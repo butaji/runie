@@ -5,7 +5,6 @@
 use std::pin::Pin;
 use std::sync::Arc;
 
-use parking_lot::Mutex;
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tokio_util::sync::CancellationToken;
@@ -23,6 +22,7 @@ use runie_core::permissions::{
 
 use crate::emit_approval_sink::EmitApprovalSink;
 use crate::run_agent_turn;
+use crate::stream_response::EmitFn;
 use crate::AgentCommand;
 
 // ── Messages ───────────────────────────────────────────────────────────────────
@@ -194,13 +194,11 @@ impl RactorAgentActor {
         bus.publish(runie_core::Event::Done { id: id.to_owned() });
     }
 
-    fn create_emit_closure(
-        state: &AgentActorState,
-    ) -> Arc<Mutex<impl Fn(Event) + Send + Sync + 'static>> {
+    fn create_emit_closure(state: &AgentActorState) -> EmitFn {
         let bus = state.bus.clone();
-        Arc::new(Mutex::new(move |evt: Event| {
+        Arc::new(move |evt: Event| {
             bus.publish(evt);
-        }))
+        })
     }
 
     async fn create_permission_gate_with_cancel(
@@ -260,19 +258,6 @@ pub async fn spawn_ractor_agent(
         bus: bus.clone(),
     };
     spawn_ractor(None, RactorAgentActor, args).await
-}
-
-/// Extension trait for RactorAgentHandle to add helper methods.
-#[allow(async_fn_in_trait)]
-pub trait RactorAgentHandleExt {
-    /// Pop the next queued message and run a turn for it, if one is waiting.
-    async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle);
-}
-
-impl RactorAgentHandleExt for RactorAgentHandle {
-    async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        let _ = turn_handle.inner.send_message(runie_core::actors::TurnMsg::RunIfQueued);
-    }
 }
 
 // ── Leader integration ────────────────────────────────────────────────────────

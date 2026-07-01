@@ -377,12 +377,12 @@
   {
     "file": "delete-dead-inspectreport-build-method.md",
     "title": "Delete dead InspectReport build method",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-ractoragenthandleext-trait.md",
     "title": "Delete dead RactorAgentHandleExt trait",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-runie-core-testing-module.md",

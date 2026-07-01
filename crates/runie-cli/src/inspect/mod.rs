@@ -108,25 +108,6 @@ impl InspectReport {
         }
     }
 
-    /// Build a full inspect report synchronously (uses Config::load_layers directly).
-    /// Kept for backward compatibility with tests.
-    #[allow(dead_code)]
-    pub fn build() -> Self {
-        let config = Config::load_layers();
-        let skills = load_all();
-        let subagent_registry = SubagentRegistry::from_builtins();
-
-        Self {
-            config_sources: Self::discover_config_sources(),
-            skill_items: Self::format_skills(skills),
-            commands: Self::list_commands(),
-            subagents: Self::list_subagents(&subagent_registry),
-            permissions: Self::list_permissions(&config),
-            providers: Self::list_providers(&config),
-            model_catalog: Self::list_model_catalog(),
-        }
-    }
-
     fn discover_config_sources() -> Vec<ConfigSource> {
         let mut sources = Vec::new();
         let mut seen = HashSet::new();
