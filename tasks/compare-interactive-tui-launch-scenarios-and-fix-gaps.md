@@ -1,6 +1,8 @@
 # Compare interactive TUI launch scenarios and fix gaps
 
-**Status**: todo
+**Status**: blocked
+
+> **Blocked by**: `build-runie-vs-grok-build-comparison-harness` (todo), `prepare-grok-build-reference-for-comparison` (todo), Grok Build fixtures not present
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P0

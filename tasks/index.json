@@ -157,22 +157,22 @@
   {
     "file": "compare-diff-edit-output-and-fix-gaps.md",
     "title": "Compare diff and edit output and fix gaps",
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "file": "compare-file-context-picker-and-fix-gaps.md",
     "title": "Compare file context picker and fix gaps",
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "file": "compare-headless-one-shot-scenarios-and-fix-gaps.md",
     "title": "Compare headless one-shot scenarios and fix gaps",
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "file": "compare-interactive-tui-launch-scenarios-and-fix-gaps.md",
     "title": "Compare interactive TUI launch scenarios and fix gaps",
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "file": "compare-model-provider-switching-and-fix-gaps.md",
@@ -182,7 +182,7 @@
   {
     "file": "compare-multi-turn-conversation-and-fix-gaps.md",
     "title": "Compare multi-turn conversation and fix gaps",
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "file": "compare-plan-mode-and-context-workflows-and-fix-gaps.md",
