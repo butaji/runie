@@ -6,7 +6,7 @@ Large / mixed-responsibility files exceed the advertised 500-line limit and mix 
 
 - `crates/runie-tui/src/ui_actor.rs` — 794 lines (event routing, input dispatch, effects, animation, submit logic).
 - `crates/runie-core/src/proto/message/mod.rs` — 769 lines (`ChatMessage`, `ToolCall`, builder, validation).
-- `crates/runie-core/src/session/sqlite_store.rs` — 674 lines (schema, queries, import, tests).
+- `crates/runie-core/src/session/sqlite_store.rs` — 674 lines (schema, queries, import, tests; SQLite is deferred, so this file should be removed or merged into the JSONL session path).
 - `crates/runie-core/src/actors/fff_indexer/mod.rs` — 669 lines (index, search, frecency, git status).
 - `crates/runie-core/src/provider/provider_trait.rs` — 650 lines (errors, metadata, retry config, trait, tests).
 - `crates/runie-core/src/event/durable.rs` — 648 lines (dual enum + conversions + tests).

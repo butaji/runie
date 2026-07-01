@@ -40,7 +40,7 @@ The policy chain (`DefaultToolApprove`, `GitTrackedWriteApprove`, `FileAccessAsk
 
 ### 10. Session persistence is JSONL + dual SQLite
 
-`crates/runie-core/src/session/sqlite_store.rs` exists but JSONL still coexists. Standardize on `sqlx` + migrations; keep JSONL only as an event-log export format.
+`crates/runie-core/src/session/sqlite_store.rs` exists but JSONL still coexists. For now the project will stay on JSON(L) only; SQLite is deferred. The `SqliteStore` code should either be removed or folded into the JSONL path so there is one canonical persistence format.
 
 ### 11. Custom helpers still remain
 
@@ -55,7 +55,7 @@ Fuzzy/path/glob/keybinding/text helpers can be further replaced with `nucleo-mat
 5. Replace config layering with `figment`.
 6. Simplify permission evaluation to a ruleset match.
 7. Replace `ProviderFactory` pinned-box futures with `async_trait` or an enum.
-8. Migrate session runtime state to `sqlx` + migrations; JSONL becomes export-only.
+8. Keep session runtime state on JSONL; remove or merge `SqliteStore` so JSONL is the single canonical persistence format.
 9. Finish replacing remaining custom helpers with crates.
 
 ## Task mapping
@@ -70,5 +70,5 @@ Fuzzy/path/glob/keybinding/text helpers can be further replaced with `nucleo-mat
 | Config layering → `figment` | `tasks/replace-layered-config-merge-with-figment.md` | existing `todo` |
 | Simplify permission policy chain | `tasks/simplify-permission-policy-chain-to-ruleset-match.md` | **new** |
 | `ProviderFactory` → `async_trait`/enum | `tasks/replace-providerfactory-pinbox-with-async-trait-or-enum.md` | **new** |
-| Session persistence → `sqlx` | `tasks/migrate-session-persistence-to-sqlx-with-migrations.md` | **new** |
+| Session persistence → JSONL only | `tasks/standardize-session-persistence-on-jsonl.md` | **new** |
 | Finish helper-crate replacements | `tasks/finish-replacing-remaining-custom-helpers-with-crates.md` | **new** |

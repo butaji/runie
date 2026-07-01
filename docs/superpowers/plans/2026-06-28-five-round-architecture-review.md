@@ -6,7 +6,7 @@
 This review combines:
 - Codebase exploration of `crates/runie-core`, `runie-tui`, `runie-agent`, `runie-provider`.
 - Survey of `~/Code/agents/{codex,gptme,openclaw}` recommended patterns.
-- `ctx7` documentation lookups for `ractor`, `figment`, `sqlx`, `tui-input`, `rmcp`, `strum`, `pulldown-cmark`.
+- `ctx7` documentation lookups for `ractor`, `figment`, `tui-input`, `rmcp`, `strum`, `pulldown-cmark` (SQLite/`sqlx` was evaluated and deferred).
 
 ## Round documents
 

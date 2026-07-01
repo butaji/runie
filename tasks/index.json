@@ -1775,8 +1775,8 @@
     "status": "todo"
   },
   {
-    "file": "migrate-session-persistence-to-sqlx-with-migrations.md",
-    "title": "Migrate session persistence to `sqlx` with migrations",
+    "file": "standardize-session-persistence-on-jsonl.md",
+    "title": "Standardize session persistence on JSONL",
     "status": "todo"
   },
   {

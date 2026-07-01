@@ -6,7 +6,7 @@ Duplicate concepts should be collapsed before adding features:
 
 1. **State:** `TurnState` is the SSOT; `AgentState` becomes a typed projection.
 2. **Events:** canonical `Event` enum replaces `DurableCoreEvent` + generated taxonomies.
-3. **Persistence:** `sqlx` + migrations for runtime state; JSONL only as event-log export.
+3. **Persistence:** JSONL is the canonical runtime store; SQLite is deferred. Remove or fold `SqliteStore` into the JSONL path.
 4. **Config:** `figment` replaces custom layering.
 5. **Input/TUI:** `tui-input`/`tui-textarea` replace custom input state.
 6. **Provider factory:** `async_trait` or enum replaces `Pin<Box<dyn Future>>`.
@@ -27,7 +27,7 @@ Duplicate concepts should be collapsed before adding features:
 2. **Crate replacements:** config (`figment`), event names (`strum`), markdown (`pulldown-cmark`), helpers.
 3. **Async ownership:** track all spawned tasks, remove timeouts/sleeps.
 4. **Module splits:** break files >500 lines after their internals are simplified.
-5. **Persistence migration:** move to `sqlx` once event model is single-enum.
+5. **Persistence cleanup:** standardize on JSONL and remove the dual `SqliteStore` path once the event model is single-enum.
 
 ## Success metrics
 
