@@ -547,7 +547,7 @@
   {
     "file": "finish-derive-builder-for-modelinfo-and-provider-configs.md",
     "title": "Finish derive_builder for ModelInfo and provider configs",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "finish-replacing-custom-tui-widgets.md",
