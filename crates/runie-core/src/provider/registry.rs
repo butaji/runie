@@ -8,8 +8,9 @@
 use super::registry_data::{
     mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use derive_builder::Builder;
 use std::cell::RefCell;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
@@ -47,7 +48,8 @@ pub fn set_mock_enabled(enabled: bool) {
 }
 
 /// Metadata for a model supported by a provider.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Builder)]
+#[builder(setter(strip_option))]
 pub struct ModelMeta {
     pub name: String,
     pub cost_prompt: Option<f64>,
@@ -85,7 +87,8 @@ impl ModelMeta {
 }
 
 /// Metadata for a known provider.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Builder)]
+#[builder(setter(strip_option))]
 pub struct ProviderMeta {
     pub key: String,
     pub display_name: String,

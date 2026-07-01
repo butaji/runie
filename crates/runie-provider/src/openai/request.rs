@@ -195,7 +195,7 @@ fn fallback_message(role: &str, content: &str) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ModelMeta;
+    use crate::{ModelMeta, ModelMetaBuilder};
     use runie_core::proto::message::{MessageMetadata, Part, Role};
 
     fn provider() -> OpenAiProvider {
@@ -256,21 +256,22 @@ mod tests {
 
     #[test]
     fn thinking_model_uses_max_completion_tokens() {
-        let meta = ModelMeta {
-            name: "o1".to_string(),
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: true,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: true,
-            supports_reasoning: false,
-            supports_system: true,
-            max_output_tokens: 4096,
-            cache_control: false,
-        };
+        let meta = ModelMetaBuilder::default()
+            .name("o1".to_string())
+            .cost_prompt(0.0)
+            .cost_completion(0.0)
+            .supports_thinking(true)
+            .supports_vision(false)
+            .tokenizer(String::new())
+            .context_window(0)
+            .streaming(true)
+            .supports_tools(true)
+            .supports_reasoning(false)
+            .supports_system(true)
+            .max_output_tokens(4096)
+            .cache_control(false)
+            .build()
+            .unwrap();
         let p = OpenAiProvider::new("sk".to_string(), "o1").with_model_meta(meta);
         let body = build_request_body(
             &p,
@@ -285,21 +286,22 @@ mod tests {
 
     #[test]
     fn no_system_model_maps_system_to_user() {
-        let meta = ModelMeta {
-            name: "custom".to_string(),
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: false,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: true,
-            supports_reasoning: false,
-            supports_system: false,
-            max_output_tokens: 0,
-            cache_control: false,
-        };
+        let meta = ModelMetaBuilder::default()
+            .name("custom".to_string())
+            .cost_prompt(0.0)
+            .cost_completion(0.0)
+            .supports_thinking(false)
+            .supports_vision(false)
+            .tokenizer(String::new())
+            .context_window(0)
+            .streaming(true)
+            .supports_tools(true)
+            .supports_reasoning(false)
+            .supports_system(false)
+            .max_output_tokens(0)
+            .cache_control(false)
+            .build()
+            .unwrap();
         let p = OpenAiProvider::new("sk".to_string(), "custom").with_model_meta(meta);
         let body = build_request_body(&p, &[ChatMessage::system("sys".to_string())]);
         let serialized = body["messages"].as_array().unwrap();
@@ -309,21 +311,22 @@ mod tests {
 
     #[test]
     fn non_thinking_model_with_output_limit_uses_max_tokens() {
-        let meta = ModelMeta {
-            name: "gpt-4o".to_string(),
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: false,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: true,
-            supports_reasoning: false,
-            supports_system: true,
-            max_output_tokens: 2048,
-            cache_control: false,
-        };
+        let meta = ModelMetaBuilder::default()
+            .name("gpt-4o".to_string())
+            .cost_prompt(0.0)
+            .cost_completion(0.0)
+            .supports_thinking(false)
+            .supports_vision(false)
+            .tokenizer(String::new())
+            .context_window(0)
+            .streaming(true)
+            .supports_tools(true)
+            .supports_reasoning(false)
+            .supports_system(true)
+            .max_output_tokens(2048)
+            .cache_control(false)
+            .build()
+            .unwrap();
         let p = OpenAiProvider::new("sk".to_string(), "gpt-4o").with_model_meta(meta);
         let body = build_request_body(&p, &[ChatMessage::user("hi".to_string())]);
         assert_eq!(body["max_tokens"], 2048);
@@ -332,21 +335,22 @@ mod tests {
 
     #[test]
     fn supports_tools_emits_tools_and_tool_choice() {
-        let meta = ModelMeta {
-            name: "gpt-4o".to_string(),
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: false,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: true,
-            supports_reasoning: false,
-            supports_system: true,
-            max_output_tokens: 0,
-            cache_control: false,
-        };
+        let meta = ModelMetaBuilder::default()
+            .name("gpt-4o".to_string())
+            .cost_prompt(0.0)
+            .cost_completion(0.0)
+            .supports_thinking(false)
+            .supports_vision(false)
+            .tokenizer(String::new())
+            .context_window(0)
+            .streaming(true)
+            .supports_tools(true)
+            .supports_reasoning(false)
+            .supports_system(true)
+            .max_output_tokens(0)
+            .cache_control(false)
+            .build()
+            .unwrap();
         let tools = vec![serde_json::json!({
             "type": "function",
             "function": { "name": "bash", "description": "run shell commands" }
@@ -361,21 +365,22 @@ mod tests {
 
     #[test]
     fn unsupported_tools_omits_tools_and_tool_choice() {
-        let meta = ModelMeta {
-            name: "custom".to_string(),
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: false,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: false,
-            supports_reasoning: false,
-            supports_system: true,
-            max_output_tokens: 0,
-            cache_control: false,
-        };
+        let meta = ModelMetaBuilder::default()
+            .name("custom".to_string())
+            .cost_prompt(0.0)
+            .cost_completion(0.0)
+            .supports_thinking(false)
+            .supports_vision(false)
+            .tokenizer(String::new())
+            .context_window(0)
+            .streaming(true)
+            .supports_tools(false)
+            .supports_reasoning(false)
+            .supports_system(true)
+            .max_output_tokens(0)
+            .cache_control(false)
+            .build()
+            .unwrap();
         let tools = vec![serde_json::json!({
             "type": "function",
             "function": { "name": "bash" }

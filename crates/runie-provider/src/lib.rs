@@ -19,7 +19,7 @@ use crate::retry::{is_retryable, with_retry};
 // Provider trait and registry (moved to runie-core for cross-crate access).
 pub use runie_core::provider::registry::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    is_mock_enabled, known_providers, ModelMeta, ProviderMeta,
+    is_mock_enabled, known_providers, ModelMeta, ModelMetaBuilder, ProviderMeta, ProviderMetaBuilder,
 };
 pub use runie_core::provider::ProviderError;
 pub use runie_core::provider::{Provider, ProviderMetadata, RetryConfig, ResponseChunk};
