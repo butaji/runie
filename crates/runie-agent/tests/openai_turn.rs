@@ -29,7 +29,7 @@ fn command(content: &str) -> runie_agent::AgentCommand {
         .build()
 }
 
-fn openai_replay(fixture_names: &[&str]) -> runie_provider::DynProvider {
+fn openai_replay(fixture_names: &[&str]) -> runie_provider::BuiltProvider {
     let fixture_strs: Vec<String> = fixture_names
         .iter()
         .map(|n| fixtures::fixture(n))

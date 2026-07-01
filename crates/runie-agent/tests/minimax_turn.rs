@@ -13,7 +13,7 @@ fn command(content: &str) -> runie_agent::AgentCommand {
         .build()
 }
 
-fn minimax_replay(fixture_names: &[&str]) -> runie_provider::DynProvider {
+fn minimax_replay(fixture_names: &[&str]) -> runie_provider::BuiltProvider {
     let fixture_strs: Vec<String> = fixture_names.iter().map(|n| fixtures::fixture(n)).collect();
     dyn_replay_provider(&fixture_strs)
 }

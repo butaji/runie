@@ -1,4 +1,4 @@
-//! Concrete [`ProviderFactory`] implementation backed by `DynProvider`.
+//! Concrete [`ProviderFactory`] implementation backed by `BuiltProvider`.
 
 use std::future::Future;
 use std::pin::Pin;

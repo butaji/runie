@@ -1352,7 +1352,7 @@
   {
     "file": "use-toml-edit-and-file-locks-for-config.md",
     "title": "Use toml_edit + fs2 file locks for config persistence",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-tool-call-id-in-tool-events.md",
