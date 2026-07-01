@@ -34,7 +34,7 @@ impl Clone for ProviderMsg {
             ProviderMsg::Build {
                 provider,
                 model,
-                reply,
+                reply: _,
             } => ProviderMsg::Build {
                 provider: provider.clone(),
                 model: model.clone(),
@@ -43,13 +43,13 @@ impl Clone for ProviderMsg {
             ProviderMsg::ValidateKey {
                 provider,
                 api_key,
-                reply,
+                reply: _,
             } => ProviderMsg::ValidateKey {
                 provider: provider.clone(),
                 api_key: api_key.clone(),
                 reply: unsafe { std::mem::zeroed() },
             },
-            ProviderMsg::ListModels { provider, reply } => ProviderMsg::ListModels {
+            ProviderMsg::ListModels { provider, reply: _ } => ProviderMsg::ListModels {
                 provider: provider.clone(),
                 reply: unsafe { std::mem::zeroed() },
             },

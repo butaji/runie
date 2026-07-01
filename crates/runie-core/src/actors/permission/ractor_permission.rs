@@ -159,7 +159,7 @@ impl RactorPermissionActor {
         state: &PermissionActorState,
         reply: ractor::RpcReplyPort<Option<String>>,
     ) {
-        reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
+        let _ = reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
     }
 
     fn handle_ask_permission(
@@ -220,7 +220,7 @@ impl RactorPermissionActor {
     }
 
     fn handle_get_rules(state: &PermissionActorState, reply: ractor::RpcReplyPort<PermissionSet>) {
-        reply.send(state.rules.clone());
+        let _ = reply.send(state.rules.clone());
     }
 
     fn handle_load_rules(_state: &mut PermissionActorState) {

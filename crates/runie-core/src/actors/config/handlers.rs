@@ -58,14 +58,14 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         ConfigMsg::SetThinkingLevel { level } => set_thinking_level(state, &level).await,
         ConfigMsg::GetConfig(reply) => {
             let cfg = state.cfg.clone();
-            reply.send(cfg);
+            let _ = reply.send(cfg);
         }
         ConfigMsg::GetConfiguredProviders(reply) => {
-            reply.send(list_configured_providers(state));
+            let _ = reply.send(list_configured_providers(state));
         }
         ConfigMsg::LoadLayers(reply) => {
             let effective = load_layers_sync(&state.path, &state.project_path);
-            reply.send(effective);
+            let _ = reply.send(effective);
         }
         ConfigMsg::AddMcpServer {
             scope,
@@ -80,7 +80,7 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         }
         ConfigMsg::ListMcpServers { scope, reply } => {
             let servers = list_mcp_servers_from_state(state, scope);
-            reply.send(servers);
+            let _ = reply.send(servers);
         }
     }
 }
@@ -297,7 +297,7 @@ pub(super) async fn add_mcp_server(
     .await;
     match result {
         Ok(Ok(())) => {
-            reply.send(());
+            let _ = reply.send(());
             load_and_emit(state).await;
         }
         Ok(Err(e)) => {
@@ -306,11 +306,11 @@ pub(super) async fn add_mcp_server(
                 id: "config".to_owned(),
                 message: format!("Failed to add MCP server: {e}"),
             });
-            reply.send(());
+            let _ = reply.send(());
         }
         Err(thread_id) => {
             tracing::error!("add mcp server task panicked: {:?}", thread_id);
-            reply.send(());
+            let _ = reply.send(());
         }
     }
 }
@@ -330,7 +330,7 @@ pub(super) async fn remove_mcp_server(
     .await;
     match result {
         Ok(Ok(())) => {
-            reply.send(());
+            let _ = reply.send(());
             load_and_emit(state).await;
         }
         Ok(Err(e)) => {
@@ -339,11 +339,11 @@ pub(super) async fn remove_mcp_server(
                 id: "config".to_owned(),
                 message: format!("Failed to remove MCP server: {e}"),
             });
-            reply.send(());
+            let _ = reply.send(());
         }
         Err(thread_id) => {
             tracing::error!("remove mcp server task panicked: {:?}", thread_id);
-            reply.send(());
+            let _ = reply.send(());
         }
     }
 }

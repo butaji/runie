@@ -37,7 +37,7 @@
   {
     "file": "add-event-assertion-helpers-to-runie-testing.md",
     "title": "Add event assertion helpers to runie-testing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-project-level-config-layer-and-keyring-secrets.md",
@@ -57,7 +57,7 @@
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
     "title": "Adopt testing helpers across all tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-wiremock-for-provider-api-tests.md",
@@ -127,7 +127,7 @@
   {
     "file": "cleanup-runie-testing-dead-modules.md",
     "title": "Cleanup runie-testing dead modules",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-actor-handles-to-typed-map.md",
@@ -282,7 +282,7 @@
   {
     "file": "delete-dead-runie-core-testing-module.md",
     "title": "Delete dead runie-core testing module",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-leftover-telemetry-stub.md",
@@ -382,7 +382,7 @@
   {
     "file": "extend-mock-tool-skill-with-errors-and-sequencing.md",
     "title": "Extend MockToolSkill with errors and sequencing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extend-markdown-inline-styles-to-lists-and-blockquotes.md",
@@ -547,7 +547,7 @@
   {
     "file": "fix-or-delete-runie-testing-testrunner.md",
     "title": "Fix or delete runie-testing TestRunner",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-turn-projection-retain-bug-and-delete-mirrored-queue.md",

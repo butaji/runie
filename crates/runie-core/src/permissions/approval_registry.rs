@@ -37,7 +37,7 @@ impl ApprovalRegistry {
     pub fn resolve(&self, request_id: &str, action: PermissionAction) -> bool {
         let mut pending = self.pending.lock();
         if let Some(reply) = pending.remove(request_id) {
-            reply.send(action);
+            let _ = reply.send(action);
             true
         } else {
             false

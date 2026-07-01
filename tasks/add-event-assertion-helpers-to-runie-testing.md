@@ -17,9 +17,9 @@ Add helpers to `runie-testing`:
 
 ## Acceptance Criteria
 
-- [ ] Add helpers to `runie-testing`.
-- [ ] Replace manual event assertions in tests.
-- [ ] All tests pass.
+- [x] Add helpers to `runie-testing`.
+- [x] Replace manual event assertions in tests.
+- [x] All tests pass.
 
 ## Design Impact
 
@@ -35,6 +35,16 @@ No change to TUI element design or composition. Only test code changes.
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — N/A (internal test infrastructure only).
+
+## Implementation Notes
+
+Helpers implemented in `crates/runie-testing/src/event_helpers.rs`:
+- `count_events()` — filters events by predicate, returns count
+- `find_event()` — returns first matching event
+- `assert_event()` — panics if no event matches predicate
+- `capture_events()` — returns `(Arc<Mutex<Vec<Event>>>, EmitFn)` from `replay_provider.rs`
+- All re-exported from `runie-testing/src/lib.rs`
+- Used throughout `runie-agent/src/tests/` and `runie-agent/tests/`

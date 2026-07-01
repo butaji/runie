@@ -251,7 +251,7 @@ impl Actor for RactorProviderActor {
                 reply,
             } => {
                 let result = self.build_provider(&provider, &model).await;
-                reply.send(result);
+                let _ = reply.send(result);
             }
             // Network calls are offloaded so the mailbox stays responsive.
             ProviderMsg::ValidateKey {

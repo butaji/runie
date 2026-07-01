@@ -48,7 +48,7 @@ impl Clone for PermissionMsg {
                 request_id,
                 tool,
                 input,
-                reply,
+                reply: _,
             } => PermissionMsg::AskPermission {
                 request_id: request_id.clone(),
                 tool: tool.clone(),
@@ -65,11 +65,11 @@ impl Clone for PermissionMsg {
                 request_id: request_id.clone(),
             },
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
-            PermissionMsg::GetCurrentRequest(reply) => {
+            PermissionMsg::GetCurrentRequest(_reply) => {
                 PermissionMsg::GetCurrentRequest(unsafe { std::mem::zeroed() })
             }
             PermissionMsg::LoadRules => PermissionMsg::LoadRules,
-            PermissionMsg::GetRules(reply) => PermissionMsg::GetRules(unsafe { std::mem::zeroed() }),
+            PermissionMsg::GetRules(_reply) => PermissionMsg::GetRules(unsafe { std::mem::zeroed() }),
             PermissionMsg::TrustProject => PermissionMsg::TrustProject,
             PermissionMsg::UntrustProject => PermissionMsg::UntrustProject,
             PermissionMsg::UpsertRule { tool, action } => PermissionMsg::UpsertRule {
