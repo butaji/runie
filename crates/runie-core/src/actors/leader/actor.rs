@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 
@@ -232,9 +232,7 @@ impl Leader {
     /// Handle a TCP client connection.
     async fn handle_client_tcp(stream: tokio::net::TcpStream, bus: EventBus<CoreEvent>) {
         let bus2 = bus.clone();
-        let (mut rd, mut wr) = tokio::io::split(stream);
-        let mut buf = vec![0u8; 1024].into_boxed_slice();
-        let mut line_buf = String::new();
+        let (rd, mut wr) = tokio::io::split(stream);
 
         let wr_handle = tokio::spawn(async move {
             let mut sub = bus2.subscribe();
@@ -249,26 +247,16 @@ impl Leader {
             }
         });
 
-        loop {
-            match rd.read(&mut buf).await {
-                Ok(0) => {
-                    if !line_buf.is_empty() {
-                        process_client_line(&line_buf, &bus);
-                    }
-                    break;
-                }
-                Ok(n) => {
-                    if let Ok(s) = std::str::from_utf8(&buf[..n]) {
-                        line_buf.push_str(s);
-                        while let Some(pos) = line_buf.find('\n') {
-                            let line = line_buf[..=pos].to_string();
-                            line_buf.drain(..=pos);
-                            process_client_line(&line, &bus);
-                        }
-                    }
-                }
-                Err(_) => break,
+        // Use BufReader to handle UTF-8 correctly across read boundaries
+        let mut reader = tokio::io::BufReader::new(rd);
+        let mut line = String::new();
+        while reader.read_line(&mut line).await.unwrap_or(0) > 0 {
+            // Remove trailing newline
+            line = line.trim_end_matches('\n').to_string();
+            if !line.is_empty() {
+                process_client_line(&line, &bus);
             }
+            line.clear();
         }
 
         wr_handle.abort();
