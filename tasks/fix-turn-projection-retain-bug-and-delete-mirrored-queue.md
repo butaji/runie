@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,10 @@ Fix the retain condition and delete the mirrored `AgentState.message_queue`, der
 
 ## Acceptance Criteria
 
-- [ ] Fix retain to keep all messages except the delivered one.
-- [ ] Remove `AgentState.message_queue` duplicate.
-- [ ] Derive queue state from `TurnState` projection.
-- [ ] Multi-turn queue tests pass.
+- [x] Fix retain to keep all messages except the delivered one.
+- [x] Remove `AgentState.message_queue` duplicate.
+- [x] Derive queue state from `TurnState` projection.
+- [x] Multi-turn queue tests pass.
 
 ## Design Impact
 
@@ -33,6 +33,6 @@ No change to TUI element design or composition. Only queue behavior changes.
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

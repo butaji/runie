@@ -502,7 +502,7 @@
   {
     "file": "fix-turn-projection-retain-bug-and-delete-mirrored-queue.md",
     "title": "Fix turn projection retain bug and delete mirrored queue",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-view-cache-double-rebuild-and-use-cached-gen.md",

@@ -8,6 +8,7 @@ use super::AppState;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::QueuedMessageKind::{FollowUp, Steering};
 
     #[test]
     fn apply_turn_started_sets_active() {
@@ -76,6 +77,121 @@ mod tests {
         assert_eq!(content, "Hello");
         assert_eq!(id, "req.1");
     }
+
+    // ── Steering/FollowUp projection tests ───────────────────────────────────
+
+    fn push_steering(state: &mut AppState, content: &str) {
+        state.agent_state_mut().message_queue.push(crate::model::QueuedMessage {
+            content: content.into(),
+            kind: Steering,
+        });
+    }
+
+    fn push_follow_up(state: &mut AppState, content: &str) {
+        state.agent_state_mut().message_queue.push(crate::model::QueuedMessage {
+            content: content.into(),
+            kind: FollowUp,
+        });
+    }
+
+    #[test]
+    fn apply_steering_delivered_removes_steering_keeps_others() {
+        let mut state = AppState::default();
+        push_steering(&mut state, "guide");
+        push_follow_up(&mut state, "extra");
+        assert_eq!(state.agent_state().message_queue.len(), 2);
+
+        state.apply_steering_delivered("guide".into(), "s.0".into());
+
+        // Steering "guide" removed; follow-up "extra" kept
+        assert_eq!(state.agent_state().message_queue.len(), 1);
+        assert_eq!(state.agent_state().message_queue[0].content, "extra");
+        assert!(matches!(state.agent_state().message_queue[0].kind, FollowUp));
+        // Delivered message added to session and request queue
+        assert_eq!(state.session().messages.len(), 1);
+        assert_eq!(state.session().messages[0].content(), "guide");
+        assert_eq!(state.agent_state().request_queue.len(), 1);
+    }
+
+    #[test]
+    fn apply_steering_delivered_on_empty_queue_is_noop() {
+        let mut state = AppState::default();
+        state.apply_steering_delivered("nothing".into(), "s.0".into());
+        assert!(state.agent_state().message_queue.is_empty());
+        assert_eq!(state.session().messages.len(), 1); // message still added to session
+        assert_eq!(state.agent_state().request_queue.len(), 1);
+    }
+
+    #[test]
+    fn apply_steering_delivered_keeps_non_matching_steering() {
+        let mut state = AppState::default();
+        push_steering(&mut state, "guide a");
+        push_steering(&mut state, "guide b");
+        push_follow_up(&mut state, "extra");
+
+        state.apply_steering_delivered("guide a".into(), "s.0".into());
+
+        // Only "guide a" removed; "guide b" and "extra" kept
+        assert_eq!(state.agent_state().message_queue.len(), 2);
+        assert!(state.agent_state().message_queue.iter().all(|m| m.content != "guide a"));
+    }
+
+    #[test]
+    fn apply_follow_up_delivered_removes_follow_up_keeps_others() {
+        let mut state = AppState::default();
+        push_steering(&mut state, "guide");
+        push_follow_up(&mut state, "extra");
+        assert_eq!(state.agent_state().message_queue.len(), 2);
+
+        state.apply_follow_up_delivered("extra".into(), "f.0".into());
+
+        // Follow-up "extra" removed; steering "guide" kept
+        assert_eq!(state.agent_state().message_queue.len(), 1);
+        assert_eq!(state.agent_state().message_queue[0].content, "guide");
+        assert!(matches!(state.agent_state().message_queue[0].kind, Steering));
+        assert_eq!(state.session().messages.len(), 1);
+        assert_eq!(state.agent_state().request_queue.len(), 1);
+    }
+
+    #[test]
+    fn apply_follow_up_delivered_on_empty_queue_is_noop() {
+        let mut state = AppState::default();
+        state.apply_follow_up_delivered("nothing".into(), "f.0".into());
+        assert!(state.agent_state().message_queue.is_empty());
+        assert_eq!(state.session().messages.len(), 1);
+        assert_eq!(state.agent_state().request_queue.len(), 1);
+    }
+
+    #[test]
+    fn apply_follow_up_delivered_keeps_non_matching_follow_ups() {
+        let mut state = AppState::default();
+        push_follow_up(&mut state, "a");
+        push_follow_up(&mut state, "b");
+        push_steering(&mut state, "guide");
+
+        state.apply_follow_up_delivered("a".into(), "f.0".into());
+
+        // Only "a" removed; "b" and "guide" kept
+        assert_eq!(state.agent_state().message_queue.len(), 2);
+        assert!(state.agent_state().message_queue.iter().all(|m| m.content != "a"));
+    }
+
+    #[test]
+    fn apply_follow_up_delivered_multiple_same_content() {
+        // Multiple follow-ups with same content: only the matching one is removed.
+        // This is the key regression test for the retain bug where `!=` kept matching.
+        let mut state = AppState::default();
+        push_follow_up(&mut state, "hello");
+        push_follow_up(&mut state, "hello");
+        push_follow_up(&mut state, "world");
+        assert_eq!(state.agent_state().message_queue.len(), 3);
+
+        state.apply_follow_up_delivered("hello".into(), "f.0".into());
+
+        // All "hello" follow-ups removed (both); "world" kept
+        assert_eq!(state.agent_state().message_queue.len(), 1);
+        assert_eq!(state.agent_state().message_queue[0].content, "world");
+    }
 }
 
 impl AppState {
@@ -143,9 +259,11 @@ impl AppState {
     /// Removes from message_queue and adds to session.messages.
     pub(crate) fn apply_steering_delivered(&mut self, content: String, id: String) {
         use crate::message::{now, ChatMessage, Part, Role};
-        // Remove from AppState mirror of message_queue (if present)
+        // Remove the delivered steering message from the queue.
+        // Correct condition: keep messages where kind != Steering OR content != delivered content.
+        // The retain predicate returns true to keep; we negate the match condition.
         self.agent_state_mut().message_queue.retain(|m| {
-            !(m.kind == crate::model::QueuedMessageKind::Steering && m.content != content)
+            !(m.kind == crate::model::QueuedMessageKind::Steering && m.content == content)
         });
         // Add to session
         self.session_mut().messages.push(ChatMessage {
@@ -168,9 +286,11 @@ impl AppState {
     /// Removes from message_queue and adds to session.messages.
     pub(crate) fn apply_follow_up_delivered(&mut self, content: String, id: String) {
         use crate::message::{now, ChatMessage, Part, Role};
-        // Remove from AppState mirror of message_queue (if present)
+        // Remove the delivered follow-up message from the queue.
+        // Correct condition: keep messages where kind != FollowUp OR content != delivered content.
+        // The retain predicate returns true to keep; we negate the match condition.
         self.agent_state_mut().message_queue.retain(|m| {
-            !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content != content)
+            !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content == content)
         });
         // Add to session
         self.session_mut().messages.push(ChatMessage {
