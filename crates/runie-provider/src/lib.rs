@@ -120,7 +120,7 @@ fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dy
     } else {
         p
     };
-    // Retries are handled by reqwest_eventsource's ExponentialBackoff policy
+    // Retries are handled by backon for stream establishment (see stream.rs)
     Box::new(p)
 }
 

@@ -6,7 +6,8 @@ use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
 use super::request::build_request_body;
 use super::OpenAiProvider;
 use crate::protocol::ProviderProtocol;
-use reqwest_eventsource::retry::ExponentialBackoff;
+use backon::{ExponentialBuilder, Retryable};
+use reqwest_eventsource::retry::Never;
 use reqwest_eventsource::EventSource;
 use runie_core::proto::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
@@ -73,26 +74,53 @@ fn openai_event_stream(
     messages: Vec<ChatMessage>,
 ) -> impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send {
     async_stream::stream! {
-        let mut es = match build_eventsource(&provider, &messages) {
+        // Build EventSource with backon retry for stream-establishment failures.
+        // Once SSE data starts flowing, errors surface immediately (no internal retry).
+        let es = match build_eventsource_with_retry(&provider, &messages).await {
             Ok(es) => es,
             Err(e) => { yield Err(e); return; }
         };
-        configure_backoff(&mut es);
         let mut es = Box::pin(es);
         let state = stream_sse_events(&mut es).await;
         for event in OpenAiProtocol::new().on_halt(state) { yield Ok(event); }
     }
 }
 
-/// Configure exponential backoff with max 3 retries for transient errors.
-fn configure_backoff(es: &mut EventSource) {
-    let backoff = ExponentialBackoff::new(
-        std::time::Duration::from_millis(500),
-        2.0,
-        Some(std::time::Duration::from_secs(10)),
-        Some(3),
-    );
-    es.set_retry_policy(Box::new(backoff));
+/// Build an EventSource with `backon` retry for stream-establishment failures.
+/// Once the SSE starts emitting data, errors surface immediately.
+async fn build_eventsource_with_retry(
+    provider: &OpenAiProvider,
+    messages: &[ChatMessage],
+) -> anyhow::Result<EventSource> {
+    let body = build_request_body(provider, messages);
+    let url = format!("{}/chat/completions", provider.base_url);
+    let api_key = provider.api_key.clone();
+    let client = provider.client.clone();
+
+    let builder = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key.trim()))
+        .header("Content-Type", "application/json")
+        .json(&body);
+
+    // Wrap EventSource creation in backon: retry on transient errors,
+    // but only during stream establishment (before SSE data starts).
+    let es = (move || {
+        let b = builder.try_clone().expect("request builder is cloneable");
+        async move {
+            let mut es = EventSource::new(b)
+                .map_err(|e| anyhow::anyhow!("EventSource build error: {e}"))?;
+            // Disable internal retry: backon handles stream-establishment retries,
+            // and we surface SSE-streaming errors immediately.
+            es.set_retry_policy(Box::new(Never));
+            Ok(es)
+        }
+    })
+    .retry(ExponentialBuilder::default())
+    .when(|e: &anyhow::Error| crate::retry::is_retryable(e))
+    .await?;
+
+    Ok(es)
 }
 
 /// Process SSE events and yield provider events.
@@ -123,32 +151,13 @@ async fn stream_sse_events(
     state
 }
 
-fn build_eventsource(
-    provider: &OpenAiProvider,
-    messages: &[ChatMessage],
-) -> anyhow::Result<reqwest_eventsource::EventSource> {
-    let body = build_request_body(provider, messages);
-    let url = format!("{}/chat/completions", provider.base_url);
-    let api_key = &provider.api_key;
-
-    EventSource::new(
-        provider
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", api_key.trim()))
-            .header("Content-Type", "application/json")
-            .json(&body),
-    )
-    .map_err(|e| anyhow::anyhow!("reqwest-eventsource: {}", e))
-}
-
 fn parse_sse_result(
     result: Result<reqwest_eventsource::Event, reqwest_eventsource::Error>,
 ) -> Option<anyhow::Result<String>> {
     match result {
         Ok(reqwest_eventsource::Event::Open) => None,
         Ok(reqwest_eventsource::Event::Message(msg)) => Some(Ok(msg.data)),
-        Err(e) => Some(Err(anyhow::anyhow!("SSE stream error: {}", e))),
+        Err(e) => Some(Err(anyhow::anyhow!("{:?}", crate::retry::from_sse_error(&e)))),
     }
 }
 

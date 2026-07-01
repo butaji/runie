@@ -5,18 +5,69 @@
 //! stream starts emitting events. Once the stream has started, any error is
 //! surfaced immediately.
 
+use crate::ProviderError;
 use anyhow::Error;
 use backon::{ExponentialBuilder, Retryable};
 use futures::Future;
 
-/// Determines if an error should trigger a retry.
-pub fn is_retryable(e: &Error) -> bool {
-    if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
-        if let Some(status) = reqwest_err.status() {
-            return status.is_server_error() || status == 429;
+// Re-export from runie-core so callers can use it without importing from runie-core
+#[allow(unused_imports)]
+pub use crate::ProviderError as classify_reqwest_error;
+
+/// Classify an SSE stream error into a typed `ProviderError` variant.
+pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
+    use reqwest_eventsource::Error as SseErr;
+    match err {
+        // UTF-8 decode error — wrap as source
+        SseErr::Utf8(_) => {
+            ProviderError::Source(anyhow::anyhow!("{err}"))
         }
-        return reqwest_err.is_timeout() || reqwest_err.is_connect();
+        // Parser error — wrap as source
+        SseErr::Parser(_) => {
+            ProviderError::Source(anyhow::anyhow!("{err}"))
+        }
+        // HTTP-level error from reqwest
+        SseErr::Transport(e) => ProviderError::from_reqwest(e),
+        // Content-type mismatch
+        SseErr::InvalidContentType(_, _) => {
+            ProviderError::Source(anyhow::anyhow!("{err}"))
+        }
+        // HTTP status code error (5xx, 429, 401, 403)
+        SseErr::InvalidStatusCode(status, _) => {
+            let code = status.as_u16();
+            if code == 401 || code == 403 {
+                ProviderError::Auth(code)
+            } else if code == 429 {
+                ProviderError::RateLimit { retry_after_secs: None }
+            } else if code >= 500 {
+                ProviderError::Server(code, Default::default())
+            } else {
+                ProviderError::Source(anyhow::anyhow!("{err}"))
+            }
+        }
+        // Invalid Last-Event-ID header
+        SseErr::InvalidLastEventId(_) => {
+            ProviderError::Source(anyhow::anyhow!("{err}"))
+        }
+        // Stream ended unexpectedly
+        SseErr::StreamEnded => {
+            ProviderError::Source(anyhow::anyhow!("SSE stream ended unexpectedly"))
+        }
     }
+}
+
+/// Determines if an error should trigger a retry using typed `ProviderError`.
+/// Falls back to string heuristics for non-`ProviderError` errors.
+pub fn is_retryable(e: &Error) -> bool {
+    // Fast path: try to classify as a typed ProviderError first
+    if let Some(typed) = e.downcast_ref::<ProviderError>() {
+        return typed.is_retryable();
+    }
+    // Also check reqwest errors directly
+    if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
+        return ProviderError::from_reqwest(reqwest_err).is_retryable();
+    }
+    // Fallback: string-based heuristics for unknown error shapes
     let msg = e.to_string().to_lowercase();
     msg.contains("timeout")
         || msg.contains("connection")
@@ -41,6 +92,51 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+
+    // ── Layer 1: typed ProviderError is_retryable ────────────────────────────────
+
+    #[test]
+    fn is_retryable_true_for_typed_rate_limit() {
+        // Wrap the typed ProviderError as anyhow::Error so downcast works
+        let typed: ProviderError = ProviderError::RateLimit { retry_after_secs: None };
+        let err: anyhow::Error = typed.into();
+        assert!(is_retryable(&err));
+    }
+
+    #[test]
+    fn is_retryable_true_for_typed_timeout() {
+        let typed: ProviderError = ProviderError::Timeout;
+        let err: anyhow::Error = typed.into();
+        assert!(is_retryable(&err));
+    }
+
+    #[test]
+    fn is_retryable_true_for_typed_network() {
+        let typed: ProviderError = ProviderError::Network("connection refused".into());
+        let err: anyhow::Error = typed.into();
+        assert!(is_retryable(&err));
+    }
+
+    #[test]
+    fn is_retryable_false_for_typed_auth() {
+        let typed: ProviderError = ProviderError::Auth(401);
+        let err: anyhow::Error = typed.into();
+        assert!(!is_retryable(&err));
+    }
+
+    #[test]
+    fn is_retryable_false_for_typed_context_length() {
+        let typed: ProviderError = ProviderError::ContextLength(128_000);
+        let err: anyhow::Error = typed.into();
+        assert!(!is_retryable(&err));
+    }
+
+    #[test]
+    fn is_retryable_true_for_typed_server_error() {
+        let typed: ProviderError = ProviderError::Server(502, Default::default());
+        let err: anyhow::Error = typed.into();
+        assert!(is_retryable(&err));
+    }
 
     #[tokio::test]
     async fn with_retry_succeeds_on_first_attempt() {
