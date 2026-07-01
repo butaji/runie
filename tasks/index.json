@@ -1,3 +1,4 @@
+Updated: fix-config-docs-and-readme-misalignments.md -> done
 [
   {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
@@ -582,7 +583,7 @@
   {
     "file": "fix-config-docs-and-readme-misalignments.md",
     "title": "Fix config docs and README misalignments",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-deliverqueued-race-in-uiactor.md",

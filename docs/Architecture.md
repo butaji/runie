@@ -279,7 +279,7 @@ pattern = "git push"
 ### MCP server
 
 ```bash
-runie mcp add filesystem npx -y @modelcontextprotocol/server-filesroot ~/Code --transport stdio
+runie mcp add filesystem npx -y @modelcontextprotocol/server-filesroot ~/Code
 ```
 
 A generic loader parses frontmatter and emits `SkillLoaded`, `CommandRegistered`, `AgentTypeRegistered`, `PermissionRulesLoaded`, `McpServerLoaded`, etc. Adding a feature usually means adding a file, not editing the engine.

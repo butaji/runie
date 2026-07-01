@@ -25,16 +25,16 @@ Each provider requires an API key. Configure multiple providers:
 
 ```toml
 [model_providers.anthropic]
-provider_type = "anthropic"
+type = "anthropic"
 api_key = "sk-ant-..."
 
 [model_providers.openai]
-provider_type = "openai"
+type = "openai"
 base_url = "https://api.openai.com/v1"
 api_key = "sk-..."
 
 [model_providers.deepseek]
-provider_type = "openai-compatible"
+type = "openai-compatible"
 base_url = "https://api.deepseek.com/v1"
 api_key = "sk-..."
 ```
@@ -52,6 +52,45 @@ scoped = [
   "deepseek/deepseek-chat",
 ]
 ```
+
+## Permissions
+
+Control which tools require approval. Rules are checked top-to-bottom; the first match wins.
+
+```toml
+[[permissions]]
+action = "allow"
+tool = "read_file"
+
+[[permissions]]
+action = "ask"
+tool = "bash"
+pattern = "git push"
+
+[[permissions]]
+action = "deny"
+tool = "rm"
+pattern = "rm -rf /"
+```
+
+## Environment & Secrets
+
+Provider API keys can be set via environment variables or stored in the OS keyring:
+
+```toml
+[model_providers.anthropic]
+type = "anthropic"
+# Key from ANTHROPIC_API_KEY env var, or OS keyring
+api_key = "$ANTHROPIC_API_KEY"
+```
+
+Supported environment variables per provider:
+- `ANTHROPIC_API_KEY` — Anthropic
+- `OPENAI_API_KEY` — OpenAI
+- `DEEPSEEK_API_KEY` — DeepSeek
+- `OPENAI_API_KEY` — any OpenAI-compatible provider
+
+Runie looks up the keyring entry keyed by `"runie"` when the value is empty or starts with `$`.
 
 ## Truncation Policy
 

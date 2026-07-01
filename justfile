@@ -37,7 +37,7 @@ build-release:
 
 # Run the TUI (development)
 tui:
-    cargo run -p runie-tui --bin runie
+    cargo run -p runie-tui --bin runie-tui
 
 # Run the schema generator example to regenerate config.schema.json
 write-config-schema:
