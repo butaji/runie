@@ -2,10 +2,15 @@
 //!
 //! Saves input history to `~/.runie/history.jsonl` and loads on startup.
 //! Supports prefix-based search/filter for history navigation.
+//!
+//! ## Concurrency & Safety
+//! - Uses `fs2` advisory locks for cross-process safety during writes.
+//! - Writes are atomic (write to temp file, then rename).
+//! - Entry count is capped at `max_entries()` (default: 1000).
 
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
@@ -35,8 +40,63 @@ fn ensure_history_dir() -> Result<PathBuf> {
 }
 
 // ---------------------------------------------------------------------------
+// Configuration
+// ----------------------------------------------------------------------------
+
+/// Maximum number of history entries to keep.
+/// Entries beyond this limit are trimmed (oldest removed first).
+pub const DEFAULT_MAX_HISTORY_ENTRIES: usize = 1000;
+
+/// Returns the configured max history entries.
+/// Currently fixed; can be extended to load from config if needed.
+pub fn max_entries() -> usize {
+    DEFAULT_MAX_HISTORY_ENTRIES
+}
+
+// ---------------------------------------------------------------------------
 // Persistence
 // ---------------------------------------------------------------------------
+
+/// Cap entries to the configured maximum.
+fn cap_entries(entries: &[String]) -> Vec<String> {
+    let max = max_entries();
+    if entries.len() <= max {
+        entries.to_vec()
+    } else {
+        entries[entries.len() - max..].to_vec()
+    }
+}
+
+/// Load entries from a file path (shared helper for read operations).
+fn load_entries_from_file(path: &Path) -> Result<Vec<String>> {
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let file = File::open(path).with_context(|| format!("open history: {:?}", path))?;
+    let reader = BufReader::new(file);
+    let mut entries = Vec::new();
+    for line in reader.lines() {
+        let line = line.context("read history line")?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let entry: String = serde_json::from_str(&line).unwrap_or(line);
+        entries.push(entry);
+    }
+    Ok(entries)
+}
+
+/// Write entries atomically to a temp file.
+fn write_entries_atomic(entries: &[String], temp_path: &Path) -> Result<()> {
+    let file = File::create(temp_path).with_context(|| format!("create temp: {:?}", temp_path))?;
+    let mut writer = std::io::BufWriter::new(file);
+    for entry in entries {
+        let json = serde_json::to_string(entry)?;
+        writeln!(writer, "{}", json).context("write entry")?;
+    }
+    writer.flush()?;
+    Ok(())
+}
 
 /// Load history entries from the history file.
 /// Returns empty vec if file doesn't exist.
@@ -68,40 +128,72 @@ pub fn load_history() -> Result<Vec<String>> {
 }
 
 /// Save history entries to the history file.
-/// Creates/overwrites the file.
+/// Creates/overwrites the file atomically with fs2 advisory lock.
+/// Entries beyond `max_entries()` are trimmed (oldest first).
 pub fn save_history(entries: &[String]) -> Result<()> {
     let dir = ensure_history_dir()?;
     let path = dir.join("history.jsonl");
 
-    let file = File::create(&path).with_context(|| format!("create history: {:?}", path))?;
+    // Cap entries to max.
+    let entries = cap_entries(entries);
+
+    // Atomic write: write to temp file, then rename.
+    let temp_path = dir.join("history.jsonl.tmp");
+    let file = File::create(&temp_path).with_context(|| format!("create temp history: {:?}", temp_path))?;
     let mut writer = std::io::BufWriter::new(file);
 
-    for entry in entries {
+    for entry in &entries {
         let json = serde_json::to_string(entry)?;
         writeln!(writer, "{}", json).context("write history entry")?;
     }
 
     writer.flush()?;
+
+    // Acquire exclusive lock during rename to ensure atomicity.
+    let file = writer.into_inner()?;
+    drop(file);
+
+    // Lock the target file and rename atomically.
+    let target = File::create(&path).with_context(|| format!("create history: {:?}", path))?;
+    fs2::FileExt::lock_exclusive(&target)?;
+    std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
+    // Lock released when `target` is dropped
+
     Ok(())
 }
 
 /// Append a single entry to the history file.
-/// Creates file if it doesn't exist.
+/// Creates file if it doesn't exist. Acquires fs2 advisory lock.
+/// If total entries exceed `max_entries()`, trims oldest entries.
 pub fn append_history(entry: &str) -> Result<()> {
     let dir = ensure_history_dir()?;
     let path = dir.join("history.jsonl");
 
+    // Acquire exclusive lock.
     let file = OpenOptions::new()
         .create(true)
-        .append(true)
+        .write(true)
+        .truncate(false)
         .open(&path)
-        .with_context(|| format!("append history: {:?}", path))?;
-    let mut writer = std::io::BufWriter::new(file);
+        .with_context(|| format!("open history for lock: {:?}", path))?;
+    fs2::FileExt::lock_exclusive(&file)?;
 
-    let json = serde_json::to_string(entry)?;
-    writeln!(writer, "{}", json).context("append history entry")?;
-    writer.flush()?;
+    // Load existing entries.
+    let existing = load_entries_from_file(&path)?;
 
+    // If adding this entry would exceed max, trim oldest entries.
+    let mut entries = existing;
+    if entries.len() >= max_entries() {
+        entries.drain(0..entries.len().saturating_sub(max_entries() - 1));
+    }
+    entries.push(entry.to_string());
+
+    // Atomic write back.
+    let temp_path = dir.join("history.jsonl.tmp");
+    write_entries_atomic(&entries, &temp_path)?;
+    std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
+
+    fs2::FileExt::unlock(&file);
     Ok(())
 }
 

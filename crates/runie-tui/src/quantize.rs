@@ -67,24 +67,27 @@ pub fn quantize_to_16(r: u8, g: u8, b: u8) -> Color {
     Color::Indexed(ansi256_to_16(ansi256))
 }
 
-/// Lookup table mapping each ANSI 256 color index to the nearest basic
-/// ANSI 16 color. Generated from the original range-based heuristic.
-const ANSI256_TO_16: [u8; 256] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 12, 12, 12, 0, 0, 4, 12, 12, 12,
-    0, 2, 6, 12, 12, 12, 10, 10, 10, 14, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14, 0,
-    0, 4, 12, 12, 12, 0, 3, 4, 12, 12, 12, 2, 2, 3, 12, 12, 12, 10, 10, 10, 11, 12, 12, 10, 10, 10,
-    10, 11, 12, 10, 10, 10, 10, 10, 11, 0, 1, 5, 12, 12, 12, 1, 1, 3, 12, 12, 12, 3, 3, 3, 12, 12,
-    12, 10, 10, 10, 11, 12, 12, 10, 10, 10, 10, 11, 12, 10, 10, 10, 10, 10, 11, 9, 9, 9, 13, 12,
-    12, 9, 9, 9, 11, 12, 12, 9, 9, 9, 11, 12, 12, 11, 11, 11, 11, 12, 12, 10, 10, 10, 10, 11, 12,
-    10, 10, 10, 10, 10, 11, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 11, 12, 9, 9, 9, 9, 11, 12, 9, 9, 9, 9,
-    11, 12, 11, 11, 11, 11, 11, 12, 10, 10, 10, 10, 10, 11, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 11,
-    9, 9, 9, 9, 9, 11, 9, 9, 9, 9, 9, 11, 9, 9, 9, 9, 9, 11, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 15, 15,
-];
-
-/// Map an ANSI 256 color index to one of the 16 basic ANSI colors.
+/// Map an ANSI 256 color index to the nearest of the 16 basic ANSI colors
+/// using Euclidean distance in RGB space.
 fn ansi256_to_16(idx: u8) -> u8 {
-    ANSI256_TO_16[idx as usize]
+    let (r, g, b) = ansi_colours::rgb_from_ansi256(idx);
+    let mut min_dist = u32::MAX;
+    let mut closest = 0u8;
+
+    // Compare against all 16 basic ANSI colors (indices 0-15)
+    for i in 0..16u8 {
+        let (cr, cg, cb) = ansi_colours::rgb_from_ansi256(i);
+        // Euclidean distance in RGB space
+        let dr = (r as i32 - cr as i32).abs() as u32;
+        let dg = (g as i32 - cg as i32).abs() as u32;
+        let db = (b as i32 - cb as i32).abs() as u32;
+        let dist = dr * dr + dg * dg + db * db;
+        if dist < min_dist {
+            min_dist = dist;
+            closest = i;
+        }
+    }
+    closest
 }
 
 #[cfg(test)]
