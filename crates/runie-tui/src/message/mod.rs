@@ -10,10 +10,9 @@ use ratatui::{
 
 use runie_core::display_width;
 use runie_core::labels::format_timestamp;
+use runie_core::markdown::{extract_code_blocks, inlines_to_text, CodeBlock};
 
-use crate::markdown_render::{
-    apply_color_to_inlines, extract_code_blocks, md_to_spans, parse_inline_spans, CodeBlock, MdSpan,
-};
+use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
     color_accent_bg, color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
     GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
@@ -98,9 +97,8 @@ fn build_user_body(
     indent_width: u16,
     params: &UserLineParams,
 ) -> Vec<Line<'static>> {
-    // Use tui-markdown for inline styling
-    let inlines = parse_inline_spans(content);
-    let spans = apply_color_to_inlines(&inlines, color_fg_bright());
+    // Use tui-markdown for inline styling (applies inline styles + base color).
+    let spans = apply_color_to_inlines(content, color_fg_bright());
     let first_w = params
         .inner_width
         .saturating_sub(prefix_width)
@@ -203,7 +201,8 @@ fn render_agent_block(
             render_agent_list_block(items, *ordered, ts_str, inner_width, is_first, lines)
         }
         CodeBlock::Blockquote(inlines) => {
-            lines.extend(support::render_blockquote_from_spans(inlines, color_fg()));
+            let text = inlines_to_text(inlines);
+            lines.extend(support::render_blockquote_from_spans(&text, color_fg()));
             false
         }
     }
@@ -219,7 +218,9 @@ fn render_agent_text_block(
     if inlines.is_empty() {
         return is_first;
     }
-    let spans = apply_color_to_inlines(inlines, color_fg());
+    // Convert MdInline[] to plain text, then style with tui_markdown.
+    let text = inlines_to_text(inlines);
+    let spans = apply_color_to_inlines(&text, color_fg());
     let prefix_width = display_width::width(GLYPH_AGENT);
     let indent_width = display_width::width(GLYPH_INDENT);
     let ts_width = display_width::width(ts_str) + 1;
@@ -302,7 +303,9 @@ fn render_agent_list_block(
         if item.is_empty() {
             continue;
         }
-        let spans = apply_color_to_inlines(item, color_fg());
+        // Convert MdInline[] to plain text, then style with tui_markdown.
+        let item_text = inlines_to_text(item);
+        let spans = apply_color_to_inlines(&item_text, color_fg());
         let prefix_width = display_width::width(GLYPH_AGENT);
         let indent_width = display_width::width(GLYPH_INDENT);
         let ts_width = display_width::width(ts_str) + 1;

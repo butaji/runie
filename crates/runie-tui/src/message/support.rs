@@ -3,7 +3,7 @@
 use ratatui::style::Color;
 use ratatui::text::{Line, Span};
 
-use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdInline, MdSpan};
+use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
     style_tool_output, style_tool_running, style_tool_summary, style_turn_complete,
@@ -168,9 +168,10 @@ fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
     }
 }
 
-/// Render a blockquote from styled inline spans.
-pub fn render_blockquote_from_spans(inlines: &[MdInline], base_color: Color) -> Vec<Line<'static>> {
-    let spans = apply_color_to_inlines(inlines, base_color);
+/// Render a blockquote from plain markdown text using tui_markdown.
+pub fn render_blockquote_from_spans(text: &str, base_color: Color) -> Vec<Line<'static>> {
+    // Use tui_markdown for styling (via apply_color_to_inlines).
+    let spans = apply_color_to_inlines(text, base_color);
     let mut lines = Vec::new();
     let prefix = format!("{}│ ", GLYPH_INDENT);
     let prefix_width = display_width::width(&prefix);
