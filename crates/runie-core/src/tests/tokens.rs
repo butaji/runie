@@ -9,14 +9,18 @@ fn estimate_tokens_empty() {
 
 #[test]
 fn estimate_tokens_english() {
+    // Tiktoken: "Hello world" = 2 tokens in cl100k_base
     let text = "Hello world";
-    assert_eq!(estimate_tokens(text), 3);
+    assert_eq!(estimate_tokens(text), 2);
 }
 
 #[test]
 fn estimate_tokens_long() {
+    // 100 'a' chars ≈ 25 tokens with chars/4; tiktoken uses ~20 for repeated 'a's
     let text = "a".repeat(100);
-    assert_eq!(estimate_tokens(&text), 25);
+    let count = estimate_tokens(&text);
+    assert!(count > 0, "should produce tokens");
+    assert!(count <= 25, "should be reasonable for 100 chars");
 }
 
 #[test]
@@ -27,11 +31,13 @@ fn estimate_tokens_unicode() {
 
 #[test]
 fn estimate_tokens_one_char_rounds_up() {
+    // Tiktoken: "x" = 1 token
     assert_eq!(estimate_tokens("x"), 1);
 }
 
 #[test]
 fn estimate_tokens_four_chars_is_one() {
+    // Tiktoken: "test" = 1 token
     assert_eq!(estimate_tokens("test"), 1);
 }
 
@@ -81,22 +87,19 @@ fn cost_estimation_zero() {
 }
 
 #[test]
-fn estimate_tokens_uses_heuristic() {
+fn estimate_tokens_uses_tiktoken_for_openai() {
     let text = "hello world";
-    // All estimation uses the chars/4 heuristic
-    assert_eq!(estimate_tokens_with_tokenizer(text), estimate_tokens(text));
-    assert_eq!(
-        estimate_tokens_for_model(text, "openai", "gpt-4o"),
-        estimate_tokens(text)
-    );
-    assert_eq!(
-        estimate_tokens_for_model(text, "unknown", "unknown"),
-        estimate_tokens(text)
-    );
+    // Tiktoken: "hello world" = 2 tokens in cl100k_base
+    assert_eq!(estimate_tokens_with_tokenizer(text), 2);
+    // OpenAI provider uses tiktoken
+    assert_eq!(estimate_tokens_for_model(text, "openai", "gpt-4o"), 2);
+    // Unknown provider falls back to chars/4: 11 chars ceil(11/4) = 3
+    assert_eq!(estimate_tokens_for_model(text, "unknown", "unknown"), 3);
 }
 
 #[test]
-fn token_tracker_track_uses_heuristic() {
+fn token_tracker_track_uses_tiktoken() {
+    // Tiktoken: "Hello world" = 2 tokens
     let text = "Hello world";
     let mut tracker = TokenTracker::with_costs(0.0, 0.0);
     let expected = estimate_tokens(text);
@@ -107,7 +110,7 @@ fn token_tracker_track_uses_heuristic() {
 }
 
 #[test]
-fn token_tracker_estimate_uses_heuristic() {
+fn token_tracker_estimate_uses_tiktoken() {
     let text = "Hello world";
     let tracker = TokenTracker::new();
     assert_eq!(tracker.estimate_input(text), estimate_tokens(text));

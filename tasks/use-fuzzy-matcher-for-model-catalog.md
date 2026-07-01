@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Use `nucleo-matcher` or `sublime_fuzzy` for fuzzy model/catalog search.
 
 ## Acceptance Criteria
-- [ ] Replace substring filter with fuzzy matcher.
-- [ ] Preserve provider grouping.
-- [ ] Sort by score.
+- [x] Replace substring filter with fuzzy matcher. (`sublime_fuzzy::best_match()` in `fuzzy_score()`)
+- [x] Preserve provider grouping. (models grouped by provider in results)
+- [x] Sort by score. (results sorted by fuzzy score)
 
 ## Design Impact
 
@@ -28,6 +28,12 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 3 — Rendering:** `TestBackend` model selector snapshot unchanged.
 - **Layer 4 — E2E:** Headless CLI model search works.
 - **Live tmux validation:** `/model` search tolerates typos.
+
+## Implementation Notes
+
+- `sublime_fuzzy::best_match()` used for fuzzy matching
+- `filter_models_fuzzy_typo()` test validates fuzzy matching works for typos
+- Provider grouping preserved in `filter_and_score_models()`
 
 ## Completion Validation
 

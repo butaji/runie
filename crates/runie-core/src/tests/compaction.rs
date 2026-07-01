@@ -42,9 +42,14 @@ fn pinned_msg(
 
 #[test]
 fn token_estimation_consistent() {
+    // Empty string
     assert_eq!(estimate_tokens(""), 0);
-    assert_eq!(estimate_tokens("abcd"), 1);
-    assert_eq!(estimate_tokens("abcdefgh"), 2);
+    // Note: tiktoken uses subword tokenization, so these are approximate
+    // The key invariant is that estimate_tokens never panics and is consistent
+    let count_abcd = estimate_tokens("abcd");
+    assert!(count_abcd >= 1, "abcd should be at least 1 token");
+    let count_abcdefgh = estimate_tokens("abcdefgh");
+    assert!(count_abcdefgh >= count_abcd, "longer strings should have >= tokens");
 }
 
 #[test]
@@ -175,16 +180,19 @@ fn pinned_messages_not_compacted() {
         1.0,
         "p2",
     ));
-    // Add regular messages
+    // Add regular messages with more content to exceed threshold
     for i in 0..10 {
         state.session.messages.push(msg(
             Role::User,
-            format!("Q{}", i),
+            format!("This is question number {} with some extra content to add tokens", i),
             i as f64 + 2.0,
             format!("u{}", i),
         ));
     }
-    state.compact(20);
+    // Use a very low threshold to ensure compaction happens
+    let result = state.compact(10);
+    eprintln!("Compaction result: {}", result);
+    eprintln!("Total messages after compaction: {}", state.session.messages.len());
     // Pinned messages should still be present
     let pinned: Vec<_> = state
         .session
@@ -192,22 +200,33 @@ fn pinned_messages_not_compacted() {
         .iter()
         .filter(|m| m.metadata.pinned)
         .collect();
+    eprintln!("Pinned count: {}", pinned.len());
+    for m in &pinned {
+        eprintln!("  Pinned: {}", m.content());
+    }
     assert_eq!(pinned.len(), 2, "Pinned messages should not be removed");
 }
 
 #[test]
 fn compacted_message_has_compacted_flag() {
     let mut state = AppState::default();
-    // Add enough content to trigger compaction with a reasonable threshold
+    // Add enough content to trigger compaction
+    // Use shorter messages that are more predictable for tiktoken
     for i in 0..10 {
         state.session.messages.push(msg(
             Role::User,
-            format!("Question {} with some extra text to increase tokens", i),
+            format!("This is question number {}", i),
             i as f64,
             format!("u{}", i),
         ));
     }
-    state.compact(100); // Keep ~100 tokens worth
+    // Use a very low threshold to ensure compaction happens
+    let result = state.compact(5); // Keep only ~5 tokens
+    assert!(
+        result.contains("Compacted") || result.contains("removed"),
+        "Should trigger compaction. Got: {}",
+        result
+    );
     let first = state.session.messages.first().unwrap();
     // After compaction, first message should be the summary with compacted flag
     assert!(

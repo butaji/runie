@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -16,10 +16,10 @@ Adopt `tiktoken-rs` for OpenAI-compatible token counts, or `tokenizers` for mode
 
 ## Acceptance Criteria
 
-- [ ] Add `tiktoken-rs` (or `tokenizers`) to workspace dependencies.
-- [ ] Implement token counting per message and per conversation for supported models.
-- [ ] Fall back to chars/4 only for unknown model families, with a clear log.
-- [ ] Update call sites in truncation/cost estimation to use the new API.
+- [x] Add `tiktoken-rs` (or `tokenizers`) to workspace dependencies. (`tiktoken = "3.5"` in workspace Cargo.toml)
+- [x] Implement token counting per message and per conversation for supported models. (`tiktoken_count()` function in `tokens.rs`)
+- [x] Fall back to chars/4 only for unknown model families, with a clear log. (`chars4_count()` fallback in `estimate_tokens()`)
+- [x] Update call sites in truncation/cost estimation to use the new API. (call sites use `estimate_tokens()` which uses tiktoken)
 
 ## Tests
 
@@ -29,3 +29,10 @@ Adopt `tiktoken-rs` for OpenAI-compatible token counts, or `tokenizers` for mode
 - **Layer 3 — Rendering:** `TestBackend` shows token count within a reasonable tolerance.
 - **Layer 4 — E2E:** Provider replay fixture returns expected token counts for a known prompt.
 - **Live tmux validation:** Start a turn with a non-trivial prompt; the token count in the status bar matches expectations for the model.
+
+## Implementation Notes
+
+- `tiktoken = "3.5"` added to workspace dependencies
+- `tokens.rs` now uses `tiktoken::get_encoding("cl100k_base")` for OpenAI-compatible providers
+- `estimate_tokens()` tries tiktoken first, falls back to `chars4_count()` for unknown providers
+- `estimate_tokens_for_model()` specifically checks for `openai` provider to use tiktoken

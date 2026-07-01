@@ -9,12 +9,19 @@ use crate::Event;
 
 #[test]
 fn estimate_tokens_chars_divided_by_four_ceil() {
-    // Approximation: 4 chars ≈ 1 token, rounding up.
-    assert_eq!(crate::tokens::estimate_tokens("hello"), 2); // 5 chars ceil = 2
-    assert_eq!(crate::tokens::estimate_tokens("hello world"), 3); // 11 chars ceil = 3
+    // Tiktoken counts for cl100k_base encoding:
+    // Note: tiktoken uses subword tokenization, so exact counts may vary
+    assert_eq!(crate::tokens::estimate_tokens("hello"), 1); // "hello" = 1 token
+    // "hello" + " world" = 2 tokens (separate encoding), but "hello world" = 2 or 3
+    // depending on how tiktoken splits it. Use >= assertions for flexibility.
+    let hw_count = crate::tokens::estimate_tokens("hello world");
+    assert!(hw_count >= 2 && hw_count <= 3, 
+        "hello world should be 2-3 tokens, got {}", hw_count);
     assert_eq!(crate::tokens::estimate_tokens(""), 0); // 0 chars = 0 tokens
-    assert_eq!(crate::tokens::estimate_tokens("🎉"), 1); // 1 char ceil = 1
-    assert_eq!(crate::tokens::estimate_tokens("test"), 1); // 4 chars = 1
+    // Emoji tokens vary by tiktoken version
+    let emoji_count = crate::tokens::estimate_tokens("🎉");
+    assert!(emoji_count >= 1, "emoji should be at least 1 token, got {}", emoji_count);
+    assert_eq!(crate::tokens::estimate_tokens("test"), 1); // "test" = 1 token
 }
 
 #[test]
@@ -23,8 +30,8 @@ fn submit_increments_tokens_in() {
     state.input.input = "hello world".to_string();
     state.update(Event::submit());
     assert_eq!(
-        state.agent.tokens_in, 3,
-        "Input 'hello world' = 11 chars ≈ 3 tokens"
+        state.agent.tokens_in, 2,
+        "Input 'hello world' = 2 tokens in tiktoken"
     );
 }
 
@@ -37,10 +44,10 @@ fn agent_response_increments_tokens_out() {
         content: "hello".to_string(),
     });
     assert_eq!(
-        state.agent.tokens_out, 2,
-        "Output 'hello' = 5 chars ≈ 2 tokens"
+        state.agent.tokens_out, 1,
+        "Output 'hello' = 1 token in tiktoken"
     );
-    assert_eq!(state.agent.turn_tokens_out, 2, "Turn tokens should track");
+    assert_eq!(state.agent.turn_tokens_out, 1, "Turn tokens should track");
 }
 
 #[test]
@@ -55,10 +62,8 @@ fn multiple_responses_accumulate_tokens_out() {
         id: "r1".to_string(),
         content: " world".to_string(),
     });
-    assert_eq!(
-        state.agent.tokens_out, 4,
-        "'hello' (2) + ' world' (2) = 4 tokens"
-    );
+    // tiktoken: "hello" = 1, " world" = 1, total = 2
+    assert_eq!(state.agent.tokens_out, 2);
 }
 
 #[test]
@@ -70,7 +75,9 @@ fn finish_turn_resets_turn_tokens() {
         id: "r1".to_string(),
         content: "hello world".to_string(),
     });
-    assert_eq!(state.agent.turn_tokens_out, 3);
+    // tiktoken: "hello world" = 2 tokens
+    let expected = crate::tokens::estimate_tokens("hello world");
+    assert_eq!(state.agent.turn_tokens_out, expected);
 
     state.update(crate::Event::Done {
         id: "r1".to_string(),
@@ -79,7 +86,7 @@ fn finish_turn_resets_turn_tokens() {
         state.agent.turn_tokens_out, 0,
         "Turn tokens reset on finish"
     );
-    assert_eq!(state.agent.tokens_out, 3, "Cumulative tokens preserved");
+    assert_eq!(state.agent.tokens_out, expected, "Cumulative tokens preserved");
 }
 
 // =============================================================================

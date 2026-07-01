@@ -19,67 +19,84 @@ impl AppState {
     }
 
     /// Compact messages, keeping approximately `keep_recent_tokens` worth of recent content.
-    /// Pinned messages are preserved. Returns a summary of what was compacted.
+    /// Pinned messages are preserved at the beginning. Returns a summary of what was compacted.
     pub fn compact(&mut self, keep_recent_tokens: usize) -> String {
-        let total = self.total_tokens();
-        if total <= keep_recent_tokens {
-            return format!("Session has {} tokens, no compaction needed", total);
+        // Count only non-pinned messages for total
+        let non_pinned: Vec<_> = self
+            .session
+            .messages
+            .iter()
+            .filter(|m| !m.metadata.pinned)
+            .collect();
+        let non_pinned_tokens: usize = non_pinned
+            .iter()
+            .map(|m| {
+                self.agent_state()
+                    .token_tracker
+                    .estimate_input(&m.content())
+            })
+            .sum();
+
+        if non_pinned_tokens <= keep_recent_tokens {
+            return format!(
+                "Session has {} non-pinned tokens, no compaction needed",
+                non_pinned_tokens
+            );
         }
 
-        let cut_idx = self.find_compact_cut_index(keep_recent_tokens);
-        if cut_idx == 0 {
-            return "Cannot compact: all messages are recent".to_owned();
-        }
+        // Collect pinned messages to preserve
+        let pinned: Vec<ChatMessage> = self
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.metadata.pinned)
+            .cloned()
+            .collect();
 
-        let removed_count = cut_idx;
-        self.session_mut().messages.drain(..cut_idx);
-        let summary = format!(
-            "[Compacted: {} earlier messages removed, keeping ~{} tokens]",
-            removed_count, keep_recent_tokens
-        );
-        self.session_mut().messages.insert(
-            0,
-            ChatMessage {
-                role: Role::System,
-                timestamp: now(),
-                id: "compaction".to_owned(),
-                metadata: MessageMetadata {
-                    compacted: true,
-                    ..Default::default()
-                },
-                parts: vec![runie_core::message::Part::Text {
-                    content: summary.clone(),
-                }],
-                ..Default::default()
-            },
-        );
-        self.messages_changed();
-        summary
-    }
-
-    fn find_compact_cut_index(&self, keep_recent_tokens: usize) -> usize {
+        // Find how many non-pinned messages to remove
         let mut accumulated = 0usize;
-        let mut cut_idx = 0usize;
-        for (i, msg) in self.session().messages.iter().enumerate().rev() {
-            // Skip pinned messages
-            if msg.metadata.pinned {
-                continue;
-            }
+        let mut remove_count = 0usize;
+        for msg in non_pinned.iter().rev() {
             accumulated += self
                 .agent_state()
                 .token_tracker
                 .estimate_input(&msg.content());
+            remove_count += 1;
             if accumulated >= keep_recent_tokens {
-                cut_idx = i;
                 break;
             }
         }
-        while cut_idx < self.session().messages.len() {
-            match self.session().messages[cut_idx].role {
-                Role::User | Role::Assistant => break,
-                _ => cut_idx += 1,
-            }
-        }
-        cut_idx
+
+        // Keep pinned messages + remaining non-pinned + summary
+        let total_non_pinned = non_pinned.len();
+        let non_pinned_to_keep = total_non_pinned - remove_count;
+
+        // Build new message list: pinned + kept non-pinned + summary
+        let kept_non_pinned: Vec<_> = non_pinned.into_iter().take(non_pinned_to_keep).cloned().collect();
+
+        let summary = format!(
+            "[Compacted: {} earlier messages removed, keeping ~{} tokens]",
+            remove_count, keep_recent_tokens
+        );
+
+        let mut new_messages = pinned;
+        new_messages.push(ChatMessage {
+            role: Role::System,
+            timestamp: now(),
+            id: "compaction".to_owned(),
+            metadata: MessageMetadata {
+                compacted: true,
+                ..Default::default()
+            },
+            parts: vec![runie_core::message::Part::Text {
+                content: summary.clone(),
+            }],
+            ..Default::default()
+        });
+        new_messages.extend(kept_non_pinned);
+
+        self.session_mut().messages = new_messages;
+        self.messages_changed();
+        summary
     }
 }
