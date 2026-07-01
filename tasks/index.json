@@ -10,6 +10,11 @@
     "status": "done"
   },
   {
+    "file": "actually-use-pulldown-cmark-frontmatter-in-resource-loader.md",
+    "title": "Actually Use Pulldown Cmark Frontmatter In Resource Loader",
+    "status": "wontfix"
+  },
+  {
     "file": "add-agent-command-test-builder.md",
     "title": "Add Agent Command Test Builder",
     "status": "done"
@@ -30,6 +35,16 @@
     "status": "done"
   },
   {
+    "file": "add-grok-provider-event-translator-and-headless-replay.md",
+    "title": "Add Grok Provider Event Translator And Headless Replay",
+    "status": "todo"
+  },
+  {
+    "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
+    "title": "Add Grok Tui Keystroke Replay And Tool Mapping",
+    "status": "todo"
+  },
+  {
     "file": "add-jsonschema-validation-to-configactor-load.md",
     "title": "Add Jsonschema Validation To Configactor Load",
     "status": "done"
@@ -40,14 +55,49 @@
     "status": "done"
   },
   {
+    "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
+    "title": "Add Mcp Tool Schema Cache And Connection Manager",
+    "status": "todo"
+  },
+  {
+    "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
+    "title": "Add Message Origin Metadata To Fix Follow Up Continuity",
+    "status": "todo"
+  },
+  {
     "file": "add-openai-provider-fixtures.md",
     "title": "Add Openai Provider Fixtures",
     "status": "done"
   },
   {
+    "file": "add-project-config-denylist-for-sensitive-keys.md",
+    "title": "Add Project Config Denylist For Sensitive Keys",
+    "status": "todo"
+  },
+  {
+    "file": "add-project-level-config-layer-and-keyring-secrets.md",
+    "title": "Add Project Level Config Layer And Keyring Secrets",
+    "status": "todo"
+  },
+  {
+    "file": "add-sample-config-env-and-completions.md",
+    "title": "Add Sample Config Env And Completions",
+    "status": "todo"
+  },
+  {
+    "file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md",
+    "title": "Add Testable Tui Bootstrap With Providerfactory And Keystrokes",
+    "status": "todo"
+  },
+  {
     "file": "adopt-metrics-facade-for-telemetry.md",
     "title": "Adopt Metrics Facade For Telemetry",
     "status": "done"
+  },
+  {
+    "file": "adopt-palette-for-theme-color-math.md",
+    "title": "Adopt Palette For Theme Color Math",
+    "status": "wontfix"
   },
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
@@ -75,9 +125,19 @@
     "status": "done"
   },
   {
+    "file": "await-provider-network-calls-in-ractor-handler.md",
+    "title": "Await Provider Network Calls In Ractor Handler",
+    "status": "todo"
+  },
+  {
     "file": "buffer-tcp-lines-in-leader-server.md",
     "title": "Buffer Tcp Lines In Leader Server",
     "status": "done"
+  },
+  {
+    "file": "build-runie-vs-grok-build-comparison-harness.md",
+    "title": "Build Runie Vs Grok Build Comparison Harness",
+    "status": "todo"
   },
   {
     "file": "cap-and-lock-input-history.md",
@@ -135,6 +195,11 @@
     "status": "done"
   },
   {
+    "file": "collapse-command-types-to-single-command-action-enum.md",
+    "title": "Collapse Command Types To Single Command Action Enum",
+    "status": "todo"
+  },
+  {
     "file": "collapse-dialogstate-variants.md",
     "title": "Collapse Dialogstate Variants",
     "status": "done"
@@ -148,6 +213,66 @@
     "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",
     "title": "Collapse Remaining Actor Handle Wrappers To Actorref",
     "status": "done"
+  },
+  {
+    "file": "compare-auth-config-setup-and-fix-gaps.md",
+    "title": "Compare Auth Config Setup And Fix Gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-diff-edit-output-and-fix-gaps.md",
+    "title": "Compare Diff Edit Output And Fix Gaps",
+    "status": "blocked"
+  },
+  {
+    "file": "compare-file-context-picker-and-fix-gaps.md",
+    "title": "Compare File Context Picker And Fix Gaps",
+    "status": "blocked"
+  },
+  {
+    "file": "compare-headless-one-shot-scenarios-and-fix-gaps.md",
+    "title": "Compare Headless One Shot Scenarios And Fix Gaps",
+    "status": "blocked"
+  },
+  {
+    "file": "compare-interactive-tui-launch-scenarios-and-fix-gaps.md",
+    "title": "Compare Interactive Tui Launch Scenarios And Fix Gaps",
+    "status": "blocked"
+  },
+  {
+    "file": "compare-model-provider-switching-and-fix-gaps.md",
+    "title": "Compare Model Provider Switching And Fix Gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-multi-turn-conversation-and-fix-gaps.md",
+    "title": "Compare Multi Turn Conversation And Fix Gaps",
+    "status": "blocked"
+  },
+  {
+    "file": "compare-plan-mode-and-context-workflows-and-fix-gaps.md",
+    "title": "Compare Plan Mode And Context Workflows And Fix Gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-quit-abort-error-recovery-and-fix-gaps.md",
+    "title": "Compare Quit Abort Error Recovery And Fix Gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-session-persistence-resumption-and-fix-gaps.md",
+    "title": "Compare Session Persistence Resumption And Fix Gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-subagent-mcp-support-and-fix-gaps.md",
+    "title": "Compare Subagent Mcp Support And Fix Gaps",
+    "status": "todo"
+  },
+  {
+    "file": "compare-tool-execution-permission-flows-and-fix-gaps.md",
+    "title": "Compare Tool Execution Permission Flows And Fix Gaps",
+    "status": "todo"
   },
   {
     "file": "consolidate-duplicate-credential-resolution-task-files.md",
@@ -173,6 +298,16 @@
     "file": "convert-production-eprintln-to-tracing.md",
     "title": "Convert Production Eprintln To Tracing",
     "status": "done"
+  },
+  {
+    "file": "create-grok-build-fixture-recorder-and-record-fixtures.md",
+    "title": "Create Grok Build Fixture Recorder And Record Fixtures",
+    "status": "todo"
+  },
+  {
+    "file": "create-grok-fixture-loader-and-normalizer.md",
+    "title": "Create Grok Fixture Loader And Normalizer",
+    "status": "todo"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -255,6 +390,11 @@
     "status": "done"
   },
   {
+    "file": "derive-builder-for-model-and-panel-builders.md",
+    "title": "Derive Builder For Model And Panel Builders",
+    "status": "todo"
+  },
+  {
     "file": "derive-durable-and-headless-events-from-canonical-event.md",
     "title": "Derive Durable And Headless Events From Canonical Event",
     "status": "done"
@@ -272,7 +412,7 @@
   {
     "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",
     "title": "Drop Custom Markdown Ast For Pulldown Cmark And Tui Markdown",
-    "status": "done"
+    "status": "done` \u2014 Both stages complete as of 2026-07-01."
   },
   {
     "file": "drop-legacy-diff-parser-and-rely-on-diffy.md",
@@ -365,6 +505,21 @@
     "status": "done"
   },
   {
+    "file": "finish-derive-builder-for-modelinfo-and-provider-configs.md",
+    "title": "Finish Derive Builder For Modelinfo And Provider Configs",
+    "status": "todo"
+  },
+  {
+    "file": "finish-replacing-custom-tui-widgets.md",
+    "title": "Finish Replacing Custom Tui Widgets",
+    "status": "todo"
+  },
+  {
+    "file": "finish-strum-migration-for-remaining-enums.md",
+    "title": "Finish Strum Migration For Remaining Enums",
+    "status": "todo"
+  },
+  {
     "file": "fix-500-line-file-limit-violations.md",
     "title": "Fix 500 Line File Limit Violations",
     "status": "done"
@@ -385,6 +540,11 @@
     "status": "done"
   },
   {
+    "file": "fix-deliverqueued-race-in-uiactor.md",
+    "title": "Fix Deliverqueued Race In Uiactor",
+    "status": "todo"
+  },
+  {
     "file": "fix-dev-automation-recipes.md",
     "title": "Fix Dev Automation Recipes",
     "status": "done"
@@ -393,6 +553,11 @@
     "file": "fix-dry-run-tool-names-discrepancy.md",
     "title": "Fix Dry Run Tool Names Discrepancy",
     "status": "done"
+  },
+  {
+    "file": "fix-fff-search-pre-release-notify.md",
+    "title": "Fix Fff Search Pre Release Notify",
+    "status": "wontfix"
   },
   {
     "file": "fix-keybindings-dead-code.md",
@@ -505,6 +670,11 @@
     "status": "done"
   },
   {
+    "file": "fold-lifecycle-state-machine-into-provider-events.md",
+    "title": "Fold Lifecycle State Machine Into Provider Events",
+    "status": "todo"
+  },
+  {
     "file": "fold-runie-protocol-into-core.md",
     "title": "Fold Runie Protocol Into Core",
     "status": "done"
@@ -518,6 +688,16 @@
     "file": "fuzzy-history-search-with-sublime-fuzzy.md",
     "title": "Fuzzy History Search With Sublime Fuzzy",
     "status": "done"
+  },
+  {
+    "file": "generate-event-taxonomy-or-delete-generated-files.md",
+    "title": "Generate Event Taxonomy Or Delete Generated Files",
+    "status": "todo"
+  },
+  {
+    "file": "graceful-leader-shutdown-with-joinset-timeout.md",
+    "title": "Graceful Leader Shutdown With Joinset Timeout",
+    "status": "todo"
   },
   {
     "file": "harden-actors-against-mutex-poisoning.md",
@@ -550,6 +730,11 @@
     "status": "done"
   },
   {
+    "file": "inject-provider-factory-into-headless-cli-and-runtime.md",
+    "title": "Inject Provider Factory Into Headless Cli And Runtime",
+    "status": "todo"
+  },
+  {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce Cargo Deny And Cargo Machete Ci",
     "status": "done"
@@ -560,14 +745,44 @@
     "status": "done"
   },
   {
+    "file": "investigate-session-persistence-not-created-in-live-tui.md",
+    "title": "Investigate Session Persistence Not Created In Live Tui",
+    "status": "todo"
+  },
+  {
+    "file": "live-tui-smoke-test-real-minimax.md",
+    "title": "Live Tui Smoke Test Real Minimax",
+    "status": "partial"
+  },
+  {
     "file": "load-slash-commands-with-include-dir.md",
     "title": "Load Slash Commands With Include Dir",
     "status": "done"
   },
   {
+    "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
+    "title": "Make Trust And Auth File Persistence Atomic And Restricted",
+    "status": "todo"
+  },
+  {
+    "file": "make-tui-render-loop-async-with-watch-channel.md",
+    "title": "Make Tui Render Loop Async With Watch Channel",
+    "status": "todo"
+  },
+  {
+    "file": "merge-agentstate-into-turnstate-projection.md",
+    "title": "Merge Agentstate Into Turnstate Projection",
+    "status": "todo"
+  },
+  {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate Production Actors To Ractor",
     "status": "done"
+  },
+  {
+    "file": "migrate-session-persistence-to-rusqlite.md",
+    "title": "Migrate Session Persistence To Rusqlite",
+    "status": "todo"
   },
   {
     "file": "migrate-subagent-loader-to-resource-loader.md",
@@ -578,6 +793,16 @@
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate Tui And Cli To Leader Bootstrap",
     "status": "done"
+  },
+  {
+    "file": "move-approval-registry-into-permission-actor-state.md",
+    "title": "Move Approval Registry Into Permission Actor State",
+    "status": "todo"
+  },
+  {
+    "file": "move-blocking-io-out-of-command-handlers.md",
+    "title": "Move Blocking Io Out Of Command Handlers",
+    "status": "todo"
   },
   {
     "file": "move-built-in-slash-commands-to-declarative-yaml.md",
@@ -635,9 +860,24 @@
     "status": "done"
   },
   {
+    "file": "prepare-grok-build-reference-for-comparison.md",
+    "title": "Prepare Grok Build Reference For Comparison",
+    "status": "todo"
+  },
+  {
+    "file": "preserve-rich-message-and-tool-data-in-durable-events.md",
+    "title": "Preserve Rich Message And Tool Data In Durable Events",
+    "status": "todo"
+  },
+  {
     "file": "propagate-actor-spawn-errors-instead-of-panicking.md",
     "title": "Propagate Actor Spawn Errors Instead Of Panicking",
     "status": "done"
+  },
+  {
+    "file": "propagate-secretstring-through-provider-stack.md",
+    "title": "Propagate Secretstring Through Provider Stack",
+    "status": "todo"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",
@@ -655,9 +895,19 @@
     "status": "done"
   },
   {
+    "file": "remove-authtoken-custom-serde-wrappers.md",
+    "title": "Remove Authtoken Custom Serde Wrappers",
+    "status": "wontfix"
+  },
+  {
+    "file": "remove-blanket-clippy-allow-in-turn-projections.md",
+    "title": "Remove Blanket Clippy Allow In Turn Projections",
+    "status": "todo"
+  },
+  {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove Configactorstate Unnecessary Mutex",
-    "status": "done"
+    "status": "done` \u2014 implemented during the actor migration to ractor (see `convert-agent-and-fff-indexer-to-ractor-state` and related tasks). The `Mutex` was already absent when this task was authored."
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -673,6 +923,26 @@
     "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
     "title": "Remove Dead Yaml Line Parsers From Resource Loader",
     "status": "done"
+  },
+  {
+    "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
+    "title": "Remove Direct Appstate Mutation From Tui Handlers",
+    "status": "todo"
+  },
+  {
+    "file": "remove-duplicate-input-mutation-in-uiactor.md",
+    "title": "Remove Duplicate Input Mutation In Uiactor",
+    "status": "todo"
+  },
+  {
+    "file": "remove-legacy-diff-fallback-parser.md",
+    "title": "Remove Legacy Diff Fallback Parser",
+    "status": "todo"
+  },
+  {
+    "file": "remove-modelfromprovider-api-key-field-and-use-keyring.md",
+    "title": "Remove Modelfromprovider Api Key Field And Use Keyring",
+    "status": "todo"
   },
   {
     "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
@@ -720,6 +990,11 @@
     "status": "done"
   },
   {
+    "file": "remove-unused-direct-deps-from-runie-tui.md",
+    "title": "Remove Unused Direct Deps From Runie Tui",
+    "status": "todo"
+  },
+  {
     "file": "rename-telemetry-rs-to-tracing-init.md",
     "title": "Rename Telemetry Rs To Tracing Init",
     "status": "done"
@@ -738,6 +1013,16 @@
     "file": "replace-ansi256-lookup-table-with-ansi-colours.md",
     "title": "Replace Ansi256 Lookup Table With Ansi Colours",
     "status": "done"
+  },
+  {
+    "file": "replace-atomic-write-tempname-with-tempfile.md",
+    "title": "Replace Atomic Write Tempname With Tempfile",
+    "status": "todo"
+  },
+  {
+    "file": "replace-bash-safety-heuristic-with-os-sandboxing.md",
+    "title": "Replace Bash Safety Heuristic With Os Sandboxing",
+    "status": "todo"
   },
   {
     "file": "replace-bash-safety-with-shell-words.md",
@@ -795,14 +1080,29 @@
     "status": "done"
   },
   {
+    "file": "replace-emitfn-mutex-with-async-channel.md",
+    "title": "Replace Emitfn Mutex With Async Channel",
+    "status": "todo"
+  },
+  {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
     "title": "Replace Fff Search Indexer With Ignore Walkdir",
     "status": "done"
   },
   {
+    "file": "replace-file-ref-parser-with-winnow-or-regex.md",
+    "title": "Replace File Ref Parser With Winnow Or Regex",
+    "status": "todo"
+  },
+  {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
     "title": "Replace Keymap Modifier Tables With Crokey Map",
     "status": "done"
+  },
+  {
+    "file": "replace-layered-config-merge-with-figment.md",
+    "title": "Replace Layered Config Merge With Figment",
+    "status": "todo"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
@@ -820,9 +1120,19 @@
     "status": "done"
   },
   {
+    "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
+    "title": "Replace Mock Provider Keyword Heuristics With Fixtures",
+    "status": "todo"
+  },
+  {
     "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
     "title": "Replace Normalize Raw Frontmatter With Standard Splitter",
     "status": "done"
+  },
+  {
+    "file": "replace-proto-error-manual-display-with-thiserror.md",
+    "title": "Replace Proto Error Manual Display With Thiserror",
+    "status": "wontfix"
   },
   {
     "file": "replace-register-handler-and-theme-macros-with-functions.md",
@@ -835,9 +1145,24 @@
     "status": "done"
   },
   {
+    "file": "replace-remaining-std-sync-locks-with-parking_lot.md",
+    "title": "Replace Remaining Std Sync Locks With Parking_Lot",
+    "status": "todo"
+  },
+  {
+    "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
+    "title": "Replace Rpcreply With Ractor Rpcreplyport",
+    "status": "todo"
+  },
+  {
     "file": "replace-session-tree-with-arena-crate.md",
     "title": "Replace Session Tree With Arena Crate",
     "status": "done"
+  },
+  {
+    "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
+    "title": "Replace Streaming Buffer Classifier With Pulldown Cmark",
+    "status": "todo"
   },
   {
     "file": "replace-think-filter-with-regex.md",
@@ -870,6 +1195,11 @@
     "status": "done"
   },
   {
+    "file": "replace-verify-tests-with-cargo-nextest.md",
+    "title": "Replace Verify Tests With Cargo Nextest",
+    "status": "todo"
+  },
+  {
     "file": "replace-xor-auth-with-keyring.md",
     "title": "Replace Xor Auth With Keyring",
     "status": "done"
@@ -885,9 +1215,29 @@
     "status": "done"
   },
   {
+    "file": "rewrite-appstate-structural-tests-to-not-mutate-agentstate.md",
+    "title": "Rewrite Appstate Structural Tests To Not Mutate Agentstate",
+    "status": "todo"
+  },
+  {
+    "file": "route-agent-abort-through-actor-message-not-event-bus.md",
+    "title": "Route Agent Abort Through Actor Message Not Event Bus",
+    "status": "todo"
+  },
+  {
+    "file": "route-app-init-loads-through-actors.md",
+    "title": "Route App Init Loads Through Actors",
+    "status": "todo"
+  },
+  {
     "file": "route-cli-config-through-configactor.md",
     "title": "Route Cli Config Through Configactor",
     "status": "done"
+  },
+  {
+    "file": "route-provider-confignone-through-credentialresolver.md",
+    "title": "Route Provider Confignone Through Credentialresolver",
+    "status": "todo"
   },
   {
     "file": "share-configured-reqwest-client-for-provider.md",
@@ -920,6 +1270,11 @@
     "status": "done"
   },
   {
+    "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
+    "title": "Spike Evaluate Async Openai Or Rig Core For Provider Stack",
+    "status": "todo"
+  },
+  {
     "file": "split-modelclient-and-turnsession.md",
     "title": "Split Modelclient And Turnsession",
     "status": "done"
@@ -935,6 +1290,11 @@
     "status": "done"
   },
   {
+    "file": "store-and-await-headlessruntime-actor-handles.md",
+    "title": "Store And Await Headlessruntime Actor Handles",
+    "status": "todo"
+  },
+  {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store Provider Api Keys In Keyring Not Config",
     "status": "done"
@@ -945,6 +1305,11 @@
     "status": "done"
   },
   {
+    "file": "track-and-cancel-inflight-agent-turn-joinhandle.md",
+    "title": "Track And Cancel Inflight Agent Turn Joinhandle",
+    "status": "todo"
+  },
+  {
     "file": "type-and-unify-provider-model-layer.md",
     "title": "Type And Unify Provider Model Layer",
     "status": "done"
@@ -953,6 +1318,16 @@
     "file": "type-openai-chunk-and-error-parsing.md",
     "title": "Type Openai Chunk And Error Parsing",
     "status": "done"
+  },
+  {
+    "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
+    "title": "Typed Chatmessage Builder And Shrink Sanitize",
+    "status": "todo"
+  },
+  {
+    "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
+    "title": "Unify Bash Execution Into Single Shell Module With Command Group",
+    "status": "todo"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
@@ -975,9 +1350,24 @@
     "status": "done"
   },
   {
+    "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
+    "title": "Unify Edit File And Hashline Edit On Patch Based Edits",
+    "status": "todo"
+  },
+  {
     "file": "unify-file-picker-and-panel-list-widget.md",
     "title": "Unify File Picker And Panel List Widget",
     "status": "done"
+  },
+  {
+    "file": "unify-form-submit-paths-through-command-registry.md",
+    "title": "Unify Form Submit Paths Through Command Registry",
+    "status": "todo"
+  },
+  {
+    "file": "unify-headless-and-tui-streaming-response-parser.md",
+    "title": "Unify Headless And Tui Streaming Response Parser",
+    "status": "todo"
   },
   {
     "file": "unify-headless-runtime-bootstrap.md",
@@ -1080,6 +1470,11 @@
     "status": "done"
   },
   {
+    "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
+    "title": "Use Color Eyre And Human Panic For Cli Errors",
+    "status": "partial"
+  },
+  {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
     "title": "Use Configscope Enum For Mcp Server Scope",
     "status": "done"
@@ -1105,9 +1500,19 @@
     "status": "done"
   },
   {
+    "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
+    "title": "Use Mcp Tool Annotations Instead Of Custom Permission Constants",
+    "status": "todo"
+  },
+  {
     "file": "use-notify-directly-in-config-actor.md",
     "title": "Use Notify Directly In Config Actor",
     "status": "done"
+  },
+  {
+    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
+    "title": "Use Pulldown Cmark For Tool Marker Stripping",
+    "status": "wontfix"
   },
   {
     "file": "use-pulldown-cmark-frontmatter-for-resource-loader.md",
@@ -1150,6 +1555,16 @@
     "status": "done"
   },
   {
+    "file": "use-tokio-main-in-cli-instead-of-custom-block-on.md",
+    "title": "Use Tokio Main In Cli Instead Of Custom Block On",
+    "status": "done"
+  },
+  {
+    "file": "use-toml-edit-and-file-locks-for-config.md",
+    "title": "Use Toml Edit And File Locks For Config",
+    "status": "todo"
+  },
+  {
     "file": "use-tool-call-id-in-tool-events.md",
     "title": "Use Tool Call Id In Tool Events",
     "status": "done"
@@ -1158,6 +1573,11 @@
     "file": "use-which-crate-for-executable-lookup.md",
     "title": "Use Which Crate For Executable Lookup",
     "status": "done"
+  },
+  {
+    "file": "wire-modelclient-turnsession-into-provider-factory-or-delete.md",
+    "title": "Wire Modelclient Turnsession Into Provider Factory Or Delete",
+    "status": "todo"
   },
   {
     "file": "wire-or-delete-input-actor.md",
@@ -1175,428 +1595,8 @@
     "status": "done"
   },
   {
-    "file": "actually-use-pulldown-cmark-frontmatter-in-resource-loader.md",
-    "title": "Actually Use Pulldown Cmark Frontmatter In Resource Loader",
-    "status": "wontfix"
-  },
-  {
-    "file": "adopt-palette-for-theme-color-math.md",
-    "title": "Adopt Palette For Theme Color Math",
-    "status": "wontfix"
-  },
-  {
-    "file": "fix-fff-search-pre-release-notify.md",
-    "title": "Fix Fff Search Pre Release Notify",
-    "status": "wontfix"
-  },
-  {
-    "file": "remove-authtoken-custom-serde-wrappers.md",
-    "title": "Remove Authtoken Custom Serde Wrappers",
-    "status": "wontfix"
-  },
-  {
-    "file": "replace-proto-error-manual-display-with-thiserror.md",
-    "title": "Replace Proto Error Manual Display With Thiserror",
-    "status": "wontfix"
-  },
-  {
-    "file": "use-pulldown-cmark-for-tool-marker-stripping.md",
-    "title": "Use Pulldown Cmark For Tool Marker Stripping",
-    "status": "wontfix"
-  },
-  {
-    "file": "add-grok-provider-event-translator-and-headless-replay.md",
-    "title": "Add Grok Provider Event Translator And Headless Replay",
-    "status": "todo"
-  },
-  {
-    "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
-    "title": "Add Grok Tui Keystroke Replay And Tool Mapping",
-    "status": "todo"
-  },
-  {
-    "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
-    "title": "Add Mcp Tool Schema Cache And Connection Manager",
-    "status": "todo"
-  },
-  {
-    "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
-    "title": "Add Message Origin Metadata To Fix Follow Up Continuity",
-    "status": "todo"
-  },
-  {
-    "file": "add-project-config-denylist-for-sensitive-keys.md",
-    "title": "Add Project Config Denylist For Sensitive Keys",
-    "status": "todo"
-  },
-  {
-    "file": "add-project-level-config-layer-and-keyring-secrets.md",
-    "title": "Add Project Level Config Layer And Keyring Secrets",
-    "status": "todo"
-  },
-  {
-    "file": "add-sample-config-env-and-completions.md",
-    "title": "Add Sample Config Env And Completions",
-    "status": "todo"
-  },
-  {
-    "file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md",
-    "title": "Add Testable Tui Bootstrap With Providerfactory And Keystrokes",
-    "status": "todo"
-  },
-  {
-    "file": "await-provider-network-calls-in-ractor-handler.md",
-    "title": "Await Provider Network Calls In Ractor Handler",
-    "status": "todo"
-  },
-  {
-    "file": "build-runie-vs-grok-build-comparison-harness.md",
-    "title": "Build Runie Vs Grok Build Comparison Harness",
-    "status": "todo"
-  },
-  {
-    "file": "collapse-command-types-to-single-command-action-enum.md",
-    "title": "Collapse Command Types To Single Command Action Enum",
-    "status": "todo"
-  },
-  {
-    "file": "compare-auth-config-setup-and-fix-gaps.md",
-    "title": "Compare Auth Config Setup And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "compare-model-provider-switching-and-fix-gaps.md",
-    "title": "Compare Model Provider Switching And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "compare-plan-mode-and-context-workflows-and-fix-gaps.md",
-    "title": "Compare Plan Mode And Context Workflows And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "compare-quit-abort-error-recovery-and-fix-gaps.md",
-    "title": "Compare Quit Abort Error Recovery And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "compare-session-persistence-resumption-and-fix-gaps.md",
-    "title": "Compare Session Persistence Resumption And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "compare-subagent-mcp-support-and-fix-gaps.md",
-    "title": "Compare Subagent Mcp Support And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "compare-tool-execution-permission-flows-and-fix-gaps.md",
-    "title": "Compare Tool Execution Permission Flows And Fix Gaps",
-    "status": "todo"
-  },
-  {
-    "file": "create-grok-build-fixture-recorder-and-record-fixtures.md",
-    "title": "Create Grok Build Fixture Recorder And Record Fixtures",
-    "status": "todo"
-  },
-  {
-    "file": "create-grok-fixture-loader-and-normalizer.md",
-    "title": "Create Grok Fixture Loader And Normalizer",
-    "status": "todo"
-  },
-  {
-    "file": "derive-builder-for-model-and-panel-builders.md",
-    "title": "Derive Builder For Model And Panel Builders",
-    "status": "todo"
-  },
-  {
-    "file": "finish-derive-builder-for-modelinfo-and-provider-configs.md",
-    "title": "Finish Derive Builder For Modelinfo And Provider Configs",
-    "status": "todo"
-  },
-  {
-    "file": "finish-replacing-custom-tui-widgets.md",
-    "title": "Finish Replacing Custom Tui Widgets",
-    "status": "todo"
-  },
-  {
-    "file": "finish-strum-migration-for-remaining-enums.md",
-    "title": "Finish Strum Migration For Remaining Enums",
-    "status": "todo"
-  },
-  {
-    "file": "fix-deliverqueued-race-in-uiactor.md",
-    "title": "Fix Deliverqueued Race In Uiactor",
-    "status": "todo"
-  },
-  {
-    "file": "fold-lifecycle-state-machine-into-provider-events.md",
-    "title": "Fold Lifecycle State Machine Into Provider Events",
-    "status": "todo"
-  },
-  {
-    "file": "generate-event-taxonomy-or-delete-generated-files.md",
-    "title": "Generate Event Taxonomy Or Delete Generated Files",
-    "status": "todo"
-  },
-  {
-    "file": "graceful-leader-shutdown-with-joinset-timeout.md",
-    "title": "Graceful Leader Shutdown With Joinset Timeout",
-    "status": "todo"
-  },
-  {
-    "file": "inject-provider-factory-into-headless-cli-and-runtime.md",
-    "title": "Inject Provider Factory Into Headless Cli And Runtime",
-    "status": "todo"
-  },
-  {
-    "file": "investigate-session-persistence-not-created-in-live-tui.md",
-    "title": "Investigate Session Persistence Not Created In Live Tui",
-    "status": "todo"
-  },
-  {
-    "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
-    "title": "Make Trust And Auth File Persistence Atomic And Restricted",
-    "status": "todo"
-  },
-  {
-    "file": "make-tui-render-loop-async-with-watch-channel.md",
-    "title": "Make Tui Render Loop Async With Watch Channel",
-    "status": "todo"
-  },
-  {
-    "file": "merge-agentstate-into-turnstate-projection.md",
-    "title": "Merge Agentstate Into Turnstate Projection",
-    "status": "todo"
-  },
-  {
-    "file": "migrate-session-persistence-to-rusqlite.md",
-    "title": "Migrate Session Persistence To Rusqlite",
-    "status": "todo"
-  },
-  {
-    "file": "move-approval-registry-into-permission-actor-state.md",
-    "title": "Move Approval Registry Into Permission Actor State",
-    "status": "todo"
-  },
-  {
-    "file": "move-blocking-io-out-of-command-handlers.md",
-    "title": "Move Blocking Io Out Of Command Handlers",
-    "status": "todo"
-  },
-  {
-    "file": "prepare-grok-build-reference-for-comparison.md",
-    "title": "Prepare Grok Build Reference For Comparison",
-    "status": "todo"
-  },
-  {
-    "file": "preserve-rich-message-and-tool-data-in-durable-events.md",
-    "title": "Preserve Rich Message And Tool Data In Durable Events",
-    "status": "todo"
-  },
-  {
-    "file": "propagate-secretstring-through-provider-stack.md",
-    "title": "Propagate Secretstring Through Provider Stack",
-    "status": "todo"
-  },
-  {
-    "file": "remove-blanket-clippy-allow-in-turn-projections.md",
-    "title": "Remove Blanket Clippy Allow In Turn Projections",
-    "status": "todo"
-  },
-  {
-    "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
-    "title": "Remove Direct Appstate Mutation From Tui Handlers",
-    "status": "todo"
-  },
-  {
-    "file": "remove-duplicate-input-mutation-in-uiactor.md",
-    "title": "Remove Duplicate Input Mutation In Uiactor",
-    "status": "todo"
-  },
-  {
-    "file": "remove-legacy-diff-fallback-parser.md",
-    "title": "Remove Legacy Diff Fallback Parser",
-    "status": "todo"
-  },
-  {
-    "file": "remove-modelfromprovider-api-key-field-and-use-keyring.md",
-    "title": "Remove Modelfromprovider Api Key Field And Use Keyring",
-    "status": "todo"
-  },
-  {
-    "file": "remove-unused-direct-deps-from-runie-tui.md",
-    "title": "Remove Unused Direct Deps From Runie Tui",
-    "status": "todo"
-  },
-  {
-    "file": "replace-atomic-write-tempname-with-tempfile.md",
-    "title": "Replace Atomic Write Tempname With Tempfile",
-    "status": "todo"
-  },
-  {
-    "file": "replace-bash-safety-heuristic-with-os-sandboxing.md",
-    "title": "Replace Bash Safety Heuristic With Os Sandboxing",
-    "status": "todo"
-  },
-  {
-    "file": "replace-emitfn-mutex-with-async-channel.md",
-    "title": "Replace Emitfn Mutex With Async Channel",
-    "status": "todo"
-  },
-  {
-    "file": "replace-file-ref-parser-with-winnow-or-regex.md",
-    "title": "Replace File Ref Parser With Winnow Or Regex",
-    "status": "todo"
-  },
-  {
-    "file": "replace-layered-config-merge-with-figment.md",
-    "title": "Replace Layered Config Merge With Figment",
-    "status": "todo"
-  },
-  {
-    "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
-    "title": "Replace Mock Provider Keyword Heuristics With Fixtures",
-    "status": "todo"
-  },
-  {
-    "file": "replace-remaining-std-sync-locks-with-parking_lot.md",
-    "title": "Replace Remaining Std Sync Locks With Parking_Lot",
-    "status": "todo"
-  },
-  {
-    "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
-    "title": "Replace Rpcreply With Ractor Rpcreplyport",
-    "status": "todo"
-  },
-  {
-    "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
-    "title": "Replace Streaming Buffer Classifier With Pulldown Cmark",
-    "status": "todo"
-  },
-  {
-    "file": "replace-verify-tests-with-cargo-nextest.md",
-    "title": "Replace Verify Tests With Cargo Nextest",
-    "status": "todo"
-  },
-  {
-    "file": "rewrite-appstate-structural-tests-to-not-mutate-agentstate.md",
-    "title": "Rewrite Appstate Structural Tests To Not Mutate Agentstate",
-    "status": "todo"
-  },
-  {
-    "file": "route-agent-abort-through-actor-message-not-event-bus.md",
-    "title": "Route Agent Abort Through Actor Message Not Event Bus",
-    "status": "todo"
-  },
-  {
-    "file": "route-app-init-loads-through-actors.md",
-    "title": "Route App Init Loads Through Actors",
-    "status": "todo"
-  },
-  {
-    "file": "route-provider-confignone-through-credentialresolver.md",
-    "title": "Route Provider Confignone Through Credentialresolver",
-    "status": "todo"
-  },
-  {
-    "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
-    "title": "Spike Evaluate Async Openai Or Rig Core For Provider Stack",
-    "status": "todo"
-  },
-  {
-    "file": "store-and-await-headlessruntime-actor-handles.md",
-    "title": "Store And Await Headlessruntime Actor Handles",
-    "status": "todo"
-  },
-  {
-    "file": "track-and-cancel-inflight-agent-turn-joinhandle.md",
-    "title": "Track And Cancel Inflight Agent Turn Joinhandle",
-    "status": "todo"
-  },
-  {
-    "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
-    "title": "Typed Chatmessage Builder And Shrink Sanitize",
-    "status": "todo"
-  },
-  {
-    "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
-    "title": "Unify Bash Execution Into Single Shell Module With Command Group",
-    "status": "todo"
-  },
-  {
-    "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
-    "title": "Unify Edit File And Hashline Edit On Patch Based Edits",
-    "status": "todo"
-  },
-  {
-    "file": "unify-form-submit-paths-through-command-registry.md",
-    "title": "Unify Form Submit Paths Through Command Registry",
-    "status": "todo"
-  },
-  {
-    "file": "unify-headless-and-tui-streaming-response-parser.md",
-    "title": "Unify Headless And Tui Streaming Response Parser",
-    "status": "todo"
-  },
-  {
-    "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
-    "title": "Use Mcp Tool Annotations Instead Of Custom Permission Constants",
-    "status": "todo"
-  },
-  {
-    "file": "use-tokio-main-in-cli-instead-of-custom-block-on.md",
-    "title": "Use Tokio Main In Cli Instead Of Custom Block On",
-    "status": "todo"
-  },
-  {
-    "file": "use-toml-edit-and-file-locks-for-config.md",
-    "title": "Use Toml Edit And File Locks For Config",
-    "status": "todo"
-  },
-  {
-    "file": "wire-modelclient-turnsession-into-provider-factory-or-delete.md",
-    "title": "Wire Modelclient Turnsession Into Provider Factory Or Delete",
-    "status": "todo"
-  },
-  {
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie Vs Grok Build Findings Report",
     "status": "todo"
-  },
-  {
-    "file": "live-tui-smoke-test-real-minimax.md",
-    "title": "Live Tui Smoke Test Real Minimax",
-    "status": "partial"
-  },
-  {
-    "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
-    "title": "Use Color Eyre And Human Panic For Cli Errors",
-    "status": "partial"
-  },
-  {
-    "file": "compare-diff-edit-output-and-fix-gaps.md",
-    "title": "Compare Diff Edit Output And Fix Gaps",
-    "status": "blocked"
-  },
-  {
-    "file": "compare-file-context-picker-and-fix-gaps.md",
-    "title": "Compare File Context Picker And Fix Gaps",
-    "status": "blocked"
-  },
-  {
-    "file": "compare-headless-one-shot-scenarios-and-fix-gaps.md",
-    "title": "Compare Headless One Shot Scenarios And Fix Gaps",
-    "status": "blocked"
-  },
-  {
-    "file": "compare-interactive-tui-launch-scenarios-and-fix-gaps.md",
-    "title": "Compare Interactive Tui Launch Scenarios And Fix Gaps",
-    "status": "blocked"
-  },
-  {
-    "file": "compare-multi-turn-conversation-and-fix-gaps.md",
-    "title": "Compare Multi Turn Conversation And Fix Gaps",
-    "status": "blocked"
   }
 ]

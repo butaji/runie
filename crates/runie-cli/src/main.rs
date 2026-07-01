@@ -83,7 +83,8 @@ enum McpCommand {
     },
 }
 
-fn main() {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() {
     // Install human-panic hook for crash reports.
     human_panic::setup_panic!();
 
@@ -96,11 +97,11 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Command::Print { prompt } => run_print(&prompt),
-        Command::Inspect { json } => run_inspect(json),
-        Command::Json => block_on(run_json()),
-        Command::Server { stdio, yolo } => block_on(run_server(stdio, yolo)),
-        Command::Mcp { command } => block_on(run_mcp(command)),
+        Command::Print { prompt } => run_print(&prompt).await,
+        Command::Inspect { json } => run_inspect(json).await,
+        Command::Json => run_json().await,
+        Command::Server { stdio, yolo } => run_server(stdio, yolo).await,
+        Command::Mcp { command } => run_mcp(command).await,
     };
 
     if let Err(e) = result {
@@ -111,20 +112,12 @@ fn main() {
     }
 }
 
-fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(fut)
+async fn run_inspect(json: bool) -> Result<()> {
+    inspect::run(json).await
 }
 
-fn run_inspect(json: bool) -> Result<()> {
-    inspect::run(json)
-}
-
-fn run_print(prompt: &str) -> Result<()> {
-    print::run(prompt)
+async fn run_print(prompt: &str) -> Result<()> {
+    print::run(prompt).await
 }
 
 async fn run_json() -> Result<()> {
