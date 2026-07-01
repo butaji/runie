@@ -43,7 +43,6 @@ pulldown-cmark-frontmatter = "0.4"
 git2 = "0.20"
 unicode-width = "0.2"
 textwrap = { version = "0.16", features = ["unicode-linebreak"] }
-similar = "3"
 diffy = "0.5"
 backon = "1.6"
 rmcp = { version = "1.8", features = ["schemars", "server"] }
@@ -84,6 +83,8 @@ fs2 = "0.4"
 ansi_colours = "1.2"
 arboard = { version = "3", default-features = false }
 tui-textarea = "0.7"
+similar = "3"
+tiktoken = "3.5"
 crokey = "1.4"
 opaline = "0.4"
 syntect = "5"
