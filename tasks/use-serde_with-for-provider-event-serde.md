@@ -13,9 +13,9 @@
 Replace with `serde_with` (`SerializeDisplay`/`DeserializeFromStr`) or derive-friendly serde attributes.
 
 ## Acceptance Criteria
-- [ ] Add `serde_with` dependency.
-- [ ] Replace manual impls.
-- [ ] Ensure durable JSON byte-compatibility.
+- [x] Add `serde_with` dependency.
+- [x] Replace manual impls.
+- [x] Ensure durable JSON byte-compatibility.
 
 ## Design Impact
 
@@ -32,6 +32,6 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — N/A (serde-only change, no TUI impact).

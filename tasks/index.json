@@ -1647,7 +1647,7 @@
   {
     "file": "use-serde_with-for-provider-event-serde.md",
     "title": "Use serde_with for provider event serde",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-shell-words-for-slash-command-parsing.md",

@@ -71,6 +71,7 @@ path-absolutize.workspace = true
 tokio-util.workspace = true
 metrics.workspace = true
 tiktoken.workspace = true
+serde_with.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true
