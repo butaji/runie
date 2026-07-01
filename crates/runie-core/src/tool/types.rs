@@ -17,7 +17,7 @@ pub struct ParsedToolCall {
 
 /// A tool-call parse error: the raw line and a human-readable reason.
 #[derive(Debug, Clone, PartialEq, Error)]
-#[error("tool parse error: {reason}")]
+#[error("tool parse error: {reason}: {raw}")]
 pub struct ToolParseError {
     pub raw: String,
     pub reason: String,

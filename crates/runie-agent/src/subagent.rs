@@ -39,16 +39,11 @@ pub struct ParentContext {
     system_prompt: String,
 }
 
+/// Error from a subagent turn.
 #[derive(Debug, Error)]
 pub enum SubagentError {
     #[error("agent turn failed: {0}")]
-    Source(#[source] anyhow::Error),
-}
-
-impl From<anyhow::Error> for SubagentError {
-    fn from(e: anyhow::Error) -> Self {
-        SubagentError::Source(e)
-    }
+    Source(#[from] anyhow::Error),
 }
 
 /// Run a subagent turn asynchronously. Returns the final assistant text.

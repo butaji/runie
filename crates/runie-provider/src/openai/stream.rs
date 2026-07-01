@@ -251,7 +251,7 @@ fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::Mod
     if code.contains("content_filter") || code.contains("refusal") {
         return ModelError::Refusal(msg.to_string());
     }
-    ModelError::Other(msg.to_string())
+    ModelError::Other(anyhow::anyhow!("{msg}"))
 }
 
 #[cfg(test)]

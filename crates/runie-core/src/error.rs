@@ -58,30 +58,42 @@ impl From<&str> for RunieError {
 ///
 /// Used for categorizing errors without requiring a full error value.
 /// This is useful for error handling in UI and logging contexts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Derives `thiserror::Error` to produce static string displays and
+/// preserve `#[source]` chains from wrapped error types.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum RunieErrorKind {
     /// Provider configuration or API key error.
+    #[error("provider")]
     Provider,
     /// Model returned an error (rate limit, context length, refusal).
+    #[error("model")]
     Model,
     /// Session not found or cannot be loaded.
+    #[error("session")]
     Session,
     /// Configuration file error.
+    #[error("config")]
     Config,
     /// Permission denied or approval required.
+    #[error("permission")]
     Permission,
     /// Message sanitization removed content.
+    #[error("sanitize")]
     Sanitize,
     /// Tool call parsing failed.
+    #[error("tool_parse")]
     ToolParse,
     /// General IO error.
+    #[error("io")]
     Io,
     /// Unknown error.
+    #[error("unknown")]
     Unknown,
 }
 
 impl RunieErrorKind {
     /// Get the human-readable name for this error kind.
+    /// Kept for backward compatibility; `Display` via `thiserror` produces the same strings.
     pub fn as_str(&self) -> &'static str {
         match self {
             RunieErrorKind::Provider => "provider",
@@ -112,6 +124,17 @@ mod tests {
         assert_eq!(RunieErrorKind::ToolParse.as_str(), "tool_parse");
         assert_eq!(RunieErrorKind::Io.as_str(), "io");
         assert_eq!(RunieErrorKind::Unknown.as_str(), "unknown");
+    }
+
+    #[test]
+    fn error_kind_display_via_thiserror() {
+        // thiserror::Error derive produces Display from #[error("...")] attributes
+        assert_eq!(RunieErrorKind::Provider.to_string(), "provider");
+        assert_eq!(RunieErrorKind::Model.to_string(), "model");
+        assert_eq!(RunieErrorKind::Session.to_string(), "session");
+        assert_eq!(RunieErrorKind::ToolParse.to_string(), "tool_parse");
+        assert_eq!(RunieErrorKind::Io.to_string(), "io");
+        assert_eq!(RunieErrorKind::Unknown.to_string(), "unknown");
     }
 
     #[test]

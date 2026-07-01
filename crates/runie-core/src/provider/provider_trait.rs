@@ -38,19 +38,10 @@ pub enum ProviderError {
 
 /// Helper error for displaying missing API key errors.
 #[derive(Debug, Error)]
+#[error("Missing API key for {provider}. Set {env_var} or add [model_providers.{provider}] api_key to ~/.runie/config.toml")]
 pub struct MissingApiKeyError {
     pub env_var: String,
     pub provider: String,
-}
-
-impl std::fmt::Display for MissingApiKeyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Missing API key for {}. Set {} or add [model_providers.{}] api_key to ~/.runie/config.toml",
-            self.provider, self.env_var, self.provider
-        )
-    }
 }
 
 impl From<String> for MissingApiKeyError {

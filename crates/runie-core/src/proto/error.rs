@@ -1,10 +1,14 @@
 //! Protocol errors.
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
 
 /// Typed protocol error.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+///
+/// Note: `thiserror` is not used for `Display`/`Error` here because we need
+/// manual implementations that don't conflict with the serde derive.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Error {
     pub code: i32,
     pub message: String,
