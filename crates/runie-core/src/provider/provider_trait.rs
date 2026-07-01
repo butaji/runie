@@ -1,6 +1,7 @@
 //! Provider trait and types
 
 use crate::message::ChatMessage;
+use derive_builder::Builder;
 use crate::model_catalog::{ModelCapabilities, ModelInfo};
 use crate::provider_event::ProviderEvent;
 use anyhow::Result;
@@ -189,9 +190,11 @@ impl From<anyhow::Error> for ProviderError {
 
 /// Metadata about a provider's capabilities and configuration.
 /// Used by consumers to discover model info, streaming support, and retry settings.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Builder)]
+#[builder(setter(strip_option))]
 pub struct ProviderMetadata {
     /// Model-specific information (name, provider, costs, context window).
+    #[builder(default, setter(strip_option))]
     pub model_info: Option<ModelInfo>,
     /// Computed capabilities derived from model_info.
     pub capabilities: ModelCapabilities,
@@ -240,7 +243,7 @@ impl ProviderMetadata {
 }
 
 /// Configuration for retry behavior on transient provider errors.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Builder)]
 pub struct RetryConfig {
     /// Maximum number of retry attempts.
     pub max_attempts: u32,
@@ -329,6 +332,7 @@ pub trait Provider: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model_catalog::ModelCapabilitiesBuilder;
 
     // ─── Layer 1: typed error variant displays ─────────────────────────────────
 
@@ -589,5 +593,58 @@ mod tests {
         let config3 = RetryConfig::new(6, Duration::from_secs(1), Duration::from_secs(30), 2.0);
         assert_eq!(config1, config2);
         assert_ne!(config1, config3);
+    }
+
+    #[test]
+    fn retry_config_derive_builder() {
+        // Exercise the derive_builder generated API for RetryConfig.
+        // derive_builder generates StructNameBuilder (not StructName::builder()).
+        let config = RetryConfigBuilder::default()
+            .max_attempts(10)
+            .initial_delay(Duration::from_millis(500))
+            .max_delay(Duration::from_secs(60))
+            .multiplier(2.0)
+            .build()
+            .unwrap();
+        assert_eq!(config.max_attempts, 10);
+        assert_eq!(config.initial_delay, Duration::from_millis(500));
+        assert_eq!(config.max_delay, Duration::from_secs(60));
+        assert_eq!(config.multiplier, 2.0);
+    }
+
+    #[test]
+    fn provider_metadata_derive_builder() {
+        // Exercise the derive_builder generated API for ProviderMetadata.
+        // ModelCapabilities requires all its fields when built via derive_builder.
+        // ProviderMetadata fields model_info and retry_config are provided explicitly.
+        let caps = ModelCapabilitiesBuilder::default()
+            .streaming(true)
+            .supports_vision(true)
+            .supports_tools(true)
+            .supports_reasoning(false)
+            .max_context_tokens(128_000)
+            .max_output_tokens(8_192)
+            .cache_control(false)
+            .build()
+            .unwrap();
+        let retry = RetryConfigBuilder::default()
+            .max_attempts(5)
+            .initial_delay(Duration::from_millis(100))
+            .max_delay(Duration::from_secs(30))
+            .multiplier(2.0)
+            .build()
+            .unwrap();
+        let meta = ProviderMetadataBuilder::default()
+            .capabilities(caps)
+            .retry_config(retry)
+            .streaming(true)
+            .supports_tools(true)
+            .build()
+            .unwrap();
+        assert!(meta.streaming);
+        assert!(meta.supports_tools);
+        assert!(meta.capabilities.streaming);
+        assert!(meta.capabilities.supports_vision);
+        assert!(meta.capabilities.supports_tools);
     }
 }

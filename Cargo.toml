@@ -95,6 +95,7 @@ humantime = "2.3"
 include_dir = "0.7"
 tokio-util = "0.7"
 
+derive_builder = "0.20"
 async-trait = "0.1"
 ractor = "0.9"
 quick-xml = "0.37"

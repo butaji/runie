@@ -79,6 +79,7 @@ crossterm.workspace = true
 nix.workspace = true
 uuid = { version = "1", features = ["v4"] }
 async-trait.workspace = true
+derive_builder.workspace = true
 ractor.workspace = true
 parking_lot.workspace = true
 

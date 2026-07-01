@@ -1,12 +1,13 @@
 //! Model catalog for the model selector dialog.
 
 use crate::model::ModelSelectorItem;
+use derive_builder::Builder;
 
 pub mod configured;
 pub use configured::configured_models_catalog;
 
 /// Model capability flags — drives runtime adaptation and UI filtering.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Builder)]
 pub struct ModelCapabilities {
     pub streaming: bool,
     pub supports_vision: bool,
@@ -301,6 +302,7 @@ fn format_cost(prompt: Option<f64>, completion: Option<f64>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::ModelCapabilitiesBuilder;
 
     #[test]
     fn model_catalog_is_not_empty() {
@@ -403,6 +405,29 @@ mod tests {
         assert!(caps.supports_reasoning);
         assert_eq!(caps.max_context_tokens, 200_000);
         assert_eq!(caps.max_output_tokens, 40_000);
+        assert!(caps.cache_control);
+    }
+
+    #[test]
+    fn model_capabilities_derive_builder() {
+        // Exercise the derive_builder generated API for ModelCapabilities.
+        // derive_builder generates StructNameBuilder::default()...build(), not StructName::builder().
+        let caps = ModelCapabilitiesBuilder::default()
+            .streaming(true)
+            .supports_vision(true)
+            .supports_tools(true)
+            .supports_reasoning(true)
+            .max_context_tokens(128_000)
+            .max_output_tokens(8_192)
+            .cache_control(true)
+            .build()
+            .unwrap();
+        assert!(caps.streaming);
+        assert!(caps.supports_vision);
+        assert!(caps.supports_tools);
+        assert!(caps.supports_reasoning);
+        assert_eq!(caps.max_context_tokens, 128_000);
+        assert_eq!(caps.max_output_tokens, 8_192);
         assert!(caps.cache_control);
     }
 
