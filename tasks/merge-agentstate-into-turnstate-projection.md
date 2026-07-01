@@ -6,11 +6,11 @@
 
 ## Context
 
-`crates/runie-core/src/model/state/agent.rs:7-143` and `crates/runie-core/src/actors/turn/state.rs:15-114` define near-identical fields (`SpeedWindow`, queues, token counts, streaming flags). `RactorTurnActor` owns the authoritative `TurnState`, but the UI reads from `AppState::AgentState` while the actor writes to `TurnState`.
+`crates/runie-core/src/model/state/agent.rs:7-143` and `crates/runie-core/src/actors/turn/state.rs:15-114` define near-identical fields (`SpeedWindow`, queues, token counts, streaming flags). `RactorTurnActor` owns the authoritative `TurnState`, but the UI reads from `AppState::AgentState` while the actor writes to `TurnState`. The duplication survived earlier partial cleanups: `crates/runie-core/src/model/state/turn_projections.rs:199-228`, `:266-281`, `:304-325`, and `crates/runie-core/src/update/system.rs:181-212` still mutate `AgentState` directly, and `AppState::queue_steering_and_update_history` mutates `agent_state_mut().message_queue` when actor handles are absent.
 
 ## Goal
 
-Make `AgentState` a thin read-only projection of `TurnState` (or delete it and have `AppState` hold `TurnState` directly). The `RactorTurnHandle` returns snapshots.
+Make `AgentState` a thin read-only projection of `TurnState` (or delete it and have `AppState` hold `TurnState` directly). The `RactorTurnHandle` returns snapshots. Route all queue/state mutations through `TurnActor`.
 
 ## Acceptance Criteria
 

@@ -60,6 +60,11 @@
     "status": "todo"
   },
   {
+    "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
+    "title": "Add message origin metadata to fix follow-up continuity",
+    "status": "todo"
+  },
+  {
     "file": "add-openai-provider-fixtures.md",
     "title": "Add OpenAI provider fixtures",
     "status": "done"
@@ -77,6 +82,11 @@
   {
     "file": "add-sample-config-env-and-completions.md",
     "title": "Add sample config, env template, and completions",
+    "status": "todo"
+  },
+  {
+    "file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md",
+    "title": "Add testable TUI bootstrap with ProviderFactory and keystrokes",
     "status": "todo"
   },
   {
@@ -115,6 +125,11 @@
     "status": "done"
   },
   {
+    "file": "await-provider-network-calls-in-ractor-handler.md",
+    "title": "Await provider network calls in ractor handler",
+    "status": "todo"
+  },
+  {
     "file": "buffer-tcp-lines-in-leader-server.md",
     "title": "Buffer TCP lines in leader server",
     "status": "done"
@@ -148,6 +163,11 @@
     "file": "centralize-test-fixtures-and-mocks.md",
     "title": "Centralize test fixtures and mocks in `runie-testing`",
     "status": "done"
+  },
+  {
+    "file": "centralize-unix-now-helper.md",
+    "title": "Centralize unix_now helper",
+    "status": "todo"
   },
   {
     "file": "cleanup-runie-testing-dead-modules.md",
@@ -300,11 +320,6 @@
     "status": "done"
   },
   {
-    "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",
-    "title": "Deduplicate turn state between TurnActor and AppState",
-    "status": "todo"
-  },
-  {
     "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
     "title": "Delete broken DSL flow combinators and thread-local runtime",
     "status": "done"
@@ -318,6 +333,11 @@
     "file": "delete-dead-actor-modules-and-custom-trait.md",
     "title": "Delete dead actor modules and the custom `Actor` trait",
     "status": "done"
+  },
+  {
+    "file": "delete-dead-classify-reqwest-error-reexport.md",
+    "title": "Delete dead classify_reqwest_error re-export",
+    "status": "todo"
   },
   {
     "file": "delete-dead-declarative-command-registration.md",
@@ -377,7 +397,7 @@
   {
     "file": "derive-durable-and-headless-events-from-canonical-event.md",
     "title": "Derive durable and headless events from canonical Event",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -437,7 +457,7 @@
   {
     "file": "enrich-provider-trait-with-metadata-and-retry-config.md",
     "title": "Enrich provider trait with metadata and retry config",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "env-actor-owns-git-cwd.md",
@@ -462,7 +482,7 @@
   {
     "file": "externalize-default-prompts-tools-and-keybindings-to-resources.md",
     "title": "Externalize default prompts, tools, and keybindings to resources",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "externalize-default-theme-toml-to-resources.md",
@@ -485,8 +505,18 @@
     "status": "done"
   },
   {
+    "file": "finish-derive-builder-for-modelinfo-and-provider-configs.md",
+    "title": "Finish derive_builder for ModelInfo and provider configs",
+    "status": "todo"
+  },
+  {
     "file": "finish-replacing-custom-tui-widgets.md",
     "title": "Finish replacing custom TUI widgets",
+    "status": "todo"
+  },
+  {
+    "file": "finish-strum-migration-for-remaining-enums.md",
+    "title": "Finish strum migration for remaining enums",
     "status": "todo"
   },
   {
@@ -508,6 +538,11 @@
     "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
     "title": "Fix CLI headless native tool loops after permission denied",
     "status": "done"
+  },
+  {
+    "file": "fix-deliverqueued-race-in-uiactor.md",
+    "title": "Fix DeliverQueued race in UiActor",
+    "status": "todo"
   },
   {
     "file": "fix-dev-automation-recipes.md",
@@ -660,6 +695,11 @@
     "status": "todo"
   },
   {
+    "file": "graceful-leader-shutdown-with-joinset-timeout.md",
+    "title": "Graceful leader shutdown with JoinSet timeout",
+    "status": "todo"
+  },
+  {
     "file": "harden-actors-against-mutex-poisoning.md",
     "title": "Harden async actors against mutex poisoning and startup panics",
     "status": "done"
@@ -690,6 +730,11 @@
     "status": "done"
   },
   {
+    "file": "inject-provider-factory-into-headless-cli-and-runtime.md",
+    "title": "Inject provider factory into headless CLI and runtime",
+    "status": "todo"
+  },
+  {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
     "status": "done"
@@ -717,7 +762,12 @@
   {
     "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
     "title": "Make trust and auth file persistence atomic and restricted",
-    "status": "done"
+    "status": "todo"
+  },
+  {
+    "file": "make-tui-render-loop-async-with-watch-channel.md",
+    "title": "Make TUI render loop async with watch channel",
+    "status": "todo"
   },
   {
     "file": "merge-agentstate-into-turnstate-projection.md",
@@ -845,9 +895,19 @@
     "status": "done"
   },
   {
+    "file": "remove-authtoken-custom-serde-wrappers.md",
+    "title": "Remove AuthToken custom serde wrappers",
+    "status": "todo"
+  },
+  {
+    "file": "remove-blanket-clippy-allow-in-turn-projections.md",
+    "title": "Remove blanket clippy allow in turn projections",
+    "status": "todo"
+  },
+  {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -872,6 +932,11 @@
   {
     "file": "remove-duplicate-input-mutation-in-uiactor.md",
     "title": "Remove duplicate input mutation in UiActor",
+    "status": "todo"
+  },
+  {
+    "file": "remove-legacy-diff-fallback-parser.md",
+    "title": "Remove legacy diff fallback parser",
     "status": "todo"
   },
   {
@@ -905,6 +970,11 @@
     "status": "done"
   },
   {
+    "file": "remove-stale-dynprovider-references.md",
+    "title": "Remove stale DynProvider references",
+    "status": "todo"
+  },
+  {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
     "status": "done"
@@ -922,7 +992,7 @@
   {
     "file": "remove-unused-direct-deps-from-runie-tui.md",
     "title": "Remove unused direct deps from runie-tui",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "rename-telemetry-rs-to-tracing-init.md",
@@ -1010,9 +1080,19 @@
     "status": "done"
   },
   {
+    "file": "replace-emitfn-mutex-with-async-channel.md",
+    "title": "Replace EmitFn mutex with async channel",
+    "status": "todo"
+  },
+  {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
     "title": "Replace fff-search indexer with ignore/walkdir",
     "status": "done"
+  },
+  {
+    "file": "replace-file-ref-parser-with-winnow-or-regex.md",
+    "title": "Replace file ref parser with winnow or regex",
+    "status": "todo"
   },
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
@@ -1050,6 +1130,11 @@
     "status": "done"
   },
   {
+    "file": "replace-proto-error-manual-display-with-thiserror.md",
+    "title": "Replace proto error manual Display with thiserror",
+    "status": "todo"
+  },
+  {
     "file": "replace-register-handler-and-theme-macros-with-functions.md",
     "title": "Replace register_handler and theme macros with functions",
     "status": "done"
@@ -1060,9 +1145,14 @@
     "status": "done"
   },
   {
+    "file": "replace-remaining-std-sync-locks-with-parking_lot.md",
+    "title": "Replace remaining std sync locks with parking_lot",
+    "status": "todo"
+  },
+  {
     "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
     "title": "Replace RpcReply with ractor::RpcReplyPort",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-session-tree-with-arena-crate.md",
@@ -1123,6 +1213,11 @@
     "file": "resolve-runie-util-micro-crate-vs-core-re-exports.md",
     "title": "Resolve runie-util micro-crate vs core re-exports",
     "status": "done"
+  },
+  {
+    "file": "rewrite-appstate-structural-tests-to-not-mutate-agentstate.md",
+    "title": "Rewrite AppState structural tests to not mutate AgentState",
+    "status": "todo"
   },
   {
     "file": "route-agent-abort-through-actor-message-not-event-bus.md",
@@ -1195,6 +1290,11 @@
     "status": "done"
   },
   {
+    "file": "store-and-await-headlessruntime-actor-handles.md",
+    "title": "Store and await HeadlessRuntime actor handles",
+    "status": "todo"
+  },
+  {
     "file": "store-provider-api-keys-in-keyring-not-config.md",
     "title": "Store provider API keys in OS keyring, not plain `config.toml`",
     "status": "done"
@@ -1203,6 +1303,11 @@
     "file": "subscribe-tui-to-initial-facts-before-leader-start.md",
     "title": "Subscribe TUI to initial facts before leader start",
     "status": "done"
+  },
+  {
+    "file": "track-and-cancel-inflight-agent-turn-joinhandle.md",
+    "title": "Track and cancel in-flight agent turn JoinHandle",
+    "status": "todo"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -1450,6 +1555,11 @@
     "status": "done"
   },
   {
+    "file": "use-tokio-main-in-cli-instead-of-custom-block-on.md",
+    "title": "Use tokio::main in CLI instead of custom block_on",
+    "status": "todo"
+  },
+  {
     "file": "use-toml-edit-and-file-locks-for-config.md",
     "title": "Use toml_edit + fs2 file locks for config persistence",
     "status": "todo"
@@ -1463,6 +1573,11 @@
     "file": "use-which-crate-for-executable-lookup.md",
     "title": "Use which crate for executable lookup",
     "status": "done"
+  },
+  {
+    "file": "wire-modelclient-turnsession-into-provider-factory-or-delete.md",
+    "title": "Wire ModelClient/TurnSession into provider factory or delete",
+    "status": "todo"
   },
   {
     "file": "wire-or-delete-input-actor.md",
