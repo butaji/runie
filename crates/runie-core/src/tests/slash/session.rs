@@ -214,6 +214,9 @@ fn history_lists_recent_inputs() {
 #[test]
 fn resume_loads_most_recent_session() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    // Clean up RUNIE_MOCK to ensure is_mock_enabled() returns false during session replay
+    let prev_mock = std::env::var("RUNIE_MOCK").ok();
+    std::env::remove_var("RUNIE_MOCK");
 
     let store = tmp_store();
     unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
@@ -280,6 +283,11 @@ fn resume_loads_most_recent_session() {
         "older message not loaded"
     );
 
+    // Restore prior RUNIE_MOCK state
+    match prev_mock {
+        Some(v) => std::env::set_var("RUNIE_MOCK", v),
+        None => std::env::remove_var("RUNIE_MOCK"),
+    }
     unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 

@@ -6,7 +6,6 @@
 
 use anyhow::Result;
 use futures::StreamExt;
-use parking_lot::Mutex;
 use runie_core::event::Event;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
@@ -20,8 +19,9 @@ use std::sync::Arc;
 
 use crate::think_filter::ThinkFilter;
 
-/// Emit type: Arc<Mutex<dyn FnMut(Event) + Send + Sync>>
-pub type EmitFn = Arc<Mutex<dyn FnMut(Event) + Send + Sync>>;
+/// Emit type: arc-wrapped sync function.
+/// Replaces the previous Arc<Mutex<dyn FnMut(...)>> which locked per token.
+pub type EmitFn = Arc<dyn Fn(Event) + Send + Sync>;
 
 /// A fully streamed assistant response.
 #[derive(Debug, Clone)]
@@ -82,13 +82,10 @@ impl StreamState {
 
     fn on_text_delta(&mut self, delta: String) -> ControlFlow<Result<()>> {
         self.text.push_str(&delta);
-        emit_now(
-            &self.emit,
-            runie_core::Event::ResponseDelta {
-                id: self.command_id.clone(),
-                content: delta,
-            },
-        );
+        (self.emit)(runie_core::Event::ResponseDelta {
+            id: self.command_id.clone(),
+            content: delta,
+        });
         ControlFlow::Continue(())
     }
 
@@ -198,11 +195,6 @@ pub async fn stream_response(
     Ok(state.into_response())
 }
 
-fn emit_now(emit: &EmitFn, event: Event) {
-    let mut emit = emit.lock();
-    emit(event);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,7 +237,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -267,7 +259,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -291,7 +283,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -318,7 +310,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -341,7 +333,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -363,7 +355,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -383,7 +375,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -404,7 +396,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -425,7 +417,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -446,7 +438,7 @@ mod tests {
                 },
             ],
         };
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
             .await
             .unwrap();
@@ -473,7 +465,7 @@ mod tests {
                 Box::pin(futures::stream::iter([Err(anyhow::anyhow!("provider error"))]))
             }
         }
-        let emit: EmitFn = Arc::new(Mutex::new(|_| ()));
+        let emit: EmitFn = Arc::new(|_| ());
         let result = stream_response(&ErrorProvider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new()).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "provider error");

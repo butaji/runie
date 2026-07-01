@@ -21,7 +21,7 @@ use std::time::Instant;
 mod emit;
 mod tools;
 
-use emit::{emit_error_and_done, emit_now, emit_response_and_done};
+use emit::{emit_error_and_done, emit_response_and_done};
 use tools::execute_tools;
 
 /// Run an agent turn with optional skill hooks.
@@ -124,14 +124,13 @@ async fn emit_turn_end(
         }
     }
 
-    emit_now(
-        emit,
+    emit(
         runie_core::Event::TurnComplete {
             id: id.to_owned(),
             duration_secs: turn_start.elapsed().as_secs_f64(),
         },
     );
-    emit_now(emit, runie_core::Event::Done { id: id.to_owned() });
+    emit(runie_core::Event::Done { id: id.to_owned() });
 }
 
 // allow: iteration control params — orthogonal and intentionally flat for turn loop clarity
@@ -173,32 +172,23 @@ async fn run_agent_iteration(
     tool_call_count: &mut usize,
     gate: &PermissionGate,
 ) -> Result<bool> {
-    emit_now(
-        &emit,
-        runie_core::Event::Thinking {
-            id: command.id.clone(),
-        },
-    );
+    emit(runie_core::Event::Thinking {
+        id: command.id.clone(),
+    });
     let tools = build_tool_registry(command.read_only);
     let cancel_token = command.cancellation_token.clone();
     let response = match stream_response(provider, &command.id, messages, tools, emit.clone(), cancel_token).await {
         Ok(r) => r,
         Err(e) => {
-            emit_now(
-                &emit,
-                runie_core::Event::ThoughtDone {
-                    id: command.id.clone(),
-                },
-            );
+            emit(runie_core::Event::ThoughtDone {
+                id: command.id.clone(),
+            });
             return Err(e);
         }
     };
-    emit_now(
-        &emit,
-        runie_core::Event::ThoughtDone {
-            id: command.id.clone(),
-        },
-    );
+    emit(runie_core::Event::ThoughtDone {
+        id: command.id.clone(),
+    });
     if response.tool_calls.is_empty() {
         return Ok(false);
     }

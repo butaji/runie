@@ -4,7 +4,7 @@ use crate::stream_response::EmitFn;
 use crate::tool_runner::{
     execute_tool_call, fire_skill_after_hook, run_skill_before_hook, tool_result_message,
 };
-use crate::turn::emit::emit_now;
+
 use runie_core::harness_skills::SkillRegistry;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionGate;
@@ -28,14 +28,11 @@ pub async fn execute_tools(
         let output =
             execute_single_tool(tool_id, tool_call, emit.clone(), skills, &ctx, gate).await;
 
-        emit_now(
-            &emit,
-            runie_core::Event::ToolEnd {
-                id: tool_id.to_owned(),
-                duration_secs: output.duration.as_secs_f64(),
-                output: output.content.clone(),
-            },
-        );
+        emit(runie_core::Event::ToolEnd {
+            id: tool_id.to_owned(),
+            duration_secs: output.duration.as_secs_f64(),
+            output: output.content.clone(),
+        });
         messages.push(tool_result_message(tool_call, &output));
     }
 }
@@ -60,12 +57,9 @@ pub async fn execute_single_tool(
 }
 
 fn emit_tool_start(tool_id: &str, tool_call: &ParsedToolCall, emit: &EmitFn) {
-    emit_now(
-        emit,
-        runie_core::Event::ToolStart {
-            id: tool_id.to_owned(),
-            name: tool_call.name.clone(),
-            input: tool_call.args.clone(),
-        },
-    );
+    emit(runie_core::Event::ToolStart {
+        id: tool_id.to_owned(),
+        name: tool_call.name.clone(),
+        input: tool_call.args.clone(),
+    });
 }

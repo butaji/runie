@@ -4,7 +4,6 @@
 //! on successive calls.  Used by agent-turn replay tests to simulate streaming
 //! without a live network connection.
 
-use parking_lot::Mutex;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -62,12 +61,12 @@ pub fn dyn_replay_provider_with(fixtures: &[String], key: &str, model: &str) -> 
 
 /// Capture emitted `Event`s into a `Vec` using the same `EmitFn` type as
 /// `runie_agent::stream_response::EmitFn`.
-pub fn capture_events() -> (Arc<Mutex<Vec<Event>>>, runie_agent::stream_response::EmitFn) {
-    let events: Arc<Mutex<Vec<Event>>> = Arc::new(Mutex::new(Vec::new()));
+pub fn capture_events() -> (Arc<parking_lot::Mutex<Vec<Event>>>, runie_agent::stream_response::EmitFn) {
+    let events: Arc<parking_lot::Mutex<Vec<Event>>> = Arc::new(parking_lot::Mutex::new(Vec::new()));
     let captured = events.clone();
-    let emit: runie_agent::stream_response::EmitFn = Arc::new(Mutex::new(move |evt: Event| {
+    let emit: runie_agent::stream_response::EmitFn = Arc::new(move |evt: Event| {
         captured.lock().push(evt);
-    }));
+    });
     (events, emit)
 }
 

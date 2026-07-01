@@ -20,7 +20,7 @@
 //! explicit parameters.
 
 use crate::{run_agent_turn, stream_response::EmitFn, AgentCommand, PermissionGate};
-use parking_lot::Mutex;
+use parking_lot::Mutex as PgMutex;
 use runie_core::model::ThinkingLevel;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
 use runie_core::provider::Provider;
@@ -184,50 +184,77 @@ async fn run_subagent_turn_with_gate(
     max_iterations: usize,
     gate: PermissionGate,
 ) -> Result<String, SubagentError> {
-    // Create oneshot channel for the single final result.
-    let (tx, rx) = tokio::sync::oneshot::channel::<Result<String, SubagentError>>();
+    // Two channels: event_tx for forwarding events, result_rx for the final text.
+    let (event_tx, mut event_rx) = tokio::sync::mpsc::unbounded_channel::<runie_core::Event>();
+    let (result_tx, rx) = tokio::sync::oneshot::channel::<Result<String, SubagentError>>();
 
-    // Wrap the sender in Arc<Mutex> so the sync emit callback can use it.
-    let tx: Arc<Mutex<Option<tokio::sync::oneshot::Sender<_>>>> = Arc::new(Mutex::new(Some(tx)));
+    // Wrap the result sender so the spawn task and error handler can both use it.
+    let result_tx = Arc::new(PgMutex::new(Some(result_tx)));
 
-    // Collect response text and errors during the turn.
-    let responses = Arc::new(Mutex::new(Vec::<String>::new()));
-
-    let emit: EmitFn = Arc::new(Mutex::new({
-        let tx = tx.clone();
-        let responses = responses.clone();
-        move |evt: runie_core::Event| {
-            match evt {
-                runie_core::Event::ResponseDelta { content, .. }
-                | runie_core::Event::Response { content, .. } => {
-                    responses.lock().push(content);
+    // Spawn a task to accumulate responses and close the result channel.
+    let result_tx_clone = result_tx.clone();
+    tokio::spawn(async move {
+        let mut responses = Vec::<String>::new();
+        loop {
+            match event_rx.recv().await {
+                Some(runie_core::Event::ResponseDelta { content, .. })
+                | Some(runie_core::Event::Response { content, .. }) => {
+                    responses.push(content);
                 }
-                runie_core::Event::Error { message, .. } => {
-                    let mut guard = tx.lock();
+                Some(runie_core::Event::Error { message, .. }) => {
+                    let mut guard = result_tx_clone.lock();
                     if let Some(tx) = guard.take() {
                         let _ = tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
                     }
+                    return;
                 }
-                runie_core::Event::Done { .. } => {
-                    // Build the final result and send it through the channel.
-                    let text = responses.lock().join("");
-                    let mut guard = tx.lock();
+                Some(runie_core::Event::Done { .. }) => {
+                    let text = responses.join("");
+                    let mut guard = result_tx_clone.lock();
                     if let Some(tx) = guard.take() {
                         let _ = tx.send(Ok(text));
                     }
+                    return;
                 }
-                _ => {}
+                // Ignore intermediate/thinking events, continue collecting.
+                Some(runie_core::Event::Thinking { .. })
+                | Some(runie_core::Event::ThoughtDone { .. })
+                | Some(runie_core::Event::ToolStart { .. })
+                | Some(runie_core::Event::ToolInputDelta { .. })
+                | Some(runie_core::Event::ToolEnd { .. })
+                | Some(runie_core::Event::ThinkingDelta { .. })
+                | Some(runie_core::Event::TurnComplete { .. })
+                | Some(runie_core::Event::TextStart { .. })
+                | Some(runie_core::Event::TextEnd { .. })
+                | Some(runie_core::Event::ThinkingStart { .. })
+                | Some(runie_core::Event::ThinkingEnd { .. })
+                | Some(runie_core::Event::ToolConstraintError { .. }) => {
+                    continue;
+                }
+                // Channel closed without Done.
+                None => {
+                    return;
+                }
+                // Unhandled events: log and continue.
+                Some(_) => {
+                    continue;
+                }
             }
         }
-    }));
+    });
 
-    // Run the turn once with the collecting callback.
+    // EmitFn forwards all events to the event channel.
+    let emit: EmitFn = Arc::new(move |evt: runie_core::Event| {
+        let _ = event_tx.send(evt);
+    });
+
+    // Run the turn once with the forwarding callback.
     let run_result = run_agent_turn(provider, cmd, emit, max_iterations, gate).await;
 
-    // If run_agent_turn returned an error and we haven't sent a result yet,
+    // If run_agent_turn returned an error and the spawn task hasn't sent a result yet,
     // send the error through the channel.
     if let Err(e) = run_result {
-        let mut guard = tx.lock();
+        let mut guard = result_tx.lock();
         if let Some(tx) = guard.take() {
             let _ = tx.send(Err(SubagentError::Source(e)));
         }

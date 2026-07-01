@@ -117,6 +117,14 @@ model = "gpt-4o"
 
 #[test]
 fn apply_config_ignores_stale_default_model_for_provider() {
+    // Clean up RUNIE_MOCK to ensure is_mock_enabled() returns false
+    // Use ENV_LOCK to prevent parallel test interference
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let prev_mock = std::env::var("RUNIE_MOCK").ok();
+    let prev_openai_key = std::env::var("OPENAI_API_KEY").ok();
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("OPENAI_API_KEY");
+
     let _path = clean_config();
     let config = r#"provider = "openai"
 
@@ -146,4 +154,14 @@ models = ["gpt-4o"]
         state.config.current_model, "gpt-4o",
         "stale [models].default from another provider should be ignored"
     );
+
+    // Restore prior env state
+    match prev_mock {
+        Some(v) => std::env::set_var("RUNIE_MOCK", v),
+        None => std::env::remove_var("RUNIE_MOCK"),
+    }
+    match prev_openai_key {
+        Some(v) => std::env::set_var("OPENAI_API_KEY", v),
+        None => std::env::remove_var("OPENAI_API_KEY"),
+    }
 }
