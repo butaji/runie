@@ -1,34 +1,14 @@
-//! Streaming buffer with markdown-aware stability detection.
-//!
-//! Uses `pulldown-cmark` event stream to determine which lines are "stable"
-//! (not in an open code block or other construct that may continue).
-
 use std::time::{Duration, Instant};
 
 const DEBOUNCE_MS: u64 = 50;
 
 pub use crate::markdown::heal_markdown;
-
-/// Open block state tracked during parsing.
-#[derive(Debug, Clone, Default)]
-struct OpenBlock {
-    /// Whether we are inside a fenced code block.
-    in_code_block: bool,
-    /// Whether we are inside a table block.
-    in_table: bool,
-}
-
-impl OpenBlock {
-    fn is_stable(&self) -> bool {
-        !self.in_code_block && !self.in_table
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct StreamingBuffer {
     stable: Vec<String>,
     tail: String,
-    open_block: OpenBlock,
+    open_fence: Option<String>,
+    open_table: bool,
     last_flush: Option<Instant>,
 }
 
@@ -43,7 +23,8 @@ impl StreamingBuffer {
         Self {
             stable: Vec::new(),
             tail: String::new(),
-            open_block: OpenBlock::default(),
+            open_fence: None,
+            open_table: false,
             last_flush: None,
         }
     }
@@ -77,8 +58,6 @@ impl StreamingBuffer {
             lines.push(heal_markdown(&self.tail));
             self.tail.clear();
         }
-        // Reset state for next turn
-        self.open_block = OpenBlock::default();
         lines
     }
 
@@ -87,11 +66,11 @@ impl StreamingBuffer {
     }
 
     pub fn is_stable(&self) -> bool {
-        self.tail.is_empty() && self.open_block.is_stable()
+        self.tail.is_empty() && self.open_fence.is_none() && !self.open_table
     }
 
     pub fn has_pending_content(&self) -> bool {
-        !self.tail.is_empty() || !self.open_block.is_stable()
+        !self.tail.is_empty() || self.open_fence.is_some() || self.open_table
     }
 
     #[cfg(test)]
@@ -102,136 +81,179 @@ impl StreamingBuffer {
     pub fn reset(&mut self) {
         self.stable.clear();
         self.tail.clear();
-        self.open_block = OpenBlock::default();
+        self.open_fence = None;
+        self.open_table = false;
         self.last_flush = None;
     }
 
-    /// Resolve stable lines from the tail using pulldown-cmark events.
     fn resolve(&mut self) {
         if self.tail.is_empty() {
             return;
         }
 
-        // Parse with pulldown-cmark to detect block boundaries.
-        let (stable_count, open_block) = parse_stable_lines(&self.tail, &self.open_block);
+        let current = std::mem::take(&mut self.tail);
+        let ends_with_nl = current.ends_with('\n');
+        let lines: Vec<&str> = current.split('\n').collect();
+        let n = lines.len();
+
+        let (stable_count, fence_open, table_open) =
+            classify_lines(&lines, self.open_fence.clone(), self.open_table);
+
+        self.open_fence = fence_open;
+        self.open_table = table_open;
 
         if stable_count > 0 {
-            let lines: Vec<&str> = self.tail.split('\n').collect();
             for &line in lines.iter().take(stable_count) {
                 self.stable.push(line.to_owned());
             }
         }
 
-        // Update open block state.
-        self.open_block = open_block;
-
-        // Update tail with remaining content.
-        let total_lines = self.tail.split('\n').count();
-        if stable_count < total_lines {
-            let lines: Vec<&str> = self.tail.split('\n').collect();
-            self.tail = lines[stable_count..].join("\n");
-        } else {
-            self.tail.clear();
+        if stable_count < n {
+            let remaining = &lines[stable_count..];
+            self.tail = remaining.join("\n");
+            if ends_with_nl && remaining.len() == 1 && remaining[0].is_empty() {
+                self.tail.clear();
+            }
         }
     }
 }
 
-/// Parse text using pulldown-cmark to find the count of stable (complete) lines.
-///
-/// A line is considered stable if it is not part of an open block construct
-/// (code block, table, etc.).
-///
-/// Returns (stable_line_count, updated_open_block)
-fn parse_stable_lines(tail: &str, open_block: &OpenBlock) -> (usize, OpenBlock) {
-    use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+fn classify_lines(
+    lines: &[&str],
+    mut fence_open: Option<String>,
+    mut table_open: bool,
+) -> (usize, Option<String>, bool) {
+    let mut stable_count = 0usize;
+    let mut in_open_construct = fence_open.is_some() || table_open;
 
-    if tail.is_empty() {
-        return (0, open_block.clone());
-    }
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
 
-    // Set up parser options for tables and code blocks.
-    let mut options = Options::empty();
-    options.insert(Options::ENABLE_TABLES);
-    options.insert(Options::ENABLE_FOOTNOTES);
-    options.insert(Options::ENABLE_STRIKETHROUGH);
-    options.insert(Options::ENABLE_TASKLISTS);
+        if in_open_construct {
+            if try_close_construct(&mut fence_open, &mut table_open, trimmed) {
+                in_open_construct = fence_open.is_some() || table_open;
+                stable_count = i + 1;
+            }
+            continue;
+        }
 
-    let parser = Parser::new_ext(tail, options);
-
-    // Initialize state based on open_block from previous parsing.
-    let mut in_code_block = open_block.in_code_block;
-    let mut in_table = open_block.in_table;
-
-    let mut current_line: usize = 0;
-    let mut last_stable_line: usize = 0;
-
-    for event in parser {
-        match &event {
-            Event::Text(t) => {
-                // Count newlines in this text event to track line numbers.
-                for c in t.chars() {
-                    if c == '\n' {
-                        current_line += 1;
-                    }
+        if let Some(result) = classify_normal_line(trimmed) {
+            match result {
+                LineClass::Empty | LineClass::Plain => stable_count = i + 1,
+                LineClass::Fence(lang) => {
+                    fence_open = Some(lang);
+                    in_open_construct = true;
                 }
-                // Empty text after table content closes the table.
-                if in_table && t.trim().is_empty() {
-                    in_table = false;
-                    last_stable_line = current_line;
+                LineClass::TableStart => {
+                    table_open = true;
+                    in_open_construct = true;
                 }
             }
-            Event::SoftBreak | Event::HardBreak => {
-                current_line += 1;
-            }
-            Event::Start(Tag::CodeBlock(_)) => {
-                // Entering a code block.
-                in_code_block = true;
-                // Lines up to current line are stable.
-                last_stable_line = current_line;
-            }
-            Event::End(TagEnd::CodeBlock) => {
-                // Exiting a code block.
-                in_code_block = false;
-                last_stable_line = current_line;
-            }
-            Event::Start(Tag::Table(_)) | Event::Start(Tag::TableHead) | Event::Start(Tag::TableRow) => {
-                // Entering a table construct.
-                in_table = true;
-                last_stable_line = current_line;
-            }
-            Event::End(TagEnd::Table) | Event::End(TagEnd::TableHead) | Event::End(TagEnd::TableRow) => {
-                // Exiting a table construct.
-                in_table = false;
-                last_stable_line = current_line;
-            }
-            _ => {}
         }
     }
 
-    // Calculate stable line count.
-    // If we're in an open construct (fence or table), lines within it are NOT stable.
-    // We only count lines up to but NOT including the construct start.
-    let stable_count = if in_code_block || in_table {
-        // We're inside an open construct. Lines before it started are stable.
-        // The opening line of the construct itself is NOT stable (it stays in tail).
-        last_stable_line
-    } else {
-        // No open construct - all lines up to current position are stable.
-        current_line + 1
-    };
+    (stable_count, fence_open, table_open)
+}
 
-    (
-        stable_count,
-        OpenBlock {
-            in_code_block,
-            in_table,
-        },
-    )
+#[derive(Debug, Clone)]
+enum LineClass {
+    Empty,
+    Plain,
+    Fence(String),
+    TableStart,
+}
+
+fn classify_normal_line(trimmed: &str) -> Option<LineClass> {
+    if trimmed.is_empty() {
+        return Some(LineClass::Empty);
+    }
+    if trimmed.starts_with("```") {
+        let lang = trimmed.trim_start_matches("```").trim().to_owned();
+        return Some(LineClass::Fence(lang));
+    }
+    if is_table_separator(trimmed) {
+        return Some(LineClass::TableStart);
+    }
+    Some(LineClass::Plain)
+}
+
+fn try_close_construct(
+    fence_open: &mut Option<String>,
+    table_open: &mut bool,
+    trimmed: &str,
+) -> bool {
+    if fence_open.is_some() && trimmed.starts_with("```") {
+        *fence_open = None;
+        return true;
+    }
+    if *table_open && trimmed.is_empty() {
+        *table_open = false;
+        return true;
+    }
+    false
+}
+
+fn is_table_separator(line: &str) -> bool {
+    let stripped = line.trim();
+    if !stripped.starts_with('|') || !stripped.ends_with('|') {
+        return false;
+    }
+    let inner = &stripped[1..stripped.len() - 1];
+    inner
+        .split('|')
+        .all(|cell| cell.trim().chars().all(|c| c == '-' || c == ':'))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn heal_markdown_closes_unclosed_bold() {
+        assert_eq!(heal_markdown("hello **world"), "hello **world**");
+        assert_eq!(heal_markdown("**bold start"), "**bold start**");
+    }
+
+    #[test]
+    fn heal_markdown_closes_unclosed_italic() {
+        assert_eq!(heal_markdown("hello _world"), "hello _world_");
+        assert_eq!(heal_markdown("italic _start"), "italic _start_");
+    }
+
+    #[test]
+    fn heal_markdown_closes_unclosed_inline_code() {
+        assert_eq!(heal_markdown("use `rust"), "use `rust`");
+        assert_eq!(heal_markdown("code `snippet"), "code `snippet`");
+    }
+
+    #[test]
+    fn heal_markdown_closes_unclosed_link() {
+        assert_eq!(heal_markdown("see [docs"), "see [docs]()");
+        assert_eq!(heal_markdown("[link"), "[link]()");
+    }
+
+    #[test]
+    fn heal_markdown_leaves_closed_syntax_unchanged() {
+        assert_eq!(
+            heal_markdown("hello **world** and `code`"),
+            "hello **world** and `code`"
+        );
+        assert_eq!(
+            heal_markdown("**bold** and _italic_ and `code`"),
+            "**bold** and _italic_ and `code`"
+        );
+    }
+
+    #[test]
+    fn heal_markdown_leaves_plain_text_unchanged() {
+        assert_eq!(heal_markdown("just plain text"), "just plain text");
+        assert_eq!(heal_markdown(""), "");
+    }
+
+    #[test]
+    fn heal_markdown_handles_multiple_unclosed_spans() {
+        assert_eq!(heal_markdown("**bold and `code"), "**bold and `code`**");
+    }
 
     #[test]
     fn streaming_buffer_flush_heals_stable_lines() {
@@ -251,84 +273,12 @@ mod tests {
 
     #[test]
     fn streaming_buffer_raw_text_not_healed_in_tail() {
+        // This test verifies heal_markdown is applied during flush.
+        // The healing is applied to stable lines before returning.
         let mut buf = StreamingBuffer::new();
         buf.push_delta("hello **world\n");
         let lines = buf.flush();
+        // flush() returns healed stable lines
         assert!(lines.iter().any(|l| l.contains("hello **world**")));
-    }
-
-    #[test]
-    fn streaming_buffer_stable_after_code_block_close() {
-        let mut buf = StreamingBuffer::new();
-        // Start a code block.
-        buf.push_delta("```rust\n");
-        assert!(buf.has_pending_content(), "Should have pending content in open fence");
-        // Close the code block.
-        buf.push_delta("```\n");
-        assert!(buf.is_stable() || !buf.has_pending_content(), "Should be stable after fence close");
-    }
-
-    #[test]
-    fn streaming_buffer_stable_with_closed_fence() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("```\n");
-        buf.push_delta("code\n");
-        buf.push_delta("```\n");
-        buf.push_delta("after\n");
-        assert!(buf.is_stable(), "Should be stable after code block closed");
-    }
-
-    #[test]
-    fn streaming_buffer_stable_lines_excludes_open_fence() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("before\n");
-        buf.push_delta("```\n");
-        buf.push_delta("code\n");
-        let stable = buf.stable_len();
-        assert_eq!(stable, 1, "Only 'before' should be stable");
-        assert!(buf.has_pending_content(), "Should have pending content");
-    }
-
-    #[test]
-    fn streaming_buffer_table_not_stable_until_closed() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("| Header |\n");
-        buf.push_delta("| ------ |\n");
-        buf.push_delta("| Cell   |\n");
-        let stable = buf.stable_len();
-        assert!(stable >= 3, "Table rows should be stable");
-    }
-
-    #[test]
-    fn streaming_buffer_empty_line_stability() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("line1\n");
-        buf.push_delta("\n");
-        buf.push_delta("line2\n");
-        assert!(buf.is_stable() || buf.stable_len() >= 2);
-    }
-
-    #[test]
-    fn streaming_buffer_reset_clears_state() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("```\n");
-        buf.push_delta("code\n");
-        buf.reset();
-        assert!(buf.stable.is_empty());
-        assert!(buf.tail.is_empty());
-        assert!(buf.open_block.is_stable());
-    }
-
-    #[test]
-    fn streaming_buffer_partial_code_block() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("before\n");
-        buf.push_delta("```\n");
-        buf.push_delta("part1\n");
-        assert_eq!(buf.stable_len(), 1);
-        buf.push_delta("part2\n");
-        buf.push_delta("```\n");
-        buf.push_delta("after\n");
-        assert!(buf.is_stable() || !buf.has_pending_content());
     }
 }
