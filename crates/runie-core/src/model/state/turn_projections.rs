@@ -1,4 +1,3 @@
-#![allow(clippy::all)]
 //! Turn fact projections — event handlers for TurnActor facts.
 //!
 //! These methods project TurnActor facts into AppState.

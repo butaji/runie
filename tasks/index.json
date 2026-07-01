@@ -902,7 +902,7 @@
   {
     "file": "remove-blanket-clippy-allow-in-turn-projections.md",
     "title": "Remove Blanket Clippy Allow In Turn Projections",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
