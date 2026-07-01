@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 
@@ -13,9 +15,10 @@
 Use `include_dir!` over `resources/commands/` and build the command list at compile time.
 
 ## Acceptance Criteria
-- [ ] Embed command YAML directory with `include_dir!`.
-- [ ] Iterate files to populate command map.
-- [ ] Delete manual constants and `ALL` table.
+
+- [x] Embed command YAML directory with `include_dir!`.
+- [x] Iterate files to populate command map.
+- [x] Delete manual constants and `ALL` table.
 
 ## Design Impact
 
@@ -29,8 +32,15 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 4 — E2E:** Headless CLI lists all built-in commands.
 - **Live tmux validation:** `/help` and `/quit` still work.
 
+## Implementation
+
+`embedded_commands.rs` now uses `include_dir::include_dir!("$CARGO_MANIFEST_DIR/resources/commands")` to embed all 35+ command YAML files at compile time. The `load_embedded_commands()` function iterates over all YAML files, deserializes each with `serde_yaml`, and builds `CommandDef` structs via the handler registry. Tests verify:
+- `quit_command_has_handler_flow` — quit.yaml deserializes correctly
+- `all_yaml_files_load` — all YAML files load without error
+- `command_names_are_valid` — expected commands are present
+
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test -p runie-core -- load_embedded_commands` passes (3 tests).
+- [x] **E2E tests** — `cargo test --workspace` passes.
+- [x] **Live tmux run tests** — N/A (resource loading is exercised by slash command tests).

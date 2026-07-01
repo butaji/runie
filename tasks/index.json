@@ -557,7 +557,7 @@
   {
     "file": "fix-view-cache-double-rebuild-and-use-cached-gen.md",
     "title": "Fix view cache double rebuild and use cached_gen",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-runie-protocol-into-core.md",
@@ -637,7 +637,7 @@
   {
     "file": "load-slash-commands-with-include-dir.md",
     "title": "Load slash commands with include_dir",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",

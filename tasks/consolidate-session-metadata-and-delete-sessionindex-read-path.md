@@ -2,29 +2,25 @@
 
 ## Status
 
-`done`
-
-**Note**: `SessionIndex` is defined in `index.rs` but is not actually used for session loading. `SessionStore::list_metadata()` already reads from per-session file headers. `SessionHeader` is an alias for `SessionMetadata`. The task goals are already achieved.
+`todo`
 
 ## Context
 
-`crates/runie-core/src/actors/session/session_handlers.rs:255-257` still loads `SessionIndex` on `/load`, even though the unified store writes metadata into each session file header. `SessionHeader` and `SessionMetadata` are also duplicate structs.
+`crates/runie-core/src/session/index.rs` defines `SessionIndex` and `SessionMetadata`. `crates/runie-core/src/session/persistence/header.rs` defines `SessionHeader` as an alias: `pub use crate::session::index::SessionMetadata as SessionHeader`. `SessionIndex` is not used in the runtime path (session loading uses per-file headers), but the struct and its tests remain in `index.rs`.
 
 ## Goal
 
-Delete `SessionIndex` entirely; migrate any existing `sessions.json` into per-session headers once at startup; use a single `SessionMetadata` type.
+Delete `SessionIndex` and `crates/runie-core/src/session/index.rs`; keep only `SessionMetadata` (aliased as `SessionHeader`); update `lib.rs` re-exports.
+
+**Design impact:** No change to TUI element design or composition. Only session persistence behavior changes.
 
 ## Acceptance Criteria
 
 - [ ] Delete `crates/runie-core/src/session/index.rs`.
-- [ ] Merge `SessionHeader` and `SessionMetadata` into one type.
+- [ ] Merge `SessionHeader` and `SessionMetadata` into one type (or keep `SessionMetadata` as the canonical name).
 - [ ] Remove `/load` fallback to `SessionIndex`.
 - [ ] Provide one-time migration for existing `sessions.json`.
 - [ ] `/resume`, search, star, and rename behavior unchanged.
-
-## Design Impact
-
-No change to TUI element design or composition. Only session persistence behavior changes.
 
 ## Tests
 

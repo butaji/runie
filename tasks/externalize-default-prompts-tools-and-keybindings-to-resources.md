@@ -8,15 +8,21 @@
 
 Default system prompt, tool list, and keybindings are hard-coded Rust strings (`prompts.rs`, tool list, `keybindings/defaults.rs`). Editing them requires a recompile.
 
+## Current State
+
+- **Keybindings**: ✅ Externalized to `resources/keybindings/default.yaml` and loaded with `include_str!` in `keybindings/defaults.rs`.
+- **Prompts**: ❌ `DEFAULT_PROMPT` is still a raw `&str` constant in `prompts.rs:34`.
+- **Tools**: ❌ `DEFAULT_TOOLS` is still a raw `&str` constant in `prompts.rs:37`.
+
 ## Goal
 
-Move them to `resources/prompts/`, `resources/tools/`, and `resources/keybindings/default.yaml`, loading with `include_str!`/`include_dir!`.
+Move default prompt(s) and tool list to resources, load with `include_str!`, while preserving runtime overrides.
 
 ## Acceptance Criteria
 
 - [ ] Move default prompt(s) to resources.
 - [ ] Move default tool descriptions to resources.
-- [ ] Move default keybindings to YAML/JSON.
+- [ ] Move default keybindings to YAML/JSON. — **Done** ✅
 - [ ] Load at startup; preserve runtime overrides.
 - [ ] All tests pass.
 
