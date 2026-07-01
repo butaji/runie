@@ -1,4 +1,6 @@
+use std::panic::AssertUnwindSafe;
 use serde::{Deserialize, Serialize};
+use parking_lot::RwLock;
 use shell_words;
 
 use super::{HarnessSkill, TurnStartCtx, TurnStartResult};
@@ -34,14 +36,14 @@ fn default_max_output() -> usize {
 /// Startup context injector skill.
 pub struct StartupContextSkill {
     config: StartupContextConfig,
-    cache: std::sync::RwLock<Option<String>>,
+    cache: RwLock<Option<String>>,
 }
 
 impl StartupContextSkill {
     pub fn new(config: StartupContextConfig) -> Self {
         Self {
             config,
-            cache: std::sync::RwLock::new(None),
+            cache: RwLock::new(None),
         }
     }
 
@@ -82,26 +84,23 @@ impl StartupContextSkill {
     }
 
     pub fn get_context(&self) -> String {
-        if let Ok(g) = self.cache.read() {
-            if let Some(c) = g.as_ref() {
-                return c.clone();
-            }
+        if let Some(c) = self.cache.read().as_ref() {
+            return c.clone();
         }
         // Use block_in_place with catch_unwind for compatibility with single-threaded
         // runtimes used in tests. If block_in_place panics (not multi-threaded), fall
         // back to synchronous execution.
-        let ctx = std::panic::catch_unwind(|| tokio::task::block_in_place(|| self.discover()))
-            .unwrap_or_else(|_| self.discover());
-        if let Ok(mut g) = self.cache.write() {
-            *g = Some(ctx.clone());
-        }
+        let ctx = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            tokio::task::block_in_place(|| self.discover())
+        }))
+        .unwrap_or_else(|_| self.discover());
+        // parking_lot RwLock guards don't panic, so we can use them directly.
+        *self.cache.write() = Some(ctx.clone());
         ctx
     }
 
     pub fn clear_cache(&self) {
-        if let Ok(mut g) = self.cache.write() {
-            *g = None;
-        }
+        *self.cache.write() = None;
     }
 }
 

@@ -152,15 +152,25 @@ pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
 }
 
 /// Load durable events into application state.
+/// Load a session using the default store (reads RUNIE_SESSIONS_DIR env var).
 pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
     let store =
         SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    load_session_from_store(name, state, &store)
+}
+
+/// Load a session from a specific store (avoids env-var race in parallel tests).
+pub fn load_session_from_store(
+    name: &str,
+    state: &mut AppState,
+    store: &SessionStore,
+) -> anyhow::Result<()> {
     let events = store.load_events(name)?;
     if events.is_empty() {
         return Err(anyhow::anyhow!("Session '{}' not found", name));
     }
     replay_events(state, &events);
-    restore_metadata(name, state, &store)?;
+    restore_metadata(name, state, store)?;
     state.configure_token_tracker();
     state.messages_changed();
     Ok(())

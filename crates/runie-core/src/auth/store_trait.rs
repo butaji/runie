@@ -4,7 +4,7 @@
 //! with `OsKeyringStore` (production) and `MockKeyringStore` (testing) backends.
 
 use std::collections::HashMap;
-use std::sync::RwLock;
+use parking_lot::RwLock;
 
 // ── Trait ─────────────────────────────────────────────────────────────────────
 
@@ -88,16 +88,16 @@ impl Default for MockKeyringStore {
 
 impl KeyringStore for MockKeyringStore {
     fn set(&self, provider: &str, token: &str) -> anyhow::Result<()> {
-        self.entries.write().unwrap().insert(provider.to_owned(), token.to_owned());
+        self.entries.write().insert(provider.to_owned(), token.to_owned());
         Ok(())
     }
 
     fn get(&self, provider: &str) -> anyhow::Result<Option<String>> {
-        Ok(self.entries.read().unwrap().get(provider).cloned())
+        Ok(self.entries.read().get(provider).cloned())
     }
 
     fn delete(&self, provider: &str) -> anyhow::Result<()> {
-        self.entries.write().unwrap().remove(provider);
+        self.entries.write().remove(provider);
         Ok(())
     }
 }

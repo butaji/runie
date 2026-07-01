@@ -248,8 +248,12 @@ pub fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
-    match find_most_recent() {
-        Some(name) => match crate::session::replay::load_session(&name, state) {
+    let store = match crate::session::store::SessionStore::default_store() {
+        Some(s) => s,
+        None => return CommandResult::Message("No session store available.".into()),
+    };
+    match find_most_recent_from_store(&store) {
+        Some(name) => match crate::session::replay::load_session_from_store(&name, state, &store) {
             Ok(_) => CommandResult::Message(format!("Loaded '{}'.", name)),
             Err(_) => CommandResult::Message("Could not load session.".into()),
         },
@@ -257,13 +261,14 @@ pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     }
 }
 
-fn find_most_recent() -> Option<String> {
-    let names = crate::session::replay::list_sessions().ok()?;
-    let store = crate::session::store::SessionStore::default_store()?;
+fn find_most_recent_from_store(
+    store: &crate::session::store::SessionStore,
+) -> Option<String> {
+    let names = store.list().ok()?;
     let mut most_recent = None;
     let mut most_recent_time = 0.0f64;
     for name in names {
-        if let Ok(meta) = load_session_metadata(&store, &name) {
+        if let Ok(Some(meta)) = store.load_metadata(&name) {
             if meta.updated_at > most_recent_time {
                 most_recent_time = meta.updated_at;
                 most_recent = Some(name);
@@ -271,13 +276,4 @@ fn find_most_recent() -> Option<String> {
         }
     }
     most_recent
-}
-
-fn load_session_metadata(
-    store: &crate::session::store::SessionStore,
-    name: &str,
-) -> anyhow::Result<crate::session::SessionMetadata> {
-    store
-        .load_metadata(name)?
-        .ok_or_else(|| anyhow::anyhow!("not found"))
 }

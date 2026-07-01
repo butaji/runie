@@ -10,10 +10,6 @@ use anyhow::Error;
 use backon::{ExponentialBuilder, Retryable};
 use futures::Future;
 
-// Re-export from runie-core so callers can use it without importing from runie-core
-#[allow(unused_imports)]
-pub use crate::ProviderError as classify_reqwest_error;
-
 /// Classify an SSE stream error into a typed `ProviderError` variant.
 pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
     use reqwest_eventsource::Error as SseErr;

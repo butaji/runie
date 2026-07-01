@@ -29,14 +29,14 @@ fn default_max_repeats() -> usize {
 /// Loop detector skill.
 pub struct LoopDetectorSkill {
     config: LoopDetectorConfig,
-    recent_calls: std::sync::Mutex<Vec<(String, String, bool)>>,
+    recent_calls: parking_lot::Mutex<Vec<(String, String, bool)>>,
 }
 
 impl LoopDetectorSkill {
     pub fn new(config: LoopDetectorConfig) -> Self {
         Self {
             config,
-            recent_calls: std::sync::Mutex::new(Vec::new()),
+            recent_calls: parking_lot::Mutex::new(Vec::new()),
         }
     }
 
@@ -49,19 +49,17 @@ impl LoopDetectorSkill {
             .unwrap_or("")
             .to_owned();
         let entry = (tool_name.to_owned(), target, success);
-        if let Ok(mut calls) = self.recent_calls.lock() {
-            calls.push(entry);
-            if calls.len() > 100 {
-                calls.drain(0..50);
-            }
+        // parking_lot MutexGuard doesn't panic on poison, use directly.
+        let mut calls = self.recent_calls.lock();
+        calls.push(entry);
+        if calls.len() > 100 {
+            calls.drain(0..50);
         }
     }
 
     /// Reset state at turn start.
     pub fn reset(&self) {
-        if let Ok(mut calls) = self.recent_calls.lock() {
-            calls.clear();
-        }
+        self.recent_calls.lock().clear();
     }
 
     /// Check for loop. Returns message if detected.
@@ -69,7 +67,8 @@ impl LoopDetectorSkill {
         if !self.config.enabled {
             return None;
         }
-        let calls = self.recent_calls.lock().ok()?;
+        // parking_lot MutexGuard doesn't panic on poison.
+        let calls = self.recent_calls.lock();
         let mut counts = std::collections::HashMap::new();
         for (tool, target, success) in calls.iter().rev() {
             if *success {

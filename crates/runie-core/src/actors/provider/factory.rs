@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use crate::config::Config;
 use crate::message::ChatMessage;
@@ -24,7 +24,7 @@ static HTTP_CLIENT_CACHE: OnceLock<Mutex<HashMap<(String, String), Arc<reqwest::
 fn get_cached_http_client(provider_key: &str, base_url: &str) -> Arc<reqwest::Client> {
     let cache = HTTP_CLIENT_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let key = (provider_key.to_owned(), base_url.to_owned());
-    let mut guard = cache.lock().unwrap();
+    let mut guard = cache.lock();
     guard
         .entry(key)
         .or_insert_with(|| {

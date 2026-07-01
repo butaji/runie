@@ -94,7 +94,7 @@ Actors are plain `tokio` tasks. Each actor owns a slice of authoritative state a
 - `SessionActor` owns the in-memory session and persists durable events append-only.
 - `ViewActor` owns derived view/cache state and invalidates the render path.
 - `ConfigActor` is the single owner of `~/.runie/config.toml`; it loads, saves, and publishes `ConfigLoaded` facts.
-- `ProviderActor` is the single owner of `DynProvider` construction and API-key validation; it resolves credentials through the config actor.
+- `ProviderActor` is the single owner of `BuiltProvider` construction and API-key validation; it resolves credentials through the config actor.
 
 ## Core concepts
 

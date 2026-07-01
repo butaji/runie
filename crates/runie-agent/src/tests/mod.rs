@@ -31,7 +31,7 @@ impl Drop for MockGuard {
 }
 
 /// Enable mock provider for all tests. Without this, the "mock" provider key is
-/// not registered in the provider registry, causing DynProvider::new("mock", ...)
+/// not registered in the provider registry, causing `BuiltProvider::new("mock", ...)
 /// to return UnknownProvider error.
 pub(crate) async fn ensure_mock_provider() -> MockGuard {
     let guard = MOCK_STATE_LOCK.lock().await;
