@@ -267,7 +267,7 @@
   {
     "file": "consolidate-session-metadata-and-delete-sessionindex-read-path.md",
     "title": "Consolidate session metadata and delete SessionIndex read path",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
