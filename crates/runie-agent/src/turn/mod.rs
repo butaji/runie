@@ -1,6 +1,7 @@
 //! Agent turn execution.
 
 use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
+use runie_core::event::Event;
 use crate::AgentCommand;
 use anyhow::Result;
 use runie_core::harness_skills::{
@@ -124,13 +125,11 @@ async fn emit_turn_end(
         }
     }
 
-    emit(
-        runie_core::Event::TurnComplete {
-            id: id.to_owned(),
-            duration_secs: turn_start.elapsed().as_secs_f64(),
-        },
-    );
-    emit(runie_core::Event::Done { id: id.to_owned() });
+    emit(Event::TurnComplete {
+        id: id.to_owned(),
+        duration_secs: turn_start.elapsed().as_secs_f64(),
+    });
+    emit(Event::Done { id: id.to_owned() });
 }
 
 // allow: iteration control params — orthogonal and intentionally flat for turn loop clarity
@@ -172,7 +171,7 @@ async fn run_agent_iteration(
     tool_call_count: &mut usize,
     gate: &PermissionGate,
 ) -> Result<bool> {
-    emit(runie_core::Event::Thinking {
+    emit(Event::Thinking {
         id: command.id.clone(),
     });
     let tools = build_tool_registry(command.read_only);
@@ -180,13 +179,13 @@ async fn run_agent_iteration(
     let response = match stream_response(provider, &command.id, messages, tools, emit.clone(), cancel_token).await {
         Ok(r) => r,
         Err(e) => {
-            emit(runie_core::Event::ThoughtDone {
+            emit(Event::ThoughtDone {
                 id: command.id.clone(),
             });
             return Err(e);
         }
     };
-    emit(runie_core::Event::ThoughtDone {
+    emit(Event::ThoughtDone {
         id: command.id.clone(),
     });
     if response.tool_calls.is_empty() {

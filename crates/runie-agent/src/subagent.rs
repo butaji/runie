@@ -243,7 +243,7 @@ async fn run_subagent_turn_with_gate(
         }
     });
 
-    // EmitFn forwards all events to the event channel.
+    // EmitFn wraps the channel sender so the closure call syntax is used uniformly.
     let emit: EmitFn = Arc::new(move |evt: runie_core::Event| {
         let _ = event_tx.send(evt);
     });

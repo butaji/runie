@@ -19,8 +19,10 @@ use std::sync::Arc;
 
 use crate::think_filter::ThinkFilter;
 
-/// Emit type: arc-wrapped sync function.
-/// Replaces the previous Arc<Mutex<dyn FnMut(...)>> which locked per token.
+/// Emit function type: a synchronous callable that ships an event.
+///
+/// Replaces the previous `Arc<Mutex<dyn FnMut>>` which locked per-token.
+/// Clones are cheap (Arc-wrapped).
 pub type EmitFn = Arc<dyn Fn(Event) + Send + Sync>;
 
 /// A fully streamed assistant response.

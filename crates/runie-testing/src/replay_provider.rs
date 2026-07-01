@@ -59,8 +59,14 @@ pub fn dyn_replay_provider_with(fixtures: &[String], key: &str, model: &str) -> 
     BuiltProvider::from_provider(Box::new(provider), key, model)
 }
 
-/// Capture emitted `Event`s into a `Vec` using the same `EmitFn` type as
-/// `runie_agent::stream_response::EmitFn`.
+/// Capture emitted `Event`s into a `Vec`.
+///
+/// Returns `(events, emit)` where `emit` is a closure compatible with
+/// `runie_agent::stream_response::EmitFn = Box<dyn Fn(Event) + Send + Sync>`.
+///
+/// Events are written synchronously into `events` via `parking_lot::Mutex` so
+/// tests can read them via `events.lock()` immediately after `run_agent_turn`
+/// completes — no background task, no polling, no race conditions.
 pub fn capture_events() -> (Arc<parking_lot::Mutex<Vec<Event>>>, runie_agent::stream_response::EmitFn) {
     let events: Arc<parking_lot::Mutex<Vec<Event>>> = Arc::new(parking_lot::Mutex::new(Vec::new()));
     let captured = events.clone();
