@@ -1,0 +1,7 @@
+data: {"id":"chatcmpl-openai-simple-001","choices":[{"index":0,"delta":{"content":"Hello"},"usage":null}],"model":"gpt-4o-mini","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-openai-simple-001","choices":[{"index":0,"delta":{"content":" world"},"usage":null}],"model":"gpt-4o-mini","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-openai-simple-001","choices":[{"index":0,"delta":{"content":"!"},"usage":null}],"model":"gpt-4o-mini","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-openai-simple-001","choices":[{"finish_reason":"stop","index":0,"delta":{},"usage":{"prompt_tokens":10,"completion_tokens":3}}],"model":"gpt-4o-mini","object":"chat.completion.chunk"}

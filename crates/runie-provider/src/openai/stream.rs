@@ -189,6 +189,14 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
         if trimmed.is_empty() {
             continue;
         }
+        // Support fixture error lines: "error: {\"type\":\"rate_limit\",...}"
+        if let Some(err_json) = trimmed.strip_prefix("error: ") {
+            if let Ok(err_val) = serde_json::from_str::<serde_json::Value>(err_json) {
+                let model_err = parse_error_value(&err_val);
+                events.push(ProviderEvent::Error(model_err));
+            }
+            continue;
+        }
         if let Some(frame) = OpenAiFrame::from_line(trimmed) {
             if protocol.terminal(&frame) {
                 let (_, new_events) = protocol.step(std::mem::take(&mut state), frame);
@@ -202,6 +210,48 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
     }
     events.extend(protocol.on_halt(state));
     events
+}
+
+/// Parse an SSE error line value into a ModelError.
+fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::ModelError {
+    use runie_core::provider_event::ModelError;
+    let msg = val
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown error");
+    let code = val
+        .get("code")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if code.contains("rate_limit") || val
+        .get("type")
+        .and_then(|v| v.as_str())
+        .map(|t| t.contains("rate_limit"))
+        .unwrap_or(false)
+    {
+        let retry_after = val
+            .get("retry_after")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as u32);
+        return ModelError::RateLimit { retry_after_secs: retry_after };
+    }
+    if code.contains("context_length") || code.contains("token_limit") {
+        let limit = val
+            .get("limit")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(0);
+        let used = val
+            .get("used")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(0);
+        return ModelError::ContextLength { limit, used };
+    }
+    if code.contains("content_filter") || code.contains("refusal") {
+        return ModelError::Refusal(msg.to_string());
+    }
+    ModelError::Other(msg.to_string())
 }
 
 #[cfg(test)]

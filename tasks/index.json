@@ -42,7 +42,7 @@
   {
     "file": "add-openai-provider-fixtures.md",
     "title": "Add OpenAI provider fixtures",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-metrics-facade-for-telemetry.md",

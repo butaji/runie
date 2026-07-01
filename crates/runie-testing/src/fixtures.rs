@@ -1,6 +1,7 @@
 //! Common test fixtures.
 
 pub mod minimax;
+pub mod openai;
 
 use std::sync::Arc;
 use std::sync::Once;

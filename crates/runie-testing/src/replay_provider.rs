@@ -54,6 +54,12 @@ pub fn dyn_replay_provider(fixtures: &[String]) -> DynProvider {
     DynProvider::from_provider(Box::new(provider), "minimax", "MiniMax-M3")
 }
 
+/// Wrap a `ReplayProvider` in a `DynProvider` with custom key and model.
+pub fn dyn_replay_provider_with(fixtures: &[String], key: &str, model: &str) -> DynProvider {
+    let provider = ReplayProvider::new(fixtures.to_vec());
+    DynProvider::from_provider(Box::new(provider), key, model)
+}
+
 /// Capture emitted `Event`s into a `Vec` using the same `EmitFn` type as
 /// `runie_agent::stream_response::EmitFn`.
 pub fn capture_events() -> (Arc<Mutex<Vec<Event>>>, runie_agent::stream_response::EmitFn) {

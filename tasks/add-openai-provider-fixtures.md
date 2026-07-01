@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -18,10 +18,10 @@ Add `runie-testing/src/fixtures/openai/` with recorded SSE streams for:
 
 ## Acceptance Criteria
 
-- [ ] Add sanitized fixture files.
-- [ ] Add loader similar to `fixtures/minimax.rs`.
-- [ ] Add at least one agent test using OpenAI fixtures.
-- [ ] No real API keys in fixtures.
+- [x] Add sanitized fixture files.
+- [x] Add loader similar to `fixtures/minimax.rs`.
+- [x] Add at least one agent test using OpenAI fixtures.
+- [x] No real API keys in fixtures.
 
 ## Design Impact
 
@@ -37,6 +37,6 @@ No change to TUI element design or composition. Only test fixtures change.
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
