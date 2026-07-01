@@ -862,7 +862,7 @@
   {
     "file": "replace-ansi256-lookup-table-with-ansi-colours.md",
     "title": "Replace ANSI256 lookup table with ansi_colours",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-bash-safety-heuristic-with-os-sandboxing.md",
