@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -20,10 +20,10 @@ MockToolSkill::new()
 
 ## Acceptance Criteria
 
-- [ ] Add `ToolResult` enum (Success/Error).
-- [ ] Add `when` and `expect_calls` builder methods.
-- [ ] Update existing tests to use builder.
-- [ ] All tests pass.
+- [x] Add `ToolResult` enum (Success/Error).
+- [x] Add `when` and `expect_calls` builder methods.
+- [x] Update existing tests to use builder.
+- [x] All tests pass.
 
 ## Design Impact
 
@@ -39,6 +39,6 @@ No change to TUI element design or composition. Only test helpers change.
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

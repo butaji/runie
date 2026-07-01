@@ -357,7 +357,7 @@
   {
     "file": "extend-mock-tool-skill-with-errors-and-sequencing.md",
     "title": "Extend MockToolSkill with errors and sequencing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "externalize-default-prompts-tools-and-keybindings-to-resources.md",
