@@ -5,16 +5,14 @@ use crate::{
     turn::build_initial_messages,
 };
 use anyhow::Result;
-use parking_lot::Mutex;
+use runie_core::event::Event;
 use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase};
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
-use runie_core::Event;
+use runie_testing::event_helpers::{count_events, find_event};
 use runie_testing::mock_tool_skill;
-use runie_testing::event_helpers::{assert_event, count_events, find_event};
-use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
-use std::sync::Arc;
+use runie_testing::{allow_all_gate, capture_events, mock_provider, RecordingSkill};
 
 /// Layer 2: Verify a single-word "hello" produces exactly one ResponseDelta
 /// and the turn completes without repetition.
@@ -27,30 +25,20 @@ async fn test_agent_loop_single_word_echo_completes_once() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("hello").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
-    run_agent_turn(
-        &provider,
-        &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
-        5,
-        allow_all_gate(),
-    )
-    .await
-    .unwrap();
+    let (events, emit) = capture_events();
+    run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
+        .await
+        .unwrap();
 
-    let events = events.lock();
     let deltas: Vec<_> = events
+        .lock()
         .iter()
         .filter_map(|e| match e {
             Event::ResponseDelta { content, .. } => Some(content.clone()),
             _ => None,
         })
         .collect();
-    let done_count = events
-        .iter()
-        .filter(|e| matches!(e, Event::Done { .. }))
-        .count();
+    let done_count = count_events(&events, |e| matches!(e, Event::Done { .. }));
 
     // Mock provider: "hello" splits to ["hello "] → exactly 1 delta.
     assert_eq!(
@@ -68,36 +56,15 @@ async fn test_agent_loop_simple_response() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("Hello World").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
-    run_agent_turn(
-        &provider,
-        &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
-        5,
-        allow_all_gate(),
-    )
-    .await
-    .unwrap();
+    let (events, emit) = capture_events();
+    run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
+        .await
+        .unwrap();
 
-    let events = events.lock();
-    let thinking = events
-        .iter()
-        .filter(|e| matches!(e, Event::Thinking { .. }))
-        .count();
-    let deltas = events
-        .iter()
-        .filter(|e| matches!(e, Event::ResponseDelta { .. }))
-        .count();
-    let done = events
-        .iter()
-        .filter(|e| matches!(e, Event::Done { .. }))
-        .count();
-
-    let responses = events
-        .iter()
-        .filter(|e| matches!(e, Event::Response { .. }))
-        .count();
+    let thinking = count_events(&events, |e| matches!(e, Event::Thinking { .. }));
+    let deltas = count_events(&events, |e| matches!(e, Event::ResponseDelta { .. }));
+    let done = count_events(&events, |e| matches!(e, Event::Done { .. }));
+    let responses = count_events(&events, |e| matches!(e, Event::Response { .. }));
 
     assert_eq!(thinking, 1);
     assert_eq!(deltas, 2); // streaming deltas
@@ -110,12 +77,11 @@ async fn test_agent_loop_with_tool_call() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("list files").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
+    let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        emit,
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -123,19 +89,9 @@ async fn test_agent_loop_with_tool_call() {
     .await
     .unwrap();
 
-    let events = events.lock();
-    let tool_starts = events
-        .iter()
-        .filter(|e| matches!(e, Event::ToolStart { .. }))
-        .count();
-    let tool_ends = events
-        .iter()
-        .filter(|e| matches!(e, Event::ToolEnd { .. }))
-        .count();
-    let completes = events
-        .iter()
-        .filter(|e| matches!(e, Event::TurnComplete { .. }))
-        .count();
+    let tool_starts = count_events(&events, |e| matches!(e, Event::ToolStart { .. }));
+    let tool_ends = count_events(&events, |e| matches!(e, Event::ToolEnd { .. }));
+    let completes = count_events(&events, |e| matches!(e, Event::TurnComplete { .. }));
 
     assert!(tool_starts >= 1);
     assert_eq!(tool_starts, tool_ends);
@@ -147,12 +103,11 @@ async fn test_agent_loop_with_native_tool_call_events() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("run native tool").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
+    let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        emit,
         1,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -160,19 +115,9 @@ async fn test_agent_loop_with_native_tool_call_events() {
     .await
     .unwrap();
 
-    let events = events.lock();
-    let tool_starts = events
-        .iter()
-        .filter(|e| matches!(e, Event::ToolStart { .. }))
-        .count();
-    let tool_ends = events
-        .iter()
-        .filter(|e| matches!(e, Event::ToolEnd { .. }))
-        .count();
-    let bash_calls = events
-        .iter()
-        .filter(|e| matches!(e, Event::ToolStart { name, .. } if name == "bash"))
-        .count();
+    let tool_starts = count_events(&events, |e| matches!(e, Event::ToolStart { .. }));
+    let tool_ends = count_events(&events, |e| matches!(e, Event::ToolEnd { .. }));
+    let bash_calls = count_events(&events, |e| matches!(e, Event::ToolStart { name, .. } if name == "bash"));
 
     assert_eq!(tool_starts, 1, "expected one tool start");
     assert_eq!(tool_starts, tool_ends);
@@ -184,17 +129,10 @@ async fn test_agent_loop_respects_max_iterations() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("loop").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
-    run_agent_turn(
-        &provider,
-        &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
-        3,
-        allow_all_gate(),
-    )
-    .await
-    .unwrap();
+    let (events, emit) = capture_events();
+    run_agent_turn(&provider, &cmd, emit, 3, allow_all_gate())
+        .await
+        .unwrap();
     assert!(!events.lock().is_empty());
 }
 
@@ -203,17 +141,10 @@ async fn test_agent_loop_events_have_correct_id() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("test").id("req.42").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
-    run_agent_turn(
-        &provider,
-        &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
-        5,
-        allow_all_gate(),
-    )
-    .await
-    .unwrap();
+    let (events, emit) = capture_events();
+    run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
+        .await
+        .unwrap();
 
     for evt in events.lock().iter() {
         let evt_id = match evt {
@@ -277,12 +208,11 @@ async fn agent_tool_event_carries_mock_output() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("list files").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
+    let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        emit,
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -290,12 +220,13 @@ async fn agent_tool_event_carries_mock_output() {
     .await
     .unwrap();
 
-    let tool_end = events
-        .lock()
-        .iter()
-        .find_map(|e| match e {
-            Event::ToolEnd { output, .. } => Some(output.clone()),
-            _ => None,
+    let tool_end = find_event(&events, |e| matches!(e, Event::ToolEnd { .. }))
+        .map(|e| {
+            if let Event::ToolEnd { output, .. } = e {
+                output.clone()
+            } else {
+                String::new()
+            }
         })
         .expect("agent turn should emit ToolEnd");
 
@@ -307,12 +238,11 @@ async fn tool_call_event_matches_mock_output() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("list files").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
+    let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        emit,
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -367,28 +297,14 @@ async fn text_turn_emits_turn_complete() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("plain hello").id("req.text").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
-    run_agent_turn(
-        &provider,
-        &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
-        5,
-        allow_all_gate(),
-    )
-    .await
-    .unwrap();
+    let (events, emit) = capture_events();
+    run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
+        .await
+        .unwrap();
 
-    let events = events.lock();
-    let turn_complete_count = events
-        .iter()
-        .filter(|e| matches!(e, Event::TurnComplete { .. }))
-        .count();
+    let turn_complete_count = count_events(&events, |e| matches!(e, Event::TurnComplete { .. }));
     assert_eq!(turn_complete_count, 1, "text-only turn must emit TurnComplete");
-    let done_count = events
-        .iter()
-        .filter(|e| matches!(e, Event::Done { .. }))
-        .count();
+    let done_count = count_events(&events, |e| matches!(e, Event::Done { .. }));
     assert_eq!(done_count, 1, "turn must emit Done");
 }
 
@@ -398,12 +314,11 @@ async fn tool_turn_emits_turn_complete() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
         let cmd = agent_cmd("list files").id("req.tools").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
+    let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
         &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
+        emit,
         5,
         Some(&mock_tool_skill()),
         allow_all_gate(),
@@ -411,11 +326,7 @@ async fn tool_turn_emits_turn_complete() {
     .await
     .unwrap();
 
-    let events = events.lock();
-    let turn_complete_count = events
-        .iter()
-        .filter(|e| matches!(e, Event::TurnComplete { .. }))
-        .count();
+    let turn_complete_count = count_events(&events, |e| matches!(e, Event::TurnComplete { .. }));
     assert_eq!(turn_complete_count, 1, "tool turn must emit TurnComplete");
 }
 
@@ -441,26 +352,14 @@ impl Provider for ErrorProvider {
 async fn stream_error_emits_thought_done() {
     let provider = ErrorProvider;
         let cmd = agent_cmd("error").id("req.err").provider("error").model("error").build();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let events_clone = events.clone();
-    let result = run_agent_turn(
-        &provider,
-        &cmd,
-        Arc::new(Mutex::new(move |evt| events_clone.lock().push(evt))),
-        5,
-        allow_all_gate(),
-    )
-    .await;
+    let (events, emit) = capture_events();
+    let result = run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate()).await;
 
     // Turn must return an error (provider failure).
     assert!(result.is_err(), "stream error should propagate as Err");
 
     // ThoughtDone must be emitted even on error path.
-    let events = events.lock();
-    let thought_done_count = events
-        .iter()
-        .filter(|e| matches!(e, Event::ThoughtDone { .. }))
-        .count();
+    let thought_done_count = count_events(&events, |e| matches!(e, Event::ThoughtDone { .. }));
     assert_eq!(
         thought_done_count, 1,
         "ThoughtDone must be emitted even on stream error"

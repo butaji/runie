@@ -57,7 +57,7 @@
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
     "title": "Adopt testing helpers across all tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-wiremock-for-provider-api-tests.md",
