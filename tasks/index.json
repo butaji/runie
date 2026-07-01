@@ -1147,7 +1147,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
