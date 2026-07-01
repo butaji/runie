@@ -342,7 +342,7 @@
   {
     "file": "drop-terminal-brand-and-multiplexer-tables.md",
     "title": "Drop terminal brand and multiplexer tables",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-unused-rand-from-runie-provider.md",
@@ -397,7 +397,7 @@
   {
     "file": "externalize-default-theme-toml-to-resources.md",
     "title": "Externalize default theme TOML to resources",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extract-runie-test-utils-crate.md",
