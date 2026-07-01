@@ -69,6 +69,8 @@ supports-color = "3"
 supports-hyperlinks = "3"
 
 metrics = "0.22"
+color-eyre = "0.6"
+human-panic = "2"
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"

@@ -43,6 +43,9 @@ impl Drop for Cleanup {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> io::Result<()> {
+    // Install human-panic hook for crash reports.
+    human_panic::setup_panic!();
+
     telemetry::init();
 
     let args: Vec<String> = std::env::args().collect();

@@ -1157,7 +1157,7 @@
   {
     "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
     "title": "Use color-eyre and human-panic for CLI errors",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-configscope-enum-for-mcp-server-scope.md",

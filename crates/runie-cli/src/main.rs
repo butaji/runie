@@ -84,8 +84,14 @@ enum McpCommand {
 }
 
 fn main() {
+    // Install human-panic hook for crash reports.
+    human_panic::setup_panic!();
+
     // Initialize tracing subscriber.
     runie_core::tracing_init::init();
+
+    // Install color-eyre for better error chains.
+    color_eyre::install().expect("Failed to install color-eyre hook");
 
     let cli = Cli::parse();
 
@@ -98,7 +104,9 @@ fn main() {
     };
 
     if let Err(e) = result {
-        eprintln!("Error: {}", e);
+        // Print the full error chain with color-eyre formatting.
+        eprintln!("Error: {:#}", e.context("CLI command failed"));
+        eprintln!("\nHint: Set RUST_LOG=debug for more details, or RUST_LOG=trace for verbose output.");
         std::process::exit(1);
     }
 }
