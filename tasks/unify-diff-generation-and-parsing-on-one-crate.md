@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,9 +14,9 @@ Evaluate whether `diffy::create_patch` is acceptable for generation; if so, drop
 
 ## Acceptance Criteria
 
-- [ ] Pick one crate for both generating and parsing diffs.
-- [ ] Migrate `Diff::generate`, `Diff::parse`, and hashline edit.
-- [ ] All diff tests pass; TUI diff rendering unchanged.
+- [x] Pick one crate for both generating and parsing diffs.
+- [x] Migrate `Diff::generate`, `Diff::parse`, and hashline edit.
+- [x] All diff tests pass; TUI diff rendering unchanged.
 
 ## Design Impact
 
@@ -32,6 +32,6 @@ No change to TUI element design or composition. Only diff implementation changes
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

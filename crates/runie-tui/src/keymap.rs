@@ -1,5 +1,9 @@
 //! Crossterm key event → CoreEvent conversion with configurable keybindings.
+//!
+//! Uses a single HashMap lookup for both default and user keybindings.
+//! The default map is built once at startup from the YAML defaults.
 
+use crokey::KeyCombination;
 use crokey::KeyCombinationFormat;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
@@ -19,7 +23,22 @@ static COMBO_FORMAT: LazyLock<KeyCombinationFormat> = LazyLock::new(|| {
         .with_command("cmd-")
 });
 
-pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+/// Default keybindings map built once at startup.
+/// Maps KeyCombination string → CoreEvent for all default bindings.
+static DEFAULT_MAP: LazyLock<HashMap<String, CoreEvent>> = LazyLock::new(|| {
+    let defaults = keybindings::default_keybindings();
+    let mut map = HashMap::new();
+    for (combo, event_name) in defaults {
+        if let Some(event) = keybindings::event_from_name(&event_name) {
+            map.insert(combo, event);
+        } else {
+            tracing::warn!("Unknown event name in default keybindings: {}", event_name);
+        }
+    }
+    map
+});
+
+pub fn convert_event(event: &Event, user_bindings: &HashMap<String, String>) -> Option<CoreEvent> {
     log_key_event(event);
     match event {
         Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
@@ -30,7 +49,7 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
             width: *width,
             height: *height,
         }),
-        Event::Key(key) if is_press_or_repeat(key) => convert_key_event(key, bindings),
+        Event::Key(key) if is_press_or_repeat(key) => convert_key_event(key, user_bindings),
         _ => None,
     }
 }
@@ -39,7 +58,8 @@ fn is_press_or_repeat(key: &KeyEvent) -> bool {
     key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 }
 
-fn convert_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+fn convert_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+    // Special handling for Enter variants
     if key.modifiers.is_empty() && key.code == KeyCode::Char('\n') {
         return Some(CoreEvent::Newline);
     }
@@ -49,7 +69,8 @@ fn convert_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Opti
     if key.code == KeyCode::F(3) {
         return Some(CoreEvent::Newline);
     }
-    map_key_event(key, bindings)
+    
+    map_key_event(key, user_bindings)
 }
 
 fn is_enter_like(code: KeyCode) -> bool {
@@ -82,7 +103,6 @@ fn log_key_event(event: &Event) {
 /// Handle escape sequences that crossterm doesn't parse as KeyEvent.
 /// Many terminals send different sequences for modified keys.
 pub fn key_event_to_combo(key: &KeyEvent) -> String {
-    use crokey::KeyCombination;
     match key.code {
         // crokey formats KeyCode::Esc as "Esc" via Debug; map to "escape".
         KeyCode::Esc if key.modifiers.is_empty() => return "escape".to_owned(),
@@ -97,82 +117,39 @@ pub fn key_event_to_combo(key: &KeyEvent) -> String {
         .replace('-', "+")
 }
 
-fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
-    if let Some(evt) = lookup_binding(key, bindings) {
-        return Some(evt);
-    }
-    map_by_modifier(key)
-}
-
-fn lookup_binding(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+/// Map a key event to a CoreEvent using the binding maps.
+/// Priority: 1. User bindings override defaults, 2. Default map, 3. Plain key fallback
+fn map_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) -> Option<CoreEvent> {
     let combo = key_event_to_combo(key);
     if combo.is_empty() {
+        return map_plain_key(&key.code);
+    }
+    
+    // Special case: Ctrl+Shift+E is not a binding (it's paste special for image paste)
+    // Check this before any binding lookup since it's not in the default map
+    if key.modifiers.contains(KeyModifiers::CONTROL) 
+        && key.modifiers.contains(KeyModifiers::SHIFT)
+        && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E')) 
+    {
         return None;
     }
-    let event_name = bindings.get(&combo)?;
-    keybindings::event_from_name(event_name)
-}
-
-fn map_by_modifier(key: &KeyEvent) -> Option<CoreEvent> {
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        if key.modifiers.contains(KeyModifiers::SHIFT)
-            && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E'))
-        {
-            return None;
-        }
-        map_ctrl_key(key.code)
-    } else if key.modifiers.contains(KeyModifiers::ALT) {
-        map_alt_key(key.code)
-    } else if key.modifiers.contains(KeyModifiers::SHIFT) {
-        map_shift_key(key.code)
-    } else {
-        map_plain_key(key.code)
+    
+    // 1. Check user bindings first (they override defaults)
+    if let Some(event_name) = user_bindings.get(&combo) {
+        return keybindings::event_from_name(event_name);
     }
-}
-
-fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::CursorEnd),
-        KeyCode::Char('o') | KeyCode::Char('O') => Some(CoreEvent::ToggleExpand),
-        KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Newline),
-        KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
-        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
-        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorRight),
-        KeyCode::Char('w') | KeyCode::Char('W') => Some(CoreEvent::DeleteWord),
-        KeyCode::Char('k') | KeyCode::Char('K') => Some(CoreEvent::DeleteToEnd),
-        KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::DeleteToStart),
-        KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::KillChar),
-        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Suspend),
-        KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
-        KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
-        KeyCode::Char('q') | KeyCode::Char('Q') => Some(CoreEvent::ForceQuit),
-        KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
-        KeyCode::Char('l') | KeyCode::Char('L') => Some(CoreEvent::ToggleModelSelector),
-        _ => None,
+    
+    // 2. Check default map
+    if let Some(event) = DEFAULT_MAP.get(&combo) {
+        return Some(event.clone());
     }
+    
+    // 3. Fall back to plain key handling for unhandled keys
+    map_plain_key(&key.code)
 }
 
-fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        KeyCode::Enter => Some(CoreEvent::FollowUp),
-        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorWordLeft),
-        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorWordRight),
-        _ => None,
-    }
-}
-
-fn map_shift_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        KeyCode::Enter => Some(CoreEvent::Newline),
-        // Shift+F3 is what some terminals send for Shift+Enter (via \e[13;2~ escape sequence)
-        KeyCode::F(3) => Some(CoreEvent::Newline),
-        // Shift+symbol: pass through as regular input (crossterm already provides the shifted char)
-        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
-        _ => None,
-    }
-}
-
-fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
+/// Fallback handler for plain keys not in any binding map.
+fn map_plain_key(code: &KeyCode) -> Option<CoreEvent> {
     match code {
         // Esc acts as a **Back button** in any open dialog (command bar,
         // settings, login flow, model selector, etc.). The dialog's
@@ -182,7 +159,7 @@ fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
         // use `Abort` (Ctrl+\) instead.
         KeyCode::Esc => Some(CoreEvent::DialogBack),
         KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
-        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
+        KeyCode::Char(c) => Some(CoreEvent::Input(*c)),
         KeyCode::Backspace => Some(CoreEvent::Backspace),
         KeyCode::Enter => Some(CoreEvent::Submit),
         KeyCode::Up => Some(CoreEvent::HistoryPrev),
@@ -229,4 +206,88 @@ fn mouse_button_to_string(button: MouseButton) -> String {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    #[test]
+    fn test_ctrl_c_maps_to_quit() {
+        let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::Quit));
+    }
+
+    #[test]
+    fn test_ctrl_e_maps_to_cursor_end() {
+        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::CursorEnd));
+    }
+
+    #[test]
+    fn test_ctrl_shift_e_is_ignored() {
+        let key = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_escape_maps_to_dialog_back() {
+        let key = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::DialogBack));
+    }
+
+    #[test]
+    fn test_char_input_maps_to_input() {
+        let key = KeyEvent::new(KeyCode::Char('x'), KeyModifiers::empty());
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::Input('x')));
+    }
+
+    #[test]
+    fn test_user_binding_overrides_default() {
+        let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        let mut user_bindings = HashMap::new();
+        user_bindings.insert("ctrl+c".to_owned(), "Abort".to_owned());
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::Abort));
+    }
+
+    #[test]
+    fn test_alt_enter_maps_to_follow_up() {
+        let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT);
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::FollowUp));
+    }
+
+    #[test]
+    fn test_up_arrow_maps_to_history_prev() {
+        let key = KeyEvent::new(KeyCode::Up, KeyModifiers::empty());
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::HistoryPrev));
+    }
+
+    #[test]
+    fn test_backspace_maps_to_backspace() {
+        let key = KeyEvent::new(KeyCode::Backspace, KeyModifiers::empty());
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::Backspace));
+    }
+
+    #[test]
+    fn test_delete_maps_to_kill_char() {
+        let key = KeyEvent::new(KeyCode::Delete, KeyModifiers::empty());
+        let user_bindings = HashMap::new();
+        let result = convert_key_event(&key, &user_bindings);
+        assert_eq!(result, Some(CoreEvent::KillChar));
+    }
+}

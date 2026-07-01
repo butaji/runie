@@ -932,7 +932,7 @@
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
     "title": "Replace keymap modifier dispatch tables with a crokey HashMap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-layered-config-merge-with-figment.md",
@@ -1152,7 +1152,7 @@
   {
     "file": "unify-diff-generation-and-parsing-on-one-crate.md",
     "title": "Unify diff generation and parsing on one crate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
