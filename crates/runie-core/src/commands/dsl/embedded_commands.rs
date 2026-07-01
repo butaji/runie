@@ -3,108 +3,56 @@
 //! All built-in slash commands are embedded here so they are available
 //! regardless of filesystem layout (TUI, headless, CLI, tests).
 //!
-//! Paths are relative to this file (src/commands/dsl/):
-//!   ../../../../ → crates/runie-core/
+//! Uses `include_dir!` to automatically load all YAML files from
+//! resources/commands/ at compile time, avoiding a hand-maintained list.
 
+use include_dir::Dir;
 use crate::commands::dsl::handlers::HANDLER_REGISTRY;
 use crate::commands::dsl::spec::build_cmd_from_yaml;
 use crate::commands::dsl::spec::CommandDef;
 use crate::declarative::types::{CommandDef as DeclDef, CommandKindDef, DeclarativeCommandYaml};
 
-pub const SETTINGS: &str = include_str!("../../../resources/commands/settings.yaml");
-pub const HELP: &str = include_str!("../../../resources/commands/help.yaml");
-pub const QUIT: &str = include_str!("../../../resources/commands/quit.yaml");
-pub const MODEL: &str = include_str!("../../../resources/commands/model.yaml");
-pub const THINKING: &str = include_str!("../../../resources/commands/thinking.yaml");
-pub const SCOPED_MODELS: &str = include_str!("../../../resources/commands/scoped-models.yaml");
-pub const READONLY: &str = include_str!("../../../resources/commands/readonly.yaml");
-pub const TRUST: &str = include_str!("../../../resources/commands/trust.yaml");
-pub const UNTRUST: &str = include_str!("../../../resources/commands/untrust.yaml");
-pub const COPY: &str = include_str!("../../../resources/commands/copy.yaml");
-pub const RELOAD: &str = include_str!("../../../resources/commands/reload.yaml");
-pub const DIAGNOSTICS: &str = include_str!("../../../resources/commands/diagnostics.yaml");
-pub const SKILLS: &str = include_str!("../../../resources/commands/skills.yaml");
-pub const SKILL: &str = include_str!("../../../resources/commands/skill.yaml");
-pub const PROMPT: &str = include_str!("../../../resources/commands/prompt.yaml");
-pub const HOTKEYS: &str = include_str!("../../../resources/commands/hotkeys.yaml");
-pub const THEME: &str = include_str!("../../../resources/commands/theme.yaml");
-pub const APPROVE: &str = include_str!("../../../resources/commands/approve.yaml");
-pub const REJECT: &str = include_str!("../../../resources/commands/reject.yaml");
-pub const PROVIDER: &str = include_str!("../../../resources/commands/provider.yaml");
-pub const SAVE: &str = include_str!("../../../resources/commands/save.yaml");
-pub const LOAD: &str = include_str!("../../../resources/commands/load.yaml");
-pub const DELETE: &str = include_str!("../../../resources/commands/delete.yaml");
-pub const EXPORT: &str = include_str!("../../../resources/commands/export.yaml");
-pub const IMPORT: &str = include_str!("../../../resources/commands/import.yaml");
-pub const SESSIONS: &str = include_str!("../../../resources/commands/sessions.yaml");
-pub const NEW: &str = include_str!("../../../resources/commands/new.yaml");
-pub const RESET: &str = include_str!("../../../resources/commands/reset.yaml");
-pub const HISTORY: &str = include_str!("../../../resources/commands/history.yaml");
-pub const SESSION: &str = include_str!("../../../resources/commands/session.yaml");
-pub const TREE: &str = include_str!("../../../resources/commands/tree.yaml");
-pub const SHARE: &str = include_str!("../../../resources/commands/share.yaml");
-pub const RESUME: &str = include_str!("../../../resources/commands/resume.yaml");
-pub const COMPACT: &str = include_str!("../../../resources/commands/compact.yaml");
-pub const FORK: &str = include_str!("../../../resources/commands/fork.yaml");
-pub const NAME: &str = include_str!("../../../resources/commands/name.yaml");
-
-const ALL: &[(&str, &str)] = &[
-    ("settings", SETTINGS),
-    ("help", HELP),
-    ("quit", QUIT),
-    ("model", MODEL),
-    ("thinking", THINKING),
-    ("scoped-models", SCOPED_MODELS),
-    ("readonly", READONLY),
-    ("trust", TRUST),
-    ("untrust", UNTRUST),
-    ("copy", COPY),
-    ("reload", RELOAD),
-    ("diagnostics", DIAGNOSTICS),
-    ("skills", SKILLS),
-    ("skill", SKILL),
-    ("prompt", PROMPT),
-    ("hotkeys", HOTKEYS),
-    ("theme", THEME),
-    ("approve", APPROVE),
-    ("reject", REJECT),
-    ("provider", PROVIDER),
-    ("save", SAVE),
-    ("load", LOAD),
-    ("delete", DELETE),
-    ("export", EXPORT),
-    ("import", IMPORT),
-    ("sessions", SESSIONS),
-    ("new", NEW),
-    ("reset", RESET),
-    ("history", HISTORY),
-    ("session", SESSION),
-    ("tree", TREE),
-    ("share", SHARE),
-    ("resume", RESUME),
-    ("compact", COMPACT),
-    ("fork", FORK),
-    ("name", NAME),
-];
+/// Embed resources/commands/ at compile time via include_dir.
+/// This avoids a hand-maintained list: adding a new .yaml file is enough.
+static COMMANDS_DIR: Dir<'static> =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/resources/commands");
 
 /// Load all embedded commands as `spec::CommandDef`.
 pub fn load_embedded_commands() -> Vec<CommandDef> {
     let handler_registry = &*HANDLER_REGISTRY;
-    ALL.iter()
-        .filter_map(|(name, yaml)| {
-            let yaml: DeclarativeCommandYaml = match serde_yaml::from_str(yaml) {
+
+    COMMANDS_DIR
+        .files()
+        .filter_map(|f| {
+            let path = f.path();
+            // Skip non-YAML files
+            let extension = path.extension()?.to_str()?;
+            if extension != "yaml" && extension != "yml" {
+                return None;
+            }
+
+            // Safe: YAML files in resources/commands/ are always UTF-8.
+            let yaml_contents = std::str::from_utf8(f.contents()).ok()?;
+
+            let yaml: DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
                 Ok(y) => y,
                 Err(e) => {
-                    tracing::warn!("Failed to parse {}: {}", name, e);
+                    tracing::warn!(
+                        "Failed to parse {:?}: {}",
+                        path.file_name().and_then(|n| n.to_str()),
+                        e
+                    );
                     return None;
                 }
             };
+
             let (handler_name, message) = match yaml.to_kind() {
                 CommandKindDef::Handler { name } => (Some(name), None),
                 CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
                 CommandKindDef::Form { .. } => (None, None),
                 CommandKindDef::Msg { message } => (None, Some(message)),
             };
+
             let decl_def = DeclDef {
                 name: yaml.name.clone(),
                 description: yaml.description,
@@ -117,6 +65,7 @@ pub fn load_embedded_commands() -> Vec<CommandDef> {
                 handler_name,
                 message,
             };
+
             match build_cmd_from_yaml(&decl_def, handler_registry) {
                 Some(cmd) => Some(cmd),
                 None => {
@@ -138,7 +87,15 @@ mod tests {
     #[test]
     fn quit_command_has_handler_flow() {
         use crate::declarative::types::{CommandKindDef, DeclarativeCommandYaml};
-        let yaml: DeclarativeCommandYaml = serde_yaml::from_str(QUIT).unwrap();
+
+        // Find the quit.yaml file
+        let quit_yaml = COMMANDS_DIR
+            .files()
+            .find(|f| f.path().file_stem().map(|s| s == "quit").unwrap_or(false))
+            .expect("quit.yaml should be embedded");
+
+        let yaml_contents = std::str::from_utf8(quit_yaml.contents()).unwrap();
+        let yaml: DeclarativeCommandYaml = serde_yaml::from_str(yaml_contents).unwrap();
         let kind = yaml.to_kind();
         assert!(
             matches!(kind, CommandKindDef::Handler { name } if name == "quit"),
@@ -147,8 +104,56 @@ mod tests {
     }
 
     #[test]
-    fn all_36_commands_loaded() {
+    fn all_yaml_files_load() {
         let cmds = load_embedded_commands();
-        assert_eq!(cmds.len(), 36, "all 36 commands should be loaded");
+        let yaml_count = COMMANDS_DIR
+            .files()
+            .filter(|f| {
+                f.path()
+                    .extension()
+                    .map(|e| e == "yaml" || e == "yml")
+                    .unwrap_or(false)
+            })
+            .count();
+
+        // All YAML files should load successfully
+        assert_eq!(
+            cmds.len(),
+            yaml_count,
+            "all {} YAML files should be loaded",
+            yaml_count
+        );
+    }
+
+    #[test]
+    fn command_names_are_valid() {
+        let cmds = load_embedded_commands();
+
+        // All commands should have non-empty names
+        for cmd in &cmds {
+            assert!(!cmd.name.is_empty(), "command name should not be empty");
+        }
+
+        // Verify expected commands are present (using names from YAML content)
+        let cmd_names: std::collections::HashSet<_> =
+            cmds.iter().map(|c| c.name.clone()).collect();
+
+        // These are the command names as defined in the YAML files
+        let expected_commands = vec![
+            "settings", "help", "quit", "model", "thinking", "scoped-models",
+            "readonly", "trust", "untrust", "copy", "reload", "diagnostics",
+            "skills", "skill", "prompt", "hotkeys", "theme", "approve", "reject",
+            "provider", "save", "load", "delete", "export", "import", "sessions",
+            "new", "reset", "history", "session_info", "tree", "share", "resume",
+            "compact", "fork", "name",
+        ];
+
+        for expected in expected_commands {
+            assert!(
+                cmd_names.contains(expected),
+                "command '{}' should be loaded",
+                expected
+            );
+        }
     }
 }
