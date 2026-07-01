@@ -362,7 +362,7 @@
   {
     "file": "externalize-default-theme-toml-to-resources.md",
     "title": "Externalize default theme TOML to resources",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "extract-shared-streaming-response-parser.md",

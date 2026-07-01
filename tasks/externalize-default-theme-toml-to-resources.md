@@ -2,22 +2,22 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
-`crates/runie-tui/src/semantic_tokens.rs:80-161` embeds the canonical theme as a 160-line raw Rust string. It cannot be previewed/edited with standard TOML tooling.
+`crates/runie-tui/src/semantic_tokens.rs` (previously lines 80–161) embedded the canonical theme as a 160-line raw Rust string. It cannot be previewed/edited with standard TOML tooling.
 
 ## Goal
 
-Move `DEFAULT_THEME_TOML` to `crates/runie-core/resources/themes/runie.toml` and load it with `include_str!`. Remove the hand-maintained theme token list.
+Move `DEFAULT_THEME_TOML` to `crates/runie-tui/resources/themes/runie.toml` and load it with `include_str!`. Remove the hand-maintained theme token list.
 
 ## Acceptance Criteria
 
-- [ ] Move theme TOML to resources.
-- [ ] Load it at startup.
-- [ ] Delete raw string and manual token list.
-- [ ] Theme rendering unchanged.
+- [x] Move theme TOML to resources.
+- [x] Load it at startup.
+- [x] Delete raw string and manual token list.
+- [x] Theme rendering unchanged.
 
 ## Design Impact
 
@@ -33,6 +33,6 @@ No change to TUI element design or composition. Only theme loading changes.
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
