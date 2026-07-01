@@ -1,0 +1,91 @@
+### Derive Builder Usage Example
+
+Source: https://github.com/colin-kiegel/rust-derive-builder/blob/master/README.md
+
+Annotate your struct with #[derive(Builder)] and use the generated builder to create instances. The `#[builder(setter(into))]` attribute allows setters to accept types that can be converted into the field's type.
+
+```rust
+use derive_builder::Builder;
+
+#[derive(Default, Builder, Debug)]
+#[builder(setter(into))]
+struct Channel {
+    token: i32,
+    special_info: i32,
+    // .. a whole bunch of other fields ..
+}
+
+fn main() {
+    // builder pattern, go, go, go!...
+    let ch = ChannelBuilder::default()
+        .special_info(42u8)
+        .token(19124)
+        .build()
+        .unwrap();
+    println!("{:?}", ch);
+}
+```
+
+--------------------------------
+
+### Basic Builder Pattern Implementation in Rust
+
+Source: https://context7.com/colin-kiegel/rust-derive-builder/llms.txt
+
+Applies `#[derive(Builder)]` to a struct to generate a builder with setters and a `build()` method. Missing required fields will result in errors.
+
+```rust
+use derive_builder::Builder;
+
+#[derive(Builder, Debug, PartialEq)]
+struct Lorem {
+    ipsum: u32,
+    dolor: String,
+}
+
+fn main() {
+    // Create instance using the generated builder
+    let lorem = LoremBuilder::default()
+        .ipsum(42)
+        .dolor("sit".to_string())
+        .build()
+        .unwrap();
+
+    assert_eq!(lorem.ipsum, 42);
+    assert_eq!(lorem.dolor, "sit");
+
+    // Missing required fields produce errors
+    let error = LoremBuilder::default().build().unwrap_err();
+    assert_eq!(&error.to_string(), "`ipsum` must be initialized");
+}
+```
+
+--------------------------------
+
+### Basic Struct with Derive Builder
+
+Source: https://github.com/colin-kiegel/rust-derive-builder/blob/master/README.md
+
+Example of a basic struct annotated with `#[derive(Builder)]` to generate a builder.
+
+```rust
+#[derive(Builder)]
+struct MyStruct {
+    field1: String,
+    field2: u32,
+}
+```
+
+### Basic Builder Pattern
+
+Source: https://context7.com/colin-kiegel/rust-derive-builder/llms.txt
+
+The simplest usage applies `#[derive(Builder)]` to a struct, which generates a builder with setters for each field and a `build()` method returning `Result<T, TBuilderError>`. This allows for easy instantiation of structs with multiple fields, providing compile-time checks for missing required fields.
+
+--------------------------------
+
+### Builder Pattern Derive
+
+Source: https://github.com/colin-kiegel/rust-derive-builder/blob/master/README.md
+
+The `derive_builder` crate provides a Rust macro that automatically implements the builder pattern for your structs. By simply annotating a struct with `#[derive(Builder)]`, you can generate a corresponding builder struct with all necessary setter methods and a build method, eliminating the need for manual boilerplate code.

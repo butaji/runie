@@ -1,0 +1,228 @@
+### Complete Application Configuration Example (Rust)
+
+Source: https://context7.com/sergiobenitez/figment/llms.txt
+
+Presents a comprehensive example of combining multiple configuration sources: default values, a TOML file, and environment variable overrides. It demonstrates how to define a `Config` struct, implement defaults, and construct a `Figment` instance with a chain of providers.
+
+```rust
+use serde::{Serialize, Deserialize};
+use figment::{Figment, Provider, Error, Metadata, Profile};
+use figment::providers::{Format, Toml, Env, Serialized};
+use figment::value::{Map, Dict};
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Config {
+    database_url: String,
+    port: u16,
+    debug: bool,
+    allowed_hosts: Vec<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            database_url: "postgres://localhost/app".into(),
+            port: 8080,
+            debug: false,
+            allowed_hosts: vec!["localhost".into()],
+        }
+    }
+}
+
+// Make Config a provider for composability
+impl Provider for Config {
+    fn metadata(&self) -> Metadata {
+        Metadata::named("App Config")
+    }
+
+    fn data(&self) -> Result<Map<Profile, Dict>, Error> {
+        Serialized::defaults(Config::default()).data()
+    }
+}
+
+impl Config {
+    fn figment() -> Figment {
+        Figment::from(Serialized::defaults(Config::default()))
+            .merge(Toml::file("App.toml"))
+            .merge(Env::prefixed("APP_").split("_"))
+    }
+}
+
+figment::Jail::expect_with(|jail| {
+    jail.create_file("App.toml", r#"
+        port = 3000
+        debug = true
+    "#)?;
+
+    jail.set_env("APP_DATABASE_URL", "postgres://prod/myapp");
+    jail.set_env("APP_ALLOWED_HOSTS", "[\"example.com\", \"api.example.com\"]");
+
+    let config: Config = Config::figment().extract()?;
+
+    assert_eq!(config.database_url, "postgres://prod/myapp"); // from env
+    assert_eq!(config.port, 3000); // from file
+    assert_eq!(config.debug, true); // from file
+    assert_eq!(config.allowed_hosts, vec!["example.com", "api.example.com"]); // from env
+
+    Ok(())
+});
+
+```
+
+--------------------------------
+
+### Toml::file - TOML file provider
+
+Source: https://context7.com/sergiobenitez/figment/llms.txt
+
+Reads and parses configuration data from a TOML file. The provider automatically searches for the specified file in the current directory and its parent directories. This is a common way to load application configuration from a dedicated file.
+
+```rust
+use serde::Deserialize;
+use figment::{Figment, Jail, providers::{Format, Toml}, value::Map};
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct Config {
+    numbers: Vec<usize>,
+    untyped: Map<String, usize>,
+}
+
+Jail::expect_with(|jail| {
+    jail.create_file("Config.toml", r#"
+        numbers = [1, 2, 3]
+
+        [untyped]
+        key = 1
+        other = 4
+    "#)?;
+
+    let config: Config = Figment::from(Toml::file("Config.toml")).extract()?;
+    assert_eq!(config, Config {
+        numbers: vec![1, 2, 3],
+        untyped: figment::util::map!["key".into() => 1, "other".into() => 4],
+    });
+
+    Ok(())
+});
+```
+
+--------------------------------
+
+### Load Configuration from TOML, JSON, and Environment Variables in Rust
+
+Source: https://github.com/sergiobenitez/figment/blob/master/README.md
+
+This Rust code snippet demonstrates how to load configuration settings using the Figment library. It merges configurations from a TOML file ('Cargo.toml'), environment variables prefixed with 'CARGO_', specific environment variables ('RUSTC', 'RUSTDOC'), and a JSON file ('Cargo.json'). The configuration is then deserialized into a 'Config' struct. This approach is useful for managing application settings in a flexible and organized manner.
+
+```rust
+use serde::Deserialize;
+
+use figment::{Figment, providers::{Format, Toml, Json, Env}};
+
+#[derive(Deserialize)]
+struct Package {
+    name: String,
+    authors: Vec<String>,
+    publish: Option<bool>,
+    // ... and so on ...
+}
+
+#[derive(Deserialize)]
+struct Config {
+    package: Package,
+    rustc: Option<String>,
+    // ... and so on ...
+}
+
+let config: Config = Figment::new()
+    .merge(Toml::file("Cargo.toml"))
+    .merge(Env::prefixed("CARGO_"))
+    .merge(Env::raw().only(&["RUSTC", "RUSTDOC"]))
+    .join(Json::file("Cargo.json"))
+    .extract()?;
+```
+
+--------------------------------
+
+### Testing Configurations with a Sandboxed Environment (Rust)
+
+Source: https://context7.com/sergiobenitez/figment/llms.txt
+
+Demonstrates how to use Figment's `Jail` to create an isolated environment for testing configuration loading. It sets up a temporary TOML file and environment variables, then loads them into a `Config` struct, ensuring changes are automatically cleaned up.
+
+```rust
+use figment::{Figment, Jail, providers::{Format, Toml, Env}};
+use serde::Deserialize;
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct Config {
+    name: String,
+    authors: Vec<String>,
+    publish: bool
+}
+
+Jail::expect_with(|jail| {
+    // Create a temporary config file
+    jail.create_file("Cargo.toml", r#"
+        name = "test"
+        authors = ["bob"]
+        publish = false
+    "#)?;
+
+    // Set temporary environment variable
+    jail.set_env("CARGO_NAME", "env-test");
+
+    let config: Config = Figment::new()
+        .merge(Toml::file("Cargo.toml"))
+        .merge(Env::prefixed("CARGO_"))
+        .extract()?;
+
+    assert_eq!(config.name, "env-test");
+    assert_eq!(config.authors, vec!["bob"]);
+    assert_eq!(config.publish, false);
+
+    Ok(())
+});
+// Files and env vars are automatically cleaned up here
+
+```
+
+--------------------------------
+
+### Env::split - Environment variables with nested key support
+
+Source: https://context7.com/sergiobenitez/figment/llms.txt
+
+Enables the creation of nested configuration structures from environment variables by splitting environment variable keys at a specified delimiter. For example, `APP_DATABASE_HOST` can be transformed into a nested structure like `database.host`. This allows for more organized configuration loading from environment variables.
+
+```rust
+use serde::Deserialize;
+use figment::{Figment, Jail, providers::Env, value::Dict};
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct Foo {
+    key: usize,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct Config {
+    foo: Foo,
+    map: Dict,
+}
+
+Jail::expect_with(|jail| {
+    jail.set_env("APP_FOO_KEY", 20);
+    jail.set_env("APP_MAP_ONE", "1.0");
+    jail.set_env("APP_MAP_TWO", "dos");
+
+    let config: Config = Figment::new()
+        .merge(Env::prefixed("APP_").split("_"))
+        .extract()?;
+
+    assert_eq!(config.foo, Foo { key: 20 });
+    assert_eq!(config.map.get("one").unwrap().to_string(), "1.0");
+    assert_eq!(config.map.get("two").unwrap().to_string(), "\"dos\"");
+
+    Ok(())
+});
+```
