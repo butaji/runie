@@ -2,7 +2,7 @@
 //!
 //! These methods project TurnActor facts into AppState.
 
-use super::AppState;
+use super::{AgentState, AppState};
 
 #[cfg(test)]
 mod tests {
@@ -214,27 +214,8 @@ impl AppState {
         self.turn_state_mut().inflight += 1;
         self.turn_state_mut().streaming = true;
         self.turn_state_mut().turn_started_at = Some(std::time::Instant::now());
-        // Copy turn state values into locals (releases immutable borrow of self).
-        let turn_active = self.turn_state.turn_active;
-        let inflight = self.turn_state.inflight;
-        let streaming = self.turn_state.streaming;
-        let turn_started_at = self.turn_state.turn_started_at;
-        let current_request_id = self.turn_state.current_request_id.clone();
-        let current_tool_name = self.turn_state.current_tool_name.clone();
-        let current_action = self.turn_state.current_action.clone();
-        let thinking_started_at = self.turn_state.thinking_started_at;
-        let tool_started_at = self.turn_state.tool_started_at;
-        // Sync authoritative fields to AgentState.
-        let agent = self.agent_state_mut();
-        agent.turn_active = turn_active;
-        agent.inflight = inflight;
-        agent.streaming = streaming;
-        agent.turn_started_at = turn_started_at;
-        agent.current_request_id = current_request_id;
-        agent.current_tool_name = current_tool_name;
-        agent.current_action = current_action;
-        agent.thinking_started_at = thinking_started_at;
-        agent.tool_started_at = tool_started_at;
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     /// Project TurnCompleted fact into AppState.
@@ -243,17 +224,8 @@ impl AppState {
         self.turn_state_mut().turn_active = false;
         self.turn_state_mut().inflight = self.turn_state_mut().inflight.saturating_sub(1);
         self.turn_state_mut().current_tool_name = None;
-        // Copy turn state values into locals.
-        let streaming = self.turn_state.streaming;
-        let turn_active = self.turn_state.turn_active;
-        let inflight = self.turn_state.inflight;
-        let current_tool_name = self.turn_state.current_tool_name.clone();
-        // Sync authoritative fields.
-        let agent = self.agent_state_mut();
-        agent.streaming = streaming;
-        agent.turn_active = turn_active;
-        agent.inflight = inflight;
-        agent.current_tool_name = current_tool_name;
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     /// Project TurnErrored fact into AppState.
@@ -261,15 +233,8 @@ impl AppState {
         self.turn_state_mut().streaming = false;
         self.turn_state_mut().turn_active = false;
         self.turn_state_mut().inflight = 0;
-        // Copy turn state values into locals.
-        let streaming = self.turn_state.streaming;
-        let turn_active = self.turn_state.turn_active;
-        let inflight = self.turn_state.inflight;
-        // Sync authoritative fields.
-        let agent = self.agent_state_mut();
-        agent.streaming = streaming;
-        agent.turn_active = turn_active;
-        agent.inflight = inflight;
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     /// Project TokenStatsUpdated fact into AppState.
@@ -283,11 +248,8 @@ impl AppState {
         self.turn_state_mut().tokens_out = tokens_out;
         self.turn_state_mut().speed_tps = speed_tps;
         self.turn_state_mut().turn_tokens_out = tokens_out;
-        // Sync token fields to AgentState.
-        self.agent_state_mut().tokens_in = tokens_in;
-        self.agent_state_mut().tokens_out = tokens_out;
-        self.agent_state_mut().speed_tps = speed_tps;
-        self.agent_state_mut().turn_tokens_out = tokens_out;
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     /// Project UserMessageSubmitted fact into AppState.
@@ -304,8 +266,8 @@ impl AppState {
             ..Default::default()
         });
         self.turn_state_mut().request_queue.push_back((content, id));
-        // Sync request_queue to AgentState.
-        self.agent_state_mut().request_queue = self.turn_state.request_queue.clone();
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
     }
 
@@ -329,9 +291,8 @@ impl AppState {
         });
         // Add to request_queue (for agent to pick up)
         self.turn_state_mut().request_queue.push_back((content, id));
-        // Sync queues to AgentState.
-        self.agent_state_mut().message_queue = self.turn_state.message_queue.clone();
-        self.agent_state_mut().request_queue = self.turn_state.request_queue.clone();
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
     }
 
@@ -355,9 +316,8 @@ impl AppState {
         });
         // Add to request_queue (for agent to pick up)
         self.turn_state_mut().request_queue.push_back((content, id));
-        // Sync queues to AgentState.
-        self.agent_state_mut().message_queue = self.turn_state.message_queue.clone();
-        self.agent_state_mut().request_queue = self.turn_state.request_queue.clone();
+        // Sync all fields from TurnState to AgentState using the From impl.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
     }
 
