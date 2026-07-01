@@ -227,7 +227,7 @@
   {
     "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
     "title": "Delete broken DSL flow combinators and thread-local runtime",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-actor-handle-wrappers.md",
