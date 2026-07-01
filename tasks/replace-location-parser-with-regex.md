@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 
@@ -14,10 +16,10 @@ Replace the hand-written parser with a compiled `regex` that captures path, line
 
 ## Acceptance Criteria
 
-- [ ] Remove manual string splitting in `location.rs`.
-- [ ] Use one compiled `Regex` for location parsing.
-- [ ] Preserve support for paths containing colons where possible.
-- [ ] All existing location tests pass.
+- [x] Remove manual string splitting in `location.rs`. — Done; regex-based parsing with `LOCATION_RE` replaces manual splitting
+- [x] Use one compiled `Regex` for location parsing. — Done; `static LOCATION_RE: LazyLock<Regex>` handles all patterns
+- [x] Preserve support for paths containing colons where possible. — Done; path portion must look like a filename or contain path separator
+- [x] All existing location tests pass. — Done; 14 tests pass (location + search_query)
 
 ## Design Impact
 
