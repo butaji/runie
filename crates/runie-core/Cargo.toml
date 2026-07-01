@@ -19,8 +19,6 @@ serde_json = "1"
 
 [features]
 default = []
-# Enable migration from redb session files (can be disabled to reduce dependencies)
-redb-migration = ["dep:redb"]
 
 [dependencies]
 serde.workspace = true
@@ -80,7 +78,6 @@ uuid = { version = "1", features = ["v4"] }
 async-trait.workspace = true
 ractor.workspace = true
 parking_lot.workspace = true
-redb = { version = "2", optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
