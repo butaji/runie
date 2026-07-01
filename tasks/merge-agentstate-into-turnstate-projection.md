@@ -12,6 +12,8 @@
 
 Make `AgentState` a thin read-only projection of `TurnState` (or delete it and have `AppState` hold `TurnState` directly). The `RactorTurnHandle` returns snapshots. Route all queue/state mutations through `TurnActor`.
 
+Concrete remaining work: delete the one-way sync glue in `crates/runie-core/src/model/state/turn_projections.rs:199-349` (`apply_turn_started`, `apply_token_stats`, etc.) so `AgentState` is derived only through `From<&TurnState>`.
+
 ## Acceptance Criteria
 
 - [ ] Remove duplicated fields from `AgentState`.

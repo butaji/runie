@@ -1,0 +1,36 @@
+# Use validator for form and config inputs
+
+## Status
+
+`todo`
+
+## Context
+
+Form/input validation is ad-hoc (empty API key checks in form handlers); config validation is driven by JSON Schema rather than typed struct validation.
+
+## Goal
+
+Use `validator` derive macros on input structs; keep JSON Schema path for config files.
+
+## Acceptance Criteria
+- [ ] Add `validator` dependency.
+- [ ] Derive `Validate` on form/input structs.
+- [ ] Use for sensitive-key denylist checks.
+
+## Design Impact
+
+No change to TUI element design or composition unless explicitly noted. Only implementation behavior, dependency graph, internal architecture, async runtime, or documentation changes.
+
+## Tests
+
+- **Layer 1 — State/Logic:** Unit tests for validation errors.
+- **Layer 2 — Event Handling:** Invalid form facts emit errors.
+- **Layer 3 — Rendering:** N/A.
+- **Layer 4 — E2E:** Form/config tests pass.
+- **Live tmux validation:** `/login` validates input.
+
+## Completion Validation
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

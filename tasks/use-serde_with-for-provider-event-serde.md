@@ -1,0 +1,36 @@
+# Use serde_with for provider event serde
+
+## Status
+
+`todo`
+
+## Context
+
+`crates/runie-core/src/provider_event.rs:135-202` has ~70 lines of hand-written `Serialize`/`Deserialize` impls for `ModelError` that map enum variants to a JSON struct with `kind`/`message` fields.
+
+## Goal
+
+Replace with `serde_with` (`SerializeDisplay`/`DeserializeFromStr`) or derive-friendly serde attributes.
+
+## Acceptance Criteria
+- [ ] Add `serde_with` dependency.
+- [ ] Replace manual impls.
+- [ ] Ensure durable JSON byte-compatibility.
+
+## Design Impact
+
+No change to TUI element design or composition unless explicitly noted. Only implementation behavior, dependency graph, internal architecture, async runtime, or documentation changes.
+
+## Tests
+
+- **Layer 1 — State/Logic:** Unit tests for JSON round-trip.
+- **Layer 2 — Event Handling:** N/A.
+- **Layer 3 — Rendering:** N/A.
+- **Layer 4 — E2E:** Provider event tests pass.
+- **Live tmux validation:** N/A.
+
+## Completion Validation
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

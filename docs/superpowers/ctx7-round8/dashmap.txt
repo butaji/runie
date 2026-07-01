@@ -1,0 +1,124 @@
+### Inserting and Updating Entries in DashMap (Rust)
+
+Source: https://context7.com/xacrimon/dashmap/llms.txt
+
+Covers insertion and update operations for DashMap. It shows basic `insert`, conditional insertion using the `entry` API with `and_modify` and `or_insert`, and lazy initialization with `or_insert_with`.
+
+```rust
+use dashmap::DashMap;
+
+let map = DashMap::new();
+
+// Basic insert - returns old value if key existed
+let old = map.insert("name", "Alice");
+assert_eq!(old, None);
+
+let old = map.insert("name", "Bob");
+assert_eq!(old, Some("Alice"));
+
+// Entry API for conditional insertion
+map.entry("counter")
+    .and_modify(|v| *v += 1)
+    .or_insert(0);
+
+// or_insert returns mutable reference to value
+let mut ref_mut = map.entry("score").or_insert(100);
+*ref_mut += 50;
+assert_eq!(*map.get("score").unwrap(), 150);
+
+// or_insert_with for lazy initialization
+map.entry("expensive")
+    .or_insert_with(|| {
+        // Only computed if key doesn't exist
+        expensive_computation()
+    });
+
+fn expensive_computation() -> i32 { 42 }
+```
+
+--------------------------------
+
+### DashMap Advanced Entry API: Manipulate, Insert, and Compute Entries
+
+Source: https://context7.com/xacrimon/dashmap/llms.txt
+
+Demonstrates advanced entry manipulation in DashMap, including modifying existing entries, inserting default values if absent, and computing values with error handling. It shows how to get a mutable reference to an entry or insert a new one.
+
+```rust
+use dashmap::DashMap;
+
+let map = DashMap::new();
+
+// Complex entry manipulation
+let entry = map.entry("user_id");
+entry
+    .and_modify(|id| *id += 1)
+    .or_insert(1000);
+
+// Pattern: increment counter or initialize
+let mut counter_ref = map
+    .entry("page_views")
+    .or_insert(0);
+*counter_ref += 1;
+
+// Pattern: try to compute value, handle errors
+let result = map.entry("config").or_try_insert_with(|| {
+    load_config().map_err(|e| format!("Config error: {}", e))
+});
+
+match result {
+    Ok(config_ref) => println!("Config loaded"),
+    Err(e) => println!("Failed: {}", e),
+}
+
+// Insert and get entry
+let occupied = map.entry("status").insert_entry("active".to_string());
+assert_eq!(occupied.key(), &"status");
+
+fn load_config() -> Result<String, std::io::Error> {
+    Ok("loaded".to_string())
+}
+```
+
+--------------------------------
+
+### DashMap Thread-Safe Counter Pattern
+
+Source: https://context7.com/xacrimon/dashmap/llms.txt
+
+Demonstrates a common pattern for implementing thread-safe counters using DashMap. Multiple threads concurrently increment counters identified by keys, ensuring data integrity without explicit locking.
+
+```rust
+use dashmap::DashMap;
+use std::sync::Arc;
+use std::thread;
+
+let counters = Arc::new(DashMap::new());
+
+// Spawn multiple threads incrementing various counters
+let handles: Vec<_> = (0..10)
+    .map(|thread_id| {
+        let counters = Arc::clone(&counters);
+        thread::spawn(move || {
+            for i in 0..100 {
+                let counter_key = i % 5; // 5 different counters
+                counters
+                    .entry(counter_key)
+                    .and_modify(|count| *count += 1)
+                    .or_insert(1);
+            }
+        })
+    })
+    .collect();
+
+for handle in handles {
+    handle.join().unwrap();
+}
+
+// Each counter should have been incremented 200 times (10 threads * 100 / 5)
+for i in 0..5 {
+    assert_eq!(*counters.get(&i).unwrap(), 200);
+}
+
+println!("All counters: {:?}", counters);
+```
