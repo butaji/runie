@@ -58,7 +58,8 @@ impl ModelCapabilities {
 }
 
 /// Information about a model for the model selector dialog.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Builder)]
+#[builder(setter(strip_option))]
 pub struct ModelInfo {
     pub name: String,
     pub provider: String,
@@ -126,18 +127,21 @@ pub fn model_catalog() -> Vec<ModelInfo> {
                 max_output_tokens: model.max_output_tokens,
                 cache_control: model.cache_control,
             };
-            models.push(ModelInfo {
-                provider: provider.key.clone(),
-                name: model.name.clone(),
-                display_name: model.name.clone(),
-                cost_prompt: model.cost_prompt,
-                cost_completion: model.cost_completion,
-                supports_thinking: model.supports_thinking,
-                supports_vision: model.supports_vision,
-                tokenizer: model.tokenizer.clone(),
-                context_window: model.context_window,
-                capabilities,
-            });
+            models.push(
+                ModelInfoBuilder::default()
+                    .provider(provider.key.clone())
+                    .name(model.name.clone())
+                    .display_name(model.name.clone())
+                    .cost_prompt(model.cost_prompt.unwrap_or_default())
+                    .cost_completion(model.cost_completion.unwrap_or_default())
+                    .supports_thinking(model.supports_thinking)
+                    .supports_vision(model.supports_vision)
+                    .tokenizer(model.tokenizer.clone().unwrap_or_default())
+                    .context_window(model.context_window.unwrap_or_default())
+                    .capabilities(capabilities)
+                    .build()
+                    .unwrap(),
+            );
         }
     }
     models
@@ -330,26 +334,29 @@ mod tests {
     fn registry_model_has_consistent_provider() {
         for provider in crate::provider::known_providers() {
             for model in &provider.models {
-                let info = ModelInfo {
-                    provider: provider.key.clone(),
-                    name: model.name.clone(),
-                    display_name: model.name.clone(),
-                    cost_prompt: model.cost_prompt,
-                    cost_completion: model.cost_completion,
-                    supports_thinking: model.supports_thinking,
-                    supports_vision: model.supports_vision,
-                    tokenizer: model.tokenizer.clone(),
-                    context_window: model.context_window,
-                    capabilities: ModelCapabilities {
-                        streaming: model.streaming,
-                        supports_vision: model.supports_vision,
-                        supports_tools: model.supports_tools,
-                        supports_reasoning: model.supports_reasoning,
-                        max_context_tokens: model.context_window.unwrap_or(0),
-                        max_output_tokens: model.max_output_tokens,
-                        cache_control: model.cache_control,
-                    },
-                };
+                let caps = ModelCapabilitiesBuilder::default()
+                    .streaming(model.streaming)
+                    .supports_vision(model.supports_vision)
+                    .supports_tools(model.supports_tools)
+                    .supports_reasoning(model.supports_reasoning)
+                    .max_context_tokens(model.context_window.unwrap_or(0))
+                    .max_output_tokens(model.max_output_tokens)
+                    .cache_control(model.cache_control)
+                    .build()
+                    .unwrap();
+                let info = ModelInfoBuilder::default()
+                    .provider(provider.key.clone())
+                    .name(model.name.clone())
+                    .display_name(model.name.clone())
+                    .cost_prompt(model.cost_prompt.unwrap_or_default())
+                    .cost_completion(model.cost_completion.unwrap_or_default())
+                    .supports_thinking(model.supports_thinking)
+                    .supports_vision(model.supports_vision)
+                    .tokenizer(model.tokenizer.clone().unwrap_or_default())
+                    .context_window(model.context_window.unwrap_or_default())
+                    .capabilities(caps)
+                    .build()
+                    .unwrap();
                 assert_eq!(info.provider, provider.key);
                 assert_eq!(info.full(), format!("{}/{}", provider.key, model.name));
             }

@@ -432,7 +432,7 @@
   {
     "file": "derive-builder-for-model-and-panel-builders.md",
     "title": "Derive builders for model and panel builders",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "derive-durable-and-headless-events-from-canonical-event.md",
