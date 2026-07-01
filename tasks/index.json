@@ -397,7 +397,7 @@
   {
     "file": "externalize-default-prompts-tools-and-keybindings-to-resources.md",
     "title": "Externalize default prompts, tools, and keybindings to resources",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "externalize-default-theme-toml-to-resources.md",
