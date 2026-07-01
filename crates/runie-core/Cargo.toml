@@ -69,7 +69,6 @@ humantime.workspace = true
 include_dir.workspace = true
 crokey.workspace = true
 path-absolutize.workspace = true
-similar.workspace = true
 tokio-util.workspace = true
 metrics.workspace = true
 tiktoken.workspace = true

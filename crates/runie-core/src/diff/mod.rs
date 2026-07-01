@@ -2,11 +2,11 @@
 //!
 //! The agent generates a `Diff` directly; the TUI renders it without parsing.
 //! String serialization is only used for copy/export.
+//!
+//! This module uses `diffy` for both generating and parsing unified diffs,
+//! providing a unified dependency for all diff operations.
 
-use similar::{Algorithm, ChangeTag, TextDiff};
-use std::time::Duration;
-
-const DIFF_DEADLINE_SECS: u64 = 5;
+use diffy::{create_patch, Patch};
 
 /// Normalize diff content lines: ensure proper unified diff prefix.
 fn normalize_content_line(line: &str) -> Option<(char, &str)> {
@@ -85,6 +85,7 @@ pub struct Diff {
 
 impl Diff {
     /// Generate a unified diff between old and new content.
+    /// Uses `diffy` for both generation and parsing.
     pub fn generate(old_content: &str, new_content: &str) -> Self {
         if old_content == new_content {
             return Diff {
@@ -94,71 +95,15 @@ impl Diff {
             };
         }
 
-        let diff = TextDiff::configure()
-            .algorithm(Algorithm::Patience)
-            .timeout(Duration::from_secs(DIFF_DEADLINE_SECS))
-            .diff_lines(old_content, new_content);
+        // Use diffy to generate unified diff format
+        let patch = create_patch(old_content, new_content);
+        let patch_str = patch.to_string();
 
-        // Build hunks directly from similar changes (replaces HunkBuilder)
-        let mut hunks = Vec::new();
-        let mut current: Vec<DiffLine> = Vec::new();
-        let mut old_start = 1;
-        let mut new_start = 1;
-        let mut old_len = 0;
-        let mut new_len = 0;
-        let mut old_line = 1;
-        let mut new_line = 1;
-        let mut in_hunk = false;
-
-        for change in diff.iter_all_changes() {
-            match change.tag() {
-                ChangeTag::Equal => {
-                    if in_hunk {
-                        finish_hunk(&mut hunks, &mut current, old_start, old_len, new_start, new_len);
-                        in_hunk = false;
-                        old_len = 0;
-                        new_len = 0;
-                    }
-                    old_line += 1;
-                    new_line += 1;
-                }
-                ChangeTag::Delete => {
-                    if !in_hunk {
-                        old_start = old_line;
-                        new_start = new_line;
-                        in_hunk = true;
-                    }
-                    current.push(DiffLine::Removed(
-                        change.value().trim_end().to_string(),
-                        Some(old_line as u32),
-                    ));
-                    old_len += 1;
-                    old_line += 1;
-                }
-                ChangeTag::Insert => {
-                    if !in_hunk {
-                        old_start = old_line;
-                        new_start = new_line;
-                        in_hunk = true;
-                    }
-                    current.push(DiffLine::Added(
-                        change.value().trim_end().to_string(),
-                        Some(new_line as u32),
-                    ));
-                    new_len += 1;
-                    new_line += 1;
-                }
-            }
-        }
-        if in_hunk {
-            finish_hunk(&mut hunks, &mut current, old_start, old_len, new_start, new_len);
-        }
-
-        Diff {
-            old_path: "a".to_owned(),
-            new_path: "b".to_owned(),
-            hunks,
-        }
+        // Parse the generated patch back to our canonical format
+        let mut diff = Diff::parse(&patch_str);
+        diff.old_path = "a".to_owned();
+        diff.new_path = "b".to_owned();
+        diff
     }
 
     /// Render to unified-diff string format (used for copy/export only).
@@ -204,7 +149,7 @@ impl Diff {
                 break;
             }
         }
-        let result = diffy::Patch::from_str(text);
+        let result = Patch::from_str(text);
         match result {
             Ok(p) => {
                 let mut diff = diffy_to_canonical(&p);
@@ -217,7 +162,7 @@ impl Diff {
     }
 }
 
-fn diffy_to_canonical(p: &diffy::Patch<str>) -> Diff {
+fn diffy_to_canonical(p: &Patch<str>) -> Diff {
     let hunks = p
         .hunks()
         .iter()
@@ -263,23 +208,6 @@ fn diffy_to_canonical(p: &diffy::Patch<str>) -> Diff {
         new_path: "b".into(),
         hunks,
     }
-}
-/// Finish a hunk and add to the list.
-fn finish_hunk(
-    hunks: &mut Vec<DiffHunk>,
-    lines: &mut Vec<DiffLine>,
-    old_start: usize,
-    old_len: usize,
-    new_start: usize,
-    new_len: usize,
-) {
-    if lines.is_empty() {
-        return;
-    }
-    hunks.push(DiffHunk {
-        header: format!("@@ -{},{} +{},{} @@", old_start, old_len, new_start, new_len),
-        lines: std::mem::take(lines),
-    });
 }
 
 /// Minimal fallback parser for imperfect agent output that diffy rejects.

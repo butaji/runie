@@ -83,7 +83,6 @@ fs2 = "0.4"
 ansi_colours = "1.2"
 arboard = { version = "3", default-features = false }
 tui-textarea = "0.7"
-similar = "3"
 tiktoken = "3.5"
 crokey = "1.4"
 opaline = "0.4"
