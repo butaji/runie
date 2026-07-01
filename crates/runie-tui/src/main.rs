@@ -26,6 +26,7 @@ use runie_tui::{
     ui_actor::{AgentHandleBox, LeaderAgentActorHandle, UiActor},
 };
 use std::{collections::HashMap, io, time::Duration};
+use throbber_widgets_tui::ThrobberState;
 use tokio::sync::{mpsc, oneshot, watch};
 
 /// Runie TUI CLI arguments.
@@ -275,6 +276,7 @@ fn render_loop(
 ) {
     const FRAME_TIME: Duration = Duration::from_millis(16);
     let mut last_size: Option<(u16, u16)> = None;
+    let mut throbber = ThrobberState::default();
 
     loop {
         let mut snap = match rx.recv_timeout(FRAME_TIME) {
@@ -295,7 +297,7 @@ fn render_loop(
             last_size = Some(new_size);
         }
         theme::set_current_theme_with_caps(&snap.theme_name, caps);
-        let _ = terminal.draw(|f| ui::draw_snapshot(f, &snap));
+        let _ = terminal.draw(|f| ui::draw_snapshot(f, &snap, &mut throbber));
     }
 }
 

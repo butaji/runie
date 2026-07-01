@@ -46,8 +46,9 @@ pub enum ProviderEvent {
 }
 
 /// Why the generation stopped.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum StopReason {
     /// Natural end of content.
     Stop,
@@ -61,19 +62,6 @@ pub enum StopReason {
     StopSequence,
     /// Model error or other.
     Unknown,
-}
-
-impl StopReason {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            StopReason::Stop => "stop",
-            StopReason::Length => "length",
-            StopReason::ContentFilter => "content_filter",
-            StopReason::ToolCalls => "tool_calls",
-            StopReason::StopSequence => "stop_sequence",
-            StopReason::Unknown => "unknown",
-        }
-    }
 }
 
 /// Model-specific errors (distinct from `ProviderError`).

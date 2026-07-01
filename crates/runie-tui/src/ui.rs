@@ -13,6 +13,7 @@ use ratatui::{
     Frame,
 };
 use runie_core::Snapshot;
+use throbber_widgets_tui::ThrobberState;
 
 use crate::theme::color_bg;
 
@@ -31,8 +32,10 @@ pub(crate) use hints::parse_hint_spans;
 pub(crate) use layout::hstack;
 pub(crate) use messages::estimate_element_tokens;
 
-/// Draw a Snapshot to the terminal. Pure function — no mutable state.
-pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
+/// Draw a Snapshot to the terminal.
+/// The throbber state drives the animated spinner; pass a mutable ThrobberState
+/// that is advanced on each call.
+pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot, throbber: &mut ThrobberState) {
     let full_area = f.area();
     f.buffer_mut()
         .set_style(full_area, Style::default().bg(color_bg()));
@@ -47,7 +50,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     messages::render_messages(f, snap, c[0]);
     if snap.has_models {
         // c[1] is the empty margin line — no rendering needed
-        crate::status_bar::render(f, snap, c[2]);
+        crate::status_bar::render(f, snap, c[2], throbber);
         input::input(f, snap, c[3]);
     }
     if snap.has_models {
@@ -85,5 +88,19 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
 pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
     state.ensure_fresh();
     let snap = state.snapshot();
-    draw_snapshot(f, &snap);
+    // Initialize throbber state from the view animation frame so the rendered
+    // spinner matches snap.spinner_frame (tests that check specific frames need this).
+    // spinner_frame() uses backward indexing: frame 0 → braille[5], frame 5 → braille[0]
+    // So for animation_frame=3, spinner_frame() returns braille[2] = '⠟'
+    // We need to initialize throbber to index 2 so it renders '⠟'
+    let mut throbber = ThrobberState::default();
+    let raw_idx = (state.view().animation_frame % 6) as i8;
+    // Backward index: braille[(6 - 1 - raw_idx) as usize]
+    // throbber index maps to braille[throbber.index as usize]
+    // So throbber.index = (6 - 1 - raw_idx) = 5 - raw_idx
+    let throbber_idx = (5 - raw_idx + 6) % 6; // Ensure positive
+    if throbber_idx != 0 {
+        throbber.calc_step(throbber_idx as i8);
+    }
+    draw_snapshot(f, &snap, &mut throbber);
 }

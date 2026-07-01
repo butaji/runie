@@ -1,16 +1,16 @@
 use runie_core::model::AppState;
 
 #[test]
-fn spinner_frame_cycles_twelve_times() {
+fn spinner_frame_cycles_six_times() {
     let mut state = AppState::default();
     let first = state.spinner_frame();
-    for i in 1..=12 {
+    for i in 1..=6 {
         state.view.animation_frame = i;
-        if i == 12 {
+        if i == 6 {
             assert_eq!(
                 state.spinner_frame(),
                 first,
-                "spinner should cycle after 12 frames"
+                "spinner should cycle after 6 frames"
             );
         } else {
             assert_ne!(

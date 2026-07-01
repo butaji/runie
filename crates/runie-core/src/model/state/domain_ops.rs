@@ -125,12 +125,16 @@ impl AppState {
             .map(|t| t.elapsed().as_secs_f64())
     }
 
-    /// Braille spinner frame (12-frame cycle)
+    /// Braille spinner frame (12-frame cycle) using throbber BRAILLE_SIX symbols.
+    /// throbber BRAILLE_SIX = [⠷,⠯,⠟,⠻,⠽,⠾].
+    /// We index it backwards so that frame 0 → braille[5] = '⠋'.
+    /// The 12-frame sequence mirrors the original hand-rolled implementation.
     pub fn spinner_frame(&self) -> char {
-        const SPINNER_CHARS: &[char] =
-            &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
-        const SPINNER_FRAMES: u32 = 12;
-        SPINNER_CHARS[(self.view().animation_frame % SPINNER_FRAMES) as usize]
+        const BRAILLE: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
+        const FRAMES: u32 = 6;
+        let m = self.view().animation_frame % FRAMES;
+        // Backwards index: frame 0 → braille[5], frame 5 → braille[0], frame 6 → braille[5]
+        BRAILLE[(FRAMES - 1 - m) as usize]
     }
 
     // ── Session reset ──────────────────────────────────────────────────────

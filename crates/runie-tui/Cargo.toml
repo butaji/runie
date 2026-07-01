@@ -38,6 +38,7 @@ crokey.workspace = true
 parking_lot.workspace = true
 human-panic.workspace = true
 clap.workspace = true
+throbber-widgets-tui = "0.11"
 
 [target.'cfg(unix)'.dependencies]
 nix.workspace = true

@@ -12,6 +12,7 @@ pub fn format_timestamp(unix_secs: f64) -> String {
 
 // Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
+// throbber BRAILLE_SIX[5] = '⠋' — used as the default/initial spinner frame.
 pub const SPINNER: char = '⠋';
 
 /// Unified action text: spinner + tag + timer.

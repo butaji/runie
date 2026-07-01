@@ -47,9 +47,10 @@ fn non_ing_tag_no_ellipsis() {
 
 #[test]
 fn action_text_includes_spinner() {
-    let out = action_text('⠴', "Working", 1.5);
+    // Use '⠷' (throbber BRAILLE_SIX[0]) as a representative braille spinner frame.
+    let out = action_text('⠷', "Working", 1.5);
     assert!(
-        out.starts_with('⠴'),
+        out.starts_with('⠷'),
         "Must start with spinner frame: got {}",
         out
     );

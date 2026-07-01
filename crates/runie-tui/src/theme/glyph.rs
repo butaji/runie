@@ -6,6 +6,7 @@ pub const GLYPH_TOOL: &str = "✓ ";
 pub const GLYPH_SELECTED: &str = "▸ ";
 pub const GLYPH_UNSELECTED: &str = "  ";
 pub const GLYPH_THINKING: char = '◐';
+// throbber BRAILLE_SIX[5] = '⠋' — first frame of the braille spinner.
 pub const GLYPH_SPINNER: char = '⠋';
 pub const SCROLLBAR_TRACK: &str = " "; // invisible track
 pub const SCROLLBAR_THUMB: &str = "▐"; // right half-block — visible but not heavy

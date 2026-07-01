@@ -24,11 +24,11 @@ pub enum AgentPhase {
 impl fmt::Display for AgentPhase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AgentPhase::Thinking => write!(f, "thinking"),
-            AgentPhase::Composing => write!(f, "composing"),
-            AgentPhase::Tool { name } => write!(f, "tool:{}", name),
-            AgentPhase::Waiting => write!(f, "waiting"),
-            AgentPhase::Idle => write!(f, "idle"),
+            Self::Thinking => write!(f, "thinking"),
+            Self::Composing => write!(f, "composing"),
+            Self::Tool { name } => write!(f, "tool:{name}"),
+            Self::Waiting => write!(f, "waiting"),
+            Self::Idle => write!(f, "idle"),
         }
     }
 }
@@ -37,17 +37,17 @@ impl AgentPhase {
     /// Short display label for status bar.
     pub fn label(&self) -> &'static str {
         match self {
-            AgentPhase::Thinking => "thinking",
-            AgentPhase::Composing => "composing",
-            AgentPhase::Tool { name } => name,
-            AgentPhase::Waiting => "waiting",
-            AgentPhase::Idle => "",
+            Self::Thinking => "thinking",
+            Self::Composing => "composing",
+            Self::Tool { name } => name,
+            Self::Waiting => "waiting",
+            Self::Idle => "",
         }
     }
 
     /// Whether this phase should show elapsed time.
     pub fn show_elapsed(&self) -> bool {
-        !matches!(self, AgentPhase::Idle | AgentPhase::Waiting)
+        !matches!(self, Self::Idle | Self::Waiting)
     }
 }
 

@@ -21,8 +21,9 @@ fn renders_permission_modal() {
         ..Default::default()
     };
 
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| crate::ui::draw_snapshot(f, &snap))
+        .draw(|f| crate::ui::draw_snapshot(f, &snap, &mut throbber))
         .unwrap();
 
     let text = buffer_text(terminal.backend().buffer());

@@ -2,37 +2,90 @@
 
 use ratatui::{
     layout::{Constraint, Rect},
+    text::Span,
     widgets::Paragraph,
     Frame,
 };
-use runie_core::Snapshot;
-use runie_core::display_width::width;
+use throbber_widgets_tui::ThrobberState;
 
 use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};
+use runie_core::display_width::width;
+use runie_core::Snapshot;
 
-pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
+/// Render the status bar. The spinner is rendered as a throbber widget overlay
+/// at the start of the left area, driven by the provided `ThrobberState`.
+pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect, throbber: &mut ThrobberState) {
     if !snap.has_models {
         return;
     }
-    let left_text = format!(" {}", build_left_text(snap));
     let right_text = format!("{} ", build_right_status(snap));
     let right_width = width(&right_text) as u16;
 
     let h = hstack(area, &[Constraint::Min(0), Constraint::Length(right_width)]);
 
-    f.render_widget(Paragraph::new(left_text).style(style_status_idle()), h[0]);
+    render_left_with_throbber(f, snap, h[0], throbber);
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
 }
 
-pub(crate) fn build_left_text(snap: &Snapshot) -> String {
+/// Render the left side of the status bar. The spinner char is overlaid as a
+/// throbber widget at the start of the area, using BRAILLE_SIX symbols from
+/// throbber-widgets-tui.
+fn render_left_with_throbber(
+    f: &mut Frame,
+    snap: &Snapshot,
+    area: Rect,
+    throbber: &mut ThrobberState,
+) {
+    // Build text parts (without the spinner char — the throbber overlays it).
+    // The leading space is where the spinner will be overlaid.
+    let text_parts = build_left_text_parts(snap);
+    let left_text = format!(" {} · ", text_parts.join(" · "));
+
+    // Render the paragraph first (spinner position will be overwritten).
+    f.render_widget(
+        Paragraph::new(left_text).style(style_status_idle()),
+        area,
+    );
+
+    // Overlay the throbber spinner at the start of the left area.
+    // We use BRAILLE_SIX from throbber-widgets-tui to replace the hand-rolled
+    // 12-frame braille spinner math.
+    // Build a span with just the current spinner symbol (width 1).
+    let spinner = throbber_current_symbol(throbber);
+    let spinner_span = Span::raw(spinner).style(style_status_idle());
+    // Place spinner at position 0, overwriting the leading space in " Working... · "
+    let _ = f.buffer_mut().set_span(area.x, area.y, &spinner_span, 1);
+
+    // Advance throbber state for the next frame.
+    throbber.calc_next();
+}
+
+/// Get the current spinner symbol from throbber state.
+/// Matches the BRAILLE_SIX symbols used in domain_ops.rs.
+fn throbber_current_symbol(throbber: &ThrobberState) -> String {
+    const BRAILLE_SIX: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
+    let idx = throbber.index().unsigned_abs() as usize % BRAILLE_SIX.len();
+    BRAILLE_SIX[idx].to_string()
+}
+
+/// Build status bar text parts without the spinner char.
+/// The spinner is rendered as a throbber widget overlay.
+pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<String> {
     let mut parts = Vec::new();
     push_git_or_folder(&mut parts, snap);
-    push_turn_status(&mut parts, snap);
+    push_turn_status_text(&mut parts, snap);
     push_thinking(&mut parts, snap);
     push_pending_edits(&mut parts, snap);
     push_read_only(&mut parts, snap);
-    parts.join(" · ")
+    parts
+}
+
+/// Build the left status bar text as a joined string (without the spinner char).
+/// Used by tests that only need the text content.
+#[cfg(test)]
+pub(crate) fn build_left_text(snap: &Snapshot) -> String {
+    build_left_text_parts(snap).join(" · ")
 }
 
 fn push_git_or_folder(parts: &mut Vec<String>, snap: &Snapshot) {
@@ -47,19 +100,26 @@ fn push_git_or_folder(parts: &mut Vec<String>, snap: &Snapshot) {
     parts.push(git_or_folder);
 }
 
-fn push_turn_status(parts: &mut Vec<String>, snap: &Snapshot) {
+/// Build the "Working..." status text without the spinner char (throbber overlays it).
+fn push_turn_status_text(parts: &mut Vec<String>, snap: &Snapshot) {
     if !snap.turn_active {
         return;
     }
-    let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
-        runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed)
+    let text = if let Some(elapsed) = snap.turn_elapsed_secs {
+        // No spinner char — it's rendered by the throbber overlay.
+        if "Working".ends_with("ing") {
+            format!("Working... {:.1}s", elapsed)
+        } else {
+            format!("Working {:.1}s", elapsed)
+        }
     } else {
-        format!("{} Working...", snap.spinner_frame)
+        "Working...".to_owned()
     };
+    let mut full = text;
     if snap.queue_count > 0 {
-        text.push_str(&format!(" ({} queued)", snap.queue_count));
+        full.push_str(&format!(" ({} queued)", snap.queue_count));
     }
-    parts.push(text);
+    parts.push(full);
 }
 
 fn push_thinking(parts: &mut Vec<String>, snap: &Snapshot) {

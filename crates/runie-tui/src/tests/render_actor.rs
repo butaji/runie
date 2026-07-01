@@ -16,10 +16,16 @@ fn has_content(elem: &Element, text: &str) -> bool {
     }
 }
 
-fn render_snapshot(snap: &Snapshot) -> String {
+fn render_snapshot(snap: &Snapshot, animation_frame: u32) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| draw_snapshot(f, snap)).unwrap();
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
+    // Sync throbber index to the animation frame from AppState.
+    let frame_idx = (animation_frame % 6) as i8;
+    if frame_idx != 0 {
+        throbber.calc_step(frame_idx);
+    }
+    terminal.draw(|f| draw_snapshot(f, snap, &mut throbber)).unwrap();
     terminal
         .backend()
         .buffer()
@@ -34,7 +40,7 @@ fn snapshot_renders_empty_state() {
     let mut state = AppState::default();
     state.ensure_fresh();
     let snap = state.snapshot();
-    let out = render_snapshot(&snap);
+    let out = render_snapshot(&snap, state.view().animation_frame);
     // In dev (RUNIE_MOCK) the input panel shows "mock/echo". In production
     // the app starts with no provider and the model area is empty.
     if runie_core::provider::is_mock_enabled() {
@@ -53,7 +59,7 @@ fn snapshot_renders_user_message() {
     state.update(Event::Submit);
     state.ensure_fresh();
     let snap = state.snapshot();
-    let out = render_snapshot(&snap);
+    let out = render_snapshot(&snap, state.view().animation_frame);
     assert!(
         out.contains("❯ Hi"),
         "Should render user message in snapshot"
@@ -74,7 +80,7 @@ fn snapshot_is_immutable_after_creation() {
     state.ensure_fresh();
 
     // Snapshot should still show old state
-    let out = render_snapshot(&snap);
+    let out = render_snapshot(&snap, state.view().animation_frame);
     assert!(out.contains("❯ A"), "Snapshot should be immutable");
     assert!(
         !out.contains("❯ B"),
@@ -90,7 +96,7 @@ fn snapshot_spinner_frame_captured() {
     state.ensure_fresh();
     let snap = state.snapshot();
     assert_eq!(
-        snap.spinner_frame, '⠴',
+        snap.spinner_frame, '⠷',
         "Spinner frame should be captured in snapshot"
     );
 }
@@ -123,10 +129,11 @@ fn render_actor_does_not_need_mutable_state() {
     state.ensure_fresh();
     let snap = state.snapshot();
 
-    // draw_snapshot takes &Snapshot, not &mut
+    // draw_snapshot takes &Snapshot + &mut ThrobberState
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| draw_snapshot(f, &snap)).unwrap();
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
+    terminal.draw(|f| draw_snapshot(f, &snap, &mut throbber)).unwrap();
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
