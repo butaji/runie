@@ -142,7 +142,7 @@ fn list_sessions() {
 
 #[test]
 fn meta_round_trips_through_index() {
-    use crate::session::index::SessionMetadata;
+    use crate::session::SessionMetadata;
 
     let store = test_store();
     let sid = "test-meta";

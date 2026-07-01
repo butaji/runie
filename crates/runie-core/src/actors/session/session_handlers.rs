@@ -8,7 +8,7 @@ use crate::bus::EventBus;
 use crate::edit_preview::EditPreview;
 use crate::message::{now, Part};
 use crate::model::{ChatMessage, Role};
-use crate::session::index::SessionMetadata;
+use crate::session::SessionMetadata;
 use crate::session::replay::session_to_durable_events;
 use crate::session::store::SessionStore;
 use crate::session::tree::SessionTree;

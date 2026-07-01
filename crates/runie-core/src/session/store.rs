@@ -8,17 +8,17 @@
 //! Uses `fs2` advisory locks for cross-process synchronization.
 
 use crate::event::durable::DurableCoreEvent;
-use crate::session::index::SessionMetadata;
 use crate::session::persistence::{
     exclusive_lock, read_header, shared_lock, touch_header, write_header, ExclusiveLock,
     SessionHeader, SharedLock,
 };
+use crate::session::SessionMetadata;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 
 /// Alias for backward compatibility.
-pub use crate::session::index::SessionMetadata as SessionMeta;
+pub use crate::session::SessionMetadata as SessionMeta;
 
 /// JSONL-backed session store with fs2 advisory locks.
 #[derive(Debug, Clone)]

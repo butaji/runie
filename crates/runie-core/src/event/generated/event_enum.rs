@@ -453,7 +453,7 @@ pub enum Event {
     SessionLoaded {
         name: String,
         events: Box<Vec<crate::event::DurableCoreEvent>>,
-        metadata: Option<Box<crate::session::index::SessionMetadata>>,
+        metadata: Option<Box<crate::session::SessionMetadata>>,
     },
     SessionSaved {
         name: String,

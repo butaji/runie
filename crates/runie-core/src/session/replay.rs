@@ -7,7 +7,7 @@
 use crate::event::DurableCoreEvent;
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
-use crate::session::index::SessionMetadata;
+use crate::session::SessionMetadata;
 use crate::session::store::SessionStore;
 use crate::Event;
 

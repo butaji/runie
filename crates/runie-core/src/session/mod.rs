@@ -2,7 +2,6 @@
 //! import/export and `/restore`. This is *not* a persistence backend;
 //! runtime save/load use `crate::session::store::SessionStore`.
 
-pub mod index;
 pub mod persistence;
 pub mod replay;
 pub mod store;
@@ -13,6 +12,25 @@ pub mod turn_queue;
 
 use crate::model::ChatMessage;
 use serde::{Deserialize, Serialize};
+
+/// Metadata for a single session — stored in the file header of each `.jsonl` file.
+/// Aliased as `SessionHeader` in the persistence layer.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SessionMetadata {
+    pub id: String,
+    pub display_name: String,
+    pub created_at: f64,
+    pub updated_at: f64,
+    pub message_count: usize,
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub is_starred: bool,
+    #[serde(default)]
+    pub is_system: bool,
+}
+
+/// Alias for `SessionMetadata` — used in the persistence layer for file headers.
+pub use SessionMetadata as SessionHeader;
 
 /// Session snapshot — serializable conversation state.
 #[derive(Serialize, Deserialize, Debug, Clone)]

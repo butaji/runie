@@ -30,7 +30,6 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "auth/",
     // Session persistence - owned by SessionActor but reads use domain paths
     "session/store.rs",
-    "session/index.rs",
     "session/persistence/",
     // Test scaffolding and support
     "tests/support.rs",

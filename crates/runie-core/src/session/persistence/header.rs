@@ -1,13 +1,12 @@
 //! Session file header handling.
 //!
 //! The session file header is the first JSON line of each session file.
-//! `SessionHeader` is an alias for `SessionMetadata` — the same type is
-//! used both in the file header and in the session index.
+//! `SessionHeader` is an alias for `SessionMetadata` (defined in `crate::session::mod.rs`).
 
 use std::io::{BufRead, Write};
 use std::path::Path;
 
-pub use crate::session::index::SessionMetadata as SessionHeader;
+pub use crate::session::SessionMetadata as SessionHeader;
 
 /// Read the header from a session file.
 pub fn read_header(path: &Path) -> anyhow::Result<Option<SessionHeader>> {

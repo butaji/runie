@@ -276,7 +276,7 @@ fn find_most_recent() -> Option<String> {
 fn load_session_metadata(
     store: &crate::session::store::SessionStore,
     name: &str,
-) -> anyhow::Result<crate::session::index::SessionMetadata> {
+) -> anyhow::Result<crate::session::SessionMetadata> {
     store
         .load_metadata(name)?
         .ok_or_else(|| anyhow::anyhow!("not found"))

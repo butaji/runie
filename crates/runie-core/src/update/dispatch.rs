@@ -254,7 +254,7 @@ fn apply_session_loaded(
     state: &mut AppState,
     name: &str,
     events: &[crate::event::DurableCoreEvent],
-    metadata: &Option<Box<crate::session::index::SessionMetadata>>,
+    metadata: &Option<Box<crate::session::SessionMetadata>>,
 ) {
     crate::session::replay::replay_events(state, events);
     if let Some(meta) = metadata {
