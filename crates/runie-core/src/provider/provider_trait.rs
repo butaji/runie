@@ -1,11 +1,22 @@
 //! Provider trait and types
 
 use crate::message::ChatMessage;
+use crate::model_catalog::{ModelCapabilities, ModelInfo};
 use crate::provider_event::ProviderEvent;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;
+use std::time::Duration;
 use thiserror::Error;
+
+/// Default retry configuration for provider streams.
+/// Used when no explicit retry config is provided.
+pub const DEFAULT_RETRY_CONFIG: RetryConfig = RetryConfig {
+    max_attempts: 5,
+    initial_delay: Duration::from_millis(100),
+    max_delay: Duration::from_secs(30),
+    multiplier: 2.0,
+};
 
 /// A chunk of streaming response (legacy type, prefer ProviderEvent).
 #[derive(Debug, Clone)]
@@ -176,6 +187,99 @@ impl From<anyhow::Error> for ProviderError {
     }
 }
 
+/// Metadata about a provider's capabilities and configuration.
+/// Used by consumers to discover model info, streaming support, and retry settings.
+#[derive(Clone, Debug, Default)]
+pub struct ProviderMetadata {
+    /// Model-specific information (name, provider, costs, context window).
+    pub model_info: Option<ModelInfo>,
+    /// Computed capabilities derived from model_info.
+    pub capabilities: ModelCapabilities,
+    /// Retry configuration for transient failures.
+    pub retry_config: RetryConfig,
+    /// Whether this provider supports streaming responses.
+    /// Defaults to `true` if not specified in model_info.
+    pub streaming: bool,
+    /// Whether this provider supports native tool calling.
+    /// Defaults to `true` if not specified in model_info.
+    pub supports_tools: bool,
+}
+
+impl ProviderMetadata {
+    /// Create new metadata with default retry config.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the model info and derive capabilities from it.
+    pub fn with_model_info(mut self, info: ModelInfo) -> Self {
+        self.model_info = Some(info.clone());
+        self.capabilities = info.capabilities.clone();
+        self.streaming = self.capabilities.streaming;
+        self.supports_tools = self.capabilities.supports_tools;
+        self
+    }
+
+    /// Set the retry configuration.
+    pub fn with_retry_config(mut self, config: RetryConfig) -> Self {
+        self.retry_config = config;
+        self
+    }
+
+    /// Set whether streaming is supported.
+    pub fn with_streaming(mut self, streaming: bool) -> Self {
+        self.streaming = streaming;
+        self
+    }
+
+    /// Set whether tools are supported.
+    pub fn with_supports_tools(mut self, supports_tools: bool) -> Self {
+        self.supports_tools = supports_tools;
+        self
+    }
+}
+
+/// Configuration for retry behavior on transient provider errors.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts.
+    pub max_attempts: u32,
+    /// Initial delay before first retry.
+    pub initial_delay: Duration,
+    /// Maximum delay between retries.
+    pub max_delay: Duration,
+    /// Multiplier for exponential backoff (e.g., 2.0 doubles delay each attempt).
+    pub multiplier: f64,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        DEFAULT_RETRY_CONFIG
+    }
+}
+
+impl RetryConfig {
+    /// Create a new retry config with custom settings.
+    pub fn new(max_attempts: u32, initial_delay: Duration, max_delay: Duration, multiplier: f64) -> Self {
+        Self {
+            max_attempts,
+            initial_delay,
+            max_delay,
+            multiplier,
+        }
+    }
+
+    /// Create a config that disables retries (max_attempts = 1).
+    pub fn no_retry() -> Self {
+        Self {
+            max_attempts: 1,
+            initial_delay: Duration::from_secs(0),
+            max_delay: Duration::from_secs(0),
+            multiplier: 1.0,
+        }
+    }
+}
+
 /// Provider trait — implemented by LLM backends.
 /// Returns a `Stream` of `ProviderEvent`s.
 ///
@@ -196,6 +300,27 @@ pub trait Provider: Send + Sync {
         &self,
         messages: Vec<ChatMessage>,
         _tools: Vec<serde_json::Value>,
+    ) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>> {
+        self.generate(messages)
+    }
+
+    /// Return metadata about this provider's capabilities.
+    ///
+    /// The default implementation returns metadata derived from the model info
+    /// if available, with streaming and tool support inferred from capabilities.
+    /// Override this method to provide custom metadata or disable features.
+    fn metadata(&self) -> ProviderMetadata {
+        ProviderMetadata::default()
+    }
+
+    /// Generate a non-streaming (fast) response for models that don't support streaming.
+    ///
+    /// This is useful for models like o1 that don't support streaming responses.
+    /// The default implementation wraps `generate` and collects all events into a single response.
+    /// Providers that natively support non-streaming should override this method.
+    fn complete_fast(
+        &self,
+        messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>> {
         self.generate(messages)
     }
@@ -370,5 +495,99 @@ mod tests {
             matches!(err, ProviderError::Source(_)),
             "expected Source variant, got: {err:?}"
         );
+    }
+
+    // ─── Layer 1: ProviderMetadata tests ────────────────────────────────────────
+
+    #[test]
+    fn provider_metadata_default_values() {
+        let meta = ProviderMetadata::default();
+        assert!(meta.model_info.is_none());
+        assert!(!meta.streaming);
+        assert!(!meta.supports_tools);
+        assert_eq!(meta.retry_config.max_attempts, DEFAULT_RETRY_CONFIG.max_attempts);
+    }
+
+    #[test]
+    fn provider_metadata_with_model_info() {
+        let info = ModelInfo::new("openai", "gpt-4o");
+        let meta = ProviderMetadata::new().with_model_info(info);
+        assert!(meta.model_info.is_some());
+        assert_eq!(meta.model_info.as_ref().unwrap().name, "gpt-4o");
+        assert_eq!(meta.model_info.as_ref().unwrap().provider, "openai");
+    }
+
+    #[test]
+    fn provider_metadata_with_custom_retry_config() {
+        let custom_config = RetryConfig::new(10, Duration::from_secs(1), Duration::from_secs(60), 3.0);
+        let meta = ProviderMetadata::new().with_retry_config(custom_config.clone());
+        assert_eq!(meta.retry_config.max_attempts, 10);
+        assert_eq!(meta.retry_config.multiplier, 3.0);
+    }
+
+    #[test]
+    fn provider_metadata_streaming_flag() {
+        let meta = ProviderMetadata::new().with_streaming(true);
+        assert!(meta.streaming);
+
+        let meta = ProviderMetadata::new().with_streaming(false);
+        assert!(!meta.streaming);
+    }
+
+    #[test]
+    fn provider_metadata_supports_tools_flag() {
+        let meta = ProviderMetadata::new().with_supports_tools(true);
+        assert!(meta.supports_tools);
+
+        let meta = ProviderMetadata::new().with_supports_tools(false);
+        assert!(!meta.supports_tools);
+    }
+
+    // ─── Layer 1: RetryConfig tests ────────────────────────────────────────────
+
+    #[test]
+    fn retry_config_default_values() {
+        let config = RetryConfig::default();
+        assert_eq!(config.max_attempts, 5);
+        assert_eq!(config.initial_delay, Duration::from_millis(100));
+        assert_eq!(config.max_delay, Duration::from_secs(30));
+        assert_eq!(config.multiplier, 2.0);
+    }
+
+    #[test]
+    fn retry_config_no_retry() {
+        let config = RetryConfig::no_retry();
+        assert_eq!(config.max_attempts, 1);
+        assert_eq!(config.initial_delay, Duration::from_secs(0));
+        assert_eq!(config.max_delay, Duration::from_secs(0));
+        assert_eq!(config.multiplier, 1.0);
+    }
+
+    #[test]
+    fn retry_config_custom_values() {
+        let config = RetryConfig::new(3, Duration::from_secs(1), Duration::from_secs(10), 1.5);
+        assert_eq!(config.max_attempts, 3);
+        assert_eq!(config.initial_delay, Duration::from_secs(1));
+        assert_eq!(config.max_delay, Duration::from_secs(10));
+        assert_eq!(config.multiplier, 1.5);
+    }
+
+    #[test]
+    fn retry_config_clone_preserves_values() {
+        let config = RetryConfig::new(7, Duration::from_secs(2), Duration::from_secs(120), 4.0);
+        let cloned = config.clone();
+        assert_eq!(cloned.max_attempts, config.max_attempts);
+        assert_eq!(cloned.initial_delay, config.initial_delay);
+        assert_eq!(cloned.max_delay, config.max_delay);
+        assert_eq!(cloned.multiplier, config.multiplier);
+    }
+
+    #[test]
+    fn retry_config_partial_eq() {
+        let config1 = RetryConfig::new(5, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+        let config2 = RetryConfig::new(5, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+        let config3 = RetryConfig::new(6, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+        assert_eq!(config1, config2);
+        assert_ne!(config1, config3);
     }
 }

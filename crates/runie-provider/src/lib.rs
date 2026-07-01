@@ -21,7 +21,7 @@ pub use runie_core::provider::registry::{
     is_mock_enabled, known_providers, ModelMeta, ProviderMeta,
 };
 pub use runie_core::provider::ProviderError;
-pub use runie_core::provider::{Provider, ResponseChunk};
+pub use runie_core::provider::{Provider, ProviderMetadata, RetryConfig, ResponseChunk};
 
 // Model catalog types.
 pub use runie_core::model_catalog::configured::configured_models_catalog;

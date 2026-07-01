@@ -149,7 +149,8 @@ pub use prompts::{
 };
 pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    known_providers, Provider, ProviderError, ProviderMeta, ResponseChunk,
+    known_providers, Provider, ProviderError, ProviderMetadata, ProviderMeta, RetryConfig,
+    ResponseChunk,
 };
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use resource_loader::{

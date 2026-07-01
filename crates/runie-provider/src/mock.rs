@@ -1,4 +1,4 @@
-use crate::Provider;
+use crate::{Provider, ProviderMetadata};
 use futures::Stream;
 use runie_core::proto::message::{ChatMessage, Role};
 use runie_core::provider_event::{ProviderEvent, StopReason};
@@ -197,6 +197,13 @@ impl Provider for MockProvider {
         }
         self.generate(messages)
     }
+
+    fn metadata(&self) -> ProviderMetadata {
+        ProviderMetadata::new()
+            .with_streaming(true)
+            .with_supports_tools(true)
+            .with_retry_config(crate::RetryConfig::no_retry())
+    }
 }
 
 fn native_tool_stream(
@@ -278,6 +285,13 @@ impl Provider for MockStreamingProvider {
             .unwrap_or_else(|| response.len().div_ceil(self.chunk_size));
 
         stream_response(response, self.chunk_size, total_chunks, self.delay_ms)
+    }
+
+    fn metadata(&self) -> ProviderMetadata {
+        ProviderMetadata::new()
+            .with_streaming(true)
+            .with_supports_tools(false)
+            .with_retry_config(crate::RetryConfig::no_retry())
     }
 }
 

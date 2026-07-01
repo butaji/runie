@@ -6,10 +6,11 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::message::ChatMessage;
+use crate::model_catalog::ModelInfo;
 use crate::provider_event::ProviderEvent;
 
 // `Provider` and `ProviderError` are defined in `runie-provider` and re-exported here.
-use crate::provider::{Provider, ProviderError};
+use crate::provider::{Provider, ProviderError, ProviderMetadata, RetryConfig};
 
 /// Built provider that wraps a concrete provider implementation.
 ///
@@ -24,6 +25,8 @@ pub struct BuiltProvider {
     pub key: String,
     /// Model name (e.g. "gpt-4o", "echo").
     pub model: String,
+    /// Metadata about this provider's capabilities.
+    metadata: ProviderMetadata,
 }
 
 impl BuiltProvider {
@@ -33,6 +36,22 @@ impl BuiltProvider {
             provider: Arc::from(provider),
             key,
             model,
+            metadata: ProviderMetadata::default(),
+        }
+    }
+
+    /// Create a new `BuiltProvider` with metadata.
+    pub fn with_metadata(
+        provider: Box<dyn Provider>,
+        key: String,
+        model: String,
+        metadata: ProviderMetadata,
+    ) -> Self {
+        Self {
+            provider: Arc::from(provider),
+            key,
+            model,
+            metadata,
         }
     }
 
@@ -43,6 +62,7 @@ impl BuiltProvider {
             provider: Arc::from(provider),
             key: key.to_owned(),
             model: model.to_owned(),
+            metadata: ProviderMetadata::default(),
         }
     }
 
@@ -54,6 +74,23 @@ impl BuiltProvider {
     /// Returns the model name.
     pub fn model(&self) -> &str {
         &self.model
+    }
+
+    /// Returns the metadata for this provider.
+    pub fn metadata(&self) -> &ProviderMetadata {
+        &self.metadata
+    }
+
+    /// Set the model info in metadata.
+    pub fn with_model_info(mut self, info: ModelInfo) -> Self {
+        self.metadata = self.metadata.with_model_info(info);
+        self
+    }
+
+    /// Set a custom retry config.
+    pub fn with_retry_config(mut self, config: RetryConfig) -> Self {
+        self.metadata.retry_config = config;
+        self
     }
 }
 
@@ -82,6 +119,18 @@ impl Provider for BuiltProvider {
     ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
     {
         self.provider.generate_with_tools(messages, tools)
+    }
+
+    fn metadata(&self) -> ProviderMetadata {
+        self.metadata.clone()
+    }
+
+    fn complete_fast(
+        &self,
+        messages: Vec<ChatMessage>,
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+    {
+        self.provider.complete_fast(messages)
     }
 }
 

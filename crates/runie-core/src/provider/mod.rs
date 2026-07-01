@@ -14,7 +14,7 @@ pub use config::{
     get_provider_config, list_configured_providers, remove_provider_config, save_provider_config,
     set_test_config_path, set_test_config_with_providers,
 };
-pub use provider_trait::{Provider, ProviderError, ResponseChunk};
+pub use provider_trait::{Provider, ProviderError, ProviderMetadata, RetryConfig, ResponseChunk};
 pub use registry::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
     known_providers, ModelMeta, ProviderMeta,
