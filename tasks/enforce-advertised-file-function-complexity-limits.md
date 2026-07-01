@@ -55,3 +55,4 @@ This task is not complete until the fix is validated with all three levels:
   - `crates/runie-core/src/bash_safety.rs:21` — `check_destructive_tokens` 194 lines, complexity 81
   - `crates/runie-tui/src/message/support.rs:15` — `render_thought_marker` 264 lines, complexity 36
   - `crates/runie-tui/src/diff.rs:18` — `render_canonical_diff` 241 lines, complexity 20
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

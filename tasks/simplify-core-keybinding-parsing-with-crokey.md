@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only keybinding parsing behavior
 - **Layer 2 — Event Handling:** `ConfigMsg::SetKeybinding` resolves to the same `CoreEvent`.
 - **Layer 3 — Rendering:** `/settings` keybinding display is unchanged.
 - **Layer 4 — E2E:** Headless CLI loads keybindings from config.
-- **Live tmux validation:** Custom keybinding in config still works after parser swap.
+- **Live tmux testing session (required):** Custom keybinding in config still works after parser swap.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

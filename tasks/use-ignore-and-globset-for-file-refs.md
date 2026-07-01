@@ -38,8 +38,9 @@ No change to TUI element design or composition. Only file-discovery behavior cha
 - **Layer 2 — Event Handling:** `IoMsg::ListFiles` / `PathCompletions` facts match expected paths.
 - **Layer 3 — Rendering:** `TestBackend` file picker shows the same files as before.
 - **Layer 4 — E2E:** Headless CLI `@` context expansion returns correct files.
-- **Live tmux validation:** In a repo with `.gitignore`, open `@` picker and confirm ignored files are excluded and globs match case-insensitively.
+- **Live tmux testing session (required):** In a repo with `.gitignore`, open `@` picker and confirm ignored files are excluded and globs match case-insensitively.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core` passes (5 passed, 26 ignored doc tests).

@@ -44,6 +44,7 @@ Replace substring-based history search with fuzzy scoring via `sublime_fuzzy`, a
 
 - `crates/runie-core/src/input_history.rs` — added `fuzzy_entry_score`, rewrote `search_history`
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --package runie-core input_history` passes.

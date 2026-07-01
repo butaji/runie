@@ -56,3 +56,4 @@ The macro was replaced with direct use of `NamedHandler` variants in each `regis
 ## Design Impact
 
 No change to TUI element design or composition. Only internal macro/function structure changes.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -56,3 +56,4 @@ This task is not complete until the fix is validated with all three levels:
 ## Notes
 
 - May overlap with existing tasks `delete-or-fix-dead-mcp-feature-flag` and `implement-or-remove-mcp-runtime-scaffolding`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

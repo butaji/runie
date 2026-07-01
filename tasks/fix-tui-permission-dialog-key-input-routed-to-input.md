@@ -99,3 +99,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - The dialog may not actually have keyboard focus; the input box is still the active receiver.
 - Permission handling works in unit tests, so this is a TUI focus-routing bug.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

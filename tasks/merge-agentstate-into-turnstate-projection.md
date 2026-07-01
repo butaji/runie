@@ -31,8 +31,9 @@ No change to TUI element design or composition. Only internal turn-state ownersh
 - **Layer 2 — Event Handling:** `TurnActor` facts drive `AgentState` updates.
 - **Layer 3 — Rendering:** `TestBackend` status/messages unchanged.
 - **Layer 4 — E2E:** Provider replay fixture with multi-tool turn passes.
-- **Live tmux validation:** Start a turn with streaming and tool calls; status bar and messages update correctly.
+- **Live tmux testing session (required):** Start a turn with streaming and tool calls; status bar and messages update correctly.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

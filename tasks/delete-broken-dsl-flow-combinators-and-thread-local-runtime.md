@@ -29,12 +29,13 @@ No change to TUI element design or composition. Only internal DSL implementation
 - **Layer 2 — Event Handling:** Command messages produce the same events.
 - **Layer 3 — Rendering:** `TestBackend` snapshots match.
 - **Layer 4 — E2E:** Headless CLI slash commands work.
-- **Live tmux validation:** Common slash commands behave as before.
+- **Live tmux testing session (required):** Common slash commands behave as before.
 
 ## Implementation
 
 The broken DSL files (`flow.rs`, `runtime.rs`, `examples.rs`) from `crates/runie-core/src/dsl/` were deleted. The remaining `mod.rs` is a minimal test DSL helper (`test_dsl.rs`) for building `AppState` in tests — this is a separate, working utility, not the broken actor-level DSL.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

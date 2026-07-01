@@ -61,3 +61,4 @@ This task is not complete until the fix is validated with all three levels:
 ## Notes
 
 - Directly overlaps with `fix-tui-at-file-picker-shows-no-files`; this task adds the Grok Build reference dimension.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -62,6 +62,7 @@
 - Server mode (`runie server`) provides working JSON-RPC over TCP/stdio.
 - ACP was an experimental event-driven interface that never worked correctly.
 - Future work: consider unifying the leader TCP protocol (`crates/runie-core/src/actors/leader/actor.rs`) with the CLI transport module or migrating to `jsonrpsee`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

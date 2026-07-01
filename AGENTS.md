@@ -5,7 +5,7 @@ Track tasks in tasks/index.json, details per each in tasks/xxx.md
 All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: unit and e2e.
 No artificail delays in automatic tests!
 
-Each implementation must be live tested to make sure everything is working as expected.
+Each implementation must be live tested in a real terminal tmux session (or a live CLI/headless run for non-TUI tasks) to make sure everything is working as expected.
 
 ## Testing Strategy (4 Layers)
 
@@ -118,6 +118,11 @@ src/
 Every task in `tasks/<id>.md` must include a `## Tests` section with acceptance
 criteria that reference the 4 testing layers. A task is **not done** until all
 listed tests pass.
+
+Additionally, **every task must include a live tmux testing session** (or a live
+CLI/headless scenario for non-TUI tasks) that exercises the changed behavior in a
+real terminal after unit and E2E tests pass. The task is not complete until the
+live session succeeds.
 
 **Template:** See `tasks/TEMPLATE.md`.
 

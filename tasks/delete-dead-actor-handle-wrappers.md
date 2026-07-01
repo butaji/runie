@@ -46,6 +46,7 @@ The remaining handle types are all active:
 - `GenericActorHandle` is referenced nowhere in the codebase (grep confirms).
 - `RactorHandle<Msg>` is actively used in `ActorHandles` and all actor spawn paths.
 - `ProviderActorHandle::legacy_tx` is not present — `RactorProviderHandle` is the current type.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

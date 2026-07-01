@@ -47,6 +47,7 @@ The `ToolPipeline` + `Inspector` trait in `runie-agent/src/inspector.rs` was dea
 - `runie inspect` (config introspection) and the tool-inspector pipeline were always two separate things.
 - The `ToolPipeline` was designed as middleware around tool calls but was never wired into the agent tool loop.
 - The `runie-cli/src/inspect.rs` file is unaffected and remains active.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

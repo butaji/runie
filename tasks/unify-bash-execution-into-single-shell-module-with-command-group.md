@@ -35,8 +35,9 @@ No change to TUI element design or composition. Only bash tool execution behavio
 - **Layer 2 — Event Handling:** `IoMsg::RunBash` emits the same stdout/stderr events.
 - **Layer 3 — Rendering:** `TestBackend` shows bash output identically.
 - **Layer 4 — E2E:** Provider replay fixture invokes a bash tool and receives the expected output.
-- **Live tmux validation:** In the TUI, ask the agent to run `echo hello`, a piped command, and a command that spawns a grand-child; verify timeout kills the whole tree.
+- **Live tmux testing session (required):** In the TUI, ask the agent to run `echo hello`, a piped command, and a command that spawns a grand-child; verify timeout kills the whole tree.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

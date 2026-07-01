@@ -32,6 +32,7 @@ None — task was already satisfied by earlier refactors.
 
 - `keymap.rs` line 7: `use std::sync::LazyLock;` — already using the std version.
 - `futures-util` was never a direct workspace dependency; `futures` itself is used via the `futures` crate.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

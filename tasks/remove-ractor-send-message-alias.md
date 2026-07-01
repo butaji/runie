@@ -26,4 +26,5 @@ Pick one name (`send`) and delete `send_message` everywhere. Update call sites.
 - **Layer 2 — Event Handling:** Send a message through an actor handle and observe the resulting fact.
 - **Layer 3 — Rendering:** N/A unless a TUI path uses the alias; verify no compile errors.
 - **Layer 4 — E2E:** Actor-based provider replay still passes.
-- **Live tmux validation:** Start the TUI and confirm normal input/agent flow works after the rename.
+- **Live tmux testing session (required):** Start the TUI and confirm normal input/agent flow works after the rename.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

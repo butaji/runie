@@ -81,6 +81,7 @@ No change to TUI element design or composition. Only permission evaluation behav
 - **Layer 3 — Rendering:** `TestBackend` permission dialog snapshots unchanged.
 - **Layer 4 — E2E:** Provider replay fixtures with denied/approved tools produce the same outcome.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core` passes (permission tests: 15 passed).

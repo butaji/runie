@@ -61,6 +61,7 @@
 - `PermissionManager::new(mode)` now uses `PermissionMode` to assemble the default policy chain.
 - `PermissionResult` is kept for the async policy chain; `PermissionAction` is kept for the sync ruleset.
 - This is a conceptual unification, not a security policy change. All existing behavior is preserved.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

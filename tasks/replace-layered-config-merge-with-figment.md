@@ -29,4 +29,5 @@ Adopt the `figment` crate for layered config: defaults → global TOML → proje
 - **Layer 2 — Event Handling:** `ConfigActor` emits `ConfigLoaded` with values from the correct layer.
 - **Layer 3 — Rendering:** `TestBackend` snapshot of the status bar reflects the effective provider/model/theme.
 - **Layer 4 — E2E:** Headless CLI reads the effective provider from env when config file is absent.
-- **Live tmux validation:** Start the TUI in a project directory with a local `.runie/config.toml`; status bar shows the project-level provider/model, overriding the global value.
+- **Live tmux testing session (required):** Start the TUI in a project directory with a local `.runie/config.toml`; status bar shows the project-level provider/model, overriding the global value.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

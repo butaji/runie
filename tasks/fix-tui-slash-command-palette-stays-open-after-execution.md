@@ -99,3 +99,4 @@ test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 1714 filtered out
 
 - The palette is opened automatically when `/` is typed. It now closes when the command is dispatched, before the result is processed.
 - This affects every slash command; fixing it improves the perceived reliability of `/save`, `/load`, `/sessions`, `/history`, `/copy`, etc.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

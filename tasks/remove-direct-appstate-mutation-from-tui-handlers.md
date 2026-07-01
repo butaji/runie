@@ -56,3 +56,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - This is a large architectural cleanup. It may need to be split further once the scope is measured.
 - Fixing this will make many of the current live-testing bugs (palette overlay, form state, history) easier to reason about.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

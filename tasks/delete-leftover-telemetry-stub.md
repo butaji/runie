@@ -39,6 +39,7 @@ There is nothing to delete — the module is correct as-is.
 - `telemetry::init()` is called by `crates/runie-cli/src/main.rs` and `crates/runie-tui/src/main.rs`.
 - The module provides idempotent tracing subscriber setup with `RUST_LOG` env filter, formatted layer, and thread IDs.
 - If a future refactor moves `init()` into the binary entry points directly, this task would become relevant again.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

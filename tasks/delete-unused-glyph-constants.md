@@ -37,6 +37,7 @@
 
 - Glyphs used in the TUI are defined in `crates/runie-tui/src/theme/glyph.rs` (which exists).
 - The only reference to "glyphs" in the codebase is a design-system comment in `ui.rs`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

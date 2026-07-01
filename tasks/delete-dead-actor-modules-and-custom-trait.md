@@ -61,6 +61,7 @@ The following were already absent from the codebase (deleted in prior work):
 - Most of the task description items were already done by prior cleanup work. The remaining work was purely mechanical dead-code removal.
 - `GenericActorHandle` is still needed for `RactorSessionHandle` (production code in `session/messages.rs`).
 - `Reply` (= `RpcReply`) is in `ractor_adapter.rs` and used by session message handling.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

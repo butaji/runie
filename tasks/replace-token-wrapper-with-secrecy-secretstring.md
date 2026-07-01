@@ -42,8 +42,9 @@ Delete the custom wrapper code since the `Token` type was not actually used anyw
 - **Layer 2 — Event Handling:** `ConfigLoaded` carrying a provider key is handled without exposing the key.
 - **Layer 3 — Rendering (if TUI-visible):** Snapshot of `/inspect` or settings masks the API key.
 - **Layer 4 — E2E:** Headless provider resolution succeeds with a key loaded from env/keyring.
-- **Live tmux validation:** Run `/login mock`, `/inspect`; confirm the API key is masked in output.
+- **Live tmux testing session (required):** Run `/login mock`, `/inspect`; confirm the API key is masked in output.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core auth` passes (12/12).

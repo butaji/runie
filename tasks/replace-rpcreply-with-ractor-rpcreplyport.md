@@ -28,8 +28,9 @@ No change to TUI element design or composition. Only internal actor RPC plumbing
 - **Layer 2 — Event Handling:** Actor replies produce the same facts.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Provider replay fixture passes.
-- **Live tmux validation:** TUI actor flow works.
+- **Live tmux testing session (required):** TUI actor flow works.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

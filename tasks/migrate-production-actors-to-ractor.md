@@ -129,6 +129,7 @@ This task finishes the migration in phases so that `cargo check --workspace` sta
 - `UiControlActor` is currently unwired and its module is not included in `actors/mod.rs`, so it does not affect compilation. Leave its deletion to `delete-dead-actor-modules-and-custom-trait`.
 - After the migration, `Reply` must be moved out of `trait.rs` (e.g., to `actors/ractor_adapter.rs` or `actors/reply.rs`) before `trait.rs` can be deleted.
 - Rejected alternative: deleting the custom trait first and fixing everything at once. That creates a long-lived broken branch and conflicts with parallel work.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

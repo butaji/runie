@@ -54,3 +54,4 @@ Options for completing this task:
 - `cargo check --workspace` passes
 - `cargo test -p runie-testing` passes (17 tests)
 - `cargo test -p runie-core tests::copy` passes (10 tests)
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -59,3 +59,4 @@ This ensures queued follow-up messages are drained after the current turn comple
 
 - `cargo check --workspace`: passes with no warnings
 - `cargo test --workspace`: 733 passed, 0 failed
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

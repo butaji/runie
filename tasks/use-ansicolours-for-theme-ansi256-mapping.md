@@ -55,3 +55,4 @@ fn indexed_to_opaline(i: u8) -> opaline::OpalineColor {
 - `cargo check -p runie-tui` passes
 - `cargo test -p runie-tui` passes
 - `cargo clippy -p runie-tui` has no new warnings
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

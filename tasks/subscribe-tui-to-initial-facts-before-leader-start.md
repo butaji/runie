@@ -51,3 +51,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - Possible fixes: subscribe `UiActor` before `Leader::start()`, add a small replay buffer to `EventBus`, or have the leader/coordinator re-emit current facts after new subscribers register.
 - This is likely the root cause of several live “empty/missing” reports.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -29,4 +29,5 @@ Make config edits comment-preserving and cross-process safe by using `toml_edit`
 - **Layer 2 — Event Handling:** Send `ConfigMsg::SetProvider` and assert the emitted `ConfigLoaded` fact contains the edited value.
 - **Layer 3 — Rendering (if TUI-visible):** `TestBackend` snapshot of `/settings` or `/inspect` after a config edit shows the new value.
 - **Layer 4 — Provider Replay / E2E:** Run `runie login mock` and `runie mcp add` in parallel from two processes; both succeed and config remains valid TOML.
-- **Live tmux validation:** Start the TUI, run `/login mock`, `/model mock-model`, and `/mcp add ...`; inspect `~/.runie/config.toml` and confirm comments and formatting are preserved.
+- **Live tmux testing session (required):** Start the TUI, run `/login mock`, `/model mock-model`, and `/mcp add ...`; inspect `~/.runie/config.toml` and confirm comments and formatting are preserved.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

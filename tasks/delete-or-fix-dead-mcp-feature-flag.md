@@ -44,6 +44,7 @@
 - The `mcp = []` feature in the task description was already removed from `Cargo.toml`.
 - `McpSection` is defined in `crates/runie-core/src/config/mcp.rs` and re-exported from `crates/runie-core/src/config/mod.rs`.
 - Coordinate with `implement-or-remove-mcp-runtime-scaffolding.md` for future decisions about the MCP runtime.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

@@ -28,8 +28,9 @@ Replace the custom function with `uuid::Uuid::new_v4()` at the call site, or add
 - **Layer 2 — Event Handling:** N/A.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Test runner creates sessions without collisions. — Covered by existing tests.
-- **Live tmux validation:** N/A.
+- **Live tmux testing session (required):** N/A.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

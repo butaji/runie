@@ -102,3 +102,4 @@ The form already had a submit button (`FormSubmit` item) and the submission logi
 1. `Back` action restores the dialog (since `handle_back_action` closes it)
 2. `SubmitCommand` correctly closes the dialog and dispatches to the registry
 3. `KeepOpen` correctly preserves the dialog state
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

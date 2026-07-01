@@ -75,6 +75,7 @@ The `<tool_call>` XML blocks in the MiniMax fixtures are content within the SSE 
 - **MiniMax ownership clarified:** The architecture split is correct. SSE parsing lives in `runie-provider`; the text shim in `runie-core` is the fallback path.
 - **MiniMax replay tests pass:** 4 tests in `minimax_replay.rs` and 4 tests in `minimax_turn.rs` all pass.
 - **Warning fixes:** Fixed unused return value warnings in `think_filter/tests.rs`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

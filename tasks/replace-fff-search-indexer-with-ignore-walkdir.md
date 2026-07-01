@@ -30,8 +30,9 @@ No change to TUI element design or composition. Only file-search behavior become
 - **Layer 2 — Event Handling:** `IoMsg::Search` returns expected results.
 - **Layer 3 — Rendering:** `TestBackend` `@` picker shows the same ranked files.
 - **Layer 4 — E2E:** Headless CLI file search returns correct results.
-- **Live tmux validation:** Open `@` picker in a repo with `.gitignore`; ignored files are excluded and ranking feels similar.
+- **Live tmux testing session (required):** Open `@` picker in a repo with `.gitignore`; ignored files are excluded and ranking feels similar.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

@@ -55,3 +55,4 @@ Verified 2026-07-01: `crates/runie-agent/src/turn/tools.rs` uses `tool_call.id.a
 ## Notes
 
 - This is a correctness issue for multi-tool turns and UI tracking.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

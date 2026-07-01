@@ -68,6 +68,7 @@ No change to TUI element design or composition. Only internal HTTP connection po
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** All 1800+ workspace tests pass.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --workspace` passes (1800+ tests, 0 failed).

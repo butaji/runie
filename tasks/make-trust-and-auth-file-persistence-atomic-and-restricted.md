@@ -32,3 +32,4 @@
 
 - **Layer 1 — State/Logic:** Unit tests for atomic writes, locks, and permissions (3 tests in `io::atomic_write`).
 - **Layer 4 — E2E:** Trust and auth storage tests pass (11 trust tests, 9 auth tests).
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

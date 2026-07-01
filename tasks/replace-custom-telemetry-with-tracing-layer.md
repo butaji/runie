@@ -57,6 +57,7 @@
 - `ConfigState::telemetry_enabled()` and `telemetry_enabled_mut()` accessors added.
 - Default telemetry behavior changed from disabled (`Telemetry::new(false)`) to enabled (`TelemetrySection::default()` = `enabled: true`).
 - **Update after review:** `crates/runie-core/src/telemetry.rs` is now a stub with only two trivial tests. Delete it or repurpose it for the shared subscriber init; tracked by `delete-leftover-telemetry-stub.md` and `extract-shared-tracing-subscriber-init.md`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

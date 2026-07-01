@@ -49,3 +49,4 @@ This task is not complete until the fix is validated with all three levels:
 - This is the only task that should invoke live Grok Build for the comparison work.
 - All other comparison tasks depend on these fixtures and replay them.
 - Re-recording should be a rare, deliberate operation.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

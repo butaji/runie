@@ -112,6 +112,7 @@ Narrow `runie-core`'s public API to expose only what's actually needed by downst
 - Private modules identified above are not used externally and can remain as internal implementation details.
 - `path` module is used by `runie-agent` tools and should stay public until the helper-crate task lands (task marked as done, `path` still used).
 - `sanitize` is used by Provider and stays in `runie-core` (not moved to util as originally planned, since it has domain-specific logic).
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

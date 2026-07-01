@@ -29,7 +29,7 @@ No change to TUI element design or composition. Only render performance changes.
 - **Layer 2 — Event Handling:** `Snapshot` events produce the same view.
 - **Layer 3 — Rendering:** `TestBackend` snapshots unchanged.
 - **Layer 4 — E2E:** Provider replay fixture with many messages passes.
-- **Live tmux validation:** Scroll a long conversation; rendering stays responsive.
+- **Live tmux testing session (required):** Scroll a long conversation; rendering stays responsive.
 
 ## Implementation
 
@@ -39,6 +39,7 @@ No change to TUI element design or composition. Only render performance changes.
 4. Added `Debug` derive to `ViewCache` (needed by `ViewState`'s `Debug` derive).
 5. Two new unit tests: `test_cached_feed_reuse_on_gen_match` and `test_cached_feed_none_initially`.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

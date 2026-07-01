@@ -58,3 +58,4 @@ This task is not complete until the fix is validated with all three levels:
 ## Notes
 
 - This may surface that Runie lacks an edit tool or approval flow for edits.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

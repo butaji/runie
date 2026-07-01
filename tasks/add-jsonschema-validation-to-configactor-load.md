@@ -46,6 +46,7 @@ After the hand-written validator is replaced by `jsonschema`, wire validation in
 - The `validate.rs` module already uses `jsonschema`; this task wired it into the actor.
 - On validation failure during `reload_and_emit`, the actor keeps the previous valid config.
 - `load_and_emit` emits Error and falls back to defaults if validation fails.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

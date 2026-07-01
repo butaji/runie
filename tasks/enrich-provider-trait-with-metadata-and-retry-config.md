@@ -69,8 +69,9 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 2 — Event Handling:** Provider-loaded facts include metadata.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Mock and replay providers implement new methods.
-- **Live tmux validation:** `/provider` shows model metadata.
+- **Live tmux testing session (required):** `/provider` shows model metadata.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core --lib -- provider::provider_trait::tests` passes (22 tests).

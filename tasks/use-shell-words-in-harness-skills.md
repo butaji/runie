@@ -42,3 +42,4 @@ All 44 harness_skills tests pass.
 
 - `crates/runie-core/src/harness_skills/verification_loop.rs`
 - `crates/runie-core/src/harness_skills/startup_context.rs`
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

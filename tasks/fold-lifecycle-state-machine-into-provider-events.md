@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only event-generation behavior c
 - **Layer 2 — Event Handling:** `UiActor` receives the same lifecycle facts.
 - **Layer 3 — Rendering:** `TestBackend` thinking indicators and turn-complete behavior match.
 - **Layer 4 — E2E:** Provider replay fixture emits correct lifecycle events.
-- **Live tmux validation:** Start a turn with thinking blocks; the thinking indicator appears and disappears correctly.
+- **Live tmux testing session (required):** Start a turn with thinking blocks; the thinking indicator appears and disappears correctly.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

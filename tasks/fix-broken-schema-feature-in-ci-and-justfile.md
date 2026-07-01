@@ -45,6 +45,7 @@ The CI workflow and `justfile` invoked `cargo run -p runie-core --example write_
 
 - This is a prerequisite for `replace-config-validator-with-jsonschema` because CI must be able to generate the schema reliably.
 - No new dependencies are required.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

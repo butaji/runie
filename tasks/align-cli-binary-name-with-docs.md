@@ -34,3 +34,4 @@ Chose the **rename approach**: renamed the CLI binary to `runie` and the TUI bin
 - [x] Choose rename or doc-update. — **Renamed binaries**
 - [x] Apply consistently across `Cargo.toml`, README, docs, scripts. — **Done**
 - [x] `cargo build --release` produces expected binaries. — **Verified**
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

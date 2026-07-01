@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only config/secrets behavior cha
 - **Layer 2 — Event Handling:** `ConfigLoaded` facts carry providers without keys.
 - **Layer 3 — Rendering:** `/inspect` masks keys as before.
 - **Layer 4 — E2E:** Headless CLI resolves provider key from keyring/env.
-- **Live tmux validation:** `/login mock` and `/model mock-model` work; config file has no plaintext key.
+- **Live tmux testing session (required):** `/login mock` and `/model mock-model` work; config file has no plaintext key.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

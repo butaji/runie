@@ -40,6 +40,7 @@ Provider credential resolution was duplicated between `crates/runie-provider/src
 - `crates/runie-core/Cargo.toml`
 - `crates/runie-provider/Cargo.toml`
 - `crates/runie-provider/src/config/mod.rs` (replaced custom parser with dotenvy)
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

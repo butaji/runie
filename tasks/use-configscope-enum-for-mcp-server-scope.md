@@ -49,3 +49,4 @@
 - `crates/runie-cli/src/mcp.rs`
 - `crates/runie-cli/src/scope.rs` (new)
 - `config.schema.json`
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

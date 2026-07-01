@@ -27,8 +27,9 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 2 — Event Handling:** Actor accepts a second Run after first completes.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Provider replay with two sequential turns passes.
-- **Live tmux validation:** Multi-turn chat works.
+- **Live tmux testing session (required):** Multi-turn chat works.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

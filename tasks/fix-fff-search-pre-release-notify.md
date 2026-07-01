@@ -34,6 +34,7 @@
 **Won't fix as stated**: All versions of `fff-search` (including 0.9.6) depend on `fff-notify-debouncer-full` which requires `notify 9.0.0-rc.4`. There is no version of fff-search that uses notify 7 exclusively. The two-version situation has existed since fff-search was introduced and does not cause functional issues. The pre-release notify is only used by fff-search's file watching functionality, while the rest of the codebase uses notify 7.0 for config watching.
 
 **Alternative**: Replace fff-search entirely with `ignore` + `walkdir` + a custom indexer, but this is a significant refactoring task beyond the scope of this cleanup.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

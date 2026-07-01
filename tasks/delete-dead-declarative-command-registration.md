@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only internal command registrati
 - **Layer 2 — Event Handling:** Command registry still produces the same events.
 - **Layer 3 — Rendering:** `TestBackend` command palette unchanged.
 - **Layer 4 — E2E:** Headless CLI slash commands work.
-- **Live tmux validation:** Slash commands and command palette behave as before.
+- **Live tmux testing session (required):** Slash commands and command palette behave as before.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

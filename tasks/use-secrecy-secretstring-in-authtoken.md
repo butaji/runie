@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only credential handling behavio
 - **Layer 2 — Event Handling:** Auth-loaded facts carry redacted tokens.
 - **Layer 3 — Rendering:** `/inspect` masks keys.
 - **Layer 4 — E2E:** Provider request includes the correct key header.
-- **Live tmux validation:** `/login mock` and keyring config do not expose plaintext.
+- **Live tmux testing session (required):** `/login mock` and keyring config do not expose plaintext.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

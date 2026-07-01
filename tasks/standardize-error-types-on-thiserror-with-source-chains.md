@@ -61,6 +61,7 @@ Standardize on `thiserror` everywhere, use `#[source]`/`#[from]` to preserve cha
 - **Layer 3 — Rendering:** N/A (error types used for logic, not rendering).
 - **Layer 4 — E2E:** `stream_error_propagates`, `headless_turn_error_propagates`, `headless_event_error_round_trips` — all pass.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core -- provider_event` passes (10 tests).

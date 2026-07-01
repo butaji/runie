@@ -57,3 +57,4 @@ This task is not complete until the fix is validated with all three levels:
 ## Notes
 
 - Plan mode may be out of scope for the current milestone; documenting the intentional difference is acceptable if decided.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

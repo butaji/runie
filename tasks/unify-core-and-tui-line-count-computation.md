@@ -60,6 +60,7 @@ The `word_wrap` function in `runie-core` is the single source of truth for word 
 - The `textwrap` crate is used consistently for word wrapping.
 - ANSI escape sequences are handled via `display_width::width` which counts display cells correctly.
 - Core scroll math and TUI renderer share the exact same wrapping rules.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 All validation gates confirmed:

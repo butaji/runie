@@ -31,8 +31,9 @@ No change to TUI element design or composition. Only resource loading behavior c
 - **Layer 2 — Event Handling:** Resource-loaded commands produce the same events.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Headless CLI loads skill resources.
-- **Live tmux validation:** Slash commands loaded from resources work.
+- **Live tmux testing session (required):** Slash commands loaded from resources work.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

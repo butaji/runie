@@ -50,6 +50,7 @@ Provider API keys were moved to the OS keyring (service `runie`, account `provid
 - File fallback at `~/.local/share/runie/auth.json` for CI/headless
 - Migration: v3 (plaintext) → v4 (keyring)
 - Env var fallback: `{PROVIDER}_API_KEY` (e.g., `OPENAI_API_KEY`)
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

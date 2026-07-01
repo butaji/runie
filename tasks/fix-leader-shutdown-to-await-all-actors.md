@@ -76,3 +76,4 @@ The shutdown implementation is correct and never panics. The key design is using
 
 - The fix was already in place. The task was marked `todo` but the code already handles cloned handles correctly.
 - All actor cells are stopped in reverse spawn order to ensure clean termination.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -30,4 +30,5 @@ Delete the dead OSC-52 module and use `arboard` for clipboard writes, with `cros
 - **Layer 2 — Event Handling:** Feed a copy shortcut event and assert the effect dispatches a clipboard write.
 - **Layer 3 — Rendering:** `TestBackend` snapshot after copy shows a transient status message (if implemented).
 - **Layer 4 — E2E:** Headless CLI with a copy tool returns the expected event.
-- **Live tmux validation:** In a real terminal, select a message and press the copy shortcut; paste the content outside tmux and verify it matches.
+- **Live tmux testing session (required):** In a real terminal, select a message and press the copy shortcut; paste the content outside tmux and verify it matches.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

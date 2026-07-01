@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only tool permission metadata ch
 - **Layer 2 — Event Handling:** `PermissionRequest` carries annotation-derived context.
 - **Layer 3 — Rendering:** Permission dialog text is unchanged.
 - **Layer 4 — E2E:** MCP tool registration preserves annotations.
-- **Live tmux validation:** A read-only tool does not prompt; a destructive tool prompts.
+- **Live tmux testing session (required):** A read-only tool does not prompt; a destructive tool prompts.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

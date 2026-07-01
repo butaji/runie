@@ -30,8 +30,9 @@ No change to TUI element design or composition. Only the provider implementation
 - **Layer 2 — Event Handling:** `ProviderActor` handles adapter events.
 - **Layer 3 — Rendering:** N/A for spike.
 - **Layer 4 — E2E:** All provider-replay fixtures pass with the adapter.
-- **Live tmux validation:** If the spike lands, run a live MiniMax/mock turn end-to-end.
+- **Live tmux testing session (required):** If the spike lands, run a live MiniMax/mock turn end-to-end.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

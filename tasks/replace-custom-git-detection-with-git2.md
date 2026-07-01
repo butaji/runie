@@ -28,7 +28,7 @@ Replace the custom parser with `git2::Repository::discover`, `repo.head()`, and 
 - **Layer 2 — Event Handling:** `IoMsg::DetectGit` produces the expected `GitInfoLoaded` fact. *(covered by existing IoActor tests)*
 - **Layer 3 — Rendering:** `TestBackend` status bar shows branch/origin info in a git repo. *(covered by existing rendering tests)*
 - **Layer 4 — E2E:** `cargo test --workspace` includes the new git detection tests.
-- **Live tmux validation:** Open the TUI in a git worktree and in a normal repo; status bar shows the correct branch and origin. *(manual verification)*
+- **Live tmux testing session (required):** Open the TUI in a git worktree and in a normal repo; status bar shows the correct branch and origin. *(manual verification)*
 
 ## Implementation
 
@@ -36,6 +36,7 @@ Replaced `read_branch_sync`, `read_origin_repo_name_sync`, `read_git_info_sync`,
 
 Four unit tests added covering: real repo detection, non-git directory, temp repo with no origin, and detached HEAD state.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

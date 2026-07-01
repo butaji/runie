@@ -31,8 +31,9 @@ No change to TUI element design or composition. Only location parsing behavior c
 - **Layer 2 — Event Handling:** `IoMsg::OpenLocation` resolves correctly.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Headless CLI `--goto` argument resolves.
-- **Live tmux validation:** Click or use a shortcut on a `file:line` link in the TUI; verify the editor opens the right place.
+- **Live tmux testing session (required):** Click or use a shortcut on a `file:line` link in the TUI; verify the editor opens the right place.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

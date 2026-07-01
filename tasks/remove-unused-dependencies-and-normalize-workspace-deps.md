@@ -47,6 +47,7 @@ Several dependencies were unused, duplicated, or pinned inline when they should 
 - `tempfile` is used in production code (`actors/io/effects/editor.rs`) and test code, so it must remain in both `[dependencies]` and `[dev-dependencies]` sections.
 - Moved to workspace inheritance: `unicode-segmentation`, `notify`, `notify-debouncer-mini`, `strum`, `tracing`.
 - `parking_lot` was added during `harden-actors-against-mutex-poisoning` and is now workspace-inherited.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

@@ -28,7 +28,7 @@ Adopt `tiktoken-rs` for OpenAI-compatible token counts, or `tokenizers` for mode
 - **Layer 2 — Event Handling:** Token count facts are emitted after each streaming delta.
 - **Layer 3 — Rendering:** `TestBackend` shows token count within a reasonable tolerance.
 - **Layer 4 — E2E:** Provider replay fixture returns expected token counts for a known prompt.
-- **Live tmux validation:** Start a turn with a non-trivial prompt; the token count in the status bar matches expectations for the model.
+- **Live tmux testing session (required):** Start a turn with a non-trivial prompt; the token count in the status bar matches expectations for the model.
 
 ## Implementation Notes
 
@@ -36,3 +36,4 @@ Adopt `tiktoken-rs` for OpenAI-compatible token counts, or `tokenizers` for mode
 - `tokens.rs` now uses `tiktoken::get_encoding("cl100k_base")` for OpenAI-compatible providers
 - `estimate_tokens()` tries tiktoken first, falls back to `chars4_count()` for unknown providers
 - `estimate_tokens_for_model()` specifically checks for `openai` provider to use tiktoken
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

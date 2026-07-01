@@ -61,6 +61,7 @@
 - The agent manifest SHA-256 checksum validation is kept in `build.rs` as a release integrity check.
 - `bacon.toml`'s `check-skip` job remains as documentation; the remaining `build.rs` checks (AppState access + manifest validation) are fast enough for iteration.
 - Event taxonomy generation was removed from `build.rs`; generated files are committed to git and regeneration is manual via `scripts/generate-event-taxonomy.sh`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

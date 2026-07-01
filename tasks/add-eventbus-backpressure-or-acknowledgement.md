@@ -52,3 +52,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - Possible fixes: increase buffer, split control events onto a dedicated channel, or replace broadcast with a fan-out pattern that awaits slow consumers.
 - Coordinate with the late-subscription fix; both touch the bus and startup ordering.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

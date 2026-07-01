@@ -39,6 +39,7 @@
 - `shutdown` takes `self` by value so it can move handles out and await them.
 - `ActorCell::stop(None)` is called for each actor in reverse spawn order before awaiting.
 - `spawn_with_join` was added to `AgentActorFactory` so the agent join handle is also captured.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

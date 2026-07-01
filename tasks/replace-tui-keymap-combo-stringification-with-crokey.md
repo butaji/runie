@@ -47,6 +47,7 @@
 - `crokey` uses `-` as the separator; the output is lowercased and `-`→`+` to match the existing config format.
 - `KeyCombinationFormat::default().with_lowercase_modifiers()` provides the formatter backbone.
 - Two special cases are preserved: `Esc` → "escape" (crokey formats as "Esc") and `BackTab` → "shift+tab" (the binding table uses this legacy alias).
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

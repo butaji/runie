@@ -60,3 +60,4 @@ This task is not complete until the fix is validated with all three levels:
 ## Notes
 
 - Overlaps with `fix-tui-permission-dialog-key-input-routed-to-input` and `wire-user-permission-rules-into-agent-gate`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

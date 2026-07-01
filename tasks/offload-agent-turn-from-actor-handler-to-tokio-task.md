@@ -32,8 +32,9 @@ No change to TUI element design or composition. Only internal agent concurrency 
 - **Layer 2 — Event Handling:** `AgentMsg::Abort` cancels a streaming turn and emits `TurnAborted`.
 - **Layer 3 — Rendering:** `TestBackend` shows the turn aborted state.
 - **Layer 4 — E2E:** Provider replay fixture cancels a turn mid-stream.
-- **Live tmux validation:** Start a turn, press the abort shortcut, and confirm the UI returns to idle immediately.
+- **Live tmux testing session (required):** Start a turn, press the abort shortcut, and confirm the UI returns to idle immediately.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

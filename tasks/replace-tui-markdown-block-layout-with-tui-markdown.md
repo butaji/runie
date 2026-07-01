@@ -73,6 +73,7 @@ extract_code_blocks()          ← runie-core markdown module
 - Block-level layout (code headers, list formatting, blockquote markers) remains custom
 - Syntax highlighting uses syntect directly for better control
 - Future work: consider extending tui-markdown or using a wrapper to support custom code block headers
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

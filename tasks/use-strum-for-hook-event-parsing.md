@@ -47,3 +47,4 @@ pub enum HookEvent {
 - `cargo check -p runie-core` passes
 - `cargo test -p runie-core --lib -- hooks` — 9 tests pass
 - `cargo clippy -p runie-core` has no new warnings
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -64,6 +64,7 @@ This task extracts the common scanning/frontmatter logic into a single loader mo
 - Once unified, replace the custom frontmatter/body scanner with `pulldown-cmark-frontmatter` + `serde_yaml` in `use-pulldown-cmark-frontmatter-for-resource-loader`. Use `walkdir`/`ignore` for directory traversal instead of manual `fs::read_dir` loops.
 - `thClaws` and `OpenFang` both use YAML-frontmatter `SKILL.md` resources; aligning the loader makes Runie skills portable across agents.
 - Out of scope: unifying the command YAML loader, fixing the declarative `Box::leak`/`CommandCategory` issues, or changing the resource file format.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 All validation gates confirmed:

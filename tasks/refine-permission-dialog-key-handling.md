@@ -79,3 +79,4 @@ if self.state.permission_request_opt().is_some()
 ```
 
 Helper `is_navigation_or_editing_event` lists all keys that should be silently consumed.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

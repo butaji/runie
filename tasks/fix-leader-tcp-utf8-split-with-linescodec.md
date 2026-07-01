@@ -31,7 +31,7 @@ No change to TUI element design or composition. Only leader transport behavior c
 - **Layer 2 — Event Handling:** Leader actor emits the correct parsed message event.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** A headless client sends Unicode through leader TCP and receives correct response.
-- **Live tmux validation:** N/A (non-TUI path).
+- **Live tmux testing session (required):** N/A (non-TUI path).
 
 ## Implementation Notes
 
@@ -50,6 +50,7 @@ while reader.read_line(&mut line).await.unwrap_or(0) > 0 {
 
 `BufReader::read_line()` handles multi-byte UTF-8 correctly across arbitrary read boundaries. The old `from_utf8` chunking logic and 1024-byte buffer are removed.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core leader` passes (8 tests including new UTF-8 regression test).

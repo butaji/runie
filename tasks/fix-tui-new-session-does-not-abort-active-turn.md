@@ -70,3 +70,4 @@ Done: Unit tests pass. 4 pre-existing queue/flow test failures remain (unrelated
 - This is a safety/correctness issue: an infinite mock turn could leak across sessions.
 - The abort path cancels the provider stream future via `CancellationToken`.
 - 4 pre-existing queue/flow test failures (unrelated to this fix).
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

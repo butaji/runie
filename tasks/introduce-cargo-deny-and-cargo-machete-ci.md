@@ -47,6 +47,7 @@ The workspace had duplicate transitive dependencies, potential unused dependenci
 - `cargo machete` passes with no unused dependencies
 - Git2 unsound advisories are ignored pending `fff-search` update
 - Duplicate versions are all transitive and would require upstream changes to resolve
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

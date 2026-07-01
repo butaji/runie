@@ -28,7 +28,7 @@ Build a single `HashMap<crokey::KeyCombination, CoreEvent>` from the default bin
 - **Layer 2 — Event Handling:** Feed crossterm key events and assert the correct `CoreEvent` is emitted.
 - **Layer 3 — Rendering:** `TestBackend` snapshot after a key combo shows the expected UI change.
 - **Layer 4 — E2E:** Headless CLI does not depend on keymap; N/A unless tested via CLI transport.
-- **Live tmux validation:** Launch the TUI and press all documented shortcuts (`q`, `Ctrl+c`, `/`, `@`, `Enter`, etc.); each behaves as documented.
+- **Live tmux testing session (required):** Launch the TUI and press all documented shortcuts (`q`, `Ctrl+c`, `/`, `@`, `Enter`, etc.); each behaves as documented.
 
 ## Implementation Notes
 
@@ -38,3 +38,4 @@ The keymap now uses:
 - `map_plain_key()`: Minimal fallback for unhandled keys (Esc, Tab, chars, navigation)
 
 The old per-modifier tables (`map_by_modifier`, `map_ctrl_key`, etc.) have been deleted.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

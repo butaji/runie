@@ -34,6 +34,7 @@ None — no changes needed. The task was already satisfied by earlier actor refa
 
 - `AgentActorFactoryImpl::spawn` does `Ok(Arc::new(LeaderAgentHandleImpl::new(handle)) as Arc<dyn LeaderAgentHandle>)` — safe and direct.
 - `box_to_arc` was described in the task plan but was never present in the code.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

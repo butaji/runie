@@ -52,6 +52,7 @@ Use `shell_words::split` to parse commands into argv, then execute with `tokio::
 - **Layer 3 — Rendering:** Bash output renders in message list
 - **Layer 4 — E2E:** Provider replay fixture invokes bash tool
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] `cargo check --workspace` passes

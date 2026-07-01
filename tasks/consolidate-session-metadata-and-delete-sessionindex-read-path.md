@@ -76,6 +76,7 @@ No change to TUI element design or composition. Only internal session persistenc
 - **Layer 3 — Rendering:** `/sessions` popup uses `list_metadata()` which reads per-file headers — unchanged.
 - **Layer 4 — E2E:** Session store tests cover all CRUD operations.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core --lib -- --test-threads=1` passes (1813 passed, 0 failed, 1 ignored).

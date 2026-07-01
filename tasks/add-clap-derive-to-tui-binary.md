@@ -44,3 +44,4 @@
 - `cargo run --bin runie-tui -- --version` shows version
 - `cargo run --bin runie-tui -- --dry-run` works (runs dry-run preview)
 - `cargo clippy -p runie-tui` has no new warnings
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

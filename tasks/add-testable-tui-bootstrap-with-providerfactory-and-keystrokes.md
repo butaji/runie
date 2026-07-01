@@ -27,8 +27,9 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 2 — Event Handling:** Keystroke DSL produces expected events.
 - **Layer 3 — Rendering:** `TestBackend` scenario snapshots pass.
 - **Layer 4 — E2E:** TUI replay with fixture provider passes.
-- **Live tmux validation:** TUI starts normally.
+- **Live tmux testing session (required):** TUI starts normally.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

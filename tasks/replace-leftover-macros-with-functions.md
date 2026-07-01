@@ -44,6 +44,7 @@ Several small macros can be ordinary functions or `if let` expressions: `with_pa
 ## Notes
 
 - The `with_panel_stack!` part overlaps with `collapse-dialogstate-variants.md`; pick whichever task lands first to do it.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

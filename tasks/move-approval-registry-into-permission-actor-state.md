@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only internal permission actor s
 - **Layer 2 — Event Handling:** `PermissionRequest`/`PermissionResponse` events unchanged.
 - **Layer 3 — Rendering:** Permission dialog snapshots match.
 - **Layer 4 — E2E:** Provider replay fixture with approvals passes.
-- **Live tmux validation:** Approve/deny a tool call; response arrives correctly.
+- **Live tmux testing session (required):** Approve/deny a tool call; response arrives correctly.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

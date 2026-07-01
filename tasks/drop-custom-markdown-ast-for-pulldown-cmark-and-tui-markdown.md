@@ -71,7 +71,7 @@ Consolidated `blocks.rs` + `inline.rs` into single `parsing.rs` module:
 - **Layer 2 — Event Handling:** Feed streaming markdown deltas and assert the correct `Event::MessageDelta` facts.
 - **Layer 3 — Rendering:** `TestBackend` snapshot tests for code blocks, lists, blockquotes, inline styles, and incomplete fences must match existing snapshots.
 - **Layer 4 — E2E:** Provider replay fixture streams markdown and produces the same rendered output.
-- **Live tmux validation:** Start a turn that returns a code block, list, and blockquote; verify the rendered messages look identical to before.
+- **Live tmux testing session (required):** Start a turn that returns a code block, list, and blockquote; verify the rendered messages look identical to before.
 
 ## Acceptance Criteria
 
@@ -81,6 +81,7 @@ Consolidated `blocks.rs` + `inline.rs` into single `parsing.rs` module:
 - [x] All existing markdown snapshot tests pass without visual changes. — Verified: all 692 TUI tests pass, including rendering tests
 - [x] Edge cases preserved: nested lists, blockquotes, code fences, inline styles, incomplete fences. — Verified: heal tests pass, blockquote/list rendering unchanged
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-tui --lib`: 692 passed, 0 failed; `cargo test -p runie-core --lib`: 1821 passed, 0 failed

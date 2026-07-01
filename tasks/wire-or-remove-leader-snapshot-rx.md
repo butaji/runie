@@ -47,3 +47,4 @@ Verified 2026-07-01: `snapshot_rx` has been removed from `LeaderHandle`. Search 
 ## Notes
 
 - Decision: **removed** the field rather than wiring it. The field was a placeholder that was never connected to the actual render channel.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

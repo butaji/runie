@@ -52,6 +52,7 @@ The task proposes rewriting `strip.rs` using `pulldown-cmark` events, arguing it
 - If a future requirement demands stripping valid CommonMark code blocks (e.g., tool output in fenced blocks), revisit `pulldown-cmark` at that point.
 - The `tool_markers/strip.rs` module is small (~200 lines) and the string-scanning approach is both correct and easy to audit.
 - `pulldown-cmark` is correctly used in the rendering pipeline (`runie-tui` message display); the stripping layer does not need it.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

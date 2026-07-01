@@ -59,3 +59,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - The CLI headless native-tool loop (`fix-cli-headless-native-tool-permission-denied-loop`) is expected to surface here.
 - Do not mutate the Runie repo; run tools in a temp fixture copy.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

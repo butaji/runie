@@ -35,6 +35,7 @@
 
 - AGENTS.md forbids artificial delays in automatic tests; `MockProvider::random_delay` is seeded with a fixed value so tests remain deterministic.
 - `MockProvider::default()` uses seed `42`; `MockProvider::with_delay(min, max)` also uses seed `42`; `MockProvider::with_seed(min, max, s)` accepts an explicit seed.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

@@ -79,3 +79,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - The mock provider is deterministic and always returns a bash call for "native tool", so the headless loop must have a guard (e.g. max tool turns) or treat a denied tool as a terminal error.
 - This is a headless-only bug; the TUI shows a permission dialog but cannot answer it due to a separate focus bug.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

@@ -74,6 +74,7 @@ Every provider reimplements SSE framing, JSON extraction, delta accumulation, an
 - Tool call arguments are accumulated across events via `ToolAccum` state
 - OpenAI-compatible providers (MiniMax, Together, etc.) share the same parser
 - The `ProviderProtocol` trait allows adding new providers without duplicating streaming logic
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

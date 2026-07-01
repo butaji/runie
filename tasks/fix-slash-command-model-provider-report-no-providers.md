@@ -45,3 +45,4 @@ Added a thread-local `TEST_MOCK` override to `set_mock_enabled`/`is_mock_enabled
 - **Layer 2 — Event Handling:** Both `handle_model` paths verified by the tests above.
 - **Layer 3 — Rendering:** `/model` opens `ModelSelector` dialog which renders normally.
 - **Layer 4 — E2E:** Covered by existing TUI smoke tests.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

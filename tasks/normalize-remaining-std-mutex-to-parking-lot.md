@@ -47,6 +47,7 @@ The remaining `std::sync::Mutex`/`RwLock` usages in the workspace are in test fi
 
 - Remaining `std::sync::Mutex` in the workspace are in `tests/` and harness skill files — exempt from production normalization per AGENTS.md.
 - Remaining non-test usages: `crates/runie-core/src/session/tree.rs` (`std::sync::Mutex`), `crates/runie-core/src/provider/config.rs` (`std::sync::RwLock`), `crates/runie-core/src/declarative/register.rs` (`std::sync::RwLock`) — these could be a follow-up task but are outside the current scope.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

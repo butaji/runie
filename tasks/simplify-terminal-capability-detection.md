@@ -47,6 +47,7 @@ Terminal capability detection (`NO_COLOR`, color level, truecolor, hyperlinks) i
 - The `NO_COLOR` spec is honored via `supports-color`.
 - `TermCaps` is `Copy` and cheap to clone.
 - Brand/multiplexer detection remains custom heuristics over an env snapshot for testability.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

@@ -55,6 +55,7 @@
 
 - `ractor` processes messages serially per actor, so a `HashMap<request_id, RpcReplyPort<PermissionAction>>` in `State` is sufficient; no `Mutex` is needed if state is moved into `type State`.
 - Coordinate with `use-ractor-state-for-actor-mutable-state.md` if it lands first.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

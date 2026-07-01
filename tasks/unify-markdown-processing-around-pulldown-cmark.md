@@ -80,6 +80,7 @@ This is architecturally awkward since tool markers are not standard markdown.
 - The `markdown` module is the single source of truth for markdown parsing
 - Tool-marker stripping is a specialized operation that doesn't fit pulldown-cmark's model
 - If strict pulldown-cmark usage is required, tool-marker stripping could be refactored to use the event stream, but the complexity may not be worth it
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

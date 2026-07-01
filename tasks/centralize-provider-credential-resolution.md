@@ -39,6 +39,7 @@ Provider API key/base URL resolution is implemented in at least four places with
 ## Notes
 
 - Use `dotenvy::dotenv()` once and then `std::env::vars()`.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

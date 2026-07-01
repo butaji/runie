@@ -74,3 +74,4 @@ if matches!(&evt, Event::TurnCompleted { .. } | Event::TurnErrored { .. } | Even
 
 - `cargo check --workspace`: passes
 - `cargo test --workspace`: 2802 passed, 0 failed
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

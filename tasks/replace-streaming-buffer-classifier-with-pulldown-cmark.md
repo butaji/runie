@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only the internal streaming-stab
 - **Layer 2 — Event Handling:** Streaming deltas produce the same `MessageDelta` facts.
 - **Layer 3 — Rendering:** `TestBackend` snapshots across chunk boundaries match existing snapshots.
 - **Layer 4 — E2E:** Provider replay fixture streams a fenced code block split across many chunks.
-- **Live tmux validation:** Start a turn that returns a large markdown response; verify no visual jumps or mis-rendered fences.
+- **Live tmux testing session (required):** Start a turn that returns a large markdown response; verify no visual jumps or mis-rendered fences.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

@@ -67,3 +67,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - This may be related to the status/queue not clearing after a turn; expand/collapse may only apply to a selected message that is not focused.
 - Fix after the turn-completion bug so the UI is in a known state.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

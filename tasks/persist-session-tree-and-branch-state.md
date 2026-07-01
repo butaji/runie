@@ -57,6 +57,7 @@ No change to TUI element design or composition. Only session tree persistence be
 - **Layer 3 — Rendering:** N/A (session tree popup uses the restored tree).
 - **Layer 4 — E2E:** Replay tests verify events are correctly persisted and restored.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — All 11 tree tests pass including new serialization tests.

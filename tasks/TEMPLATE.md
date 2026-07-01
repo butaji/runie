@@ -18,6 +18,7 @@ One-paragraph summary of the problem or goal. Keep it concrete and scoped.
 - [x] Another criterion.
 - [x] `cargo test --workspace` succeeds after the change.
 - [x] `cargo check --workspace` succeeds with no new warnings.
+- [x] A live tmux testing session was run and passed.
 
 ## Tests
 
@@ -34,6 +35,9 @@ Reference the four testing layers from `AGENTS.md`. Omit a layer only if it is g
 
 ### Layer 4 — Smoke / Crash
 - [x] `test_name` — what it verifies (or N/A with explanation).
+
+### Live Tmux Testing Session
+- [x] A real terminal tmux session was run after implementation; the changed behavior was exercised and passed.
 
 ## Files touched
 

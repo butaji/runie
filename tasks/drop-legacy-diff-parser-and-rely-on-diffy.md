@@ -58,3 +58,4 @@ Net reduction of ~110 lines of custom parsing code, replaced with ~75 lines of s
 ## Task Updated
 
 - `tasks/index.json` — status changed from `todo` to `done`
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

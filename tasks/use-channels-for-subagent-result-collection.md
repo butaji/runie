@@ -74,6 +74,7 @@ let (tx, rx) = tokio::sync::oneshot::channel();
 - Used `tokio::sync::oneshot` (single result) rather than `mpsc` because the subagent returns exactly one final text result.
 - The 300s timeout is generous for production; tests use the mock provider which returns immediately.
 - The `parking_lot::Mutex` in `stream_response.rs` is unchanged — it protects the `EmitFn` which is sync by design.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

@@ -67,6 +67,7 @@ The taxonomy generation is driven by `scripts/generate-event-taxonomy.sh` (or ma
 - `Intent` variants are a semantic projection of `Event` variants, as defined by the `intent_renames` and `intent_skips` sections in `taxonomy.json`.
 - The `EVENT_NAMES` table is a curated subset of zero-argument `Event` constructors used for keybinding lookups.
 - All lifecycle variants (`TurnStarted`, `TurnAborted`, `TurnCompleted`, `TurnErrored`) are classified as `Fact` in the taxonomy.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

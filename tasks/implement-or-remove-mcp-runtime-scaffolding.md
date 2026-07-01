@@ -50,6 +50,7 @@ If MCP client runtime is needed, it would require:
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
 - N/A.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

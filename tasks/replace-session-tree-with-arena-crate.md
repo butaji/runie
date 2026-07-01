@@ -48,6 +48,7 @@
 - `TreeNode` renamed to `TreeNodeData` to clarify it holds data, not tree structure.
 - `SessionTree` no longer implements `PartialEq` (arena doesn't), but `Session` and `SessionState` have manual implementations.
 - The `id_index: HashMap<String, NodeId>` provides O(1) message lookup instead of the old path-based index.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 All validation gates confirmed:

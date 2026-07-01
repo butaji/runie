@@ -42,8 +42,9 @@ Large inputs are truncated with "..." indicator.
 - **Layer 2 — Event Handling:** Permission fact carries summary. — Covered by existing permission tests.
 - **Layer 3 — Rendering:** `TestBackend` permission dialog snapshot updated. — Verified in existing tests.
 - **Layer 4 — E2E:** Permission gate E2E tests pass. — Covered by existing tests.
-- **Live tmux validation:** Permission dialog is readable for read_file/bash tools.
+- **Live tmux testing session (required):** Permission dialog is readable for read_file/bash tools.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

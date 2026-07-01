@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only queue behavior changes.
 - **Layer 2 — Event Handling:** `TurnActor` facts drive queue display.
 - **Layer 3 — Rendering:** `TestBackend` queue indicator unchanged.
 - **Layer 4 — E2E:** Provider replay fixture with queued messages passes.
-- **Live tmux validation:** Queue multiple messages; deliver them and verify none are lost.
+- **Live tmux testing session (required):** Queue multiple messages; deliver them and verify none are lost.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

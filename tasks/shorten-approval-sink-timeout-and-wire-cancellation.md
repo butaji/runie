@@ -61,3 +61,4 @@
 - `tokio-util = "0.7"` added as workspace dependency (already available as transitive dep).
 - The `CancellationToken` is shared between `PermissionGate` and `EmitApprovalSink`; cancelling either one cancels both.
 - `PermissionGate::cancel_pending()` is exposed for explicit cancellation when `AbortTurn` fires.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

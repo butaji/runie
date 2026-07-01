@@ -27,3 +27,4 @@
 - `cargo test --workspace`: all tests pass
 - `cargo test --package runie-agent parse_grep`: passes
 - `cargo test --package runie-agent parse_find`: passes
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

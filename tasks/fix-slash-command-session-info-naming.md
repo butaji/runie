@@ -61,3 +61,4 @@ This task is not complete until the fix is validated with all three levels:
 - `/session_info` is the canonical command name (already registered in `HANDLER_REGISTRY`); `/session` is added as an alias in `session.yaml`.
 - `triggers` in YAML is not used for command aliases — `aliases` field is. Added `/session` and `/session_info` to `triggers` for documentation/tracking purposes.
 - The fix: `session.yaml` now has `name: session_info` and `aliases: [session]`, making both invocations work.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

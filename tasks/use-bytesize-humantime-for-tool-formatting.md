@@ -64,6 +64,7 @@ of `"1m0s"`. All other tool result formatting is unchanged.
   the same formatters.
 - **Layer 4 — E2E:** Headless CLI tool result formatting uses the same functions.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core "tool::tests::format"` passes (8/8).

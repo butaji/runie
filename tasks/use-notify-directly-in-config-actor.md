@@ -60,6 +60,7 @@ No changes needed - already implemented correctly
 - `notify_debouncer_mini` provides the debouncing abstraction
 - `myself.cast()` is the cleanest way to send async messages from non-async contexts
 - This pattern is idiomatic for combining blocking I/O with async actors
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

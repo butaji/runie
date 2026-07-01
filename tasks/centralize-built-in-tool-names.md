@@ -61,6 +61,7 @@ The canonical list of built-in tool names already exists in `crates/runie-core/s
 - The canonical list already exists; this task is about switching consumers to it.
 - This is an independent, high-Pareto task: small, safe, and removes a duplication hotspot.
 - Out of scope: changing tool schemas, MCP boundary, or skill-hook logic.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

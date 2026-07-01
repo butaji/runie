@@ -65,8 +65,9 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 2 — Event Handling:** N/A.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** OpenAI and MiniMax fixture replay tests pass.
-- **Live tmux validation:** Real provider streaming works.
+- **Live tmux testing session (required):** Real provider streaming works.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-provider` passes (49 tests, 0 failed).

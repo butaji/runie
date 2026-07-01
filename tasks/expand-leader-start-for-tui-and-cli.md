@@ -60,6 +60,7 @@
 
 - The TUI now uses `Leader::start` as its canonical bootstrap.
 - The render snapshot channel is owned by `UiActor` via `UiActor::take_render_rx()`; `LeaderHandle::snapshot_rx` is a placeholder for verification.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

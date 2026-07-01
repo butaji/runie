@@ -47,6 +47,7 @@ The `<think>` block filter uses custom streaming string matching that is fragile
 
 - Consider combining with the shared markdown event stream so think tags are treated as raw HTML and dropped there.
 - If model-specific tags differ, keep the regex pattern in the model catalog.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

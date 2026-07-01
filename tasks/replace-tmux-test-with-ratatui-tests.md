@@ -42,6 +42,7 @@
 
 - AGENTS.md forbids shell/tmux tests; this task brings the project into compliance.
 - If the tmux test is already unmaintained/broken, deleting it without replacement is acceptable only after documenting the lost coverage.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 All validation gates confirmed:

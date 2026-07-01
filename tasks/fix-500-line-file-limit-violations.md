@@ -52,6 +52,7 @@ AGENTS.md enforces a 500-line limit per `.rs` file. Several production files exc
 - Split by extracting handler methods into separate modules: handlers.rs, session_handlers.rs, config_impl.rs, ui_actor_agent_handles.rs
 - The architecture guardrail test was updated to allow `session_handlers.rs` (which contains spawn_blocking for sync IO)
 - All original tests continue to pass
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

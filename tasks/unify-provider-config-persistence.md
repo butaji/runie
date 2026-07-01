@@ -44,6 +44,7 @@
 
 - `crates/runie-core/src/actors/config/mod.rs` (made file_helpers public)
 - `crates/runie-core/src/provider/config.rs` (delegate to file_helpers)
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

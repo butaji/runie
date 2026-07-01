@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only message construction/saniti
 - **Layer 2 — Event Handling:** Message events carry valid sequences.
 - **Layer 3 — Rendering:** Message list rendering is unchanged.
 - **Layer 4 — E2E:** Provider replay fixture with tool calls produces a valid final conversation.
-- **Live tmux validation:** Multi-tool conversation renders without sanitization artifacts.
+- **Live tmux testing session (required):** Multi-tool conversation renders without sanitization artifacts.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

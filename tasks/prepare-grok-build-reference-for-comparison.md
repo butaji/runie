@@ -44,3 +44,4 @@ This task is not complete until the fix is validated with all three levels:
 
 - If authentication is unavailable, this task becomes a documented blocker and the comparison proceeds using published Grok Build documentation as a secondary reference.
 - Do not run Grok Build inside the `runie-dev` working directory; always use a temp copy.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

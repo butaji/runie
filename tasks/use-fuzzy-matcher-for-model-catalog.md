@@ -27,7 +27,7 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 2 — Event Handling:** Model filter event unchanged.
 - **Layer 3 — Rendering:** `TestBackend` model selector snapshot unchanged.
 - **Layer 4 — E2E:** Headless CLI model search works.
-- **Live tmux validation:** `/model` search tolerates typos.
+- **Live tmux testing session (required):** `/model` search tolerates typos.
 
 ## Implementation Notes
 
@@ -35,6 +35,7 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - `filter_models_fuzzy_typo()` test validates fuzzy matching works for typos
 - Provider grouping preserved in `filter_and_score_models()`
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

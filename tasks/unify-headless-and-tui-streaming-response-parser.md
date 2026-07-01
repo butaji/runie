@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only internal streaming parser c
 - **Layer 2 — Event Handling:** Both paths emit the same events.
 - **Layer 3 — Rendering:** `TestBackend` output unchanged.
 - **Layer 4 — E2E:** Provider replay fixtures pass for both TUI and headless.
-- **Live tmux validation:** Run the same prompt in TUI and headless; outputs match.
+- **Live tmux testing session (required):** Run the same prompt in TUI and headless; outputs match.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

@@ -35,8 +35,9 @@ No change to TUI element design or composition. Only internal tool dispatch beha
 - **Layer 2 — Event Handling:** Tool execution events are unchanged.
 - **Layer 3 — Rendering:** Tool result display is unchanged.
 - **Layer 4 — E2E:** Provider replay fixture with multiple tools passes.
-- **Live tmux validation:** A turn calling bash, read_file, and edit_file tools works end-to-end.
+- **Live tmux testing session (required):** A turn calling bash, read_file, and edit_file tools works end-to-end.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

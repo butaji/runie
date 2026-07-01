@@ -30,7 +30,7 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 2 — Event Handling:** Command-loaded fact unchanged.
 - **Layer 3 — Rendering:** `/help` popup snapshot unchanged.
 - **Layer 4 — E2E:** Headless CLI lists all built-in commands.
-- **Live tmux validation:** `/help` and `/quit` still work.
+- **Live tmux testing session (required):** `/help` and `/quit` still work.
 
 ## Implementation
 
@@ -39,6 +39,7 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - `all_yaml_files_load` — all YAML files load without error
 - `command_names_are_valid` — expected commands are present
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-core -- load_embedded_commands` passes (3 tests).

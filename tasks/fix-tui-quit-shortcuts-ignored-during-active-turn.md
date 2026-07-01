@@ -77,3 +77,4 @@ test result: ok. 5 passed; 0 failed; 0 ignored
 - Quit/ForceQuit are handled at the top priority in `handle_event_inner` and return `true` to exit immediately.
 - Abort is processed through the normal event flow but clears the `agent_running` flag so the turn is properly terminated.
 - Live tmux tests are not implemented but the fix is verified by unit tests.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

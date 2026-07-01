@@ -29,8 +29,9 @@ No change to TUI element design or composition. Only durable event format change
 - **Layer 2 — Event Handling:** Replay events carry full data.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Session replay with images/reasoning/tools passes.
-- **Live tmux validation:** A turn with tool calls and images survives save/load.
+- **Live tmux testing session (required):** A turn with tool calls and images survives save/load.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.

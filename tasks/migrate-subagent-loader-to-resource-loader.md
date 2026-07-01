@@ -67,6 +67,7 @@ use crate::resource_loader::{extract_body, extract_frontmatter};
 // resource_loader.rs added:
 pub fn extract_body(content: &str) -> String { ... }
 ```
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

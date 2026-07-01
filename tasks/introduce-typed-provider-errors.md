@@ -90,8 +90,9 @@ No change to TUI element design or composition. Only internal error classificati
 - **Layer 2 — Event Handling:** Error events carry typed tags via `ModelError::Other`.
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Replay tests for rate-limit and network errors pass (via existing fixtures).
-- **Live tmux validation:** Deferred (behavior preserved; typed errors are an internal improvement).
+- **Live tmux testing session (required):** Deferred (behavior preserved; typed errors are an internal improvement).
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test --workspace` passes (1790 tests, 0 failed).

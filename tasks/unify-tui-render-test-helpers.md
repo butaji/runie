@@ -57,6 +57,7 @@ Several TUI test modules duplicate `render_content`, `render_chat`, and buffer-t
 
 - This is a safe, test-only refactor with no production impact.
 - Out of scope: changing rendering logic or widget internals.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 Before marking this task complete, confirm all three validation gates:

@@ -57,6 +57,7 @@ No change to TUI element design or composition. Only provider retry behavior cha
 - **Layer 3 — Rendering:** N/A.
 - **Layer 4 — E2E:** Provider replay fixtures with transient failure pass.
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test -p runie-provider -- retry` passes (17 tests).

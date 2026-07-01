@@ -41,6 +41,7 @@ None. The `ToolStream` layer in `tool_stream.rs` is the correct tool-call stream
 - **Layer 3 — Rendering:** N/A
 - **Layer 4 — E2E:** Existing provider replay tests cover tool call streaming
 
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
 - [x] **Unit tests** — removed dead code had no tests; existing provider tests pass.
