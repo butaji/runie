@@ -3,6 +3,7 @@
 //! YAML files live in `resources/models/` and are embedded via `include_str!`.
 //! A build script validates the YAML at compile time and generates checksums.
 
+use include_dir::Dir;
 use serde::Deserialize;
 
 /// YAML representation of a provider's metadata.
@@ -54,47 +55,22 @@ pub fn parse_provider_yaml(yaml: &str) -> Result<ProviderYaml, serde_yaml::Error
     serde_yaml::from_str(yaml)
 }
 
+// Embed resources/models/ at compile time via include_dir.
+// This avoids a hand-maintained list: adding a new .yaml file is enough.
+static MODELS: Dir<'static> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/resources/models");
+
 /// Get the list of embedded YAML files for all providers.
 pub fn provider_yaml_files() -> Vec<(&'static str, &'static str)> {
-    vec![
-        (
-            "anthropic",
-            include_str!("../../resources/models/anthropic.yaml"),
-        ),
-        ("openai", include_str!("../../resources/models/openai.yaml")),
-        ("google", include_str!("../../resources/models/google.yaml")),
-        (
-            "deepseek",
-            include_str!("../../resources/models/deepseek.yaml"),
-        ),
-        (
-            "openrouter",
-            include_str!("../../resources/models/openrouter.yaml"),
-        ),
-        ("groq", include_str!("../../resources/models/groq.yaml")),
-        (
-            "mistral",
-            include_str!("../../resources/models/mistral.yaml"),
-        ),
-        (
-            "fireworks",
-            include_str!("../../resources/models/fireworks.yaml"),
-        ),
-        (
-            "together",
-            include_str!("../../resources/models/together.yaml"),
-        ),
-        (
-            "minimax",
-            include_str!("../../resources/models/minimax.yaml"),
-        ),
-        (
-            "moonshotai",
-            include_str!("../../resources/models/moonshotai.yaml"),
-        ),
-        ("xai", include_str!("../../resources/models/xai.yaml")),
-        ("ollama", include_str!("../../resources/models/ollama.yaml")),
-    ]
+    MODELS
+        .files()
+        .filter_map(|f| {
+            let path = f.path();
+            let name = path.file_stem()?.to_str()?;
+            // Safe: YAML files in resources/models/ are always UTF-8.
+            let contents = std::str::from_utf8(f.contents()).ok()?;
+            Some((name, contents))
+        })
+        .collect()
 }
 
 /// Mock provider YAML (dev-only).

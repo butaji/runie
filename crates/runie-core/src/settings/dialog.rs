@@ -263,10 +263,12 @@ fn provider_options(state: &AppState) -> Vec<String> {
     if !configured.is_empty() {
         return configured;
     }
-    crate::provider::known_providers()
+    let mut options: Vec<String> = crate::provider::known_providers()
         .iter()
         .map(|p| p.key.to_owned())
-        .collect()
+        .collect();
+    options.sort();
+    options
 }
 
 fn model_options(state: &AppState, provider: &str) -> Vec<String> {

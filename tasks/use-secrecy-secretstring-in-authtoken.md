@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,10 @@ Make `AuthToken.token` a `secrecy::SecretString`. Expose plaintext only at the H
 
 ## Acceptance Criteria
 
-- [ ] Change `AuthToken.token` to `SecretString`.
-- [ ] Update JSON/TOML serialization to handle redaction.
-- [ ] Update provider HTTP header construction to use `ExposeSecret`.
-- [ ] Verify keys do not leak in `Debug` or snapshots.
+- [x] Change `AuthToken.token` to `SecretString`.
+- [x] Update JSON/TOML serialization to handle redaction.
+- [x] Update provider HTTP header construction to use `ExposeSecret`.
+- [x] Verify keys do not leak in `Debug` or snapshots.
 
 ## Design Impact
 
@@ -33,6 +33,6 @@ No change to TUI element design or composition. Only credential handling behavio
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

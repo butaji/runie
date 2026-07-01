@@ -56,7 +56,7 @@ tempfile.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 keyring.workspace = true
-secrecy.workspace = true
+secrecy = { workspace = true, features = ["serde"] }
 dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
@@ -66,6 +66,7 @@ ignore.workspace = true
 globset.workspace = true
 bytesize.workspace = true
 humantime.workspace = true
+include_dir.workspace = true
 crokey.workspace = true
 path-absolutize.workspace = true
 tokio-util.workspace = true

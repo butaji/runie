@@ -179,6 +179,7 @@ fn settings_select_cycles_provider() {
         ("openai".into(), vec!["gpt-4o".into()]),
     ]);
     let mut state = AppState::default();
+    crate::tests::apply_test_config_to_state(&mut state);
     state.config.current_provider = "anthropic".into();
     state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);

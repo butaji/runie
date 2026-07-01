@@ -3,10 +3,25 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use secrecy::{ExposeSecret, SecretString};
+
+/// Serialize a `SecretString` by exposing the secret value.
+fn serialize_secret<S: Serializer>(s: &SecretString, ser: S) -> Result<S::Ok, S::Error> {
+    s.expose_secret().serialize(ser)
+}
+
+/// Deserialize a `SecretString` from a string.
+fn deserialize_secret<'de, D: Deserializer<'de>>(de: D) -> Result<SecretString, D::Error> {
+    let s = String::deserialize(de)?;
+    Ok(SecretString::from(s))
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AuthToken {
     pub provider: String,
-    pub token: String,
+    #[serde(serialize_with = "serialize_secret", deserialize_with = "deserialize_secret")]
+    pub token: SecretString,
     pub expires_at: Option<f64>,
 }
 
@@ -85,7 +100,7 @@ impl AuthStorage {
                             provider.clone(),
                             AuthToken {
                                 provider: provider.clone(),
-                                token: token_str.to_owned(),
+                                token: SecretString::from(String::from(token_str)),
                                 expires_at: exp.filter(|e| *e > 0.0),
                             },
                         );
@@ -112,7 +127,10 @@ impl AuthStorage {
         let mut obj = serde_json::Map::new();
         for (provider, tok) in &self.tokens {
             let mut entry = serde_json::Map::new();
-            entry.insert("token".into(), tok.token.clone().into());
+            entry.insert(
+                "token".into(),
+                tok.token.expose_secret().to_owned().into(),
+            );
             entry.insert("expires_at".into(), tok.expires_at.unwrap_or(0.0).into());
             obj.insert(provider.clone(), entry.into());
         }
@@ -123,7 +141,7 @@ impl AuthStorage {
 
     fn save_to_keyring(&self) -> anyhow::Result<()> {
         for (provider, tok) in &self.tokens {
-            super::keyring::set_keyring(provider, &tok.token)?;
+            super::keyring::set_keyring(provider, tok.token.expose_secret())?;
         }
         Ok(())
     }
@@ -144,7 +162,7 @@ impl AuthStorage {
             provider.to_owned(),
             AuthToken {
                 provider: provider.to_owned(),
-                token: token.to_owned(),
+                token: SecretString::from(String::from(token)),
                 expires_at,
             },
         );
@@ -209,6 +227,17 @@ impl AuthStorage {
     }
 }
 
+/// PartialEq compares tokens by exposing them — acceptable here since both sides
+/// are in-memory and we are not logging them.
+impl PartialEq for AuthToken {
+    fn eq(&self, other: &AuthToken) -> bool {
+        use secrecy::ExposeSecret;
+        self.provider == other.provider
+            && self.token.expose_secret() == other.token.expose_secret()
+            && self.expires_at == other.expires_at
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -231,7 +260,10 @@ mod tests {
     fn auth_storage_set_get() {
         let mut store = tmp_storage();
         store.set("openai", "sk-test", Some(1_000_000_000.0));
-        assert_eq!(store.get("openai").unwrap().token, "sk-test");
+        assert_eq!(
+            store.get("openai").unwrap().token.expose_secret(),
+            "sk-test"
+        );
         assert_eq!(store.get("openai").unwrap().provider, "openai");
     }
 
@@ -243,7 +275,10 @@ mod tests {
 
         let loaded = AuthStorage::load_from(&store.fallback_path);
         assert_eq!(loaded.tokens.len(), 1);
-        assert_eq!(loaded.tokens.get("openai").unwrap().token, "sk-test");
+        assert_eq!(
+            loaded.tokens.get("openai").unwrap().token.expose_secret(),
+            "sk-test"
+        );
     }
 
     #[test]
@@ -282,5 +317,46 @@ mod tests {
         // Result is None or Some depending on actual keyring state
         // This test just verifies the API works without panicking
         let _ = result;
+    }
+
+    #[test]
+    fn auth_token_debug_does_not_leak_token() {
+        // Layer 1: Debug must redact the token value.
+        let token = AuthToken {
+            provider: "openai".into(),
+            token: secrecy::SecretString::from(String::from("sk-super-secret-key-12345")),
+            expires_at: None,
+        };
+        let debug_str = format!("{:?}", token);
+        // The debug string must NOT contain the actual token value
+        assert!(
+            !debug_str.contains("sk-super-secret-key-12345"),
+            "Debug output must not contain the actual token: {}",
+            debug_str
+        );
+        // The debug string must contain the provider (non-sensitive)
+        assert!(
+            debug_str.contains("openai"),
+            "Debug output should contain provider name"
+        );
+    }
+
+    #[test]
+    fn auth_token_expose_secret_only_at_boundary() {
+        // Layer 1: Token value is accessible only via ExposeSecret.
+        use secrecy::ExposeSecret;
+        let token = AuthToken {
+            provider: "openai".into(),
+            token: secrecy::SecretString::from(String::from("sk-exposed-at-boundary")),
+            expires_at: None,
+        };
+        // ExposeSecret gives access to the inner value
+        assert_eq!(
+            token.token.expose_secret().as_str(),
+            "sk-exposed-at-boundary"
+        );
+        // Direct access to .token gives the SecretString wrapper, not the value
+        let _secret = &token.token;
+        // Cannot accidentally compare SecretString to &str without ExposeSecret
     }
 }

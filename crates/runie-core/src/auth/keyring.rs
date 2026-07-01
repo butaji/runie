@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 
+use secrecy::SecretString;
+
 use crate::auth::AuthToken;
 
 const SERVICE: &str = "runie";
@@ -79,7 +81,7 @@ pub fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
                 provider.to_owned(),
                 AuthToken {
                     provider: provider.to_owned(),
-                    token,
+                    token: SecretString::from(token),
                     expires_at: None,
                 },
             );

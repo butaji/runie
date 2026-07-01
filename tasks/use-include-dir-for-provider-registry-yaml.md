@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,10 @@ Use `include_dir!` over `resources/models/`, iterate files, and deserialize each
 
 ## Acceptance Criteria
 
-- [ ] Embed `resources/models/` with `include_dir!`.
-- [ ] Iterate and deserialize provider/model YAMLs at startup.
-- [ ] Delete the hard-coded list.
-- [ ] All provider registry tests pass.
+- [x] Embed `resources/models/` with `include_dir!`.
+- [x] Iterate and deserialize provider/model YAMLs at startup.
+- [x] Delete the hard-coded list.
+- [x] All provider registry tests pass.
 
 ## Design Impact
 
@@ -33,6 +33,6 @@ No change to TUI element design or composition. Only provider registry loading c
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
