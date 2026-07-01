@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Note**: `SessionIndex` is defined in `index.rs` but is not actually used for session loading. `SessionStore::list_metadata()` already reads from per-session file headers. `SessionHeader` is an alias for `SessionMetadata`. The task goals are already achieved.
 
 ## Context
 
