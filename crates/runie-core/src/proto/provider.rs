@@ -20,40 +20,5 @@ pub trait ProviderConfig: Send + Sync + fmt::Debug {
     fn resolve_base_url(&self, provider: &str) -> Option<String>;
 }
 
-/// Wrapper for type-erased ProviderConfig that can be cloned.
-///
-/// This is used when we need to pass a ProviderConfig through multiple
-/// API calls that require Clone.
-pub struct ProviderConfigBox {
-    inner: Arc<dyn ProviderConfig>,
-}
-
-impl ProviderConfigBox {
-    /// Create a new box from any ProviderConfig implementation.
-    pub fn new(config: impl ProviderConfig + 'static) -> Self {
-        Self {
-            inner: Arc::new(config),
-        }
-    }
-}
-
-impl std::ops::Deref for ProviderConfigBox {
-    type Target = dyn ProviderConfig;
-    fn deref(&self) -> &Self::Target {
-        &*self.inner
-    }
-}
-
-impl Clone for ProviderConfigBox {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
-}
-
-impl fmt::Debug for ProviderConfigBox {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ProviderConfigBox").finish()
-    }
-}
+/// Type alias for the common case: an `Arc`-wrapped, cloneable `ProviderConfig`.
+pub type ProviderConfigBox = Arc<dyn ProviderConfig>;

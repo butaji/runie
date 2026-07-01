@@ -15,7 +15,7 @@ use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::Event;
 use runie_provider::openai::stream::replay_sse;
-use runie_provider::DynProvider;
+use runie_provider::BuiltProvider;
 
 /// A `Provider` that returns pre-recorded SSE fixtures in round-robin order.
 pub struct ReplayProvider {
@@ -48,16 +48,16 @@ impl Provider for ReplayProvider {
     }
 }
 
-/// Wrap a `ReplayProvider` in a `DynProvider`.
-pub fn dyn_replay_provider(fixtures: &[String]) -> DynProvider {
+/// Wrap a `ReplayProvider` in a `BuiltProvider`.
+pub fn dyn_replay_provider(fixtures: &[String]) -> BuiltProvider {
     let provider = ReplayProvider::new(fixtures.to_vec());
-    DynProvider::from_provider(Box::new(provider), "minimax", "MiniMax-M3")
+    BuiltProvider::from_provider(Box::new(provider), "minimax", "MiniMax-M3")
 }
 
-/// Wrap a `ReplayProvider` in a `DynProvider` with custom key and model.
-pub fn dyn_replay_provider_with(fixtures: &[String], key: &str, model: &str) -> DynProvider {
+/// Wrap a `ReplayProvider` in a `BuiltProvider` with custom key and model.
+pub fn dyn_replay_provider_with(fixtures: &[String], key: &str, model: &str) -> BuiltProvider {
     let provider = ReplayProvider::new(fixtures.to_vec());
-    DynProvider::from_provider(Box::new(provider), key, model)
+    BuiltProvider::from_provider(Box::new(provider), key, model)
 }
 
 /// Capture emitted `Event`s into a `Vec` using the same `EmitFn` type as

@@ -5,7 +5,9 @@
 //!
 //! Priority: 1. Environment variables, 2. dotenvy (.env), 3. OS keyring, 4. Config file
 
-use runie_core::proto::ProviderConfigBox;
+use std::sync::Arc;
+
+use runie_core::proto::ProviderConfig;
 
 /// Resolves provider configuration from multiple sources.
 ///
@@ -14,7 +16,7 @@ use runie_core::proto::ProviderConfigBox;
 #[derive(Clone)]
 pub struct ProviderConfigResolver {
     inner: runie_core::auth::CredentialResolver,
-    fallback: Option<ProviderConfigBox>,
+    fallback: Option<Arc<dyn ProviderConfig>>,
 }
 
 impl std::fmt::Debug for ProviderConfigResolver {
@@ -28,7 +30,7 @@ impl std::fmt::Debug for ProviderConfigResolver {
 
 impl ProviderConfigResolver {
     /// Create a resolver from a `ProviderConfig` implementation.
-    pub fn new(config: ProviderConfigBox) -> Self {
+    pub fn new(config: Arc<dyn ProviderConfig>) -> Self {
         Self {
             inner: runie_core::auth::CredentialResolver::new(),
             fallback: Some(config),
@@ -49,7 +51,7 @@ impl ProviderConfigResolver {
     pub fn with_config<C: runie_core::proto::ProviderConfig + 'static>(config: C) -> Self {
         Self {
             inner: runie_core::auth::CredentialResolver::empty(),
-            fallback: Some(ProviderConfigBox::new(config)),
+            fallback: Some(Arc::new(config) as Arc<dyn ProviderConfig>),
         }
     }
 
@@ -80,7 +82,7 @@ pub use runie_core::config::{Config, ModelProvider, ModelsSection};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_core::proto::ProviderConfig;
+    use std::sync::Arc;
 
     struct TestConfig {
         api_key: Option<String>,
@@ -93,7 +95,7 @@ mod tests {
         }
     }
 
-    impl ProviderConfig for TestConfig {
+    impl runie_core::proto::ProviderConfig for TestConfig {
         fn resolve_api_key(&self, _provider: &str) -> Option<String> {
             self.api_key.clone()
         }
@@ -111,7 +113,9 @@ mod tests {
             api_key: Some("config-key".to_string()),
             base_url: Some("http://example.com".to_string()),
         };
-        let resolver = ProviderConfigResolver::new(ProviderConfigBox::new(test_config));
+        let resolver = ProviderConfigResolver::new(
+            Arc::new(test_config) as Arc<dyn runie_core::proto::ProviderConfig>
+        );
 
         // Environment variable should override config
         let result = resolver.resolve_api_key("testprovider");

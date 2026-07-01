@@ -30,11 +30,11 @@ pub fn load_default_config_for_test(test_home: &TempDir) -> Config {
 }
 
 /// Return a mock provider suitable for deterministic tests.
-pub fn mock_provider() -> runie_provider::DynProvider {
+pub fn mock_provider() -> runie_provider::BuiltProvider {
     let prev = std::env::var_os("RUNIE_MOCK");
     std::env::set_var("RUNIE_MOCK", "1");
     let mock = runie_provider::MockProvider::default();
-    let provider = runie_provider::DynProvider::from_provider(Box::new(mock), "mock", "echo");
+    let provider = runie_provider::BuiltProvider::from_provider(Box::new(mock), "mock", "echo");
     // Restore prior state so tests don't pollute the env for subsequent tests.
     match prev {
         Some(v) => std::env::set_var("RUNIE_MOCK", v),
@@ -67,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn shared_mock_provider_returns_dyn() {
+    fn shared_mock_provider_returns_built() {
         let provider = mock_provider();
         // Should be able to get key and model info
         assert_eq!(provider.key(), "mock");

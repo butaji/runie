@@ -32,6 +32,7 @@ pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use openai::OpenAiProvider;
 pub use runie_core::proto::{ProviderConfig, ProviderConfigBox};
+use std::sync::Arc;
 
 use anyhow::Result;
 
@@ -40,9 +41,6 @@ pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_se
 
 /// Re-export `BuiltProvider` from `runie-core`.
 pub use runie_core::actors::provider::BuiltProvider;
-
-/// Alias for `BuiltProvider` for backward compatibility.
-pub type DynProvider = BuiltProvider;
 
 // ---------------------------------------------------------------------------
 // Provider construction helpers
@@ -57,7 +55,7 @@ pub fn is_known(key: &str) -> bool {
 fn resolve_credentials(
     key: &str,
     meta: &ProviderMeta,
-    config: Option<ProviderConfigBox>,
+    config: Option<Arc<dyn ProviderConfig>>,
 ) -> (String, String) {
     let (api_key, base_url) = if let Some(cfg) = config {
         let resolver = config::ProviderConfigResolver::new(cfg);
@@ -85,7 +83,7 @@ fn resolve_credentials(
 pub fn build_provider(
     key: &str,
     model: &str,
-    config: Option<ProviderConfigBox>,
+    config: Option<Arc<dyn ProviderConfig>>,
 ) -> Result<BuiltProvider, ProviderError> {
     if key == "mock" && is_mock_enabled() {
         return Ok(build_mock_provider(key, model));
@@ -133,7 +131,7 @@ pub fn build_provider_with_config(
     model: &str,
     config: &runie_core::config::Config,
 ) -> Result<BuiltProvider, ProviderError> {
-    build_provider(key, model, Some(ProviderConfigBox::new(config.clone())))
+    build_provider(key, model, Some(Arc::new(config.clone()) as Arc<dyn ProviderConfig>))
 }
 
 /// Wrap an arbitrary provider implementation.
@@ -149,7 +147,7 @@ pub fn build_provider_from_boxed(
 pub fn build_provider_with_fallback(
     chain: &[&str],
     model: &str,
-    config: ProviderConfigBox,
+    config: Arc<dyn ProviderConfig>,
 ) -> Result<BuiltProvider, ProviderError> {
     let mut last_err = None;
     for key in chain {

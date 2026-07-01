@@ -192,7 +192,8 @@ fn built_provider_prefers_env_over_config() {
 
 #[test]
 fn fallback_uses_config_api_key() {
-    use runie_core::proto::ProviderConfigBox;
+    use std::sync::Arc;
+    use runie_core::proto::ProviderConfig;
 
     let _guard = ENV_LOCK.lock().unwrap();
     let mut cfg = Config::default();
@@ -209,8 +210,12 @@ fn fallback_uses_config_api_key() {
     let saved_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::remove_var("OPENAI_API_KEY");
 
-    let provider = crate::build_provider_with_fallback(&["openai"], "gpt-4o", ProviderConfigBox::new(cfg))
-        .expect("fallback should build from config key");
+    let provider = crate::build_provider_with_fallback(
+        &["openai"],
+        "gpt-4o",
+        Arc::new(cfg) as Arc<dyn ProviderConfig>,
+    )
+    .expect("fallback should build from config key");
     assert_eq!(provider.key(), "openai");
 
     if let Some(v) = saved_key {

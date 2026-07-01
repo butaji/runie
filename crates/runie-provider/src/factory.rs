@@ -2,12 +2,13 @@
 
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use crate::config::ProviderConfigResolver;
 use crate::{build_provider, find_provider, validate_api_key, ProviderError};
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::config::Config;
-use runie_core::proto::ProviderConfigBox;
+use runie_core::proto::ProviderConfig;
 
 /// The production provider factory.
 ///
@@ -25,7 +26,7 @@ impl ProviderFactory for DynProviderFactory {
         build_provider(
             provider,
             model,
-            Some(ProviderConfigBox::new(config.clone())),
+            Some(Arc::new(config.clone()) as Arc<dyn ProviderConfig>),
         )
     }
 
@@ -40,7 +41,7 @@ impl ProviderFactory for DynProviderFactory {
     }
 
     fn resolve_credentials(&self, provider: &str, config: &Config) -> (String, String) {
-        let resolver = ProviderConfigResolver::new(ProviderConfigBox::new(config.clone()));
+        let resolver = ProviderConfigResolver::new(Arc::new(config.clone()) as Arc<dyn ProviderConfig>);
         let base_url = resolver
             .resolve_base_url(provider)
             .or_else(|| default_base_url(provider))
