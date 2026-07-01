@@ -34,6 +34,53 @@ fn test_snapshot_contains_expected_fields() {
     assert_eq!(snap.model, state.config.current_model);
 }
 
+#[test]
+fn test_cached_feed_reuse_on_gen_match() {
+    // Verify cached_feed is reused when message_gen hasn't changed,
+    // avoiding a redundant build_view_cache() call.
+    let mut state = AppState::default();
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        timestamp: 1.0,
+        id: "u1".into(),
+        parts: vec![Part::Text { content: "hello".into() }],
+        ..Default::default()
+    });
+    state.refresh_after_message_change();
+
+    // First snapshot: ensure_fresh() builds and stores the cache.
+    let snap1 = state.snapshot();
+    let gen1 = state.view().message_gen;
+    assert!(!snap1.elements.is_empty());
+
+    // Second snapshot with no state change: cache should be reused.
+    let snap2 = state.snapshot();
+    let gen2 = state.view().message_gen;
+    assert_eq!(gen1, gen2);
+    assert_eq!(snap1.elements.len(), snap2.elements.len());
+    assert_eq!(snap1.total_lines, snap2.total_lines);
+
+    // Third snapshot after a message change: cache should be rebuilt.
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        timestamp: 2.0,
+        id: "u2".into(),
+        parts: vec![Part::Text { content: "world".into() }],
+        ..Default::default()
+    });
+    state.refresh_after_message_change();
+    let snap3 = state.snapshot();
+    assert!(snap3.elements.len() > snap1.elements.len());
+    assert!(state.view().message_gen > gen1);
+}
+
+#[test]
+fn test_cached_feed_none_initially() {
+    // Fresh AppState has no cached feed until ensure_fresh() is called.
+    let state = AppState::default();
+    assert!(state.view().cached_feed.is_none());
+}
+
 fn assert_send_sync<T: Send + Sync>() {}
 
 #[test]

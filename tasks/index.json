@@ -512,7 +512,7 @@
   {
     "file": "fix-view-cache-double-rebuild-and-use-cached-gen.md",
     "title": "Fix view cache double rebuild and use cached_gen",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fold-lifecycle-state-machine-into-provider-events.md",

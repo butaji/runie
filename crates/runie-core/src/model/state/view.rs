@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
+use crate::model::view_cache::ViewCache;
 
 /// View state — scroll, animation, and UI dimensions.
 ///
@@ -56,6 +57,9 @@ pub struct ViewState {
     pub mouse_position: Option<(u16, u16)>,
     /// Vim-style scrollback navigation active.
     pub vim_nav_mode: bool,
+    /// Reusable feed cache. Populated by `ensure_fresh()`; reused by
+    /// `snapshot_feed()` when `message_gen` matches `cached_gen`.
+    pub(crate) cached_feed: Option<ViewCache>,
     /// When vim_mode Esc was used to abort a turn, the next Esc enters
     /// nav mode. Cleared once consumed or when a turn is no longer active.
     pub vim_nav_pending: bool,
@@ -127,6 +131,7 @@ impl Default for ViewState {
             cached_auth_valid: false,
             mouse_position: None,
             vim_nav_mode: false,
+            cached_feed: None,
             vim_nav_pending: false,
             input_receiver: InputReceiver::default(),
         }

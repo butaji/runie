@@ -10,7 +10,7 @@ use crate::view::elements::{Element, Post};
 
 /// Intermediate view cache built from LazyCache.
 /// Stored in AppState and only rebuilt when message_gen changes.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(dead_code, reason = "cached_gen written by view_cache(); read by UiActor after decouple")]
 pub(crate) struct ViewCache {
     pub cached_gen: u64,

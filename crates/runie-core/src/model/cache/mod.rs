@@ -243,8 +243,9 @@ impl AppState {
         let prev_scroll = self.view().scroll;
         let prev_selected_post = self.view().selected_post;
 
-        // Build the view cache on-demand.
+        // Build the view cache on-demand and store for reuse by snapshot_feed().
         let cache = self.build_view_cache();
+        self.view_mut().cached_feed = Some(cache.clone());
 
         // Extract needed values before any other mutable operations.
         let posts_len = cache.posts.len();
@@ -295,7 +296,15 @@ impl AppState {
 
     fn snapshot_feed(&mut self) -> Snapshot {
         let view_values = self.extract_view_values();
-        let cache = self.build_view_cache();
+        // Reuse the cache built in ensure_fresh() if the generation matches.
+        let cache = match &self.view().cached_feed {
+            Some(c) if c.cached_gen == self.view().message_gen => c.clone(),
+            _ => {
+                // Cache stale or absent — rebuild.
+                self.ensure_fresh();
+                self.view().cached_feed.clone().expect("cached_feed must be set after ensure_fresh")
+            }
+        };
         let (mouse_target, hovered_element) = snapshot_mouse_impl(
             &cache.elements,
             &cache.line_counts,
