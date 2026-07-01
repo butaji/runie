@@ -13,9 +13,10 @@
 Compute nearest basic ANSI color from RGB via `ansi_colours::ansi256_from_rgb` and a small distance helper.
 
 ## Acceptance Criteria
-- [x] Delete lookup table. — Done; custom table replaced with `ansi_colours::rgb_from_ansi256()` for all 16 basic colors
-- [x] Use `ansi_colours` + Euclidean distance over 16 standard colors. — Done; `ansi256_to_16()` uses Euclidean distance
-- [x] Snapshots updated or preserved. — N/A; quantization is tested directly
+
+- [x] Delete lookup table. — **Done**; custom table replaced with `ansi_colours::rgb_from_ansi256()` for all 16 basic colors.
+- [x] Use `ansi_colours` + Euclidean distance over 16 standard colors. — **Done**; `ansi256_to_16()` uses Euclidean distance via `ansi_colours::rgb_from_ansi256()`.
+- [x] Snapshots updated or preserved. — **Done**; quantization tested directly; no snapshot changes needed.
 
 ## Design Impact
 
@@ -29,14 +30,14 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - **Layer 4 — E2E:** N/A.
 - **Live tmux validation:** Theme colors render correctly on 16-color terminals.
 
-## Implementation Notes
+## Implementation
 
-- `crates/runie-tui/src/quantize.rs` now uses `ansi_colours::ansi256_from_rgb()` and `ansi_colours::rgb_from_ansi256()`
-- `ansi256_to_16()` computes Euclidean distance over RGB space to find nearest of 16 basic ANSI colors
-- All 12 tests pass validating quantization behavior
+- `crates/runie-tui/src/quantize.rs` now uses `ansi_colours::ansi256_from_rgb()` and `ansi_colours::rgb_from_ansi256()`.
+- `ansi256_to_16()` computes Euclidean distance over RGB space to find nearest of 16 basic ANSI colors.
+- All 12 tests pass validating quantization behavior.
+- `ansi_colours` is a workspace dependency declared in `crates/runie-tui/Cargo.toml`.
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.

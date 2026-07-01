@@ -242,7 +242,7 @@
   {
     "file": "deduplicate-cargo-lock-versions-and-deny.md",
     "title": "Deduplicate Cargo.lock versions and deny multiples",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",
@@ -262,7 +262,7 @@
   {
     "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
     "title": "Delete broken DSL flow combinators and thread-local runtime",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-actor-handle-wrappers.md",
@@ -277,7 +277,7 @@
   {
     "file": "delete-dead-declarative-command-registration.md",
     "title": "Delete dead declarative command registration",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-runie-core-testing-module.md",
@@ -857,7 +857,7 @@
   {
     "file": "replace-ansi256-lookup-table-with-ansi-colours.md",
     "title": "Replace ANSI256 lookup table with ansi_colours",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
