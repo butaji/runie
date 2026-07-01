@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done` — implemented during the actor migration to ractor (see `convert-agent-and-fff-indexer-to-ractor-state` and related tasks). The `Mutex` was already absent when this task was authored.
 
 ## Context
 
@@ -14,10 +14,10 @@ Move `cfg: Config` directly into `ConfigActorState` and mutate it through `&mut 
 
 ## Acceptance Criteria
 
-- [ ] Remove `Mutex` from `ConfigActorState`.
-- [ ] Update handlers to take `&mut state`.
-- [ ] Delete lock/unlock boilerplate.
-- [ ] All config actor tests pass.
+- [x] Remove `Mutex` from `ConfigActorState`. `cfg: Config` is stored directly.
+- [x] Update handlers to take `&mut state`. All handlers in `handlers.rs` take `&mut ConfigActorState`.
+- [x] Delete lock/unlock boilerplate. No `parking_lot::Mutex` imports or usage in the config actor module.
+- [x] All config actor tests pass. 8 tests in `ractor_config::tests` pass.
 
 ## Design Impact
 
@@ -33,6 +33,6 @@ No change to TUI element design or composition. Only internal actor state handli
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
