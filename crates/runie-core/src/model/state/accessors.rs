@@ -210,4 +210,10 @@ impl AppState {
     pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::LeaderHandle> {
         &mut self.actor_handles
     }
+
+    /// Mutable access to the authoritative turn state.
+    /// Used by fact handlers to sync `AgentState` from `TurnState`.
+    pub fn turn_state_mut(&mut self) -> &mut crate::actors::turn::TurnState {
+        &mut self.turn_state
+    }
 }

@@ -29,6 +29,8 @@ pub(crate) fn fill_snapshot_input(s: &mut Snapshot, state: &AppState) {
 }
 
 pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
+    // Sync authoritative turn fields from TurnState to AgentState for the snapshot.
+    // Non-authoritative fields (queues, streaming_tail) retain their test-set values.
     let agent = state.agent_state();
     let input = state.input();
     let view = state.view();

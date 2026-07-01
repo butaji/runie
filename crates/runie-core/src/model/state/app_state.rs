@@ -10,6 +10,7 @@
 use super::{
     AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
+use crate::actors::turn::TurnState;
 
 /// Application state — a read-only UI projection of actor-owned state.
 ///
@@ -52,6 +53,9 @@ pub struct AppState {
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
     pub actor_handles: Option<crate::actors::LeaderHandle>,
+    /// Authoritative turn state — kept in sync with `TurnActor` via facts.
+    /// `AgentState` is derived from this via `From<&TurnState>`.
+    pub turn_state: TurnState,
 }
 
 impl AppState {

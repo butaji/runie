@@ -179,15 +179,36 @@ impl AppState {
 
     /// Handle TurnAborted fact — clear turn flags in AppState projection.
     pub(crate) fn apply_turn_aborted(&mut self) {
-        self.agent_state_mut().turn_active = false;
-        self.agent_state_mut().streaming = false;
-        self.agent_state_mut().inflight = 0;
-        self.agent_state_mut().current_request_id = None;
-        self.agent_state_mut().current_tool_name = None;
-        self.agent_state_mut().current_action = None;
-        self.agent_state_mut().turn_started_at = None;
-        self.agent_state_mut().thinking_started_at = None;
-        self.agent_state_mut().tool_started_at = None;
+        self.turn_state_mut().turn_active = false;
+        self.turn_state_mut().streaming = false;
+        self.turn_state_mut().inflight = 0;
+        self.turn_state_mut().current_request_id = None;
+        self.turn_state_mut().current_tool_name = None;
+        self.turn_state_mut().current_action = None;
+        self.turn_state_mut().turn_started_at = None;
+        self.turn_state_mut().thinking_started_at = None;
+        self.turn_state_mut().tool_started_at = None;
+        // Copy turn state values into locals (releases immutable borrow of self).
+        let turn_active = self.turn_state.turn_active;
+        let streaming = self.turn_state.streaming;
+        let inflight = self.turn_state.inflight;
+        let current_request_id = self.turn_state.current_request_id.clone();
+        let current_tool_name = self.turn_state.current_tool_name.clone();
+        let current_action = self.turn_state.current_action.clone();
+        let turn_started_at = self.turn_state.turn_started_at;
+        let thinking_started_at = self.turn_state.thinking_started_at;
+        let tool_started_at = self.turn_state.tool_started_at;
+        // Sync authoritative fields to AgentState.
+        let agent = self.agent_state_mut();
+        agent.turn_active = turn_active;
+        agent.streaming = streaming;
+        agent.inflight = inflight;
+        agent.current_request_id = current_request_id;
+        agent.current_tool_name = current_tool_name;
+        agent.current_action = current_action;
+        agent.turn_started_at = turn_started_at;
+        agent.thinking_started_at = thinking_started_at;
+        agent.tool_started_at = tool_started_at;
         self.view_mut().dirty = true;
     }
 
