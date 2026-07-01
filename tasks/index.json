@@ -57,7 +57,7 @@
   {
     "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
     "title": "Add MCP tool schema cache and connection manager",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
@@ -1157,7 +1157,7 @@
   {
     "file": "replace-file-ref-parser-with-winnow-or-regex.md",
     "title": "Replace file ref parser with winnow or regex",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
@@ -1742,6 +1742,91 @@
   {
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
+    "status": "todo"
+  },
+  {
+    "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
+    "title": "Remove direct `AppState` mutation from core update handlers",
+    "status": "todo"
+  },
+  {
+    "file": "remove-direct-projection-bypasses-in-dispatch-and-domain-ops.md",
+    "title": "Remove direct projection bypasses in dispatch and domain ops",
+    "status": "todo"
+  },
+  {
+    "file": "collapse-durablecoreevent-into-event-enum.md",
+    "title": "Collapse `DurableCoreEvent` into the canonical `Event` enum",
+    "status": "todo"
+  },
+  {
+    "file": "replace-speedwindow-with-ringbuffer-crate.md",
+    "title": "Replace `SpeedWindow` with a ring-buffer crate",
+    "status": "todo"
+  },
+  {
+    "file": "simplify-permission-policy-chain-to-ruleset-match.md",
+    "title": "Simplify permission policy chain to a ruleset match",
+    "status": "todo"
+  },
+  {
+    "file": "replace-providerfactory-pinbox-with-async-trait-or-enum.md",
+    "title": "Replace `ProviderFactory` `Pin<Box<dyn Future>>` with `async_trait` or provider enum",
+    "status": "todo"
+  },
+  {
+    "file": "migrate-session-persistence-to-sqlx-with-migrations.md",
+    "title": "Migrate session persistence to `sqlx` with migrations",
+    "status": "todo"
+  },
+  {
+    "file": "finish-replacing-remaining-custom-helpers-with-crates.md",
+    "title": "Finish replacing remaining custom helpers with crates",
+    "status": "todo"
+  },
+  {
+    "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
+    "title": "Track orphan spawned tasks in provider, IO, and session actors",
+    "status": "todo"
+  },
+  {
+    "file": "remove-timeout-polling-from-uiactor-and-actors.md",
+    "title": "Remove timeout polling from `UiActor` and actors",
+    "status": "todo"
+  },
+  {
+    "file": "enforce-observed-async-work-in-all-actors.md",
+    "title": "Enforce observed async work in all actors",
+    "status": "todo"
+  },
+  {
+    "file": "split-uiactor-into-focused-modules.md",
+    "title": "Split `ui_actor.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-panel-handler-into-focused-modules.md",
+    "title": "Split `panel_handler.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-runie-agent-actor-into-focused-modules.md",
+    "title": "Split `runie-agent/src/actor.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-ractor-turn-actor-into-focused-modules.md",
+    "title": "Split `ractor_turn.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-large-core-files-into-focused-modules.md",
+    "title": "Split large core files into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "execute-five-round-architecture-review-roadmap.md",
+    "title": "Execute five-round architecture review roadmap",
     "status": "todo"
   }
 ]
