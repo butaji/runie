@@ -13,9 +13,9 @@ Agent unit tests duplicate event-capture closures and filter/count assertions de
 Replace manual captures/assertions with `runie_testing::capture_events`, `assert_event`, `count_events`, and `find_event`.
 
 ## Acceptance Criteria
-- [ ] Replace duplicated closures in `runie-agent/src/tests/`.
-- [ ] Use assertion helpers everywhere.
-- [ ] All tests pass.
+- [x] Replace duplicated closures in `runie-agent/src/tests/`.
+- [x] Use assertion helpers everywhere.
+- [x] All tests pass.
 
 ## Design Impact
 
