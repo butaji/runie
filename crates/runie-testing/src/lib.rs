@@ -1,5 +1,6 @@
 //! Shared test infrastructure for Runie crates.
 
+pub mod conditional;
 pub mod env_lock;
 pub mod event_helpers;
 pub mod events;
@@ -8,10 +9,6 @@ pub mod mock_tool_skill;
 pub mod replay_provider;
 
 pub mod tests;
-pub mod timeout;
-
-#[macro_use]
-pub mod macros;
 
 pub use env_lock::{env_lock, ENV_LOCK};
 pub use events::{

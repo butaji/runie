@@ -107,7 +107,7 @@
   {
     "file": "cleanup-runie-testing-dead-modules.md",
     "title": "Cleanup runie-testing dead modules",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
