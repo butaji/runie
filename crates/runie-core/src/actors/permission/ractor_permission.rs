@@ -579,7 +579,7 @@ mod tests {
     #[tokio::test]
     async fn trust_command_updates_permission_actor() {
         let bus = EventBus::<Event>::new(16);
-        let mut sub = bus.subscribe();
+        let _sub = bus.subscribe();
 
         let (handle, _cell, _join) =
             RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();

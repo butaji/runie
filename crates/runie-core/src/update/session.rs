@@ -192,6 +192,10 @@ impl AppState {
 
     /// Sync delivery via TurnQueue for test mode — applies state changes directly.
     /// NOTE: Does NOT call projection methods to avoid double-removing from queue.
+    ///
+    /// Logic matches RactorTurnActor::handle_deliver_queued:
+    /// - If steering was delivered, only deliver follow-up if mode is All
+    /// - If no steering, deliver follow-up
     fn apply_queue_delivery_sync(
         &mut self,
         steering_mode: DeliveryMode,
@@ -202,7 +206,7 @@ impl AppState {
         let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
 
         if let Some(r) = queue.pop_steering(steering_mode) {
-            // Steering was delivered
+            // Steering was delivered — sync to AppState
             self.agent_state_mut().message_queue = queue.into_inner();
             let id = self.next_id();
             self.session_mut().messages.push(ChatMessage {
@@ -219,34 +223,28 @@ impl AppState {
                 .push_back((r.content, id));
             self.messages_changed();
 
-            // Deliver follow-ups after steering:
-            // - All mode: pop all follow-ups and join them
-            // - OneAtATime: pop exactly one follow-up (one-at-a-time delivery)
-            let follow_up_mode_is_all = follow_up_mode == DeliveryMode::All;
-            let mut q = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
-            let follow_up_result = if follow_up_mode_is_all {
-                q.pop_all_follow_ups()
-            } else {
-                q.pop_follow_up(follow_up_mode)
-            };
-            if let Some(r) = follow_up_result {
-                self.agent_state_mut().message_queue = q.into_inner();
-                let id = self.next_id();
-                self.session_mut().messages.push(ChatMessage {
-                    role: Role::User,
-                    timestamp: now(),
-                    id: id.clone(),
-                    parts: vec![Part::Text {
-                        content: r.content.clone(),
-                    }],
-                    ..Default::default()
-                });
-                self.agent_state_mut()
-                    .request_queue
-                    .push_back((r.content, id));
-                self.messages_changed();
-            } else {
-                self.agent_state_mut().message_queue = q.into_inner();
+            // Only deliver follow-ups in All mode (matching RactorTurnActor)
+            if follow_up_mode == DeliveryMode::All {
+                let mut q = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+                if let Some(r) = q.pop_all_follow_ups() {
+                    self.agent_state_mut().message_queue = q.into_inner();
+                    let id = self.next_id();
+                    self.session_mut().messages.push(ChatMessage {
+                        role: Role::User,
+                        timestamp: now(),
+                        id: id.clone(),
+                        parts: vec![Part::Text {
+                            content: r.content.clone(),
+                        }],
+                        ..Default::default()
+                    });
+                    self.agent_state_mut()
+                        .request_queue
+                        .push_back((r.content, id));
+                    self.messages_changed();
+                } else {
+                    self.agent_state_mut().message_queue = q.into_inner();
+                }
             }
         } else if let Some(r) = queue.pop_follow_up(follow_up_mode) {
             // Follow-up was delivered
