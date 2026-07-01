@@ -31,7 +31,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 /// Runie TUI CLI arguments.
 #[derive(Parser, Debug)]
-#[command(name = "runie", version)]
+#[command(name = "runie-tui", version)]
 struct Cli {
     /// Show dry-run preview without starting the TUI.
     #[arg(long)]

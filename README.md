@@ -117,7 +117,7 @@ cargo build --release
 RUNIE_MOCK=1 ./target/release/runie-tui
 
 # One-shot CLI
-./target/release/runie print "find unused imports" < src/main.rs
+./target/release/runie print "find unused imports"
 ```
 
 Add keys in `~/.runie/config.toml`. See [docs/Configuration.md](docs/Configuration.md) for the full reference.
@@ -136,8 +136,10 @@ If you have credits there, Runie helps you use them.
 |---|---|
 | TUI | `./target/release/runie-tui` |
 | Print | `./target/release/runie print "..."` |
-| JSON | `./target/release/runie json "..."` |
+| Inspect | `./target/release/runie inspect` |
+| JSON | `./target/release/runie json` |
 | Server | `./target/release/runie server` |
+| MCP | `./target/release/runie mcp list\|add\|remove` |
 
 ## Development
 
