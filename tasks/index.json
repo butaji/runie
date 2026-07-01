@@ -762,7 +762,7 @@
   {
     "file": "hold-advisory-lock-until-atomic-rename-completes.md",
     "title": "Hold advisory lock until atomic rename completes",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "implement-graceful-leader-shutdown.md",
