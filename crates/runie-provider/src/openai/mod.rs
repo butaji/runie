@@ -170,21 +170,23 @@ mod tests {
         assert_eq!(serialized[2]["role"], "assistant");
     }
 
+    /// Orphan tool result (no matching tool call) is serialized as role="user".
+    /// The OpenAI API requires tool_call_id to serialize as role="tool".
     #[test]
     fn serializes_tool_role_as_user_when_id_missing() {
-        // Orphan tool result (no matching tool call, no tool_call_id) is removed by sanitize.
-        // Only system placeholder remains.
         let msg = ChatMessage::tool("read_file result:\nhello".to_string());
         let body = build_request_body(&test_provider(), &[msg]);
         let serialized = body["messages"].as_array().unwrap();
         assert!(!serialized.is_empty());
-        assert_eq!(serialized[0]["role"], "system");
+        // Without tool_call_id, the API serializes it as role="user"
+        assert_eq!(serialized[0]["role"], "user");
     }
 
+    /// Dangling tool calls (no matching result) are preserved by sanitize.
+    /// Previously sanitize removed them. Note: when assistant has tool_calls,
+    /// OpenAI API requires content to be empty — text is sent separately.
     #[test]
     fn assistant_tool_message_has_empty_content() {
-        // Dangling tool calls (no matching result) are removed by sanitize.
-        // After removal, only text remains, so content is preserved.
         let messages = vec![
             ChatMessage::user("read it".to_string()),
             ChatMessage {
@@ -210,12 +212,13 @@ mod tests {
         let body = build_request_body(&test_provider(), &messages);
         let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
-        // Content preserved since dangling tool call was removed
-        assert_eq!(serialized["content"], "Reading...");
+        // OpenAI API requires empty content when tool_calls are present
+        assert_eq!(serialized["content"], "");
+        // Tool call is present (dangling, not removed by sanitize)
         assert!(serialized["tool_calls"]
             .as_array()
-            .map(|a| a.is_empty())
-            .unwrap_or(true));
+            .map(|a| !a.is_empty())
+            .unwrap_or(false));
     }
 
     #[test]

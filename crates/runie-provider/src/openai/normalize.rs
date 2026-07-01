@@ -41,6 +41,8 @@ mod tests {
         assert!(out[0].provider_metadata.is_none());
     }
 
+    /// Consecutive same-role messages are no longer merged by sanitize.
+    /// This behavior was removed — use ChatMessageBuilder to build valid sequences.
     #[test]
     fn merges_consecutive_same_role_messages() {
         let messages = vec![
@@ -49,8 +51,8 @@ mod tests {
             ChatMessage::user("ok".to_string()),
         ];
         let out = normalize_messages(messages);
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].content(), "part 1\n\npart 2\n\nok");
+        // Sanitize no longer merges; it only validates + trims
+        assert_eq!(out.len(), 3);
     }
 
     #[test]
@@ -87,22 +89,25 @@ mod tests {
             .any(|m| m.tool_call_id.as_deref() == Some("call_2")));
     }
 
+    /// When first message is tool (orphan), sanitize no longer injects a placeholder.
+    /// This behavior was removed — construct valid sequences with ChatMessageBuilder.
     #[test]
     fn injects_placeholder_when_first_is_tool() {
-        // Tool result without matching tool call is removed as orphan
         let messages = vec![ChatMessage::tool("result".to_string())];
         let out = normalize_messages(messages);
-        // Placeholder is added, orphan tool result is removed
+        // Orphan tool result is NOT removed; placeholder injection was removed from sanitize
         assert_eq!(out.len(), 1);
-        assert_eq!(out[0].role, Role::System);
+        assert_eq!(out[0].role, Role::Tool);
     }
 
+    /// When first message is assistant, sanitize no longer injects a placeholder.
+    /// This behavior was removed — construct valid sequences with ChatMessageBuilder.
     #[test]
     fn does_not_inject_placeholder_for_assistant_first() {
         let messages = vec![ChatMessage::assistant("hi".to_string())];
         let out = normalize_messages(messages);
-        assert_eq!(out.len(), 2);
-        assert_eq!(out[0].role, Role::System);
-        assert_eq!(out[1].role, Role::Assistant);
+        // Sanitize no longer injects placeholders
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].role, Role::Assistant);
     }
 }

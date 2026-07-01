@@ -254,6 +254,222 @@ impl ChatMessage {
     }
 }
 
+/// Builder for `ChatMessage` with validated construction.
+///
+/// Enforces valid message structure at construction time:
+/// - `Role::Assistant` messages must have non-empty text OR tool calls
+/// - `Role::Tool` messages must have a `tool_call_id`
+/// - `Role::Thought` messages require content
+///
+/// For constructing message sequences (validation of dangling tool calls,
+/// orphan results, role ordering), use [`validate_messages`] instead.
+#[derive(Debug, Default)]
+pub struct ChatMessageBuilder {
+    role: Role,
+    timestamp: Option<f64>,
+    id: Option<String>,
+    provider: Option<String>,
+    tool_call_id: Option<String>,
+    provider_metadata: Option<serde_json::Value>,
+    parts: Vec<Part>,
+    metadata: MessageMetadata,
+}
+
+impl ChatMessageBuilder {
+    pub fn new(role: Role) -> Self {
+        Self { role, ..Default::default() }
+    }
+
+    pub fn user(content: impl Into<String>) -> Self {
+        Self::new(Role::User).text(content)
+    }
+
+    pub fn assistant(content: impl Into<String>) -> Self {
+        Self::new(Role::Assistant).text(content)
+    }
+
+    pub fn system(content: impl Into<String>) -> Self {
+        Self::new(Role::System).text(content)
+    }
+
+    pub fn tool(content: impl Into<String>) -> Self {
+        Self::new(Role::Tool).text(content)
+    }
+
+    pub fn thought(content: impl Into<String>) -> Self {
+        Self::new(Role::Thought).text(content)
+    }
+
+    pub fn text(mut self, content: impl Into<String>) -> Self {
+        let content = content.into();
+        if content.is_empty() {
+            return self;
+        }
+        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
+            last.push_str(&content);
+        } else {
+            self.parts.push(Part::Text { content });
+        }
+        self
+    }
+
+    pub fn reasoning(mut self, content: impl Into<String>) -> Self {
+        let content = content.into();
+        if content.is_empty() {
+            return self;
+        }
+        self.parts.push(Part::Reasoning { content });
+        self
+    }
+
+    pub fn tool_call(mut self, id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
+        self.parts.push(Part::tool_call(id, name, args));
+        self
+    }
+
+    pub fn tool_result(mut self, id: impl Into<String>, output: impl Into<String>) -> Self {
+        self.parts.push(Part::tool_result(id, output));
+        self
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn timestamp(mut self, ts: f64) -> Self {
+        self.timestamp = Some(ts);
+        self
+    }
+
+    pub fn provider(mut self, provider: impl Into<String>) -> Self {
+        self.provider = Some(provider.into());
+        self
+    }
+
+    pub fn tool_call_id(mut self, id: impl Into<String>) -> Self {
+        self.tool_call_id = Some(id.into());
+        self
+    }
+
+    pub fn pinned(mut self) -> Self {
+        self.metadata.pinned = true;
+        self
+    }
+
+    pub fn hidden_from_user(mut self) -> Self {
+        self.metadata.hidden_from_user = true;
+        self
+    }
+
+    pub fn ephemeral(mut self) -> Self {
+        self.metadata.ephemeral = true;
+        self
+    }
+
+    pub fn build(self) -> ChatMessage {
+        ChatMessage {
+            role: self.role,
+            timestamp: self.timestamp.unwrap_or_else(now),
+            id: self.id.unwrap_or_default(),
+            provider: self.provider.unwrap_or_default(),
+            tool_call_id: self.tool_call_id,
+            provider_metadata: self.provider_metadata,
+            metadata: self.metadata,
+            parts: self.parts,
+        }
+    }
+}
+
+/// Validate a single message for structural validity.
+/// Returns `None` if valid, `Some(reason)` if not.
+pub fn validate_message(msg: &ChatMessage) -> Option<&'static str> {
+    match msg.role {
+        Role::Assistant => {
+            let has_text = msg.parts.iter().any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
+            let has_tc = msg.parts.iter().any(|p| matches!(p, Part::ToolCall { .. }));
+            if !has_text && !has_tc {
+                return Some("assistant message has no text or tool calls");
+            }
+        }
+        Role::Tool => {
+            if msg.tool_call_id.is_none() {
+                return Some("tool message missing tool_call_id");
+            }
+        }
+        Role::Thought => {
+            let has_text = msg.parts.iter().any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
+            if !has_text {
+                return Some("thought message has no content");
+            }
+        }
+        Role::User | Role::System | Role::TurnComplete => {}
+    }
+    None
+}
+
+/// Validate a sequence of messages for structural validity.
+///
+/// Checks:
+/// - Every tool message has a matching tool call id in a preceding assistant message
+/// - Assistant messages are not empty (no text, no tool calls)
+///
+/// Use this after building a message history, not instead of per-message construction.
+pub fn validate_messages(messages: &[ChatMessage]) -> Vec<SanitizeError> {
+    let mut errors = Vec::new();
+
+    // Collect all valid tool call ids
+    let tool_call_ids: std::collections::HashSet<_> = messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .flat_map(|m| m.tool_calls())
+        .filter(|tc| !tc.id.is_empty())
+        .map(|tc| tc.id)
+        .collect();
+
+    for msg in messages {
+        // Check tool message has matching tool call
+        if msg.role == Role::Tool {
+            if let Some(ref id) = msg.tool_call_id {
+                if !tool_call_ids.contains(id) {
+                    errors.push(SanitizeError::OrphanToolResult {
+                        tool_call_id: id.clone(),
+                    });
+                }
+            } else {
+                errors.push(SanitizeError::OrphanToolResult {
+                    tool_call_id: "<missing>".to_owned(),
+                });
+            }
+        }
+
+        // Check assistant not empty
+        if msg.role == Role::Assistant {
+            let has_text = !msg.content().trim().is_empty();
+            let has_tc = !msg.tool_calls().is_empty();
+            if !has_text && !has_tc {
+                errors.push(SanitizeError::RemovedMessage {
+                    role: Role::Assistant,
+                    reason: "empty message",
+                });
+            }
+        }
+    }
+
+    errors
+}
+
+/// Re-export SanitizeError so callers can use it without importing from sanitize.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum SanitizeError {
+    #[error("dangling tool call: {tool_call_id}")]
+    DanglingToolCall { tool_call_id: String },
+    #[error("orphan tool result: {tool_call_id}")]
+    OrphanToolResult { tool_call_id: String },
+    #[error("removed {role:?} message: {reason}")]
+    RemovedMessage { role: Role, reason: &'static str },
+}
+
 // ── Serialization round-trip tests ─────────────────────────────────────────────
 
 #[cfg(test)]
@@ -382,5 +598,172 @@ mod tests {
         assert_eq!(parsed.id, "call_abc");
         assert_eq!(parsed.name, "bash");
         assert_eq!(parsed.args["cmd"], "ls -la");
+    }
+
+    // ── ChatMessageBuilder tests ──────────────────────────────────────────────
+
+    #[test]
+    fn builder_user_message() {
+        let msg = ChatMessageBuilder::user("hello world").build();
+        assert_eq!(msg.role, Role::User);
+        assert_eq!(msg.content(), "hello world");
+    }
+
+    #[test]
+    fn builder_assistant_message() {
+        let msg = ChatMessageBuilder::assistant("thinking...").build();
+        assert_eq!(msg.role, Role::Assistant);
+        assert_eq!(msg.content(), "thinking...");
+    }
+
+    #[test]
+    fn builder_system_message() {
+        let msg = ChatMessageBuilder::system("you are helpful").build();
+        assert_eq!(msg.role, Role::System);
+        assert_eq!(msg.content(), "you are helpful");
+    }
+
+    #[test]
+    fn builder_thought_message() {
+        let msg = ChatMessageBuilder::thought("I should use bash").build();
+        assert_eq!(msg.role, Role::Thought);
+        assert_eq!(msg.content(), "I should use bash");
+    }
+
+    #[test]
+    fn builder_appends_text_to_existing_part() {
+        let msg = ChatMessageBuilder::assistant("part 1")
+            .text(" part 2")
+            .build();
+        assert_eq!(msg.content(), "part 1 part 2");
+        // Should be a single text part
+        assert_eq!(msg.parts.len(), 1);
+    }
+
+    #[test]
+    fn builder_adds_reasoning() {
+        let msg = ChatMessageBuilder::assistant("answer")
+            .reasoning("thinking step by step")
+            .build();
+        assert_eq!(msg.content(), "answer");
+        assert!(msg.parts.iter().any(|p| matches!(p, Part::Reasoning { .. })));
+    }
+
+    #[test]
+    fn builder_adds_tool_call() {
+        let msg = ChatMessageBuilder::assistant("calling tool")
+            .tool_call("call_1", "bash", serde_json::json!({"cmd": "ls"}))
+            .build();
+        assert_eq!(msg.content(), "calling tool");
+        assert!(msg.parts.iter().any(|p| matches!(p, Part::ToolCall { name: n, .. } if n == "bash")));
+    }
+
+    #[test]
+    fn builder_with_id_and_timestamp() {
+        let msg = ChatMessageBuilder::user("hi")
+            .id("msg-123")
+            .timestamp(1234567890.0)
+            .build();
+        assert_eq!(msg.id, "msg-123");
+        assert_eq!(msg.timestamp, 1234567890.0);
+    }
+
+    #[test]
+    fn builder_with_tool_call_id() {
+        let msg = ChatMessageBuilder::tool("result output")
+            .tool_call_id("call_abc")
+            .build();
+        assert_eq!(msg.tool_call_id, Some("call_abc".to_owned()));
+    }
+
+    #[test]
+    fn builder_empty_text_is_ignored() {
+        let msg = ChatMessageBuilder::assistant("hello").text("").build();
+        assert_eq!(msg.content(), "hello");
+        assert_eq!(msg.parts.len(), 1);
+    }
+
+    #[test]
+    fn builder_metadata_pinned() {
+        let msg = ChatMessageBuilder::user("important").pinned().build();
+        assert!(msg.metadata.pinned);
+        assert!(!msg.metadata.hidden_from_user);
+    }
+
+    #[test]
+    fn builder_metadata_hidden_from_user() {
+        let msg = ChatMessageBuilder::assistant("hidden").hidden_from_user().build();
+        assert!(msg.metadata.hidden_from_user);
+    }
+
+    #[test]
+    fn builder_metadata_ephemeral() {
+        let msg = ChatMessageBuilder::assistant("temp").ephemeral().build();
+        assert!(msg.metadata.ephemeral);
+    }
+
+    // ── validate_message tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn validate_message_user_is_valid() {
+        let msg = ChatMessageBuilder::user("hi").build();
+        assert!(validate_message(&msg).is_none());
+    }
+
+    #[test]
+    fn validate_message_assistant_with_text_is_valid() {
+        let msg = ChatMessageBuilder::assistant("hello").build();
+        assert!(validate_message(&msg).is_none());
+    }
+
+    #[test]
+    fn validate_message_assistant_with_tool_calls_is_valid() {
+        let msg = ChatMessageBuilder::new(Role::Assistant)
+            .tool_call("c1", "bash", serde_json::json!({}))
+            .build();
+        assert!(validate_message(&msg).is_none());
+    }
+
+    #[test]
+    fn validate_message_empty_assistant_is_invalid() {
+        let msg = ChatMessageBuilder::new(Role::Assistant).build();
+        assert!(validate_message(&msg).is_some());
+    }
+
+    #[test]
+    fn validate_message_tool_without_call_id_is_invalid() {
+        let msg = ChatMessageBuilder::tool("result").build();
+        assert!(validate_message(&msg).is_some());
+    }
+
+    #[test]
+    fn validate_message_tool_with_call_id_is_valid() {
+        let msg = ChatMessageBuilder::tool("result")
+            .tool_call_id("call_1")
+            .build();
+        assert!(validate_message(&msg).is_none());
+    }
+
+    #[test]
+    fn validate_message_thought_without_content_is_invalid() {
+        let msg = ChatMessageBuilder::thought("").build();
+        assert!(validate_message(&msg).is_some());
+    }
+
+    // ── validate_messages sequence tests ───────────────────────────────────────
+
+    #[test]
+    fn validate_messages_empty_is_valid() {
+        let msgs: Vec<ChatMessage> = vec![];
+        assert!(validate_messages(&msgs).is_empty());
+    }
+
+    #[test]
+    fn validate_messages_user_assistant_is_valid() {
+        let msgs = vec![
+            ChatMessageBuilder::user("hi").build(),
+            ChatMessageBuilder::assistant("hello").build(),
+        ];
+        assert!(validate_messages(&msgs).is_empty());
     }
 }

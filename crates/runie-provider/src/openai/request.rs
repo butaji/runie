@@ -211,9 +211,9 @@ mod tests {
 
     #[test]
     fn assistant_message_with_tool_calls_omits_content() {
-        // When assistant has both text and tool_calls, content is set to empty.
-        // Dangling tool calls (no matching result) are removed by sanitize first,
-        // so content is preserved when tool_calls become empty.
+        // When assistant has both text and tool_calls, OpenAI API requires
+        // content to be empty (the text goes in a separate message).
+        // Sanitize no longer removes dangling tool calls.
         let msg = ChatMessage {
             role: Role::Assistant,
             timestamp: 0.0,
@@ -236,13 +236,11 @@ mod tests {
         let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
         let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
-        // Dangling tool call was removed, so content is preserved
-        assert_eq!(serialized["content"], "I'll read it.");
-        // No tool_calls since the dangling one was removed
+        // Dangling tool call is preserved (sanitize no longer removes it)
         assert!(serialized["tool_calls"]
             .as_array()
-            .map(|a| a.is_empty())
-            .unwrap_or(true));
+            .map(|a| !a.is_empty())
+            .unwrap_or(false));
     }
 
     #[test]

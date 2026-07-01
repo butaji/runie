@@ -24,7 +24,7 @@
 
 pub use crate::provider::ProviderError;
 pub use crate::provider_event::ModelError;
-pub use crate::sanitize::SanitizeError;
+pub use crate::proto::message::SanitizeError;
 pub use crate::tool::types::ToolParseError;
 
 /// Common error variants shared across the workspace.
