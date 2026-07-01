@@ -37,7 +37,7 @@ fn minimax_key_saved_during_login_is_used_when_sending_message() {
     let saved = std::env::var("MINIMAX_API_KEY").ok();
     std::env::set_var("MINIMAX_API_KEY", "sk-minimax-saved");
 
-    let provider = runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
+    let provider = runie_provider::build_provider_with_config("minimax", "MiniMax-M3", &config)
         .expect("provider should build from saved config key");
     assert_eq!(provider.key(), "minimax");
     assert_eq!(provider.model(), "MiniMax-M3");
@@ -72,7 +72,7 @@ async fn minimax_key_persists_through_runtime_save_and_load() {
     let saved = std::env::var("MINIMAX_API_KEY").ok();
     std::env::set_var("MINIMAX_API_KEY", "sk-minimax-runtime");
 
-    let provider = runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
+    let provider = runie_provider::build_provider_with_config("minimax", "MiniMax-M3", &config)
         .expect("provider should build from saved config key after runtime save");
     assert_eq!(provider.key(), "minimax");
     assert_eq!(provider.model(), "MiniMax-M3");
@@ -103,7 +103,7 @@ fn env_var_still_takes_priority_over_saved_config() {
     let saved = std::env::var("MINIMAX_API_KEY").ok();
     std::env::set_var("MINIMAX_API_KEY", "sk-from-env");
 
-    let provider = runie_provider::DynProvider::new_with_config("minimax", "MiniMax-M3", &config)
+    let provider = runie_provider::build_provider_with_config("minimax", "MiniMax-M3", &config)
         .expect("provider should build");
     assert_eq!(provider.key(), "minimax");
 

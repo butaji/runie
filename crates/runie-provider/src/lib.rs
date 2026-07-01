@@ -41,6 +41,9 @@ pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_se
 /// Re-export `BuiltProvider` from `runie-core`.
 pub use runie_core::actors::provider::BuiltProvider;
 
+/// Alias for `BuiltProvider` for backward compatibility.
+pub type DynProvider = BuiltProvider;
+
 // ---------------------------------------------------------------------------
 // Provider construction helpers
 // ---------------------------------------------------------------------------
