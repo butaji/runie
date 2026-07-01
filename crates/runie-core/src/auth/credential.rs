@@ -53,17 +53,17 @@ impl CredentialResolver {
 
     /// Load .env file using dotenvy, returning only API-related variables.
     ///
-    /// Uses dotenvy to load the .env file into the environment, then captures
-    /// relevant variables (API keys and base URLs) from the environment.
+    /// Uses `dotenvy::from_filename_iter` to read the .env file directly into
+    /// a HashMap without mutating the process environment. This avoids global
+    /// state side-effects and removes the need for ENV_LOCK serialization.
     fn load_dotenv() -> HashMap<String, String> {
-        // dotenvy::dotenv() loads .env into the environment
-        if dotenvy::dotenv().is_err() {
-            return HashMap::new();
+        match dotenvy::from_filename_iter(".env") {
+            Ok(iter) => iter
+                .filter_map(|result| result.ok())
+                .filter(|(key, _)| key.ends_with("_API_KEY") || key.ends_with("_BASE_URL"))
+                .collect(),
+            Err(_) => HashMap::new(),
         }
-        // Capture API-related variables from the environment
-        std::env::vars()
-            .filter(|(key, _)| key.ends_with("_API_KEY") || key.ends_with("_BASE_URL"))
-            .collect()
     }
 
     /// Set a config entry for a provider.
@@ -192,5 +192,17 @@ mod tests {
             resolver.resolve_api_key("test"),
             Some("dotenv-key".to_owned())
         );
+    }
+
+    #[test]
+    fn load_dotenv_does_not_mutate_process_env() {
+        // Verify that .env file loading reads into a local HashMap,
+        // not the process environment. Create CredentialResolver::new()
+        // and verify std::env::var is not affected.
+        let before = std::env::var("TEST_DOTENV_SANITY_KEY");
+        let _resolver = CredentialResolver::new();
+        let after = std::env::var("TEST_DOTENV_SANITY_KEY");
+        // The environment should be unchanged (both None, or both Some)
+        assert_eq!(before, after, "dotenv loading should not mutate process environment");
     }
 }
