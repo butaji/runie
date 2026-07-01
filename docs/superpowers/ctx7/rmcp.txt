@@ -1,0 +1,116 @@
+### Create Transport from TCP Stream (Client)
+
+Source: https://docs.rs/rmcp/latest/rmcp/transport/index.html
+
+This example demonstrates how to create a client transport using a TCP stream. It requires the `client` feature to be enabled. The code connects to a specified address, serves the stream as a client transport, and then lists available tools.
+
+```rust
+#[cfg(feature = "client")]
+
+// create transport from tcp stream
+#[cfg(feature = "client")]
+async fn client() -> Result<(), Box<dyn std::error::Error>> {
+    let stream = tokio::net::TcpSocket::new_v4()? 
+        .connect("127.0.0.1:8001".parse()?)
+        .await?;
+    let client = ().serve(stream).await?;
+    let tools = client.peer().list_tools(Default::default()).await?;
+    println!("{:?}", tools);
+    Ok(())
+}
+```
+
+--------------------------------
+
+### Call Tool Request - Peer Client
+
+Source: https://docs.rs/rmcp/latest/rmcp/service/struct.Peer.html?search=
+
+Calls a tool with the specified parameters. Available only on the 'client' crate feature.
+
+```rust
+pub async fn call_tool( &self, params: CallToolRequestParams, ) -> Result<CallToolResult, ServiceError>
+```
+
+--------------------------------
+
+### Peer::call_tool
+
+Source: https://docs.rs/rmcp/latest/rmcp/service/struct.Peer.html?search=std%3A%3Avec
+
+Calls a tool on the remote peer. Available on the client role.
+
+```APIDOC
+## Peer::call_tool
+
+### Description
+Calls a tool on the remote peer.
+
+### Method
+`async fn call_tool(&self, params: CallToolRequestParams) -> Result<CallToolResult, ServiceError>`
+
+### Parameters
+#### Path Parameters
+None
+
+#### Query Parameters
+None
+
+#### Request Body
+- **params** (CallToolRequestParams) - Required - Parameters for calling the tool.
+
+### Response
+#### Success Response (200)
+- **CallToolResult** - The result of the tool call.
+
+#### Error Response
+- **ServiceError** - An error occurred during the tool call.
+```
+
+--------------------------------
+
+### ClientRequest::from<Request<CallToolRequestMethod, CallToolRequestParams>>
+
+Source: https://docs.rs/rmcp/latest/rmcp/model/enum.ClientRequest.html?search=u32+-%3E+bool
+
+Converts a CallToolRequest into a ClientRequest.
+
+```APIDOC
+## ClientRequest::from<Request<CallToolRequestMethod, CallToolRequestParams>>
+
+### Description
+Converts a `CallToolRequest` into a `ClientRequest`.
+
+### Signature
+`fn from(value: CallToolRequest) -> Self`
+```
+
+--------------------------------
+
+### call_tool
+
+Source: https://docs.rs/rmcp/latest/rmcp/transport/common/server_side_http/type.SessionId.html?search=Option%3CT%3E%2C+%28T+-%3E+U%29+-%3E+Option%3CU%3E
+
+Handles a `tools/call` request from a client, executing a specified tool.
+
+```APIDOC
+## call_tool
+
+### Description
+Handles a `tools/call` request from a client. Read more
+
+### Method
+Not specified (likely POST based on request params)
+
+### Endpoint
+Not specified
+
+### Parameters
+#### Request Body
+- **request** (CallToolRequestParams) - Required - Parameters for calling the tool.
+- **context** (RequestContext<RoleServer>) - Required - Server context for the request.
+
+### Response
+#### Success Response (200)
+- **CallToolResult** - The result of the tool execution.
+```

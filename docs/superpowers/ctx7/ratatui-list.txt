@@ -1,0 +1,115 @@
+### Console-like Interface Pattern: Input + Scrollback Output
+
+Source: https://github.com/ratatui/ratatui/blob/main/examples/apps/user-input/src/main.rs
+
+Demonstrates how to build a console/REPL-like interface combining an input prompt (Paragraph) for user input, a List widget for scrollback output/history, and cursor positioning. This is the recommended pattern for terminal console applications in Ratatui.
+
+```rust
+struct App {
+    input: String,
+    character_index: usize,
+    messages: Vec<String>,
+}
+
+fn render(&self, frame: &mut Frame) {
+    let layout = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Min(1),
+    ]);
+    let [input_area, messages_area] = frame.area().layout(&layout);
+
+    let input = Paragraph::new(self.input.as_str())
+        .block(Block::bordered().title("Input"));
+    frame.render_widget(input, input_area);
+    frame.set_cursor_position(Position::new(
+        input_area.x + self.character_index as u16 + 1,
+        input_area.y + 1,
+    ));
+
+    let messages: Vec<ListItem> = self.messages
+        .iter()
+        .enumerate()
+        .map(|(i, m)| ListItem::new(Line::from(Span::raw(format!("{i}: {m}")))))\n        .collect();
+    let messages = List::new(messages)
+        .block(Block::bordered().title("Messages"));
+    frame.render_widget(messages, messages_area);
+}
+```
+
+--------------------------------
+
+### ListState scrolling methods
+
+Source: https://github.com/ratatui/ratatui/blob/main/ratatui-widgets/src/list/state.rs
+
+Methods for scrolling: scroll_down_by(amount) moves the selected index down by the given amount with saturation, and scroll_up_by(amount) moves the selected index up by the given amount with saturation to prevent underflow.
+
+```rust
+pub fn scroll_down_by(&mut self, amount: u16) {
+    let selected = self.selected.unwrap_or_default();
+    self.select(Some(selected.saturating_add(amount as usize)));
+}
+
+pub fn scroll_up_by(&mut self, amount: u16) {
+    let selected = self.selected.unwrap_or_default();
+    self.select(Some(selected.saturating_sub(amount as usize)));
+}
+```
+
+--------------------------------
+
+### ListState selection methods
+
+Source: https://github.com/ratatui/ratatui/blob/main/ratatui-widgets/src/list/state.rs
+
+Methods for selecting items: select_next() moves to the next item or first if none selected, select_previous() moves to the previous item or last if none selected, select_first() selects the first item (index 0), and select_last() selects the last item (index usize::MAX).
+
+```rust
+pub fn select_next(&mut self) {
+    let next = self.selected.map_or(0, |i| i.saturating_add(1));
+    self.select(Some(next));
+}
+
+pub fn select_previous(&mut self) {
+    let previous = self.selected.map_or(usize::MAX, |i| i.saturating_sub(1));
+    self.select(Some(previous));
+}
+
+pub const fn select_first(&mut self) {
+    self.select(Some(0));
+}
+
+pub const fn select_last(&mut self) {
+    self.select(Some(usize::MAX));
+}
+```
+
+--------------------------------
+
+### List Widget: Handle Empty Strings in Items
+
+Source: https://github.com/ratatui/ratatui/blob/main/BREAKING-CHANGES.md
+
+The List widget now renders empty strings as separate items. Code relying on the previous behavior of ignoring empty strings must now manually filter them.
+
+```rust
+let items = vec![
+    ListItem::new("line one"),
+    ListItem::new(""),
+    ListItem::new("line four"),
+];
+```
+
+--------------------------------
+
+### Update List::new() for IntoIterator
+
+Source: https://github.com/ratatui/ratatui/blob/main/BREAKING-CHANGES.md
+
+The `List::new()` constructor now accepts `IntoIterator<Item = Into<ListItem<'a>>>`. Update empty vector initialization to use `List::default()`.
+
+```diff
+- let list = List::new(vec![]);
+// becomes
++ let list = List::default();
+```

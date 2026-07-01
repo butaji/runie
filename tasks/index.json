@@ -1,10 +1,5 @@
 [
   {
-    "file": "TEMPLATE.md",
-    "title": "Task Title",
-    "status": "todo"
-  },
-  {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
     "status": "done"
@@ -45,6 +40,11 @@
     "status": "done"
   },
   {
+    "file": "add-project-level-config-layer-and-keyring-secrets.md",
+    "title": "Add project-level config layer and keyring secrets",
+    "status": "todo"
+  },
+  {
     "file": "adopt-metrics-facade-for-telemetry.md",
     "title": "Adopt metrics facade for telemetry",
     "status": "done"
@@ -53,6 +53,11 @@
     "file": "adopt-palette-for-theme-color-math.md",
     "title": "Adopt `palette` for theme color math",
     "status": "wontfix"
+  },
+  {
+    "file": "adopt-testing-helpers-across-all-tests.md",
+    "title": "Adopt testing helpers across all tests",
+    "status": "todo"
   },
   {
     "file": "adopt-wiremock-for-provider-api-tests.md",
@@ -75,6 +80,11 @@
     "status": "todo"
   },
   {
+    "file": "cap-and-lock-input-history.md",
+    "title": "Cap and lock input history",
+    "status": "todo"
+  },
+  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
     "status": "done"
@@ -93,6 +103,11 @@
     "file": "centralize-test-fixtures-and-mocks.md",
     "title": "Centralize test fixtures and mocks in `runie-testing`",
     "status": "done"
+  },
+  {
+    "file": "cleanup-runie-testing-dead-modules.md",
+    "title": "Cleanup runie-testing dead modules",
+    "status": "todo"
   },
   {
     "file": "cleanup-small-duplicates-and-dead-code.md",
@@ -225,6 +240,11 @@
     "status": "done"
   },
   {
+    "file": "deduplicate-cargo-lock-versions-and-deny.md",
+    "title": "Deduplicate Cargo.lock versions and deny multiples",
+    "status": "todo"
+  },
+  {
     "file": "deduplicate-turn-state-between-turnactor-and-appstate.md",
     "title": "Deduplicate turn state between TurnActor and AppState",
     "status": "todo"
@@ -258,6 +278,11 @@
     "file": "delete-dead-runie-macros-crate.md",
     "title": "Delete the dead `runie-macros` crate",
     "status": "done"
+  },
+  {
+    "file": "delete-dynprovider-and-providerconfigbox-wrappers.md",
+    "title": "Delete DynProvider and ProviderConfigBox wrappers",
+    "status": "todo"
   },
   {
     "file": "delete-eventbusbridge-wrapper.md",
@@ -315,6 +340,11 @@
     "status": "done"
   },
   {
+    "file": "drop-terminal-brand-and-multiplexer-tables.md",
+    "title": "Drop terminal brand and multiplexer tables",
+    "status": "todo"
+  },
+  {
     "file": "drop-unused-rand-from-runie-provider.md",
     "title": "Drop unused `rand` from `runie-provider`",
     "status": "done"
@@ -338,6 +368,11 @@
     "file": "enforce-advertised-file-function-complexity-limits.md",
     "title": "Enforce advertised file/function/complexity limits",
     "status": "done"
+  },
+  {
+    "file": "enrich-provider-trait-with-metadata-and-retry-config.md",
+    "title": "Enrich provider trait with metadata and retry config",
+    "status": "todo"
   },
   {
     "file": "env-actor-owns-git-cwd.md",
@@ -370,6 +405,11 @@
     "status": "done"
   },
   {
+    "file": "extract-runie-test-utils-crate.md",
+    "title": "Extract runie-test-utils crate",
+    "status": "todo"
+  },
+  {
     "file": "extract-shared-streaming-response-parser.md",
     "title": "Extract shared streaming response parser",
     "status": "done"
@@ -378,6 +418,11 @@
     "file": "extract-shared-tracing-subscriber-init.md",
     "title": "Extract shared tracing subscriber init",
     "status": "done"
+  },
+  {
+    "file": "finish-replacing-custom-tui-widgets.md",
+    "title": "Finish replacing custom TUI widgets",
+    "status": "todo"
   },
   {
     "file": "fix-500-line-file-limit-violations.md",
@@ -525,14 +570,34 @@
     "status": "done"
   },
   {
+    "file": "format-permission-request-for-human-readable-display.md",
+    "title": "Format permission request for human-readable display",
+    "status": "todo"
+  },
+  {
     "file": "fuzzy-history-search-with-sublime-fuzzy.md",
     "title": "Fuzzy history search with sublime-fuzzy",
     "status": "done"
   },
   {
+    "file": "generate-event-taxonomy-or-delete-generated-files.md",
+    "title": "Generate event taxonomy or delete generated files",
+    "status": "todo"
+  },
+  {
     "file": "harden-actors-against-mutex-poisoning.md",
     "title": "Harden async actors against mutex poisoning and startup panics",
     "status": "done"
+  },
+  {
+    "file": "hoist-runie-provider-inline-deps-to-workspace.md",
+    "title": "Hoist runie-provider inline deps to workspace",
+    "status": "todo"
+  },
+  {
+    "file": "hoist-runie-tui-inline-deps-to-workspace.md",
+    "title": "Hoist runie-tui inline deps to workspace",
+    "status": "todo"
   },
   {
     "file": "implement-graceful-leader-shutdown.md",
@@ -555,6 +620,11 @@
     "status": "done"
   },
   {
+    "file": "introduce-typed-provider-errors.md",
+    "title": "Introduce typed provider errors",
+    "status": "todo"
+  },
+  {
     "file": "investigate-session-persistence-not-created-in-live-tui.md",
     "title": "Investigate session persistence not created during live TUI runs",
     "status": "todo"
@@ -563,6 +633,11 @@
     "file": "live-tui-smoke-test-real-minimax.md",
     "title": "Live TUI smoke test with real MiniMax provider",
     "status": "partial"
+  },
+  {
+    "file": "load-slash-commands-with-include-dir.md",
+    "title": "Load slash commands with include_dir",
+    "status": "todo"
   },
   {
     "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
@@ -675,6 +750,11 @@
     "status": "done"
   },
   {
+    "file": "propagate-secretstring-through-provider-stack.md",
+    "title": "Propagate SecretString through provider stack",
+    "status": "todo"
+  },
+  {
     "file": "reconnect-tui-agent-actor-channel.md",
     "title": "Reconnect or remove TUI `AgentActor` channel",
     "status": "done"
@@ -765,6 +845,11 @@
     "status": "done"
   },
   {
+    "file": "remove-unused-direct-deps-from-runie-tui.md",
+    "title": "Remove unused direct deps from runie-tui",
+    "status": "todo"
+  },
+  {
     "file": "rename-telemetry-rs-to-tracing-init.md",
     "title": "Rename `telemetry.rs` to `tracing_init.rs`",
     "status": "done"
@@ -772,6 +857,11 @@
   {
     "file": "replace-agent-manifest-sha-with-include-dir-fingerprint.md",
     "title": "Replace agent manifest SHA with include_dir fingerprint",
+    "status": "todo"
+  },
+  {
+    "file": "replace-ansi256-lookup-table-with-ansi-colours.md",
+    "title": "Replace ANSI256 lookup table with ansi_colours",
     "status": "todo"
   },
   {
@@ -862,7 +952,7 @@
   {
     "file": "replace-location-parser-with-regex.md",
     "title": "Replace location parser with regex",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
@@ -965,6 +1055,11 @@
     "status": "done"
   },
   {
+    "file": "share-configured-reqwest-client-for-provider.md",
+    "title": "Share configured reqwest client for provider",
+    "status": "todo"
+  },
+  {
     "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
     "title": "Shorten approval sink timeout and wire cancellation",
     "status": "done"
@@ -995,8 +1090,18 @@
     "status": "todo"
   },
   {
+    "file": "split-modelclient-and-turnsession.md",
+    "title": "Split ModelClient and TurnSession",
+    "status": "todo"
+  },
+  {
     "file": "standardize-error-types-on-thiserror-with-source-chains.md",
     "title": "Standardize error types on thiserror with source chains",
+    "status": "todo"
+  },
+  {
+    "file": "stop-dotenvy-from-mutating-process-environment.md",
+    "title": "Stop dotenvy from mutating process environment",
     "status": "todo"
   },
   {
@@ -1013,6 +1118,11 @@
     "file": "type-and-unify-provider-model-layer.md",
     "title": "Type and unify provider/model layer",
     "status": "done"
+  },
+  {
+    "file": "type-openai-chunk-and-error-parsing.md",
+    "title": "Type OpenAI chunk and error parsing",
+    "status": "todo"
   },
   {
     "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
@@ -1047,6 +1157,11 @@
   {
     "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
     "title": "Unify edit_file and hashline_edit on patch-based edits",
+    "status": "todo"
+  },
+  {
+    "file": "unify-file-picker-and-panel-list-widget.md",
+    "title": "Unify file picker and panel list widget",
     "status": "todo"
   },
   {
@@ -1163,6 +1278,11 @@
     "file": "use-configscope-enum-for-mcp-server-scope.md",
     "title": "Use ConfigScope enum for McpServer scope",
     "status": "done"
+  },
+  {
+    "file": "use-fuzzy-matcher-for-model-catalog.md",
+    "title": "Use fuzzy matcher for model catalog",
+    "status": "todo"
   },
   {
     "file": "use-ignore-and-globset-for-file-refs.md",
