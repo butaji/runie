@@ -33,13 +33,9 @@
 //! ```
 
 pub mod loader;
-pub mod register;
 #[cfg(test)]
 mod tests;
 pub mod types;
 
 pub use loader::{load_commands_from_dir, load_skills_from_dir, DeclarativeLoader};
-pub use register::{
-    register_declarative_command, register_declarative_commands, register_declarative_skills,
-};
 pub use types::{CommandDef, SkillDef, Trigger};
