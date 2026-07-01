@@ -11,6 +11,7 @@ use runie_agent::AgentCommand;
 use runie_agent::truncate::TruncationPolicy;
 use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::bus::{EventBus, Receiver};
+use runie_core::update::dialog::handle_form_dialog;
 use runie_core::{AppState, Event, Snapshot};
 
 use crate::effects::EffectCommand;
@@ -678,8 +679,21 @@ impl UiActor {
         }
     }
 
-    /// Dispatch submit content (slash command, steering, or user message).
+    /// Dispatch submit content (slash command, form submission, steering, or user message).
     pub(crate) async fn dispatch_submit_content(&mut self, content: String) {
+        // If a form dialog is open and chat input is empty, this is a form submission
+        // (the form field content lives in the panel, not the chat input).
+        // Route through handle_form_dialog so Enter on the submit button works.
+        if self.state.open_dialog().is_some() && content.is_empty() {
+            let form_handled = self.maybe_submit_form();
+            if form_handled {
+                // Form was submitted → dialog is now closed, command dispatched.
+                self.state.view_mut().scroll = 0;
+                self.state.view_mut().dirty = true;
+                return;
+            }
+            // Not a form panel — fall through to close dialog and handle as slash command.
+        }
         // Close any open dialog (e.g., command palette) before executing the command.
         *self.state.open_dialog_mut() = None;
         // Slash command handling.
@@ -705,6 +719,32 @@ impl UiActor {
         }
         // Normal user message submission.
         self.state.submit_user_message_and_update_history(content);
+    }
+
+    /// If a form panel is open, emit CommandFormSubmit and return true.
+    /// Returns `false` if no form panel is open, so the caller knows to use the
+    /// fallback behavior (close dialog and handle as slash command).
+    fn maybe_submit_form(&mut self) -> bool {
+        // Quick check: is a dialog open and is it a form?
+        if self.state.open_dialog().is_none() {
+            return false;
+        }
+        // handle_form_dialog handles Generic dialogs with form panels.
+        // For non-form dialogs (command palette, etc.) it does nothing.
+        // If the form was submitted, the dialog is now closed.
+        // If not (e.g. validation failure), the dialog is still open.
+        let was_open = self.state.open_dialog().is_some();
+        handle_form_dialog(&mut self.state, Event::CommandFormSubmit);
+        // If dialog was already closed by handle_form_dialog, return true (handled).
+        // If it was a form that kept open (validation), also return true.
+        // Only return false if no form dialog was open (non-form dialog path).
+        if !was_open || self.state.open_dialog().is_some() {
+            // Dialog is still open → form kept it open (not submitted).
+            // Return false so the caller closes it as a non-form dialog.
+            return false;
+        }
+        // Dialog was closed by handle_form_dialog → form was submitted.
+        true
     }
 
     fn publish_snapshot(&mut self) {

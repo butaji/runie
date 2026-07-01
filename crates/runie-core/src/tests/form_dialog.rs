@@ -428,3 +428,49 @@ fn form_submit_button_uses_factory() {
         "Enter on FormSubmit button should use the submit factory"
     );
 }
+
+/// Test that `handle_form_dialog(Event::CommandFormSubmit)` dispatches the form
+/// submit when a form dialog is open. This is the path the UiActor uses when
+/// the user presses Enter with an empty chat input and a form is open.
+#[test]
+fn handle_form_dialog_submit_dispatches_save_command() {
+    let mut state = crate::model::AppState::default();
+    // Open the save form via the command palette.
+    palette_select(&mut state, "save");
+    assert!(
+        state.open_dialog.is_some(),
+        "form dialog should be open"
+    );
+    // Verify the root panel is a form.
+    let dialog = state.open_dialog.as_ref().unwrap();
+    let DialogState::Active { panels, .. } = dialog else {
+        panic!("expected Active dialog");
+    };
+    let root_panel = panels.root().expect("root panel should exist");
+    assert!(
+        root_panel.is_form(),
+        "root panel should be a form"
+    );
+    // Clone and modify the panel: set a form field value and move to submit button.
+    let mut panel = root_panel.clone();
+    // Set form values (how the form stores user input).
+    panel.form_values.insert("name".to_string(), "test-session".to_string());
+    // Move to submit button (the second item in a save form: field + submit button).
+    panel.selected = 1;
+    // Apply CommandFormSubmit (the event the UiActor sends on Enter with empty input).
+    let action =
+        crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::Event::CommandFormSubmit);
+    // Should produce a SubmitCommand action with the form values.
+    match action {
+        crate::update::dialog::FormAction::SubmitCommand { name, keys, values } => {
+            assert_eq!(name, "save", "should route to save command");
+            assert_eq!(keys, &["name"], "should have name field key");
+            assert_eq!(
+                values.get("name").cloned(),
+                Some("test-session".to_string()),
+                "should preserve form field value"
+            );
+        }
+        other => panic!("expected SubmitCommand, got {:?}", other),
+    }
+}
