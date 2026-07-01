@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`partial`
 
 ## Context
 

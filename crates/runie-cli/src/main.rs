@@ -6,6 +6,7 @@
 //! - `runie json` — structured JSON stdin/stdout for scripting
 //! - `runie server` — TCP/stdio JSON-RPC server for IDE integration
 //! - `runie mcp` — manage MCP servers (list, add, remove)
+//! - `runie completion` — generate shell completions (requires --features completions)
 
 use anyhow::Result;
 use clap::Parser;
@@ -17,6 +18,9 @@ mod print;
 mod scope; // Required for ConfigScope ValueEnum impl
 mod server;
 pub mod transport;
+
+#[cfg(feature = "completions")]
+mod completion;
 
 /// Runie CLI — Terminal-native coding agent harness
 #[derive(Parser, Debug)]
@@ -55,6 +59,13 @@ enum Command {
     Mcp {
         #[command(subcommand)]
         command: McpCommand,
+    },
+    /// Generate shell completions
+    #[cfg(feature = "completions")]
+    Completion {
+        /// Shell to generate completions for (bash, elvish, fish, powershell, zsh)
+        #[arg(default_value = "bash", value_parser = clap::builder::PossibleValuesParser::new(["bash", "zsh", "fish", "powershell", "elvish"]))]
+        shell: String,
     },
 }
 
@@ -102,6 +113,8 @@ async fn main() {
         Command::Json => run_json().await,
         Command::Server { stdio, yolo } => run_server(stdio, yolo).await,
         Command::Mcp { command } => run_mcp(command).await,
+        #[cfg(feature = "completions")]
+        Command::Completion { shell } => crate::completion::run_completion(&shell),
     };
 
     if let Err(e) = result {

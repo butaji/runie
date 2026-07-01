@@ -1,0 +1,83 @@
+# Runie Configuration
+# Copy this file to ~/.runie/config.toml and customize as needed.
+
+# Default provider and model
+provider = "anthropic"
+model = "claude-sonnet-4-6"
+
+# ── Model Providers ──────────────────────────────────────────────────────────────
+
+[model_providers.anthropic]
+type = "anthropic"
+# API key can also be set via ANTHROPIC_API_KEY environment variable
+# api_key = "sk-ant-..."
+
+[model_providers.openai]
+type = "openai"
+base_url = "https://api.openai.com/v1"
+# api_key = "sk-..."
+
+[model_providers.deepseek]
+type = "openai-compatible"
+base_url = "https://api.deepseek.com/v1"
+# api_key = "sk-..."
+
+# ── Model Selection ─────────────────────────────────────────────────────────────
+
+[models]
+# Default model when none specified
+default = "anthropic/claude-sonnet-4-6"
+
+# Models shown in the model selector UI
+scoped = [
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-3-5-sonnet",
+    "openai/gpt-4o",
+    "deepseek/deepseek-chat",
+]
+
+# ── Truncation ─────────────────────────────────────────────────────────────────
+
+[truncation]
+# Maximum lines to keep in conversation context
+max_lines = 2000
+
+# Maximum bytes per message before truncation
+max_bytes = 51200
+
+# ── Permissions ────────────────────────────────────────────────────────────────
+
+[permissions]
+# Permission mode: default, acceptEdits, auto, dontAsk, bypassPermissions, plan
+mode = "default"
+
+# Explicit permission rules (optional)
+# [[permissions.rules]]
+# tool = "bash"
+# action = "ask"
+# 
+# [[permissions.rules]]
+# tool = "read_*"
+# action = "allow"
+
+# ── UI Settings ─────────────────────────────────────────────────────────────────
+
+[ui]
+# Enable Vim keybindings
+vim_mode = true
+
+# ── Thinking Level ──────────────────────────────────────────────────────────────
+# Thinking level for reasoning-intensive tasks: Off, Low, Medium, High
+thinking_level = "Off"
+
+# ── Telemetry ──────────────────────────────────────────────────────────────────
+
+[telemetry]
+# Anonymous usage telemetry (disabled by default)
+enabled = false
+
+# ── MCP Servers (optional) ──────────────────────────────────────────────────────
+
+# [[mcp.servers]]
+# command = ["npx", "mcp-server-filesystem", "/path/to/allowed/dir"]
+# transport = "stdio"
