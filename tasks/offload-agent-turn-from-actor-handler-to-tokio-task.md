@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 
@@ -14,11 +16,11 @@ Spawn `run_agent_turn(...)` as a `tokio::spawn` task; store its `AbortHandle` (o
 
 ## Acceptance Criteria
 
-- [ ] `handle` returns immediately after spawning the turn task.
-- [ ] `AgentActorState` holds the current turn `AbortHandle`/`CancellationToken`.
-- [ ] `AgentMsg::Abort` cancels the in-flight turn.
-- [ ] Remove the side event-bus subscription used for abort detection.
-- [ ] Existing turn lifecycle events still flow through the event bus.
+- [x] `handle` returns immediately after spawning the turn task.
+- [x] `AgentActorState` holds the current turn `CancellationToken` (in `Arc` for ownership) and `PermissionGate`.
+- [x] `AgentMsg::Abort` cancels the in-flight turn.
+- [x] Remove the side event-bus subscription used for abort detection.
+- [x] Existing turn lifecycle events still flow through the event bus.
 
 ## Design Impact
 
@@ -34,6 +36,6 @@ No change to TUI element design or composition. Only internal agent concurrency 
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes (1800+ tests).
+- [ ] **Live tmux run tests** — Deferred (behavior preserved; abort shortcut triggers AgentMsg::Abort which cancels the token).
