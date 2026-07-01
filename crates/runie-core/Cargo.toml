@@ -35,6 +35,7 @@ dirs.workspace = true
 base64.workspace = true
 unicode-segmentation.workspace = true
 toml.workspace = true
+toml_edit.workspace = true
 tokio.workspace = true
 futures.workspace = true
 pulldown-cmark.workspace = true
