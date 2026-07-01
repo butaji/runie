@@ -37,6 +37,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "input_history.rs",
     // Trust settings - owned by TrustActor
     "trust.rs",
+    // Atomic file write utility for trust/auth persistence
+    "io/atomic_write.rs",
     // Permissions storage
     "actors/permission/",
     // Skills loading
