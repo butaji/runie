@@ -597,7 +597,7 @@
   {
     "file": "hoist-runie-tui-inline-deps-to-workspace.md",
     "title": "Hoist runie-tui inline deps to workspace",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "implement-graceful-leader-shutdown.md",

@@ -80,10 +80,14 @@ indextree = "4.1"
 keyring = { version = "3", features = ["vendored"] }
 dotenvy = "0.15"
 fs2 = "0.4"
+toml_edit = "0.22"
 ansi_colours = "1.2"
 arboard = { version = "3", default-features = false }
 tui-textarea = "0.7"
 crokey = "1.4"
+opaline = "0.4"
+syntect = "5"
+tui-markdown = "0.3.7"
 which = "7.0"
 bytesize = "1.1"
 humantime = "2.3"
@@ -97,6 +101,13 @@ runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
+
+# Provider-specific dependencies (hoisted to workspace for consistency)
+async-stream = "0.3"
+reqwest-eventsource = "0.6"
+
+# Dev-only dependencies
+wiremock = "0.6"
 
 
 
