@@ -952,7 +952,7 @@
   {
     "file": "replace-location-parser-with-regex.md",
     "title": "Replace location parser with regex",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
