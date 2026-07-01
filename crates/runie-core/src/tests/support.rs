@@ -1,14 +1,17 @@
-//! Shared test helpers for runie-core tests.
+//! Core-specific test helpers.
 //!
-//! Canonical source for `fresh_state()`, `type_str()`, and `exec()` within
-//! `runie-core`.  The remaining helpers (`ENV_LOCK`, `tmp_store`,
-//! `minimal_session`) also live here because they need access to
-//! `runie-core` internals.
+//! Contains helpers that need access to `runie-core` internals:
+//! - `ENV_LOCK` — global lock for env-sensitive tests
+//! - `seed_providers()` — seeds config with provider definitions
+//! - `tmp_store()` — creates a temp session store
+//! - `minimal_session()` — creates a minimal test session
+//!
+//! Shared helpers (`fresh_state`, `type_str`, `exec`) are now imported
+//! from `runie_testing` instead of duplicated here.
 
 use std::sync::Mutex;
 
 use crate::config::ModelProvider;
-use crate::event::Event;
 use crate::model::AppState;
 use crate::session::store::SessionStore;
 use crate::session::Session;
@@ -30,31 +33,6 @@ pub fn seed_providers(state: &mut AppState, providers: &[(String, String, String
             },
         );
     }
-}
-
-/// Returns a fresh `AppState` with default values and mock provider configured.
-pub fn fresh_state() -> AppState {
-    let mut state = AppState::default();
-    seed_providers(
-        &mut state,
-        &[("mock".into(), "".into(), "".into(), vec!["echo".into()])],
-    );
-    state
-}
-
-/// Simulates typing `text` into the input buffer of `state`.
-pub fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(Event::Input(c));
-    }
-}
-
-/// Set input buffer directly and submit — bypasses the command palette.
-/// Use for slash commands that need arguments.
-pub fn exec(state: &mut AppState, text: &str) {
-    state.input_mut().input = text.into();
-    state.input_mut().cursor_pos = text.len();
-    state.update(Event::Submit);
 }
 
 /// Creates a temporary session store in the system temp directory.
@@ -86,23 +64,6 @@ pub fn minimal_session(name: &str) -> Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn shared_type_str_appends() {
-        let mut state = fresh_state();
-        assert_eq!(state.input().input, "");
-        type_str(&mut state, "hello");
-        assert_eq!(state.input().input, "hello");
-        type_str(&mut state, " world");
-        assert_eq!(state.input().input, "hello world");
-    }
-
-    #[test]
-    fn shared_exec_sets_input_and_submits() {
-        let mut state = fresh_state();
-        assert_eq!(state.input().input, "");
-        exec(&mut state, "/save");
-    }
 
     #[test]
     fn shared_tmp_store_is_unique() {

@@ -1,0 +1,93 @@
+# Default keybindings
+# Format: key_combo: event_name
+bindings:
+  - combo: ctrl+e
+    event: CursorEnd
+  - combo: ctrl+o
+    event: ToggleExpand
+  - combo: ctrl+j
+    event: Newline
+  - combo: ctrl+a
+    event: CursorStart
+  - combo: ctrl+b
+    event: CursorLeft
+  - combo: ctrl+f
+    event: CursorRight
+  - combo: ctrl+w
+    event: DeleteWord
+  - combo: ctrl+k
+    event: DeleteToEnd
+  - combo: ctrl+u
+    event: DeleteToStart
+  - combo: ctrl+d
+    event: KillChar
+  - combo: ctrl+z
+    event: Suspend
+  - combo: ctrl+y
+    event: Redo
+  - combo: ctrl+c
+    event: Quit
+  - combo: ctrl+q
+    event: ForceQuit
+  - combo: ctrl+s
+    event: Abort
+  - combo: ctrl+g
+    event: OpenExternalEditor
+  - combo: ctrl+shift+o
+    event: CopyLastResponse
+  - combo: ctrl+p
+    event: ToggleCommandPalette
+  - combo: ctrl+shift+p
+    event: ToggleCommandPalette
+  - combo: ctrl+n
+    event: NewSession
+  - combo: ctrl+r
+    event: ResumeSession
+  - combo: ctrl+m
+    event: CycleModelNext
+  - combo: ctrl+shift+m
+    event: CycleModelPrev
+  - combo: alt+enter
+    event: FollowUp
+  - combo: alt+up
+    event: Dequeue
+  - combo: alt+b
+    event: CursorWordLeft
+  - combo: alt+f
+    event: CursorWordRight
+  - combo: escape
+    event: DialogBack
+  - combo: tab
+    event: "Input:\t"
+  - combo: backspace
+    event: Backspace
+  - combo: enter
+    event: Submit
+  - combo: up
+    event: HistoryPrev
+  - combo: down
+    event: HistoryNext
+  - combo: left
+    event: CursorLeft
+  - combo: right
+    event: CursorRight
+  - combo: home
+    event: CursorStart
+  - combo: end
+    event: CursorEnd
+  - combo: delete
+    event: KillChar
+  - combo: shift+enter
+    event: Newline
+  - combo: shift+tab
+    event: CycleThinkingLevel
+  - combo: pageup
+    event: PageUp
+  - combo: pagedown
+    event: PageDown
+  - combo: ctrl+v
+    event: PasteImage
+    condition: "!windows"
+  - combo: alt+v
+    event: PasteImage
+    condition: windows

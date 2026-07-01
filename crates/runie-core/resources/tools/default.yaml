@@ -1,0 +1,16 @@
+# Default tool list
+tools:
+  - name: read_file
+    description: Read contents of a file
+  - name: list_dir
+    description: List files in a directory
+  - name: write_file
+    description: Write content to a file
+  - name: edit_file
+    description: Edit a file using search and replace
+  - name: bash
+    description: Execute a bash command
+  - name: grep
+    description: Search for a pattern in files
+  - name: find
+    description: Find files by name pattern

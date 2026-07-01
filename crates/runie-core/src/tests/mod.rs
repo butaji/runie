@@ -3,9 +3,12 @@ mod arch_guardrails;
 #[cfg(test)]
 mod support;
 
-// Re-export shared test helpers for backward compatibility
+// Import shared test helpers from runie_testing (the canonical source).
+// Core-specific helpers remain in support module.
 #[cfg(test)]
-pub use support::{exec, fresh_state, seed_providers, tmp_store, type_str};
+pub use runie_testing::{exec, fresh_state, type_str};
+#[cfg(test)]
+pub use support::{seed_providers, tmp_store};
 
 #[cfg(test)]
 mod agent;

@@ -1,0 +1,1 @@
+read_file, list_dir, write_file, edit_file, bash, grep, find

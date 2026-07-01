@@ -1,64 +1,45 @@
 use std::collections::HashMap;
 
-/// Default bindings as (combo, event_name) tuples.
-pub const DEFAULT_BINDINGS: &[(&str, &str)] = &[
-    ("ctrl+e", "CursorEnd"),
-    ("ctrl+o", "ToggleExpand"),
-    ("ctrl+j", "Newline"),
-    ("ctrl+a", "CursorStart"),
-    ("ctrl+b", "CursorLeft"),
-    ("ctrl+f", "CursorRight"),
-    ("ctrl+w", "DeleteWord"),
-    ("ctrl+k", "DeleteToEnd"),
-    ("ctrl+u", "DeleteToStart"),
-    ("ctrl+d", "KillChar"),
-    ("ctrl+z", "Suspend"),
-    ("ctrl+y", "Redo"),
-    ("ctrl+c", "Quit"),
-    ("ctrl+q", "ForceQuit"),
-    ("ctrl+s", "Abort"),
-    ("ctrl+g", "OpenExternalEditor"),
-    ("ctrl+shift+o", "CopyLastResponse"),
-    ("ctrl+p", "ToggleCommandPalette"),
-    ("ctrl+shift+p", "ToggleCommandPalette"),
-    ("ctrl+n", "NewSession"),
-    ("ctrl+r", "ResumeSession"),
-    ("ctrl+m", "CycleModelNext"),
-    ("ctrl+shift+m", "CycleModelPrev"),
-    ("alt+enter", "FollowUp"),
-    ("alt+up", "Dequeue"),
-    ("alt+b", "CursorWordLeft"),
-    ("alt+f", "CursorWordRight"),
-    ("escape", "DialogBack"),
-    ("tab", "Input:\t"),
-    ("backspace", "Backspace"),
-    ("enter", "Submit"),
-    ("up", "HistoryPrev"),
-    ("down", "HistoryNext"),
-    ("left", "CursorLeft"),
-    ("right", "CursorRight"),
-    ("home", "CursorStart"),
-    ("end", "CursorEnd"),
-    ("delete", "KillChar"),
-    ("shift+enter", "Newline"),
-    ("shift+tab", "CycleThinkingLevel"),
-    ("pageup", "PageUp"),
-    ("pagedown", "PageDown"),
-];
+use serde::Deserialize;
 
-/// Default keybindings map (key combo string → event name)
+/// A binding entry parsed from the YAML resource.
+#[derive(Debug, Deserialize)]
+struct BindingEntry {
+    combo: String,
+    event: String,
+    #[serde(default)]
+    condition: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct KeybindingsYaml {
+    bindings: Vec<BindingEntry>,
+}
+
+/// Default bindings loaded from resources/keybindings/default.yaml.
+/// This replaces the hard-coded DEFAULT_BINDINGS array.
 pub fn default_keybindings() -> HashMap<String, String> {
+    let yaml_content = include_str!("../../resources/keybindings/default.yaml");
+    let data: KeybindingsYaml = serde_yaml::from_str(yaml_content).unwrap_or_else(|e| {
+        tracing::warn!("Failed to parse default keybindings YAML: {}, using empty map", e);
+        KeybindingsYaml { bindings: vec![] }
+    });
+
     let mut map = HashMap::new();
-    for (combo, name) in DEFAULT_BINDINGS {
-        map.insert(combo.to_string(), name.to_string());
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        map.insert("ctrl+v".to_owned(), "PasteImage".to_owned());
-    }
-    #[cfg(target_os = "windows")]
-    {
-        map.insert("alt+v".to_string(), "PasteImage".to_string());
+    for binding in data.bindings {
+        // Check platform conditions
+        if let Some(condition) = &binding.condition {
+            let condition = condition.trim();
+            let passes = match condition {
+                "windows" => cfg!(target_os = "windows"),
+                "!windows" => !cfg!(target_os = "windows"),
+                _ => true,
+            };
+            if !passes {
+                continue;
+            }
+        }
+        map.insert(binding.combo, binding.event);
     }
     map
 }

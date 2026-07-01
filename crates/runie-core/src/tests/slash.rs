@@ -1,6 +1,7 @@
 //! Slash command tests — ensure all /commands work as users expect
 
-pub use crate::tests::support::{exec, minimal_session, tmp_store, ENV_LOCK};
+pub use crate::tests::support::{minimal_session, tmp_store};
+pub use runie_testing::exec;
 
 pub mod compact;
 pub mod copy;
