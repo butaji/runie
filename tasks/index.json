@@ -17,12 +17,12 @@
   {
     "file": "add-agent-command-test-builder.md",
     "title": "Add AgentCommand test builder",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-event-assertion-helpers-to-runie-testing.md",
     "title": "Add event assertion helpers to runie-testing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-eventbus-backpressure-or-acknowledgement.md",
@@ -127,7 +127,7 @@
   {
     "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",
     "title": "Collapse remaining actor handle wrappers to ractor::ActorRef",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "compare-auth-config-setup-and-fix-gaps.md",
@@ -292,7 +292,7 @@
   {
     "file": "disable-arboard-image-features-for-text-only-clipboard.md",
     "title": "Disable arboard image features for text-only clipboard",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "drop-custom-markdown-ast-for-pulldown-cmark-and-tui-markdown.md",

@@ -8,8 +8,8 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use runie_util::display_width;
-use runie_util::labels::format_timestamp;
+use runie_core::display_width;
+use runie_core::labels::format_timestamp;
 
 use crate::markdown_render::{
     apply_color_to_inlines, extract_code_blocks, md_to_spans, parse_inline_spans, CodeBlock, MdSpan,

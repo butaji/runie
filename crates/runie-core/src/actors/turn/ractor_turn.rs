@@ -33,23 +33,24 @@ impl TurnActorState {
 /// Ractor-based TurnActor handle.
 #[derive(Clone, Debug)]
 pub struct RactorTurnHandle {
-    inner: crate::actors::ractor_adapter::RactorHandle<TurnMsg>,
+    /// Public for ergonomic access by agent extensions.
+    pub inner: ActorRef<TurnMsg>,
 }
 
 impl RactorTurnHandle {
-    /// Create a new handle wrapping the inner RactorHandle.
-    pub fn new(inner: crate::actors::ractor_adapter::RactorHandle<TurnMsg>) -> Self {
+    /// Create a new handle wrapping an ActorRef.
+    pub fn new(inner: ActorRef<TurnMsg>) -> Self {
         Self { inner }
     }
 
     /// Send a message to the actor (fire-and-forget).
     pub async fn send(&self, msg: TurnMsg) {
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
     }
 
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: TurnMsg) -> Result<(), ractor::MessagingErr<TurnMsg>> {
-        self.inner.try_send(msg)
+        self.inner.send_message(msg)
     }
 
 }

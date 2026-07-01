@@ -12,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 
 use runie_core::actors::permission::RactorPermissionHandle;
 use runie_core::actors::provider::RactorProviderHandle;
-use runie_core::actors::ractor_adapter::{spawn_ractor, RactorHandle};
+use runie_core::actors::ractor_adapter::spawn_ractor;
 use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::permissions::PermissionGate;
@@ -196,7 +196,7 @@ impl RactorAgentActor {
 }
 
 /// Handle for the ractor-based AgentActor.
-pub type RactorAgentHandle = RactorHandle<AgentMsg>;
+pub type RactorAgentHandle = ractor::ActorRef<AgentMsg>;
 
 /// Spawn a ractor-based AgentActor.
 pub async fn spawn_ractor_agent(
@@ -228,9 +228,7 @@ pub trait RactorAgentHandleExt {
 
 impl RactorAgentHandleExt for RactorAgentHandle {
     async fn run_if_queued(&self, turn_handle: &runie_core::actors::RactorTurnHandle) {
-        turn_handle
-            .send(runie_core::actors::TurnMsg::RunIfQueued)
-            .await;
+        let _ = turn_handle.inner.send_message(runie_core::actors::TurnMsg::RunIfQueued);
     }
 }
 
@@ -272,7 +270,7 @@ impl runie_core::actors::leader::LeaderAgentHandle for LeaderAgentHandleImpl {
         let inner = self.inner.clone();
         let msg = AgentMsg::RunLeader { command: cmd };
         Box::pin(async move {
-            let _ = inner.send(msg).await;
+            let _ = inner.send_message(msg);
         })
     }
 }

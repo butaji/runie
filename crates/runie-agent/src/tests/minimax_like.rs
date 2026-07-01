@@ -1,7 +1,7 @@
 //! Regression: MiniMax-style response with inline <think> tags must render
 //! a visible assistant message.
 
-use crate::{run_agent_turn, AgentCommand};
+use crate::{agent_command_builder::agent_cmd, run_agent_turn};
 use futures::Stream;
 use parking_lot::Mutex;
 use runie_core::message::{ChatMessage, Role};
@@ -58,18 +58,10 @@ impl Provider for MinimaxLikeProvider {
 #[tokio::test]
 async fn minimax_inline_think_renders_visible_response() {
     let provider = MinimaxLikeProvider;
-    let cmd = AgentCommand {
-        content: "say hi".to_string(),
-        id: "req.0".to_string(),
-        provider: "minimax".to_string(),
-        model: "MiniMax-M3".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("say hi")
+        .provider("minimax")
+        .model("MiniMax-M3")
+        .build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn(

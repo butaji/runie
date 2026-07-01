@@ -5,7 +5,7 @@
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
-use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::InputState;
@@ -13,7 +13,7 @@ use crate::model::InputState;
 use super::messages::InputMsg;
 
 /// Handle type for InputActor using ractor.
-pub type RactorInputHandle = RactorHandle<InputMsg>;
+pub type RactorInputHandle = ActorRef<InputMsg>;
 
 /// InputActor's ractor State — holds the authoritative input state.
 ///
@@ -121,7 +121,7 @@ mod tests {
         let mut sub = bus.subscribe();
 
         let (handle, _cell, _) = InputActor::spawn(bus.clone()).await.unwrap();
-        handle.send(InputMsg::InsertChar('h')).await;
+        let _ = handle.send_message(InputMsg::InsertChar('h'));
 
         // Wait for first InputChanged event
         let found_h = wait_for_event(
@@ -131,7 +131,7 @@ mod tests {
         .await;
         assert!(found_h, "Expected InputChanged with 'h'");
 
-        handle.send(InputMsg::InsertChar('i')).await;
+        let _ = handle.send_message(InputMsg::InsertChar('i'));
 
         // Wait for second InputChanged event
         let found_hi = wait_for_event(
@@ -149,12 +149,10 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _cell, _) = InputActor::spawn(bus).await.unwrap();
 
-        handle
-            .send(InputMsg::HistoryLoaded {
-                entries: vec!["first".into(), "second".into()],
-            })
-            .await;
-        handle.send(InputMsg::HistoryPrev).await;
+        let _ = handle.send_message(InputMsg::HistoryLoaded {
+            entries: vec!["first".into(), "second".into()],
+        });
+        let _ = handle.send_message(InputMsg::HistoryPrev);
         drop(handle);
     }
 
@@ -163,10 +161,10 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _cell, _) = InputActor::spawn(bus).await.unwrap();
 
-        handle.send(InputMsg::InsertChar('t')).await;
-        handle.send(InputMsg::InsertChar('e')).await;
-        handle.send(InputMsg::InsertChar('s')).await;
-        handle.send(InputMsg::Clear).await;
+        let _ = handle.send_message(InputMsg::InsertChar('t'));
+        let _ = handle.send_message(InputMsg::InsertChar('e'));
+        let _ = handle.send_message(InputMsg::InsertChar('s'));
+        let _ = handle.send_message(InputMsg::Clear);
         drop(handle);
     }
 }

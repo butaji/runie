@@ -1,24 +1,16 @@
 //! Replay captured MiniMax streams through the full agent turn with mocked IO.
 
-use runie_agent::{run_agent_turn_with_skills, AgentCommand};
-use runie_core::model::ThinkingLevel;
+use runie_agent::agent_command_builder::agent_cmd;
+use runie_agent::run_agent_turn_with_skills;
 use runie_core::Event;
 use runie_testing::fixtures::minimax as fixtures;
 use runie_testing::{allow_all_gate, capture_events, dyn_replay_provider, mock_tool_skill_minimax};
 
-fn command(content: &str) -> AgentCommand {
-    AgentCommand {
-        content: content.to_string(),
-        id: "req.0".to_string(),
-        provider: "minimax".to_string(),
-        model: "MiniMax-M3".to_string(),
-        thinking_level: ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: runie_agent::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    }
+fn command(content: &str) -> runie_agent::AgentCommand {
+    agent_cmd(content)
+        .provider("minimax")
+        .model("MiniMax-M3")
+        .build()
 }
 
 fn minimax_replay(fixture_names: &[&str]) -> runie_provider::DynProvider {

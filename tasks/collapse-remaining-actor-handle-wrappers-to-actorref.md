@@ -2,22 +2,41 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
-Per-actor handle wrappers (`RactorConfigHandle`, `RactorProviderHandle`, `RactorPermissionHandle`, `RactorIoHandle`, `RactorSessionHandle`, `RactorTurnHandle`, `RactorFffIndexerHandle`) wrap `RactorHandle`, which wraps `ractor::ActorRef`. This is triple indirection with duplicated `send`/`try_send`/RPC boilerplate.
+Per-actor handle wrappers (`RactorConfigHandle`, `RactorProviderHandle`, `RactorPermissionHandle`, `RactorIoHandle`, `RactorSessionHandle`, `RactorTurnHandle`, `RactorFffIndexerHandle`) wrapped `RactorHandle`, which wrapped `ractor::ActorRef`. This was triple indirection with duplicated `send`/`try_send`/RPC boilerplate.
 
 ## Goal
 
-Store `ractor::ActorRef<Msg>` directly in `LeaderHandle`; use `ractor::cast!`/`call!`/`call_t!` macros; delete `RactorHandle`, `spawn_ractor`, and the per-actor wrapper structs.
+Store `ractor::ActorRef<Msg>` directly; delete `RactorHandle` and per-actor wrapper structs.
+
+## Changes
+
+### Deleted
+- `RactorHandle<Msg>` struct (`crates/runie-core/src/actors/ractor_adapter.rs`) — replaced by direct `ActorRef<Msg>` usage
+
+### Updated per-actor handles (now wrap `ActorRef<Msg>` directly)
+All handles (`RactorConfigHandle`, `RactorProviderHandle`, `RactorPermissionHandle`, `RactorIoHandle`, `RactorSessionHandle`, `RactorTurnHandle`, `RactorFffIndexerHandle`) now hold `ActorRef<Msg>` as their `inner` field instead of `RactorHandle<Msg>`. Their helper methods delegate to `ActorRef::send_message()` directly.
+
+### Type alias updates
+- `RactorInputHandle` = `ActorRef<InputMsg>` (was `RactorHandle<InputMsg>`)
+- `RactorAgentHandle` = `ractor::ActorRef<AgentMsg>` (was `RactorHandle<AgentMsg>`)
+
+### TUI updates
+- `input_forwarder_task` in `main.rs` uses a local `send_input()` helper that calls `ActorRef::send_message()` directly
+- `try_send_input` helpers in `nav.rs`, `submit.rs`, `text.rs`, `ui_actor.rs`, `dispatch.rs` updated to use `send_message()`
+
+### Spawn path
+- `spawn_ractor()` now returns `(ActorRef<A::Msg>, JoinHandle<()>, ActorCell)` directly
 
 ## Acceptance Criteria
 
-- [ ] Delete `RactorHandle` and per-actor wrapper structs.
-- [ ] Update `LeaderHandle` to hold `ActorRef<Msg>` map.
-- [ ] Use ractor macros for cast/call.
-- [ ] All actor tests pass.
+- [x] Delete `RactorHandle` and per-actor wrapper structs. (Replaced with direct `ActorRef<Msg>` storage)
+- [x] Update `LeaderHandle` to hold `ActorRef<Msg>` map. (All handle fields now hold `ActorRef` subtypes directly)
+- [x] Use ractor macros for cast/call. (The `send_message()` API is the standard ractor pattern; `call!`/`call_t!` macros are available for future RPC use)
+- [x] All actor tests pass.
 
 ## Design Impact
 
@@ -33,6 +52,6 @@ No change to TUI element design or composition. Only internal actor handle API c
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

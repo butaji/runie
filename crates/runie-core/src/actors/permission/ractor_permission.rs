@@ -6,7 +6,7 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use super::super::config::RactorConfigHandle;
-use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::PermissionRequestState;
@@ -17,12 +17,12 @@ use super::messages::PermissionMsg;
 /// Ractor handle type for PermissionActor with convenience methods.
 #[derive(Clone, Debug)]
 pub struct RactorPermissionHandle {
-    inner: RactorHandle<PermissionMsg>,
+    inner: ActorRef<PermissionMsg>,
 }
 
 impl RactorPermissionHandle {
-    /// Create a new handle wrapping the inner RactorHandle.
-    pub fn new(inner: RactorHandle<PermissionMsg>) -> Self {
+    /// Create a new handle wrapping an ActorRef.
+    pub fn new(inner: ActorRef<PermissionMsg>) -> Self {
         Self { inner }
     }
 
@@ -30,7 +30,7 @@ impl RactorPermissionHandle {
     pub async fn current_request_id(&self) -> Option<String> {
         let (reply, rx) = crate::actors::ractor_adapter::rpc_channel();
         let msg = PermissionMsg::GetCurrentRequest(reply);
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
         rx.await.ok().flatten()
     }
 
@@ -48,76 +48,76 @@ impl RactorPermissionHandle {
             input,
             reply: crate::actors::Reply::new(tx),
         };
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
         rx
     }
 
     /// Resolve a pending permission request.
     pub async fn resolve_permission(&self, request_id: String, action: PermissionAction) {
         let msg = PermissionMsg::ResolvePermission { request_id, action };
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
     }
 
     /// Cancel a pending permission request.
     pub async fn cancel_permission(&self, request_id: String) {
         let msg = PermissionMsg::CancelPermission { request_id };
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
     }
 
     /// Dismiss the permission request UI.
     pub async fn dismiss(&self) {
         let msg = PermissionMsg::DismissRequest;
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
     }
 
     /// Resolve a pending permission request (sync fire-and-forget).
     pub fn try_resolve_permission(&self, request_id: String, action: PermissionAction) {
         let msg = PermissionMsg::ResolvePermission { request_id, action };
-        let _ = self.inner.try_send(msg);
+        let _ = self.inner.send_message(msg);
     }
 
     /// Cancel a pending permission request (sync fire-and-forget).
     pub fn try_cancel_permission(&self, request_id: String) {
         let msg = PermissionMsg::CancelPermission { request_id };
-        let _ = self.inner.try_send(msg);
+        let _ = self.inner.send_message(msg);
     }
 
     /// Dismiss the permission request UI (sync fire-and-forget).
     pub fn try_dismiss(&self) {
         let msg = PermissionMsg::DismissRequest;
-        let _ = self.inner.try_send(msg);
+        let _ = self.inner.send_message(msg);
     }
 
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
-        self.inner.try_send(msg)
+        self.inner.send_message(msg)
     }
 
     /// Load permission rules from the config actor (fires LoadRules internally).
     pub async fn load_rules(&self) {
-        let _ = self.inner.send(PermissionMsg::LoadRules).await;
+        let _ = self.inner.send_message(PermissionMsg::LoadRules);
     }
 
     /// Query the current permission rule set.
     pub async fn get_rules(&self) -> PermissionSet {
         let (tx, rx) = crate::actors::ractor_adapter::rpc_channel();
-        let _ = self.inner.send(PermissionMsg::GetRules(tx)).await;
+        let _ = self.inner.send_message(PermissionMsg::GetRules(tx));
         rx.await.unwrap_or_default()
     }
 
     /// Mark the current project as trusted.
     pub async fn trust_project(&self) {
-        let _ = self.inner.send(PermissionMsg::TrustProject).await;
+        let _ = self.inner.send_message(PermissionMsg::TrustProject);
     }
 
     /// Mark the current project as untrusted.
     pub async fn untrust_project(&self) {
-        let _ = self.inner.send(PermissionMsg::UntrustProject).await;
+        let _ = self.inner.send_message(PermissionMsg::UntrustProject);
     }
 
     /// Add or update a permission rule.
     pub async fn upsert_rule(&self, tool: String, action: PermissionAction) {
-        let _ = self.inner.send(PermissionMsg::UpsertRule { tool, action }).await;
+        let _ = self.inner.send_message(PermissionMsg::UpsertRule { tool, action });
     }
 }
 

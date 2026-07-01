@@ -1,7 +1,7 @@
 //! Agent turn tests that exercise the TUI-style permission gate.
 
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn, AgentCommand};
+use crate::{agent_command_builder::agent_cmd, run_agent_turn};
 use parking_lot::Mutex;
 use runie_core::permissions::{
     AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
@@ -16,18 +16,7 @@ use std::sync::Arc;
 async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "list files".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("list files").build();
 
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();

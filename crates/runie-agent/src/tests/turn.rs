@@ -1,7 +1,8 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
 use crate::{
-    run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages, AgentCommand,
+    agent_command_builder::agent_cmd, run_agent_turn, run_agent_turn_with_skills,
+    turn::build_initial_messages,
 };
 use anyhow::Result;
 use parking_lot::Mutex;
@@ -11,6 +12,7 @@ use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::Event;
 use runie_testing::mock_tool_skill;
+use runie_testing::event_helpers::{assert_event, count_events, find_event};
 use runie_testing::{allow_all_gate, mock_provider, RecordingSkill};
 use std::sync::Arc;
 
@@ -24,18 +26,7 @@ use std::sync::Arc;
 async fn test_agent_loop_single_word_echo_completes_once() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "hello".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("hello").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn(
@@ -76,18 +67,7 @@ async fn test_agent_loop_single_word_echo_completes_once() {
 async fn test_agent_loop_simple_response() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "Hello World".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("Hello World").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn(
@@ -129,18 +109,7 @@ async fn test_agent_loop_simple_response() {
 async fn test_agent_loop_with_tool_call() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "list files".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("list files").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn_with_skills(
@@ -177,18 +146,7 @@ async fn test_agent_loop_with_tool_call() {
 async fn test_agent_loop_with_native_tool_call_events() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "run native tool".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("run native tool").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn_with_skills(
@@ -225,18 +183,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
 async fn test_agent_loop_respects_max_iterations() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "loop".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("loop").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn(
@@ -255,18 +202,7 @@ async fn test_agent_loop_respects_max_iterations() {
 async fn test_agent_loop_events_have_correct_id() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "test".to_string(),
-        id: "req.42".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("test").id("req.42").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn(
@@ -296,18 +232,7 @@ async fn test_agent_loop_events_have_correct_id() {
 
 #[test]
 fn read_only_excludes_write_tools() {
-    let cmd = AgentCommand {
-        content: "test".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: true,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("test").read_only(true).build();
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
         runie_core::message::Role::System => msgs[0].content().clone(),
@@ -330,18 +255,7 @@ fn read_only_excludes_write_tools() {
 
 #[test]
 fn read_write_includes_all_tools() {
-    let cmd = AgentCommand {
-        content: "test".to_string(),
-        id: "req.1".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("test").id("req.1").build();
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
         runie_core::message::Role::System => msgs[0].content().clone(),
@@ -362,18 +276,7 @@ fn read_write_includes_all_tools() {
 async fn agent_tool_event_carries_mock_output() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "list files".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("list files").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn_with_skills(
@@ -403,18 +306,7 @@ async fn agent_tool_event_carries_mock_output() {
 async fn tool_call_event_matches_mock_output() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "list files".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("list files").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn_with_skills(
@@ -474,18 +366,7 @@ fn tool_call_hook_receives_input() {
 async fn text_turn_emits_turn_complete() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "plain hello".to_string(),
-        id: "req.text".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("plain hello").id("req.text").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn(
@@ -516,18 +397,7 @@ async fn text_turn_emits_turn_complete() {
 async fn tool_turn_emits_turn_complete() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "list files".to_string(),
-        id: "req.tools".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("list files").id("req.tools").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn_with_skills(
@@ -570,18 +440,7 @@ impl Provider for ErrorProvider {
 #[tokio::test]
 async fn stream_error_emits_thought_done() {
     let provider = ErrorProvider;
-    let cmd = AgentCommand {
-        content: "error".to_string(),
-        id: "req.err".to_string(),
-        provider: "error".to_string(),
-        model: "error".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("error").id("req.err").provider("error").model("error").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     let result = run_agent_turn(

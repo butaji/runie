@@ -555,7 +555,7 @@ impl UiActor {
         let Some(handles) = self.state.actor_handles() else {
             return;
         };
-        let _ = handles.input.try_send(msg);
+        let _ = handles.input.send_message(msg);
     }
 
     /// Check if a command is a quit command (matches slash-command semantics).

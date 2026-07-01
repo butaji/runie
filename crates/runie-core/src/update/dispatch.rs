@@ -195,7 +195,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
             if let Some(handles) = state.actor_handles() {
                 let _ = handles
                     .input
-                    .try_send(crate::actors::InputMsg::HistoryLoaded {
+                    .send_message(crate::actors::InputMsg::HistoryLoaded {
                         entries: entries.clone(),
                     });
             }

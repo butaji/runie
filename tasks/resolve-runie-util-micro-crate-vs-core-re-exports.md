@@ -2,7 +2,14 @@
 
 ## Status
 
-`todo`
+`done`
+
+## Decision: Fold
+
+Folded `runie-util` into `runie-core` because:
+- The crate was tiny (2 modules, no complex external deps worth isolating)
+- Both `runie-core` and `runie-tui` used these utilities
+- Eliminates extra crate boundary without value
 
 ## Context
 
@@ -14,10 +21,10 @@ Either fold `runie-util` into `runie-core` and delete re-export stubs, or expand
 
 ## Acceptance Criteria
 
-- [ ] Decide fold vs expand.
-- [ ] Move code accordingly.
-- [ ] Delete duplicate re-exports.
-- [ ] All tests pass.
+- [x] Decide fold vs expand.
+- [x] Move code accordingly.
+- [x] Delete duplicate re-exports.
+- [x] All tests pass.
 
 ## Design Impact
 

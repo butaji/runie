@@ -33,8 +33,8 @@ pub mod declarative;
 pub mod dialog;
 pub mod diff;
 pub mod resource_loader;
-// display_width re-exported from runie-util for internal use.
-mod display_width;
+/// Display-cell width helpers for terminal layout.
+pub mod display_width;
 pub mod dry_run;
 pub mod dsl;
 pub mod edit_preview;
@@ -45,6 +45,7 @@ pub mod headless_runtime;
 pub mod hooks;
 pub mod input_history;
 pub mod keybindings;
+/// Static labels and text constants.
 pub mod labels;
 pub mod layout;
 pub mod lifecycle;

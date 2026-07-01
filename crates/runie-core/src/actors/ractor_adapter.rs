@@ -1,9 +1,8 @@
-//! Ractor adapter types: handle wrappers, RPC reply channels, and spawn helpers.
+//! Ractor adapter types: RPC reply channels and spawn helpers.
 //!
 //! All actors use `ractor` as the runtime. This module provides:
-//! - `RactorHandle<Msg>` — cloneable handle to a ractor actor
 //! - `RpcReply<T>` / `rpc_channel()` — oneshot-based RPC reply channels
-//! - `spawn_ractor()` — ergonomic actor spawn helper
+//! - `spawn_ractor()` — ergonomic actor spawn helper that returns `ActorRef` directly
 
 use ractor::concurrency::JoinHandle;
 use ractor::SpawnErr as RactorSpawnErr;
@@ -16,79 +15,20 @@ use crate::bus::EventBus;
 // Re-export ractor types for convenience
 pub use ractor::{async_trait, ActorName};
 
-/// Handle to a ractor-based actor.
-#[derive(Clone)]
-pub struct RactorHandle<Msg: ractor::Message> {
-    actor_ref: ActorRef<Msg>,
-}
-
-impl<Msg: ractor::Message> RactorHandle<Msg> {
-    /// Send a message to the actor (fire-and-forget).
-    pub async fn send(&self, msg: Msg) {
-        let _ = self.actor_ref.send_message(msg);
-    }
-
-    /// Try to send a message (non-blocking).
-    /// Returns Ok(()) if the message was sent, Err(MessagingErr) if the channel is closed.
-    pub fn try_send(&self, msg: Msg) -> Result<(), ractor::MessagingErr<Msg>> {
-        self.actor_ref.send_message(msg)
-    }
-
-    /// Get the actor cell for supervision.
-    pub fn cell(&self) -> ractor::ActorCell {
-        self.actor_ref.get_cell()
-    }
-
-    /// Access the underlying actor ref.
-    pub fn actor_ref(&self) -> &ActorRef<Msg> {
-        &self.actor_ref
-    }
-
-    /// Convert to an owned `ActorRef`.
-    pub fn into_actor_ref(self) -> ActorRef<Msg> {
-        self.actor_ref
-    }
-
-}
-
-/// Construct a `RactorHandle` from an owned `ActorRef`.
-impl<Msg: ractor::Message> From<ActorRef<Msg>> for RactorHandle<Msg> {
-    fn from(actor_ref: ActorRef<Msg>) -> Self {
-        Self { actor_ref }
-    }
-}
-
-impl<Msg: ractor::Message> std::fmt::Debug for RactorHandle<Msg> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RactorHandle")
-            .field("actor_id", &self.actor_ref.get_id())
-            .finish()
-    }
-}
-
-/// Spawn a ractor actor and return a handle.
+/// Spawn a ractor actor and return an `ActorRef`.
 pub async fn spawn_ractor<A>(
     name: Option<ActorName>,
     actor: A,
     args: A::Arguments,
-) -> Result<(RactorHandle<A::Msg>, JoinHandle<()>, ractor::ActorCell), RactorSpawnErr>
+) -> Result<(ActorRef<A::Msg>, JoinHandle<()>, ractor::ActorCell), RactorSpawnErr>
 where
     A: Actor,
 {
     let (actor_ref, handle) = Actor::spawn(name, actor, args).await?;
-    Ok((
-        RactorHandle {
-            actor_ref: actor_ref.clone(),
-        },
-        handle,
-        actor_ref.get_cell(),
-    ))
+    Ok((actor_ref.clone(), handle, actor_ref.get_cell()))
 }
 
-// ── Event bus integration ──────────────────────────────────────────────────────
 
-// Note: EventBus<E> is already Clone, so actors can hold it directly.
-// No wrapper is needed.
 
 // ── Reply wrapper (for RPC) ───────────────────────────────────────────────────
 
@@ -134,7 +74,7 @@ pub use ractor::{ActorErr, ActorProcessingErr, MessagingErr, RactorErr};
 mod tests {
     use super::*;
 
-/// Test that actors can publish events directly via EventBus.
+    /// Test that actors can publish events directly via EventBus.
     #[tokio::test]
     async fn event_bus_actors_publish_directly() {
         let bus = EventBus::<String>::new(16);

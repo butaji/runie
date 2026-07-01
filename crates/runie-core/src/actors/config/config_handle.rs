@@ -1,9 +1,11 @@
-//! Ractor-based `ConfigActor` implementation.
+//! Ractor-based `ConfigActor` handle.
 //!
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
 use std::path::PathBuf;
+
+use ractor::ActorRef;
 
 use crate::actors::ractor_adapter::Reply;
 use crate::bus::EventBus;
@@ -18,33 +20,28 @@ use crate::config::ConfigScope;
 /// API-compatible with `ConfigActorHandle` for drop-in replacement.
 #[derive(Clone, Debug)]
 pub struct RactorConfigHandle {
-    inner: crate::actors::ractor_adapter::RactorHandle<ConfigMsg>,
+    inner: ActorRef<ConfigMsg>,
 }
 
 impl RactorConfigHandle {
-    pub fn new(inner: crate::actors::ractor_adapter::RactorHandle<ConfigMsg>) -> Self {
+    pub fn new(inner: ActorRef<ConfigMsg>) -> Self {
         Self { inner }
-    }
-
-    /// Get the underlying ractor handle for low-level access.
-    pub fn tx(&self) -> &crate::actors::ractor_adapter::RactorHandle<ConfigMsg> {
-        &self.inner
     }
 
     /// Send a message to the actor (fire-and-forget).
     pub async fn send(&self, msg: ConfigMsg) {
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
     }
 
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: ConfigMsg) -> Result<(), Box<ractor::MessagingErr<ConfigMsg>>> {
-        self.inner.try_send(msg).map_err(Box::new)
+        self.inner.send_message(msg).map_err(Box::new)
     }
 
     /// Request the current in-memory config.
     pub async fn get_config(&self) -> Option<Config> {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self.inner.send(ConfigMsg::GetConfig(Reply::new(tx))).await;
+        let _ = self.inner.send_message(ConfigMsg::GetConfig(Reply::new(tx)));
         rx.await.ok()
     }
 
@@ -53,19 +50,18 @@ impl RactorConfigHandle {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send(ConfigMsg::GetConfiguredProviders(Reply::new(tx)))
-            .await;
+            .send_message(ConfigMsg::GetConfiguredProviders(Reply::new(tx)));
         rx.await.ok()
     }
 
     /// Ask the actor to load config from disk.
     pub async fn load(&self) {
-        let _ = self.inner.send(ConfigMsg::Load).await;
+        let _ = self.inner.send_message(ConfigMsg::Load);
     }
 
     /// Ask the actor to reload config from disk.
     pub async fn reload(&self) {
-        let _ = self.inner.send(ConfigMsg::Reload).await;
+        let _ = self.inner.send_message(ConfigMsg::Reload);
     }
 
     /// Save a provider configuration.
@@ -78,59 +74,56 @@ impl RactorConfigHandle {
     ) {
         let _ = self
             .inner
-            .send(ConfigMsg::SaveProvider {
+            .send_message(ConfigMsg::SaveProvider {
                 name,
                 base_url,
                 api_key,
                 models,
-            })
-            .await;
+            });
     }
 
     /// Remove a provider configuration.
     pub async fn remove_provider(&self, name: String) {
-        let _ = self.inner.send(ConfigMsg::RemoveProvider { name }).await;
+        let _ = self.inner.send_message(ConfigMsg::RemoveProvider { name });
     }
 
     /// Persist the active provider/model as the default.
     pub async fn set_default_model(&self, provider: String, model: String) {
         let _ = self
             .inner
-            .send(ConfigMsg::SetDefaultModel { provider, model })
-            .await;
+            .send_message(ConfigMsg::SetDefaultModel { provider, model });
     }
 
     /// Update the saved model list for a provider.
     pub async fn set_provider_models(&self, name: String, models: Vec<String>) {
         let _ = self
             .inner
-            .send(ConfigMsg::SetProviderModels { name, models })
-            .await;
+            .send_message(ConfigMsg::SetProviderModels { name, models });
     }
 
     /// Set the theme name.
     pub async fn set_theme(&self, name: String) {
-        let _ = self.inner.send(ConfigMsg::SetTheme { name }).await;
+        let _ = self.inner.send_message(ConfigMsg::SetTheme { name });
     }
 
     /// Set vim mode.
     pub async fn set_vim_mode(&self, enabled: bool) {
-        let _ = self.inner.send(ConfigMsg::SetVimMode { enabled }).await;
+        let _ = self.inner.send_message(ConfigMsg::SetVimMode { enabled });
     }
 
     /// Set telemetry enabled.
     pub async fn set_telemetry(&self, enabled: bool) {
-        let _ = self.inner.send(ConfigMsg::SetTelemetry { enabled }).await;
+        let _ = self.inner.send_message(ConfigMsg::SetTelemetry { enabled });
     }
 
     /// Set truncation limits.
     pub async fn set_truncation(&self, limits: TruncationSection) {
-        let _ = self.inner.send(ConfigMsg::SetTruncation { limits }).await;
+        let _ = self.inner.send_message(ConfigMsg::SetTruncation { limits });
     }
 
     /// Set thinking level.
     pub async fn set_thinking_level(&self, level: ThinkingLevel) {
-        let _ = self.inner.send(ConfigMsg::SetThinkingLevel { level }).await;
+        let _ = self.inner.send_message(ConfigMsg::SetThinkingLevel { level });
     }
 
     /// Load layered config (global + project) and return the effective config.
@@ -138,10 +131,9 @@ impl RactorConfigHandle {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send(ConfigMsg::LoadLayers(
+            .send_message(ConfigMsg::LoadLayers(
                 crate::actors::ractor_adapter::Reply::new(tx),
-            ))
-            .await;
+            ));
         rx.await.ok()
     }
 
@@ -152,13 +144,12 @@ impl RactorConfigHandle {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send(ConfigMsg::AddMcpServer {
+            .send_message(ConfigMsg::AddMcpServer {
                 scope,
                 name,
                 server,
                 reply: crate::actors::ractor_adapter::Reply::new(tx),
-            })
-            .await;
+            });
         let _ = rx.await;
     }
 
@@ -169,12 +160,11 @@ impl RactorConfigHandle {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send(ConfigMsg::RemoveMcpServer {
+            .send_message(ConfigMsg::RemoveMcpServer {
                 scope,
                 name,
                 reply: crate::actors::ractor_adapter::Reply::new(tx),
-            })
-            .await;
+            });
         let _ = rx.await;
     }
 
@@ -183,11 +173,10 @@ impl RactorConfigHandle {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send(ConfigMsg::ListMcpServers {
+            .send_message(ConfigMsg::ListMcpServers {
                 scope,
                 reply: crate::actors::ractor_adapter::Reply::new(tx),
-            })
-            .await;
+            });
         rx.await.unwrap_or_default()
     }
 }

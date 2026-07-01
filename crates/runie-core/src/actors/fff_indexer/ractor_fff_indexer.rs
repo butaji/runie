@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
 
-use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::FffFileEntry;
@@ -20,23 +20,23 @@ use super::{
 /// Ractor-based FffIndexerActor handle.
 #[derive(Clone, Debug)]
 pub struct RactorFffIndexerHandle {
-    inner: RactorHandle<FffSearchRequest>,
+    inner: ActorRef<FffSearchRequest>,
 }
 
 impl RactorFffIndexerHandle {
-    /// Create a new handle wrapping the inner RactorHandle.
-    pub fn new(inner: RactorHandle<FffSearchRequest>) -> Self {
+    /// Create a new handle wrapping an ActorRef.
+    pub fn new(inner: ActorRef<FffSearchRequest>) -> Self {
         Self { inner }
     }
 
     /// Send a search request to the indexer.
     pub async fn search(&self, request: FffSearchRequest) {
-        self.inner.send(request).await;
+        let _ = self.inner.send_message(request);
     }
 
     /// Try to send a search request (non-blocking).
     pub fn try_search(&self, request: FffSearchRequest) {
-        let _ = self.inner.try_send(request);
+        let _ = self.inner.send_message(request);
     }
 
     /// Try to send a message (non-blocking).
@@ -44,7 +44,7 @@ impl RactorFffIndexerHandle {
         &self,
         msg: FffSearchRequest,
     ) -> Result<(), ractor::MessagingErr<FffSearchRequest>> {
-        self.inner.try_send(msg)
+        self.inner.send_message(msg)
     }
 }
 

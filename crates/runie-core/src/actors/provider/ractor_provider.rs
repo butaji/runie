@@ -15,7 +15,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 #[cfg(test)]
 use crate::actors::config::RactorConfigActor;
 use crate::actors::config::RactorConfigHandle;
-use crate::actors::ractor_adapter::{rpc_channel, spawn_ractor, RactorHandle};
+use crate::actors::ractor_adapter::{rpc_channel, spawn_ractor};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -27,18 +27,13 @@ use super::messages::ProviderMsg;
 /// Ractor-based `ProviderActor` handle with ergonomic helper methods.
 #[derive(Clone, Debug)]
 pub struct RactorProviderHandle {
-    inner: RactorHandle<ProviderMsg>,
+    inner: ActorRef<ProviderMsg>,
 }
 
 impl RactorProviderHandle {
-    /// Wrap an existing `RactorHandle`.
-    pub fn new(inner: RactorHandle<ProviderMsg>) -> Self {
+    /// Wrap an existing `ActorRef`.
+    pub fn new(inner: ActorRef<ProviderMsg>) -> Self {
         Self { inner }
-    }
-
-    /// Access the underlying ractor handle.
-    pub fn tx(&self) -> &RactorHandle<ProviderMsg> {
-        &self.inner
     }
 
     /// Build a provider for the given registry key and model.
@@ -53,7 +48,7 @@ impl RactorProviderHandle {
             model,
             reply,
         };
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
         rx.await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped").into()))
     }
@@ -70,7 +65,7 @@ impl RactorProviderHandle {
             api_key,
             reply,
         };
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
         rx.await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
     }
@@ -82,7 +77,7 @@ impl RactorProviderHandle {
             provider,
             reply,
         };
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
         rx.await
             .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
     }

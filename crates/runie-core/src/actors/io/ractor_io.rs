@@ -11,7 +11,7 @@ use shell_words;
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
-use crate::actors::ractor_adapter::{spawn_ractor, RactorHandle};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::snapshot::GitInfo;
@@ -22,18 +22,18 @@ use super::messages::IoMsg;
 /// Ractor-based IoActor handle.
 #[derive(Clone, Debug)]
 pub struct RactorIoHandle {
-    inner: RactorHandle<IoMsg>,
+    inner: ActorRef<IoMsg>,
 }
 
 impl RactorIoHandle {
-    /// Create a new handle wrapping the inner RactorHandle.
-    pub fn new(inner: RactorHandle<IoMsg>) -> Self {
+    /// Create a new handle wrapping an ActorRef.
+    pub fn new(inner: ActorRef<IoMsg>) -> Self {
         Self { inner }
     }
 
     /// Send a message to the actor (fire-and-forget).
     pub async fn send(&self, msg: IoMsg) {
-        let _ = self.inner.send(msg).await;
+        let _ = self.inner.send_message(msg);
     }
 
     /// Request running a bash command.
@@ -45,52 +45,50 @@ impl RactorIoHandle {
     /// If `shell` is true, the command is passed to `sh -c` to support shell
     /// metacharacters (pipes, redirects, command substitution, etc.).
     pub async fn run_bash(&self, command: String, shell: bool) {
-        self.inner.send(IoMsg::RunBash { command, shell }).await;
+        let _ = self.inner.send_message(IoMsg::RunBash { command, shell });
     }
 
     /// Request writing files.
     pub async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
-        self.inner.send(IoMsg::WriteFiles { edits }).await;
+        let _ = self.inner.send_message(IoMsg::WriteFiles { edits });
     }
 
     /// Request environment detection.
     pub async fn detect_env(&self) {
-        self.inner.send(IoMsg::DetectEnv).await;
+        let _ = self.inner.send_message(IoMsg::DetectEnv);
     }
 
     /// Request sharing session to gist.
     pub async fn share_session(&self, messages: Vec<ChatMessage>, display_name: Option<String>) {
-        self.inner
-            .send(IoMsg::ShareSession {
-                messages,
-                display_name,
-            })
-            .await;
+        let _ = self.inner.send_message(IoMsg::ShareSession {
+            messages,
+            display_name,
+        });
     }
 
     /// Request opening external editor.
     pub async fn open_external_editor(&self, text: String) {
-        self.inner.send(IoMsg::OpenExternalEditor { text }).await;
+        let _ = self.inner.send_message(IoMsg::OpenExternalEditor { text });
     }
 
     /// Request clipboard write.
     pub async fn write_clipboard(&self, text: String) {
-        self.inner.send(IoMsg::WriteClipboard { text }).await;
+        let _ = self.inner.send_message(IoMsg::WriteClipboard { text });
     }
 
     /// Request clipboard read.
     pub async fn read_clipboard(&self) {
-        self.inner.send(IoMsg::ReadClipboard).await;
+        let _ = self.inner.send_message(IoMsg::ReadClipboard);
     }
 
     /// Request process suspend.
     pub async fn suspend_process(&self) {
-        self.inner.send(IoMsg::SuspendProcess).await;
+        let _ = self.inner.send_message(IoMsg::SuspendProcess);
     }
 
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: IoMsg) -> Result<(), ractor::MessagingErr<IoMsg>> {
-        self.inner.try_send(msg)
+        self.inner.send_message(msg)
     }
 }
 

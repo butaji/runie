@@ -61,7 +61,6 @@ dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
 arboard.workspace = true
-runie-util.workspace = true
 which.workspace = true
 ignore.workspace = true
 globset.workspace = true

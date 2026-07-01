@@ -109,61 +109,65 @@ async fn input_forwarder_task(
     submit_tx: mpsc::Sender<Event>,
 ) {
     use runie_core::actors::InputMsg;
+    // Local helper: fire-and-forget send to InputActor (sync send_message with no-op await).
+    async fn send_input(handle: &runie_core::actors::RactorInputHandle, msg: InputMsg) {
+        let _ = handle.send_message(msg);
+    }
     while let Some(evt) = input_rx.recv().await {
         match &evt {
             Event::Input(c) => {
-                input_handle.send(InputMsg::InsertChar(*c)).await;
+                send_input(&input_handle, InputMsg::InsertChar(*c)).await;
             }
             Event::Backspace => {
-                input_handle.send(InputMsg::Backspace).await;
+                send_input(&input_handle, InputMsg::Backspace).await;
             }
             Event::Newline => {
-                input_handle.send(InputMsg::Newline).await;
+                send_input(&input_handle, InputMsg::Newline).await;
             }
             Event::DeleteWord => {
-                input_handle.send(InputMsg::DeleteWord).await;
+                send_input(&input_handle, InputMsg::DeleteWord).await;
             }
             Event::DeleteToEnd => {
-                input_handle.send(InputMsg::DeleteToEnd).await;
+                send_input(&input_handle, InputMsg::DeleteToEnd).await;
             }
             Event::DeleteToStart => {
-                input_handle.send(InputMsg::DeleteToStart).await;
+                send_input(&input_handle, InputMsg::DeleteToStart).await;
             }
             Event::CursorLeft => {
-                input_handle.send(InputMsg::CursorLeft).await;
+                send_input(&input_handle, InputMsg::CursorLeft).await;
             }
             Event::CursorRight => {
-                input_handle.send(InputMsg::CursorRight).await;
+                send_input(&input_handle, InputMsg::CursorRight).await;
             }
             Event::CursorStart => {
-                input_handle.send(InputMsg::CursorStart).await;
+                send_input(&input_handle, InputMsg::CursorStart).await;
             }
             Event::CursorEnd => {
-                input_handle.send(InputMsg::CursorEnd).await;
+                send_input(&input_handle, InputMsg::CursorEnd).await;
             }
             Event::CursorWordLeft => {
-                input_handle.send(InputMsg::CursorWordLeft).await;
+                send_input(&input_handle, InputMsg::CursorWordLeft).await;
             }
             Event::CursorWordRight => {
-                input_handle.send(InputMsg::CursorWordRight).await;
+                send_input(&input_handle, InputMsg::CursorWordRight).await;
             }
             Event::HistoryPrev => {
-                input_handle.send(InputMsg::HistoryPrev).await;
+                send_input(&input_handle, InputMsg::HistoryPrev).await;
             }
             Event::HistoryNext => {
-                input_handle.send(InputMsg::HistoryNext).await;
+                send_input(&input_handle, InputMsg::HistoryNext).await;
             }
             Event::Undo => {
-                input_handle.send(InputMsg::Undo).await;
+                send_input(&input_handle, InputMsg::Undo).await;
             }
             Event::Redo => {
-                input_handle.send(InputMsg::Redo).await;
+                send_input(&input_handle, InputMsg::Redo).await;
             }
             Event::Paste(s) => {
-                input_handle.send(InputMsg::Paste(s.clone())).await;
+                send_input(&input_handle, InputMsg::Paste(s.clone())).await;
             }
             Event::PasteImage => {
-                input_handle.send(InputMsg::PasteImage).await;
+                send_input(&input_handle, InputMsg::PasteImage).await;
             }
             Event::Submit => {
                 // Submit must be handled by UiActor so it can capture the input

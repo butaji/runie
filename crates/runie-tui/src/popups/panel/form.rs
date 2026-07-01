@@ -352,8 +352,8 @@ fn input_display_spans(
     let cursor_pos = cursor_pos.min(value.len());
     let before = &value[..cursor_pos];
     let after = &value[cursor_pos..];
-    let before_w = runie_util::display_width::width(before) as usize;
-    let after_w = runie_util::display_width::width(after) as usize;
+    let before_w = runie_core::display_width::width(before) as usize;
+    let after_w = runie_core::display_width::width(after) as usize;
     let scroll = compute_field_scroll(before_w, after_w, avail);
 
     build_field_spans(

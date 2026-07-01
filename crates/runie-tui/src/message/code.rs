@@ -6,7 +6,7 @@ use crate::syntax::highlight_code;
 use crate::theme::{
     code_header_label, style_code_header, style_timestamp, GLYPH_AGENT, GLYPH_INDENT,
 };
-use runie_util::display_width;
+use runie_core::display_width;
 
 pub(super) fn render_code_header(
     lang: &str,

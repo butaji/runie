@@ -2,7 +2,7 @@
 //! legacy TOOL: markers in assistant messages.
 
 use crate::tests::ensure_mock_provider;
-use crate::{run_agent_turn_with_skills, AgentCommand};
+use crate::{agent_command_builder::agent_cmd, run_agent_turn_with_skills};
 use parking_lot::Mutex;
 use runie_core::message::Role;
 use runie_testing::{allow_all_gate, mock_provider, mock_tool_skill};
@@ -12,18 +12,7 @@ use std::sync::Arc;
 async fn agent_turn_state_no_raw_tool_markers() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-    let cmd = AgentCommand {
-        content: "list files".to_string(),
-        id: "req.0".to_string(),
-        provider: "mock".to_string(),
-        model: "echo".to_string(),
-        thinking_level: runie_core::model::ThinkingLevel::Off,
-        read_only: false,
-        skills_context: String::new(),
-        system_prompt: String::new(),
-        truncation: crate::truncate::TruncationPolicy::default(),
-        cancellation_token: tokio_util::sync::CancellationToken::new(),
-    };
+        let cmd = agent_cmd("list files").build();
     let events = Arc::new(Mutex::new(Vec::new()));
     let events_clone = events.clone();
     run_agent_turn_with_skills(

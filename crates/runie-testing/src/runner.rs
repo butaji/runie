@@ -4,7 +4,8 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use std::time::Duration;
 
-use runie_agent::{run_agent_turn, AgentCommand, PermissionGate};
+use runie_agent::agent_command_builder::agent_cmd;
+use runie_agent::{run_agent_turn, PermissionGate};
 use runie_core::config::Config;
 use runie_core::event::Event;
 use runie_core::permissions::{AutoAllowSink, PermissionManager};
@@ -55,18 +56,11 @@ impl TestRunner {
         provider: &DynProvider,
     ) -> anyhow::Result<TestSubmissionId> {
         let id = format!("sub.{}", uuid::Uuid::new_v4());
-        let cmd = AgentCommand {
-            content: input.to_owned(),
-            id: id.clone(),
-            provider: self.config().provider.clone().unwrap_or("mock".into()),
-            model: self.config().default_model().unwrap_or("echo").to_owned(),
-            thinking_level: runie_core::model::ThinkingLevel::Off,
-            read_only: false,
-            skills_context: String::new(),
-            system_prompt: String::new(),
-            truncation: runie_agent::truncate::TruncationPolicy::default(),
-            cancellation_token: tokio_util::sync::CancellationToken::new(),
-        };
+        let cmd = agent_cmd(input)
+            .id(id.clone())
+            .provider(self.config().provider.clone().unwrap_or("mock".into()))
+            .model(self.config().default_model().unwrap_or("echo").to_owned())
+            .build();
 
         let events = self.events.clone();
         let emit = Arc::new(Mutex::new(move |evt: Event| events.lock().push(evt)));
