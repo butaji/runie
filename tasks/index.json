@@ -552,7 +552,7 @@
   {
     "file": "fix-turn-projection-retain-bug-and-delete-mirrored-queue.md",
     "title": "Fix turn projection retain bug and delete mirrored queue",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-view-cache-double-rebuild-and-use-cached-gen.md",
@@ -572,7 +572,7 @@
   {
     "file": "format-permission-request-for-human-readable-display.md",
     "title": "Format permission request for human-readable display",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fuzzy-history-search-with-sublime-fuzzy.md",
@@ -937,7 +937,7 @@
   {
     "file": "replace-custom-nanoid-in-runie-testing.md",
     "title": "Replace custom nanoid in runie-testing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-custom-nanoid-in-test-runner.md",
