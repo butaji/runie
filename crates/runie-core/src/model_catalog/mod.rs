@@ -142,19 +142,46 @@ pub fn model_catalog() -> Vec<ModelInfo> {
     models
 }
 
-/// Filter models by name, provider, or display name (case-insensitive).
+/// Filter and score models by name, provider, or display name using fuzzy matching.
+/// Returns indices sorted by match score (highest first).
 pub fn filter_models(models: &[ModelInfo], query: &str) -> Vec<usize> {
-    let q = query.to_lowercase();
-    models
+    if query.is_empty() {
+        return (0..models.len()).collect();
+    }
+
+    let mut scored: Vec<(usize, i32)> = models
         .iter()
         .enumerate()
-        .filter(|(_, m)| {
-            m.name.to_lowercase().contains(&q)
-                || m.provider.to_lowercase().contains(&q)
-                || m.display_name.to_lowercase().contains(&q)
+        .filter_map(|(idx, m)| {
+            // Try matching on full name (provider/model), name, and provider separately
+            let full = m.full();
+            let name = &m.name;
+            let provider = &m.provider;
+            let display = &m.display_name;
+
+            // Score the best match across all fields
+            let best_score = [
+                fuzzy_score(query, &full),
+                fuzzy_score(query, name),
+                fuzzy_score(query, provider),
+                fuzzy_score(query, display),
+            ]
+            .into_iter()
+            .flatten()
+            .max();
+
+            best_score.map(|score| (idx, score))
         })
-        .map(|(i, _)| i)
-        .collect()
+        .collect();
+
+    // Sort by score descending
+    scored.sort_by(|a, b| b.1.cmp(&a.1));
+    scored.into_iter().map(|(idx, _)| idx).collect()
+}
+
+/// Score a fuzzy match between `query` and `candidate` using `sublime_fuzzy`.
+fn fuzzy_score(query: &str, candidate: &str) -> Option<i32> {
+    sublime_fuzzy::best_match(query, candidate).map(|m| m.score() as i32)
 }
 
 /// Build grouped model selector items for the snapshot.
@@ -433,5 +460,58 @@ mod tests {
         assert_eq!(minimax.context_window, Some(256_000));
         assert!(minimax.capabilities.streaming);
         assert!(minimax.capabilities.supports_tools);
+    }
+
+    // ── Fuzzy matching tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn filter_models_empty_query_returns_all() {
+        let catalog = model_catalog();
+        let indices = filter_models(&catalog, "");
+        assert_eq!(indices.len(), catalog.len());
+        // Should be in original order
+        assert_eq!(indices[0], 0);
+    }
+
+    #[test]
+    fn filter_models_exact_match() {
+        let catalog = model_catalog();
+        let indices = filter_models(&catalog, "gpt-4o");
+        assert!(!indices.is_empty());
+        // First result should be gpt-4o
+        let first = &catalog[indices[0]];
+        assert_eq!(first.name, "gpt-4o");
+        assert_eq!(first.provider, "openai");
+    }
+
+    #[test]
+    fn filter_models_fuzzy_typo() {
+        let catalog = model_catalog();
+        // "gpt4" should still find "gpt-4o" via fuzzy matching
+        let indices = filter_models(&catalog, "gpt4");
+        assert!(!indices.is_empty());
+        // Should find gpt-4o even with typo
+        let has_gpt4o = indices.iter().any(|&i| catalog[i].name == "gpt-4o");
+        assert!(has_gpt4o, "fuzzy match should find gpt-4o for query 'gpt4'");
+    }
+
+    #[test]
+    fn filter_models_sorted_by_score() {
+        let catalog = model_catalog();
+        // Query that matches multiple models should sort by score
+        let indices = filter_models(&catalog, "claude");
+        assert!(!indices.is_empty());
+        // First result should be a claude model
+        let first = &catalog[indices[0]];
+        assert!(first.name.contains("claude") || first.provider == "anthropic");
+    }
+
+    #[test]
+    fn filter_models_by_provider() {
+        let catalog = model_catalog();
+        let indices = filter_models(&catalog, "openai");
+        assert!(!indices.is_empty());
+        // First result should be from openai (highest score)
+        assert_eq!(catalog[indices[0]].provider, "openai");
     }
 }
