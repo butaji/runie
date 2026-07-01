@@ -46,8 +46,8 @@ pub struct Session {
     pub theme_name: String,
     pub thinking_level: crate::model::ThinkingLevel,
     pub read_only: bool,
-    /// Session tree is not serialized; it's reconstructed from messages on load.
-    #[serde(skip)]
+    /// Session tree with branching structure. Serialized via SessionTreeSnapshot.
+    #[serde(default)]
     pub session_tree: Option<crate::session::tree::SessionTree>,
 }
 

@@ -69,16 +69,42 @@ impl SessionTreeFilter {
 /// Cached result of a filtered walk: (depth, NodeId) pairs.
 type FilterCache = Vec<(usize, NodeId)>;
 
-/// Serialized form of SessionTree — stores messages for reconstruction.
-/// The arena and transient caches are rebuilt on deserialization.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionTreeSerialized {
-    /// Current branch path as node IDs.
+/// A node in the serialized tree — stores message data and parent relationship.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SerializedNode {
+    /// Unique message ID (used for parent references).
+    pub id: String,
+    /// Node data (message + optional label).
+    pub data: TreeNodeData,
+}
+
+/// Serialized form of SessionTree — stores edges and branch path.
+/// The arena is rebuilt from edges on deserialization.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SessionTreeSnapshot {
+    /// Current branch path as message IDs (stable across serialization).
     #[serde(default)]
-    pub current_branch: Vec<u32>,
-    /// Messages in the tree for reconstruction.
+    pub current_branch: Vec<String>,
+    /// Root node message ID.
     #[serde(default)]
-    pub messages: Vec<TreeNodeData>,
+    pub root_id: String,
+    /// All nodes: each stores its parent message ID for edge reconstruction.
+    #[serde(default)]
+    pub nodes: Vec<SerializedNode>,
+    /// Parent-child edges: (parent_id, child_id) pairs.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edges: Vec<(String, String)>,
+}
+
+impl Default for SessionTreeSnapshot {
+    fn default() -> Self {
+        Self {
+            current_branch: Vec::new(),
+            root_id: "root".to_string(),
+            nodes: Vec::new(),
+            edges: Vec::new(),
+        }
+    }
 }
 
 /// The session tree holds the arena and current branch path.
@@ -95,27 +121,34 @@ pub struct SessionTree {
     cached_filter: Mutex<Option<(SessionTreeFilter, FilterCache)>>,
 }
 
+// ─── Serialization ─────────────────────────────────────────────────────────
+
+impl Serialize for SessionTree {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_snapshot().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for SessionTree {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let snapshot = SessionTreeSnapshot::deserialize(deserializer)?;
+        Self::from_snapshot(&snapshot)
+            .ok_or_else(|| serde::de::Error::custom("invalid session tree snapshot"))
+    }
+}
+
 impl Clone for SessionTree {
     fn clone(&self) -> Self {
-        // Clone can't preserve arena references, so we create a minimal
-        // default tree with a root node (matching Default impl).
-        let mut arena = Arena::new();
-        let root_data = TreeNodeData::new(ChatMessage {
-            role: Role::System,
-            id: "clone-root".into(),
-            parts: vec![crate::message::Part::Text {
-                content: "[clone]".into(),
-            }],
-            ..Default::default()
-        });
-        let root_id = arena.new_node(root_data);
-        Self {
-            arena,
-            root_id: Some(root_id),
-            current_branch: Vec::new(),
-            id_index: HashMap::new(),
-            cached_filter: Mutex::new(None),
-        }
+        // Serialize to snapshot and deserialize to get a proper deep clone.
+        let snapshot = self.to_snapshot();
+        Self::from_snapshot(&snapshot)
+            .expect("session tree clone failed — snapshot should always be valid")
     }
 }
 
@@ -200,6 +233,93 @@ impl SessionTree {
             id_index,
             cached_filter: Mutex::new(None),
         }
+    }
+
+    /// Serialize the tree to a snapshot (stable across serialization).
+    pub fn to_snapshot(&self) -> SessionTreeSnapshot {
+        // Collect all nodes by walking the tree
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        let mut root_id = String::new();
+
+        // Use the existing walk() method to iterate all nodes
+        for (_, node_id) in self.walk() {
+            let data = self.arena.get(node_id).expect("node should exist").get().clone();
+            let msg_id = data.message.id.clone();
+
+            if self.root_id == Some(node_id) {
+                root_id = msg_id.clone();
+            }
+
+            // Collect edges (parent -> child)
+            for child_id in node_id.children(&self.arena) {
+                if let Some(child_node) = self.arena.get(child_id) {
+                    edges.push((msg_id.clone(), child_node.get().message.id.clone()));
+                }
+            }
+
+            nodes.push(SerializedNode {
+                id: msg_id,
+                data,
+            });
+        }
+
+        // Convert current_branch from NodeId to message IDs
+        let current_branch: Vec<String> = self
+            .current_branch
+            .iter()
+            .filter_map(|id| self.arena.get(*id).map(|n| n.get().message.id.clone()))
+            .collect();
+
+        SessionTreeSnapshot {
+            current_branch,
+            root_id,
+            nodes,
+            edges,
+        }
+    }
+
+    /// Deserialize from a snapshot, rebuilding the arena.
+    pub fn from_snapshot(snapshot: &SessionTreeSnapshot) -> Option<Self> {
+        if snapshot.nodes.is_empty() {
+            return Some(Self::default());
+        }
+
+        let mut arena = Arena::new();
+        let mut id_to_node: HashMap<String, NodeId> = HashMap::new();
+
+        // First pass: create all nodes
+        for node in &snapshot.nodes {
+            let node_id = arena.new_node(node.data.clone());
+            id_to_node.insert(node.id.clone(), node_id);
+        }
+
+        // Second pass: attach children to parents
+        for (parent_id, child_id) in &snapshot.edges {
+            if let (Some(&parent_node), Some(&child_node)) =
+                (id_to_node.get(parent_id), id_to_node.get(child_id))
+            {
+                parent_node.append(child_node, &mut arena);
+            }
+        }
+
+        // Build current_branch from message IDs
+        let current_branch: Vec<NodeId> = snapshot
+            .current_branch
+            .iter()
+            .filter_map(|id| id_to_node.get(id).copied())
+            .collect();
+
+        // Root ID
+        let root_id = id_to_node.get(&snapshot.root_id).copied();
+
+        Some(Self {
+            arena,
+            root_id,
+            current_branch,
+            id_index: id_to_node,
+            cached_filter: Mutex::new(None),
+        })
     }
 
     /// Get the number of nodes in the tree.

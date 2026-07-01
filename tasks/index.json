@@ -807,7 +807,7 @@
   {
     "file": "persist-session-tree-and-branch-state.md",
     "title": "Persist session tree and branch state",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "prepare-grok-build-reference-for-comparison.md",

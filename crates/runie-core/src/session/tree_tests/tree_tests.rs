@@ -130,3 +130,126 @@ fn filter_excludes_tools() {
     assert_eq!(no_tools.len(), 2);
     assert_eq!(user_only.len(), 1);
 }
+
+// ─── Serialization Tests ────────────────────────────────────────────────────
+
+#[test]
+fn to_snapshot_and_back_preserves_tree() {
+    let messages = vec![
+        msg(Role::User, "hello", "m1"),
+        msg(Role::Assistant, "hi", "m2"),
+        msg(Role::User, "there", "m3"),
+    ];
+    let tree = SessionTree::from_messages(&messages);
+
+    // Serialize
+    let snapshot = tree.to_snapshot();
+
+    // Deserialize
+    let restored = SessionTree::from_snapshot(&snapshot).expect("should restore");
+
+    // Verify structure is preserved
+    assert_eq!(restored.node_count(), tree.node_count());
+    assert_eq!(restored.current_branch().len(), tree.current_branch().len());
+
+    // Verify message IDs are preserved
+    assert!(restored.id_index().contains_key("m1"));
+    assert!(restored.id_index().contains_key("m2"));
+    assert!(restored.id_index().contains_key("m3"));
+}
+
+#[test]
+fn clone_preserves_tree_structure() {
+    let messages = vec![
+        msg(Role::User, "hello", "m1"),
+        msg(Role::Assistant, "hi", "m2"),
+        msg(Role::User, "there", "m3"),
+    ];
+    let tree = SessionTree::from_messages(&messages);
+
+    // Clone
+    let cloned = tree.clone();
+
+    // Verify structure is preserved
+    assert_eq!(cloned.node_count(), tree.node_count());
+    assert_eq!(cloned.current_branch().len(), tree.current_branch().len());
+
+    // Verify message IDs are preserved
+    assert!(cloned.id_index().contains_key("m1"));
+    assert!(cloned.id_index().contains_key("m2"));
+    assert!(cloned.id_index().contains_key("m3"));
+}
+
+#[test]
+fn to_snapshot_preserves_fork() {
+    let messages = vec![
+        msg(Role::User, "hello", "m1"),
+        msg(Role::Assistant, "hi", "m2"),
+        msg(Role::User, "there", "m3"),
+    ];
+    let mut tree = SessionTree::from_messages(&messages);
+    let _path = tree.fork_at(1).expect("fork should succeed");
+
+    // Serialize
+    let snapshot = tree.to_snapshot();
+
+    // Verify snapshot has the fork
+    assert!(snapshot.nodes.len() >= 4); // 3 original + 1 fork
+
+    // Deserialize
+    let restored = SessionTree::from_snapshot(&snapshot).expect("should restore");
+
+    // Verify fork is preserved
+    assert_eq!(restored.node_count(), tree.node_count());
+}
+
+#[test]
+fn to_snapshot_preserves_current_branch() {
+    let messages = vec![
+        msg(Role::User, "hello", "m1"),
+        msg(Role::Assistant, "hi", "m2"),
+        msg(Role::User, "there", "m3"),
+    ];
+    let mut tree = SessionTree::from_messages(&messages);
+
+    // Navigate to a different position
+    let root = tree.root_id().unwrap();
+    let first_child = tree.first_child(root).unwrap();
+    tree.navigate_to(&[root, first_child]);
+
+    // Serialize
+    let snapshot = tree.to_snapshot();
+
+    // Verify snapshot has the branch
+    assert_eq!(snapshot.current_branch.len(), 2); // root + first_child
+
+    // Deserialize
+    let restored = SessionTree::from_snapshot(&snapshot).expect("should restore");
+
+    // Verify branch is preserved
+    assert_eq!(restored.current_branch().len(), tree.current_branch().len());
+}
+
+#[test]
+fn serde_roundtrip_preserves_tree() {
+    let messages = vec![
+        msg(Role::User, "hello", "m1"),
+        msg(Role::Assistant, "hi", "m2"),
+    ];
+    let tree = SessionTree::from_messages(&messages);
+
+    // Serialize to JSON
+    let json = serde_json::to_string(&tree).expect("should serialize");
+
+    // Deserialize from JSON
+    let restored: SessionTree =
+        serde_json::from_str(&json).expect("should deserialize");
+
+    // Verify structure is preserved
+    assert_eq!(restored.node_count(), tree.node_count());
+    assert_eq!(restored.current_branch().len(), tree.current_branch().len());
+
+    // Verify message IDs are preserved
+    assert!(restored.id_index().contains_key("m1"));
+    assert!(restored.id_index().contains_key("m2"));
+}

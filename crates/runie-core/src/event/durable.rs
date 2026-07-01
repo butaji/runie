@@ -324,7 +324,7 @@ impl TryFrom<&DurableCoreEvent> for Event {
             D::ThemeSwitched { name } => Ok(Event::SwitchTheme { name: name.clone() }),
             D::ThinkingLevelSet { level } => Ok(Event::SetThinkingLevel(*level)),
             // SessionRenamed and ReadOnlySet are handled directly in replay_event
-            D::SessionRenamed { .. } | D::ReadOnlySet { .. } => Err(()),
+            D::SessionRenamed { .. } | D::ReadOnlySet { .. } | D::TreeSnapshot { .. } => Err(()),
         }
     }
 }
@@ -364,6 +364,10 @@ pub enum DurableCoreEvent {
     ThinkingLevelSet { level: crate::model::ThinkingLevel },
     /// The user toggled read-only mode.
     ReadOnlySet { read_only: bool },
+    /// Session tree structure snapshot (edges and branch).
+    TreeSnapshot {
+        snapshot: crate::session::tree::SessionTreeSnapshot,
+    },
 }
 
 #[cfg(test)]

@@ -40,6 +40,11 @@ pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
         DurableCoreEvent::SessionRenamed { name } => {
             state.session_mut().session_display_name = Some(name.clone());
         }
+        DurableCoreEvent::TreeSnapshot { snapshot } => {
+            if let Some(tree) = crate::session::tree::SessionTree::from_snapshot(snapshot) {
+                state.session_mut().session_tree = Some(tree);
+            }
+        }
         DurableCoreEvent::ToolCalled { .. }
         | DurableCoreEvent::ToolResult { .. }
         | DurableCoreEvent::ModelSwitched { .. }
@@ -91,6 +96,12 @@ pub fn session_to_durable_events(session: &crate::session::Session) -> Vec<Durab
     }
     if let Some(name) = &session.display_name {
         events.push(DurableCoreEvent::SessionRenamed { name: name.clone() });
+    }
+    // Include tree snapshot if available
+    if let Some(ref tree) = session.session_tree {
+        events.push(DurableCoreEvent::TreeSnapshot {
+            snapshot: tree.to_snapshot(),
+        });
     }
     events
 }
