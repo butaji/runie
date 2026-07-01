@@ -3,7 +3,7 @@ use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::exec;
 use crate::tests::fresh_state;
-use crate::tests::slash::ENV_LOCK;
+use crate::tests::support::ENV_LOCK;
 use crate::Event;
 
 /// Open palette and select a command by name

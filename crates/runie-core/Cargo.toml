@@ -84,7 +84,6 @@ parking_lot.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 criterion = "0.5"
-runie-testing.workspace = true
 
 [[bench]]
 name = "snapshot"

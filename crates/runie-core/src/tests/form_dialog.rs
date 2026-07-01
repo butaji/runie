@@ -6,7 +6,7 @@ use crate::Event;
 
 use crate::commands::{DialogKind, DialogState};
 use crate::message::Part;
-use crate::tests::slash::ENV_LOCK;
+use crate::tests::support::ENV_LOCK;
 use crate::tests::{fresh_state, tmp_store, type_str};
 
 /// Open palette and select a command by name
