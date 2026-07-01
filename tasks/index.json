@@ -52,7 +52,7 @@
   {
     "file": "add-keyring-store-trait-with-mock.md",
     "title": "Add keyring store trait with mock",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
@@ -847,7 +847,7 @@
   {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-dead-migration-scaffolding.md",
@@ -1062,7 +1062,7 @@
   {
     "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
     "title": "Replace RpcReply with ractor::RpcReplyPort",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-session-tree-with-arena-crate.md",

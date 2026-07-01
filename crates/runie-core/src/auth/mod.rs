@@ -5,6 +5,7 @@
 
 pub mod keyring;
 pub mod storage;
+pub mod store_trait;
 
 pub use credential::CredentialResolver;
 pub use keyring::{
@@ -12,5 +13,6 @@ pub use keyring::{
     set_and_verify_keyring, set_keyring, set_keyring_value,
 };
 pub use storage::{AuthStorage, AuthToken};
+pub use store_trait::{KeyringStore, MockKeyringStore, OsKeyringStore};
 
 mod credential;

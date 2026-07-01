@@ -1,6 +1,7 @@
 //! Unified credential resolver for API keys and base URLs.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 // ---------------------------------------------------------------------------
 // Unified Credential Resolver
@@ -12,9 +13,9 @@ use std::collections::HashMap;
 /// 3. OS keyring
 /// 4. Config file
 ///
-/// This resolver is used by both `runie-core` (for Config) and `runie-provider`
-/// (for ProviderConfigResolver) to ensure consistent credential resolution.
-#[derive(Debug, Clone)]
+/// The keyring backend is injectable via `Arc<dyn KeyringStore>`, enabling
+/// tests to use `MockKeyringStore` without OS keychain access.
+#[derive(Clone)]
 pub struct CredentialResolver {
     /// Environment variables captured at construction.
     env: HashMap<String, String>,
@@ -22,6 +23,18 @@ pub struct CredentialResolver {
     dotenv: HashMap<String, String>,
     /// Provider config entries (provider name -> (api_key, base_url)).
     entries: HashMap<String, (Option<String>, Option<String>)>,
+    /// Keyring storage backend (injectable for tests).
+    store: Arc<dyn super::KeyringStore>,
+}
+
+impl std::fmt::Debug for CredentialResolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CredentialResolver")
+            .field("env", &self.env)
+            .field("dotenv", &self.dotenv)
+            .field("entries", &self.entries)
+            .finish()
+    }
 }
 
 impl Default for CredentialResolver {
@@ -31,7 +44,7 @@ impl Default for CredentialResolver {
 }
 
 impl CredentialResolver {
-    /// Create a new resolver that captures the current environment.
+    /// Create a new resolver using the OS keyring.
     pub fn new() -> Self {
         let env: HashMap<String, String> = std::env::vars().collect();
         let dotenv = Self::load_dotenv();
@@ -39,6 +52,7 @@ impl CredentialResolver {
             env,
             dotenv,
             entries: HashMap::new(),
+            store: Arc::new(super::OsKeyringStore::new()),
         }
     }
 
@@ -48,14 +62,26 @@ impl CredentialResolver {
             env: HashMap::new(),
             dotenv: HashMap::new(),
             entries: HashMap::new(),
+            store: Arc::new(super::OsKeyringStore::new()),
+        }
+    }
+
+    /// Create a resolver with an injectable keyring store (for tests).
+    pub fn with_store(store: Arc<dyn super::KeyringStore>) -> Self {
+        let env: HashMap<String, String> = std::env::vars().collect();
+        let dotenv = Self::load_dotenv();
+        Self {
+            env,
+            dotenv,
+            entries: HashMap::new(),
+            store,
         }
     }
 
     /// Load .env file using dotenvy, returning only API-related variables.
     ///
     /// Uses `dotenvy::from_filename_iter` to read the .env file directly into
-    /// a HashMap without mutating the process environment. This avoids global
-    /// state side-effects and removes the need for ENV_LOCK serialization.
+    /// a HashMap without mutating the process environment.
     fn load_dotenv() -> HashMap<String, String> {
         match dotenvy::from_filename_iter(".env") {
             Ok(iter) => iter
@@ -94,8 +120,8 @@ impl CredentialResolver {
             }
         }
 
-        // 3. Keyring
-        if let Some(token) = super::storage::AuthStorage::get_keyring_token(provider) {
+        // 3. Keyring (via injectable store)
+        if let Ok(Some(token)) = self.store.get(provider) {
             return Some(token);
         }
 
@@ -134,23 +160,21 @@ impl CredentialResolver {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use super::super::{KeyringStore, MockKeyringStore};
     use super::*;
 
     #[test]
     fn resolver_priority_env_over_keyring() {
-        // Environment should win over keyring
         let mut resolver = CredentialResolver::empty();
         resolver.env.insert("TESTPROVIDER_API_KEY".to_owned(), "env-key".to_owned());
 
-        // Note: This test assumes keyring doesn't have "testprovider"
-        // In practice, we just verify env is checked first
         let result = resolver.resolve_api_key("testprovider");
         assert_eq!(result, Some("env-key".to_owned()));
     }
 
     #[test]
     fn resolver_fallback_to_config() {
-        // Config should be used when env/keyring are absent
         let mut resolver = CredentialResolver::empty();
         resolver.set_config(
             "testprovider",
@@ -196,13 +220,77 @@ mod tests {
 
     #[test]
     fn load_dotenv_does_not_mutate_process_env() {
-        // Verify that .env file loading reads into a local HashMap,
-        // not the process environment. Create CredentialResolver::new()
-        // and verify std::env::var is not affected.
         let before = std::env::var("TEST_DOTENV_SANITY_KEY");
         let _resolver = CredentialResolver::new();
         let after = std::env::var("TEST_DOTENV_SANITY_KEY");
-        // The environment should be unchanged (both None, or both Some)
-        assert_eq!(before, after, "dotenv loading should not mutate process environment");
+        assert_eq!(before, after);
+    }
+
+    #[test]
+    fn resolver_uses_injected_mock_store() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        let resolver = CredentialResolver::with_store(Arc::clone(&mock));
+
+        // Pre-load the mock store
+        mock.set("injected", "mock-token").unwrap();
+
+        assert_eq!(
+            resolver.resolve_api_key("injected"),
+            Some("mock-token".to_owned())
+        );
+    }
+
+    #[test]
+    fn resolver_mock_store_gets_none_when_empty() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        let resolver = CredentialResolver::with_store(mock);
+
+        // Provider not in mock store, not in env, not in dotenv, not in config
+        assert_eq!(resolver.resolve_api_key("missing"), None);
+    }
+
+    #[test]
+    fn resolver_mock_store_priority_env_over_mock() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        mock.set("priority_test", "mock-token").unwrap();
+
+        let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
+        resolver.env.insert("PRIORITY_TEST_API_KEY".to_owned(), "env-token".to_owned());
+
+        // Env should win over mock store
+        assert_eq!(
+            resolver.resolve_api_key("priority_test"),
+            Some("env-token".to_owned())
+        );
+    }
+
+    #[test]
+    fn resolver_mock_store_priority_dotenv_over_mock() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        mock.set("dotenv_test", "mock-token").unwrap();
+
+        let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
+        resolver.dotenv.insert("DOTENV_TEST_API_KEY".to_owned(), "dotenv-token".to_owned());
+
+        // dotenv should win over mock store
+        assert_eq!(
+            resolver.resolve_api_key("dotenv_test"),
+            Some("dotenv-token".to_owned())
+        );
+    }
+
+    #[test]
+    fn resolver_mock_store_priority_mock_over_config() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        mock.set("config_test", "mock-token").unwrap();
+
+        let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
+        resolver.set_config("config_test", Some("config-token".to_owned()), None);
+
+        // mock store should win over config
+        assert_eq!(
+            resolver.resolve_api_key("config_test"),
+            Some("mock-token".to_owned())
+        );
     }
 }
