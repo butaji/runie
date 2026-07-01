@@ -15,17 +15,17 @@ Target locations:
 
 ## Acceptance criteria
 
-- Every `tokio::spawn`/`spawn_blocking` stores its `JoinHandle` in actor state or a `JoinSet`.
-- Replies are sent only after the spawned task completes.
-- Actor shutdown awaits or cancels outstanding handles.
+1. **Unit tests** — Actor state correctly tracks spawned tasks via `JoinHandle` or `JoinSet`.
+2. **E2E tests** — A multi-fixture replay run completes without leaked tasks.
+3. **Live run tests** — Run an IO-heavy turn in tmux and verify clean shutdown with no orphaned processes.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - Actor state tracks spawned tasks correctly.
 
-### Layer 2 — Event Handling
+### E2E tests
 - Events are still emitted after spawned tasks complete.
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- A multi-fixture replay run completes without leaked tasks.
+### Live run tests
+- Run bash/file-tool operations in tmux, then shut down and confirm no lingering IO tasks.

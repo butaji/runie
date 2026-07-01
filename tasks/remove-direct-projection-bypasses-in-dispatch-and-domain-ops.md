@@ -14,14 +14,17 @@ Target locations:
 
 ## Acceptance criteria
 
-- `Event::EnvDetected` updates `AppState` through the projection accessor, not direct field write.
-- `set_git_info`/`set_cwd_name` setters are removed or made private to tests.
-- Production code uses only actor-emitted events to update these fields.
+1. **Unit tests** — `AppState::apply_event(Event::EnvDetected { ... })` updates the projection through accessors only.
+2. **E2E tests** — Dispatching `EnvDetected` through the central dispatcher updates only the intended projection accessors.
+3. **Live run tests** — Run in tmux, change working directory, and verify `cwd_name`/`git_info` update without direct field writes.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - `AppState::apply_event(Event::EnvDetected { git_info, cwd_name })` updates the projection correctly.
 
-### Layer 2 — Event Handling
+### E2E tests
 - Dispatching `EnvDetected` through the central dispatcher updates only the intended projection accessors.
+
+### Live run tests
+- Start the TUI in tmux, `cd` into a git repo, and confirm the status bar reflects the new cwd and git branch via events.

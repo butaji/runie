@@ -10,10 +10,17 @@ Several small helpers for fuzzy matching, path/glob expansion, keybinding parsin
 
 ## Acceptance criteria
 
-- No custom fuzzy/path/glob/keybinding/text helpers remain in production code.
-- Behavior is preserved or improved.
+1. **Unit tests** — Each replacement matches the old behavior for representative inputs.
+2. **E2E tests** — Commands using helpers (path/glob/fuzzy/keybinding) work in mock-provider replay.
+3. **Live run tests** — Use affected features (palette search, file picker, slash commands) in tmux.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - Each replacement has unit tests matching old behavior.
+
+### E2E tests
+- A replay run exercises path expansion, fuzzy matching, and keybinding parsing.
+
+### Live run tests
+- Open the command palette, file picker, and submit a slash command in tmux.

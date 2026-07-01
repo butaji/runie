@@ -10,13 +10,17 @@
 
 ## Acceptance criteria
 
-- `ProviderFactory::validate_key` is an `async fn` (via `async_trait`) or the factory becomes an enum.
-- All implementations compile without manual `Pin<Box<...>>`.
+1. **Unit tests** — Mock factory builds and validates keys correctly without manual `Pin<Box<...>>`.
+2. **E2E tests** — A provider replay turn completes successfully with the refactored factory.
+3. **Live run tests** — Switch provider/model in tmux and confirm the factory resolves credentials and builds the provider.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - Mock factory builds and validates keys correctly.
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
+### E2E tests
 - A replay turn with the refactored factory completes successfully.
+
+### Live run tests
+- In tmux, use `/provider` or model selection to switch providers and start a turn.

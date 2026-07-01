@@ -13,13 +13,17 @@ Target location:
 
 ## Acceptance criteria
 
-- The 100 ms timeout is removed.
-- `UiActor` either receives an explicit completion event or holds a future from `TurnActor`.
+1. **Unit tests** — `clear_turn_state` no longer uses a sleep/timeout; completion is deterministic.
+2. **E2E tests** — Queued turn handoff is covered by deterministic events, not timeouts.
+3. **Live run tests** — A multi-turn queued replay in tmux completes reliably.
 
 ## Tests
 
-### Layer 2 — Event Handling
-- Queued turn handoff is covered by deterministic events, not timeouts.
+### Unit tests
+- The 100 ms timeout is removed from the function.
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- Multi-turn queued replay completes reliably without sleeps.
+### E2E tests
+- Queued turn handoff is covered by deterministic events.
+
+### Live run tests
+- In tmux, queue multiple messages and verify each turn starts promptly without timeout-dependent delays.

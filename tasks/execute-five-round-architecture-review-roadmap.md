@@ -10,14 +10,17 @@ Track the integration of the five-round architecture review. Success metrics: fe
 
 ## Acceptance criteria
 
-- All Round 1–5 tasks are linked from this roadmap.
-- Progress is tracked in `tasks/index.json`.
-- Final verification runs the test suite and reports metrics.
+1. **Unit tests** — A metrics script counts LOC and files >500 lines and reports improvement.
+2. **E2E tests** — Smoke tests pass after each round.
+3. **Live run tests** — A full manual session in tmux exercises the changes end-to-end.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - Static metrics script counts LOC and files >500 lines.
 
-### Layer 2 — Event Handling
+### E2E tests
 - Smoke tests pass after each round.
+
+### Live run tests
+- Run a complete coding session in tmux and verify no regressions.

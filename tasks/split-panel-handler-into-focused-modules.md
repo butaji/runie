@@ -10,10 +10,17 @@
 
 ## Acceptance criteria
 
-- Split into `navigation.rs`, `activation.rs`, `form.rs`.
-- No module exceeds 500 lines.
+1. **Unit tests** — Navigation, activation, and form modules compile and pass focused unit tests.
+2. **E2E tests** — Panel navigation, activation, and form submit events still work.
+3. **Live run tests** — Open a dialog in tmux and exercise navigation, selection, and form submission.
 
 ## Tests
 
-### Layer 2 — Event Handling
+### Unit tests
+- Split modules compile and tests pass.
+
+### E2E tests
 - Panel navigation, activation, and form submit events still work.
+
+### Live run tests
+- Open the command palette or a settings dialog in tmux and navigate/submit.

@@ -15,19 +15,19 @@ Target locations:
 
 ## Acceptance criteria
 
-- Core update handlers no longer mutate `AgentState` fields directly.
-- Turn lifecycle state transitions are sent to `TurnActor` and applied via events.
-- Queue delivery is owned entirely by `TurnActor`; the sync fallback is removed.
+1. **Unit tests** — `AppState` projection rebuilds deterministically from `TurnState` events; `TurnState` state-machine transitions are covered.
+2. **E2E tests** — A mock-provider replay turn emits the expected `TurnComplete` and `QueuesCleared` events with no direct `AgentState` mutation.
+3. **Live run tests** — A multi-tool turn in tmux updates turn/queue state correctly without direct state write anti-patterns.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - `AppState` projection rebuilds from a sequence of `TurnState` events deterministically.
 - `TurnState` state-machine transitions pass unit tests.
 
-### Layer 2 — Event Handling
+### E2E tests
 - Feeding `Event::TurnAborted`, `Event::QueueAborted`, `Event::SteeringDelivered`, `Event::FollowUpDelivered` into `dispatch_event` updates only the projection fields derived from `TurnState`.
 - No direct `agent_state_mut()` mutation occurs in update handlers (assert via code search).
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- A multi-tool replay turn still emits the expected `TurnComplete` and `QueuesCleared` events with no direct `AgentState` mutation.
+### Live run tests
+- Run a streaming multi-tool turn in tmux and verify `turn_active`, `inflight`, and queue state update correctly.

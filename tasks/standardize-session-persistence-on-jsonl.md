@@ -10,17 +10,17 @@ Session persistence currently mixes JSONL with a custom `SqliteStore`. SQLite is
 
 ## Acceptance criteria
 
-- `SqliteStore` is removed or merged into the JSONL session store.
-- Session metadata, messages, and durable events round-trip through JSONL.
-- No dual persistence paths remain in production code.
+1. **Unit tests** — JSONL round-trips session metadata, messages, and durable events.
+2. **E2E tests** — `SessionLoaded`, `SessionSaved`, and `SessionDeleted` events still work after removing the SQLite path.
+3. **Live run tests** — Save and resume a session in tmux; verify no SQLite files are created.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - Store round-trips metadata, messages, and durable events through JSONL.
 
-### Layer 2 — Event Handling
+### E2E tests
 - `SessionLoaded`, `SessionSaved`, `SessionDeleted` events still work.
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- A saved session replays deterministically after cleanup.
+### Live run tests
+- Save a session in tmux, list the sessions directory, and confirm only JSONL files are present.

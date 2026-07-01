@@ -10,15 +10,18 @@
 
 ## Acceptance criteria
 
-- `DurableCoreEvent` is deleted.
-- Canonical `Event` variants are annotated for serde so transient variants/fields are skipped.
-- JSONL persistence round-trips the same data as before.
+1. **Unit tests** — Every transient `Event` variant serializes to skip/`None`; every durable variant round-trips through JSON.
+2. **E2E tests** — Replaying a session from durable events produces the same `AppState` as before.
+3. **Live run tests** — Save and resume a session in tmux; persisted events restore the same UI state.
 
 ## Tests
 
-### Layer 1 — State/Logic
+### Unit tests
 - Every transient `Event` variant serializes to `None`/`skip`.
 - Every durable variant round-trips through JSON.
 
-### Layer 2 — Event Handling
+### E2E tests
 - Replaying a session from durable events produces the same `AppState` as before.
+
+### Live run tests
+- Save a session in tmux, restart, and resume to the same point.

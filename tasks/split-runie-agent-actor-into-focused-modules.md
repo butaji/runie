@@ -10,13 +10,17 @@
 
 ## Acceptance criteria
 
-- Split into `state.rs`, `turn.rs`, `factory.rs`.
-- No module exceeds 500 lines.
+1. **Unit tests** — Split modules compile and agent unit tests pass.
+2. **E2E tests** — `AgentMsg` handling still works in a replay turn.
+3. **Live run tests** — Run an agent turn in tmux and verify the same lifecycle events.
 
 ## Tests
 
-### Layer 2 — Event Handling
+### Unit tests
+- Split modules compile and tests pass.
+
+### E2E tests
 - `AgentMsg` handling still works.
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- A replay turn completes through the refactored actor.
+### Live run tests
+- Submit a prompt in tmux and confirm the turn completes with `TurnComplete`.

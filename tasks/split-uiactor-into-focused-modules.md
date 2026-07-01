@@ -10,14 +10,17 @@
 
 ## Acceptance criteria
 
-- Split into modules such as `ui_actor/input.rs`, `ui_actor/effects.rs`, `ui_actor/submit.rs`, `ui_actor/animation.rs`.
-- No module exceeds 500 lines.
-- Public API of `UiActor` remains unchanged.
+1. **Unit tests** — Split modules compile and existing unit tests pass.
+2. **E2E tests** — Key/submit/autocomplete events still route correctly via `TestBackend`.
+3. **Live run tests** — Run the TUI in tmux and verify input, effects, and rendering work after the split.
 
 ## Tests
 
-### Layer 2 — Event Handling
+### Unit tests
+- Split modules compile and existing tests pass.
+
+### E2E tests
 - Key/submit/autocomplete events still route correctly.
 
-### Layer 3 — Rendering
-- `TestBackend` snapshots match before and after the split.
+### Live run tests
+- Launch the app in tmux, type input, submit a message, and observe effects.

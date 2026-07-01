@@ -10,13 +10,17 @@
 
 ## Acceptance criteria
 
-- Split into `state.rs`, `handlers.rs`, `actor.rs`.
-- No module exceeds 500 lines.
+1. **Unit tests** — Split modules compile and turn-state unit tests pass.
+2. **E2E tests** — `TurnMsg` handling still produces the same events.
+3. **Live run tests** — A multi-turn queue in tmux completes correctly after the split.
 
 ## Tests
 
-### Layer 2 — Event Handling
+### Unit tests
+- Split modules compile and tests pass.
+
+### E2E tests
 - `TurnMsg` handling still produces the same events.
 
-### Layer 4 — Provider Replay / Mock-Tool E2E
-- Multi-turn queue replay still works.
+### Live run tests
+- Queue multiple turns in tmux and verify each completes in order.
