@@ -140,6 +140,11 @@
     "status": "done"
   },
   {
+    "file": "audit-tasks-for-events-based-ssot-actor-compliance.md",
+    "title": "Audit tasks for events-based SSOT actor compliance",
+    "status": "todo"
+  },
+  {
     "file": "avoid-setting-global-theme-every-frame.md",
     "title": "Avoid setting global theme every frame",
     "status": "done"

@@ -90,6 +90,18 @@ async fn minimax_m3_multi_tool_turn() {
 | Test widget internals | Test output, not structure |
 | Mix state + rendering in one test | Hard to debug |
 
+## Architecture Principles
+
+Everything must be **events-based with SSOT actors**.
+
+- **Single Source of Truth (SSOT):** Each runtime fact is owned by exactly one actor. The actor's state is the only authoritative copy.
+- **Events are the change mechanism:** The only way to observe or react to a change is through events published by the owning actor (via the `EventBus` or actor channel).
+- **No direct mutation:** Handlers, tools, subagents, and tests must not mutate another actor's state directly. Send a message; let the actor transition state and emit events.
+- **No mirrored state:** If a second location holds the same data, it must be a read-only projection or snapshot rebuilt from events, never independently mutable.
+- **Observed async work:** Every spawned task has an owner (`JoinHandle`, `JoinSet`, or completion event). No unbounded fire-and-forget `tokio::spawn`.
+
+See `docs/superpowers/plans/2026-07-01-events-based-ssot-actors.md` for the full ADR and task compliance checklist.
+
 ## File Structure
 
 ```
@@ -133,7 +145,6 @@ The build script at `crates/runie-core/build.rs` enforces:
 | Check | Scope | Fail-on-violation |
 |-------|-------|-------------------|
 | AppState field access patterns | Production code only | Yes |
-| Agent manifest checksums | Generated files | Yes |
 
 **AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
 
