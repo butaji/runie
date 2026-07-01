@@ -1,9 +1,9 @@
-//! Shared test helpers for runie-core tests.
+//! Internal test helpers for runie-core tests.
 //!
-//! Canonical source for `fresh_state()`, `type_str()`, and `exec()` within
-//! `runie-core`.  The remaining helpers (`ENV_LOCK`, `tmp_store`,
-//! `minimal_session`) also live here because they need access to
-//! `runie-core` internals.
+//! `fresh_state()`, `type_str()`, and `exec()` are defined here (not re-exported
+//! from runie-testing) because runie-testing cannot be imported in non-test builds
+//! of runie-core.  The internal helpers (`ENV_LOCK`, `seed_providers`, `tmp_store`,
+//! `minimal_session`) also live here because they need access to runie-core internals.
 
 use std::sync::Mutex;
 

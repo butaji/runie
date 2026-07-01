@@ -1,10 +1,14 @@
+// All items below are individually #[cfg(test)]-gated so this module compiles
+// as an empty shell in non-test builds.  The module itself is unconditional
+// so that pub-re-exports are visible to runie-testing dev-dependencies.
+
 #[cfg(test)]
 mod arch_guardrails;
-#[cfg(test)]
+#[allow(unused)]
 mod support;
 
-// Re-export shared test helpers for backward compatibility
-#[cfg(test)]
+// Re-export shared test helpers.  This is unconditional so that
+// runie_core::tests_support in lib.rs can reference them even in non-test builds.
 pub use support::{exec, fresh_state, seed_providers, tmp_store, type_str};
 
 #[cfg(test)]

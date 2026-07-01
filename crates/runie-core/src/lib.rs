@@ -91,8 +91,27 @@ pub mod trust;
 pub mod update;
 pub mod view;
 
-#[cfg(test)]
+// The tests module is unconditionally declared so that its pub-re-exports
+// are visible to runie-testing dev-dependencies even in non-test builds.
+// Individual items inside tests/ remain #[cfg(test)]-gated.
+#[allow(unused)]
 mod tests;
+
+/// Canonical test helpers for `AppState` manipulation, re-exported from
+/// `tests/support.rs` so that `runie-testing` can import the same helpers.
+///
+/// Internal helpers (`ENV_LOCK`, `seed_providers`, `tmp_store`, `minimal_session`)
+/// stay in `tests/support.rs` and are NOT re-exported.
+///
+/// `pub mod` (unconditional) so the module is compiled even when `runie-core`
+/// is built as a dev-dependency of `runie-testing`.
+#[allow(unused)]
+pub mod tests_support {
+    // Re-export from the pub-re-exports in tests/mod.rs.
+    pub use crate::tests::exec;
+    pub use crate::tests::fresh_state;
+    pub use crate::tests::type_str;
+}
 
 pub use actors::session::RactorSessionActor;
 pub use agent_phase::{elapsed_secs, format_elapsed, AgentPhase};

@@ -1,30 +1,14 @@
 //! Shared test helpers for AppState manipulation.
 //!
-//! Canonical source for `fresh_state()`, `type_str()`, and `exec()` shared by
-//! `runie-core` and `runie-tui` tests.  Crates import from `runie_testing`
-/// instead of defining their own copies.
-use runie_core::event::Event;
-use runie_core::model::AppState;
-
-/// Returns a fresh `AppState` with default values.
-pub fn fresh_state() -> AppState {
-    AppState::default()
-}
-
-/// Simulates typing `text` into the input buffer of `state`.
-pub fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(Event::Input(c));
-    }
-}
-
-/// Set input buffer directly and submit — bypasses the command palette.
-/// Use for slash commands that need arguments.
-pub fn exec(state: &mut AppState, text: &str) {
-    *state.input_mut().input_mut() = text.into();
-    *state.input_mut().cursor_pos_mut() = text.len();
-    state.update(Event::Submit);
-}
+//! Re-exports the canonical implementations from `runie_core` so that both
+//! `runie-core` tests and `runie-testing` consumers import the same helpers
+//! without duplicating the logic.
+//!
+//! The canonical source lives in `runie-core/src/tests/support.rs`, which has
+//! access to internal seeding APIs (`seed_providers`).  This module re-exports
+//! the three shared helpers (`fresh_state`, `type_str`, `exec`) so that
+//! `runie-testing` consumers can import from one place.
+pub use runie_core::tests_support::{exec, fresh_state, type_str};
 
 #[cfg(test)]
 mod tests {
@@ -45,6 +29,5 @@ mod tests {
         let mut state = fresh_state();
         assert_eq!(state.input().input, "");
         exec(&mut state, "/save");
-        // cursor_pos is usize so always >= 0; just check it's well-formed.
     }
 }
