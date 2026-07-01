@@ -13,9 +13,7 @@ use runie_core::config::Config;
 use runie_core::event::Event;
 use runie_core::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
-use runie_testing::{env_lock, ENV_LOCK};
-use std::io::{Read, Write};
-use std::sync::Mutex;
+use runie_testing::ENV_LOCK;
 
 /// Helper to run a test closure with the env lock held.
 fn with_env_lock<F, T>(var: &str, value: &str, f: F) -> T
@@ -292,26 +290,33 @@ async fn test_mock_streaming_provider_no_delay() {
 #[tokio::test]
 async fn test_validate_api_key_times_out_on_hanging_server() {
     use std::time::Duration;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = listener.local_addr().unwrap().port();
+    // Start a wiremock server that delays response beyond the validation timeout.
+    let mock_server = MockServer::start().await;
 
-    // Spawn a task that accepts but never responds — validation will hit its timeout.
-    let handle = tokio::spawn(async move {
-        let _ = listener.accept().await; // never completes
-    });
+    // Match GET /v1/models and delay response by 5 seconds (exceeds 250ms timeout).
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(5)))
+        .mount(&mock_server)
+        .await;
 
     let start = std::time::Instant::now();
     let result = crate::validate_api_key_with_timeout(
-        &format!("http://127.0.0.1:{}/v1", port),
+        &format!("{}/v1", mock_server.uri()),
         "sk-test",
         Duration::from_millis(250),
     )
     .await;
 
     let elapsed = start.elapsed();
-    handle.abort();
-    assert!(result.is_err(), "hanging server should produce an error");
+    assert!(
+        result.is_err(),
+        "server delayed beyond timeout should produce an error: {:?}",
+        result
+    );
     assert!(
         elapsed < Duration::from_secs(2),
         "should return quickly due to timeout"
@@ -335,33 +340,28 @@ async fn test_validate_api_key_rejects_unreachable_port() {
 #[tokio::test]
 async fn test_validate_api_key_parses_minimax_models_and_trims_key() {
     use std::time::Duration;
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-    let (tx, rx) = std::sync::mpsc::channel();
+    let mock_server = MockServer::start().await;
 
-    std::thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
-        let mut buf = [0u8; 1024];
-        let n = stream.read(&mut buf).unwrap_or(0);
-        let request = String::from_utf8_lossy(&buf[..n]);
-        let auth = request
-            .lines()
-            .find(|l| l.to_lowercase().starts_with("authorization:"))
-            .unwrap_or("")
-            .to_string();
-        let _ = tx.send(auth);
-        let body = r#"{"data":[{"id":"MiniMax-M3"},{"id":"MiniMax-M2.7"}]}"#;
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        let _ = stream.write_all(response.as_bytes());
-    });
+    // Verify the Authorization header is sent with the trimmed key.
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .and(header("authorization", "Bearer sk-test"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": [
+                    {"id": "MiniMax-M3"},
+                    {"id": "MiniMax-M2.7"}
+                ]
+            })),
+        )
+        .mount(&mock_server)
+        .await;
 
     let models = crate::validate_api_key_with_timeout(
-        &format!("http://127.0.0.1:{}/v1", port),
+        &format!("{}/v1", mock_server.uri()),
         "  sk-test\n ",
         Duration::from_secs(2),
     )
@@ -369,14 +369,6 @@ async fn test_validate_api_key_parses_minimax_models_and_trims_key() {
     .expect("valid MiniMax-style response should succeed");
 
     assert_eq!(models, vec!["MiniMax-M3", "MiniMax-M2.7"]);
-    let auth = rx
-        .recv_timeout(Duration::from_secs(2))
-        .expect("server sent auth header");
-    assert!(
-        auth.contains("Bearer sk-test"),
-        "key should be trimmed in request header: {}",
-        auth
-    );
 }
 
 #[test]
@@ -443,39 +435,33 @@ async fn provider_actor_rejects_unknown_provider_real_factory() {
 
 #[tokio::test]
 async fn provider_actor_validates_key_against_mock_server() {
-    use std::io::{Read, Write};
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
+    let mock_server = MockServer::start().await;
 
-    std::thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
-        let mut buf = [0u8; 1024];
-        let n = stream.read(&mut buf).unwrap_or(0);
-        let request = String::from_utf8_lossy(&buf[..n]);
-        let auth = request
-            .lines()
-            .find(|l| l.to_lowercase().starts_with("authorization:"))
-            .unwrap_or("")
-            .to_string();
-        let body = r#"{"data":[{"id":"model-a"},{"id":"model-b"}]}"#;
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        let _ = stream.write_all(response.as_bytes());
-        auth
-    });
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .and(header("authorization", "Bearer sk-test"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": [
+                    {"id": "model-a"},
+                    {"id": "model-b"}
+                ]
+            })),
+        )
+        .mount(&mock_server)
+        .await;
 
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("config.toml");
     let config = format!(
         r#"[model_providers.test]
-base_url = "http://127.0.0.1:{}/v1"
+base_url = "{base}/v1"
 api_key = "sk-test"
 "#,
-        port
+        base = mock_server.uri()
     );
     std::fs::write(&config_path, config).unwrap();
 

@@ -57,7 +57,7 @@
   {
     "file": "adopt-wiremock-for-provider-api-tests.md",
     "title": "Adopt wiremock for provider API tests",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "avoid-setting-global-theme-every-frame.md",
