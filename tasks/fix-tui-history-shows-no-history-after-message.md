@@ -1,6 +1,6 @@
 # Fix TUI /history shows "No history" after a message is sent
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Sessions
 **Priority**: P2
@@ -26,9 +26,9 @@ After sending a user message in the TUI, `/history` reports `No history.` even t
 
 ## Acceptance Criteria
 
-- [ ] After at least one user message is submitted, `/history` shows that message.
-- [ ] After a completed assistant/tool turn, `/history` includes both user and assistant/tool entries.
-- [ ] `cargo test --workspace` passes.
+- [x] After at least one user message is submitted, `/history` shows that message.
+- [x] After a completed assistant/tool turn, `/history` includes both user and assistant/tool entries.
+- [x] `cargo test --workspace` passes.
 - [ ] Live tmux `hello` followed by `/history` shows the `hello` message.
 
 ## Tests

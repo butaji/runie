@@ -1,5 +1,10 @@
 [
   {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
+  },
+  {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
     "status": "done"
@@ -247,7 +252,7 @@
   {
     "file": "delete-dead-runie-core-testing-module.md",
     "title": "Delete dead runie-core testing module",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dead-runie-macros-crate.md",
@@ -462,7 +467,7 @@
   {
     "file": "fix-tui-history-shows-no-history-after-message.md",
     "title": "Fix TUI /history shows \"No history\" after a message is sent",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-mock-simple-text-response-repetition.md",
@@ -942,7 +947,7 @@
   {
     "file": "resolve-runie-util-micro-crate-vs-core-re-exports.md",
     "title": "Resolve runie-util micro-crate vs core re-exports",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-agent-abort-through-actor-message-not-event-bus.md",
@@ -1172,7 +1177,7 @@
   {
     "file": "use-include-dir-for-provider-registry-yaml.md",
     "title": "Use include_dir for provider registry YAML",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
