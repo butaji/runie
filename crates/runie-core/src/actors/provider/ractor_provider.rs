@@ -15,7 +15,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 #[cfg(test)]
 use crate::actors::config::RactorConfigActor;
 use crate::actors::config::RactorConfigHandle;
-use crate::actors::ractor_adapter::{rpc_channel, spawn_ractor};
+use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -42,15 +42,20 @@ impl RactorProviderHandle {
         provider: String,
         model: String,
     ) -> Result<BuiltProvider, ProviderError> {
-        let (reply, rx) = rpc_channel();
-        let msg = ProviderMsg::Build {
-            provider,
-            model,
-            reply,
-        };
-        let _ = self.inner.send_message(msg);
-        rx.await
-            .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped").into()))
+        match self.inner
+            .call(
+                |tx| ProviderMsg::Build {
+                    provider,
+                    model,
+                    reply: tx,
+                },
+                None,
+            )
+            .await
+        {
+            Ok(ractor::rpc::CallResult::Success(result)) => result,
+            _ => Err(anyhow::anyhow!("provider actor dropped").into()),
+        }
     }
 
     /// Validate an API key for a provider, resolving base URL from config.
@@ -59,27 +64,37 @@ impl RactorProviderHandle {
         provider: String,
         api_key: String,
     ) -> anyhow::Result<Vec<String>> {
-        let (reply, rx) = rpc_channel();
-        let msg = ProviderMsg::ValidateKey {
-            provider,
-            api_key,
-            reply,
-        };
-        let _ = self.inner.send_message(msg);
-        rx.await
-            .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
+        match self.inner
+            .call(
+                |tx| ProviderMsg::ValidateKey {
+                    provider,
+                    api_key,
+                    reply: tx,
+                },
+                None,
+            )
+            .await
+        {
+            Ok(ractor::rpc::CallResult::Success(result)) => result,
+            _ => Err(anyhow::anyhow!("provider actor dropped")),
+        }
     }
 
     /// List models for a configured provider.
     pub async fn list_models(&self, provider: String) -> anyhow::Result<Vec<String>> {
-        let (reply, rx) = rpc_channel();
-        let msg = ProviderMsg::ListModels {
-            provider,
-            reply,
-        };
-        let _ = self.inner.send_message(msg);
-        rx.await
-            .unwrap_or_else(|_| Err(anyhow::anyhow!("provider actor dropped")))
+        match self.inner
+            .call(
+                |tx| ProviderMsg::ListModels {
+                    provider,
+                    reply: tx,
+                },
+                None,
+            )
+            .await
+        {
+            Ok(ractor::rpc::CallResult::Success(result)) => result,
+            _ => Err(anyhow::anyhow!("provider actor dropped")),
+        }
     }
 }
 

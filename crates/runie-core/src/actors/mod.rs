@@ -5,7 +5,7 @@
 //! a running session.
 
 pub mod ractor_adapter;
-pub use ractor_adapter::{spawn_ractor, Reply, RpcReply};
+pub use ractor_adapter::spawn_ractor;
 
 pub mod config;
 pub mod fff_indexer;

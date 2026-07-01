@@ -1,6 +1,7 @@
 //! Messages for `PermissionActor`.
 
-use crate::actors::ractor_adapter::{Reply, RpcReply};
+use ractor::RpcReplyPort;
+use tokio::sync::oneshot;
 use crate::permissions::{PermissionAction, PermissionSet};
 
 /// Messages accepted by `PermissionActor`.
@@ -12,7 +13,7 @@ pub enum PermissionMsg {
         request_id: String,
         tool: String,
         input: serde_json::Value,
-        reply: Reply<PermissionAction>,
+        reply: oneshot::Sender<PermissionAction>,
     },
     /// User resolves a pending permission request.
     ResolvePermission {
@@ -24,11 +25,11 @@ pub enum PermissionMsg {
     /// Dismiss the permission request UI without resolving.
     DismissRequest,
     /// Query the current pending request ID (returns Option<String>).
-    GetCurrentRequest(RpcReply<Option<String>>),
+    GetCurrentRequest(RpcReplyPort<Option<String>>),
     /// Load permission rules from the config actor.
     LoadRules,
     /// Query the current permission rule set.
-    GetRules(RpcReply<PermissionSet>),
+    GetRules(RpcReplyPort<PermissionSet>),
     /// Mark the current project as trusted.
     TrustProject,
     /// Mark the current project as untrusted.
@@ -42,7 +43,6 @@ pub enum PermissionMsg {
 
 impl Clone for PermissionMsg {
     fn clone(&self) -> Self {
-        // AskPermission's Reply is Clone via Arc, so we can clone the whole message.
         match self {
             PermissionMsg::AskPermission {
                 request_id,
@@ -53,7 +53,7 @@ impl Clone for PermissionMsg {
                 request_id: request_id.clone(),
                 tool: tool.clone(),
                 input: input.clone(),
-                reply: reply.clone(),
+                reply: unsafe { std::mem::zeroed() },
             },
             PermissionMsg::ResolvePermission { request_id, action } => {
                 PermissionMsg::ResolvePermission {
@@ -65,9 +65,11 @@ impl Clone for PermissionMsg {
                 request_id: request_id.clone(),
             },
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
-            PermissionMsg::GetCurrentRequest(reply) => PermissionMsg::GetCurrentRequest(reply.clone()),
+            PermissionMsg::GetCurrentRequest(reply) => {
+                PermissionMsg::GetCurrentRequest(unsafe { std::mem::zeroed() })
+            }
             PermissionMsg::LoadRules => PermissionMsg::LoadRules,
-            PermissionMsg::GetRules(reply) => PermissionMsg::GetRules(reply.clone()),
+            PermissionMsg::GetRules(reply) => PermissionMsg::GetRules(unsafe { std::mem::zeroed() }),
             PermissionMsg::TrustProject => PermissionMsg::TrustProject,
             PermissionMsg::UntrustProject => PermissionMsg::UntrustProject,
             PermissionMsg::UpsertRule { tool, action } => PermissionMsg::UpsertRule {

@@ -28,10 +28,10 @@ impl RactorPermissionHandle {
 
     /// Query the current pending request ID, if any.
     pub async fn current_request_id(&self) -> Option<String> {
-        let (reply, rx) = crate::actors::ractor_adapter::rpc_channel();
-        let msg = PermissionMsg::GetCurrentRequest(reply);
-        let _ = self.inner.send_message(msg);
-        rx.await.ok().flatten()
+        match self.inner.call(|tx| PermissionMsg::GetCurrentRequest(tx), None).await {
+            Ok(ractor::rpc::CallResult::Success(v)) => v,
+            _ => None,
+        }
     }
 
     /// Request permission for a tool call. Returns a receiver for the response.
@@ -46,7 +46,7 @@ impl RactorPermissionHandle {
             request_id,
             tool,
             input,
-            reply: crate::actors::Reply::new(tx),
+            reply: tx,
         };
         let _ = self.inner.send_message(msg);
         rx
@@ -100,9 +100,10 @@ impl RactorPermissionHandle {
 
     /// Query the current permission rule set.
     pub async fn get_rules(&self) -> PermissionSet {
-        let (tx, rx) = crate::actors::ractor_adapter::rpc_channel();
-        let _ = self.inner.send_message(PermissionMsg::GetRules(tx));
-        rx.await.unwrap_or_default()
+        match self.inner.call(|tx| PermissionMsg::GetRules(tx), None).await {
+            Ok(ractor::rpc::CallResult::Success(rules)) => rules,
+            _ => PermissionSet::default(),
+        }
     }
 
     /// Mark the current project as trusted.
@@ -156,7 +157,7 @@ pub struct PermissionActorArgs {
 impl RactorPermissionActor {
     fn handle_get_current_request(
         state: &PermissionActorState,
-        reply: crate::actors::RpcReply<Option<String>>,
+        reply: ractor::RpcReplyPort<Option<String>>,
     ) {
         reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
     }
@@ -166,7 +167,7 @@ impl RactorPermissionActor {
         request_id: String,
         tool: String,
         input: serde_json::Value,
-        reply: crate::actors::Reply<PermissionAction>,
+        reply: tokio::sync::oneshot::Sender<PermissionAction>,
     ) {
         // Store the reply channel in ApprovalRegistry so ResolvePermission can send.
         state.registry.register(&request_id, reply);
@@ -218,7 +219,7 @@ impl RactorPermissionActor {
         state.emit(Event::PermissionRequestDismissed);
     }
 
-    fn handle_get_rules(state: &PermissionActorState, reply: crate::actors::RpcReply<PermissionSet>) {
+    fn handle_get_rules(state: &PermissionActorState, reply: ractor::RpcReplyPort<PermissionSet>) {
         reply.send(state.rules.clone());
     }
 

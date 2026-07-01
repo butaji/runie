@@ -7,11 +7,10 @@ use std::path::{Path, PathBuf};
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 
-use crate::actors::ractor_adapter::Reply;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
-use ractor::ActorRef;
+use ractor::{ActorRef, RpcReplyPort};
 
 use super::config_handle::ConfigActorState;
 use super::file_helpers;
@@ -287,7 +286,7 @@ pub(super) async fn add_mcp_server(
     scope: ConfigScope,
     name: &str,
     server: McpServer,
-    reply: Reply<()>,
+    reply: RpcReplyPort<()>,
 ) {
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let name = name.to_owned();
@@ -321,7 +320,7 @@ pub(super) async fn remove_mcp_server(
     state: &mut ConfigActorState,
     scope: ConfigScope,
     name: &str,
-    reply: Reply<()>,
+    reply: RpcReplyPort<()>,
 ) {
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let name = name.to_owned();

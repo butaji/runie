@@ -8,15 +8,14 @@
 
 use parking_lot::Mutex;
 use std::collections::HashMap;
-
-use crate::actors::Reply;
+use tokio::sync::oneshot;
 
 use super::PermissionAction;
 
 /// Holds pending reply channels keyed by request id.
 #[derive(Debug, Default)]
 pub struct ApprovalRegistry {
-    pending: Mutex<HashMap<String, Reply<PermissionAction>>>,
+    pending: Mutex<HashMap<String, oneshot::Sender<PermissionAction>>>,
 }
 
 impl ApprovalRegistry {
@@ -29,7 +28,7 @@ impl ApprovalRegistry {
 
     /// Register a new approval request with the reply channel (sync).
     /// The reply channel will be used by [`resolve`](Self::resolve) to deliver the user's choice.
-    pub fn register(&self, request_id: &str, reply: Reply<PermissionAction>) {
+    pub fn register(&self, request_id: &str, reply: oneshot::Sender<PermissionAction>) {
         self.pending.lock().insert(request_id.to_owned(), reply);
     }
 
@@ -49,16 +48,14 @@ impl ApprovalRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::actors::Reply;
     use tokio::sync::oneshot;
 
     #[test]
     fn resolve_sends_action_to_receiver() {
         let registry = ApprovalRegistry::new();
         let (tx, rx) = oneshot::channel();
-        let reply = Reply::new(tx);
 
-        registry.register("req-1", reply);
+        registry.register("req-1", tx);
         assert!(registry.resolve("req-1", PermissionAction::Allow));
 
         assert_eq!(rx.blocking_recv(), Ok(PermissionAction::Allow));
@@ -77,8 +74,8 @@ mod tests {
         let (tx_a, rx_a) = oneshot::channel();
         let (tx_b, rx_b) = oneshot::channel();
 
-        registry.register("a", Reply::new(tx_a));
-        registry.register("b", Reply::new(tx_b));
+        registry.register("a", tx_a);
+        registry.register("b", tx_b);
 
         registry.resolve("a", PermissionAction::Allow);
         registry.resolve("b", PermissionAction::Deny);

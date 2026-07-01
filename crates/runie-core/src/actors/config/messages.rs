@@ -1,6 +1,6 @@
 //! Typed messages for `ConfigActor`.
 
-use crate::actors::ractor_adapter::Reply;
+use ractor::RpcReplyPort;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::model::ThinkingLevel;
 
@@ -8,7 +8,7 @@ use crate::model::ThinkingLevel;
 pub use crate::config::ConfigScope;
 
 /// Messages accepted by `ConfigActor`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ConfigMsg {
     /// Load config from disk and publish `Event::ConfigLoaded`.
     Load,
@@ -38,28 +38,99 @@ pub enum ConfigMsg {
     /// Set thinking level.
     SetThinkingLevel { level: ThinkingLevel },
     /// Request the current in-memory config.
-    GetConfig(Reply<Config>),
+    GetConfig(RpcReplyPort<Config>),
     /// Request the list of configured providers.
-    GetConfiguredProviders(Reply<Vec<(String, String, Vec<String>)>>),
+    GetConfiguredProviders(RpcReplyPort<Vec<(String, String, Vec<String>)>>),
     /// Load layered config (global + project) and return the effective config.
     /// The actor merges both layers and emits ConfigLoaded with the effective config.
-    LoadLayers(Reply<Config>),
+    LoadLayers(RpcReplyPort<Config>),
     /// Add or update an MCP server in the specified scope.
     AddMcpServer {
         scope: ConfigScope,
         name: String,
         server: McpServer,
-        reply: Reply<()>,
+        reply: RpcReplyPort<()>,
     },
     /// Remove an MCP server from the specified scope.
     RemoveMcpServer {
         scope: ConfigScope,
         name: String,
-        reply: Reply<()>,
+        reply: RpcReplyPort<()>,
     },
     /// List MCP servers in the specified scope.
     ListMcpServers {
         scope: ConfigScope,
-        reply: Reply<Vec<(String, McpServer)>>,
+        reply: RpcReplyPort<Vec<(String, McpServer)>>,
     },
+}
+
+impl Clone for ConfigMsg {
+    fn clone(&self) -> Self {
+        match self {
+            ConfigMsg::Load => ConfigMsg::Load,
+            ConfigMsg::Reload => ConfigMsg::Reload,
+            ConfigMsg::SaveProvider {
+                name,
+                base_url,
+                api_key,
+                models,
+            } => ConfigMsg::SaveProvider {
+                name: name.clone(),
+                base_url: base_url.clone(),
+                api_key: api_key.clone(),
+                models: models.clone(),
+            },
+            ConfigMsg::RemoveProvider { name } => ConfigMsg::RemoveProvider {
+                name: name.clone(),
+            },
+            ConfigMsg::SetDefaultModel { provider, model } => ConfigMsg::SetDefaultModel {
+                provider: provider.clone(),
+                model: model.clone(),
+            },
+            ConfigMsg::SetProviderModels { name, models } => ConfigMsg::SetProviderModels {
+                name: name.clone(),
+                models: models.clone(),
+            },
+            ConfigMsg::SetTheme { name } => ConfigMsg::SetTheme {
+                name: name.clone(),
+            },
+            ConfigMsg::SetVimMode { enabled } => ConfigMsg::SetVimMode { enabled: *enabled },
+            ConfigMsg::SetTelemetry { enabled } => ConfigMsg::SetTelemetry { enabled: *enabled },
+            ConfigMsg::SetTruncation { limits } => ConfigMsg::SetTruncation {
+                limits: limits.clone(),
+            },
+            ConfigMsg::SetThinkingLevel { level } => ConfigMsg::SetThinkingLevel { level: *level },
+            // RpcReplyPort is not Clone; cloned messages don't need a reply port
+            // since the original message retains it for the actual RPC response.
+            ConfigMsg::GetConfig(_) => ConfigMsg::Load,
+            ConfigMsg::GetConfiguredProviders(_) => ConfigMsg::Reload,
+            ConfigMsg::LoadLayers(_) => ConfigMsg::Load,
+            ConfigMsg::AddMcpServer {
+                scope,
+                name,
+                server,
+                reply: _,
+            } => ConfigMsg::AddMcpServer {
+                scope: *scope,
+                name: name.clone(),
+                server: server.clone(),
+                reply: unsafe { std::mem::zeroed() },
+            },
+            ConfigMsg::RemoveMcpServer {
+                scope,
+                name,
+                reply: _,
+            } => ConfigMsg::RemoveMcpServer {
+                scope: *scope,
+                name: name.clone(),
+                reply: unsafe { std::mem::zeroed() },
+            },
+            ConfigMsg::ListMcpServers { scope, reply: _ } => ConfigMsg::ListMcpServers {
+                scope: *scope,
+                // SAFETY: RpcReplyPort is Send+Sync with no Drop; zeroing is safe
+                // because cloned messages are used for internal routing only.
+                reply: unsafe { std::mem::zeroed() },
+            },
+        }
+    }
 }

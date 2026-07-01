@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 use ractor::ActorRef;
 
-use crate::actors::ractor_adapter::Reply;
 use crate::bus::EventBus;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
@@ -40,18 +39,18 @@ impl RactorConfigHandle {
 
     /// Request the current in-memory config.
     pub async fn get_config(&self) -> Option<Config> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self.inner.send_message(ConfigMsg::GetConfig(Reply::new(tx)));
-        rx.await.ok()
+        match self.inner.call(|tx| ConfigMsg::GetConfig(tx), None).await {
+            Ok(ractor::rpc::CallResult::Success(config)) => Some(config),
+            _ => None,
+        }
     }
 
     /// Request the list of configured providers.
     pub async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send_message(ConfigMsg::GetConfiguredProviders(Reply::new(tx)));
-        rx.await.ok()
+        match self.inner.call(|tx| ConfigMsg::GetConfiguredProviders(tx), None).await {
+            Ok(ractor::rpc::CallResult::Success(v)) => Some(v),
+            _ => None,
+        }
     }
 
     /// Ask the actor to load config from disk.
@@ -128,56 +127,53 @@ impl RactorConfigHandle {
 
     /// Load layered config (global + project) and return the effective config.
     pub async fn load_layers(&self) -> Option<Config> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send_message(ConfigMsg::LoadLayers(
-                crate::actors::ractor_adapter::Reply::new(tx),
-            ));
-        rx.await.ok()
+        match self.inner.call(|tx| ConfigMsg::LoadLayers(tx), None).await {
+            Ok(ractor::rpc::CallResult::Success(config)) => Some(config),
+            _ => None,
+        }
     }
 
     /// Add or update an MCP server in the specified scope.
     ///
     /// Waits for the operation to complete before returning.
     pub async fn add_mcp_server(&self, scope: ConfigScope, name: String, server: McpServer) {
-        let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send_message(ConfigMsg::AddMcpServer {
-                scope,
-                name,
-                server,
-                reply: crate::actors::ractor_adapter::Reply::new(tx),
-            });
-        let _ = rx.await;
+            .call(
+                |tx| ConfigMsg::AddMcpServer {
+                    scope,
+                    name,
+                    server,
+                    reply: tx,
+                },
+                None,
+            )
+            .await;
     }
 
     /// Remove an MCP server from the specified scope.
     ///
     /// Waits for the operation to complete before returning.
     pub async fn remove_mcp_server(&self, scope: ConfigScope, name: String) {
-        let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = self
             .inner
-            .send_message(ConfigMsg::RemoveMcpServer {
-                scope,
-                name,
-                reply: crate::actors::ractor_adapter::Reply::new(tx),
-            });
-        let _ = rx.await;
+            .call(
+                |tx| ConfigMsg::RemoveMcpServer {
+                    scope,
+                    name,
+                    reply: tx,
+                },
+                None,
+            )
+            .await;
     }
 
     /// List MCP servers in the specified scope.
     pub async fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let _ = self
-            .inner
-            .send_message(ConfigMsg::ListMcpServers {
-                scope,
-                reply: crate::actors::ractor_adapter::Reply::new(tx),
-            });
-        rx.await.unwrap_or_default()
+        match self.inner.call(|tx| ConfigMsg::ListMcpServers { scope, reply: tx }, None).await {
+            Ok(ractor::rpc::CallResult::Success(v)) => v,
+            _ => Vec::new(),
+        }
     }
 }
 
@@ -195,4 +191,3 @@ impl ConfigActorState {
         self.bus.publish(event);
     }
 }
-
