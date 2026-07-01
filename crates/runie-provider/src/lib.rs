@@ -5,6 +5,7 @@
 pub mod config;
 pub mod factory;
 pub mod mock;
+pub mod model_client;
 pub mod openai;
 pub mod protocol;
 pub mod retry;
@@ -30,6 +31,7 @@ pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilit
 pub use config::Config;
 pub use factory::DynProviderFactory;
 pub use mock::{MockProvider, MockStreamingProvider};
+pub use model_client::{ModelClient, TurnSession};
 pub use openai::OpenAiProvider;
 pub use runie_core::proto::{ProviderConfig, ProviderConfigBox};
 use std::sync::Arc;
@@ -114,7 +116,9 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
 }
 
 fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
-    let p = OpenAiProvider::new(api_key, model).with_base_url(base_url);
+    // Use the cached HTTP client so TCP connections are reused across turns.
+    let client = BuiltProvider::cached_http_client("openai", base_url);
+    let p = OpenAiProvider::from_http_client(client, api_key, model).with_base_url(base_url);
     let p = if let Some(meta) = find_model(model) {
         p.with_model_meta(meta)
     } else {

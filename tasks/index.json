@@ -1182,7 +1182,7 @@
   {
     "file": "split-modelclient-and-turnsession.md",
     "title": "Split ModelClient and TurnSession",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "standardize-error-types-on-thiserror-with-source-chains.md",

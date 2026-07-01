@@ -6,18 +6,27 @@ mod request;
 pub mod stream;
 pub mod types;
 
+use crate::model_client::ModelClient;
+use std::sync::Arc;
+
+/// OpenAI-compatible provider backed by a `ModelClient`.
+///
+/// The `client` field holds an `Arc<reqwest::Client>` so multiple
+/// `OpenAiProvider` instances can share the same connection pool.
 #[derive(Clone)]
 pub struct OpenAiProvider {
+    /// Shared HTTP client (potentially shared across provider instances).
+    client: Arc<reqwest::Client>,
     api_key: String,
     model: String,
     base_url: String,
     model_meta: Option<crate::ModelMeta>,
     tools: Vec<serde_json::Value>,
     tool_choice: Option<serde_json::Value>,
-    client: reqwest::Client,
 }
 
 impl OpenAiProvider {
+    /// Create from explicit credentials (new HTTP client per instance).
     pub fn new(api_key: String, model: impl Into<String>) -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(120))
@@ -25,13 +34,43 @@ impl OpenAiProvider {
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
         Self {
+            client: Arc::new(client),
             api_key: api_key.trim().to_owned(),
             model: model.into(),
             base_url: "https://api.openai.com/v1".to_owned(),
             model_meta: None,
             tools: Vec::new(),
             tool_choice: None,
+        }
+    }
+
+    /// Create from an existing `ModelClient` — shares the HTTP client.
+    pub fn from_model_client(client: &ModelClient) -> Self {
+        Self {
+            client: client.client.clone(),
+            api_key: client.api_key.clone(),
+            model: client.model.clone(),
+            base_url: client.transport.base_url.clone(),
+            model_meta: None,
+            tools: Vec::new(),
+            tool_choice: None,
+        }
+    }
+
+    /// Create from an explicit HTTP client (shared across providers).
+    pub fn from_http_client(
+        client: Arc<reqwest::Client>,
+        api_key: String,
+        model: impl Into<String>,
+    ) -> Self {
+        Self {
             client,
+            api_key: api_key.trim().to_owned(),
+            model: model.into(),
+            base_url: "https://api.openai.com/v1".to_owned(),
+            model_meta: None,
+            tools: Vec::new(),
+            tool_choice: None,
         }
     }
 
