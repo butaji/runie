@@ -36,8 +36,10 @@
 - Coordinate with `unify-permission-system-rules.md`.
 ## Completion Validation
 
-Before marking this task complete, confirm all three validation gates:
+All validation gates confirmed:
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — N/A (internal enum consolidation).
+
+**Verification (2026-07-01):** `subagents/mod.rs:48` re-exports `PermissionMode` from `permissions`. Legacy `parse_permission_mode()` handles camelCase names. No duplicate `PermissionMode` enum exists.

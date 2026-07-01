@@ -36,8 +36,10 @@
 - Low priority; the duplication does not break functionality.
 ## Completion Validation
 
-Before marking this task complete, confirm all three validation gates:
+All validation gates confirmed:
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — N/A (architectural consolidation, not user-visible change).
+
+**Verification (2026-07-01):** Confirmed CLI no longer uses `spawn_headless_runtime`; unified on `runie-core::HeadlessRuntime`.

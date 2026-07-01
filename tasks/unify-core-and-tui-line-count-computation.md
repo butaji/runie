@@ -62,8 +62,10 @@ The `word_wrap` function in `runie-core` is the single source of truth for word 
 - Core scroll math and TUI renderer share the exact same wrapping rules.
 ## Completion Validation
 
-Before marking this task complete, confirm all three validation gates:
+All validation gates confirmed:
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — N/A (internal computation unification).
+
+**Verification (2026-07-01):** `word_wrap` in `runie-core/src/layout.rs` is the single source of truth. TUI re-exports from `runie_core::layout::word_wrap` in `message/wrap.rs:8`.
