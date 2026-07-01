@@ -5,49 +5,18 @@
 //! but runtime persistence goes exclusively through `SessionStore`.
 
 use crate::event::DurableCoreEvent;
+use std::convert::TryFrom as _;
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
 use crate::session::SessionMetadata;
 use crate::session::store::SessionStore;
 use crate::Event;
 
-/// Convert a durable event to a bus event for replay.
+/// Convert a durable event to a canonical `Event` for replay.
+/// Returns `None` for events that are handled directly in `replay_event`
+/// (`SessionRenamed`, `ReadOnlySet`).
 pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
-    match event {
-        DurableCoreEvent::MessageSent {
-            id,
-            role,
-            content,
-            timestamp,
-            provider,
-        } => Some(Event::MessageReplayed {
-            id: id.clone(),
-            role: role.clone(),
-            content: content.clone(),
-            timestamp: *timestamp,
-            provider: provider.clone(),
-        }),
-        DurableCoreEvent::ToolCalled { id, name, input } => Some(Event::ToolStart {
-            id: id.clone(),
-            name: name.clone(),
-            input: input.clone(),
-        }),
-        DurableCoreEvent::ToolResult { id, output, .. } => Some(Event::ToolEnd {
-            id: id.clone(),
-            duration_secs: 0.0,
-            output: output.clone(),
-        }),
-        DurableCoreEvent::ModelSwitched { provider, model } => Some(Event::SwitchModel {
-            provider: provider.clone(),
-            model: model.clone(),
-            explicit: false,
-        }),
-        DurableCoreEvent::SessionRenamed { .. } => None, // handled directly in replay_event
-        DurableCoreEvent::ThemeSwitched { name } => Some(Event::SwitchTheme { name: name.clone() }),
-        DurableCoreEvent::ThinkingLevelSet { level } => Some(Event::SetThinkingLevel(*level)),
-        // ReadOnlySet is handled directly in replay_event to avoid lossy toggle conversion
-        DurableCoreEvent::ReadOnlySet { .. } => None,
-    }
+    Event::try_from(event).ok()
 }
 
 /// Replay a single durable event directly into application state.

@@ -4,10 +4,13 @@
 //! newline-delimited JSON to stdout. All headless modes (print, json, server)
 //! share the same event vocabulary.
 //!
+//! Derivable from the canonical `Event` via `HeadlessEvent::try_from_event`.
+//!
 //! Inspired by Grok Build's headless output format.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 /// A headless streaming event — serializable to JSONL.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,11 +72,238 @@ impl HeadlessEvent {
         let line = self.to_json_line();
         println!("{}", line);
     }
+
+    /// Try to convert a canonical `Event` to a headless streaming event.
+    /// Returns `None` for events that have no headless equivalent.
+    pub fn try_from_event(event: &crate::Event) -> Option<Self> {
+        use HeadlessEvent as H;
+        match event {
+            crate::Event::ResponseDelta { content, .. } if !content.is_empty() => {
+                Some(H::Text { data: content.clone() })
+            }
+            crate::Event::ThinkingDelta { content, .. } if !content.is_empty() => {
+                Some(H::Thinking { data: content.clone() })
+            }
+            crate::Event::ToolStart { id, name, .. } => Some(H::ToolCallStart {
+                id: id.clone(),
+                name: name.clone(),
+            }),
+            crate::Event::ToolInputDelta { id, content } => Some(H::ToolCallInputDelta {
+                id: id.clone(),
+                delta: content.clone(),
+            }),
+            crate::Event::ToolEnd { id, output: _, .. } => {
+                // ToolEnd can be either a tool call end (streaming) or a tool result
+                // (after execution). Use ToolCallEnd for streaming; ToolResult would be
+                // emitted separately after execution.
+                Some(H::ToolCallEnd { id: id.clone() })
+            }
+            crate::Event::TokenStatsUpdated {
+                tokens_in,
+                tokens_out,
+                ..
+            } => Some(H::Usage {
+                input_tokens: *tokens_in,
+                output_tokens: *tokens_out,
+            }),
+            crate::Event::Error { message, .. } => Some(H::Error { message: message.clone() }),
+            crate::Event::Done { .. } => Some(H::End {
+                stop_reason: "stop".into(),
+                session_id: None,
+                request_id: None,
+            }),
+            crate::Event::PermissionRequest { request_id, tool, input } => {
+                let args = serde_json::from_value(input.clone()).unwrap_or_default();
+                Some(H::PermissionRequest {
+                    id: request_id.clone(),
+                    tool: tool.clone(),
+                    args,
+                })
+            }
+            // All other Event variants have no headless equivalent
+            _ => None,
+        }
+    }
+}
+
+/// Derive a headless event from a canonical `Event`.
+impl TryFrom<&crate::Event> for HeadlessEvent {
+    type Error = ();
+
+    fn try_from(event: &crate::Event) -> Result<HeadlessEvent, <HeadlessEvent as TryFrom<&crate::Event>>::Error> {
+        Self::try_from_event(event).ok_or(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Event → HeadlessEvent ─────────────────────────────────────────────────
+
+    #[test]
+    fn headless_from_response_delta() {
+        let event = crate::Event::ResponseDelta {
+            id: "".into(),
+            content: "Hello, ".into(),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(result.unwrap(), HeadlessEvent::Text { data } if data == "Hello, "));
+    }
+
+    #[test]
+    fn headless_from_response_delta_ignores_empty() {
+        let event = crate::Event::ResponseDelta {
+            id: "".into(),
+            content: String::new(),
+        };
+        assert!(HeadlessEvent::try_from_event(&event).is_none());
+    }
+
+    #[test]
+    fn headless_from_thinking_delta() {
+        let event = crate::Event::ThinkingDelta {
+            id: "".into(),
+            content: "thinking...".into(),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(result.unwrap(), HeadlessEvent::Thinking { data } if data == "thinking..."));
+    }
+
+    #[test]
+    fn headless_from_tool_start() {
+        let event = crate::Event::ToolStart {
+            id: "c1".into(),
+            name: "bash".into(),
+            input: serde_json::json!({}),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(
+            result.unwrap(),
+            HeadlessEvent::ToolCallStart { id, name } if id == "c1" && name == "bash"
+        ));
+    }
+
+    #[test]
+    fn headless_from_tool_input_delta() {
+        let event = crate::Event::ToolInputDelta {
+            id: "c1".into(),
+            content: "{\"cmd\": ".into(),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(
+            result.unwrap(),
+            HeadlessEvent::ToolCallInputDelta { id, delta } if id == "c1" && delta == "{\"cmd\": "
+        ));
+    }
+
+    #[test]
+    fn headless_from_tool_end() {
+        let event = crate::Event::ToolEnd {
+            id: "c1".into(),
+            duration_secs: 1.0,
+            output: "done".into(),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(result.unwrap(), HeadlessEvent::ToolCallEnd { id } if id == "c1"));
+    }
+
+    #[test]
+    fn headless_from_token_stats() {
+        let event = crate::Event::TokenStatsUpdated {
+            tokens_in: 100,
+            tokens_out: 50,
+            speed_tps: 12.5,
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(
+            result.unwrap(),
+            HeadlessEvent::Usage { input_tokens: 100, output_tokens: 50 }
+        ));
+    }
+
+    #[test]
+    fn headless_from_error() {
+        let event = crate::Event::Error {
+            id: "".into(),
+            message: "rate limited".into(),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(
+            result.unwrap(),
+            HeadlessEvent::Error { message } if message == "rate limited"
+        ));
+    }
+
+    #[test]
+    fn headless_from_done() {
+        let event = crate::Event::Done { id: "".into() };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(
+            result.unwrap(),
+            HeadlessEvent::End { stop_reason, .. } if stop_reason == "stop"
+        ));
+    }
+
+    #[test]
+    fn headless_from_permission_request() {
+        let event = crate::Event::PermissionRequest {
+            request_id: "p1".into(),
+            tool: "bash".into(),
+            input: serde_json::json!({"cmd": "ls"}),
+        };
+        let result = HeadlessEvent::try_from_event(&event);
+        assert!(result.is_some());
+        assert!(matches!(
+            result.unwrap(),
+            HeadlessEvent::PermissionRequest { id, tool, .. }
+            if id == "p1" && tool == "bash"
+        ));
+    }
+
+    #[test]
+    fn non_headless_events_return_none() {
+        let cases: Vec<crate::Event> = vec![
+            crate::Event::Quit,
+            crate::Event::Input('x'),
+            crate::Event::SetThinkingLevel(crate::model::ThinkingLevel::Medium),
+            crate::Event::TurnComplete { id: "".into(), duration_secs: 0.0 },
+        ];
+        for event in cases {
+            assert!(
+                HeadlessEvent::try_from_event(&event).is_none(),
+                "{:?} should not become headless",
+                event
+            );
+        }
+    }
+
+    // ── TryFrom<&Event> for HeadlessEvent ──────────────────────────────────────
+
+    #[test]
+    fn try_from_event_ok() {
+        let event = crate::Event::ResponseDelta { id: "".into(), content: "hi".into() };
+        let result: Result<HeadlessEvent, _> = HeadlessEvent::try_from(&event);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn try_from_event_err_for_non_headless() {
+        let event = crate::Event::Quit;
+        let result: Result<HeadlessEvent, _> = HeadlessEvent::try_from(&event);
+        assert!(result.is_err());
+    }
+
+    // ── Existing serialization tests ────────────────────────────────────────────
+
 
     #[test]
     fn text_event_serialization() {
