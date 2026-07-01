@@ -637,7 +637,7 @@
   {
     "file": "load-slash-commands-with-include-dir.md",
     "title": "Load slash commands with include_dir",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
