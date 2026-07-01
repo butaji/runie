@@ -2,7 +2,9 @@
 
 ## Status
 
-`todo`
+`done`
+
+**Completed:** 2026-07-01
 
 ## Context
 
@@ -13,9 +15,9 @@
 Add `fs2` advisory lock, cap entries, and optionally migrate to the SQLite session store.
 
 ## Acceptance Criteria
-- [ ] Lock history file during writes.
-- [ ] Cap to a configurable max (default 1000).
-- [ ] Atomic write or migration to session store.
+- [x] Lock history file during writes.
+- [x] Cap to a configurable max (default 1000).
+- [x] Atomic write or migration to session store.
 
 ## Design Impact
 
@@ -31,6 +33,6 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass. 21 tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

@@ -1092,7 +1092,7 @@
   {
     "file": "standardize-error-types-on-thiserror-with-source-chains.md",
     "title": "Standardize error types on thiserror with source chains",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "stop-dotenvy-from-mutating-process-environment.md",
