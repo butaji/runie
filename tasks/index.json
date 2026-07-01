@@ -997,7 +997,7 @@
   {
     "file": "replace-register-handler-and-theme-macros-with-functions.md",
     "title": "Replace register_handler and theme macros with functions",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-remaining-custom-parsers-and-macros-with-strum.md",
@@ -1307,7 +1307,7 @@
   {
     "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
     "title": "Use color-eyre and human-panic for CLI errors",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "use-fuzzy-matcher-for-model-catalog.md",

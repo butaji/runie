@@ -2,7 +2,7 @@
 
 ## Status
 
-`done`
+`partial`
 
 ## Context
 
@@ -14,10 +14,10 @@ Adopt `color-eyre` for the TUI and `human-panic` for both binaries. Print the fu
 
 ## Acceptance Criteria
 
-- [ ] Add `color-eyre`/`human-panic` to workspace deps.
-- [ ] Install `human-panic` panic hook in both binaries.
-- [ ] Use `color_eyre::Result` in `runie-cli` and print the chain on error.
-- [ ] TUI uses `color-eyre` for startup errors.
+- [x] Add `color-eyre`/`human-panic` to workspace deps. — Done; both in Cargo.toml
+- [x] Install `human-panic` panic hook in both binaries. — Done; CLI at line 88, TUI at line 47
+- [x] Use `color_eyre::Result` in `runie-cli` and print the chain on error. — Done; color_eyre::install() at line 94, error chain printed at line 107
+- [ ] TUI uses `color-eyre` for startup errors. — NOT DONE; TUI main.rs does not use color_eyre
 
 ## Design Impact
 
@@ -33,6 +33,10 @@ No change to TUI element design or composition. Only error reporting behavior ch
 
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+## Notes
+
+The CLI fully implements color-eyre and human-panic. The TUI only uses human-panic. The task as written requires color-eyre in TUI startup errors, which is not implemented.
