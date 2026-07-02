@@ -1927,7 +1927,7 @@
   {
     "file": "use-atomic-write-and-lock-for-session-header-updates.md",
     "title": "Use atomic write and lock for session header updates",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-atomic-writes-for-config-and-session-files.md",

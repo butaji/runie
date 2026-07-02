@@ -3,10 +3,12 @@
 //! The session file header is the first JSON line of each session file.
 //! `SessionHeader` is an alias for `SessionMetadata` (defined in `crate::session::mod.rs`).
 
-use std::io::{BufRead, Write};
+use std::io::BufRead;
 use std::path::Path;
 
 pub use crate::session::SessionMetadata as SessionHeader;
+
+use crate::io::atomic_write::atomic_write;
 
 /// Read the header from a session file.
 pub fn read_header(path: &Path) -> anyhow::Result<Option<SessionHeader>> {
@@ -35,14 +37,16 @@ pub fn read_header(path: &Path) -> anyhow::Result<Option<SessionHeader>> {
     }
 }
 
-/// Write the header to a session file.
+/// Write the header to a session file atomically.
+///
+/// Reads the existing content, prepends the new header as the first JSON line,
+/// and atomically replaces the file using `atomic_write`.
 pub fn write_header(path: &Path, header: &SessionHeader) -> anyhow::Result<()> {
     let header_line = serde_json::to_string(header)?;
     let content = std::fs::read_to_string(path)?;
-    let mut file = std::fs::File::create(path)?;
-    writeln!(file, "{}", header_line)?;
-    file.write_all(content.as_bytes())?;
-    file.sync_all()?;
+    // Build the new file content: header as first line, then the rest
+    let new_content = format!("{}\n{}", header_line, content);
+    atomic_write(path, &new_content)?;
     Ok(())
 }
 
