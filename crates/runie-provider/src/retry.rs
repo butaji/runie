@@ -9,6 +9,7 @@ use crate::{ProviderError, RetryConfig};
 use anyhow::Error;
 use backon::{ExponentialBuilder, Retryable};
 use futures::Future;
+use tracing::Instrument;
 
 /// Classify an SSE stream error into a typed `ProviderError` variant.
 pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
@@ -99,9 +100,21 @@ where
         .with_min_delay(config.initial_delay)
         .with_max_delay(config.max_delay)
         .with_factor(config.multiplier as f32);
-    f.retry(builder)
-        .when(is_retryable)
-        .await
+    tracing::debug!(max_attempts = %config.max_attempts, initial_delay_ms = %config.initial_delay.as_millis(), max_delay_ms = %config.max_delay.as_millis(), "provider retry starting");
+    let span = tracing::info_span!("provider_retry", max_attempts = %config.max_attempts);
+    let result = async {
+        f.retry(builder)
+            .when(is_retryable)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "provider retry failed"))
+    }
+    .instrument(span)
+    .await;
+    match &result {
+        Ok(_) => tracing::debug!("provider retry succeeded"),
+        Err(_) => {}
+    }
+    result
 }
 
 #[cfg(test)]

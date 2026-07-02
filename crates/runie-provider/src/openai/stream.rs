@@ -12,6 +12,7 @@ use reqwest_eventsource::retry::Never;
 use reqwest_eventsource::EventSource;
 use runie_core::proto::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
+use tracing::Instrument;
 
 /// Re-export types for testing and external consumers.
 pub use super::protocol::ToolAccum;
@@ -26,10 +27,15 @@ fn parse_sse_line(line: &str) -> Option<Result<OpenAiFrame, runie_core::provider
     // Support fixture error lines: "error: {\"type\":\"rate_limit\",...}"
     if let Some(err_json) = trimmed.strip_prefix("error: ") {
         if let Ok(err_val) = serde_json::from_str::<serde_json::Value>(err_json) {
+            tracing::trace!(line = %trimmed, "parsed SSE error line");
             return Some(Err(parse_error_value(&err_val)));
         }
     }
-    OpenAiFrame::from_line(trimmed).map(Ok)
+    let frame = OpenAiFrame::from_line(trimmed);
+    if frame.is_some() {
+        tracing::trace!(line = %trimmed, "parsed SSE frame");
+    }
+    frame.map(Ok)
 }
 
 
@@ -45,15 +51,29 @@ fn openai_event_stream(
     provider: OpenAiProvider,
     messages: Vec<ChatMessage>,
 ) -> impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send {
+    let _span = tracing::info_span!(
+        "openai_stream",
+        provider = %provider.model(),
+        base_url = %provider.base_url,
+        message_count = %messages.len()
+    );
     async_stream::stream! {
+        tracing::debug!("starting OpenAI stream");
         // Build EventSource with backon retry for stream-establishment failures.
         // Once SSE data starts flowing, errors surface immediately (no internal retry).
         let es = match build_eventsource_with_retry(&provider, &messages).await {
-            Ok(es) => es,
-            Err(e) => { yield Err(e); return; }
+            Ok(es) => {
+                tracing::debug!("EventSource established");
+                es
+            }
+            Err(e) => {
+                tracing::error!(error = %e, "failed to establish EventSource");
+                yield Err(e); return;
+            }
         };
         let mut es = Box::pin(es);
         let state = stream_sse_events(&mut es).await;
+        tracing::debug!("SSE stream completed");
         for event in OpenAiProtocol::new().on_halt(state) { yield Ok(event); }
     }
 }
@@ -64,43 +84,54 @@ async fn build_eventsource_with_retry(
     provider: &OpenAiProvider,
     messages: &[ChatMessage],
 ) -> anyhow::Result<EventSource> {
-    let body = build_request_body(provider, messages);
-    let url = format!("{}/chat/completions", provider.base_url);
-    let api_key = provider.api_key.clone();
-    let client = provider.client.clone();
+    let span = tracing::debug_span!("build_eventsource");
+    async move {
+        let body = build_request_body(provider, messages);
+        let url = format!("{}/chat/completions", provider.base_url);
+        let api_key = provider.api_key.clone();
+        let client = provider.client.clone();
 
-    let builder = client
-        .post(&url)
-        .header("Authorization", format!("Bearer {}", api_key.trim()))
-        .header("Content-Type", "application/json")
-        .json(&body);
+        tracing::trace!(url = %url, body_size = %body.to_string().len(), "building request");
 
-    // Wrap EventSource creation in backon: retry on transient errors,
-    // but only during stream establishment (before SSE data starts).
-    let retry_config = provider.retry_config().cloned().unwrap_or_default();
-    // max_attempts includes the initial call, so max_times (retries) = max_attempts - 1.
-    // Use saturating_sub to handle max_attempts = 0 or 1 (no retries).
-    let backoff = ExponentialBuilder::default()
-        .with_max_times(retry_config.max_attempts.saturating_sub(1) as usize)
-        .with_min_delay(retry_config.initial_delay)
-        .with_max_delay(retry_config.max_delay)
-        .with_factor(retry_config.multiplier as f32);
-    let es = (move || {
-        let b = builder.try_clone().expect("request builder is cloneable");
-        async move {
-            let mut es = EventSource::new(b)
-                .map_err(|e| anyhow::anyhow!("EventSource build error: {e}"))?;
-            // Disable internal retry: backon handles stream-establishment retries,
-            // and we surface SSE-streaming errors immediately.
-            es.set_retry_policy(Box::new(Never));
-            Ok(es)
-        }
-    })
-    .retry(backoff)
-    .when(crate::retry::is_retryable)
-    .await?;
+        let builder = client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", api_key.trim()))
+            .header("Content-Type", "application/json")
+            .json(&body);
 
-    Ok(es)
+        // Wrap EventSource creation in backon: retry on transient errors,
+        // but only during stream establishment (before SSE data starts).
+        let retry_config = provider.retry_config().cloned().unwrap_or_default();
+        tracing::debug!(max_attempts = %retry_config.max_attempts, initial_delay_ms = %retry_config.initial_delay.as_millis(), "building EventSource with retry");
+        // max_attempts includes the initial call, so max_times (retries) = max_attempts - 1.
+        // Use saturating_sub to handle max_attempts = 0 or 1 (no retries).
+        let backoff = ExponentialBuilder::default()
+            .with_max_times(retry_config.max_attempts.saturating_sub(1) as usize)
+            .with_min_delay(retry_config.initial_delay)
+            .with_max_delay(retry_config.max_delay)
+            .with_factor(retry_config.multiplier as f32);
+        let es = (move || {
+            let b = builder.try_clone().expect("request builder is cloneable");
+            async move {
+                tracing::trace!("creating EventSource");
+                let mut es = EventSource::new(b)
+                    .map_err(|e| anyhow::anyhow!("EventSource build error: {e}"))?;
+                // Disable internal retry: backon handles stream-establishment retries,
+                // and we surface SSE-streaming errors immediately.
+                es.set_retry_policy(Box::new(Never));
+                Ok(es)
+            }
+        })
+        .retry(backoff)
+        .when(crate::retry::is_retryable)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "EventSource build failed after retries"))?;
+
+        tracing::debug!("EventSource created successfully");
+        Ok(es)
+    }
+    .instrument(span)
+    .await
 }
 
 /// Process SSE events and yield provider events.
@@ -108,34 +139,48 @@ async fn stream_sse_events(
     es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>>
               + Unpin),
 ) -> OpenAiState {
-    let protocol = OpenAiProtocol::new();
-    let mut state = OpenAiState::default();
+    let span = tracing::debug_span!("stream_sse_events");
+    async move {
+        let protocol = OpenAiProtocol::new();
+        let mut state = OpenAiState::default();
+        let mut event_count = 0usize;
 
-    while let Some(result) = futures::StreamExt::next(&mut *es).await {
-        let line = match parse_sse_result(result) {
-            Some(Ok(l)) => l,
-            Some(Err(_)) => return state,
-            None => continue,
-        };
-        // Feed through the shared SSE parser (handles frames and fixture errors).
-        match parse_sse_line(&line) {
-            Some(Ok(frame)) => {
-                if protocol.terminal(&frame) {
-                    let (new_state, _) = protocol.step(state, frame);
-                    return new_state;
+        while let Some(result) = futures::StreamExt::next(&mut *es).await {
+            let line = match parse_sse_result(result) {
+                Some(Ok(l)) => l,
+                Some(Err(e)) => {
+                    tracing::warn!(error = %e, "SSE stream error");
+                    return state;
                 }
-                let (new_state, _) = protocol.step(state, frame);
-                state = new_state;
+                None => continue,
+            };
+            // Feed through the shared SSE parser (handles frames and fixture errors).
+            match parse_sse_line(&line) {
+                Some(Ok(frame)) => {
+                    event_count += 1;
+                    tracing::trace!(event_count = event_count, "processing SSE frame");
+                    if protocol.terminal(&frame) {
+                        let (new_state, _) = protocol.step(state, frame);
+                        tracing::debug!(total_events = event_count, "SSE stream terminated");
+                        return new_state;
+                    }
+                    let (new_state, _) = protocol.step(state, frame);
+                    state = new_state;
+                }
+                Some(Err(err)) => {
+                    tracing::warn!(error = %err, "SSE parse error");
+                    // Error lines are fixture-only; in live streaming, SSE errors
+                    // surface as reqwest_eventsource errors above, not as parsed lines.
+                    continue;
+                }
+                None => continue,
             }
-            Some(Err(_)) => {
-                // Error lines are fixture-only; in live streaming, SSE errors
-                // surface as reqwest_eventsource errors above, not as parsed lines.
-                continue;
-            }
-            None => continue,
         }
+        tracing::debug!(total_events = event_count, "SSE stream ended");
+        state
     }
-    state
+    .instrument(span)
+    .await
 }
 
 fn parse_sse_result(

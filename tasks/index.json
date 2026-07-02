@@ -138,7 +138,7 @@
     {
       "file": "add-tracing-to-runie-provider.md",
       "title": "Add tracing to `runie-provider`",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "adopt-camino-utf8pathbuf-for-internal-paths.md",

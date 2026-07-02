@@ -36,8 +36,16 @@ pub fn build_request_body(
     provider: &OpenAiProvider,
     messages: &[ChatMessage],
 ) -> serde_json::Value {
+    let span = tracing::debug_span!(
+        "build_request_body",
+        model = %provider.model(),
+        message_count = %messages.len()
+    );
+    let _guard = span.enter();
+
     let normalized = super::normalize::normalize_messages(messages.to_vec());
     let meta = request_metadata(provider.model_meta());
+    tracing::trace!(normalized_count = %normalized.len(), "messages normalized");
     let mut body = serde_json::json!({
         "model": provider.model(),
         "messages": serialize_messages(&normalized, meta.supports_system),

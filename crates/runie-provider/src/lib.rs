@@ -2,6 +2,8 @@
 
 //! Runie Provider - Concrete LLM provider implementations
 
+use tracing::Instrument;
+
 pub mod config;
 pub mod factory;
 pub mod http;
@@ -206,22 +208,36 @@ pub async fn validate_api_key_with_timeout(
     api_key: &str,
     timeout: std::time::Duration,
 ) -> Result<Vec<String>> {
-    // Apply retry via backon to transient errors, bounded by overall timeout.
-    match tokio::time::timeout(
-        timeout,
-        with_retry(|| async { fetch_models(base_url, api_key, timeout).await }),
-    )
-    .await
-    {
-        Ok(Ok(models)) => Ok(models),
-        Ok(Err(e)) => {
-            if is_retryable(&e) {
-                anyhow::bail!("API validation failed after retries: {e}");
+    let span = tracing::info_span!("validate_api_key", base_url = %base_url);
+    async move {
+        tracing::debug!("validating API key");
+        // Apply retry via backon to transient errors, bounded by overall timeout.
+        match tokio::time::timeout(
+            timeout,
+            with_retry(|| async { fetch_models(base_url, api_key, timeout).await }),
+        )
+        .await
+        {
+            Ok(Ok(models)) => {
+                tracing::debug!(model_count = %models.len(), "API key validated successfully");
+                Ok(models)
             }
-            Err(e)
+            Ok(Err(e)) => {
+                if is_retryable(&e) {
+                    tracing::warn!(error = %e, "API validation failed after retries");
+                    anyhow::bail!("API validation failed after retries: {e}");
+                }
+                tracing::warn!(error = %e, "API validation failed");
+                Err(e)
+            }
+            Err(_) => {
+                tracing::warn!(timeout_secs = %timeout.as_secs(), "API validation timed out");
+                anyhow::bail!("API validation timed out after {}s", timeout.as_secs())
+            }
         }
-        Err(_) => anyhow::bail!("API validation timed out after {}s", timeout.as_secs()),
     }
+    .instrument(span)
+    .await
 }
 
 async fn fetch_models(
@@ -229,32 +245,41 @@ async fn fetch_models(
     api_key: &str,
     timeout: std::time::Duration,
 ) -> Result<Vec<String>> {
-    let client = reqwest::Client::builder()
-        .timeout(timeout)
-        .connect_timeout(timeout)
-        .build()?;
-    let url = http::request_url(base_url, "models");
-    let resp = client
-        .get(&url)
-        .header("Authorization", http::bearer_header(api_key))
-        .send()
-        .await?;
+    let span = tracing::debug_span!("fetch_models", base_url = %base_url);
+    async move {
+        let client = reqwest::Client::builder()
+            .timeout(timeout)
+            .connect_timeout(timeout)
+            .build()?;
+        let url = http::request_url(base_url, "models");
+        tracing::trace!("fetching models from {}", url);
+        let resp = client
+            .get(&url)
+            .header("Authorization", http::bearer_header(api_key))
+            .send()
+            .await?;
 
-    if !resp.status().is_success() {
-        let text = resp.text().await.unwrap_or_default();
-        anyhow::bail!("API validation failed: {}", text);
+        let status = resp.status();
+        tracing::trace!(status = %status, "received response");
+
+        if !status.is_success() {
+            let text = resp.text().await.unwrap_or_default();
+            tracing::warn!(status = %status, "API request failed");
+            anyhow::bail!("API validation failed: {}", text);
+        }
+        let json: serde_json::Value = resp.json().await?;
+        Ok(json
+            .get("data")
+            .and_then(|d| d.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default())
     }
-
-    let json: serde_json::Value = resp.json().await?;
-    Ok(json
-        .get("data")
-        .and_then(|d| d.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
-                .collect()
-        })
-        .unwrap_or_default())
+    .instrument(span)
+    .await
 }
 
 // ---------------------------------------------------------------------------
