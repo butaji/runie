@@ -1,8 +1,9 @@
 # Compare multi-turn conversation and fix gaps
 
 **Status**: blocked
+**Blocked reason**: Grok Build fixtures not present; comparison harness not yet built.
 
-> **Blocked by**: `build-runie-vs-grok-build-comparison-harness` (todo), `prepare-grok-build-reference-for-comparison` (todo), Grok Build fixtures not present
+> **Blocked by**: `build-runie-vs-grok-build-comparison-harness` (todo), `prepare-grok-build-reference-for-comparison` (todo)
 **Milestone**: R7
 **Category**: TUI / Rendering
 **Priority**: P1

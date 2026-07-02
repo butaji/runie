@@ -1,12 +1,15 @@
 # Task Title
 
-**Status**: todo
-**Milestone**: (MVP | R1 | R2 | R3 | R4)
+**Status**: (todo | in_progress | done | blocked | wontfix)
+**Milestone**: (MVP | R1 | R2 | R3 | R4 | R5 | R6 | R7)
 **Category**: (Core / State | Tools | TUI / Rendering | Input / Commands | Sessions | Configuration | Architecture / Actors | Architecture / Security | ...)
 **Priority**: (P0 | P1 | P2)
 
 **Depends on**: (task-ids or none)
 **Blocks**: (task-ids or none)
+**Supersedes**: (task-id or none)
+**Blocked by**: (task-ids or none)
+**Blocked reason**: (reason string or none)
 
 ## Description
 
