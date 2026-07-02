@@ -5,7 +5,6 @@
 
 use crate::provider::ProviderError;
 use serde::{Deserialize, Serialize};
-use serde_with::{DeserializeAs, SerializeAs};
 use thiserror::Error;
 
 /// Unified provider event stream type.
@@ -67,209 +66,52 @@ pub enum StopReason {
 /// Model-specific errors (distinct from `ProviderError`).
 ///
 /// Uses `thiserror` to derive `Display` and `Error` with proper `#[source]` chains.
-/// The `Other` variant stores the underlying `anyhow::Error` directly so that the
-/// full source chain (`Error::source()`) is preserved for error introspection.
-/// Serialization uses `serde_with` (`SerializeAs`/`DeserializeAs`) via the
-/// `ModelErrorJsonSchema` helper, producing a `{kind, message, retryAfterSecs?}`
-/// JSON object that is byte-compatible with the prior hand-written impls.
-#[derive(Debug, Error)]
+/// The `Other` variant stores the error message as a `String` for simple serialization;
+/// the original source chain is lost in this representation but the user-visible
+/// message is preserved.
+#[derive(Debug, Error, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "message", rename_all = "camelCase")]
 pub enum ModelError {
     /// LLM returned invalid JSON.
     #[error("JSON decode error: {0}")]
     JsonDecode(String),
     /// Token limit exceeded.
     #[error("Context length exceeded: used {used}, limit {limit}")]
-    ContextLength { limit: usize, used: usize },
+    ContextLength {
+        limit: usize,
+        used: usize,
+    },
     /// Model refused the request.
     #[error("Model refused: {0}")]
     Refusal(String),
     /// Rate limit hit (retry info available via struct fields).
     #[error("Rate limited")]
-    RateLimit { retry_after_secs: Option<u32> },
-    /// An underlying error (network, parse, etc.) with preserved source chain.
-    /// `#[transparent]` forwards Display and Error::source to the inner anyhow::Error.
-    #[error(transparent)]
-    Other(anyhow::Error),
+    RateLimit {
+        #[serde(
+            rename = "retryAfterSecs",
+            skip_serializing_if = "Option::is_none"
+        )]
+        retry_after_secs: Option<u32>,
+    },
+    /// An underlying error (network, parse, etc.).
+    /// Stores only the message string for serialization simplicity.
+    #[error("{0}")]
+    Other(String),
 }
 
-// ─── serde_with helpers ───────────────────────────────────────────────────────
-
-/// JSON schema for serializing/deserializing `ModelError`.
-/// Mirrors the `{kind, message, retryAfterSecs?}` structure.
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ModelErrorJsonSchema {
-    kind: String,
-    message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    retry_after_secs: Option<u32>,
-}
-
-impl SerializeAs<ModelError> for ModelErrorJsonSchema {
-    fn serialize_as<S>(source: &ModelError, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let (kind, message, retry_after_secs) = match source {
-            ModelError::JsonDecode(msg) => ("jsonDecode", format!("JSON decode error: {msg}"), None),
-            ModelError::ContextLength { limit, used } => (
-                "contextLength",
-                format!("Context length exceeded: used {used}, limit {limit}"),
-                None,
-            ),
-            ModelError::Refusal(msg) => ("refusal", format!("Model refused: {msg}"), None),
-            ModelError::RateLimit { retry_after_secs } => ("rateLimit", "Rate limited".into(), *retry_after_secs),
-            ModelError::Other(e) => ("other", e.to_string(), None),
-        };
-        ModelErrorJsonSchema { kind: kind.into(), message, retry_after_secs }.serialize(serializer)
-    }
-}
-
-impl<'de> DeserializeAs<'de, ModelError> for ModelErrorJsonSchema {
-    fn deserialize_as<D>(deserializer: D) -> Result<ModelError, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let ModelErrorJsonSchema { kind, message, retry_after_secs } =
-            ModelErrorJsonSchema::deserialize(deserializer)?;
-        match kind.as_str() {
-            "jsonDecode" => Ok(ModelError::JsonDecode(
-                message.trim_start_matches("JSON decode error: ").to_owned(),
-            )),
-            "contextLength" => {
-                let used = message
-                    .split(", limit ")
-                    .next()
-                    .and_then(|s| s.split("used ").nth(1))
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or_default();
-                let limit = message
-                    .split(", limit ")
-                    .nth(1)
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or_default();
-                Ok(ModelError::ContextLength { limit, used })
-            }
-            "refusal" => Ok(ModelError::Refusal(
-                message.trim_start_matches("Model refused: ").to_owned(),
-            )),
-            "rateLimit" => Ok(ModelError::RateLimit { retry_after_secs }),
-            _ => Ok(ModelError::Other(anyhow::anyhow!("{message}"))),
-        }
-    }
-}
-
-// ─── Manual trait impls that thiserror can't derive ──────────────────────────
-
-impl Clone for ModelError {
-    fn clone(&self) -> Self {
-        use ModelError::*;
-        match self {
-            JsonDecode(s) => JsonDecode(s.clone()),
-            ContextLength { limit, used } => ContextLength { limit: *limit, used: *used },
-            Refusal(s) => Refusal(s.clone()),
-            RateLimit { retry_after_secs } => RateLimit { retry_after_secs: *retry_after_secs },
-            // anyhow::Error is not Clone, so we clone the message string instead
-            Other(e) => Other(anyhow::anyhow!("{e}")),
-        }
-    }
-}
-
-impl PartialEq for ModelError {
-    fn eq(&self, other: &Self) -> bool {
-        use ModelError::*;
-        match (self, other) {
-            (JsonDecode(a), JsonDecode(b)) => a == b,
-            (ContextLength { limit: al, used: au }, ContextLength { limit: bl, used: bu }) => al == bl && au == bu,
-            (Refusal(a), Refusal(b)) => a == b,
-            (RateLimit { retry_after_secs: a }, RateLimit { retry_after_secs: b }) => a == b,
-            // anyhow::Error does not impl PartialEq; compare formatted messages
-            (Other(a), Other(b)) => a.to_string() == b.to_string(),
-            _ => false,
-        }
-    }
-}
-
-impl serde::Serialize for ModelError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let schema = match self {
-            ModelError::JsonDecode(msg) => ModelErrorJsonSchema {
-                kind: "jsonDecode".into(),
-                message: format!("JSON decode error: {msg}"),
-                retry_after_secs: None,
-            },
-            ModelError::ContextLength { limit, used } => ModelErrorJsonSchema {
-                kind: "contextLength".into(),
-                message: format!("Context length exceeded: used {used}, limit {limit}"),
-                retry_after_secs: None,
-            },
-            ModelError::Refusal(msg) => ModelErrorJsonSchema {
-                kind: "refusal".into(),
-                message: format!("Model refused: {msg}"),
-                retry_after_secs: None,
-            },
-            ModelError::RateLimit { retry_after_secs } => ModelErrorJsonSchema {
-                kind: "rateLimit".into(),
-                message: "Rate limited".into(),
-                retry_after_secs: *retry_after_secs,
-            },
-            ModelError::Other(e) => ModelErrorJsonSchema {
-                kind: "other".into(),
-                message: e.to_string(),
-                retry_after_secs: None,
-            },
-        };
-        schema.serialize(serializer)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for ModelError {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let ModelErrorJsonSchema { kind, message, retry_after_secs } =
-            ModelErrorJsonSchema::deserialize(deserializer)?;
-        match kind.as_str() {
-            "jsonDecode" => Ok(ModelError::JsonDecode(
-                message.trim_start_matches("JSON decode error: ").to_owned(),
-            )),
-            "contextLength" => {
-                let used = message
-                    .split(", limit ")
-                    .next()
-                    .and_then(|s| s.split("used ").nth(1))
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or_default();
-                let limit = message
-                    .split(", limit ")
-                    .nth(1)
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or_default();
-                Ok(ModelError::ContextLength { limit, used })
-            }
-            "refusal" => Ok(ModelError::Refusal(
-                message.trim_start_matches("Model refused: ").to_owned(),
-            )),
-            "rateLimit" => Ok(ModelError::RateLimit { retry_after_secs }),
-            _ => Ok(ModelError::Other(anyhow::anyhow!("{message}"))),
-        }
-    }
-}
+// ─── From implementations ───────────────────────────────────────────────────────
 
 impl From<ProviderError> for ModelError {
     fn from(e: ProviderError) -> Self {
-        // Wrap in anyhow::Error to preserve the full source chain
-        ModelError::Other(anyhow::Error::from(e))
+        // Store the error message as a string for serialization
+        ModelError::Other(e.to_string())
     }
 }
 
 impl From<anyhow::Error> for ModelError {
     fn from(e: anyhow::Error) -> Self {
-        ModelError::Other(e)
+        // Store the error message as a string for serialization
+        ModelError::Other(e.to_string())
     }
 }
 
@@ -350,7 +192,8 @@ mod tests {
     fn model_error_json_decode_roundtrip() {
         let err = ModelError::JsonDecode("unexpected token".into());
         let json = serde_json::to_string(&err).unwrap();
-        assert_eq!(json, r#"{"kind":"jsonDecode","message":"JSON decode error: unexpected token"}"#);
+        // With #[serde(tag = "kind", content = "message")], tuple variants put content directly in message
+        assert_eq!(json, r#"{"kind":"jsonDecode","message":"unexpected token"}"#);
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
     }
@@ -359,9 +202,10 @@ mod tests {
     fn model_error_context_length_roundtrip() {
         let err = ModelError::ContextLength { limit: 8192, used: 9000 };
         let json = serde_json::to_string(&err).unwrap();
+        // Struct variants put the struct fields in message
         assert_eq!(
             json,
-            r#"{"kind":"contextLength","message":"Context length exceeded: used 9000, limit 8192"}"#
+            r#"{"kind":"contextLength","message":{"limit":8192,"used":9000}}"#
         );
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
@@ -371,7 +215,7 @@ mod tests {
     fn model_error_refusal_roundtrip() {
         let err = ModelError::Refusal("content blocked".into());
         let json = serde_json::to_string(&err).unwrap();
-        assert_eq!(json, r#"{"kind":"refusal","message":"Model refused: content blocked"}"#);
+        assert_eq!(json, r#"{"kind":"refusal","message":"content blocked"}"#);
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
     }
@@ -380,23 +224,24 @@ mod tests {
     fn model_error_rate_limit_roundtrip() {
         let err = ModelError::RateLimit { retry_after_secs: Some(30) };
         let json = serde_json::to_string(&err).unwrap();
-        assert_eq!(json, r#"{"kind":"rateLimit","message":"Rate limited","retryAfterSecs":30}"#);
+        // The retry_after_secs field is renamed to retryAfterSecs in JSON
+        assert_eq!(json, r#"{"kind":"rateLimit","message":{"retryAfterSecs":30}}"#);
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
 
-        // Without retry info
+        // Without retry info, the field is skipped entirely
         let err2 = ModelError::RateLimit { retry_after_secs: None };
         let json2 = serde_json::to_string(&err2).unwrap();
-        assert_eq!(json2, r#"{"kind":"rateLimit","message":"Rate limited"}"#);
+        assert_eq!(json2, r#"{"kind":"rateLimit","message":{}}"#);
         let roundtrip2: ModelError = serde_json::from_str(&json2).unwrap();
         assert_eq!(roundtrip2, err2);
     }
 
     #[test]
     fn model_error_other_roundtrip() {
-        let err = ModelError::Other(anyhow::anyhow!("connection refused"));
+        let err = ModelError::Other("connection refused".into());
         let json = serde_json::to_string(&err).unwrap();
-        assert!(json.starts_with(r#"{"kind":"other","message":"connection refused"}"#));
+        assert_eq!(json, r#"{"kind":"other","message":"connection refused"}"#);
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
     }
@@ -405,9 +250,10 @@ mod tests {
     fn provider_event_error_roundtrip() {
         let event = ProviderEvent::Error(ModelError::Refusal("policy violation".into()));
         let json = serde_json::to_string(&event).unwrap();
+        // New format: message contains just the refusal text
         assert_eq!(
             json,
-            r#"{"type":"error","data":{"kind":"refusal","message":"Model refused: policy violation"}}"#
+            r#"{"type":"error","data":{"kind":"refusal","message":"policy violation"}}"#
         );
         let roundtrip: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, event);

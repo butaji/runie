@@ -233,7 +233,7 @@ fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::Mod
                 .get("message")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown error");
-            return ModelError::Other(anyhow::anyhow!("{msg}"));
+            return ModelError::Other(msg.to_string());
         }
     };
 
@@ -255,7 +255,7 @@ fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::Mod
     if code.contains("content_filter") || code.contains("refusal") || type_.contains("content_filter") {
         return ModelError::Refusal(msg.to_string());
     }
-    ModelError::Other(anyhow::anyhow!("{msg}"))
+    ModelError::Other(msg.to_string())
 }
 
 #[cfg(test)]

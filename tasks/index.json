@@ -1732,7 +1732,7 @@
   {
     "file": "simplify-modelerror-serde-by-storing-message.md",
     "title": "Simplify `ModelError` serde by storing a message string",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-core-keybinding-parsing-with-crokey.md",

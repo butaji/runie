@@ -186,7 +186,7 @@ fn think_filter_usage_flushes_buffer() {
 fn think_filter_error_flushes_buffer() {
     let mut f = ThinkFilter::new();
     f.feed(ProviderEvent::TextDelta("<tool_call>open".into()));
-    let err = ProviderEvent::Error(runie_core::provider_event::ModelError::Other(anyhow::anyhow!("oops")));
+    let err = ProviderEvent::Error(runie_core::provider_event::ModelError::Other("oops".into()));
     let out = f.feed(err.clone());
     assert!(matches!(&out[0], ProviderEvent::ThinkingDelta(_)));
     assert!(matches!(&out[1], ProviderEvent::ThinkingEnd { .. }));

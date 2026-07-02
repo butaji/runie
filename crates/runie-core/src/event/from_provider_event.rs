@@ -99,7 +99,7 @@ mod tests {
                 delta: "-la".into(),
             },
             ProviderEvent::ToolCallEnd { id: "c1".into() },
-            ProviderEvent::Error(crate::provider_event::ModelError::Other(anyhow::anyhow!("oops"))),
+            ProviderEvent::Error(crate::provider_event::ModelError::Other("oops".into())),
             ProviderEvent::Usage {
                 input_tokens: 100,
                 output_tokens: 50,
