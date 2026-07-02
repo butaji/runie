@@ -122,9 +122,16 @@ mod tests {
         std::fs::create_dir_all(&tmp).unwrap();
         let path = tmp.join("trust.json");
 
-        // Save via direct serialization
-        let json = serde_json::to_string_pretty(&tm).unwrap();
-        std::fs::write(&path, json).unwrap();
+        // Set env so save() uses our temp directory
+        std::env::set_var("RUNIE_TEST_CONFIG_DIR", &tmp);
+
+        // Save via atomic write path (tm.save())
+        tm.save().unwrap();
+
+        std::env::remove_var("RUNIE_TEST_CONFIG_DIR");
+
+        // Verify file was created at expected path
+        assert!(path.exists(), "trust.json should exist after save");
 
         let loaded: TrustManager =
             serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
@@ -136,6 +143,37 @@ mod tests {
         assert_eq!(
             loaded.decision_for(&Utf8PathBuf::from("/project/b")),
             Some(TrustDecision::Untrusted)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn save_sets_restricted_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut tm = TrustManager::default();
+        tm.set(&Utf8PathBuf::from("/project/a"), TrustDecision::Trusted);
+
+        let tmp = std::env::temp_dir().join(format!("runie_trust_perms_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let path = tmp.join("trust.json");
+
+        // Set env so save() uses our temp directory
+        std::env::set_var("RUNIE_TEST_CONFIG_DIR", &tmp);
+
+        tm.save().unwrap();
+
+        std::env::remove_var("RUNIE_TEST_CONFIG_DIR");
+
+        // Verify 0o600 permissions (user read/write only)
+        let perms = std::fs::metadata(&path).unwrap().permissions();
+        let mode = perms.mode();
+        assert_eq!(
+            mode & 0o777,
+            0o600,
+            "File should have 0o600 permissions, got {:o}",
+            mode
         );
     }
 }

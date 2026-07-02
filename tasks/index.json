@@ -1667,7 +1667,7 @@
   {
     "file": "test-trust-save-through-atomic-write-path.md",
     "title": "Test trust save through atomic write path",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "track-and-cancel-inflight-agent-turn-joinhandle.md",
