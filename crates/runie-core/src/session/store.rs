@@ -39,21 +39,14 @@ pub const COMPACT_TURN_COUNT: usize = 50;
 pub const COMPACT_TARGET_EVENTS: usize = 100;
 
 /// Compaction policy: how to preserve the original journal.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CompactionPolicy {
-    /// Archive the original journal as `<session_id>.journal/<turn_N>.jsonl`.
-    /// Each compacted turn is written as a separate file.
+    /// Default to archive so the original journal is never lost.
+    #[default]
     ArchiveToSidecar,
     /// Append a synthetic `SessionCompacted` event to the compacted file.
     /// The original journal is NOT preserved (lossy compaction).
     DiscardOriginal,
-}
-
-impl Default for CompactionPolicy {
-    fn default() -> Self {
-        // Default to archive so the original journal is never lost.
-        Self::ArchiveToSidecar
-    }
 }
 
 /// JSONL-backed session store with fs2 advisory locks.

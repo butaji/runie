@@ -113,10 +113,6 @@ mod tests {
     use secrecy::ExposeSecret;
     use super::*;
 
-    fn ss(s: &str) -> SecretString {
-        SecretString::from(s.to_owned())
-    }
-
     // OS keyring tests interact with the real macOS/Linux keychain.
     // Run with: cargo test --ignored -- os_keyring
     // These may fail in CI if keyring access is restricted.
