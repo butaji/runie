@@ -304,8 +304,8 @@ fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
             true
         }
         Event::EnvDetected { git_info, cwd_name } => {
-            *state.git_info_mut() = git_info.clone();
-            *state.cwd_name_mut() = cwd_name.clone();
+            state.set_git_info(git_info.clone());
+            state.set_cwd_name(cwd_name.clone());
             true
         }
         Event::FffSearchResult {

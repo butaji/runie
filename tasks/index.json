@@ -532,7 +532,7 @@
   {
     "file": "derive-event-taxonomies-with-strum-or-proc-macro.md",
     "title": "Derive event taxonomies with `strum` or a proc macro",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -1142,7 +1142,7 @@
   {
     "file": "remove-direct-projection-bypasses-in-dispatch-and-domain-ops.md",
     "title": "Remove direct projection bypasses in dispatch and domain ops",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-duplicate-input-mutation-in-uiactor.md",
@@ -1322,7 +1322,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
@@ -1697,7 +1697,7 @@
   {
     "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
     "title": "Unify bash execution into a single shell module with command-group",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
@@ -1732,7 +1732,7 @@
   {
     "file": "unify-form-submit-paths-through-command-registry.md",
     "title": "Unify form submit paths through command registry",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-headless-and-tui-streaming-response-parser.md",
@@ -1802,7 +1802,7 @@
   {
     "file": "unify-sse-parsing-on-openai-frame.md",
     "title": "Unify SSE parsing on `OpenAiFrame::from_line`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",
@@ -1867,7 +1867,7 @@
   {
     "file": "use-dashmap-for-approval-registry.md",
     "title": "Use dashmap for approval registry",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "use-fuzzy-matcher-for-model-catalog.md",

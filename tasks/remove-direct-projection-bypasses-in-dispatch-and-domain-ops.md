@@ -2,7 +2,13 @@
 
 ## Status
 
-`todo`
+`done`
+
+## Resolution
+
+`dispatch.rs:306-309` was directly mutating `AppState` fields via `git_info_mut()` and `cwd_name_mut()`. Replaced with calls to `state.set_git_info(...)` and `state.set_cwd_name(...)` from `domain_ops.rs` — the proper domain-operation abstraction.
+
+The `domain_ops.rs` methods themselves (`set_git_info`, `set_cwd_name`) are fine: they are the accessor-level setters, and calling them from the dispatcher is the correct pattern. No changes needed in `domain_ops.rs`.
 
 ## Description
 
