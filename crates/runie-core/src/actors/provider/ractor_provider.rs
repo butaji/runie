@@ -253,26 +253,23 @@ impl Actor for RactorProviderActor {
                 let result = self.build_provider(&provider, &model).await;
                 let _ = reply.send(result);
             }
-            // Network calls are offloaded so the mailbox stays responsive.
+            // Network calls are awaited directly — ractor actors are async so the
+            // mailbox is only blocked while waiting for a message, not while awaiting
+            // the network call. No `tokio::spawn` handles are lost.
             ProviderMsg::ValidateKey {
                 provider,
                 api_key,
                 reply,
             } => {
                 let config = self.config().await;
-                let factory = self.factory.clone();
-                tokio::spawn(Self::spawn_validate_key(
-                    provider,
-                    api_key,
-                    reply,
-                    config,
-                    factory,
-                ));
+                let result =
+                    Self::call_validate_key(&provider, &api_key, config, &*self.factory).await;
+                let _ = reply.send(result);
             }
             ProviderMsg::ListModels { provider, reply } => {
                 let config = self.config().await;
-                let factory = self.factory.clone();
-                tokio::spawn(Self::spawn_list_models(provider, reply, config, factory));
+                let result = Self::call_list_models(&provider, config, &*self.factory).await;
+                let _ = reply.send(result);
             }
         }
         Ok(())
@@ -280,17 +277,17 @@ impl Actor for RactorProviderActor {
 }
 
 impl RactorProviderActor {
-    async fn spawn_validate_key(
-        provider: String,
-        api_key: String,
-        reply: ractor::RpcReplyPort<anyhow::Result<Vec<String>>>,
+    /// Call `validate_key` and return the result directly.
+    async fn call_validate_key(
+        provider: &str,
+        api_key: &str,
         config: Result<Config, ProviderError>,
-        factory: Arc<dyn ProviderFactory>,
-    ) {
-        let result = match config {
+        factory: &dyn ProviderFactory,
+    ) -> anyhow::Result<Vec<String>> {
+        match config {
             Ok(cfg) => {
-                let (base_url, resolved_key) = factory.resolve_credentials(&provider, &cfg);
-                let api_key = if api_key.is_empty() { &resolved_key } else { &api_key };
+                let (base_url, resolved_key) = factory.resolve_credentials(provider, &cfg);
+                let api_key = if api_key.is_empty() { &resolved_key } else { api_key };
                 if api_key.is_empty() {
                     Err(anyhow::anyhow!("API key is required"))
                 } else {
@@ -298,19 +295,18 @@ impl RactorProviderActor {
                 }
             }
             Err(e) => Err(anyhow::anyhow!("{e}")),
-        };
-        let _ = reply.send(result);
+        }
     }
 
-    async fn spawn_list_models(
-        provider: String,
-        reply: ractor::RpcReplyPort<anyhow::Result<Vec<String>>>,
+    /// Call `list_models` (via validate_key) and return the result directly.
+    async fn call_list_models(
+        provider: &str,
         config: Result<Config, ProviderError>,
-        factory: Arc<dyn ProviderFactory>,
-    ) {
-        let result = match config {
+        factory: &dyn ProviderFactory,
+    ) -> anyhow::Result<Vec<String>> {
+        match config {
             Ok(cfg) => {
-                let (base_url, resolved_key) = factory.resolve_credentials(&provider, &cfg);
+                let (base_url, resolved_key) = factory.resolve_credentials(provider, &cfg);
                 if resolved_key.is_empty() {
                     Err(anyhow::anyhow!("API key is required"))
                 } else {
@@ -318,8 +314,7 @@ impl RactorProviderActor {
                 }
             }
             Err(e) => Err(anyhow::anyhow!("{e}")),
-        };
-        let _ = reply.send(result);
+        }
     }
 }
 

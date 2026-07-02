@@ -162,7 +162,7 @@
   {
     "file": "await-provider-network-calls-in-ractor-handler.md",
     "title": "Await provider network calls in ractor handler",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "buffer-tcp-lines-in-leader-server.md",
