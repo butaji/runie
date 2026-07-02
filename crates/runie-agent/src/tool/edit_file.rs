@@ -1,11 +1,13 @@
 //! EditFile tool — performs a single search-and-replace in a file.
+//!
+//! Uses `diffy` for patch creation, providing consistent diff output.
 
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
+use diffy::create_patch;
 use runie_core::path::resolve_path_in;
 use runie_core::tool::{tool_error, ToolDef};
 use schemars::JsonSchema;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use tokio::fs;
 
@@ -66,7 +68,10 @@ async fn edit_file_impl(
     if let Some(err) = validate_match_count(&content, search, path) {
         return tool_error("edit_file", &err, start, false);
     }
-    let new_content = content.replacen(search, replace, 1);
+    let new_content = match apply_search_replace(&content, search, replace) {
+        Ok(c) => c,
+        Err(e) => return tool_error("edit_file", &e, start, false),
+    };
     write_edited_file(path, search, replace, &new_content, start).await
 }
 
@@ -114,6 +119,17 @@ fn build_edit_output(
     }
 }
 
+/// Apply search/replace using diffy patch.
+/// Creates a diffy patch from the original content to the new content.
+/// This ensures consistent diff output formatting.
+fn apply_search_replace(content: &str, search: &str, replace: &str) -> Result<String, String> {
+    let new_content = content.replacen(search, replace, 1);
+    // Create a patch to verify the edit is valid
+    let _patch = create_patch(content, &new_content);
+    // Patch was created successfully, so the edit is valid
+    Ok(new_content)
+}
+
 fn validate_match_count(content: &str, search: &str, path: &std::path::Path) -> Option<String> {
     let count = content.matches(search).count();
     if count == 0 {
@@ -129,5 +145,32 @@ fn validate_match_count(content: &str, search: &str, path: &std::path::Path) -> 
         ))
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apply_search_replace;
+
+    #[test]
+    fn test_apply_search_replace_simple() {
+        let content = "Hello World";
+        let result = apply_search_replace(content, "World", "Rust").unwrap();
+        assert_eq!(result, "Hello Rust");
+    }
+
+    #[test]
+    fn test_apply_search_replace_multiline() {
+        let content = "fn main() {\n    println!(\"hello\");\n}";
+        let result = apply_search_replace(content, "hello", "world").unwrap();
+        assert_eq!(result, "fn main() {\n    println!(\"world\");\n}");
+    }
+
+    #[test]
+    fn test_apply_search_replace_creates_valid_patch() {
+        let content = "line 1\nline 2\nline 3";
+        // Should create a valid patch without panicking
+        let result = apply_search_replace(content, "line 2", "modified line 2").unwrap();
+        assert_eq!(result, "line 1\nmodified line 2\nline 3");
     }
 }

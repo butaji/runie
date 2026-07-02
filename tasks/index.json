@@ -341,8 +341,8 @@
 {"file": "split-modelclient-and-turnsession.md", "title": "Split ModelClient and TurnSession", "status": "done"}
 {"file": "split-panel-handler-into-focused-modules.md", "title": "Split `panel_handler.rs` into focused modules", "status": "done"}
 {"file": "split-ractor-turn-actor-into-focused-modules.md", "title": "Split `ractor_turn.rs` into focused modules", "status": "done"}
-{"file": "split-runie-agent-actor-into-focused-modules.md", "title": "Split `runie-agent/src/actor.rs` into focused modules", "status": "todo"}
-{"file": "split-uiactor-into-focused-modules.md", "title": "Split `ui_actor.rs` into focused modules", "status": "todo"}
+{"file": "split-runie-agent-actor-into-focused-modules.md", "title": "Split `runie-agent/src/actor.rs` into focused modules", "status": "done"}
+{"file": "split-uiactor-into-focused-modules.md", "title": "Split `ui_actor.rs` into focused modules", "status": "done"}
 {"file": "standardize-error-types-on-thiserror-with-source-chains.md", "title": "Standardize error types on thiserror with source chains", "status": "done"}
 {"file": "standardize-session-persistence-on-jsonl.md", "title": "Standardize session persistence on JSONL", "status": "done"}
 {"file": "stop-dotenvy-from-mutating-process-environment.md", "title": "Stop dotenvy from mutating process environment", "status": "done"}
@@ -361,7 +361,7 @@
 {"file": "unify-core-and-tui-line-count-computation.md", "title": "Unify core and TUI line-count computation", "status": "done"}
 {"file": "unify-declarative-resource-loader.md", "title": "Unify declarative resource loader", "status": "done"}
 {"file": "unify-diff-generation-and-parsing-on-one-crate.md", "title": "Unify diff generation and parsing on one crate", "status": "done"}
-{"file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md", "title": "Unify edit_file and hashline_edit on patch-based edits", "status": "todo"}
+{"file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md", "title": "Unify edit_file and hashline_edit on patch-based edits", "status": "partial"}
 {"file": "unify-file-picker-and-panel-list-widget.md", "title": "Unify file picker and panel list widget", "status": "done"}
 {"file": "unify-form-submit-paths-through-command-registry.md", "title": "Unify form submit paths through command registry", "status": "done"}
 {"file": "unify-headless-and-tui-streaming-response-parser.md", "title": "Unify headless and TUI streaming response parser", "status": "done"}
