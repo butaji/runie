@@ -84,7 +84,7 @@ fn parse_legacy_space(t: &str) -> (&str, String, String) {
     (name, first, rest)
 }
 
-pub(crate) fn build_legacy_args(name: &str, a1: String, a2: String) -> Option<Value> {
+fn build_legacy_args(name: &str, a1: String, a2: String) -> Option<Value> {
     let mut args = Map::new();
     match name {
         "read_file" | "list_dir" => {
@@ -102,32 +102,9 @@ pub(crate) fn build_legacy_args(name: &str, a1: String, a2: String) -> Option<Va
     Some(Value::Object(args))
 }
 
-// ─── [TOOL_CALL] markup parser ────────────────────────────────────────────────
+// ─── Arrow-to-JSON normalizer for [TOOL_CALL] markup ───────────────────────────
 
-pub(crate) fn parse_markup_tool(line: &str) -> Option<ParsedToolCall> {
-    let payload = extract_tool_call_payload(line)?;
-    let json = arrow_to_json(payload);
-    let v: Value = serde_json::from_str(&json).ok()?;
-    let name = v.get("tool")?.as_str()?;
-    let args = v.get("args")?.as_object()?;
-    if !is_known_tool(name) {
-        return None;
-    }
-    Some(ParsedToolCall {
-        name: name.to_owned(),
-        args: Value::Object(args.clone()),
-        id: None,
-    })
-}
-
-pub(crate) fn extract_tool_call_payload(line: &str) -> Option<&str> {
-    let start = line.find("[TOOL_CALL]")?;
-    let after = &line[start + "[TOOL_CALL]".len()..];
-    let end = after.find("[/TOOL_CALL]")?;
-    Some(after[..end].trim())
-}
-
-pub(crate) fn arrow_to_json(input: &str) -> String {
+fn arrow_to_json(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut chars = input.chars().peekable();
     while let Some(ch) = chars.next() {
@@ -175,6 +152,43 @@ fn in_str(s: &str) -> bool {
     s.matches('"').count() % 2 == 1
 }
 
+// ─── Unified non-XML tool call parser ───────────────────────────────────────
+// Tries inline JSON, then [TOOL_CALL] markup (arrow syntax), then legacy TOOL:.
+// Returns the first successful parse, or None if no format matches.
+
+fn try_parse_non_xml_tool(line: &str) -> Option<ParsedToolCall> {
+    // 1. Inline JSON: {"name":"...","arguments":{...}}
+    let inline = parse_inline_json_tools(line);
+    if !inline.is_empty() {
+        return inline.into_iter().find_map(|r| r.ok());
+    }
+
+    // 2. [TOOL_CALL]{...}[/TOOL_CALL] markup (arrow syntax)
+    if let Some(payload) = extract_tool_call_payload(line) {
+        let json = arrow_to_json(payload);
+        let v: Value = serde_json::from_str(&json).ok()?;
+        let name = v.get("tool")?.as_str()?;
+        let args = v.get("args")?.as_object()?;
+        if is_known_tool(name) {
+            return Some(ParsedToolCall {
+                name: name.to_owned(),
+                args: Value::Object(args.clone()),
+                id: None,
+            });
+        }
+    }
+
+    // 3. Legacy TOOL:name:arg1:arg2
+    parse_legacy_tool(line)
+}
+
+fn extract_tool_call_payload(line: &str) -> Option<&str> {
+    let start = line.find("[TOOL_CALL]")?;
+    let after = &line[start + "[TOOL_CALL]".len()..];
+    let end = after.find("[/TOOL_CALL]")?;
+    Some(after[..end].trim())
+}
+
 pub fn parse_tool_calls(text: &str) -> Vec<ParsedToolCall> {
     parse_tool_calls_fallible(text)
         .into_iter()
@@ -202,29 +216,36 @@ fn parse_line_strategies(
     trimmed: &str,
     original: &str,
 ) -> Vec<Result<ParsedToolCall, ToolParseError>> {
-    let mut results = Vec::new();
-    results.extend(parse_legacy_tools_in_line(trimmed));
-    if trimmed.contains('{') {
-        let inline = parse_inline_json_tools(trimmed);
-        if !inline.is_empty() {
-            results.extend(inline);
-        } else if trimmed.starts_with('{') {
-            results.push(Err(ToolParseError {
-                raw: original.to_owned(),
-                reason: "invalid JSON".into(),
-            }));
+    // If the line looks like JSON (has '{'), try JSON first.
+    // If it looks like markup (has [TOOL_CALL]), try it last.
+    // Return errors for tool-like-but-invalid inputs so callers can report them.
+    let looks_like_json = trimmed.contains('{');
+    let looks_like_markup = trimmed.contains(TC_START);
+
+    if looks_like_json {
+        if let Some(tool) = try_parse_non_xml_tool(trimmed) {
+            return vec![Ok(tool)];
         }
+        // Looks like JSON but failed to parse — return an error.
+        return vec![Err(ToolParseError {
+            raw: original.to_owned(),
+            reason: "invalid JSON".into(),
+        })];
     }
-    if trimmed.contains(TC_START) {
-        match parse_markup_tool(trimmed) {
-            Some(t) => results.push(Ok(t)),
-            None => results.push(Err(ToolParseError {
+
+    if looks_like_markup {
+        // Markup found but failed to parse — return an error.
+        if try_parse_non_xml_tool(trimmed).is_none() {
+            return vec![Err(ToolParseError {
                 raw: original.to_owned(),
                 reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
-            })),
+            })];
         }
+        return vec![Ok(try_parse_non_xml_tool(trimmed).unwrap())];
     }
-    results
+
+    // Fall back to the legacy multi-tool parser.
+    parse_legacy_tools_in_line(trimmed)
 }
 
 pub fn has_tool_calls(text: &str) -> bool {

@@ -1657,12 +1657,12 @@
   {
     "file": "replace-vacuous-print-mode-test-with-replay-test.md",
     "title": "Replace vacuous print mode test with replay test",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-verify-tests-with-cargo-nextest.md",
     "title": "Replace verify-tests.sh with cargo-nextest",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replay-sessions-via-events-through-appstate.md",
@@ -1747,7 +1747,7 @@
   {
     "file": "simplify-text-tool-shim-parsers.md",
     "title": "Simplify text tool shim parsers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "single-config-resolve-default-model.md",

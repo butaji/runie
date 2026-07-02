@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,11 +14,11 @@ Replace the script with `cargo-nextest` configured via `.config/nextest.toml`, p
 
 ## Acceptance Criteria
 
-- [ ] Add `cargo-nextest` configuration with slow-timeout and per-test-group overrides.
-- [ ] Delete `scripts/verify-tests.sh` (or reduce to a tiny wrapper).
-- [ ] Ensure doctests are still run (`cargo test --doc`) because nextest skips them.
-- [ ] CI uses `cargo nextest run`.
-- [ ] All existing tests pass under nextest.
+- [x] Add `cargo-nextest` configuration with slow-timeout and per-test-group overrides.
+- [x] Delete `scripts/verify-tests.sh` (or reduce to a tiny wrapper).
+- [x] Ensure doctests are still run (`cargo test --doc`) because nextest skips them.
+- [x] CI uses `cargo nextest run`.
+- [x] All existing tests pass under nextest.
 
 ## Design Impact
 
@@ -35,6 +35,6 @@ No change to TUI element design or composition. Only test infrastructure changes
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — N/A (test infrastructure change only).

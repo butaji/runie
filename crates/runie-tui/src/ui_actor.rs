@@ -532,11 +532,6 @@ impl UiActor {
         snap
     }
 
-    /// Return a reference to the stored InputActor handle.
-    fn input_handle(&self) -> Option<&RactorInputHandle> {
-        self.input_handle.as_ref()
-    }
-
     /// Fire-and-forget send to InputActor.
     async fn send_input_msg(&self, msg: runie_core::actors::InputMsg) {
         if let Some(ref handle) = self.input_handle {
