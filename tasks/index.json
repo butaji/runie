@@ -1427,7 +1427,7 @@
   {
     "file": "replace-speedwindow-with-ringbuffer-crate.md",
     "title": "Replace `SpeedWindow` with a ring-buffer crate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
