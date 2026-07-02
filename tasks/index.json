@@ -677,7 +677,7 @@
   {
     "file": "finish-strum-migration-for-remaining-enums.md",
     "title": "Finish strum migration for remaining enums",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-500-line-file-limit-violations.md",

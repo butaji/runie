@@ -1,11 +1,12 @@
 //! Command Category
 
 use std::str::FromStr;
-use strum::Display;
+use strum::{Display, EnumString};
 
 /// Command category for organization
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Display, EnumString)]
 #[strum(serialize_all = "PascalCase")]
+#[strum(ascii_case_insensitive)]
 #[derive(Default)]
 pub enum CommandCategory {
     Core,
@@ -14,21 +15,6 @@ pub enum CommandCategory {
     Safety,
     #[default]
     System,
-}
-
-impl FromStr for CommandCategory {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "core" => Ok(Self::Core),
-            "session" => Ok(Self::Session),
-            "model" => Ok(Self::Model),
-            "safety" => Ok(Self::Safety),
-            "tool" | "help" | "system" | "unknown" | "" => Ok(Self::System),
-            _ => Err(()),
-        }
-    }
 }
 
 impl CommandCategory {
@@ -41,6 +27,22 @@ impl CommandCategory {
             Self::Model => "Model",
             Self::Safety => "Safety",
             Self::System => "System",
+        }
+    }
+
+    /// Parse a category string (case-insensitive), including legacy aliases.
+    ///
+    /// Standard values: `Core`, `Session`, `Model`, `Safety`, `System` (any case).
+    /// Aliases: `tool`, `help`, `unknown`, `""` → `System`.
+    pub fn parse_case_insensitive(s: &str) -> Result<Self, ()> {
+        // Try strum first (case-insensitive standard variants).
+        if let Ok(cat) = Self::from_str(s) {
+            return Ok(cat);
+        }
+        // Legacy aliases that map to System.
+        match s.to_lowercase().as_str() {
+            "tool" | "help" | "unknown" | "" => Ok(Self::System),
+            _ => Err(()),
         }
     }
 
@@ -73,7 +75,6 @@ mod tests {
 
     #[test]
     fn test_category_round_trip() {
-        use std::str::FromStr;
         for cat in [
             CommandCategory::Core,
             CommandCategory::Session,
@@ -82,8 +83,18 @@ mod tests {
             CommandCategory::System,
         ] {
             let s = cat.to_string();
-            let parsed = CommandCategory::from_str(&s);
+            let parsed = CommandCategory::parse_case_insensitive(&s);
             assert_eq!(parsed, Ok(cat), "round-trip failed for {cat:?}");
         }
+    }
+
+    #[test]
+    fn test_category_aliases() {
+        // Legacy aliases for backward compatibility.
+        assert_eq!(CommandCategory::parse_case_insensitive("tool"), Ok(CommandCategory::System));
+        assert_eq!(CommandCategory::parse_case_insensitive("help"), Ok(CommandCategory::System));
+        assert_eq!(CommandCategory::parse_case_insensitive("unknown"), Ok(CommandCategory::System));
+        assert_eq!(CommandCategory::parse_case_insensitive(""), Ok(CommandCategory::System));
+        assert!(CommandCategory::parse_case_insensitive("nonexistent").is_err());
     }
 }

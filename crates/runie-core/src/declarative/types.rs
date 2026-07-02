@@ -1,7 +1,6 @@
 //! Types for declarative configuration.
 
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use serde::de::{self, Error as SerdeError, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -109,14 +108,15 @@ pub struct DeclarativeCommandYaml {
 impl DeclarativeCommandYaml {
 }
 
-/// Deserialize a category string using FromStr.
-/// Handles case-insensitive matching to maintain backward compatibility.
+/// Deserialize a category string.
+/// Handles case-insensitive matching and legacy aliases to maintain backward compatibility.
 fn deserialize_category<'de, D>(deserializer: D) -> Result<CommandCategory, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    CommandCategory::from_str(&s).map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
+    CommandCategory::parse_case_insensitive(&s)
+        .map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
 }
 
 /// Deserialize a YAML list of trigger strings into `Vec<Trigger>`.
@@ -203,7 +203,6 @@ pub struct CommandDef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
 
     #[test]
     fn trigger_parse_command() {
@@ -228,41 +227,41 @@ mod tests {
         use crate::commands::CommandCategory;
         // Case-insensitive parsing (original behavior preserved)
         assert_eq!(
-            CommandCategory::from_str("session"),
+            CommandCategory::parse_case_insensitive("session"),
             Ok(CommandCategory::Session)
         );
         assert_eq!(
-            CommandCategory::from_str("SESSION"),
+            CommandCategory::parse_case_insensitive("SESSION"),
             Ok(CommandCategory::Session)
         );
         assert_eq!(
-            CommandCategory::from_str("model"),
+            CommandCategory::parse_case_insensitive("model"),
             Ok(CommandCategory::Model)
         );
         assert_eq!(
-            CommandCategory::from_str("safety"),
+            CommandCategory::parse_case_insensitive("safety"),
             Ok(CommandCategory::Safety)
         );
         // Aliases that map to System
         assert_eq!(
-            CommandCategory::from_str("tool"),
+            CommandCategory::parse_case_insensitive("tool"),
             Ok(CommandCategory::System)
         );
         assert_eq!(
-            CommandCategory::from_str("help"),
+            CommandCategory::parse_case_insensitive("help"),
             Ok(CommandCategory::System)
         );
         assert_eq!(
-            CommandCategory::from_str("system"),
+            CommandCategory::parse_case_insensitive("system"),
             Ok(CommandCategory::System)
         );
         // Display round-trip
         assert_eq!(
-            CommandCategory::from_str(&CommandCategory::Core.to_string()),
+            CommandCategory::parse_case_insensitive(&CommandCategory::Core.to_string()),
             Ok(CommandCategory::Core)
         );
         // Unknown returns error
-        assert!(CommandCategory::from_str("nonexistent").is_err());
+        assert!(CommandCategory::parse_case_insensitive("nonexistent").is_err());
     }
 
     #[test]

@@ -139,54 +139,51 @@ Content
 
     #[test]
     fn command_category_from_str_parses_known_values() {
-        use std::str::FromStr;
         // Case-insensitive parsing (original behavior preserved)
         assert_eq!(
-            CommandCategory::from_str("session"),
+            CommandCategory::parse_case_insensitive("session"),
             Ok(CommandCategory::Session)
         );
         assert_eq!(
-            CommandCategory::from_str("SESSION"),
+            CommandCategory::parse_case_insensitive("SESSION"),
             Ok(CommandCategory::Session)
         );
         assert_eq!(
-            CommandCategory::from_str("model"),
+            CommandCategory::parse_case_insensitive("model"),
             Ok(CommandCategory::Model)
         );
         assert_eq!(
-            CommandCategory::from_str("safety"),
+            CommandCategory::parse_case_insensitive("safety"),
             Ok(CommandCategory::Safety)
         );
         assert_eq!(
-            CommandCategory::from_str("system"),
+            CommandCategory::parse_case_insensitive("system"),
             Ok(CommandCategory::System)
         );
     }
 
     #[test]
     fn command_category_from_str_aliases_map_to_system() {
-        use std::str::FromStr;
         // Tool, Help, Unknown all map to System
         assert_eq!(
-            CommandCategory::from_str("tool"),
+            CommandCategory::parse_case_insensitive("tool"),
             Ok(CommandCategory::System)
         );
         assert_eq!(
-            CommandCategory::from_str("help"),
+            CommandCategory::parse_case_insensitive("help"),
             Ok(CommandCategory::System)
         );
     }
 
     #[test]
     fn command_category_from_str_display_round_trip() {
-        use std::str::FromStr;
         // Display round-trip
         assert_eq!(
-            CommandCategory::from_str(&CommandCategory::Core.to_string()),
+            CommandCategory::parse_case_insensitive(&CommandCategory::Core.to_string()),
             Ok(CommandCategory::Core)
         );
         assert_eq!(
-            CommandCategory::from_str(&CommandCategory::Session.to_string()),
+            CommandCategory::parse_case_insensitive(&CommandCategory::Session.to_string()),
             Ok(CommandCategory::Session)
         );
     }

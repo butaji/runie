@@ -1,5 +1,6 @@
 use git2::Status as GitStatus;
 use serde::Serialize;
+use strum::{Display, EnumString};
 
 use crate::tool::constants::{SEARCH_DEFAULT_LIMIT, SEARCH_DEFAULT_MAX_MATCHES};
 
@@ -31,7 +32,8 @@ pub struct SearchItem {
 }
 
 /// Search mode selector.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Display, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum SearchMode {
     #[default]
     Files,
@@ -41,13 +43,10 @@ pub enum SearchMode {
 }
 
 impl SearchMode {
+    /// Parse a search mode string, defaulting to `Files` on unknown input.
     pub(crate) fn from_str(s: &str) -> Self {
-        match s {
-            "content" => SearchMode::Content,
-            "mixed" => SearchMode::Mixed,
-            "glob" => SearchMode::Glob,
-            _ => SearchMode::Files,
-        }
+        <SearchMode as std::str::FromStr>::from_str(s)
+            .unwrap_or(Self::Files)
     }
 }
 
