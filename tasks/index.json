@@ -428,3 +428,14 @@
 {"file": "wire-rmcp-client-or-remove-mcp-config.md", "title": "Wire `rmcp` client or remove MCP config", "status": "todo"}
 {"file": "wire-user-permission-rules-into-agent-gate.md", "title": "Wire user permission rules into the agent permission gate", "status": "done"}
 {"file": "write-runie-vs-grok-build-findings-report.md", "title": "Write Runie vs Grok Build findings report", "status": "todo"}
+{"file": "resolve-sqlite-vs-jsonl-persistence-conflict.md", "title": "Resolve SQLite vs JSONL persistence conflict", "status": "todo"}
+{"file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md", "title": "Update `ProviderProtocol` doc to reflect `wontfix` decision", "status": "todo"}
+{"file": "merge-duplicate-tui-widget-replacement-tasks.md", "title": "Merge duplicate TUI widget replacement tasks", "status": "todo"}
+{"file": "merge-duplicate-session-persistence-tasks.md", "title": "Merge duplicate session persistence tasks", "status": "todo"}
+{"file": "create-unified-architecture-backlog-execution-task.md", "title": "Create unified architecture backlog execution task", "status": "todo"}
+{"file": "add-blocked-status-and-blocked-reason-fields-to-tasks.md", "title": "Add `blocked` status and `blocked_reason` fields to tasks", "status": "todo"}
+{"file": "add-supersedes-field-and-deduplication-sweep-task.md", "title": "Add `supersedes` field and deduplication sweep task", "status": "todo"}
+{"file": "spike-rmcp-feasibility-before-mcp-decision.md", "title": "Spike `rmcp` feasibility before MCP decision", "status": "todo"}
+{"file": "spike-tui-textarea-parity-before-widget-replacement.md", "title": "Spike `tui-textarea` parity before widget replacement", "status": "todo"}
+{"file": "define-jsonl-compaction-threshold-and-policy.md", "title": "Define JSONL compaction threshold and policy", "status": "todo"}
+{"file": "execute-fourth-pass-backlog-consolidation-roadmap.md", "title": "Execute fourth-pass backlog consolidation roadmap", "status": "todo"}
