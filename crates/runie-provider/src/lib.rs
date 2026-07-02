@@ -8,7 +8,7 @@ use tracing::Instrument;
 pub mod config;
 pub mod factory;
 pub mod http;
-pub mod model_client;
+
 pub mod protocol;
 pub mod retry;
 
@@ -38,7 +38,7 @@ pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilit
 
 pub use runie_core::config::Config;
 pub use factory::BuiltProviderFactory;
-pub use model_client::{ModelClient, TurnSession};
+
 
 #[cfg(feature = "openai")]
 pub use openai::OpenAiProvider;

@@ -7,10 +7,9 @@ pub mod stream;
 pub mod types;
 
 use secrecy::SecretString;
-use crate::model_client::ModelClient;
 use std::sync::Arc;
 
-/// OpenAI-compatible provider backed by a `ModelClient`.
+/// OpenAI-compatible provider.
 ///
 /// The `client` field holds an `Arc<reqwest::Client>` so multiple
 /// `OpenAiProvider` instances can share the same connection pool.
@@ -39,20 +38,6 @@ impl OpenAiProvider {
             api_key: SecretString::from(crate::http::normalize_api_key(&api_key)),
             model: model.into(),
             base_url: "https://api.openai.com/v1".to_owned(),
-            model_meta: None,
-            tools: Vec::new(),
-            tool_choice: None,
-            retry_config: None,
-        }
-    }
-
-    /// Create from an existing `ModelClient` — shares the HTTP client.
-    pub fn from_model_client(client: &ModelClient) -> Self {
-        Self {
-            client: client.client.clone(),
-            api_key: client.api_key.clone(),
-            model: client.model.clone(),
-            base_url: client.transport.base_url.clone(),
             model_meta: None,
             tools: Vec::new(),
             tool_choice: None,
