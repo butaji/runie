@@ -2,33 +2,14 @@
 
 ## Status
 
-`todo`
+**Superseded** — This is a subset of `finish-replacing-custom-tui-widgets.md`. The canonical task is now `finish-replacing-custom-tui-widgets.md` which covers all custom TUI widgets including forms.
 
-## Description
+## Original Description
 
 `popups/panel/form.rs` is a custom 400-line form renderer. Replace editable fields with `tui-textarea`/`tui-input` and buttons with `ratatui::widgets::List`.
 
-## Acceptance criteria
+## Notes
 
-1. **Unit tests** — Form state updates and validation work with the new widgets.
-2. **E2E tests** — Form submit events produce the same results.
-3. **Live tmux tests** — Open a settings/login form in tmux and fill/submit it.
-
-## Tests
-
-### Unit tests
-- Field editing, validation, and submit logic.
-
-### E2E tests
-- Form submit events in replay.
-
-### Live tmux tests
-- Open a form dialog and edit fields.
-
-### SSOT/Event Compliance
-- [ ] **Actor/SSOT:** N/A (UI-only change; `UiActor` state projection unchanged).
-- [ ] **Trigger events:** `Submit` event triggers form submission.
-- [ ] **Observer events:** Form state changes emit UI events via `UiActor`.
-- [ ] **No direct mutations:** Form widget changes must not mutate actor-owned state directly.
-- [ ] **No new mirrors:** Form state must be a projection, not authoritative storage.
-- [ ] **Async work observed:** N/A (synchronous rendering).
+- Input box replacement (`ui/input.rs`) is already done.
+- Form rendering replacement is tracked in the canonical task.
+- See `finish-replacing-custom-tui-widgets.md` for the current status.

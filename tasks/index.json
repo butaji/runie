@@ -268,7 +268,7 @@
 {"file": "replace-build-linter-with-clippy-ci.md", "title": "Replace custom build.rs linter with Clippy / CI", "status": "done"}
 {"file": "replace-clipboard-dead-code-with-arboard-or-osc52.md", "title": "Replace clipboard dead code with arboard", "status": "done"}
 {"file": "replace-config-validator-with-jsonschema.md", "title": "Replace custom config validator with `jsonschema`", "status": "done"}
-{"file": "replace-custom-form-rendering-with-tui-textarea.md", "title": "Replace custom form rendering with `tui-textarea`/`tui-input`", "status": "todo"}
+{"file": "replace-custom-form-rendering-with-tui-textarea.md", "title": "Replace custom form rendering with `tui-textarea`/`tui-input`", "status": "superseded"}
 {"file": "replace-custom-git-detection-with-git2.md", "title": "Replace custom git detection with git2", "status": "done"}
 {"file": "replace-custom-helpers-with-crates.md", "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates", "status": "done"}
 {"file": "replace-custom-input-box-with-tui-textarea.md", "title": "Replace custom input box with `tui-textarea`", "status": "done"}
@@ -429,9 +429,9 @@
 {"file": "wire-user-permission-rules-into-agent-gate.md", "title": "Wire user permission rules into the agent permission gate", "status": "done"}
 {"file": "write-runie-vs-grok-build-findings-report.md", "title": "Write Runie vs Grok Build findings report", "status": "todo"}
 {"file": "resolve-sqlite-vs-jsonl-persistence-conflict.md", "title": "Resolve SQLite vs JSONL persistence conflict", "status": "done"}
-{"file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md", "title": "Update `ProviderProtocol` doc to reflect `wontfix` decision", "status": "todo"}
-{"file": "merge-duplicate-tui-widget-replacement-tasks.md", "title": "Merge duplicate TUI widget replacement tasks", "status": "todo"}
-{"file": "merge-duplicate-session-persistence-tasks.md", "title": "Merge duplicate session persistence tasks", "status": "todo"}
+{"file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md", "title": "Update `ProviderProtocol` doc to reflect `wontfix` decision", "status": "done"}
+{"file": "merge-duplicate-tui-widget-replacement-tasks.md", "title": "Merge duplicate TUI widget replacement tasks", "status": "done"}
+{"file": "merge-duplicate-session-persistence-tasks.md", "title": "Merge duplicate session persistence tasks", "status": "done"}
 {"file": "create-unified-architecture-backlog-execution-task.md", "title": "Create unified architecture backlog execution task", "status": "todo"}
 {"file": "add-blocked-status-and-blocked-reason-fields-to-tasks.md", "title": "Add `blocked` status and `blocked_reason` fields to tasks", "status": "todo"}
 {"file": "add-supersedes-field-and-deduplication-sweep-task.md", "title": "Add `supersedes` field and deduplication sweep task", "status": "todo"}

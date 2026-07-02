@@ -6,14 +6,19 @@
 
 ## Context
 
-`crates/runie-tui/src/ui/input.rs`, `popups/panel/list.rs`, and `popups/panel/form.rs` still implement custom multi-line input, list, and single-line form widgets despite available ecosystem crates.
+`crates/runie-tui/src/ui/input.rs` (done), `popups/panel/list.rs`, and `popups/panel/form.rs` implement custom multi-line input, list, and single-line form widgets despite available ecosystem crates.
+
+**Status:**
+- [x] Input box (`ui/input.rs`) — Done via `replace-custom-input-box-with-tui-textarea.md`
+- [ ] Panel list (`popups/panel/list.rs`) — Remaining
+- [ ] Form renderer (`popups/panel/form.rs`) — Remaining (supersedes `replace-custom-form-rendering-with-tui-textarea.md`)
 
 ## Goal
 
 Replace them with `tui-textarea` / `ratatui::widgets::List` while preserving the existing visual output.
 
 ## Acceptance Criteria
-- [ ] Replace custom input box with `tui-textarea`.
+- [x] Replace custom input box with `tui-textarea`. (Done - see `replace-custom-input-box-with-tui-textarea.md`)
 - [ ] Replace custom panel list with `ratatui::widgets::List` + `ListState`.
 - [ ] Replace form inputs with `tui-textarea` single-line or `tui-input`.
 - [ ] Snapshots match.

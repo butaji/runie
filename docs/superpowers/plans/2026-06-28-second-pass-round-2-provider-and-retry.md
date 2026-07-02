@@ -16,13 +16,13 @@ This logic should live in one place.
 
 Either pass `RetryConfig` into `with_retry` or remove it from metadata.
 
-### 3. `ProviderProtocol` is dead weight
+### 3. `ProviderProtocol` — Decision: Keep (wontfix)
 
-- `crates/runie-provider/src/protocol.rs:18-69` — `ProviderProtocol` trait is not used polymorphically.
-- `crates/runie-provider/src/lib.rs:101` — `build_provider` always calls `build_openai_provider`.
-- `crates/runie-provider/src/openai/mod.rs:114-145` — `OpenAiProvider` hardcodes `openai_stream`.
+- `crates/runie-provider/src/protocol.rs:18-69` — `ProviderProtocol` trait provides documentation and type safety.
+- The trait documents the protocol abstraction clearly and enables type-safe frame/state handling.
+- It can be extended with new protocol implementations without refactoring.
 
-Either make the protocol real or delete it.
+**Decision: Keep the abstraction.** It provides value as documentation and future protocol support. See `tasks/remove-or-make-real-providerprotocol-abstraction.md`.
 
 ### 4. Duplicated HTTP client creation & normalization
 
@@ -48,7 +48,7 @@ These all parse the same `data: {...}` / `data: [DONE]` grammar. Consolidate on 
 
 1. Make `ProviderError::from_reqwest` the single classifier; implement SSE error conversion by extracting the inner `reqwest::Error`.
 2. Use `RetryConfig` in `with_retry`, or remove it from metadata.
-3. Delete `ProviderProtocol` if it remains unused; otherwise make `OpenAiProvider` generic over it.
+3. ~~Delete `ProviderProtocol`~~ **Keep (wontfix).** The abstraction provides value as documentation and future protocol support.
 4. Centralize `reqwest::Client` creation and URL/key normalization in `runie-provider::http`.
 5. Unify SSE parsing/replay on `OpenAiFrame::from_line`.
 6. Use `#[serde(untagged)]` for provider error-body shapes.
