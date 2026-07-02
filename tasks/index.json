@@ -293,7 +293,7 @@
     {
       "file": "collapse-commandkinddef-into-commandkind.md",
       "title": "Collapse `CommandKindDef` into `CommandKind`",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "collapse-dialogstate-variants.md",
@@ -708,7 +708,7 @@
     {
       "file": "fix-config-docs-and-readme-misalignments.md",
       "title": "Fix config docs and README misalignments",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "fix-deliverqueued-race-in-uiactor.md",
@@ -878,7 +878,7 @@
     {
       "file": "generate-tool-dispatch-from-single-registry.md",
       "title": "Generate tool dispatch from a single registry",
-      "status": "todo"
+      "status": "partial"
     },
     {
       "file": "graceful-leader-shutdown-with-joinset-timeout.md",
@@ -1058,7 +1058,7 @@
     {
       "file": "plumb-keyringstore-into-builtproviderfactory.md",
       "title": "Plumb KeyringStore into BuiltProviderFactory",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "prepare-grok-build-reference-for-comparison.md",
@@ -1093,7 +1093,7 @@
     {
       "file": "regenerate-config-schema-and-fix-permission-mode-description.md",
       "title": "Regenerate config schema and fix PermissionMode description",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md",
@@ -1178,7 +1178,7 @@
     {
       "file": "remove-or-make-real-providerprotocol-abstraction.md",
       "title": "Remove or make real the `ProviderProtocol` abstraction",
-      "status": "todo"
+      "status": "wontfix"
     },
     {
       "file": "remove-ractor-send-message-alias.md",
@@ -1413,7 +1413,7 @@
     {
       "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
       "title": "Replace RpcReply with ractor::RpcReplyPort",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "replace-session-tree-with-arena-crate.md",
@@ -1843,7 +1843,7 @@
     {
       "file": "use-atomic-writes-for-config-and-session-files.md",
       "title": "Use atomic writes for config and session files",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "use-bytesize-humantime-for-tool-formatting.md",

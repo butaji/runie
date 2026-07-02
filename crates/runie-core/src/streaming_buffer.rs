@@ -212,11 +212,8 @@ fn classify_normal_line(trimmed: &str) -> Option<LineClass> {
     let mut has_table_separator = false;
 
     for event in parser {
-        match event {
-            pulldown_cmark::Event::Start(pulldown_cmark::Tag::CodeBlock(_)) => {
-                has_code_block = true;
-            }
-            _ => {}
+        if let pulldown_cmark::Event::Start(pulldown_cmark::Tag::CodeBlock(_)) = event {
+            has_code_block = true;
         }
     }
 
@@ -266,13 +263,11 @@ fn try_close_construct(
 ) -> bool {
     // Fence close - must be exactly "```" (possibly with trailing whitespace).
     // Empty lines inside fences do NOT close them.
-    if *fence_open {
-        if trimmed.starts_with("```") {
-            let after_fence = trimmed.trim_start_matches("```").trim();
-            if after_fence.is_empty() {
-                *fence_open = false;
-                return true;
-            }
+    if *fence_open && trimmed.starts_with("```") {
+        let after_fence = trimmed.trim_start_matches("```").trim();
+        if after_fence.is_empty() {
+            *fence_open = false;
+            return true;
         }
     }
 

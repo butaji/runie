@@ -1,27 +1,11 @@
-//! Centralized tool registry — single source of truth for tool names, schemas,
-//! and dispatch.
+//! Centralized tool registry — single source of truth for tool schemas.
 //!
-//! Replaces the three duplicated `build_tool_registry` functions and the
-//! hard-coded match in `dispatch_tool`. Adding a new tool now requires editing
-//! only this file and the tool's implementation.
+//! Tool names are defined in `runie_core::tool::BUILTIN_TOOL_NAMES`.
+//! This module provides schema generation and tool categorization.
 
 use serde_json::Value;
 
 use runie_core::tool::to_openai_function;
-
-/// All built-in tools (read + write).
-pub const ALL_TOOL_NAMES: &[&str] = &[
-    "bash",
-    "read_file",
-    "write_file",
-    "edit_file",
-    "list_dir",
-    "grep",
-    "find",
-    "fetch_docs",
-    "search",
-    "find_definitions",
-];
 
 /// Read-only tools (no write side effects — allowed in read-only mode).
 pub const READ_ONLY_TOOL_NAMES: &[&str] = &[

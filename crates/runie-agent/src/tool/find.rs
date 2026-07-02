@@ -95,7 +95,7 @@ fn run_find(pattern: &str, path: &Path, limit: usize) -> String {
     };
 
     for entry in walker.flatten() {
-        if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+        if !entry.file_type().is_some_and(|ft| ft.is_file()) {
             continue;
         }
 
@@ -182,7 +182,7 @@ fn run_find_simple(pattern: &str, path: &Path, limit: usize) -> String {
     let mut results: Vec<String> = Vec::new();
 
     for entry in walker.flatten() {
-        if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+        if !entry.file_type().is_some_and(|ft| ft.is_file()) {
             continue;
         }
 

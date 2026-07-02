@@ -123,7 +123,7 @@ async fn run_grep_impl(
     let mut match_count = 0;
 
     for entry in walker.build().flatten() {
-        if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+        if !entry.file_type().is_some_and(|ft| ft.is_file()) {
             continue;
         }
 
@@ -166,11 +166,9 @@ async fn run_grep_impl(
     };
 
     let bytes = content.len();
-    let status = if match_count > 0 {
-        ToolStatus::Success
-    } else {
-        ToolStatus::Success
-    };
+    // grep returns Success whether or not matches were found
+    // (no matches means empty output, which is still success)
+    let status = ToolStatus::Success;
 
     ToolOutput {
         tool_name: "grep".to_owned(),
