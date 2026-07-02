@@ -6,7 +6,7 @@ use crate::update::strip_tool_markers;
 impl AppState {
     pub(crate) fn flush_buffered_response(&mut self, id: &str) {
         let buffered = self
-            .agent_state_mut()
+            .turn_state
             .streaming_buffer
             .force_flush()
             .join("");
@@ -16,7 +16,8 @@ impl AppState {
         if let Some(idx) = self.find_cached_assistant_index(id) {
             self.append_to_message(idx, &buffered);
         } else if let Some(idx) = self.find_assistant_by_id(id) {
-            self.agent_state_mut().last_assistant_index = Some(idx);
+            self.turn_state_mut().last_assistant_index = Some(idx);
+            *self.agent_state_mut() = AgentState::from(&self.turn_state);
             self.append_to_message(idx, &buffered);
         } else {
             self.create_assistant_message(id.to_owned(), buffered);
@@ -32,7 +33,7 @@ impl AppState {
     }
 
     pub(crate) fn on_assistant_message_ready(&mut self, message: ChatMessage) {
-        if let Some(idx) = self.agent_state_mut().last_assistant_index {
+        if let Some(idx) = self.turn_state.last_assistant_index {
             if idx < self.session_mut().messages.len()
                 && self.session_mut().messages[idx].role == Role::Assistant
             {
@@ -42,7 +43,8 @@ impl AppState {
             }
         }
         self.session_mut().messages.push(message);
-        self.agent_state_mut().last_assistant_index = Some(self.session_mut().messages.len() - 1);
+        self.turn_state_mut().last_assistant_index = Some(self.session_mut().messages.len() - 1);
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
     }
 
@@ -68,8 +70,9 @@ impl AppState {
             parts: vec![Part::Text { content }],
             ..Default::default()
         });
-        self.agent_state_mut().current_request_id = Some(id);
-        self.agent_state_mut().last_assistant_index = Some(idx);
+        self.turn_state_mut().current_request_id = Some(id);
+        self.turn_state_mut().last_assistant_index = Some(idx);
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
     }
 
@@ -94,7 +97,8 @@ impl AppState {
             });
         }
         self.messages_changed();
-        self.agent_state_mut().turn_started_at = None;
+        self.turn_state_mut().turn_started_at = None;
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     pub(crate) fn finish_turn(&mut self, id: String) {
@@ -215,9 +219,10 @@ impl AppState {
                 let mut agent = self.session_mut().messages.remove(a_idx);
                 agent.timestamp = now();
                 self.session_mut().messages.insert(t_idx, agent);
-                // Update cached index if it was affected
-                if self.agent_state_mut().last_assistant_index == Some(a_idx) {
-                    self.agent_state_mut().last_assistant_index = Some(t_idx);
+                // Update last_assistant_index if it was affected.
+                if self.turn_state.last_assistant_index == Some(a_idx) {
+                    self.turn_state_mut().last_assistant_index = Some(t_idx);
+                    *self.agent_state_mut() = AgentState::from(&self.turn_state);
                 }
             }
         }
@@ -233,10 +238,11 @@ impl AppState {
             let mut turn_complete = self.session_mut().messages.remove(idx);
             turn_complete.timestamp = now();
             self.session_mut().messages.push(turn_complete);
-            // Update cached index if it was affected
-            if let Some(last_idx) = self.agent_state_mut().last_assistant_index {
+            // Update last_assistant_index if it was affected.
+            if let Some(last_idx) = self.turn_state.last_assistant_index {
                 if last_idx >= idx {
-                    self.agent_state_mut().last_assistant_index = Some(last_idx.saturating_sub(1));
+                    self.turn_state_mut().last_assistant_index = Some(last_idx.saturating_sub(1));
+                    *self.agent_state_mut() = AgentState::from(&self.turn_state);
                 }
             }
         }

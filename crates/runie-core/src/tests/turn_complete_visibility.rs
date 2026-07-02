@@ -40,7 +40,7 @@ fn feed_has_turn_complete(state: &AppState) -> bool {
 #[test]
 fn single_thought_hides_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::Response {
@@ -59,7 +59,7 @@ fn single_thought_hides_turn_complete() {
 #[test]
 fn tool_plus_thought_shows_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::ToolStart {
@@ -88,7 +88,7 @@ fn tool_plus_thought_shows_turn_complete() {
 #[test]
 fn tool_only_hides_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "start".into(),
@@ -119,7 +119,7 @@ fn tool_only_hides_turn_complete() {
 #[test]
 fn two_thoughts_shows_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::Thinking { id: "req.0".into() });
@@ -140,7 +140,7 @@ fn two_thoughts_shows_turn_complete() {
 #[test]
 fn two_tools_shows_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::ToolStart {
@@ -179,7 +179,7 @@ fn two_tools_shows_turn_complete() {
 #[test]
 fn mixed_thought_tool_shows_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::ToolStart {
@@ -208,7 +208,7 @@ fn mixed_thought_tool_shows_turn_complete() {
 #[test]
 fn zero_actions_hides_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -276,7 +276,7 @@ fn second_turn_events() -> Vec<Event> {
 #[test]
 fn second_turn_independent_action_count() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     dispatch(&mut state, &first_turn_events());
     dispatch(&mut state, &second_turn_events());
     state.ensure_fresh();
@@ -292,7 +292,7 @@ fn second_turn_independent_action_count() {
 #[test]
 fn three_mixed_actions_shows_turn_complete() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::ToolStart {
@@ -323,7 +323,7 @@ fn three_mixed_actions_shows_turn_complete() {
 #[test]
 fn turn_complete_still_in_session_when_hidden() {
     let mut state = fresh_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::Response {

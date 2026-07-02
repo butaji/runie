@@ -23,7 +23,7 @@ fn test_reset_clears_state() {
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
     state.input.input = "test".to_string();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.update(crate::Event::Reset);
     assert_eq!(state.input.input, "");
     assert!(!state.agent.streaming);

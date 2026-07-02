@@ -54,7 +54,7 @@ fn large_tool_output_latest_visible_at_bottom() {
 #[test]
 fn final_response_visible_after_full_turn() {
     let mut state = AppState::default();
-    state.agent.streaming = true;
+    state.set_streaming(true);
 
     state.update(Event::Thinking { id: "req.0".into() });
     state.update(Event::Response {
@@ -174,7 +174,7 @@ fn scrolled_up_does_not_auto_scroll_during_streaming() {
     }
     state.ensure_fresh();
     state.view.scroll = 3;
-    state.agent.streaming = true;
+    state.set_streaming(true);
 
     state.update(Event::Response {
         id: "req.0".into(),
@@ -204,7 +204,7 @@ fn scroll_preserved_until_user_scrolls_down_during_streaming() {
     }
     state.ensure_fresh();
     state.view.scroll = 5;
-    state.agent.streaming = true;
+    state.set_streaming(true);
 
     state.update(Event::Response {
         id: "req.0".into(),

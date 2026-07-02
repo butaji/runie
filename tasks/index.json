@@ -133,7 +133,7 @@
     {
       "file": "adopt-snapshot-journal-jsonl-pattern.md",
       "title": "Adopt snapshot + append-only JSONL journal pattern",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "adopt-testing-helpers-across-all-tests.md",
@@ -538,7 +538,7 @@
     {
       "file": "derive-event-taxonomies-with-strum-or-proc-macro.md",
       "title": "Derive event taxonomies with `strum` or a proc macro",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -878,7 +878,7 @@
     {
       "file": "generate-tool-dispatch-from-single-registry.md",
       "title": "Generate tool dispatch from a single registry",
-      "status": "partial"
+      "status": "done"
     },
     {
       "file": "graceful-leader-shutdown-with-joinset-timeout.md",
@@ -963,7 +963,7 @@
     {
       "file": "merge-agentstate-into-turnstate-projection.md",
       "title": "Merge AgentState into a TurnState projection",
-      "status": "partial"
+      "status": "done"
     },
     {
       "file": "migrate-production-actors-to-ractor.md",
@@ -1093,7 +1093,7 @@
     {
       "file": "regenerate-config-schema-and-fix-permission-mode-description.md",
       "title": "Regenerate config schema and fix PermissionMode description",
-      "status": "done"
+      "status": "todo"
     },
     {
       "file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md",
@@ -1178,7 +1178,7 @@
     {
       "file": "remove-or-make-real-providerprotocol-abstraction.md",
       "title": "Remove or make real the `ProviderProtocol` abstraction",
-      "status": "wontfix"
+      "status": "done"
     },
     {
       "file": "remove-ractor-send-message-alias.md",
@@ -1353,7 +1353,7 @@
     {
       "file": "replace-layered-config-merge-with-figment.md",
       "title": "Replace custom layered config merge with Figment",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "replace-leftover-macros-with-functions.md",
@@ -1578,7 +1578,7 @@
     {
       "file": "simplify-permission-policy-chain-to-ruleset-match.md",
       "title": "Simplify permission policy chain to a ruleset match",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "simplify-slash-command-dsl.md",
@@ -1648,7 +1648,7 @@
     {
       "file": "standardize-session-persistence-on-jsonl.md",
       "title": "Standardize session persistence on JSONL",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "stop-dotenvy-from-mutating-process-environment.md",
@@ -1973,7 +1973,7 @@
     {
       "file": "use-textwrap-for-blockquote-word-wrap.md",
       "title": "Use `textwrap` for blockquote word wrap",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
@@ -1993,7 +1993,7 @@
     {
       "file": "use-toml-edit-and-file-locks-for-config.md",
       "title": "Use toml_edit + fs2 file locks for config persistence",
-      "status": "todo"
+      "status": "partial"
     },
     {
       "file": "use-tool-call-id-in-tool-events.md",
@@ -2023,7 +2023,7 @@
     {
       "file": "use-validator-for-form-and-config-inputs.md",
       "title": "Use validator for form and config inputs",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "use-which-crate-for-executable-lookup.md",

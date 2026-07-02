@@ -1,3 +1,4 @@
+use crate::model::state::AgentState;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
@@ -464,7 +465,7 @@ fn abort_during_streaming_clears_turn_and_allows_new_submit() {
     state.config.vim_mode = true;
     state.turn_state.turn_active = true;
     state.sync_agent_state();
-    state.agent.streaming = true;
+    state.set_streaming(true);
     state.input.input = "hi".into();
     state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
@@ -493,10 +494,11 @@ fn abort_during_streaming_resets_timers() {
     state.config.vim_mode = true;
     state.turn_state.turn_active = true;
     state.sync_agent_state();
-    state.agent.streaming = true;
-    state.agent.turn_started_at = Some(std::time::Instant::now());
-    state.agent.thinking_started_at = Some(std::time::Instant::now());
-    state.agent.tool_started_at = Some(std::time::Instant::now());
+    state.set_streaming(true);
+    state.turn_state.turn_started_at = Some(std::time::Instant::now());
+    state.turn_state.thinking_started_at = Some(std::time::Instant::now());
+    state.turn_state.tool_started_at = Some(std::time::Instant::now());
+    *state.agent_state_mut() = AgentState::from(&state.turn_state);
 
     state.update(crate::Event::Escape);
 

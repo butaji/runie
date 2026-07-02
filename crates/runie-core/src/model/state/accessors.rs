@@ -216,4 +216,11 @@ impl AppState {
     pub fn turn_state_mut(&mut self) -> &mut crate::actors::turn::TurnState {
         &mut self.turn_state
     }
+
+    /// Set streaming state on authoritative TurnState and sync to AgentState.
+    /// This is the canonical way to set streaming state; do not set `agent.streaming` directly.
+    pub fn set_streaming(&mut self, streaming: bool) {
+        self.turn_state.streaming = streaming;
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+    }
 }
