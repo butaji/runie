@@ -5,11 +5,15 @@
 pub mod config;
 pub mod factory;
 pub mod http;
-pub mod mock;
 pub mod model_client;
-pub mod openai;
 pub mod protocol;
 pub mod retry;
+
+#[cfg(feature = "openai")]
+pub mod openai;
+
+#[cfg(feature = "mock")]
+pub mod mock;
 
 use crate::retry::{is_retryable, with_retry};
 
@@ -31,9 +35,13 @@ pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilit
 
 pub use runie_core::config::Config;
 pub use factory::BuiltProviderFactory;
-pub use mock::{MockProvider, MockStreamingProvider};
 pub use model_client::{ModelClient, TurnSession};
+
+#[cfg(feature = "openai")]
 pub use openai::OpenAiProvider;
+
+#[cfg(feature = "mock")]
+pub use mock::{MockProvider, MockStreamingProvider};
 pub use runie_core::proto::ProviderConfig;
 use std::sync::Arc;
 
@@ -92,8 +100,18 @@ pub fn build_provider(
     model: &str,
     config: Option<Arc<dyn ProviderConfig>>,
 ) -> Result<BuiltProvider, ProviderError> {
-    if key == "mock" && is_mock_enabled() {
-        return Ok(build_mock_provider(key, model));
+    #[cfg(feature = "mock")]
+    {
+        if key == "mock" && is_mock_enabled() {
+            return Ok(build_mock_provider(key, model));
+        }
+    }
+    #[cfg(not(feature = "mock"))
+    ]
+    {
+        if key == "mock" {
+            return Err(ProviderError::UnknownProvider(key.to_owned()));
+        }
     }
 
     let meta = find_provider(key).ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
@@ -103,14 +121,19 @@ pub fn build_provider(
         return Err(ProviderError::MissingApiKey(meta.env_var.to_owned().into()));
     }
 
-    let provider = build_openai_provider(api_key, model, &base_url);
-    Ok(BuiltProvider::new(
-        provider,
-        key.to_owned(),
-        model.to_owned(),
-    ))
+    #[cfg(feature = "openai")]
+    {
+        let provider = build_openai_provider(api_key, model, &base_url);
+        Ok(BuiltProvider::new(provider, key.to_owned(), model.to_owned()))
+    }
+    #[cfg(not(feature = "openai"))]
+    {
+        let _ = (api_key, model, base_url);
+        Err(ProviderError::UnknownProvider(key.to_owned()))
+    }
 }
 
+#[cfg(feature = "mock")]
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
         // Use small delay (5-10ms) for fast deterministic tests
@@ -121,6 +144,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     BuiltProvider::new(provider, key.to_owned(), model.to_owned())
 }
 
+#[cfg(feature = "openai")]
 fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
     // Use the cached HTTP client so TCP connections are reused across turns.
     let client = BuiltProvider::cached_http_client("openai", base_url);
