@@ -336,7 +336,7 @@ async fn execute_headless_tools(
     let mut any_blocked = false;
 
     for tool_call in tools {
-        let output = execute_tool_call(tool_call, &ctx, gate).await;
+        let output = execute_tool_call(tool_call, &ctx, gate, None).await;
 
         // Track if any tool was blocked (denied by permission policy)
         if output.status == runie_core::tool::ToolStatus::Blocked {

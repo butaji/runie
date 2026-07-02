@@ -2050,6 +2050,11 @@
     "status": "done"
   },
   {
+    "file": "062-add-tool-result-cache-expiry.md",
+    "title": "Add tool result cache with TTL expiry",
+    "status": "done"
+  },
+  {
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
     "status": "todo"

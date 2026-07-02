@@ -51,7 +51,7 @@ pub async fn execute_single_tool(
         return output;
     }
 
-    let output = execute_tool_call(tool_call, ctx, gate).await;
+    let output = execute_tool_call(tool_call, ctx, gate, None).await;
     fire_skill_after_hook(skills, tool_call, &output);
     output
 }

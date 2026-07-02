@@ -130,6 +130,23 @@ impl Default for TruncationSection {
     }
 }
 
+// ── Tool Cache Section ────────────────────────────────────────────────────────
+
+/// Tool result cache configuration.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[derive(JsonSchema)]
+pub struct ToolCacheSection {
+    /// TTL in seconds for cached tool results. Zero disables the cache.
+    pub ttl_secs: u64,
+}
+
+impl Default for ToolCacheSection {
+    fn default() -> Self {
+        Self { ttl_secs: 300 } // 5 minutes
+    }
+}
+
 // ============================================================================
 // Hooks Section
 // ============================================================================
@@ -219,6 +236,9 @@ pub struct Config {
     /// MCP server configurations.
     #[serde(default)]
     pub mcp: mcp::McpSection,
+    /// Tool result cache settings.
+    #[serde(default)]
+    pub tool_cache: ToolCacheSection,
 }
 
 #[cfg(test)]

@@ -91,6 +91,13 @@
       "$ref": "#/$defs/ThinkingLevel",
       "default": "Off"
     },
+    "tool_cache": {
+      "description": "Tool result cache settings.",
+      "$ref": "#/$defs/ToolCacheSection",
+      "default": {
+        "ttl_secs": 300
+      }
+    },
     "truncation": {
       "description": "Truncation settings.",
       "$ref": "#/$defs/TruncationSection",
@@ -422,6 +429,19 @@
         "Medium",
         "High"
       ]
+    },
+    "ToolCacheSection": {
+      "description": "Tool result cache configuration.",
+      "type": "object",
+      "properties": {
+        "ttl_secs": {
+          "description": "TTL in seconds for cached tool results. Zero disables the cache.",
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        }
+      }
     },
     "TruncationSection": {
       "description": "Truncation limits for tool output.",

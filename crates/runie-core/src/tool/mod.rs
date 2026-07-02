@@ -10,6 +10,7 @@
 //! and handles execution. There is no separate `Tool` trait or `ToolRegistry`;
 //! tools are MCP tools by definition.
 
+pub mod cache;
 mod constraints;
 mod context;
 mod format;
@@ -21,6 +22,7 @@ mod state;
 mod tests;
 pub mod types;
 
+pub use cache::{is_cacheable_tool, CacheEntry, ToolResultCache, CACHEABLE_TOOL_NAMES};
 pub use constraints::{
     validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation,
     ValidationResult,
