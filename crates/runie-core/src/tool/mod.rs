@@ -10,6 +10,7 @@
 //! and handles execution. There is no separate `Tool` trait or `ToolRegistry`;
 //! tools are MCP tools by definition.
 
+pub mod annotations;
 pub mod cache;
 mod constraints;
 mod context;

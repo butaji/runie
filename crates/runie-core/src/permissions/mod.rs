@@ -18,6 +18,7 @@
 use std::path::Path;
 
 use async_trait::async_trait;
+use rmcp::model::ToolAnnotations;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -141,12 +142,15 @@ pub fn parse_permission_mode(s: &str) -> PermissionMode {
 }
 
 /// Context passed to each policy during evaluation.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PermissionContext<'a> {
     pub tool: &'a str,
     pub path: Option<&'a Path>,
     pub input: Option<&'a Value>,
     pub cwd: Option<&'a Path>,
+    /// MCP tool annotations for the requested tool, if known.
+    /// Populated by `PermissionActor` from `runie_core::tool::annotations`.
+    pub annotations: Option<ToolAnnotations>,
 }
 
 /// A single permission policy in the chain.

@@ -577,6 +577,7 @@ mod tests {
             path: None,
             input: Some(&serde_json::json!({"command": "echo hi"})),
             cwd: None,
+            annotations: crate::tool::annotations::get_tool_annotations("bash"),
         };
 
         // Policy matches and returns Allow

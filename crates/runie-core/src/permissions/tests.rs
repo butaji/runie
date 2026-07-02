@@ -18,6 +18,7 @@ fn ctx<'a>(tool: &'a str, path: Option<&'a Path>, cwd: Option<&'a Path>) -> Perm
         path,
         input: None,
         cwd,
+        annotations: crate::tool::annotations::get_tool_annotations(tool),
     }
 }
 

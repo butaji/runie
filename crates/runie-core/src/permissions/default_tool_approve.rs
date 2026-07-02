@@ -1,10 +1,13 @@
 //! Auto-approve read-only / safe tools.
+//!
+//! Uses MCP `ToolAnnotations.read_only_hint` from the permission context to
+//! determine whether a tool is safe for auto-approval.
 
 use async_trait::async_trait;
 
-use super::{is_read_only_tool, PermissionContext, PermissionPolicy, PermissionResult};
+use super::{PermissionContext, PermissionPolicy, PermissionResult};
 
-/// Auto-approve safe/read-only tools.
+/// Auto-approve tools where `ctx.annotations.read_only_hint == Some(true)`.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DefaultToolApprove;
 
@@ -21,7 +24,12 @@ impl PermissionPolicy for DefaultToolApprove {
     }
 
     fn matches(&self, ctx: &PermissionContext<'_>) -> bool {
-        is_read_only_tool(ctx.tool)
+        // Read-only if annotations indicate it, or if no annotations known and tool
+        // name suggests read-only.
+        ctx.annotations
+            .as_ref()
+            .map(|a| a.read_only_hint == Some(true))
+            .unwrap_or(false)
     }
 
     async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
