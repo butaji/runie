@@ -1,5 +1,6 @@
 //! Message types shared across the application.
 
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -112,24 +113,29 @@ pub fn now() -> f64 {
         .unwrap_or(0.0)
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Builder)]
+#[builder(build_fn(skip))]
 pub struct ChatMessage {
+    #[builder(setter(into, name = "set_role"))]
     pub role: Role,
+    #[builder(default = "crate::proto::message::now()", setter(into, name = "set_timestamp"))]
+    #[serde(default)]
     pub timestamp: f64,
+    #[builder(default, setter(into, name = "set_id"))]
+    #[serde(default)]
     pub id: String,
+    #[builder(default = "String::new()", setter(into, name = "set_provider"))]
     #[serde(default)]
     pub provider: String,
+    #[builder(default, setter(into))]
     #[serde(default)]
     pub metadata: MessageMetadata,
-    /// For `Role::Tool` messages, the id of the assistant tool call this
-    /// result answers. Required by OpenAI-compatible APIs.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(into, strip_option, name = "set_tool_call_id"))]
     pub tool_call_id: Option<String>,
-    /// Provider-specific round-trip state (signatures, reasoning format, etc.)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option, name = "set_provider_metadata"))]
     pub provider_metadata: Option<serde_json::Value>,
-    /// Typed parts of this message (text, reasoning, tool calls, results).
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[builder(default, setter(name = "set_parts"))]
+    #[serde(default)]
     pub parts: Vec<Part>,
 }
 
@@ -254,7 +260,7 @@ impl ChatMessage {
     }
 }
 
-/// Builder for `ChatMessage` with validated construction.
+/// Builder for `ChatMessage` with helper constructors and typed setters.
 ///
 /// Enforces valid message structure at construction time:
 /// - `Role::Assistant` messages must have non-empty text OR tool calls
@@ -263,21 +269,11 @@ impl ChatMessage {
 ///
 /// For constructing message sequences (validation of dangling tool calls,
 /// orphan results, role ordering), use [`validate_messages`] instead.
-#[derive(Debug, Default)]
-pub struct ChatMessageBuilder {
-    role: Role,
-    timestamp: Option<f64>,
-    id: Option<String>,
-    provider: Option<String>,
-    tool_call_id: Option<String>,
-    provider_metadata: Option<serde_json::Value>,
-    parts: Vec<Part>,
-    metadata: MessageMetadata,
-}
-
 impl ChatMessageBuilder {
     pub fn new(role: Role) -> Self {
-        Self { role, ..Default::default() }
+        let mut builder = Self::default();
+        builder.set_role(role);
+        builder
     }
 
     pub fn user(content: impl Into<String>) -> Self {
@@ -300,15 +296,17 @@ impl ChatMessageBuilder {
         Self::new(Role::Thought).text(content)
     }
 
+    /// Append text content, or merge with the last text part if one exists.
     pub fn text(mut self, content: impl Into<String>) -> Self {
         let content = content.into();
         if content.is_empty() {
             return self;
         }
-        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
+        let parts = self.parts.get_or_insert_with(Vec::new);
+        if let Some(Part::Text { content: last }) = parts.last_mut() {
             last.push_str(&content);
         } else {
-            self.parts.push(Part::Text { content });
+            parts.push(Part::Text { content });
         }
         self
     }
@@ -318,17 +316,25 @@ impl ChatMessageBuilder {
         if content.is_empty() {
             return self;
         }
-        self.parts.push(Part::Reasoning { content });
+        let parts = self.parts.get_or_insert_with(Vec::new);
+        parts.push(Part::Reasoning { content });
         self
     }
 
-    pub fn tool_call(mut self, id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
-        self.parts.push(Part::tool_call(id, name, args));
+    pub fn tool_call(
+        mut self,
+        id: impl Into<String>,
+        name: impl Into<String>,
+        args: serde_json::Value,
+    ) -> Self {
+        let parts = self.parts.get_or_insert_with(Vec::new);
+        parts.push(Part::tool_call(id, name, args));
         self
     }
 
     pub fn tool_result(mut self, id: impl Into<String>, output: impl Into<String>) -> Self {
-        self.parts.push(Part::tool_result(id, output));
+        let parts = self.parts.get_or_insert_with(Vec::new);
+        parts.push(Part::tool_result(id, output));
         self
     }
 
@@ -348,35 +354,41 @@ impl ChatMessageBuilder {
     }
 
     pub fn tool_call_id(mut self, id: impl Into<String>) -> Self {
-        self.tool_call_id = Some(id.into());
+        self.tool_call_id = Some(Some(id.into()));
         self
     }
 
     pub fn pinned(mut self) -> Self {
-        self.metadata.pinned = true;
+        self.metadata.get_or_insert_with(Default::default).pinned = true;
         self
     }
 
     pub fn hidden_from_user(mut self) -> Self {
-        self.metadata.hidden_from_user = true;
+        self.metadata.get_or_insert_with(Default::default).hidden_from_user = true;
         self
     }
 
     pub fn ephemeral(mut self) -> Self {
-        self.metadata.ephemeral = true;
+        self.metadata.get_or_insert_with(Default::default).ephemeral = true;
         self
     }
 
     pub fn build(self) -> ChatMessage {
+        let role = self.role.unwrap_or(Role::User);
+        let timestamp = self.timestamp.unwrap_or_else(now);
+        let id = self.id.unwrap_or_default();
+        let provider = self.provider.unwrap_or_default();
+        let metadata = self.metadata.unwrap_or_default();
+        let parts = self.parts.unwrap_or_default();
         ChatMessage {
-            role: self.role,
-            timestamp: self.timestamp.unwrap_or_else(now),
-            id: self.id.unwrap_or_default(),
-            provider: self.provider.unwrap_or_default(),
-            tool_call_id: self.tool_call_id,
-            provider_metadata: self.provider_metadata,
-            metadata: self.metadata,
-            parts: self.parts,
+            role,
+            timestamp,
+            id,
+            provider,
+            metadata,
+            tool_call_id: self.tool_call_id.flatten(),
+            provider_metadata: self.provider_metadata.flatten(),
+            parts,
         }
     }
 }

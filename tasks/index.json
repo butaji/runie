@@ -482,7 +482,7 @@
   {
     "file": "derive-chatmessage-builder-with-derive-builder.md",
     "title": "Derive `ChatMessageBuilder` with `derive_builder`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "derive-durable-and-headless-events-from-canonical-event.md",
