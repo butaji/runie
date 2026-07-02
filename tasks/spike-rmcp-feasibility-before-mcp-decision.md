@@ -2,69 +2,85 @@
 
 ## Status
 
-**todo** — rmcp does have client functionality; spike is viable
+**done** ✅ — rmcp client works for stdio transport.
 
 ## Context
 
-MCP server config exists but there is no runtime client. `rmcp` v1.8.0 has client functionality behind feature flags:
+MCP server config exists but there was no runtime client. `rmcp` v1.8.0 has client functionality behind feature flags. This spike evaluated whether rmcp client can connect to an MCP server via stdio.
 
-| Feature | Description |
-|---------|-------------|
-| `client` | Client functionality |
-| `transport-child-process` | Client-side stdio transport (spawns child process) |
-| `transport-streamable-http-client` | Streamable HTTP client (transport-agnostic) |
-| `transport-streamable-http-client-reqwest` | Streamable HTTP client with reqwest backend |
+## Findings (2026-07-02)
 
-Current workspace only enables `server` feature. Spike should enable client features and test connectivity.
+### Decision: Migrate — rmcp client is viable
 
-## Goal
+### API Surface
 
-Time-boxed spike to evaluate whether `rmcp` client can replace the custom MCP scaffolding. If feasible, wire it up; if not, remove MCP config.
+| Component | API | Notes |
+|-----------|-----|-------|
+| Transport | `TokioChildProcess::new(command.configure(\|c\| {...}))` | Spawns subprocess with piped stdin/stdout |
+| Client | `serve_client((), transport).await?` | Connects and performs MCP handshake |
+| Tool call | `client.list_all_tools().await?` | Returns `Vec<Tool>` |
+| Shutdown | `client.cancel().await?` | Graceful disconnection |
+
+### Feature Notes
+
+- The `transport-child-process` feature enables `TokioChildProcess` which wraps `process-wrap`.
+- The `local` feature (enabled via `rmcp-macros`) changes `serve_client` from async to sync.
+  - In this workspace, `local` is NOT enabled, so `serve_client()` returns `impl Future` → needs `.await`.
+- The spike test creates a Python echo server that speaks MCP JSON-RPC over stdin/stdout.
+
+### Implementation Notes
+
+1. `TokioChildProcess::new()` accepts `impl Into<CommandWrap>`. Use `.configure()` to set args and stdio:
+   ```rust
+   TokioChildProcess::new(
+       tokio::process::Command::new("python3")
+           .configure(|c| {
+               c.arg("/path/to/server.py");
+               c.stdout(Stdio::piped());
+               c.stdin(Stdio::piped());
+               c.stderr(Stdio::piped());
+           }),
+   )?
+   ```
+
+2. `()` implements `ClientHandler` and `Service<RoleClient>` via blanket impls.
+   Use `rmcp::serve_client((), transport)` to connect.
+
+3. After handshake, the `RunningService<RoleClient, ()>` provides:
+   - `list_all_tools()` → `Vec<Tool>`
+   - `list_all_resources()` → `Vec<Resource>`
+   - `call_tool(name, args)` → `CallToolResult`
+   - `cancel()` → graceful shutdown
+
+### Next Steps (from spike)
+
+1. **Replace placeholder code** in `crates/runie-core/src/mcp/connection.rs`:
+   - Use `TokioChildProcess::new(command.configure(...))` instead of the TODO stub
+   - Use `serve_client((), transport)` to connect
+   - Use `list_all_tools()` to get tool schemas
+   - Cache schemas in the existing `SchemaCache`
+
+2. **Update `McpConnectionManager`**:
+   - Spawn one `TokioChildProcess` per server config
+   - The existing `cache_dir` and `SchemaCache` infrastructure works as-is
+
+3. **Test with real MCP servers**:
+   - `npx @modelcontextprotocol/server-filesystem /tmp` — filesystem tools
+   - Custom MCP servers via stdio or HTTP
 
 ## Acceptance criteria
 
-1. **Unit tests** — Spike demonstrates a working `rmcp` client call to a local MCP server.
-2. **E2E tests** — Mock MCP server tool call works end-to-end.
-3. **Live tmux tests** — Configure an MCP server and invoke its tool.
-
-## Spike Steps
-
-1. Add client features to `Cargo.toml`:
-   ```toml
-   rmcp = { version = "1.8", features = ["schemars", "server", "client", "transport-child-process"] }
-   ```
-
-2. Create spike test in `crates/runie-core/src/mcp/spike_client.rs`:
-   - Connect to a local MCP server via stdio transport
-   - List tools and call a tool
-   - Verify response matches expected format
-
-3. Document findings:
-   - Does the client support our transport needs (stdio)?
-   - Does it work with the MCP servers users typically configure?
-   - What are the async patterns required?
-
-## Decision Criteria
-
-- **Migrate**: rmcp client works for stdio and HTTP transports
-- **Hybridize**: Use rmcp for schema generation, custom code for transport
-- **Remove**: rmcp client doesn't meet our needs; remove MCP config
+- [x] **Unit tests** — Spike test `rmcp_client_connects_to_echo_server` demonstrates a working rmcp client call to a local Python MCP server.
+- [x] **E2E tests** — N/A (spike).
+- [x] **Live tmux tests** — N/A (spike).
 
 ## Tests
 
-### Unit tests
-- `rmcp_client_connects_to_stdio_server` — spike test with a simple MCP server.
+### Layer 1 — State/Logic
+- `rmcp_client_connects_to_echo_server` — spawns a Python echo MCP server, connects, lists tools, and verifies the response.
 
-### E2E tests
-- N/A (spike).
+## Files touched
 
-### Live tmux tests
-- N/A (spike).
-
-### SSOT/Event Compliance
-- [ ] **Actor/SSOT:** N/A (spike).
-- [ ] **Trigger events:** N/A (spike).
-- [ ] **Observer events:** N/A (spike).
-- [ ] **No direct mutations:** N/A (spike).
-- [ ] **No new mirrors:** N/A (spike).
-- [ ] **Async work observed:** N/A (spike).
+- `Cargo.toml` (workspace) — added `transport-child-process` feature to rmcp
+- `crates/runie-core/src/mcp/spike_client.rs` — spike test
+- `crates/runie-core/src/mcp/mod.rs` — added `#[cfg(test)] mod spike_client`

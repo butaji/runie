@@ -15,5 +15,7 @@
 mod cache;
 mod connection;
 
+#[cfg(test)] mod spike_client;
+
 pub use cache::SchemaCache;
 pub use connection::{McpConnectionManager, McpTool};
