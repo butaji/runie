@@ -2,7 +2,7 @@
 //! Command Registry - manages command registration and dispatch
 
 use super::{CommandCategory, CommandDef, CommandResult};
-use crate::declarative::types::CommandDef as DeclarativeCommandDef;
+use crate::declarative::types::DeclarativeCommandYaml;
 use crate::dialog::PanelStack;
 use crate::model::AppState;
 use std::collections::HashMap;
@@ -31,7 +31,7 @@ impl CommandRegistry {
 
     /// Create a registry with commands loaded from YAML files (at runtime).
     /// This merges commands from YAML files with embedded built-ins.
-    pub fn with_commands(commands: Vec<DeclarativeCommandDef>) -> Self {
+    pub fn with_commands(commands: Vec<DeclarativeCommandYaml>) -> Self {
         let mut registry = Self::new();
         for cmd in commands {
             registry.register_from_yaml(cmd);
@@ -47,9 +47,9 @@ impl CommandRegistry {
     }
 
     /// Register a command from YAML definition.
-    fn register_from_yaml(&mut self, yaml_def: DeclarativeCommandDef) {
+    fn register_from_yaml(&mut self, yaml: DeclarativeCommandYaml) {
         let handler_registry = &super::dsl::handlers::HANDLER_REGISTRY;
-        let cmd = super::dsl::spec::build_cmd_from_yaml(&yaml_def, handler_registry);
+        let cmd = super::dsl::spec::build_cmd_from_yaml(&yaml, handler_registry);
         if let Some(cmd) = cmd {
             self.register(cmd);
         }

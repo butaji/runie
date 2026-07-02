@@ -10,7 +10,7 @@ use include_dir::Dir;
 use crate::commands::dsl::handlers::HANDLER_REGISTRY;
 use crate::commands::dsl::spec::build_cmd_from_yaml;
 use crate::commands::dsl::spec::CommandDef;
-use crate::declarative::types::{CommandDef as DeclDef, CommandKindDef, DeclarativeCommandYaml};
+use crate::declarative::types::DeclarativeCommandYaml;
 
 /// Embed resources/commands/ at compile time via include_dir.
 /// This avoids a hand-maintained list: adding a new .yaml file is enough.
@@ -51,27 +51,7 @@ fn load_single_command_file(
         }
     };
 
-    let (handler_name, message) = match yaml.to_kind() {
-        CommandKindDef::Handler { name } => (Some(name), None),
-        CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
-        CommandKindDef::Form { .. } => (None, None),
-        CommandKindDef::Msg { message } => (None, Some(message)),
-    };
-
-    let decl_def = DeclDef {
-        name: yaml.name.clone(),
-        description: yaml.description,
-        category: yaml.category,
-        intent: yaml.intent,
-        shortcut: yaml.shortcut,
-        aliases: yaml.aliases,
-        has_subcommands: yaml.sub,
-        file_path: std::path::PathBuf::new(),
-        handler_name,
-        message,
-    };
-
-    match build_cmd_from_yaml(&decl_def, handler_registry) {
+    match build_cmd_from_yaml(&yaml, handler_registry) {
         Some(cmd) => Some(cmd),
         None => {
             tracing::warn!(
@@ -89,7 +69,7 @@ mod tests {
 
     #[test]
     fn quit_command_has_handler_flow() {
-        use crate::declarative::types::{CommandKindDef, DeclarativeCommandYaml};
+        use crate::declarative::types::{CommandKind, DeclarativeCommandYaml};
 
         // Find the quit.yaml file
         let quit_yaml = COMMANDS_DIR
@@ -99,9 +79,8 @@ mod tests {
 
         let yaml_contents = std::str::from_utf8(quit_yaml.contents()).unwrap();
         let yaml: DeclarativeCommandYaml = serde_yaml::from_str(yaml_contents).unwrap();
-        let kind = yaml.to_kind();
         assert!(
-            matches!(kind, CommandKindDef::Handler { name } if name == "quit"),
+            matches!(&yaml.kind, CommandKind::Handler { handler } if handler == "quit"),
             "quit yaml should deserialize to Handler(\"quit\")"
         );
     }

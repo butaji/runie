@@ -183,41 +183,90 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
 
 /// Build a `CommandDef` from a YAML definition and handler registry.
 pub fn build_cmd_from_yaml(
-    yaml_def: &crate::declarative::types::CommandDef,
+    yaml: &crate::declarative::types::DeclarativeCommandYaml,
     handler_registry: &super::handlers::registry::HandlerRegistry,
 ) -> Option<CommandDef> {
-    let mut cmd = CommandDef::new(yaml_def.name.clone())
-        .desc(yaml_def.description.clone())
-        .category(yaml_def.category);
-    if !yaml_def.aliases.is_empty() {
-        let aliases: Vec<&str> = yaml_def.aliases.iter().map(|s| s.as_str()).collect();
+    use crate::declarative::types::CommandKind as YamlKind;
+
+    let mut cmd = CommandDef::new(yaml.name.clone())
+        .desc(yaml.description.clone())
+        .category(yaml.category);
+    if !yaml.aliases.is_empty() {
+        let aliases: Vec<&str> = yaml.aliases.iter().map(|s| s.as_str()).collect();
         cmd = cmd.aliases(&aliases);
     }
 
-    if yaml_def.has_subcommands {
+    if yaml.sub {
         cmd = cmd.sub();
     }
 
-    // Look up handler from registry
-    if let Some(ref handler_name) = yaml_def.handler_name {
-        if let Some(kind) = handler_registry.to_command_kind(handler_name) {
-            match kind {
-                CommandKind::Handler(f) => cmd = cmd.handler(f),
-                CommandKind::FormWithHandler {
-                    title,
-                    fields,
-                    handler,
-                } => {
-                    cmd = cmd.form_with_handler(title, move |f| add_fields(f, fields), handler);
-                }
-                CommandKind::Msg(m) => cmd = cmd.msg(m),
+    // Look up handler from registry based on YAML kind.
+    // `handler_registry.to_command_kind` returns spec::CommandKind (with fn pointers).
+    match &yaml.kind {
+        YamlKind::Handler { handler } => {
+            if let Some(kind) = handler_registry.to_command_kind(handler) {
+                cmd = apply_kind(cmd, kind);
             }
         }
-    } else if let Some(ref msg) = yaml_def.message {
-        cmd = cmd.msg(msg);
+        YamlKind::FormWithHandler { title, fields, handler } => {
+            if let Some(kind) = handler_registry.to_command_kind(handler) {
+                let title_static: &'static str = Box::leak(title.clone().into_boxed_str());
+                let fields_vec: Vec<(&'static str, &'static str, &'static str)> = fields
+                    .iter()
+                    .map(|f| {
+                        let label: &'static str = Box::leak(f.label.clone().into_boxed_str());
+                        let ph: &'static str = Box::leak(f.placeholder.clone().into_boxed_str());
+                        let key: &'static str = Box::leak(f.key.clone().into_boxed_str());
+                        (label, ph, key)
+                    })
+                    .collect();
+                let fields_box: Box<[(&'static str, &'static str, &'static str)]> =
+                    fields_vec.into();
+                cmd = apply_form_with_handler(cmd, kind, title_static, Box::leak(fields_box));
+            }
+        }
+        YamlKind::Msg { message } => {
+            cmd = cmd.msg(message.clone());
+        }
+        YamlKind::Form { .. } => {
+            // Form without handler — not supported by the registry; skip.
+        }
     }
 
     Some(cmd)
+}
+
+/// Apply a resolved spec::CommandKind to a CommandDef builder.
+fn apply_kind(cmd: CommandDef, kind: CommandKind) -> CommandDef {
+    match kind {
+        CommandKind::Handler(f) => cmd.handler(f),
+        CommandKind::FormWithHandler {
+            title,
+            fields,
+            handler,
+        } => cmd.form_with_handler(title, move |f| add_fields(f, fields), handler),
+        CommandKind::Msg(m) => cmd.msg(m),
+    }
+}
+
+/// Apply a FormWithHandler kind with the form template from YAML.
+fn apply_form_with_handler(
+    cmd: CommandDef,
+    kind: CommandKind,
+    title: &'static str,
+    fields: &'static [(&'static str, &'static str, &'static str)],
+) -> CommandDef {
+    match kind {
+        CommandKind::FormWithHandler {
+            title: t,
+            handler: h,
+            ..
+        } => cmd.form_with_handler(t, move |p| add_fields(p, fields), h),
+        CommandKind::Handler(form_handler) => cmd
+            .form_with_handler(title, move |p| add_fields(p, fields), form_handler)
+            .with_form_handler(form_handler),
+        CommandKind::Msg(m) => cmd.msg(m),
+    }
 }
 
 fn add_fields(

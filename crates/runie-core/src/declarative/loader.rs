@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::resource_loader::{derive_name_from_path, is_user_invocable, load_resources_from_dir};
 
-use super::types::{CommandDef, CommandKindDef, DeclarativeCommandYaml, SkillDef, Trigger};
+use super::types::{DeclarativeCommandYaml, SkillDef, Trigger};
 
 /// Generic loader for declarative configuration.
 pub struct DeclarativeLoader {
@@ -46,7 +46,7 @@ impl DeclarativeLoader {
     }
 
     /// Load all commands from configured directories.
-    pub fn load_commands(&self) -> Vec<CommandDef> {
+    pub fn load_commands(&self) -> Vec<DeclarativeCommandYaml> {
         let mut commands = Vec::new();
         for dir in &self.command_dirs {
             commands.extend(load_commands_from_dir(dir));
@@ -101,7 +101,7 @@ fn record_to_skill_def(record: crate::resource_loader::ResourceRecord) -> Option
 // ---------------------------------------------------------------------------
 
 /// Load all commands from a directory.
-pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
+pub fn load_commands_from_dir(dir: &Path) -> Vec<DeclarativeCommandYaml> {
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
         Err(_) => return Vec::new(),
@@ -119,28 +119,11 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<CommandDef> {
     commands
 }
 
-/// Parse a command YAML file into a typed struct.
-pub(crate) fn parse_command_yaml(path: &Path) -> Option<CommandDef> {
+/// Parse a command YAML file into `DeclarativeCommandYaml`.
+pub(crate) fn parse_command_yaml(path: &Path) -> Option<DeclarativeCommandYaml> {
     let yaml: DeclarativeCommandYaml =
         serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
-    let (handler_name, message) = match yaml.to_kind() {
-        CommandKindDef::Handler { name } => (Some(name), None),
-        CommandKindDef::FormWithHandler { handler, .. } => (Some(handler), None),
-        CommandKindDef::Form { .. } => (None, None),
-        CommandKindDef::Msg { message } => (None, Some(message)),
-    };
-    Some(CommandDef {
-        name: yaml.name,
-        description: yaml.description,
-        category: yaml.category,
-        intent: yaml.intent,
-        shortcut: yaml.shortcut,
-        aliases: yaml.aliases,
-        has_subcommands: yaml.sub,
-        file_path: path.to_owned(),
-        handler_name,
-        message,
-    })
+    Some(yaml)
 }
 
 // ---------------------------------------------------------------------------

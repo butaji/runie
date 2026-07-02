@@ -1047,7 +1047,7 @@
   {
     "file": "collapse-commandkinddef-into-commandkind.md",
     "title": "Collapse `CommandKindDef` into `CommandKind`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-durablecoreevent-into-event-enum.md",

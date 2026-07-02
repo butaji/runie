@@ -8,7 +8,7 @@ mod loader_tests {
     // Re-export types for tests
     use crate::commands::CommandCategory;
     use crate::declarative::loader::{parse_command_yaml, parse_triggers};
-    use crate::declarative::types::{CommandDef, DeclarativeCommandYaml, SkillDef, Trigger};
+    use crate::declarative::types::{CommandDef, CommandKind, DeclarativeCommandYaml, SkillDef, Trigger};
     use crate::resource_loader::extract_frontmatter;
 
     // ── Frontmatter parsing tests ───────────────────────────────────────────────
@@ -221,8 +221,9 @@ Content
             aliases: vec![],
             has_subcommands: false,
             file_path: Path::new("/commands/bookmark.yaml").to_path_buf(),
-            handler_name: None,
-            message: None,
+            yaml_kind: CommandKind::Msg {
+                message: "bookmarked".to_owned(),
+            },
         };
         assert_eq!(cmd.name, "bookmark");
         assert_eq!(cmd.category, CommandCategory::Session);
@@ -352,5 +353,64 @@ handler: trig
         assert_eq!(cmd.triggers.len(), 2);
         assert_eq!(cmd.triggers[0], Trigger::Command("/help".to_owned()));
         assert_eq!(cmd.triggers[1], Trigger::Shortcut("Ctrl+h".to_owned()));
+    }
+
+    // ── CommandKind helper method tests ────────────────────────────────────────
+
+    #[test]
+    fn command_kind_handler_name_returns_name() {
+        use crate::declarative::types::CommandKind;
+        let kind = CommandKind::Handler { handler: "save".to_owned() };
+        assert_eq!(kind.handler_name(), Some("save"));
+        assert_eq!(kind.message(), None);
+    }
+
+    #[test]
+    fn command_kind_form_with_handler_returns_handler_name() {
+        use crate::declarative::types::CommandKind;
+        let kind = CommandKind::FormWithHandler {
+            title: "Save".to_owned(),
+            fields: vec![],
+            handler: "save_session".to_owned(),
+        };
+        assert_eq!(kind.handler_name(), Some("save_session"));
+        assert_eq!(kind.message(), None);
+    }
+
+    #[test]
+    fn command_kind_msg_returns_message() {
+        use crate::declarative::types::CommandKind;
+        let kind = CommandKind::Msg { message: "Done!".to_owned() };
+        assert_eq!(kind.handler_name(), None);
+        assert_eq!(kind.message(), Some("Done!"));
+    }
+
+    #[test]
+    fn command_kind_form_returns_none() {
+        use crate::declarative::types::CommandKind;
+        let kind = CommandKind::Form {
+            title: "Form".to_owned(),
+            fields: vec![],
+            submit_event: "submit".to_owned(),
+        };
+        assert_eq!(kind.handler_name(), None);
+        assert_eq!(kind.message(), None);
+    }
+
+    #[test]
+    fn yaml_deserializes_directly_to_command_kind() {
+        // Layer 1: YAML deserializes directly into DeclarativeCommandYaml with CommandKind.
+        let yaml = r#"
+name: my-cmd
+description: A test command
+category: session
+type: handler
+handler: my_handler
+"#;
+        let cmd: DeclarativeCommandYaml = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(cmd.name, "my-cmd");
+        assert_eq!(cmd.description, "A test command");
+        assert_eq!(cmd.category, CommandCategory::Session);
+        assert_eq!(cmd.kind.handler_name(), Some("my_handler"));
     }
 }

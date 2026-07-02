@@ -28,15 +28,19 @@ use crate::commands::CommandCategory;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type")]
 pub enum CommandKind {
+    /// Handler by name lookup.
     #[serde(alias = "handler")]
     Handler { handler: String },
+    /// Static message.
     Msg { message: String },
+    /// Form dialog (handled as FormWithHandler with empty handler name).
     Form {
         title: String,
         fields: Vec<FormFieldDef>,
         #[serde(default)]
         submit_event: String,
     },
+    /// Form dialog with a named handler.
     #[serde(rename = "form_with_handler")]
     FormWithHandler {
         title: String,
@@ -46,44 +50,23 @@ pub enum CommandKind {
 }
 
 impl CommandKind {
-    /// Convert from the deserialized enum to the internal `CommandKindDef`.
-    pub fn to_kind_def(&self) -> CommandKindDef {
+    /// Returns the handler name if this is a Handler or FormWithHandler variant.
+    pub fn handler_name(&self) -> Option<&str> {
         match self {
-            CommandKind::Handler { handler } => CommandKindDef::Handler { name: handler.clone() },
-            CommandKind::Msg { message } => CommandKindDef::Msg { message: message.clone() },
-            CommandKind::Form { title, fields, submit_event } => CommandKindDef::Form {
-                title: title.clone(),
-                fields: fields.clone(),
-                submit_event: submit_event.clone(),
-            },
-            CommandKind::FormWithHandler { title, fields, handler } => CommandKindDef::FormWithHandler {
-                title: title.clone(),
-                fields: fields.clone(),
-                handler: handler.clone(),
-            },
+            CommandKind::Handler { handler } => Some(handler),
+            CommandKind::FormWithHandler { handler, .. } => Some(handler),
+            CommandKind::Form { .. } => None,
+            CommandKind::Msg { .. } => None,
         }
     }
-}
 
-/// What kind of command this is — determines how it executes.
-#[derive(Debug, Clone)]
-pub enum CommandKindDef {
-    /// Static message to display.
-    Msg { message: String },
-    /// Reference to a named handler function.
-    Handler { name: String },
-    /// Form dialog with submit event.
-    Form {
-        title: String,
-        fields: Vec<FormFieldDef>,
-        submit_event: String,
-    },
-    /// Form dialog with custom handler.
-    FormWithHandler {
-        title: String,
-        fields: Vec<FormFieldDef>,
-        handler: String,
-    },
+    /// Returns the static message if this is a Msg variant.
+    pub fn message(&self) -> Option<&str> {
+        match self {
+            CommandKind::Msg { message } => Some(message),
+            _ => None,
+        }
+    }
 }
 
 /// A form field definition.
@@ -124,10 +107,6 @@ pub struct DeclarativeCommandYaml {
 }
 
 impl DeclarativeCommandYaml {
-    /// Convert to `CommandKindDef`.
-    pub fn to_kind(&self) -> CommandKindDef {
-        self.kind.to_kind_def()
-    }
 }
 
 /// Deserialize a category string using FromStr.
@@ -217,10 +196,8 @@ pub struct CommandDef {
     pub aliases: Vec<String>,
     pub has_subcommands: bool,
     pub file_path: PathBuf,
-    /// Handler name for looking up the actual handler function.
-    pub handler_name: Option<String>,
-    /// Static message (for Msg type commands).
-    pub message: Option<String>,
+    /// The parsed kind from YAML (used by `build_cmd_from_yaml` to look up the handler).
+    pub yaml_kind: CommandKind,
 }
 
 #[cfg(test)]
