@@ -15,6 +15,10 @@ This is a deeper, implementation-focused review built on top of the first five-r
 | 4 | TUI input, rendering & event loop | [`2026-06-28-second-pass-round-4-tui-rendering.md`](./2026-06-28-second-pass-round-4-tui-rendering.md) |
 | 5 | Config, sessions, persistence & integration roadmap | [`2026-06-28-second-pass-round-5-config-sessions-persistence.md`](./2026-06-28-second-pass-round-5-config-sessions-persistence.md) |
 
+## Pareto prioritization
+
+All decisions must be low-effort, high-impact. See [`2026-06-28-second-pass-pareto-prioritization.md`](./2026-06-28-second-pass-pareto-prioritization.md) for the ranked quick-win list and execution order.
+
 ## Cross-cutting principles
 
 1. **Derive, don't write:** use `strum`, `derive_builder`, `serde` attributes, and `schemars` to eliminate hand-maintained tables and builders.

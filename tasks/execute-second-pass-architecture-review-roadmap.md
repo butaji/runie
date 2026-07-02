@@ -6,7 +6,7 @@
 
 ## Description
 
-Track integration of the second-pass review. Success metrics: fewer LOC, fewer hand-maintained tables, centralized HTTP/retry, event-driven TUI, JSONL persistence.
+Track integration of the second-pass review using the Pareto prioritization in `docs/superpowers/plans/2026-06-28-second-pass-pareto-prioritization.md`. Success metrics: fewer LOC, fewer hand-maintained tables, centralized HTTP/retry, event-driven TUI, JSONL persistence.
 
 ## Acceptance criteria
 
