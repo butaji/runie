@@ -1682,7 +1682,7 @@
   {
     "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
     "title": "Track orphan spawned tasks in provider, IO, and session actors",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
