@@ -2,6 +2,21 @@
 
 ## Status
 
+`done`
+
+## Implementation
+
+Model structs converted to use `derive_builder`:
+- `ModelCapabilities` — `#[derive(Builder)]`
+- `ModelInfo` — `#[derive(Builder)]`
+
+Panel builder remains with custom fluent methods because:
+- Custom normalization in builder methods (e.g., `with_title`)
+- UI-specific behavior (filtering, navigation)
+- Fluent DSL pattern is more ergonomic for Panel construction
+
+## Context
+
 `partial`
 
 ## Context

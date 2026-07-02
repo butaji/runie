@@ -517,7 +517,7 @@
   {
     "file": "derive-builder-for-model-and-panel-builders.md",
     "title": "Derive builders for model and panel builders",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "derive-chatmessage-builder-with-derive-builder.md",
