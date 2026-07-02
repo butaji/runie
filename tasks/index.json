@@ -57,7 +57,7 @@
   {
     "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
     "title": "Add MCP tool schema cache and connection manager",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
@@ -87,7 +87,7 @@
   {
     "file": "add-sample-config-env-and-completions.md",
     "title": "Add sample config, env template, and completions",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "add-session-compaction-with-threshold-and-tool-pair-summarization.md",
@@ -118,6 +118,11 @@
     "file": "adopt-palette-for-theme-color-math.md",
     "title": "Adopt `palette` for theme color math",
     "status": "wontfix"
+  },
+  {
+    "file": "adopt-snapshot-journal-jsonl-pattern.md",
+    "title": "Adopt snapshot + append-only JSONL journal pattern",
+    "status": "todo"
   },
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
@@ -185,6 +190,16 @@
     "status": "done"
   },
   {
+    "file": "centralize-provider-error-status-classification.md",
+    "title": "Centralize provider error status classification",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-reqwest-client-and-url-normalization.md",
+    "title": "Centralize `reqwest` client and URL normalization",
+    "status": "todo"
+  },
+  {
     "file": "centralize-test-fixtures-and-mocks.md",
     "title": "Centralize test fixtures and mocks in `runie-testing`",
     "status": "done"
@@ -230,14 +245,29 @@
     "status": "todo"
   },
   {
+    "file": "collapse-commandkinddef-into-commandkind.md",
+    "title": "Collapse `CommandKindDef` into `CommandKind`",
+    "status": "todo"
+  },
+  {
     "file": "collapse-dialogstate-variants.md",
     "title": "Collapse `DialogState` variants",
     "status": "done"
   },
   {
+    "file": "collapse-durablecoreevent-into-event-enum.md",
+    "title": "Collapse `DurableCoreEvent` into the canonical `Event` enum",
+    "status": "todo"
+  },
+  {
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
     "status": "done"
+  },
+  {
+    "file": "collapse-intent-into-shared-event-payloads.md",
+    "title": "Collapse `Intent` into shared event payloads",
+    "status": "todo"
   },
   {
     "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",
@@ -310,6 +340,11 @@
     "status": "done"
   },
   {
+    "file": "consolidate-message-validation-in-one-module.md",
+    "title": "Consolidate message validation in one module",
+    "status": "todo"
+  },
+  {
     "file": "consolidate-provider-credential-resolver-duplication.md",
     "title": "Consolidate provider credential resolver duplication",
     "status": "done"
@@ -348,6 +383,11 @@
     "file": "deduplicate-cargo-lock-versions-and-deny.md",
     "title": "Deduplicate Cargo.lock versions and deny multiples",
     "status": "done"
+  },
+  {
+    "file": "deduplicate-input-event-mapping-between-forwarder-and-uiactor.md",
+    "title": "Deduplicate input-event mapping between forwarder and `UiActor`",
+    "status": "todo"
   },
   {
     "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
@@ -430,14 +470,29 @@
     "status": "done"
   },
   {
+    "file": "derive-agent-running-flag-from-turnstate-events.md",
+    "title": "Derive `agent_running` flag from `TurnState` events",
+    "status": "todo"
+  },
+  {
     "file": "derive-builder-for-model-and-panel-builders.md",
     "title": "Derive builders for model and panel builders",
-    "status": "done"
+    "status": "todo"
+  },
+  {
+    "file": "derive-chatmessage-builder-with-derive-builder.md",
+    "title": "Derive `ChatMessageBuilder` with `derive_builder`",
+    "status": "todo"
   },
   {
     "file": "derive-durable-and-headless-events-from-canonical-event.md",
     "title": "Derive durable and headless events from canonical Event",
     "status": "done"
+  },
+  {
+    "file": "derive-event-taxonomies-with-strum-or-proc-macro.md",
+    "title": "Derive event taxonomies with `strum` or a proc macro",
+    "status": "todo"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -495,6 +550,11 @@
     "status": "done"
   },
   {
+    "file": "enforce-observed-async-work-in-all-actors.md",
+    "title": "Enforce observed async work in all actors",
+    "status": "todo"
+  },
+  {
     "file": "enrich-provider-trait-with-metadata-and-retry-config.md",
     "title": "Enrich provider trait with metadata and retry config",
     "status": "done"
@@ -503,6 +563,16 @@
     "file": "env-actor-owns-git-cwd.md",
     "title": "env-actor-owns-git-cwd",
     "status": "done"
+  },
+  {
+    "file": "execute-five-round-architecture-review-roadmap.md",
+    "title": "Execute five-round architecture review roadmap",
+    "status": "todo"
+  },
+  {
+    "file": "execute-second-pass-architecture-review-roadmap.md",
+    "title": "Execute second-pass architecture review roadmap",
+    "status": "todo"
   },
   {
     "file": "expand-leader-start-for-tui-and-cli.md",
@@ -555,6 +625,11 @@
     "status": "todo"
   },
   {
+    "file": "finish-replacing-remaining-custom-helpers-with-crates.md",
+    "title": "Finish replacing remaining custom helpers with crates",
+    "status": "todo"
+  },
+  {
     "file": "finish-strum-migration-for-remaining-enums.md",
     "title": "Finish strum migration for remaining enums",
     "status": "todo"
@@ -582,12 +657,12 @@
   {
     "file": "fix-config-docs-and-readme-misalignments.md",
     "title": "Fix config docs and README misalignments",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-deliverqueued-race-in-uiactor.md",
     "title": "Fix DeliverQueued race in UiActor",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "fix-dev-automation-recipes.md",
@@ -603,6 +678,11 @@
     "file": "fix-fff-search-pre-release-notify.md",
     "title": "Fix `fff-search` pulling pre-release `notify`",
     "status": "wontfix"
+  },
+  {
+    "file": "fix-initial-tui-snapshot-race-after-bootstrap.md",
+    "title": "Fix initial TUI snapshot race after bootstrap",
+    "status": "todo"
   },
   {
     "file": "fix-keybindings-dead-code.md",
@@ -648,6 +728,11 @@
     "file": "fix-slash-command-session-info-naming.md",
     "title": "Fix /session_info slash command naming mismatch",
     "status": "done"
+  },
+  {
+    "file": "fix-throbber-inversion-and-use-throbber-widgets-tui.md",
+    "title": "Fix throbber inversion and use `throbber_widgets_tui`",
+    "status": "todo"
   },
   {
     "file": "fix-tui-at-file-picker-shows-no-files.md",
@@ -737,7 +822,12 @@
   {
     "file": "generate-event-taxonomy-or-delete-generated-files.md",
     "title": "Generate event taxonomy or delete generated files",
-    "status": "done"
+    "status": "todo"
+  },
+  {
+    "file": "generate-tool-dispatch-from-single-registry.md",
+    "title": "Generate tool dispatch from a single registry",
+    "status": "todo"
   },
   {
     "file": "graceful-leader-shutdown-with-joinset-timeout.md",
@@ -990,9 +1080,19 @@
     "status": "done"
   },
   {
+    "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
+    "title": "Remove direct `AppState` mutation from core update handlers",
+    "status": "todo"
+  },
+  {
     "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
     "title": "Remove direct AppState mutation from TUI handlers",
     "status": "done"
+  },
+  {
+    "file": "remove-direct-projection-bypasses-in-dispatch-and-domain-ops.md",
+    "title": "Remove direct projection bypasses in dispatch and domain ops",
+    "status": "todo"
   },
   {
     "file": "remove-duplicate-input-mutation-in-uiactor.md",
@@ -1005,6 +1105,11 @@
     "status": "todo"
   },
   {
+    "file": "remove-manual-env-overrides-from-config-layers.md",
+    "title": "Remove manual env overrides from config layers",
+    "status": "todo"
+  },
+  {
     "file": "remove-modelfromprovider-api-key-field-and-use-keyring.md",
     "title": "Remove api_key field from ModelProvider and use keyring",
     "status": "todo"
@@ -1013,6 +1118,11 @@
     "file": "remove-mutex-eventbus-wrappers-from-actor-state.md",
     "title": "Remove `Mutex<EventBus>` wrappers from actor `State`",
     "status": "done"
+  },
+  {
+    "file": "remove-or-make-real-providerprotocol-abstraction.md",
+    "title": "Remove or make real the `ProviderProtocol` abstraction",
+    "status": "todo"
   },
   {
     "file": "remove-ractor-send-message-alias.md",
@@ -1043,6 +1153,11 @@
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
     "status": "done"
+  },
+  {
+    "file": "remove-timeout-polling-from-uiactor-and-actors.md",
+    "title": "Remove timeout polling from `UiActor` and actors",
+    "status": "todo"
   },
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
@@ -1110,6 +1225,11 @@
     "status": "done"
   },
   {
+    "file": "replace-custom-form-rendering-with-tui-textarea.md",
+    "title": "Replace custom form rendering with `tui-textarea`/`tui-input`",
+    "status": "todo"
+  },
+  {
     "file": "replace-custom-git-detection-with-git2.md",
     "title": "Replace custom git detection with git2",
     "status": "done"
@@ -1118,6 +1238,11 @@
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
     "status": "done"
+  },
+  {
+    "file": "replace-custom-input-box-with-tui-textarea.md",
+    "title": "Replace custom input box with `tui-textarea`",
+    "status": "todo"
   },
   {
     "file": "replace-custom-nanoid-in-runie-testing.md",
@@ -1147,7 +1272,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
@@ -1157,7 +1282,12 @@
   {
     "file": "replace-file-ref-parser-with-winnow-or-regex.md",
     "title": "Replace file ref parser with winnow or regex",
-    "status": "done"
+    "status": "todo"
+  },
+  {
+    "file": "replace-grep-find-shellouts-with-walkdir-ignore-regex.md",
+    "title": "Replace grep/find shell-outs with `walkdir`/`ignore`/`regex`",
+    "status": "todo"
   },
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
@@ -1200,6 +1330,11 @@
     "status": "wontfix"
   },
   {
+    "file": "replace-providerfactory-pinbox-with-async-trait-or-enum.md",
+    "title": "Replace `ProviderFactory` `Pin<Box<dyn Future>>` with `async_trait` or provider enum",
+    "status": "todo"
+  },
+  {
     "file": "replace-register-handler-and-theme-macros-with-functions.md",
     "title": "Replace register_handler and theme macros with functions",
     "status": "done"
@@ -1225,6 +1360,11 @@
     "status": "done"
   },
   {
+    "file": "replace-speedwindow-with-ringbuffer-crate.md",
+    "title": "Replace `SpeedWindow` with a ring-buffer crate",
+    "status": "todo"
+  },
+  {
     "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
     "title": "Replace streaming-buffer classifier with pulldown-cmark",
     "status": "todo"
@@ -1232,7 +1372,7 @@
   {
     "file": "replace-subagent-template-engine-with-tinytemplate.md",
     "title": "Replace subagent template engine with tinytemplate",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-think-filter-with-regex.md",
@@ -1267,17 +1407,22 @@
   {
     "file": "replace-vacuous-print-mode-test-with-replay-test.md",
     "title": "Replace vacuous print mode test with replay test",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-verify-tests-with-cargo-nextest.md",
     "title": "Replace verify-tests.sh with cargo-nextest",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",
     "title": "Replace XOR-obfuscated auth storage with OS keyring",
     "status": "done"
+  },
+  {
+    "file": "replay-sessions-via-events-through-appstate.md",
+    "title": "Replay sessions via events through `AppState`",
+    "status": "todo"
   },
   {
     "file": "rescope-terminal-capability-task-to-current-module.md",
@@ -1325,8 +1470,23 @@
     "status": "done"
   },
   {
+    "file": "route-fetch-docs-through-central-http-client.md",
+    "title": "Route `fetch_docs` through the central HTTP client",
+    "status": "todo"
+  },
+  {
+    "file": "route-permission-clearance-through-permissionactor.md",
+    "title": "Route permission clearance through `PermissionActor`",
+    "status": "todo"
+  },
+  {
     "file": "route-provider-confignone-through-credentialresolver.md",
     "title": "Route provider config=None through CredentialResolver",
+    "status": "todo"
+  },
+  {
+    "file": "route-tui-autocomplete-through-inputactor-events.md",
+    "title": "Route TUI autocomplete through `InputActor` events",
     "status": "todo"
   },
   {
@@ -1350,6 +1510,16 @@
     "status": "done"
   },
   {
+    "file": "simplify-modelerror-serde-by-storing-message.md",
+    "title": "Simplify `ModelError` serde by storing a message string",
+    "status": "todo"
+  },
+  {
+    "file": "simplify-permission-policy-chain-to-ruleset-match.md",
+    "title": "Simplify permission policy chain to a ruleset match",
+    "status": "todo"
+  },
+  {
     "file": "simplify-slash-command-dsl.md",
     "title": "Simplify slash-command DSL",
     "status": "done"
@@ -1360,13 +1530,28 @@
     "status": "done"
   },
   {
+    "file": "simplify-text-tool-shim-parsers.md",
+    "title": "Simplify text tool shim parsers",
+    "status": "todo"
+  },
+  {
     "file": "simplify-word-wrap-to-single-pass.md",
     "title": "Simplify `word_wrap` to a single pass",
     "status": "done"
   },
   {
+    "file": "single-config-resolve-default-model.md",
+    "title": "Single `Config::resolve_default_model`",
+    "status": "todo"
+  },
+  {
     "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
     "title": "Spike: evaluate async-openai or rig-core for the provider stack",
+    "status": "todo"
+  },
+  {
+    "file": "split-large-core-files-into-focused-modules.md",
+    "title": "Split large core files into focused modules",
     "status": "todo"
   },
   {
@@ -1375,9 +1560,34 @@
     "status": "done"
   },
   {
+    "file": "split-panel-handler-into-focused-modules.md",
+    "title": "Split `panel_handler.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-ractor-turn-actor-into-focused-modules.md",
+    "title": "Split `ractor_turn.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-runie-agent-actor-into-focused-modules.md",
+    "title": "Split `runie-agent/src/actor.rs` into focused modules",
+    "status": "todo"
+  },
+  {
+    "file": "split-uiactor-into-focused-modules.md",
+    "title": "Split `ui_actor.rs` into focused modules",
+    "status": "todo"
+  },
+  {
     "file": "standardize-error-types-on-thiserror-with-source-chains.md",
     "title": "Standardize error types on thiserror with source chains",
     "status": "done"
+  },
+  {
+    "file": "standardize-session-persistence-on-jsonl.md",
+    "title": "Standardize session persistence on JSONL",
+    "status": "todo"
   },
   {
     "file": "stop-dotenvy-from-mutating-process-environment.md",
@@ -1410,6 +1620,11 @@
     "status": "done"
   },
   {
+    "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
+    "title": "Track orphan spawned tasks in provider, IO, and session actors",
+    "status": "todo"
+  },
+  {
     "file": "type-and-unify-provider-model-layer.md",
     "title": "Type and unify provider/model layer",
     "status": "done"
@@ -1427,7 +1642,7 @@
   {
     "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
     "title": "Unify bash execution into a single shell module with command-group",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
@@ -1467,7 +1682,7 @@
   {
     "file": "unify-headless-and-tui-streaming-response-parser.md",
     "title": "Unify headless and TUI streaming response parser",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-headless-runtime-bootstrap.md",
@@ -1530,6 +1745,11 @@
     "status": "done"
   },
   {
+    "file": "unify-sse-parsing-on-openai-frame.md",
+    "title": "Unify SSE parsing on `OpenAiFrame::from_line`",
+    "status": "todo"
+  },
+  {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",
     "title": "Unify tool-call accumulators into single state machine",
     "status": "done"
@@ -1557,6 +1777,11 @@
   {
     "file": "use-atomic-write-and-lock-for-session-header-updates.md",
     "title": "Use atomic write and lock for session header updates",
+    "status": "todo"
+  },
+  {
+    "file": "use-atomic-writes-for-config-and-session-files.md",
+    "title": "Use atomic writes for config and session files",
     "status": "todo"
   },
   {
@@ -1640,6 +1865,11 @@
     "status": "done"
   },
   {
+    "file": "use-retryconfig-in-with-retry-or-remove-it.md",
+    "title": "Use `RetryConfig` in `with_retry` or remove it",
+    "status": "todo"
+  },
+  {
     "file": "use-secrecy-secretstring-in-authtoken.md",
     "title": "Use secrecy::SecretString in AuthToken",
     "status": "done"
@@ -1647,7 +1877,7 @@
   {
     "file": "use-serde_with-for-provider-event-serde.md",
     "title": "Use serde_with for provider event serde",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-shell-words-for-slash-command-parsing.md",
@@ -1658,6 +1888,11 @@
     "file": "use-shell-words-in-harness-skills.md",
     "title": "Use shell-words in harness skills",
     "status": "done"
+  },
+  {
+    "file": "use-similar-diffy-for-edit-file.md",
+    "title": "Use `similar`/`diffy` for `edit_file`",
+    "status": "todo"
   },
   {
     "file": "use-strum-for-event-intent-names.md",
@@ -1673,6 +1908,11 @@
     "file": "use-tagged-enum-for-declarative-command-kind.md",
     "title": "Use tagged enum for declarative command kind",
     "status": "done"
+  },
+  {
+    "file": "use-textwrap-for-blockquote-word-wrap.md",
+    "title": "Use `textwrap` for blockquote word wrap",
+    "status": "todo"
   },
   {
     "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
@@ -1700,6 +1940,11 @@
     "status": "done"
   },
   {
+    "file": "use-tree-sitter-for-find-definitions.md",
+    "title": "Use `tree-sitter` for `find_definitions`",
+    "status": "todo"
+  },
+  {
     "file": "use-tui-popup-for-popup-shell.md",
     "title": "Use tui-popup for popup shell",
     "status": "todo"
@@ -1710,9 +1955,14 @@
     "status": "todo"
   },
   {
+    "file": "use-untagged-enum-for-provider-error-bodies.md",
+    "title": "Use an untagged enum for provider error bodies",
+    "status": "todo"
+  },
+  {
     "file": "use-validator-for-form-and-config-inputs.md",
     "title": "Use validator for form and config inputs",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-which-crate-for-executable-lookup.md",
@@ -1735,6 +1985,11 @@
     "status": "done"
   },
   {
+    "file": "wire-rmcp-client-or-remove-mcp-config.md",
+    "title": "Wire `rmcp` client or remove MCP config",
+    "status": "todo"
+  },
+  {
     "file": "wire-user-permission-rules-into-agent-gate.md",
     "title": "Wire user permission rules into the agent permission gate",
     "status": "done"
@@ -1742,261 +1997,6 @@
   {
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
-    "status": "todo"
-  },
-  {
-    "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
-    "title": "Remove direct `AppState` mutation from core update handlers",
-    "status": "todo"
-  },
-  {
-    "file": "remove-direct-projection-bypasses-in-dispatch-and-domain-ops.md",
-    "title": "Remove direct projection bypasses in dispatch and domain ops",
-    "status": "todo"
-  },
-  {
-    "file": "collapse-durablecoreevent-into-event-enum.md",
-    "title": "Collapse `DurableCoreEvent` into the canonical `Event` enum",
-    "status": "todo"
-  },
-  {
-    "file": "replace-speedwindow-with-ringbuffer-crate.md",
-    "title": "Replace `SpeedWindow` with a ring-buffer crate",
-    "status": "todo"
-  },
-  {
-    "file": "simplify-permission-policy-chain-to-ruleset-match.md",
-    "title": "Simplify permission policy chain to a ruleset match",
-    "status": "todo"
-  },
-  {
-    "file": "replace-providerfactory-pinbox-with-async-trait-or-enum.md",
-    "title": "Replace `ProviderFactory` `Pin<Box<dyn Future>>` with `async_trait` or provider enum",
-    "status": "todo"
-  },
-  {
-    "file": "standardize-session-persistence-on-jsonl.md",
-    "title": "Standardize session persistence on JSONL",
-    "status": "todo"
-  },
-  {
-    "file": "finish-replacing-remaining-custom-helpers-with-crates.md",
-    "title": "Finish replacing remaining custom helpers with crates",
-    "status": "todo"
-  },
-  {
-    "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
-    "title": "Track orphan spawned tasks in provider, IO, and session actors",
-    "status": "todo"
-  },
-  {
-    "file": "remove-timeout-polling-from-uiactor-and-actors.md",
-    "title": "Remove timeout polling from `UiActor` and actors",
-    "status": "todo"
-  },
-  {
-    "file": "enforce-observed-async-work-in-all-actors.md",
-    "title": "Enforce observed async work in all actors",
-    "status": "todo"
-  },
-  {
-    "file": "split-uiactor-into-focused-modules.md",
-    "title": "Split `ui_actor.rs` into focused modules",
-    "status": "todo"
-  },
-  {
-    "file": "split-panel-handler-into-focused-modules.md",
-    "title": "Split `panel_handler.rs` into focused modules",
-    "status": "todo"
-  },
-  {
-    "file": "split-runie-agent-actor-into-focused-modules.md",
-    "title": "Split `runie-agent/src/actor.rs` into focused modules",
-    "status": "todo"
-  },
-  {
-    "file": "split-ractor-turn-actor-into-focused-modules.md",
-    "title": "Split `ractor_turn.rs` into focused modules",
-    "status": "todo"
-  },
-  {
-    "file": "split-large-core-files-into-focused-modules.md",
-    "title": "Split large core files into focused modules",
-    "status": "todo"
-  },
-  {
-    "file": "execute-five-round-architecture-review-roadmap.md",
-    "title": "Execute five-round architecture review roadmap",
-    "status": "todo"
-  },
-  {
-    "file": "derive-event-taxonomies-with-strum-or-proc-macro.md",
-    "title": "Derive event taxonomies with `strum` or a proc macro",
-    "status": "todo"
-  },
-  {
-    "file": "collapse-intent-into-shared-event-payloads.md",
-    "title": "Collapse `Intent` into shared event payloads",
-    "status": "todo"
-  },
-  {
-    "file": "derive-chatmessage-builder-with-derive-builder.md",
-    "title": "Derive `ChatMessageBuilder` with `derive_builder`",
-    "status": "todo"
-  },
-  {
-    "file": "simplify-modelerror-serde-by-storing-message.md",
-    "title": "Simplify `ModelError` serde by storing a message string",
-    "status": "todo"
-  },
-  {
-    "file": "consolidate-message-validation-in-one-module.md",
-    "title": "Consolidate message validation in one module",
-    "status": "todo"
-  },
-  {
-    "file": "centralize-provider-error-status-classification.md",
-    "title": "Centralize provider error status classification",
-    "status": "todo"
-  },
-  {
-    "file": "use-retryconfig-in-with-retry-or-remove-it.md",
-    "title": "Use `RetryConfig` in `with_retry` or remove it",
-    "status": "todo"
-  },
-  {
-    "file": "remove-or-make-real-providerprotocol-abstraction.md",
-    "title": "Remove or make real the `ProviderProtocol` abstraction",
-    "status": "todo"
-  },
-  {
-    "file": "centralize-reqwest-client-and-url-normalization.md",
-    "title": "Centralize `reqwest` client and URL normalization",
-    "status": "todo"
-  },
-  {
-    "file": "unify-sse-parsing-on-openai-frame.md",
-    "title": "Unify SSE parsing on `OpenAiFrame::from_line`",
-    "status": "todo"
-  },
-  {
-    "file": "use-untagged-enum-for-provider-error-bodies.md",
-    "title": "Use an untagged enum for provider error bodies",
-    "status": "todo"
-  },
-  {
-    "file": "generate-tool-dispatch-from-single-registry.md",
-    "title": "Generate tool dispatch from a single registry",
-    "status": "todo"
-  },
-  {
-    "file": "wire-rmcp-client-or-remove-mcp-config.md",
-    "title": "Wire `rmcp` client or remove MCP config",
-    "status": "todo"
-  },
-  {
-    "file": "replace-grep-find-shellouts-with-walkdir-ignore-regex.md",
-    "title": "Replace grep/find shell-outs with `walkdir`/`ignore`/`regex`",
-    "status": "todo"
-  },
-  {
-    "file": "use-tree-sitter-for-find-definitions.md",
-    "title": "Use `tree-sitter` for `find_definitions`",
-    "status": "todo"
-  },
-  {
-    "file": "route-fetch-docs-through-central-http-client.md",
-    "title": "Route `fetch_docs` through the central HTTP client",
-    "status": "todo"
-  },
-  {
-    "file": "use-similar-diffy-for-edit-file.md",
-    "title": "Use `similar`/`diffy` for `edit_file`",
-    "status": "todo"
-  },
-  {
-    "file": "simplify-text-tool-shim-parsers.md",
-    "title": "Simplify text tool shim parsers",
-    "status": "todo"
-  },
-  {
-    "file": "collapse-commandkinddef-into-commandkind.md",
-    "title": "Collapse `CommandKindDef` into `CommandKind`",
-    "status": "todo"
-  },
-  {
-    "file": "route-tui-autocomplete-through-inputactor-events.md",
-    "title": "Route TUI autocomplete through `InputActor` events",
-    "status": "todo"
-  },
-  {
-    "file": "route-permission-clearance-through-permissionactor.md",
-    "title": "Route permission clearance through `PermissionActor`",
-    "status": "todo"
-  },
-  {
-    "file": "deduplicate-input-event-mapping-between-forwarder-and-uiactor.md",
-    "title": "Deduplicate input-event mapping between forwarder and `UiActor`",
-    "status": "todo"
-  },
-  {
-    "file": "replace-custom-form-rendering-with-tui-textarea.md",
-    "title": "Replace custom form rendering with `tui-textarea`",
-    "status": "todo"
-  },
-  {
-    "file": "use-textwrap-for-blockquote-word-wrap.md",
-    "title": "Use `textwrap` for blockquote word wrap",
-    "status": "todo"
-  },
-  {
-    "file": "replace-custom-input-box-with-tui-textarea.md",
-    "title": "Replace custom input box with `tui-textarea`",
-    "status": "todo"
-  },
-  {
-    "file": "fix-throbber-inversion-and-use-throbber-widgets-tui.md",
-    "title": "Fix throbber inversion and use `throbber_widgets_tui`",
-    "status": "todo"
-  },
-  {
-    "file": "derive-agent-running-flag-from-turnstate-events.md",
-    "title": "Derive `agent_running` flag from `TurnState` events",
-    "status": "todo"
-  },
-  {
-    "file": "remove-manual-env-overrides-from-config-layers.md",
-    "title": "Remove manual env overrides from config layers",
-    "status": "todo"
-  },
-  {
-    "file": "single-config-resolve-default-model.md",
-    "title": "Single `Config::resolve_default_model`",
-    "status": "todo"
-  },
-  {
-    "file": "use-atomic-writes-for-config-and-session-files.md",
-    "title": "Use atomic writes for config and session files",
-    "status": "todo"
-  },
-  {
-    "file": "adopt-snapshot-journal-jsonl-pattern.md",
-    "title": "Adopt snapshot + append-only JSONL journal pattern",
-    "status": "todo"
-  },
-  {
-    "file": "replay-sessions-via-events-through-appstate.md",
-    "title": "Replay sessions via events through `AppState`",
-    "status": "todo"
-  },
-  {
-    "file": "fix-initial-tui-snapshot-race-after-bootstrap.md",
-    "title": "Fix initial TUI snapshot race after bootstrap",
-    "status": "todo"
-  },
-  {
-    "file": "execute-second-pass-architecture-review-roadmap.md",
-    "title": "Execute second-pass architecture review roadmap",
     "status": "todo"
   }
 ]

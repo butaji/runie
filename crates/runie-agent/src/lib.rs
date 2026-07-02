@@ -6,6 +6,7 @@ pub mod emit_approval_sink;
 pub mod headless;
 pub mod headless_helper;
 pub mod safety;
+pub mod streaming_parser;
 pub mod stream_response;
 pub mod subagent;
 pub mod think_filter;

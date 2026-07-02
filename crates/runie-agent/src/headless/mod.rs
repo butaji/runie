@@ -9,6 +9,7 @@
 //! `spawn_headless_runtime → provider → PermissionGate → run_headless_turn`
 //! pattern shared by `runie-cli print`, `runie-cli json`, and `runie-cli server`.
 
+use crate::streaming_parser::{SharedResponse, SharedStreamState, StreamingHandler};
 use crate::tool_runner::{execute_tool_call, tool_result_message};
 use crate::PermissionGate;
 use anyhow::Result;
@@ -23,12 +24,9 @@ use runie_core::provider::Provider;
 use runie_provider::BuiltProviderFactory;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool::{
-    assign_tool_call_ids, build_assistant_message, parse_tool_calls_fallible,
-    tool_parse_error_message, ParsedToolCall, ToolParseError,
+    assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
 use runie_core::tool::{ToolContext, ToolOutput};
-use runie_core::tool_stream::ToolStream;
-use std::ops::ControlFlow;
 use std::sync::Arc;
 
 /// Run a headless turn with a fresh runtime, a PermissionGate, and an ApprovalSink.
@@ -149,7 +147,7 @@ impl HeadlessTurnState {
         )
         .await?;
 
-        let HeadlessStreamedResponse {
+        let SharedResponse {
             text,
             mut tool_calls,
             parse_errors,
@@ -193,86 +191,23 @@ impl HeadlessTurnState {
     }
 }
 
-struct HeadlessStreamState<'a> {
-    text: String,
+/// `StreamingHandler` for the headless runner.
+///
+/// Handles the five core streaming events (text, tool lifecycle) via the shared
+/// trait. `ThinkingDelta` and `Usage` are emitted directly in the stream loop
+/// since they are not part of the shared trait.
+struct HeadlessHandler<'a> {
+    shared: SharedStreamState,
     content: &'a mut String,
     options: &'a mut HeadlessOptions,
-    tool_stream: ToolStream,
-    tool_calls: Vec<ParsedToolCall>,
-    error: Option<String>,
 }
 
-impl<'a> HeadlessStreamState<'a> {
+impl<'a> HeadlessHandler<'a> {
     fn new(content: &'a mut String, options: &'a mut HeadlessOptions) -> Self {
         Self {
-            text: String::new(),
+            shared: SharedStreamState::new(),
             content,
             options,
-            tool_stream: ToolStream::new(),
-            tool_calls: Vec::new(),
-            error: None,
-        }
-    }
-
-    fn handle_event(&mut self, event: ProviderEvent) -> ControlFlow<()> {
-        match event {
-            ProviderEvent::TextDelta(delta) => self.on_text_delta(delta),
-            ProviderEvent::ToolCallStart { id, name } => {
-                self.tool_stream.start(&id, &name);
-                self.emit(HeadlessEvent::ToolCallStart { id, name });
-            }
-            ProviderEvent::ToolCallInputDelta { id, delta } => {
-                self.tool_stream.append(&id, &delta);
-                self.emit(HeadlessEvent::ToolCallInputDelta { id, delta });
-            }
-            ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
-            ProviderEvent::ThinkingDelta(content) => {
-                self.emit(HeadlessEvent::Thinking { data: content });
-            }
-            ProviderEvent::Usage {
-                input_tokens,
-                output_tokens,
-            } => {
-                self.emit(HeadlessEvent::Usage {
-                    input_tokens,
-                    output_tokens,
-                });
-            }
-            ProviderEvent::Finish { reason } => {
-                self.emit(HeadlessEvent::End {
-                    stop_reason: format!("{:?}", reason),
-                    session_id: None,
-                    request_id: None,
-                });
-                return ControlFlow::Break(());
-            }
-            ProviderEvent::Error(e) => {
-                self.error = Some(format!("{:?}", e));
-                self.emit(HeadlessEvent::Error {
-                    message: format!("{:?}", e),
-                });
-                return ControlFlow::Break(());
-            }
-            _ => {}
-        }
-        ControlFlow::Continue(())
-    }
-
-    fn on_text_delta(&mut self, delta: String) {
-        self.text.push_str(&delta);
-        self.content.push_str(&delta);
-        self.emit(HeadlessEvent::Text {
-            data: delta.clone(),
-        });
-        if let Some(cb) = self.options.on_chunk.as_mut() {
-            cb(&delta);
-        }
-    }
-
-    fn on_tool_end(&mut self, id: String) {
-        self.emit(HeadlessEvent::ToolCallEnd { id: id.clone() });
-        if let Some(call) = self.tool_stream.finish(&id) {
-            self.tool_calls.push(call);
         }
     }
 
@@ -281,31 +216,44 @@ impl<'a> HeadlessStreamState<'a> {
             cb(event);
         }
     }
-
-    fn into_response(mut self) -> HeadlessStreamedResponse {
-        self.tool_calls.extend(self.tool_stream.finish_all());
-        let mut parse_errors = Vec::new();
-        if self.tool_calls.is_empty() && !self.text.is_empty() {
-            for result in parse_tool_calls_fallible(&self.text) {
-                match result {
-                    Ok(call) => self.tool_calls.push(call),
-                    Err(err) => parse_errors.push(err),
-                }
-            }
-        }
-        HeadlessStreamedResponse {
-            text: self.text,
-            tool_calls: self.tool_calls,
-            parse_errors,
-        }
-    }
 }
 
-#[derive(Debug)]
-struct HeadlessStreamedResponse {
-    text: String,
-    tool_calls: Vec<ParsedToolCall>,
-    parse_errors: Vec<ToolParseError>,
+impl<'a> StreamingHandler for HeadlessHandler<'a> {
+    fn on_text_delta(&mut self, delta: String) {
+        self.shared.push_text(&delta);
+        self.content.push_str(&delta);
+        self.emit(HeadlessEvent::Text { data: delta.clone() });
+        if let Some(cb) = self.options.on_chunk.as_mut() {
+            cb(&delta);
+        }
+    }
+
+    fn on_tool_start(&mut self, id: String, name: String) {
+        self.shared.start_tool(&id, &name);
+        self.emit(HeadlessEvent::ToolCallStart { id, name });
+    }
+
+    fn on_tool_input(&mut self, id: String, delta: String) {
+        self.shared.append_tool_input(&id, &delta);
+        self.emit(HeadlessEvent::ToolCallInputDelta { id, delta });
+    }
+
+    fn on_tool_end(&mut self, id: String) {
+        self.emit(HeadlessEvent::ToolCallEnd { id: id.clone() });
+        self.shared.finish_tool(&id);
+    }
+
+    fn on_finish(&mut self) {
+        // Finish reason is emitted separately by the stream loop.
+    }
+
+    fn on_error(&mut self, message: String) -> Result<()> {
+        Err(anyhow::anyhow!("LLM error: {}", message))
+    }
+
+    fn is_cancelled(&self) -> bool {
+        false // Headless does not support cancellation.
+    }
 }
 
 async fn stream_headless_response(
@@ -313,22 +261,67 @@ async fn stream_headless_response(
     messages: &[ChatMessage],
     content: &mut String,
     options: &mut HeadlessOptions,
-) -> Result<HeadlessStreamedResponse> {
+) -> Result<SharedResponse> {
     let tools = crate::tool_registry::build_all_schemas();
-    let mut state = HeadlessStreamState::new(content, options);
+    let mut handler = HeadlessHandler::new(content, options);
     let mut stream = provider.generate_with_tools(messages.to_vec(), tools);
 
+    // Emit ThinkingDelta and Usage directly since they are not in StreamingHandler.
     while let Some(event_result) = stream.next().await {
-        if let ControlFlow::Break(()) = state.handle_event(event_result?) {
-            break;
+        let event = match event_result? {
+            // Delegate these five to the shared handler.
+            ProviderEvent::TextDelta(delta) => {
+                handler.on_text_delta(delta);
+                continue;
+            }
+            ProviderEvent::ToolCallStart { id, name } => {
+                handler.on_tool_start(id, name);
+                continue;
+            }
+            ProviderEvent::ToolCallInputDelta { id, delta } => {
+                handler.on_tool_input(id, delta);
+                continue;
+            }
+            ProviderEvent::ToolCallEnd { id } => {
+                handler.on_tool_end(id);
+                continue;
+            }
+            ProviderEvent::Error(e) => {
+                let msg = format!("{:?}", e);
+                handler.emit(HeadlessEvent::Error { message: msg.clone() });
+                handler.on_error(msg)?;
+                return Ok(handler.shared.into_response());
+            }
+            // Pass through the rest.
+            other => other,
+        };
+
+        match event {
+            ProviderEvent::ThinkingDelta(data) => {
+                handler.emit(HeadlessEvent::Thinking { data });
+            }
+            ProviderEvent::Usage {
+                input_tokens,
+                output_tokens,
+            } => {
+                handler.emit(HeadlessEvent::Usage {
+                    input_tokens,
+                    output_tokens,
+                });
+            }
+            ProviderEvent::Finish { reason } => {
+                handler.emit(HeadlessEvent::End {
+                    stop_reason: format!("{:?}", reason),
+                    session_id: None,
+                    request_id: None,
+                });
+                break;
+            }
+            _ => {}
         }
     }
 
-    if let Some(err) = state.error {
-        return Err(anyhow::anyhow!("LLM error: {err}"));
-    }
-
-    Ok(state.into_response())
+    Ok(handler.shared.into_response())
 }
 
 

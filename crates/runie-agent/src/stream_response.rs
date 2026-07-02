@@ -3,6 +3,9 @@
 //! Normalizes provider-native tool-call events and plain-text deltas into a
 //! `StreamedResponse`. Callers still get the legacy text fallback when the
 //! provider does not emit structured tool-call events.
+//!
+//! The core streaming logic is shared with the headless runner via
+//! `streaming_parser::SharedStreamState`.
 
 use anyhow::Result;
 use futures::StreamExt;
@@ -10,13 +13,12 @@ use runie_core::event::Event;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
-use runie_core::tool::{parse_tool_calls_fallible, ParsedToolCall, ToolParseError};
-use runie_core::tool_markers::strip_tool_markers;
-use runie_core::tool_stream::ToolStream;
+use runie_core::tool::{ParsedToolCall, ToolParseError};
 use serde_json::Value;
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
+use crate::streaming_parser::{SharedResponse, SharedStreamState};
 use crate::think_filter::ThinkFilter;
 
 /// Emit function type: a synchronous callable that ships an event.
@@ -35,10 +37,8 @@ pub struct StreamedResponse {
 }
 
 struct StreamState {
-    text: String,
+    shared: SharedStreamState,
     reasoning: Option<String>,
-    tool_stream: ToolStream,
-    tool_calls: Vec<ParsedToolCall>,
     command_id: String,
     emit: EmitFn,
     think_filter: ThinkFilter,
@@ -47,10 +47,8 @@ struct StreamState {
 impl StreamState {
     fn new(command_id: &str, emit: EmitFn) -> Self {
         Self {
-            text: String::new(),
+            shared: SharedStreamState::new(),
             reasoning: None,
-            tool_stream: ToolStream::new(),
-            tool_calls: Vec::new(),
             command_id: command_id.to_owned(),
             emit,
             think_filter: ThinkFilter::new(),
@@ -83,7 +81,8 @@ impl StreamState {
     }
 
     fn on_text_delta(&mut self, delta: String) -> ControlFlow<Result<()>> {
-        self.text.push_str(&delta);
+        // Accumulate text in shared state; emit ResponseDelta directly.
+        self.shared.push_text(&delta);
         (self.emit)(runie_core::Event::ResponseDelta {
             id: self.command_id.clone(),
             content: delta,
@@ -99,42 +98,30 @@ impl StreamState {
     }
 
     fn on_tool_start(&mut self, id: String, name: String) -> ControlFlow<Result<()>> {
-        self.tool_stream.start(&id, &name);
+        // Accumulate tool start in shared state; no separate emit needed for TUI.
+        self.shared.start_tool(&id, &name);
         ControlFlow::Continue(())
     }
 
     fn on_tool_input(&mut self, id: String, delta: String) -> ControlFlow<Result<()>> {
-        self.tool_stream.append(&id, &delta);
+        self.shared.append_tool_input(&id, &delta);
         ControlFlow::Continue(())
     }
 
     fn on_tool_end(&mut self, id: String) -> ControlFlow<Result<()>> {
-        if let Some(call) = self.tool_stream.finish(&id) {
-            self.tool_calls.push(call);
-        }
+        self.shared.finish_tool(&id);
         ControlFlow::Continue(())
     }
 
-    fn finish_remaining_tools(&mut self) {
-        let calls = self.tool_stream.finish_all();
-        self.tool_calls.extend(calls);
-    }
-
-    fn into_response(mut self) -> StreamedResponse {
-        self.finish_remaining_tools();
-        let mut parse_errors = Vec::new();
-        if self.tool_calls.is_empty() && !self.text.is_empty() {
-            for result in parse_tool_calls_fallible(&self.text) {
-                match result {
-                    Ok(call) => self.tool_calls.push(call),
-                    Err(err) => parse_errors.push(err),
-                }
-            }
-        }
-        self.text = strip_tool_markers(&self.text);
+    fn into_response(self) -> StreamedResponse {
+        let SharedResponse {
+            text,
+            tool_calls,
+            parse_errors,
+        } = self.shared.into_response();
         StreamedResponse {
-            text: self.text,
-            tool_calls: self.tool_calls,
+            text,
+            tool_calls,
             parse_errors,
             reasoning: self.reasoning,
         }
