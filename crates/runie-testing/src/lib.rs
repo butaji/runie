@@ -10,7 +10,7 @@ pub mod replay_provider;
 
 pub mod tests;
 
-pub use env_lock::{env_lock, ENV_LOCK};
+pub use env_lock::{env_lock, with_env, EnvGuard, EnvRestore, ENV_LOCK};
 pub use events::{
     ev_completed, ev_error, ev_output_text_delta, ev_response_created, llm_finish, llm_text_delta,
 };

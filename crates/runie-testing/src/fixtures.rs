@@ -4,43 +4,61 @@ pub mod minimax;
 pub mod openai;
 
 use std::sync::Arc;
-use std::sync::Once;
 
 use runie_core::config::Config;
 use runie_core::permissions::{AutoAllowSink, PermissionGate, PermissionManager};
 use runie_core::session::store::SessionStore;
 use tempfile::TempDir;
 
-static SET_MOCK_HOME: Once = Once::new();
+use crate::env_lock::with_env;
+
+/// Guard that restores HOME when dropped.
+pub struct HomeRestore {
+    original_home: Option<std::ffi::OsString>,
+}
+
+impl HomeRestore {
+    fn set(dir: &std::path::Path) -> Self {
+        let original_home = std::env::var_os("HOME");
+        std::env::set_var("HOME", dir);
+        Self { original_home }
+    }
+}
+
+impl Drop for HomeRestore {
+    fn drop(&mut self) {
+        match &self.original_home {
+            Some(h) => std::env::set_var("HOME", h),
+            None => std::env::remove_var("HOME"),
+        }
+    }
+}
 
 /// Create an isolated temp home directory and set `HOME` to it.
-pub fn temp_home() -> TempDir {
+///
+/// The original `HOME` is restored when the returned `TempDir` is dropped.
+pub fn temp_home() -> (TempDir, HomeRestore) {
     let dir = TempDir::new().unwrap();
-    SET_MOCK_HOME.call_once(|| {
-        std::env::set_var("HOME", dir.path());
-    });
-    dir
+    let restore = HomeRestore::set(dir.path());
+    (dir, restore)
 }
 
 /// Build a default config rooted in the temp home.
 pub fn load_default_config_for_test(test_home: &TempDir) -> Config {
-    std::env::set_var("HOME", test_home.path());
-    let path = test_home.path().join(".runie").join("config.toml");
-    Config::load(Some(&path))
+    with_env(|env| {
+        env.set("HOME", test_home.path().to_str().unwrap_or("/tmp"));
+        let path = test_home.path().join(".runie").join("config.toml");
+        Config::load(Some(&path))
+    })
 }
 
 /// Return a mock provider suitable for deterministic tests.
 pub fn mock_provider() -> runie_provider::BuiltProvider {
-    let prev = std::env::var_os("RUNIE_MOCK");
-    std::env::set_var("RUNIE_MOCK", "1");
-    let mock = runie_provider::MockProvider::default();
-    let provider = runie_provider::BuiltProvider::from_provider(Box::new(mock), "mock", "echo");
-    // Restore prior state so tests don't pollute the env for subsequent tests.
-    match prev {
-        Some(v) => std::env::set_var("RUNIE_MOCK", v),
-        None => std::env::remove_var("RUNIE_MOCK"),
-    }
-    provider
+    with_env(|env| {
+        env.set("RUNIE_MOCK", "1");
+        let mock = runie_provider::MockProvider::default();
+        runie_provider::BuiltProvider::from_provider(Box::new(mock), "mock", "echo")
+    })
 }
 
 /// Build a permission gate that allows all operations without prompting.
@@ -72,5 +90,19 @@ mod tests {
         // Should be able to get key and model info
         assert_eq!(provider.key(), "mock");
         assert_eq!(provider.model(), "echo");
+    }
+
+    #[test]
+    fn temp_home_isolates_home() {
+        let original_home = std::env::var_os("HOME");
+        {
+            let (_dir, _restore) = temp_home();
+            // HOME should be different inside
+            let current = std::env::var_os("HOME").unwrap();
+            assert!(!current.is_empty());
+        }
+        // HOME should be restored after drop
+        let after = std::env::var_os("HOME");
+        assert_eq!(after, original_home);
     }
 }

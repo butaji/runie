@@ -113,7 +113,8 @@ pub fn build_provider(
 
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
-        Box::new(MockProvider::with_delay(300, 800))
+        // Use small delay (5-10ms) for fast deterministic tests
+        Box::new(MockProvider::with_delay(5, 10))
     } else {
         Box::new(MockProvider::default())
     };

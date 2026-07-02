@@ -14,14 +14,12 @@ use runie_core::config::Config;
 use runie_core::event::Event;
 use runie_core::message::ChatMessage;
 use runie_core::provider_event::ProviderEvent;
-use runie_testing::ENV_LOCK;
-
-/// Helper to run a test closure with the env lock held.
+/// Helper to run a test closure with protected env vars.
 fn with_env_lock<F, T>(var: &str, value: &str, f: F) -> T
 where
     F: FnOnce() -> T,
 {
-    let _guard = ENV_LOCK.lock().unwrap();
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::set_var(var, value);
     let result = f();
     std::env::remove_var(var);
@@ -152,13 +150,14 @@ async fn mock_provider_default_no_delay() {
 
 #[test]
 fn mock_provider_with_delay_configured() {
-    let p = MockProvider::with_delay(500, 3000);
-    assert_eq!(p.delay_ms(), Some((500, 3000)));
+    let p = MockProvider::with_delay(5, 15);
+    assert_eq!(p.delay_ms(), Some((5, 15)));
 }
 
 #[tokio::test]
 async fn test_built_provider_mock_delay_adds_streaming_delay() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    // Use env_lock for async test context
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::remove_var("RUNIE_MOCK");
     std::env::set_var("RUNIE_MOCK_DELAY", "1");
 
@@ -170,8 +169,9 @@ async fn test_built_provider_mock_delay_adds_streaming_delay() {
 
     std::env::remove_var("RUNIE_MOCK_DELAY");
     assert!(!texts.is_empty());
+    // Delay is now 5-10ms, so we check for >= 1ms to verify delay was applied
     assert!(
-        start.elapsed() >= std::time::Duration::from_millis(50),
+        start.elapsed() >= std::time::Duration::from_millis(1),
         "RUNIE_MOCK_DELAY should introduce a streaming delay, elapsed: {:?}",
         start.elapsed()
     );
@@ -205,7 +205,8 @@ fn test_built_provider_unknown_returns_err() {
 
 #[test]
 fn test_built_provider_missing_api_key_returns_err() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    // Use env_lock for test isolation
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::remove_var("OPENAI_API_KEY");
     let result = build_provider_with_config("openai", "gpt-4o-mini", &Config::default());
     match result {
@@ -398,7 +399,8 @@ async fn test_mock_streaming_provider_accumulates_content() {
 
 #[tokio::test]
 async fn provider_actor_builds_mock_provider_with_runie_mock() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    // Use env_lock for test isolation
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::set_var("RUNIE_MOCK", "1");
 
     let bus = EventBus::<Event>::new(1);

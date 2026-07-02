@@ -613,7 +613,7 @@
     {
       "file": "eliminate-real-sleeps-in-provider-tests.md",
       "title": "Eliminate real sleeps in provider tests",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "emit-thoughtdone-on-stream-error.md",
@@ -773,7 +773,7 @@
     {
       "file": "fix-env-lock-isolation-and-remove-duplicates.md",
       "title": "Fix env lock isolation and remove duplicates",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "fix-fff-search-pre-release-notify.md",
