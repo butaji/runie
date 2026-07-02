@@ -1717,7 +1717,7 @@
   {
     "file": "route-provider-confignone-through-credentialresolver.md",
     "title": "Route provider config=None through CredentialResolver",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "scope-diff-comparison-to-headless-unified-output.md",

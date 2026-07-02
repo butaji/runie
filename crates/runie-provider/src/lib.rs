@@ -68,11 +68,12 @@ fn resolve_credentials(
                 .unwrap_or_else(|| meta.base_url.to_owned()),
         )
     } else {
-        let api_key = if meta.env_var.is_empty() {
-            String::new()
-        } else {
-            std::env::var(&meta.env_var).unwrap_or_default()
-        };
+        // When no config is provided, use CredentialResolver for unified priority:
+        // env var → dotenv → keyring → config
+        let resolver = runie_core::auth::CredentialResolver::new();
+        let api_key = resolver
+            .resolve_api_key(key)
+            .unwrap_or_default();
         (api_key, meta.base_url.to_owned())
     };
     (
