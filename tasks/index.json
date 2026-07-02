@@ -1432,7 +1432,7 @@
   {
     "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
     "title": "Replace streaming-buffer classifier with pulldown-cmark",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-subagent-template-engine-with-tinytemplate.md",
