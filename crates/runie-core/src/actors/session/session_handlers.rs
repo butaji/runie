@@ -7,7 +7,8 @@ use std::path::PathBuf;
 
 use crate::bus::EventBus;
 use crate::edit_preview::EditPreview;
-use crate::message::{now, Part};
+use crate::message::{now, Part, MessageOrigin};
+use crate::proto::message::MessageMetadata;
 use crate::model::{ChatMessage, Role};
 use crate::session::SessionMetadata;
 use crate::session::replay::session_to_durable_events;
@@ -68,6 +69,10 @@ impl RactorSessionActor {
             timestamp: now(),
             id,
             parts: vec![Part::Text { content }],
+            metadata: MessageMetadata {
+                origin: MessageOrigin::User,
+                ..Default::default()
+            },
             ..Default::default()
         });
         bump_time(&mut state.session_state);
@@ -81,6 +86,10 @@ impl RactorSessionActor {
             timestamp: now(),
             id: "system".to_owned(),
             parts: vec![Part::Text { content }],
+            metadata: MessageMetadata {
+                origin: MessageOrigin::System,
+                ..Default::default()
+            },
             ..Default::default()
         });
         bump_time(&mut state.session_state);
@@ -100,6 +109,10 @@ impl RactorSessionActor {
             id,
             parts: vec![Part::Text { content }],
             tool_call_id: Some(name),
+            metadata: MessageMetadata {
+                origin: MessageOrigin::Tool,
+                ..Default::default()
+            },
             ..Default::default()
         });
         bump_time(&mut state.session_state);

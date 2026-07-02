@@ -72,7 +72,7 @@
   {
     "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
     "title": "Add message origin metadata to fix follow-up continuity",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "add-openai-provider-fixtures.md",

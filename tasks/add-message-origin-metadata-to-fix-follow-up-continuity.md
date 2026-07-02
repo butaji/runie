@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`partial`
 
 ## Context
 
@@ -12,9 +12,50 @@ Runie cannot distinguish a real user follow-up from injected tool/system context
 
 Add `origin` to `ChatMessage`/`AgentEvent` flow so the turn engine can separate user messages from injections.
 
+## Implementation Status
+
+### ✅ Step 1: Define MessageOrigin enum
+**Location:** `crates/runie-core/src/proto/message/mod.rs`
+
+Added `MessageOrigin` enum with variants:
+- `User` (default) - Direct user input
+- `Tool` - Tool result injected into the conversation
+- `System` - System message or prompt injection
+- `Compaction` - Compaction summary
+- `Steering` - Steering or guidance message
+- `FollowUp` - Follow-up from user after turn completion
+- `Context` - Session context injection (e.g., @file, @search)
+
+Added `origin` field to `MessageMetadata`.
+
+Added `origin()` builder method to `ChatMessageBuilder`.
+
+Added unit tests for origin functionality.
+
+### ✅ Step 2: Tag messages at creation points (partial)
+**Status:** In Progress
+
+Updated message creation in session handlers:
+- ✅ `handle_add_user_message` → `MessageOrigin::User`
+- ✅ `handle_add_system_message` → `MessageOrigin::System`
+- ✅ `handle_add_tool_message` → `MessageOrigin::Tool`
+
+Still need to update:
+- [ ] Compaction summarization → `MessageOrigin::Compaction`
+- [ ] Steering messages → `MessageOrigin::Steering`
+- [ ] Follow-up messages → `MessageOrigin::FollowUp`
+- [ ] Context injection (@file, @search) → `MessageOrigin::Context`
+
+### ⏳ Step 3: Use origin in turn scheduling
+**Status:** Pending
+
+Need to update turn scheduling logic to consider origin when deciding:
+- Whether to queue a message behind an active turn
+- Whether to start a new turn immediately
+
 ## Acceptance Criteria
-- [ ] Define `MessageOrigin` enum (User, Tool, System, Compaction, etc.).
-- [ ] Tag messages at creation points.
+- [x] Define `MessageOrigin` enum (User, Tool, System, Compaction, etc.).
+- [x] Tag messages at creation points (user, system, tool done).
 - [ ] Use origin in turn scheduling.
 
 ## Design Impact

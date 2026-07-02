@@ -104,6 +104,33 @@ pub struct MessageMetadata {
     /// This message is a compaction summary (replaces older messages).
     #[serde(default)]
     pub compacted: bool,
+    /// Origin of the message (used for turn scheduling).
+    #[serde(default)]
+    pub origin: MessageOrigin,
+}
+
+/// Origin of a message, used to distinguish user messages from injected content.
+#[derive(
+    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, strum::Display,
+    strum::EnumString, strum::IntoStaticStr,
+)]
+#[strum(serialize_all = "snake_case")]
+pub enum MessageOrigin {
+    /// Direct user input.
+    #[default]
+    User,
+    /// Tool result injected into the conversation.
+    Tool,
+    /// System message or prompt injection.
+    System,
+    /// Compaction summary (replaces older messages).
+    Compaction,
+    /// Steering or guidance message.
+    Steering,
+    /// Follow-up from user after turn completion.
+    FollowUp,
+    /// Session context injection (e.g., @file, @search).
+    Context,
 }
 
 pub fn now() -> f64 {
@@ -370,6 +397,11 @@ impl ChatMessageBuilder {
 
     pub fn ephemeral(mut self) -> Self {
         self.metadata.get_or_insert_with(Default::default).ephemeral = true;
+        self
+    }
+
+    pub fn origin(mut self, origin: MessageOrigin) -> Self {
+        self.metadata.get_or_insert_with(Default::default).origin = origin;
         self
     }
 
@@ -777,5 +809,37 @@ mod tests {
             ChatMessageBuilder::assistant("hello").build(),
         ];
         assert!(validate_messages(&msgs).is_empty());
+    }
+
+    // ── MessageOrigin tests ───────────────────────────────────────────────────
+
+    #[test]
+    fn message_origin_defaults_to_user() {
+        let msg = ChatMessageBuilder::user("hello").build();
+        assert_eq!(msg.metadata.origin, MessageOrigin::User);
+    }
+
+    #[test]
+    fn message_builder_can_set_origin() {
+        let msg = ChatMessageBuilder::user("hello")
+            .origin(MessageOrigin::Tool)
+            .build();
+        assert_eq!(msg.metadata.origin, MessageOrigin::Tool);
+    }
+
+    #[test]
+    fn message_origin_can_be_compaction() {
+        let msg = ChatMessageBuilder::assistant("summary")
+            .origin(MessageOrigin::Compaction)
+            .build();
+        assert_eq!(msg.metadata.origin, MessageOrigin::Compaction);
+    }
+
+    #[test]
+    fn message_origin_can_be_follow_up() {
+        let msg = ChatMessageBuilder::user("follow up question")
+            .origin(MessageOrigin::FollowUp)
+            .build();
+        assert_eq!(msg.metadata.origin, MessageOrigin::FollowUp);
     }
 }
