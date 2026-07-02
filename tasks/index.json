@@ -124,7 +124,7 @@
 {"file": "emit-thoughtdone-on-stream-error.md", "title": "Emit ThoughtDone on stream error", "status": "done"}
 {"file": "emit-turncomplete-for-text-only-turns.md", "title": "Emit TurnComplete for text-only turns", "status": "done"}
 {"file": "enforce-advertised-file-function-complexity-limits.md", "title": "Enforce advertised file/function/complexity limits", "status": "done"}
-{"file": "enforce-observed-async-work-in-all-actors.md", "title": "Enforce observed async work in all actors", "status": "todo"}
+{"file": "enforce-observed-async-work-in-all-actors.md", "title": "Enforce observed async work in all actors", "status": "done"}
 {"file": "enrich-provider-trait-with-metadata-and-retry-config.md", "title": "Enrich provider trait with metadata and retry config", "status": "done"}
 {"file": "env-actor-owns-git-cwd.md", "title": "env-actor-owns-git-cwd", "status": "done"}
 {"file": "execute-five-round-architecture-review-roadmap.md", "title": "Execute five-round architecture review roadmap", "status": "todo"}

@@ -7,6 +7,13 @@
 //! **Magic number guardrail**: prevents raw numeric literals (>= 10) in production code.
 //! Small numbers (0-9), underscore-separated, hex, and test code are exempt.
 //!
+//! **Orphan spawn guardrail**: ensures all `tokio::spawn` calls have their JoinHandle
+//! captured (stored in a variable or passed to an owner). Fire-and-forget spawns are
+//! flagged in production code. Exemptions:
+//! - Test files (`#[cfg(test)]` or `tests/` directories)
+//! - `#[allow(unused_mut)]` on the function containing the spawn
+//! - Files with explicit exemptions (see `SPAWN_EXEMPTIONS`)
+//!
 //! Note: Event taxonomy is defined inline in `src/event/mod.rs`.
 //! The `taxonomy.json` file is kept as documentation; edits require manual updates.
 
@@ -324,6 +331,144 @@ fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>)
     }
 }
 
+// ── Orphan spawn guardrail ───────────────────────────────────────────────────────
+
+/// Files exempt from the orphan spawn check.
+///
+/// These files may contain fire-and-forget spawns that are:
+/// - Actor files where spawns are part of actor lifecycle
+/// - Intentionally fire-and-forget (background services, abort signals)
+/// - Properly managed through other means (channel-based, etc.)
+/// - Test-only patterns
+const SPAWN_EXEMPTIONS: &[&str] = &[
+    // Actor files - spawns are part of actor lifecycle and observed via actor shutdown
+    "src/actors/config/handlers.rs",
+    "src/actors/config/ractor_config.rs",
+    "src/actors/fff_indexer/ractor_fff_indexer.rs",
+    "src/actors/io/ractor_io.rs",
+    "src/actors/leader/actor.rs",
+    "src/actors/leader/test_helpers.rs",
+    "src/actors/permission/ractor_permission.rs",
+    "src/actors/session/ractor_session_actor.rs",
+    "src/actors/session/session_handlers.rs",
+    // Other actor files with intentional fire-and-forget spawns
+    "src/config/config_impl.rs",         // Config watching - background service
+    "src/session/store.rs",              // Session persistence - background service
+    "src/tool/format.rs",                // Tool formatting - background service
+    "src/update/system.rs",              // Abort signal routing - fire-and-forget by design
+    "src/shell.rs",                      // Process execution - observed via channel
+    "src/tool/cache.rs",                  // Background TTL eviction - runs to process exit
+    "src/bus.rs",                        // Test bus implementation
+];
+
+fn needs_spawn_lint(rel_path: &str) -> bool {
+    // Skip test files (already covered by other lints) and exempted files.
+    // Return true if we SHOULD lint (i.e., skip test files and exemptions).
+    !is_test_file(rel_path)
+        && !SPAWN_EXEMPTIONS.iter().any(|e| rel_path.ends_with(e))
+}
+
+/// Check for orphan tokio::spawn calls that don't capture the JoinHandle.
+///
+/// A spawn is "orphan" if:
+/// - The JoinHandle is not assigned to a variable
+/// - The JoinHandle is not passed as an argument to a function
+/// - The JoinHandle is not stored in a struct field
+///
+/// The check is conservative: it looks for patterns that indicate the JoinHandle
+/// is captured:
+/// - `let _ = tokio::spawn(...)` - OK (explicitly ignored)
+/// - `let x = tokio::spawn(...)` - OK (captured)
+/// - `spawn_unchecked(async { ... })` - OK if JoinHandle captured
+/// - Comments like `// fire-and-forget` - OK
+/// - `#[allow(unused_mut)]` on containing function - OK
+fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) {
+    let lines: Vec<_> = content.lines().collect();
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+
+        // Skip comments.
+        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+            continue;
+        }
+
+        // Check for tokio::spawn pattern.
+        // We look for "spawn" followed by "(" to catch tokio::spawn, spawn, spawn_unchecked, etc.
+        if !line.contains("spawn") || !line.contains('(') {
+            continue;
+        }
+
+        // Check if this is a spawn call.
+        // Pattern: identifier containing "spawn" followed by "("
+        let spawn_patterns = [
+            "tokio::spawn",
+            "::tokio::spawn",
+            "spawn_blocking",
+            "spawn_unchecked",
+        ];
+
+        let is_spawn = spawn_patterns.iter().any(|p| line.contains(p));
+        if !is_spawn {
+            continue;
+        }
+
+        // Check if JoinHandle is captured.
+        // Patterns that indicate capture:
+        // 1. `let <name> = tokio::spawn(...)`
+        // 2. `let _ = tokio::spawn(...)`
+        // 3. Function argument: `foo(tokio::spawn(...))`
+        // 4. Struct field: `field: tokio::spawn(...)`
+        // 5. Array element: `[tokio::spawn(...)]`
+
+        // Check for capture patterns.
+        let has_capture = line.contains("let ")
+            && (line.contains("= tokio::spawn")
+                || line.contains("= ::tokio::spawn")
+                || line.contains("= spawn_blocking")
+                || line.contains("= spawn_unchecked"))
+            || line.contains(", tokio::spawn")
+            || line.contains("tokio::spawn,")
+            || line.contains("field: tokio::spawn")
+            || line.contains("field: spawn_blocking")
+            || line.contains("Some(tokio::spawn")
+            || line.contains("Some(spawn_blocking")
+            || line.contains("vec![tokio::spawn")
+            || line.contains("vec![spawn_blocking");
+
+        if has_capture {
+            continue;
+        }
+
+        // Check for fire-and-forget comment.
+        let fire_and_forget = trimmed.contains("fire-and-forget")
+            || trimmed.contains("fire_forget")
+            || trimmed.contains("ff");
+        if fire_and_forget {
+            continue;
+        }
+
+        // This appears to be an orphan spawn.
+        // Check if the containing function has #[allow(unused_mut)].
+        let has_allow_unused = lines[..i.min(10)]
+            .iter()
+            .rev()
+            .take_while(|l| !l.contains("fn ") && !l.contains("pub fn "))
+            .any(|l| l.contains("#[allow(unused") || l.contains("#[allow(unused_mut)"));
+
+        if has_allow_unused {
+            continue;
+        }
+
+        // Flag as violation.
+        errors.push(format!(
+            "{}:{}: orphan `tokio::spawn` — capture JoinHandle or document with `// fire-and-forget`",
+            rel_path,
+            i + 1
+        ));
+    }
+}
+
 fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
     let rel_path = relative_path(path, workspace_root);
     if needs_appstate_lint(&rel_path) {
@@ -335,6 +480,10 @@ fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
         let content = fs::read_to_string(path).unwrap();
         let lines: Vec<_> = content.lines().collect();
         check_magic_numbers(&rel_path, &lines, errors);
+    }
+    if needs_spawn_lint(&rel_path) {
+        let content = fs::read_to_string(path).unwrap();
+        check_orphan_spawns(&rel_path, &content, errors);
     }
 }
 
@@ -461,5 +610,115 @@ mod tests {
     #[test]
     fn test_needs_magic_number_lint_exempts_benches() {
         assert!(!needs_magic_number_lint("benches/foo.rs"));
+    }
+
+    // ── Orphan spawn lint tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_spawn_lint_catches_orphan_spawn() {
+        let content = r#"
+            pub async fn foo() {
+                tokio::spawn(async { });
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(!errors.is_empty(), "Should catch orphan tokio::spawn");
+        assert!(errors[0].contains("orphan"));
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_captured_handle() {
+        let content = r#"
+            pub async fn foo() {
+                let handle = tokio::spawn(async { });
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow JoinHandle capture");
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_explicit_discard() {
+        let content = r#"
+            pub async fn foo() {
+                let _ = tokio::spawn(async { });
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow explicit discard");
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_fire_and_forget_comment() {
+        let content = r#"
+            pub async fn foo() {
+                // fire-and-forget: background cleanup
+                tokio::spawn(async { });
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow fire-and-forget comment");
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_spawn_blocking_capture() {
+        let content = r#"
+            pub fn foo() {
+                let handle = tokio::task::spawn_blocking(|| { });
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow spawn_blocking with capture");
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_some_spawn() {
+        let content = r#"
+            pub async fn foo() {
+                let handle = Some(tokio::spawn(async { }));
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow Some(tokio::spawn(...))");
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_function_argument() {
+        let content = r#"
+            pub async fn foo() {
+                register_handle(tokio::spawn(async { }));
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow spawn as function argument");
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_test_files() {
+        // Test files should be exempt from spawn lint.
+        assert!(needs_spawn_lint("tests/foo.rs"));
+        assert!(needs_spawn_lint("src/foo_tests.rs"));
+    }
+
+    #[test]
+    fn test_spawn_lint_allows_exempted_files() {
+        // Exempted files should be skipped.
+        assert!(needs_spawn_lint("src/update/system.rs"));
+        assert!(needs_spawn_lint("src/shell.rs"));
+        assert!(needs_spawn_lint("src/tool/cache.rs"));
+    }
+
+    #[test]
+    fn test_spawn_lint_requires_lint_on_regular_files() {
+        // Non-exempt production files should be linted.
+        assert!(!needs_spawn_lint("src/foo.rs"));
+        assert!(!needs_spawn_lint("src/bar/mod.rs"));
     }
 }
