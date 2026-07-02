@@ -162,10 +162,6 @@ pub fn build_cmd_from_yaml(
             let msg: &'static str = Box::leak(message.clone().into_boxed_str());
             cmd = cmd.action(Action::Msg(msg));
         }
-        YamlKind::Form { .. } => {
-            // Form without handler — not supported; skip.
-            return None;
-        }
     }
 
     Some(cmd)

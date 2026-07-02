@@ -32,13 +32,6 @@ pub enum CommandKind {
     Handler { handler: String },
     /// Static message.
     Msg { message: String },
-    /// Form dialog (handled as FormWithHandler with empty handler name).
-    Form {
-        title: String,
-        fields: Vec<FormFieldDef>,
-        #[serde(default)]
-        submit_event: String,
-    },
     /// Form dialog with a named handler.
     #[serde(rename = "form_with_handler")]
     FormWithHandler {
@@ -54,7 +47,6 @@ impl CommandKind {
         match self {
             CommandKind::Handler { handler } => Some(handler),
             CommandKind::FormWithHandler { handler, .. } => Some(handler),
-            CommandKind::Form { .. } => None,
             CommandKind::Msg { .. } => None,
         }
     }

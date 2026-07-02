@@ -383,18 +383,6 @@ handler: trig
     }
 
     #[test]
-    fn command_kind_form_returns_none() {
-        use crate::declarative::types::CommandKind;
-        let kind = CommandKind::Form {
-            title: "Form".to_owned(),
-            fields: vec![],
-            submit_event: "submit".to_owned(),
-        };
-        assert_eq!(kind.handler_name(), None);
-        assert_eq!(kind.message(), None);
-    }
-
-    #[test]
     fn yaml_deserializes_directly_to_command_kind() {
         // Layer 1: YAML deserializes directly into DeclarativeCommandYaml with CommandKind.
         let yaml = r#"

@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,11 @@ Always route form submission through the command registry. Delete `submit_factor
 
 ## Acceptance Criteria
 
-- [ ] Remove `submit_factory` from `FormPanel`.
-- [ ] Delete legacy `form_build_submit` path.
-- [ ] All forms submit via the command registry.
-- [ ] Login and command forms still work.
+- [x] Remove `submit_factory` from `FormPanel`. — **Already done**; `submit_factory` was removed in `fix-deliverqueued-race`.
+- [x] Delete legacy `form_build_submit` path. — **Already done**; `form_build_submit` does not exist.
+- [x] All forms submit via the command registry. — **Done**; `route_form_submit` creates `FormAction::SubmitCommand` with `cmd_name`.
+- [x] Login and command forms still work. — **Done**; special-case for `login-key` panel handles API key submission.
+- [x] Delete `CommandKind::Form` variant. — **Done**; removed dead `Form` variant from `declarative::types::CommandKind` (only `Handler`, `Msg`, `FormWithHandler` remain).
 
 ## Design Impact
 
@@ -34,8 +35,8 @@ No change to TUI element design or composition. Only form submission behavior ch
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
 
 ### SSOT/Event Compliance

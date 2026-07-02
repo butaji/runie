@@ -20,6 +20,42 @@ use std::path::PathBuf;
 /// Alias for backward compatibility.
 pub use crate::session::SessionMetadata as SessionMeta;
 
+// ── Compaction thresholds ──────────────────────────────────────────────────────
+
+/// Default max file size before compaction is triggered (10 MB).
+/// Sessions larger than this are compacted on the next write.
+pub const COMPACT_FILE_SIZE_BYTES: u64 = 10 * 1024 * 1024;
+
+/// Default max event count before compaction is triggered (500 events).
+/// Prevents unbounded growth even for small messages.
+pub const COMPACT_EVENT_COUNT: usize = 500;
+
+/// Default max turn count before compaction is triggered (50 turns).
+/// Sessions with many turns accumulate context overhead.
+pub const COMPACT_TURN_COUNT: usize = 50;
+
+/// Target event count after compaction (100 events).
+/// Compaction summarises the oldest events and keeps the most recent window.
+pub const COMPACT_TARGET_EVENTS: usize = 100;
+
+/// Compaction policy: how to preserve the original journal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompactionPolicy {
+    /// Archive the original journal as `<session_id>.journal/<turn_N>.jsonl`.
+    /// Each compacted turn is written as a separate file.
+    ArchiveToSidecar,
+    /// Append a synthetic `SessionCompacted` event to the compacted file.
+    /// The original journal is NOT preserved (lossy compaction).
+    DiscardOriginal,
+}
+
+impl Default for CompactionPolicy {
+    fn default() -> Self {
+        // Default to archive so the original journal is never lost.
+        Self::ArchiveToSidecar
+    }
+}
+
 /// JSONL-backed session store with fs2 advisory locks.
 #[derive(Debug, Clone)]
 pub struct SessionStore {
@@ -489,5 +525,25 @@ mod tests {
         assert_eq!(metas.len(), 2);
         assert_eq!(metas[0].id, "meta2");
         assert_eq!(metas[1].id, "meta1");
+    }
+
+    #[test]
+    fn compaction_thresholds_are_reasonable() {
+        // File size: 10 MB threshold
+        assert_eq!(COMPACT_FILE_SIZE_BYTES, 10 * 1024 * 1024);
+        // Event count: 500 events before compaction
+        assert_eq!(COMPACT_EVENT_COUNT, 500);
+        // Turn count: 50 turns before compaction
+        assert_eq!(COMPACT_TURN_COUNT, 50);
+        // Target: keep last 100 events after compaction
+        assert_eq!(COMPACT_TARGET_EVENTS, 100);
+        // Thresholds should be ordered correctly
+        assert!(COMPACT_TARGET_EVENTS < COMPACT_EVENT_COUNT);
+    }
+
+    #[test]
+    fn compaction_policy_default_is_archive() {
+        let policy = CompactionPolicy::default();
+        assert_eq!(policy, CompactionPolicy::ArchiveToSidecar);
     }
 }
