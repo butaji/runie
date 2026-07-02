@@ -2,7 +2,7 @@
 
 ## Status
 
-`partial` — `proto/message/mod.rs`, `provider/provider_trait.rs`, `event/durable.rs`, and `actors/io/ractor_io.rs` split into focused modules + tests. Remaining: `actors/fff_indexer/mod.rs` (669), `actors/permission/ractor_permission.rs` (685).
+`partial` — `proto/message/mod.rs`, `provider/provider_trait.rs`, `event/durable.rs`, `actors/io/ractor_io.rs`, and `actors/permission/ractor_permission.rs` split into focused modules + tests. Remaining: `actors/fff_indexer/mod.rs` (669).
 
 ## Description
 
@@ -15,11 +15,10 @@ The following production files exceed the advertised 500-line limit and mix resp
 - ~~`crates/runie-core/src/event/durable.rs`~~ — **DONE** (772→387 lines)
   - Split into: `durable.rs` (main) + `tests.rs` (tests)
 - ~~`crates/runie-core/src/actors/io/ractor_io.rs`~~ — **DONE** (633→346 lines)
-  - Split into: `ractor_io.rs` (main) + `tests.rs` (tests)
+  - Split into: `ractor_io.rs` (main) + `ractor_io/tests.rs` (tests)
+- ~~`crates/runie-core/src/actors/permission/ractor_permission.rs`~~ — **DONE** (686→405 lines)
+  - Split into: `ractor_permission.rs` (main) + `ractor_permission/tests.rs` (tests)
 - `crates/runie-core/src/actors/fff_indexer/mod.rs` — 669 lines
-- `crates/runie-core/src/actors/fff_indexer/mod.rs` — 669 lines
-- `crates/runie-core/src/actors/permission/ractor_permission.rs` — 685 lines
-- `crates/runie-core/src/actors/io/ractor_io.rs` — 633 lines
 - `crates/runie-core/src/model/state/domain_ops.rs` — 410 lines (under limit)
 
 (`session/sqlite_store.rs` is excluded because SQLite is deferred; see `standardize-session-persistence-on-jsonl.md`.)
@@ -49,6 +48,14 @@ Split `crates/runie-core/src/actors/io/ractor_io.rs` (633 lines) into 2 focused 
 |------|-------|----------|
 | `actors/io/ractor_io.rs` | 346 | Main actor, message handling, git detection |
 | `actors/io/ractor_io/tests.rs` | 289 | Unit tests |
+
+### ractor_permission.rs split
+Split `crates/runie-core/src/actors/permission/ractor_permission.rs` (686 lines) into 2 focused files:
+
+| File | Lines | Contains |
+|------|-------|----------|
+| `actors/permission/ractor_permission.rs` | 405 | Main actor, message handling |
+| `actors/permission/ractor_permission/tests.rs` | 283 | Unit tests |
 
 Public API preserved. All tests pass via `cargo test --workspace`.
 
