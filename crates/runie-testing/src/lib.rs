@@ -30,5 +30,8 @@ pub use mock_tool_skill::{
     mock_tool_skill, mock_tool_skill_minimax, MockToolSkill, RecordingSkill,
 };
 #[cfg(feature = "agent")]
-pub use replay_provider::{capture_events, dyn_replay_provider, dyn_replay_provider_with, ReplayProvider};
+pub use replay_provider::{
+    capture_events, dyn_grok_replay_provider, dyn_replay_provider, dyn_replay_provider_with,
+    grok_replay_from_fixtures, GrokReplayProvider, ReplayProvider,
+};
 pub use tests::state::{exec, fresh_state, type_str};

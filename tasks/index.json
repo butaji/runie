@@ -57,7 +57,7 @@
   {
     "file": "add-grok-provider-event-translator-and-headless-replay.md",
     "title": "Add Grok provider-event translator and headless replay",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
@@ -1762,7 +1762,7 @@
   {
     "file": "spike-rmcp-feasibility-before-mcp-decision.md",
     "title": "Spike `rmcp` feasibility before MCP decision",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "spike-tui-textarea-parity-before-widget-replacement.md",
@@ -2227,7 +2227,7 @@
   {
     "file": "wire-rmcp-client-or-remove-mcp-config.md",
     "title": "Wire `rmcp` client or remove MCP config",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "wire-user-permission-rules-into-agent-gate.md",
