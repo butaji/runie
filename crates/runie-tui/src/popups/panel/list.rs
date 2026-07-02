@@ -11,7 +11,8 @@ use runie_core::dialog::{Panel, PanelItem};
 
 use crate::theme::{
     color_accent, color_bg, color_bg_panel, color_dim, style_hint, style_popup_unselected,
-    style_thinking, style_user, GLYPH_SELECTED, GLYPH_UNSELECTED,
+    style_thinking, style_user, BOX_HORIZONTAL, GLYPH_CHECKED, GLYPH_FILTER, GLYPH_SELECTED,
+    GLYPH_UNCHECKED, GLYPH_UNSELECTED,
 };
 use crate::ui::{parse_hint_spans, render_scrollbar};
 
@@ -113,9 +114,9 @@ fn render_hotkeys(
 fn build_header(panel: &Panel, inner_w: usize) -> (Vec<Line<'_>>, u16) {
     let mut lines: Vec<Line> = Vec::new();
     if panel.filterable {
-        lines.push(Line::from(format!("❯ {}", panel.filter)).style(style_user()));
+        lines.push(Line::from(format!("{} {}", GLYPH_FILTER, panel.filter)).style(style_user()));
     }
-    lines.push(Line::from("─".repeat(inner_w)).style(style_hint()));
+    lines.push(Line::from(BOX_HORIZONTAL.to_string().repeat(inner_w)).style(style_hint()));
     let h = lines.len() as u16;
     (lines, h)
 }
@@ -241,7 +242,7 @@ fn push_named_item<'a>(
 
 fn push_toggle(lines: &mut Vec<Line>, label: &str, value: bool, selected: bool, width: usize) {
     let prefix = selection_glyph(selected);
-    let mark = if value { "[x]" } else { "[ ]" };
+    let mark = if value { GLYPH_CHECKED } else { GLYPH_UNCHECKED };
     let text = format!("{} {}", mark, label);
     if selected {
         let bg = color_accent();

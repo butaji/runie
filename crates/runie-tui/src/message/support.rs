@@ -7,12 +7,12 @@ use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
     style_tool_output, style_tool_running, style_tool_summary, style_turn_complete,
-    GLYPH_SPINNER,
+    GLYPH_BULLET, GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_ERROR,
 };
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 use runie_core::display_width;
 
-use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap, GLYPH_INDENT};
+use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap};
 
 pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'static>> {
     let inner_width = content_width.saturating_sub(2);
@@ -64,7 +64,7 @@ pub fn render_tool_done(
     error: bool,
 ) -> Vec<Line<'static>> {
     let label = format_tool_label(name, args);
-    let status_icon = if error { "✗" } else { "✓" };
+    let status_icon = if error { GLYPH_X } else { GLYPH_CHECK };
     let duration = format_duration(duration_secs);
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
@@ -75,7 +75,7 @@ pub fn render_tool_done(
         label,
         duration,
         bytes_str,
-        if error { " [✗]" } else { "" }
+        if error { INDICATOR_ERROR } else { "" }
     );
     let mut lines = vec![Line::from(header).style(style_tool_header())];
     if !output.is_empty() {
@@ -264,7 +264,7 @@ pub fn render_list_item_from_spans(
     let bullet = if ordered {
         format!("{}.", idx + 1)
     } else {
-        "•".to_owned()
+        GLYPH_BULLET.to_owned()
     };
     let bullet_prefix = format!("{} {}", prefix, bullet);
 

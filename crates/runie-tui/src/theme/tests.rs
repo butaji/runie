@@ -1,4 +1,4 @@
-//! Theme caching and quantization tests.
+//! Theme caching, quantization, and glyph tests.
 
 use std::sync::Arc;
 
@@ -6,6 +6,12 @@ use crate::terminal::caps::{MouseCapability, TermCaps};
 use crate::theme::loader::{default_theme, minimal_fallback_theme};
 use crate::theme::{
     current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES,
+};
+use crate::theme::glyph::{
+    BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT, BOX_HORIZONTAL, BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL,
+    GLYPH_BULLET, GLYPH_CHECK, GLYPH_CHECKED, GLYPH_DOWNLOAD, GLYPH_FILTER, GLYPH_SELECTED,
+    GLYPH_SPINNER, GLYPH_TOOL, GLYPH_UNCHECKED, GLYPH_UNSELECTED, GLYPH_X,
+    INDICATOR_COLLAPSED, INDICATOR_ERROR, PANEL_CHAT, PANEL_INPUT, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
 };
 
 #[test]
@@ -186,4 +192,85 @@ fn minimal_fallback_theme_loads_successfully() {
         opaline::OpalineColor::FALLBACK,
         "fallback text-primary should resolve"
     );
+}
+
+// ── Layer 1 — State/Logic: glyph constants ────────────────────────────────────
+
+/// Verifies that all checkbox glyphs have correct values.
+#[test]
+fn glyph_checkbox_constants_are_correct() {
+    assert_eq!(GLYPH_CHECKED, "[x]");
+    assert_eq!(GLYPH_UNCHECKED, "[ ]");
+    assert_eq!(GLYPH_CHECK, "✓");
+    assert_eq!(GLYPH_X, "✗");
+}
+
+/// Verifies that all selection and navigation glyphs have correct values.
+#[test]
+fn glyph_selection_constants_are_correct() {
+    assert_eq!(GLYPH_SELECTED, "▸ ");
+    assert_eq!(GLYPH_UNSELECTED, "  ");
+}
+
+/// Verifies that tool and status glyphs have correct values.
+#[test]
+fn glyph_tool_constants_are_correct() {
+    assert_eq!(GLYPH_TOOL, "✓ ");
+    assert_eq!(GLYPH_BULLET, "•");
+}
+
+/// Verifies that indicator glyphs have correct values.
+#[test]
+fn glyph_indicator_constants_are_correct() {
+    assert_eq!(INDICATOR_COLLAPSED, " [+]");
+    assert_eq!(INDICATOR_ERROR, " [✗]");
+}
+
+/// Verifies that scrollbar glyphs have correct values.
+#[test]
+fn glyph_scrollbar_constants_are_correct() {
+    assert_eq!(SCROLLBAR_TRACK, " ");
+    assert_eq!(SCROLLBAR_THUMB, "▐");
+}
+
+/// Verifies that panel header glyphs have correct values.
+#[test]
+fn glyph_panel_constants_are_correct() {
+    assert_eq!(PANEL_CHAT, " Chat ");
+    assert_eq!(PANEL_INPUT, " Input ");
+}
+
+/// Verifies that spinner glyph is a braille character.
+#[test]
+fn glyph_spinner_is_braille() {
+    // GLYPH_SPINNER is a char (first frame of braille spinner)
+    // Verify it's in the braille range (U+2800 to U+28FF)
+    let c = GLYPH_SPINNER;
+    assert!(
+        c >= '\u{2800}' && c <= '\u{28FF}',
+        "GLYPH_SPINNER should be a braille character, got: {c}"
+    );
+}
+
+/// Verifies that filter glyph is the correct character.
+#[test]
+fn glyph_filter_is_correct() {
+    assert_eq!(GLYPH_FILTER, '❯');
+}
+
+/// Verifies that download glyph is correct.
+#[test]
+fn glyph_download_is_correct() {
+    assert_eq!(GLYPH_DOWNLOAD, "⇣");
+}
+
+/// Verifies that all box drawing glyphs have correct values.
+#[test]
+fn glyph_box_drawing_constants_are_correct() {
+    assert_eq!(BOX_HORIZONTAL, '─');
+    assert_eq!(BOX_VERTICAL, '│');
+    assert_eq!(BOX_TOP_LEFT, "┌");
+    assert_eq!(BOX_TOP_RIGHT, "┐");
+    assert_eq!(BOX_BOTTOM_LEFT, "└");
+    assert_eq!(BOX_BOTTOM_RIGHT, "┘");
 }

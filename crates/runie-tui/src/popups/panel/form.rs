@@ -9,7 +9,10 @@ use ratatui::{
 use runie_core::dialog::{Panel, PanelItem};
 use unicode_width::UnicodeWidthChar;
 
-use crate::theme::{color_accent, style_hint, style_placeholder, style_thinking};
+use crate::theme::{
+    color_accent, style_hint, style_placeholder, style_thinking, BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT,
+    BOX_HORIZONTAL, BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL, GLYPH_CHECKED, GLYPH_UNCHECKED,
+};
 use crate::ui::parse_hint_spans;
 
 use super::{pad_to_width, setup_popup, style_border};
@@ -169,7 +172,7 @@ fn push_toggle_body<'a>(
 /// Render a toggle (checkbox) line in the form body. Toggle items are
 /// the universal checkbox in the DSL — no separate Checkbox variant.
 fn push_toggle_item<'a>(body: &mut Vec<Line<'a>>, label: &'a str, checked: bool, is_active: bool) {
-    let mark = if checked { "[x]" } else { "[ ]" };
+    let mark = if checked { GLYPH_CHECKED } else { GLYPH_UNCHECKED };
     let text = format!("  {} {}", mark, label);
     let style = if is_active {
         Style::default()
@@ -252,7 +255,7 @@ fn build_button_line(panel: &Panel, inner_w: usize) -> Line<'_> {
 
 fn push_header(lines: &mut Vec<Line>, inner_w: usize) {
     lines.push(Line::from("  Fill in the form and press Enter to submit").style(style_hint()));
-    lines.push(Line::from("─".repeat(inner_w)).style(style_hint()));
+    lines.push(Line::from(BOX_HORIZONTAL.to_string().repeat(inner_w)).style(style_hint()));
     lines.push(Line::from(""));
 }
 
@@ -318,11 +321,11 @@ fn build_input_box<'a>(
     let box_w = inner_w.saturating_sub(6).max(12);
     let inner_avail = box_w.saturating_sub(2);
     let spans = input_display_spans(value, placeholder, cursor_pos, inner_avail, is_active);
-    let top = format!("  ┌{}┐", "─".repeat(box_w - 2));
-    let bot = format!("  └{}┘", "─".repeat(box_w - 2));
-    let mut all_spans = vec![Span::styled("  │", style_border())];
+    let top = format!("  {}{}{}", BOX_TOP_LEFT, BOX_HORIZONTAL.to_string().repeat(box_w - 2), BOX_TOP_RIGHT);
+    let bot = format!("  {}{}{}", BOX_BOTTOM_LEFT, BOX_HORIZONTAL.to_string().repeat(box_w - 2), BOX_BOTTOM_RIGHT);
+    let mut all_spans = vec![Span::styled("  ".to_string() + &BOX_VERTICAL.to_string(), style_border())];
     all_spans.extend(spans);
-    all_spans.push(Span::styled("│", style_border()));
+    all_spans.push(Span::styled(BOX_VERTICAL.to_string(), style_border()));
     (top, all_spans, bot)
 }
 
