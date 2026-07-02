@@ -208,6 +208,7 @@ fn dispatcher_handles_all_variants() {
             | Event::SessionList { .. }
             | Event::SessionOperationFailed { .. }
             | Event::SessionChanged { .. }
+            | Event::SessionTreeSnapshot { .. }
             | Event::BashOutput { .. }
             | Event::FilesWritten { .. }
             | Event::EnvDetected { .. }

@@ -1507,7 +1507,7 @@
   {
     "file": "round-trip-session-tree-snapshot-through-durable-events.md",
     "title": "Round-trip session tree snapshot through durable events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-agent-abort-through-actor-message-not-event-bus.md",

@@ -299,6 +299,12 @@ pub(super) fn handle_session_event(state: &mut AppState, event: crate::Event) {
         crate::Event::SessionTreeSelect { id } => {
             state.session_tree_select(&id);
         }
+        crate::Event::SessionTreeSnapshot { snapshot } => {
+            if let Some(tree) = crate::session::tree::SessionTree::from_snapshot(&snapshot) {
+                state.session_mut().session_tree = Some(tree);
+                state.view_mut().cached_session_tree_valid = false;
+            }
+        }
         // intentionally ignored: other session events fall through
         _ => {}
     }

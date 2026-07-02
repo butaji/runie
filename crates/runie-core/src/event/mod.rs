@@ -305,6 +305,8 @@ pub enum Event {
     SessionList { sessions: Box<Vec<String>> },
     SessionOperationFailed { operation: String, error: String },
     SessionChanged { state: Box<crate::model::SessionState> },
+    /// Session tree snapshot (branching history) for durable persistence.
+    SessionTreeSnapshot { snapshot: crate::session::tree::SessionTreeSnapshot },
 
     // ── System / Fact variants ───────────────────────────────────────────────
     TransientMessage { content: String, level: TLevel },
@@ -556,6 +558,7 @@ impl Event {
             Event::SessionList { .. } => EventKind::Fact,
             Event::SessionOperationFailed { .. } => EventKind::Fact,
             Event::SessionChanged { .. } => EventKind::Fact,
+            Event::SessionTreeSnapshot { .. } => EventKind::Fact,
             Event::SystemMessage { .. } => EventKind::Fact,
             Event::ConfigLoaded { .. } => EventKind::Fact,
             // Control variants
@@ -798,6 +801,7 @@ impl Event {
             Event::SessionList { .. } => EventCategory::Session,
             Event::SessionOperationFailed { .. } => EventCategory::Session,
             Event::SessionChanged { .. } => EventCategory::Session,
+            Event::SessionTreeSnapshot { .. } => EventCategory::Session,
             Event::TransientMessage { .. } => EventCategory::System,
             Event::TransientError { .. } => EventCategory::System,
             Event::ClearTransient => EventCategory::System,

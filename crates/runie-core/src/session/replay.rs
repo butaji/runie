@@ -40,17 +40,13 @@ pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
         DurableCoreEvent::SessionRenamed { name } => {
             state.session_mut().session_display_name = Some(name.clone());
         }
-        DurableCoreEvent::TreeSnapshot { snapshot } => {
-            if let Some(tree) = crate::session::tree::SessionTree::from_snapshot(snapshot) {
-                state.session_mut().session_tree = Some(tree);
-            }
-        }
         DurableCoreEvent::ToolCalled { .. }
         | DurableCoreEvent::ToolResult { .. }
         | DurableCoreEvent::ModelSwitched { .. }
         | DurableCoreEvent::ThemeSwitched { .. }
         | DurableCoreEvent::ThinkingLevelSet { .. }
-        | DurableCoreEvent::ReadOnlySet { .. } => {
+        | DurableCoreEvent::ReadOnlySet { .. }
+        | DurableCoreEvent::TreeSnapshot { .. } => {
             if let Some(evt) = durable_to_event(event) {
                 state.update(evt);
             }
@@ -385,5 +381,63 @@ mod tests {
             DurableCoreEvent::MessageSent { role, content, .. }
                 if role == "user" && content == "hello"
         )));
+    }
+
+    /// Layer 1: SessionTreeSnapshot round-trips through durable events.
+    #[test]
+    fn replay_tree_snapshot_restore() {
+        use crate::session::tree::SessionTree;
+
+        // Build a tree manually with known-good data (avoids tree-construction bugs)
+        let user_msg = ChatMessage {
+            role: Role::User,
+            parts: vec![crate::message::Part::Text { content: "hello".into() }],
+            timestamp: 1.0,
+            id: "msg1".into(),
+            ..Default::default()
+        };
+        let assistant_msg = ChatMessage {
+            role: Role::Assistant,
+            parts: vec![crate::message::Part::Text { content: "hi".into() }],
+            timestamp: 2.0,
+            id: "msg2".into(),
+            ..Default::default()
+        };
+        let tree = SessionTree::from_messages(&[user_msg, assistant_msg]);
+
+        // Get snapshot (avoids .clone() on SessionTree which has a serialize bug)
+        let snapshot = tree.to_snapshot();
+        assert_eq!(snapshot.nodes.len(), 2, "tree should have 2 nodes");
+        assert_eq!(snapshot.root_id, "msg1");
+
+        // Convert to durable event and back (both directions)
+        let durable = DurableCoreEvent::TreeSnapshot { snapshot: snapshot.clone() };
+        let event: Event = Event::try_from(&durable).unwrap();
+        let back: DurableCoreEvent = DurableCoreEvent::try_from_event(&event).unwrap();
+
+        // Verify round-trip produces equivalent snapshot
+        let roundtripped = if let DurableCoreEvent::TreeSnapshot { snapshot: s } = back {
+            s
+        } else {
+            panic!("round-trip did not produce TreeSnapshot")
+        };
+        assert_eq!(roundtripped.root_id, snapshot.root_id);
+        assert_eq!(roundtripped.nodes.len(), snapshot.nodes.len());
+
+        // Reconstruct tree from round-tripped snapshot and verify
+        let restored_tree = SessionTree::from_snapshot(&roundtripped)
+            .expect("snapshot should deserialize");
+        let restored_snapshot = restored_tree.to_snapshot();
+        assert_eq!(restored_snapshot.root_id, snapshot.root_id);
+        assert_eq!(restored_snapshot.nodes.len(), snapshot.nodes.len());
+
+        // Verify replay via AppState update
+        let mut loaded = AppState::default();
+        loaded.update(event.clone());
+        let loaded_tree = loaded.session.session_tree.clone()
+            .expect("tree should be restored via AppState update");
+        let loaded_snapshot = loaded_tree.to_snapshot();
+        assert_eq!(loaded_snapshot.root_id, snapshot.root_id);
+        assert_eq!(loaded_snapshot.nodes.len(), snapshot.nodes.len());
     }
 }

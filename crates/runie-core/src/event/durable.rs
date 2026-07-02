@@ -93,6 +93,9 @@ impl DurableCoreEvent {
             Event::RunNameCommand { name } => Some(D::SessionRenamed { name: name.clone() }),
             Event::SwitchTheme { name } => Some(D::ThemeSwitched { name: name.clone() }),
             Event::SetThinkingLevel(level) => Some(D::ThinkingLevelSet { level: *level }),
+            // Durable: session tree
+            Event::SessionTreeSnapshot { snapshot } => Some(D::TreeSnapshot { snapshot: snapshot.clone() }),
+
             // Input, scroll, permission — not persisted
             Event::Input(_)
             | Event::Backspace
@@ -327,7 +330,9 @@ impl TryFrom<&DurableCoreEvent> for Event {
             D::ThemeSwitched { name } => Ok(Event::SwitchTheme { name: name.clone() }),
             D::ThinkingLevelSet { level } => Ok(Event::SetThinkingLevel(*level)),
             // SessionRenamed and ReadOnlySet are handled directly in replay_event
-            D::SessionRenamed { .. } | D::ReadOnlySet { .. } | D::TreeSnapshot { .. } => Err(()),
+            D::SessionRenamed { .. } | D::ReadOnlySet { .. } => Err(()),
+            D::TreeSnapshot { snapshot } => Ok(Event::SessionTreeSnapshot { snapshot: snapshot.clone() }),
+
         }
     }
 }
@@ -605,6 +610,66 @@ mod tests {
         let durable = DurableCoreEvent::ReadOnlySet { read_only: true };
         let event: Result<Event, _> = Event::try_from(&durable);
         assert!(event.is_err()); // handled directly in replay_event
+    }
+
+    // ── SessionTreeSnapshot round-trip ─────────────────────────────────────────
+
+    #[test]
+    fn durable_from_session_tree_snapshot() {
+        let snapshot = crate::session::tree::SessionTreeSnapshot {
+            current_branch: vec!["msg1".into(), "msg2".into()],
+            root_id: "msg1".into(),
+            nodes: vec![],
+            edges: vec![],
+        };
+        let event = Event::SessionTreeSnapshot { snapshot: snapshot.clone() };
+        let durable = DurableCoreEvent::try_from_event(&event);
+        assert!(durable.is_some());
+        let durable = durable.unwrap();
+        assert!(matches!(
+            durable,
+            DurableCoreEvent::TreeSnapshot { snapshot } if snapshot.current_branch == ["msg1", "msg2"]
+        ));
+    }
+
+    #[test]
+    fn event_from_tree_snapshot() {
+        let durable = DurableCoreEvent::TreeSnapshot {
+            snapshot: crate::session::tree::SessionTreeSnapshot {
+                current_branch: vec!["a".into()],
+                root_id: "a".into(),
+                nodes: vec![],
+                edges: vec![],
+            },
+        };
+        let event: Result<Event, _> = Event::try_from(&durable);
+        assert!(event.is_ok());
+        let event = event.unwrap();
+        assert!(matches!(
+            event,
+            Event::SessionTreeSnapshot { snapshot } if snapshot.current_branch == ["a"]
+        ));
+    }
+
+    #[test]
+    fn tree_snapshot_roundtrip() {
+        // Event → DurableCoreEvent → Event (full round-trip)
+        let snapshot = crate::session::tree::SessionTreeSnapshot {
+            current_branch: vec!["root".into(), "branch".into()],
+            root_id: "root".into(),
+            nodes: vec![],
+            edges: vec![],
+        };
+        let original = Event::SessionTreeSnapshot { snapshot: snapshot.clone() };
+        let durable = DurableCoreEvent::try_from_event(&original).unwrap();
+        let recovered: Event = Event::try_from(&durable).unwrap();
+        match (original, recovered) {
+            (
+                Event::SessionTreeSnapshot { snapshot: s1 },
+                Event::SessionTreeSnapshot { snapshot: s2 },
+            ) => assert_eq!(s1, s2),
+            _ => panic!("round-trip mismatch"),
+        }
     }
 
     // ── Serde roundtrip for DurableCoreEvent ─────────────────────────────────
