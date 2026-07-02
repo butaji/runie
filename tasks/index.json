@@ -1821,7 +1821,7 @@
 {
   "file": "use-toml-edit-and-file-locks-for-config.md",
   "title": "Use toml_edit + fs2 file locks for config persistence",
-  "status": "partial"
+  "status": "done"
 }
 {
   "file": "compare-diff-edit-output-and-fix-gaps.md",
