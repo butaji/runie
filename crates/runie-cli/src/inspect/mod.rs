@@ -12,6 +12,9 @@ use secrecy::ExposeSecret;
 
 use std::collections::HashSet;
 
+/// Capacity of the EventBus channel used for config actor initialization in inspect.
+const EVENT_BUS_CHANNEL_CAPACITY: usize = 16;
+
 // Type alias for the config handle reply type
 type ConfigHandle = runie_core::actors::RactorConfigHandle;
 
@@ -576,7 +579,7 @@ impl InspectReport {
 /// Run the inspect command.
 pub async fn run(json: bool) -> anyhow::Result<()> {
     let (config_handle, _cell, _join) = runie_core::actors::RactorConfigActor::spawn_default(
-        runie_core::bus::EventBus::new(16),
+        runie_core::bus::EventBus::new(EVENT_BUS_CHANNEL_CAPACITY),
     )
     .await
     .unwrap();

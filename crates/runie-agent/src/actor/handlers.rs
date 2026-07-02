@@ -6,6 +6,8 @@ use tokio_util::sync::CancellationToken;
 
 use runie_core::actors::permission::RactorPermissionHandle;
 use runie_core::permissions::PermissionGate;
+
+use crate::constants::DEFAULT_PERMISSION_TIMEOUT_SECS;
 use runie_core::permissions::{
     DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
     PermissionSetPolicy,
@@ -62,7 +64,7 @@ pub(crate) async fn create_permission_gate(
         permissions,
         Arc::new(EmitApprovalSink::with_cancel(
             permission_handle,
-            60,
+            DEFAULT_PERMISSION_TIMEOUT_SECS,
             abort_tx,
         )),
     )

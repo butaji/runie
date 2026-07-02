@@ -21,6 +21,7 @@ pub mod ui;
 
 pub mod app_init;
 pub mod bootstrap;
+pub mod channels;
 pub mod dry_run_cmd;
 pub mod effects;
 pub mod keymap;

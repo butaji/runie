@@ -27,6 +27,7 @@ use runie_core::bus::EventBus;
 use runie_core::event::Event;
 use runie_core::permissions::PermissionGate;
 
+use crate::constants::DEFAULT_MAX_TOOL_ROUNDS;
 use crate::run_agent_turn;
 use crate::stream_response::EmitFn;
 use crate::AgentCommand;
@@ -212,7 +213,7 @@ impl RactorAgentActor {
         let myself_for_task = myself.clone();
 
         tokio::spawn(async move {
-            let turn = run_agent_turn(&info.built, &command, emit_for_task, 5, info.gate.clone());
+            let turn = run_agent_turn(&info.built, &command, emit_for_task, DEFAULT_MAX_TOOL_ROUNDS, info.gate.clone());
             tokio::pin!(turn);
 
             let result = turn.await;

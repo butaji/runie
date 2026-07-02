@@ -56,6 +56,14 @@ pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_se
 // Re-export HTTP timeout constants from runie-core so all provider crates share the same values.
 pub use runie_core::provider::{REQUEST_TIMEOUT, CONNECT_TIMEOUT};
 
+/// Minimum delay for mock provider (milliseconds).
+#[cfg(feature = "mock")]
+pub const MOCK_DELAY_MIN_MS: u64 = 5;
+
+/// Maximum delay for mock provider (milliseconds).
+#[cfg(feature = "mock")]
+pub const MOCK_DELAY_MAX_MS: u64 = 10;
+
 /// Re-export `BuiltProvider` from `runie-core`.
 pub use runie_core::actors::provider::BuiltProvider;
 
@@ -140,7 +148,7 @@ pub fn build_provider(
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
         // Use small delay (5-10ms) for fast deterministic tests
-        Box::new(MockProvider::with_delay(5, 10))
+        Box::new(MockProvider::with_delay(MOCK_DELAY_MIN_MS, MOCK_DELAY_MAX_MS))
     } else {
         Box::new(MockProvider::default())
     };

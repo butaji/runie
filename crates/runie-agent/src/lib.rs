@@ -2,6 +2,7 @@
 
 pub mod actor;
 pub mod agent_command_builder;
+pub mod constants;
 pub mod emit_approval_sink;
 pub mod headless;
 pub mod headless_helper;

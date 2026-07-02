@@ -11,6 +11,9 @@ use crate::auth::AuthToken;
 
 use super::store_trait::{KeyringStore, OsKeyringStore};
 
+/// Number of characters shown in a token preview when logging mismatches.
+const TOKEN_PREVIEW_LENGTH: usize = 8;
+
 /// Set a provider token directly in the keyring (no instance state needed).
 /// This is used by the config migration to move plaintext keys to keyring.
 pub fn set_keyring_value(provider: &str, token: &str) -> anyhow::Result<()> {
@@ -32,7 +35,7 @@ pub fn set_and_verify_keyring(provider: &str, token: &str) -> anyhow::Result<()>
             Err(anyhow::anyhow!(
                 "keyring returned different token (len={}): {:?}",
                 s.len(),
-                &s[..s.len().min(8)]
+                &s[..s.len().min(TOKEN_PREVIEW_LENGTH)]
             ))
         }
         Ok(None) => Err(anyhow::anyhow!("keyring retrieval returned None after set")),

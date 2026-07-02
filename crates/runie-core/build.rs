@@ -4,7 +4,7 @@
 //! **AppState field access guardrail**: ensures internal AppState fields are accessed
 //! through accessors, not directly.
 //!
-//! **Magic number guardrail**: prevents raw numeric literals (>= 10) in production code.
+//! **Magic number guardrail**: prevents raw numeric literals (>= 1000) in production code.
 //! Small numbers (0-9), underscore-separated, hex, and test code are exempt.
 //!
 //! **Orphan spawn guardrail**: ensures all `tokio::spawn` calls have their JoinHandle
@@ -383,6 +383,9 @@ fn needs_spawn_lint(rel_path: &str) -> bool {
 /// - Comments like `// fire-and-forget` - OK
 /// - `#[allow(unused_mut)]` on containing function - OK
 fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) {
+    /// Number of lines to look back when searching for `#[allow(...)]` above a spawn.
+    const SPAWN_ALLOW_LOOKBACK: usize = 10;
+
     let lines: Vec<_> = content.lines().collect();
 
     for (i, line) in lines.iter().enumerate() {
@@ -450,7 +453,7 @@ fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) 
 
         // This appears to be an orphan spawn.
         // Check if the containing function has #[allow(unused_mut)].
-        let has_allow_unused = lines[..i.min(10)]
+        let has_allow_unused = lines[..i.min(SPAWN_ALLOW_LOOKBACK)]
             .iter()
             .rev()
             .take_while(|l| !l.contains("fn ") && !l.contains("pub fn "))

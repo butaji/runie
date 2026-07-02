@@ -192,7 +192,7 @@
   {
     "file": "audit-mock-provider-delay-constants.md",
     "title": "Audit mock provider delay constants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "audit-tasks-for-events-based-ssot-actor-compliance.md",
@@ -237,7 +237,7 @@
   {
     "file": "centralize-agent-approval-timeout-and-max-tool-rounds.md",
     "title": "Centralize agent approval timeout and max tool rounds",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -697,7 +697,7 @@
   {
     "file": "execute-second-pass-magic-numbers-cleanup.md",
     "title": "Execute second-pass magic numbers cleanup",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "execute-third-pass-architecture-review-roadmap.md",
@@ -1132,12 +1132,12 @@
   {
     "file": "name-keyring-token-preview-and-build-lint-lookback.md",
     "title": "Name keyring token preview and build lint lookback",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "name-tui-and-cli-channel-capacities.md",
     "title": "Name TUI and CLI channel capacities",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "narrow-runie-core-public-api.md",
@@ -2002,7 +2002,7 @@
   {
     "file": "update-build-rs-comment-on-magic-number-guardrail.md",
     "title": "Update build.rs comment on magic-number guardrail",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md",

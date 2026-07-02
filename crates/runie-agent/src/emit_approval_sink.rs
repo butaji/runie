@@ -19,6 +19,8 @@ use serde_json::Value;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
+use crate::constants::DEFAULT_PERMISSION_TIMEOUT_SECS;
+
 /// Approval sink that delegates to `PermissionActor`.
 pub struct EmitApprovalSink {
     permission_handle: RactorPermissionHandle,
@@ -31,7 +33,7 @@ pub struct EmitApprovalSink {
 impl EmitApprovalSink {
     /// Create a new sink backed by the given permission actor handle.
     pub fn new(permission_handle: RactorPermissionHandle) -> Self {
-        Self::with_cancel(permission_handle, 60, CancellationToken::new())
+        Self::with_cancel(permission_handle, DEFAULT_PERMISSION_TIMEOUT_SECS, CancellationToken::new())
     }
 
     /// Create a new sink with a custom timeout.

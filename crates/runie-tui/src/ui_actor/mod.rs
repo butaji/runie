@@ -24,6 +24,7 @@ use runie_core::bus::{EventBus, Receiver};
 use runie_core::update::dialog::handle_form_dialog;
 use runie_core::{AppState, Event, Snapshot};
 
+use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TermCaps;
 
@@ -213,7 +214,7 @@ impl UiActor {
         mut rx: Receiver<Event>,
         mut submit_rx: tokio::sync::mpsc::Receiver<Event>,
     ) {
-        let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(16);
+        let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(EFFECT_FORWARDER_CHANNEL_CAPACITY);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
         // Drain all buffered bootstrap events before sending the first snapshot.

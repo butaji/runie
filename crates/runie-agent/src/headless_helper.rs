@@ -14,6 +14,7 @@ use runie_core::prompts::{
     build_system_prompt as core_system_prompt, DEFAULT_PROMPT, DEFAULT_TOOLS,
 };
 
+use crate::constants::DEFAULT_MAX_TOOL_ROUNDS;
 use crate::HeadlessCliOptions;
 
 /// Build a system prompt string with the default tools and harness context.
@@ -42,7 +43,7 @@ pub fn build_options(
 ) -> HeadlessCliOptions {
     HeadlessCliOptions {
         execute_tools: true,
-        max_tool_rounds: 5,
+        max_tool_rounds: DEFAULT_MAX_TOOL_ROUNDS,
         on_chunk,
         on_event,
     }

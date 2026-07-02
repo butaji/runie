@@ -2,7 +2,13 @@
 
 ## Status
 
-`todo`
+**done** — All 6 production code second-pass fixes completed:
+- DEFAULT_PERMISSION_TIMEOUT_SECS (60s)
+- DEFAULT_MAX_TOOL_ROUNDS (5)
+- TOKEN_PREVIEW_LENGTH (8)
+- SPAWN_ALLOW_LOOKBACK (10)
+- EFFECT_FORWARDER_CHANNEL_CAPACITY (16)
+- EVENT_BUS_CHANNEL_CAPACITY (16)
 
 ## Description
 
