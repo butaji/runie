@@ -1851,42 +1851,42 @@
 {
   "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
   "title": "Add Grok TUI keystroke replay and tool mapping",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "add-grok-provider-event-translator-and-headless-replay.md",
   "title": "Add Grok provider-event translator and headless replay",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "add-plan-file-artifact-and-plan-mode-rpc.md",
   "title": "Add plan file artifact and plan mode RPC",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "add-session-compaction-with-threshold-and-tool-pair-summarization.md",
   "title": "Add session compaction with threshold and tool-pair summarization",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md",
   "title": "Add testable TUI bootstrap with ProviderFactory and keystrokes",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "adopt-camino-utf8pathbuf-for-internal-paths.md",
   "title": "Adopt camino Utf8PathBuf for internal paths",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "audit-tasks-for-events-based-ssot-actor-compliance.md",
   "title": "Audit tasks for events-based SSOT actor compliance",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "build-runie-vs-grok-build-comparison-harness.md",
   "title": "Build Runie vs Grok Build comparison harness",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "collapse-durablecoreevent-into-event-enum.md",
@@ -1901,77 +1901,77 @@
 {
   "file": "compare-model-provider-switching-and-fix-gaps.md",
   "title": "Compare model/provider switching and fix gaps",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "compare-plan-mode-and-context-workflows-and-fix-gaps.md",
   "title": "Compare plan mode and context workflows and fix gaps",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "compare-session-persistence-resumption-and-fix-gaps.md",
   "title": "Compare session persistence and resumption and fix gaps",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "compare-subagent-mcp-support-and-fix-gaps.md",
   "title": "Compare subagent and MCP support and fix gaps",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "compare-tool-execution-permission-flows-and-fix-gaps.md",
   "title": "Compare tool execution and permission flows and fix gaps",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "create-grok-build-fixture-recorder-and-record-fixtures.md",
   "title": "Create Grok Build fixture recorder and record fixtures",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "enforce-observed-async-work-in-all-actors.md",
   "title": "Enforce observed async work in all actors",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "execute-five-round-architecture-review-roadmap.md",
   "title": "Execute five-round architecture review roadmap",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "execute-magic-numbers-cleanup-roadmap.md",
   "title": "Execute magic numbers cleanup roadmap",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "execute-second-pass-architecture-review-roadmap.md",
   "title": "Execute second-pass architecture review roadmap",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "execute-third-pass-architecture-review-roadmap.md",
   "title": "Execute third-pass architecture review roadmap",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "feature-gate-heavy-runie-core-subsystems.md",
   "title": "Feature-gate heavy `runie-core` subsystems",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "finish-replacing-custom-tui-widgets.md",
   "title": "Finish replacing custom TUI widgets",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "finish-replacing-remaining-custom-helpers-with-crates.md",
   "title": "Finish replacing remaining custom helpers with crates",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "fold-lifecycle-state-machine-into-provider-events.md",
   "title": "Fold lifecycle state machine into provider events",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "instrument-actor-handlers-with-tracing.md",
@@ -1981,37 +1981,37 @@
 {
   "file": "migrate-session-persistence-to-rusqlite.md",
   "title": "Migrate session persistence to rusqlite",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "move-tunable-values-from-constants-to-config.md",
   "title": "Move tunable values from constants to config",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "prepare-grok-build-reference-for-comparison.md",
   "title": "Prepare Grok Build reference for comparison",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "preserve-rich-message-and-tool-data-in-durable-events.md",
   "title": "Preserve rich message and tool data in durable events",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "propagate-secretstring-through-provider-stack.md",
   "title": "Propagate SecretString through provider stack",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "regenerate-config-schema-and-fix-permission-mode-description.md",
   "title": "Regenerate config schema and fix PermissionMode description",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "remove-modelfromprovider-api-key-field-and-use-keyring.md",
   "title": "Remove api_key field from ModelProvider and use keyring",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "remove-unused-workspace-dependencies.md",
@@ -2021,12 +2021,12 @@
 {
   "file": "replace-bash-safety-heuristic-with-os-sandboxing.md",
   "title": "Replace bash safety heuristic with OS sandboxing",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "replace-custom-form-rendering-with-tui-textarea.md",
   "title": "Replace custom form rendering with `tui-textarea`/`tui-input`",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "replace-custom-input-box-with-tui-textarea.md",
@@ -2036,37 +2036,37 @@
 {
   "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
   "title": "Replace mock provider keyword heuristics with fixtures",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "replace-production-expect-panics-with-result-propagation.md",
   "title": "Replace production `expect`/`unwrap` panics with `Result` propagation",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "replay-sessions-via-events-through-appstate.md",
   "title": "Replay sessions via events through `AppState`",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "restructure-runieerror-with-typed-variants.md",
   "title": "Restructure `RunieError` with typed variants",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "route-tui-autocomplete-through-inputactor-events.md",
   "title": "Route TUI autocomplete through `InputActor` events",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "scope-diff-comparison-to-headless-unified-output.md",
   "title": "Scope diff comparison to headless unified output",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
   "title": "Spike: evaluate async-openai or rig-core for the provider stack",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "split-panel-handler-into-focused-modules.md",
@@ -2076,75 +2076,75 @@
 {
   "file": "split-ractor-turn-actor-into-focused-modules.md",
   "title": "Split `ractor_turn.rs` into focused modules",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "split-runie-agent-actor-into-focused-modules.md",
   "title": "Split `runie-agent/src/actor.rs` into focused modules",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "split-uiactor-into-focused-modules.md",
   "title": "Split `ui_actor.rs` into focused modules",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "split-large-core-files-into-focused-modules.md",
   "title": "Split large core files into focused modules",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "stop-flattening-provider-errors-into-strings.md",
   "title": "Stop flattening provider errors into strings",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
   "title": "Unify edit_file and hashline_edit on patch-based edits",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "unify-form-submit-paths-through-command-registry.md",
   "title": "Unify form submit paths through command registry",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
   "title": "Use MCP tool annotations instead of custom permission constants",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "use-similar-diffy-for-edit-file.md",
   "title": "Use `similar`/`diffy` for `edit_file`",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "use-tree-sitter-for-find-definitions.md",
   "title": "Use `tree-sitter` for `find_definitions`",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "use-tui-popup-for-popup-shell.md",
   "title": "Use tui-popup for popup shell",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "use-tui-scrollview-for-message-feed.md",
   "title": "Use tui-scrollview for message feed",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "wire-modelclient-turnsession-into-provider-factory-or-delete.md",
   "title": "Wire ModelClient/TurnSession into provider factory or delete",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "wire-rmcp-client-or-remove-mcp-config.md",
   "title": "Wire `rmcp` client or remove MCP config",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "write-runie-vs-grok-build-findings-report.md",
   "title": "Write Runie vs Grok Build findings report",
-  "status": "todo"
+  "status": "done"
 }
