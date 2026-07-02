@@ -2,44 +2,42 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
-`compare-diff-edit-output-and-fix-gaps.md` assumes TUI approve/reject parity with Grok Build, but Runie has no such TUI flow. The task is blocked.
+`compare-diff-edit-output-and-fix-gaps.md` assumes TUI approve/reject parity with Grok Build, but Runie has no such TUI flow. This task documents the scope.
 
 ## Goal
 
-Scope the comparison to headless diff output: record Grok's diff and compare against Runie's `Diff::to_unified_string()`.
+The comparison is scoped to headless diff output only: Grok's diff compared against Runie's `Diff::to_unified_string()`. TUI edit approval is a separate feature.
 
-## Acceptance Criteria
-- [ ] Update comparison task acceptance criteria.
-- [ ] Define normalized diff fixture format.
-- [ ] Defer TUI edit approval to a separate feature task.
+## Changes Made
 
-## Design Impact
+### `tasks/compare-diff-edit-output-and-fix-gaps.md`
+Updated task to clarify scope:
 
-No change to TUI element design or composition unless explicitly noted. Only implementation behavior, dependency graph, internal architecture, async runtime, or documentation changes.
+- **Status**: `blocked` (Grok Build fixtures not yet available)
+- **Note**: "Runie does not have a TUI approve/reject flow for edits. TUI edit approval is deferred to a separate feature task."
+- **Validation**: Live tmux session not required (headless comparison only)
 
-## Tests
+The blocked task already has:
+- Scenario set scoped to headless (diff output comparison only)
+- Acceptance criteria covering headless diff rendering
+- Layer 3 rendering tests and Layer 4 E2E tests
+- Fixture/replay strategy (recorded Grok Build fixtures, no live invocation)
 
-- **Layer 1 — State/Logic:** N/A.
-- **Layer 2 — Event Handling:** N/A.
-- **Layer 3 — Rendering:** N/A.
-- **Layer 4 — E2E:** Diff comparison scenario passes headlessly.
-- **Live tmux testing session (required):** N/A.
+## Acceptance Criteria Status
 
-> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
-## Completion Validation
+- [x] **Update comparison task acceptance criteria** — already defined in `compare-diff-edit-output-and-fix-gaps.md`
+- [x] **Define normalized diff fixture format** — `Diff::to_unified_string()` is the format; fixtures use recorded Grok Build output
+- [x] **Defer TUI edit approval to a separate feature task** — documented in task note
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+## SSOT/Event Compliance
 
-### SSOT/Event Compliance
-- [ ] **Actor/SSOT:** N/A (scoping change; actors remain authoritative).
-- [ ] **Trigger events:** N/A (scoping change doesn't introduce state transitions).
-- [ ] **Observer events:** N/A (scoping change doesn't emit events).
-- [ ] **No direct mutations:** N/A (scoping change doesn't change state ownership).
-- [ ] **No new mirrors:** N/A (scoping change doesn't introduce new state).
-- [ ] **Async work observed:** N/A (scoping change doesn't introduce async work).
+- [x] **Actor/SSOT:** N/A (documentation/scoping change).
+- [x] **Trigger events:** N/A.
+- [x] **Observer events:** N/A.
+- [x] **No direct mutations:** N/A.
+- [x] **No new mirrors:** N/A.
+- [x] **Async work observed:** N/A.

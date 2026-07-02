@@ -325,7 +325,7 @@
 {"file": "route-permission-clearance-through-permissionactor.md", "title": "Route permission clearance through `PermissionActor`", "status": "done"}
 {"file": "route-provider-confignone-through-credentialresolver.md", "title": "Route provider config=None through CredentialResolver", "status": "done"}
 {"file": "route-tui-autocomplete-through-inputactor-events.md", "title": "Route TUI autocomplete through `InputActor` events", "status": "done"}
-{"file": "scope-diff-comparison-to-headless-unified-output.md", "title": "Scope diff comparison to headless unified output", "status": "todo"}
+{"file": "scope-diff-comparison-to-headless-unified-output.md", "title": "Scope diff comparison to headless unified output", "status": "done"}
 {"file": "share-configured-reqwest-client-for-provider.md", "title": "Share configured reqwest client for provider", "status": "done"}
 {"file": "shorten-approval-sink-timeout-and-wire-cancellation.md", "title": "Shorten approval sink timeout and wire cancellation", "status": "done"}
 {"file": "simplify-core-keybinding-parsing-with-crokey.md", "title": "Simplify core keybinding parsing with crokey", "status": "done"}
