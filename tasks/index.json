@@ -179,7 +179,7 @@
 {"file": "fix-turn-projection-retain-bug-and-delete-mirrored-queue.md", "title": "Fix turn projection retain bug and delete mirrored queue", "status": "done"}
 {"file": "fix-unix-only-dependencies-in-runie-core.md", "title": "Fix Unix-only dependencies in `runie-core`", "status": "done"}
 {"file": "fix-view-cache-double-rebuild-and-use-cached-gen.md", "title": "Fix view cache double rebuild and use cached_gen", "status": "done"}
-{"file": "fold-lifecycle-state-machine-into-provider-events.md", "title": "Fold lifecycle state machine into provider events", "status": "todo"}
+{"file": "fold-lifecycle-state-machine-into-provider-events.md", "title": "Fold lifecycle state machine into provider events", "status": "done"}
 {"file": "fold-runie-protocol-into-core.md", "title": "Fold `runie-protocol` crate into `runie-core`", "status": "done"}
 {"file": "format-permission-request-for-human-readable-display.md", "title": "Format permission request for human-readable display", "status": "done"}
 {"file": "fuzzy-history-search-with-sublime-fuzzy.md", "title": "Fuzzy history search with sublime-fuzzy", "status": "done"}

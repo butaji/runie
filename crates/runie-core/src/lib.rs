@@ -54,7 +54,6 @@ pub use mcp::{McpConnectionManager, McpTool, SchemaCache};
 /// Static labels and text constants.
 pub mod labels;
 pub mod layout;
-pub mod lifecycle;
 pub mod location;
 pub mod login_flow;
 pub mod markdown;
@@ -149,7 +148,6 @@ pub use keybindings::{
     default_keybindings, event_from_name, load_keybindings, merged_keybindings,
     parse_keybindings_json,
 };
-pub use lifecycle::LifecycleState;
 pub use login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
     LoginStep,
