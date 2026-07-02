@@ -2071,7 +2071,7 @@
 {
   "file": "split-panel-handler-into-focused-modules.md",
   "title": "Split `panel_handler.rs` into focused modules",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "split-ractor-turn-actor-into-focused-modules.md",

@@ -19,6 +19,9 @@ use super::{CommandCategory, CommandFlow, CommandResult};
 /// Handler for form submissions.
 pub type FormHandler = fn(&mut AppState, &str) -> CommandResult;
 
+/// Builder function for panel stacks.
+type PanelBuilder = std::sync::Arc<dyn Fn(&mut AppState, &str) -> CoreStack + Send + Sync>;
+
 /// What a command does — replaces both `dsl::spec::CommandKind` and `declarative::types::CommandKind`.
 #[derive(Clone)]
 pub enum Action {
@@ -33,9 +36,7 @@ pub enum Action {
     /// Show a static message.
     Msg(&'static str),
     /// Open a panel stack (for complex dialogs).
-    Panel {
-        builder: std::sync::Arc<dyn Fn(&mut AppState, &str) -> CoreStack + Send + Sync>,
-    },
+    Panel { builder: PanelBuilder },
 }
 
 impl Action {

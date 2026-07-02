@@ -244,7 +244,7 @@ fn build_trailing_cursor_line(
     token_held: bool,
 ) -> Line<'static> {
     let prefix = if is_empty { GLYPH_USER } else { "  " };
-    let mut spans = vec![Span::styled(prefix, chevron_style.clone())];
+    let mut spans = vec![Span::styled(prefix, *chevron_style)];
     if token_held {
         spans.push(Span::styled(" ", style_input_cursor()));
     }
