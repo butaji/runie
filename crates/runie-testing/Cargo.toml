@@ -22,5 +22,6 @@ serde_json.workspace = true
 parking_lot.workspace = true
 uuid.workspace = true
 include_dir.workspace = true
+regex.workspace = true
 
 [dev-dependencies]

@@ -4121,6 +4121,7 @@ dependencies = [
  "futures",
  "include_dir",
  "parking_lot",
+ "regex",
  "runie-agent",
  "runie-core",
  "runie-provider",

@@ -1,5 +1,6 @@
 //! Common test fixtures.
 
+pub mod grok_build;
 pub mod minimax;
 pub mod openai;
 
