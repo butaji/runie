@@ -382,7 +382,7 @@
   {
     "file": "consolidate-message-validation-in-one-module.md",
     "title": "Consolidate message validation in one module",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "consolidate-provider-credential-resolver-duplication.md",

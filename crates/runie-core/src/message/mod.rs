@@ -2,10 +2,22 @@
 //!
 //! Canonical definitions live in `crate::proto::message`. This module re-exports
 //! them for backward compatibility and adds runie-core-specific `From` conversions.
+//!
+//! ## Validation
+//!
+//! Use [`validate_messages`] to check a sequence for dangling tool calls and orphan
+//! results. Use [`sanitize_messages`] to validate AND trim whitespace.
 
 pub use crate::proto::message::{ChatMessage, MessageMetadata, Part, Role, ToolCall};
 
+pub use crate::proto::message::{validate_message, validate_messages, SanitizeError};
+
 pub use crate::proto::message::now;
+
+/// Validate and trim a message sequence.
+///
+/// See [`crate::proto::message::validate_messages`] for the underlying validation.
+pub use crate::sanitize::sanitize_messages;
 
 impl From<crate::tool::ParsedToolCall> for ToolCall {
     fn from(call: crate::tool::ParsedToolCall) -> Self {
