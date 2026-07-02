@@ -244,7 +244,7 @@
 {"file": "remove-duplicate-input-mutation-in-uiactor.md", "title": "Remove duplicate input mutation in UiActor", "status": "done"}
 {"file": "remove-legacy-diff-fallback-parser.md", "title": "Remove legacy diff fallback parser", "status": "done"}
 {"file": "remove-manual-env-overrides-from-config-layers.md", "title": "Remove manual env overrides from config layers", "status": "done"}
-{"file": "remove-modelfromprovider-api-key-field-and-use-keyring.md", "title": "Remove api_key field from ModelProvider and use keyring", "status": "todo"}
+{"file": "remove-modelfromprovider-api-key-field-and-use-keyring.md", "title": "Remove api_key field from ModelProvider and use keyring", "status": "done"}
 {"file": "remove-mutex-eventbus-wrappers-from-actor-state.md", "title": "Remove `Mutex<EventBus>` wrappers from actor `State`", "status": "done"}
 {"file": "remove-or-make-real-providerprotocol-abstraction.md", "title": "Remove or make real the `ProviderProtocol` abstraction", "status": "wontfix"}
 {"file": "remove-ractor-send-message-alias.md", "title": "Remove ractor send/send_message alias", "status": "done"}
