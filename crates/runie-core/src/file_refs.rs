@@ -1,8 +1,10 @@
 use base64::Engine;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::{DirEntry, WalkBuilder};
+use regex::Regex;
 use std::ops::RangeInclusive;
 use std::path::Path;
+use std::sync::LazyLock;
 
 /// Parsed result from a `@path` or `@path:start-end` reference.
 #[derive(Debug, Clone)]
@@ -15,6 +17,19 @@ pub struct ParsedFileRef {
     pub original: String,
 }
 
+/// Compiled regex for `@path:start-end` file references.
+///
+/// Pattern: `^(?<path>.+?):(?<start>\d+)-(?<end>\d+)$`
+///
+/// Guarantees:
+/// - One colon separates path from range (regex ensures exactly one `:` in the matched part).
+/// - Exactly one hyphen between digits (the `\d+-\d+` sub-pattern).
+/// - Both start and end are non-zero (explicit check after capture).
+/// - Inverted ranges (`start > end`) fall through to plain-ref behavior.
+static FILE_REF_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?<path>.+?):(?<start>\d+)-(?<end>\d+)$").expect("file-ref regex is valid")
+});
+
 /// Parse a file reference string, supporting optional `:start-end` line range suffix.
 ///
 /// Examples:
@@ -26,31 +41,31 @@ pub fn parse_file_ref(input: &str) -> Option<ParsedFileRef> {
         return None;
     }
 
-    let Some(colon_pos) = find_range_separator(input) else {
-        return Some(plain_ref(input, input));
+    let Some(caps) = FILE_REF_RE.captures(input) else {
+        // No range suffix (e.g. "file.txt", "file.txt:100", "file.txt:").
+        return Some(ParsedFileRef {
+            path: input.to_owned(),
+            range: None,
+            original: input.to_owned(),
+        });
     };
 
-    let path = input[..colon_pos].to_string();
-    let range_str = &input[colon_pos + 1..];
+    let path = caps["path"].to_string();
+    let start: u32 = caps["start"].parse().ok()?;
+    let end: u32 = caps["end"].parse().ok()?;
 
-    if !is_valid_range_str(range_str) {
-        return Some(plain_ref(input, input));
+    // Line 0 is not valid (same guard as the old manual parser).
+    if start == 0 || end == 0 {
+        return None;
     }
 
-    // Try to parse the range.
-    let parts: Vec<&str> = range_str.split('-').collect();
-    let start: u32 = match parts[0].trim().parse() {
-        Ok(n) if n != 0 => n,
-        _ => return None, // unparseable or zero — unrecoverable
-    };
-    let end: u32 = match parts[1].trim().parse() {
-        Ok(n) if n != 0 => n,
-        _ => return None,
-    };
-
     if start > end {
-        // Inverted range — path is the part before the colon.
-        return Some(plain_ref(&path, input));
+        // Inverted range — treat as plain path.
+        return Some(ParsedFileRef {
+            path,
+            range: None,
+            original: input.to_owned(),
+        });
     }
 
     Some(ParsedFileRef {
@@ -58,35 +73,6 @@ pub fn parse_file_ref(input: &str) -> Option<ParsedFileRef> {
         range: Some(start..=end),
         original: input.to_owned(),
     })
-}
-
-/// Return a plain ParsedFileRef with an explicit path and the original input preserved.
-fn plain_ref(path: &str, original: &str) -> ParsedFileRef {
-    ParsedFileRef {
-        path: path.to_owned(),
-        range: None,
-        original: original.to_owned(),
-    }
-}
-
-/// Check if a range suffix string has exactly one hyphen (valid for range parsing).
-fn is_valid_range_str(s: &str) -> bool {
-    s.matches('-').count() == 1 && !s.starts_with('-') && !s.ends_with('-')
-}
-
-/// Find the position of the `:` that separates the path from a line range suffix.
-/// Requires a `:` followed by at least one digit (valid range start).
-fn find_range_separator(input: &str) -> Option<usize> {
-    // Find the last `:` in the string.
-    let last_colon = input.rfind(':')?;
-
-    // It must be followed by at least one digit (start of line number).
-    let after = input.get(last_colon + 1..)?;
-    if !after.starts_with(|c: char| c.is_ascii_digit()) {
-        return None;
-    }
-
-    Some(last_colon)
 }
 
 #[derive(Debug, Clone)]
