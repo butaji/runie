@@ -346,7 +346,7 @@
 {"file": "standardize-error-types-on-thiserror-with-source-chains.md", "title": "Standardize error types on thiserror with source chains", "status": "done"}
 {"file": "standardize-session-persistence-on-jsonl.md", "title": "Standardize session persistence on JSONL", "status": "done"}
 {"file": "stop-dotenvy-from-mutating-process-environment.md", "title": "Stop dotenvy from mutating process environment", "status": "done"}
-{"file": "stop-flattening-provider-errors-into-strings.md", "title": "Stop flattening provider errors into strings", "status": "todo"}
+{"file": "stop-flattening-provider-errors-into-strings.md", "title": "Stop flattening provider errors into strings", "status": "done"}
 {"file": "store-and-await-headlessruntime-actor-handles.md", "title": "Store and await HeadlessRuntime actor handles", "status": "done"}
 {"file": "store-provider-api-keys-in-keyring-not-config.md", "title": "Store provider API keys in OS keyring, not plain `config.toml`", "status": "done"}
 {"file": "subscribe-tui-to-initial-facts-before-leader-start.md", "title": "Subscribe TUI to initial facts before leader start", "status": "done"}

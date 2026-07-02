@@ -103,8 +103,15 @@ pub enum ModelError {
 
 impl From<ProviderError> for ModelError {
     fn from(e: ProviderError) -> Self {
-        // Store the error message as a string for serialization
-        ModelError::Other(e.to_string())
+        use ProviderError::*;
+        match e {
+            // Typed: RateLimit preserves retry info (e.g., Retry-After header).
+            RateLimit { retry_after_secs } => ModelError::RateLimit { retry_after_secs },
+            // Typed: ContextLength — provider reports the limit; use it as both limit and used.
+            ContextLength(n) => ModelError::ContextLength { limit: n, used: n },
+            // All other provider errors fall through to Other, preserving the full message.
+            _ => ModelError::Other(e.to_string()),
+        }
     }
 }
 
