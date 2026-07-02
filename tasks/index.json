@@ -1891,7 +1891,7 @@
 {
   "file": "collapse-durablecoreevent-into-event-enum.md",
   "title": "Collapse `DurableCoreEvent` into the canonical `Event` enum",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "collapse-command-types-to-single-command-action-enum.md",
