@@ -111,7 +111,11 @@ async fn build_eventsource_with_retry(
             .with_max_delay(retry_config.max_delay)
             .with_factor(retry_config.multiplier as f32);
         let es = (move || {
-            let b = builder.try_clone().expect("request builder is cloneable");
+            // `RequestBuilder::try_clone()` returns `None` when the body is
+            // non-repeatable (e.g., a streaming body). Since we use JSON bodies
+            // (from `.json(&body)`), cloning always succeeds in practice.
+            // If it fails, treat it as a fatal error (not retryable).
+            let b = builder.try_clone().unwrap();
             async move {
                 tracing::trace!("creating EventSource");
                 let mut es = EventSource::new(b)

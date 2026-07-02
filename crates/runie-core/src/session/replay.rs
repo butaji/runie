@@ -93,11 +93,15 @@ pub fn session_to_durable_events(session: &crate::session::Session) -> Vec<Durab
     if let Some(name) = &session.display_name {
         events.push(DurableCoreEvent::SessionRenamed { name: name.clone() });
     }
-    // Include tree snapshot if available
+    // Include tree snapshot if available.
+    // Snapshot errors indicate arena inconsistency — a bug in the tree
+    // implementation. Log and skip the snapshot so session save can proceed.
     if let Some(ref tree) = session.session_tree {
-        events.push(DurableCoreEvent::TreeSnapshot {
-            snapshot: tree.to_snapshot(),
-        });
+        if let Ok(snapshot) = tree.to_snapshot() {
+            events.push(DurableCoreEvent::TreeSnapshot { snapshot });
+        } else {
+            tracing::warn!("session tree snapshot failed — skipping for this session save");
+        }
     }
     events
 }
@@ -406,7 +410,7 @@ mod tests {
         let tree = SessionTree::from_messages(&[user_msg, assistant_msg]);
 
         // Get snapshot (avoids .clone() on SessionTree which has a serialize bug)
-        let snapshot = tree.to_snapshot();
+        let snapshot = tree.to_snapshot().unwrap();
         assert_eq!(snapshot.nodes.len(), 2, "tree should have 2 nodes");
         assert_eq!(snapshot.root_id, "msg1");
 
@@ -427,7 +431,7 @@ mod tests {
         // Reconstruct tree from round-tripped snapshot and verify
         let restored_tree = SessionTree::from_snapshot(&roundtripped)
             .expect("snapshot should deserialize");
-        let restored_snapshot = restored_tree.to_snapshot();
+        let restored_snapshot = restored_tree.to_snapshot().unwrap();
         assert_eq!(restored_snapshot.root_id, snapshot.root_id);
         assert_eq!(restored_snapshot.nodes.len(), snapshot.nodes.len());
 
@@ -436,7 +440,7 @@ mod tests {
         loaded.update(event.clone());
         let loaded_tree = loaded.session.session_tree.clone()
             .expect("tree should be restored via AppState update");
-        let loaded_snapshot = loaded_tree.to_snapshot();
+        let loaded_snapshot = loaded_tree.to_snapshot().unwrap();
         assert_eq!(loaded_snapshot.root_id, snapshot.root_id);
         assert_eq!(loaded_snapshot.nodes.len(), snapshot.nodes.len());
     }

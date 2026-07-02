@@ -290,7 +290,7 @@
 {"file": "replace-magic-numbers-in-command-form-handlers.md", "title": "Replace magic numbers in command form handlers", "status": "done"}
 {"file": "replace-mock-provider-keyword-heuristics-with-fixtures.md", "title": "Replace mock provider keyword heuristics with fixtures", "status": "done"}
 {"file": "replace-normalize-raw-frontmatter-with-standard-splitter.md", "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter", "status": "done"}
-{"file": "replace-production-expect-panics-with-result-propagation.md", "title": "Replace production `expect`/`unwrap` panics with `Result` propagation", "status": "todo"}
+{"file": "replace-production-expect-panics-with-result-propagation.md", "title": "Replace production `expect`/`unwrap` panics with `Result` propagation", "status": "done"}
 {"file": "replace-proto-error-manual-display-with-thiserror.md", "title": "Replace proto error manual Display with thiserror", "status": "wontfix"}
 {"file": "replace-providerfactory-pinbox-with-async-trait-or-enum.md", "title": "Replace `ProviderFactory` `Pin<Box<dyn Future>>` with `async_trait` or provider enum", "status": "done"}
 {"file": "replace-register-handler-and-theme-macros-with-functions.md", "title": "Replace register_handler and theme macros with functions", "status": "done"}

@@ -8,6 +8,17 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use parking_lot::Mutex;
 
+/// Error returned when a session tree snapshot cannot be created.
+///
+/// This only happens if the arena is in an inconsistent state — e.g.,
+/// `walk()` returned a `NodeId` that is no longer present in the arena.
+/// That indicates a bug in the tree implementation, not recoverable user data.
+#[derive(Debug, thiserror::Error)]
+pub enum TreeSnapshotError {
+    #[error("arena node not found during snapshot: node index {0}")]
+    ArenaNodeMissing(usize),
+}
+
 /// A node in the session tree — holds the data, not the tree structure.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TreeNodeData {
@@ -128,7 +139,9 @@ impl Serialize for SessionTree {
     where
         S: serde::Serializer,
     {
-        self.to_snapshot().serialize(serializer)
+        self.to_snapshot()
+            .map_err(|e| serde::ser::Error::custom(e.to_string()))?
+            .serialize(serializer)
     }
 }
 
@@ -146,9 +159,12 @@ impl<'de> Deserialize<'de> for SessionTree {
 impl Clone for SessionTree {
     fn clone(&self) -> Self {
         // Serialize to snapshot and deserialize to get a proper deep clone.
-        let snapshot = self.to_snapshot();
-        Self::from_snapshot(&snapshot)
-            .expect("session tree clone failed — snapshot should always be valid")
+        // If this fails, the arena is in an inconsistent state — a bug in the
+        // session-tree implementation. `Clone::clone()` must return `Self`, so
+        // panicking here is the only option; it signals a violation of the
+        // internal invariant that `walk()` only returns valid arena nodes.
+        let snapshot = self.to_snapshot().expect("tree clone: arena node missing — internal bug");
+        Self::from_snapshot(&snapshot).expect("tree clone: snapshot round-trip failed — internal bug")
     }
 }
 
@@ -236,15 +252,20 @@ impl SessionTree {
     }
 
     /// Serialize the tree to a snapshot (stable across serialization).
-    pub fn to_snapshot(&self) -> SessionTreeSnapshot {
+    pub fn to_snapshot(&self) -> Result<SessionTreeSnapshot, TreeSnapshotError> {
         // Collect all nodes by walking the tree
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         let mut root_id = String::new();
 
         // Use the existing walk() method to iterate all nodes
-        for (_, node_id) in self.walk() {
-            let data = self.arena.get(node_id).expect("node should exist").get().clone();
+        for (idx, node_id) in self.walk() {
+            let data = self
+                .arena
+                .get(node_id)
+                .ok_or(TreeSnapshotError::ArenaNodeMissing(idx))?
+                .get()
+                .clone();
             let msg_id = data.message.id.clone();
 
             if self.root_id == Some(node_id) {
@@ -271,12 +292,12 @@ impl SessionTree {
             .filter_map(|id| self.arena.get(*id).map(|n| n.get().message.id.clone()))
             .collect();
 
-        SessionTreeSnapshot {
+        Ok(SessionTreeSnapshot {
             current_branch,
             root_id,
             nodes,
             edges,
-        }
+        })
     }
 
     /// Deserialize from a snapshot, rebuilding the arena.

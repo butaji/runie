@@ -9,7 +9,7 @@ use crate::model::state::AppState;
 use crate::model::Role;
 
 // Lazy-initialized regex patterns (compiled once at first use).
-// Using LazyLock instead of unwrap on construction handles init errors gracefully.
+// The patterns are hardcoded and syntactically valid — unwrap documents this invariant.
 static FENCE_PAT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap()
 });
@@ -208,6 +208,7 @@ fn truncate_fenced_code_blocks(content: &mut String, keep: usize) -> (usize, boo
     let mut last_end = 0;
 
     for cap in FENCE_PAT.captures_iter(content) {
+        // `captures_iter` always yields at least the full match at index 0.
         let full = cap.get(0).unwrap();
         let lang = cap.get(1).map(|m| m.as_str()).unwrap_or("");
         let inner = cap.get(2).map(|m| m.as_str()).unwrap_or("");
@@ -256,6 +257,7 @@ fn truncate_details_blocks(content: &mut String, keep: usize) -> (usize, bool) {
     let mut last_end = 0;
 
     for cap in DETAILS_PAT.captures_iter(content) {
+        // `captures_iter` always yields at least the full match at index 0.
         let full = cap.get(0).unwrap();
         let inner = cap.get(1).map(|m| m.as_str()).unwrap_or("");
 

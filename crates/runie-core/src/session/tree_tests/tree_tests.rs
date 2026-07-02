@@ -143,7 +143,7 @@ fn to_snapshot_and_back_preserves_tree() {
     let tree = SessionTree::from_messages(&messages);
 
     // Serialize
-    let snapshot = tree.to_snapshot();
+    let snapshot = tree.to_snapshot().unwrap();
 
     // Deserialize
     let restored = SessionTree::from_snapshot(&snapshot).expect("should restore");
@@ -191,7 +191,7 @@ fn to_snapshot_preserves_fork() {
     let _path = tree.fork_at(1).expect("fork should succeed");
 
     // Serialize
-    let snapshot = tree.to_snapshot();
+    let snapshot = tree.to_snapshot().unwrap();
 
     // Verify snapshot has the fork
     assert!(snapshot.nodes.len() >= 4); // 3 original + 1 fork
@@ -218,7 +218,7 @@ fn to_snapshot_preserves_current_branch() {
     tree.navigate_to(&[root, first_child]);
 
     // Serialize
-    let snapshot = tree.to_snapshot();
+    let snapshot = tree.to_snapshot().unwrap();
 
     // Verify snapshot has the branch
     assert_eq!(snapshot.current_branch.len(), 2); // root + first_child
