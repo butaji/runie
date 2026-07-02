@@ -313,7 +313,7 @@
 {"file": "replay-sessions-via-events-through-appstate.md", "title": "Replay sessions via events through `AppState`", "status": "todo"}
 {"file": "rescope-terminal-capability-task-to-current-module.md", "title": "Rescope terminal capability task to current module layout", "status": "done"}
 {"file": "resolve-runie-util-micro-crate-vs-core-re-exports.md", "title": "Resolve runie-util micro-crate vs core re-exports", "status": "done"}
-{"file": "restructure-runieerror-with-typed-variants.md", "title": "Restructure `RunieError` with typed variants", "status": "todo"}
+{"file": "restructure-runieerror-with-typed-variants.md", "title": "Restructure `RunieError` with typed variants", "status": "done"}
 {"file": "rewrite-agentsmd-layer4-example-and-remove-stale-checksum-row.md", "title": "Rewrite AGENTS.md Layer-4 example and remove stale checksum row", "status": "done"}
 {"file": "rewrite-appstate-structural-tests-to-not-mutate-agentstate.md", "title": "Rewrite AppState structural tests to not mutate AgentState", "status": "done"}
 {"file": "rewrite-turn-projections-tests-to-not-mutate-agentstate.md", "title": "Rewrite turn projections tests to not mutate AgentState", "status": "done"}

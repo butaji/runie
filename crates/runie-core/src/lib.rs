@@ -136,7 +136,7 @@ pub use declarative::{CommandDef, DeclarativeLoader, SkillDef, Trigger};
 pub use diff::{Diff, DiffHunk, DiffLine};
 pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
-pub use error::{RunieError, RunieErrorKind};
+// NOTE: RunieError/RunieErrorKind were deleted — see crates/runie-core/src/error.rs note.
 pub use event::Event;
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use harness_skills::{
