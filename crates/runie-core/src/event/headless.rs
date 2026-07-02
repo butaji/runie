@@ -207,7 +207,8 @@ mod tests {
             id: "c1".into(),
             duration_secs: 1.0,
             output: "done".into(),
-        };
+        
+        input: None,};
         let result = HeadlessEvent::try_from_event(&event);
         assert!(result.is_some());
         assert!(matches!(result.unwrap(), HeadlessEvent::ToolCallEnd { id } if id == "c1"));

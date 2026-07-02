@@ -67,14 +67,10 @@ impl Event {
         Event::ToolStart { id, name, input }
     }
     pub fn agent_tool_end(id: String, duration_secs: f64, output: String) -> Self {
-        Event::ToolEnd {
-            id,
-            duration_secs,
-            output,
-        }
+        Event::tool_end(id, duration_secs, output)
     }
     pub fn agent_response(id: String, content: String) -> Self {
-        Event::Response { id, content }
+        Event::response(id, content)
     }
     pub fn agent_turn_complete(id: String, duration_secs: f64) -> Self {
         Event::TurnComplete { id, duration_secs }

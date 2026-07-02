@@ -104,7 +104,10 @@ fn test_event_triggers_snapshot_update() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello back".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
 
     let snap2 = state.snapshot();

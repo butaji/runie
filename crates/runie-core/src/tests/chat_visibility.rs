@@ -79,7 +79,10 @@ fn verify_agent_response_visible(state: &mut AppState, height: usize) {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "I'll list the files.".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     assert!(
         latest_is_visible(state, height),
@@ -106,7 +109,8 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    });
+    
+        input: None,});
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(
@@ -120,7 +124,10 @@ fn verify_final_response_visible(state: &mut AppState, height: usize) {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(
@@ -161,7 +168,8 @@ fn large_tool_output_bottom_lines_visible() {
         id: "".to_string(),
         duration_secs: 0.5,
         output,
-    });
+    
+        input: None,});
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -272,7 +280,10 @@ fn scroll_zero_means_bottom_after_any_event() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "a".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     let v1 = crate::tests::visible_helper::compute_viewport(&mut state, height);
     assert!(
@@ -283,7 +294,10 @@ fn scroll_zero_means_bottom_after_any_event() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "b".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     let v2 = crate::tests::visible_helper::compute_viewport(&mut state, height);
     assert!(
@@ -294,7 +308,10 @@ fn scroll_zero_means_bottom_after_any_event() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "c".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     let v3 = crate::tests::visible_helper::compute_viewport(&mut state, height);
     assert!(
@@ -307,6 +324,9 @@ fn scroll_zero_means_bottom_after_any_event() {
         state.update(crate::Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -342,11 +362,17 @@ fn streaming_response_appends_not_replaces() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "world".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
 
     let assistant_msgs: Vec<_> = state
@@ -381,7 +407,8 @@ fn tool_end_does_not_duplicate_messages() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    });
+    
+        input: None,});
     let after_count = state.session.messages.len();
 
     assert_eq!(
@@ -400,7 +427,10 @@ fn total_lines_increases_with_each_event() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "a".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     let t1 = state.snapshot().total_lines;
     assert!(t1 > t0, "total_lines should increase after response");
@@ -408,7 +438,10 @@ fn total_lines_increases_with_each_event() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "b".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
     let t2 = state.snapshot().total_lines;
     assert!(t2 >= t1, "total_lines should not decrease after append");

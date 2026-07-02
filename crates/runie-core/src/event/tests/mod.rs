@@ -27,7 +27,8 @@ fn fact_events_return_none() {
             id: "t1".into(),
             duration_secs: 0.5,
             output: "ok".into(),
-        },
+        
+        input: None,},
         Event::ValidationFailed {
             provider: "openai".into(),
             key: "sk-xxx".into(),

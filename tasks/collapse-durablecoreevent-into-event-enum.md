@@ -2,23 +2,42 @@
 
 ## Status
 
-`todo`
+`partial`
 
 ## Description
 
 `crates/runie-core/src/event/durable.rs` maintains a parallel `DurableCoreEvent` enum with ~300 lines of hand-written `TryFrom` conversions. A single canonical `Event` enum with `#[serde(skip)]` transient fields can replace both enums.
 
+## Progress
+
+### Completed
+
+1. Added `#[serde(skip)]` to transient fields in `Event` variants:
+   - `Response.role`, `Response.timestamp`, `Response.provider`
+   - `ToolEnd.input`
+
+2. Added helper functions `Event::response()` and `Event::tool_end()` for convenience
+
+3. Updated `DurableCoreEvent` -> `Event` conversion to use the new fields
+
+4. All 28 durable tests pass (round-trip, JSON serialization, etc.)
+
+### Remaining
+
+1. Update test files in `runie-tui`, `runie-agent`, and other crates to include new fields
+2. Full workspace test suite needs updating
+
 ## Acceptance criteria
 
-1. **Unit tests** — Every transient `Event` variant serializes to skip/`None`; every durable variant round-trips through JSON.
+1. **Unit tests** — ✅ Every transient `Event` variant serializes to skip/`None`; every durable variant round-trips through JSON. (28 tests pass)
 2. **E2E tests** — Replaying a session from durable events produces the same `AppState` as before.
 3. **Live run tests** — Save and resume a session in tmux; persisted events restore the same UI state.
 
 ## Tests
 
 ### Unit tests
-- Every transient `Event` variant serializes to `None`/`skip`.
-- Every durable variant round-trips through JSON.
+- ✅ Every transient `Event` variant serializes to `None`/`skip`.
+- ✅ Every durable variant round-trips through JSON.
 
 ### E2E tests
 - Replaying a session from durable events produces the same `AppState` as before.

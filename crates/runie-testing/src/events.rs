@@ -5,10 +5,7 @@ use runie_core::provider_event::{ProviderEvent, StopReason};
 
 /// Event emitted when a response stream starts.
 pub fn ev_response_created(id: impl Into<String>) -> Event {
-    Event::Response {
-        id: id.into(),
-        content: String::new(),
-    }
+    Event::response(id, String::new())
 }
 
 /// Text delta event for a response stream.

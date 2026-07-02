@@ -28,11 +28,11 @@ pub async fn execute_tools(
         let output =
             execute_single_tool(tool_id, tool_call, emit.clone(), skills, &ctx, gate).await;
 
-        emit(runie_core::Event::ToolEnd {
-            id: tool_id.to_owned(),
-            duration_secs: output.duration.as_secs_f64(),
-            output: output.content.clone(),
-        });
+        emit(runie_core::Event::tool_end(
+            tool_id.to_owned(),
+            output.duration.as_secs_f64(),
+            output.content.clone(),
+        ));
         messages.push(tool_result_message(tool_call, &output));
     }
 }

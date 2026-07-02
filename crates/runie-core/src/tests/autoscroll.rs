@@ -118,7 +118,10 @@ fn at_bottom_shows_new_agent_response() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "hi".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
@@ -146,7 +149,10 @@ fn at_bottom_shows_new_thought() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Thinking...".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
@@ -176,7 +182,8 @@ fn at_bottom_shows_new_tool() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".to_string(),
-    });
+    
+        input: None,});
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
@@ -199,7 +206,10 @@ fn scrolled_up_stays_scrolled_up_on_agent_response() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "new".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.ensure_fresh();
 
     assert_eq!(

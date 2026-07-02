@@ -77,13 +77,17 @@ fn test_tool_flow_creates_two_thoughts() {
                 id: "".to_string(),
                 duration_secs: 0.5,
                 output: String::new(),
-            },
+            
+        input: None,},
             crate::Event::Thinking { id: "req.0".into() },
             crate::Event::ThoughtDone { id: "req.0".into() },
             crate::Event::Response {
                 id: "req.0".into(),
                 content: "Here are the files".into(),
-            },
+            
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),},
         ],
     );
     let thought_count = state
@@ -121,7 +125,10 @@ fn test_turn_complete_always_added_when_event_received() {
             crate::Event::Response {
                 id: "req.0".into(),
                 content: "Hi".into(),
-            },
+            
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),},
             crate::Event::TurnComplete {
                 id: "req.0".into(),
                 duration_secs: 1.0,
@@ -148,7 +155,8 @@ fn test_tool_done_event() {
         id: "".to_string(),
         duration_secs: 0.3,
         output: String::new(),
-    });
+    
+        input: None,});
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
@@ -174,11 +182,15 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
                 id: "".to_string(),
                 duration_secs: 0.5,
                 output: String::new(),
-            },
+            
+        input: None,},
             crate::Event::Response {
                 id: "req.0".into(),
                 content: "Here are files".into(),
-            },
+            
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),},
             crate::Event::Done { id: "req.0".into() },
             crate::Event::TurnComplete {
                 id: "req.0".into(),

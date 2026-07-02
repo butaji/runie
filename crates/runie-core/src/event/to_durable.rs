@@ -41,7 +41,8 @@ mod tests {
             id: "c1".into(),
             duration_secs: 1.5,
             output: "result".into(),
-        };
+        
+        input: None,};
         let durable = event.to_durable();
         assert!(durable.is_some());
 
@@ -86,7 +87,10 @@ mod tests {
         let event = Event::Response {
             id: "r1".into(),
             content: "Hello world".into(),
-        };
+        
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),};
         let durable = event.to_durable();
         assert!(matches!(
             durable,

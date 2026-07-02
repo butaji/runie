@@ -132,6 +132,7 @@ fn to_turn_msg(event: &Event) -> Option<TurnMsg> {
             id,
             duration_secs,
             output,
+            ..
         } => Some(TurnMsg::ToolEnd {
             id: id.clone(),
             duration_secs: *duration_secs,

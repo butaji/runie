@@ -33,7 +33,10 @@ impl<'a> AgentTurn<'a> {
         self.state.update(crate::Event::Response {
             id: self.id.clone(),
             content: content.into(),
-        });
+        
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
         self
     }
 
@@ -55,7 +58,8 @@ impl<'a> AgentTurn<'a> {
             id: self.id.clone(),
             duration_secs: 0.5,
             output: output.into(),
-        });
+        
+        input: None,});
         self
     }
 

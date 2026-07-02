@@ -41,7 +41,10 @@ fn turn_complete_is_last_after_normal_flow() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::ToolStart {
         id: "req.0".into(),
@@ -52,11 +55,15 @@ fn turn_complete_is_last_after_normal_flow() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".into(),
-    });
+    
+        input: None,});
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
@@ -88,11 +95,15 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    });
+    
+        input: None,});
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -100,7 +111,10 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "world".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -128,7 +142,8 @@ fn turn_complete_is_last_with_multiple_tools() {
         id: "".to_string(),
         duration_secs: 0.1,
         output: "a".into(),
-    });
+    
+        input: None,});
     state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
@@ -138,11 +153,15 @@ fn turn_complete_is_last_with_multiple_tools() {
         id: "".to_string(),
         duration_secs: 0.2,
         output: "b".into(),
-    });
+    
+        input: None,});
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 3.0,
@@ -178,7 +197,8 @@ fn turn_complete_is_last_when_tool_end_after_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".into(),
-    });
+    
+        input: None,});
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -206,11 +226,15 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    });
+    
+        input: None,});
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -218,7 +242,10 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -244,11 +271,15 @@ fn first_turn_with_tool_events() -> Vec<Event> {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "a".into(),
-        },
+        
+        input: None,},
         crate::Event::Response {
             id: "req.0".into(),
             content: "First turn".into(),
-        },
+        
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),},
         crate::Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
@@ -296,7 +327,10 @@ fn turn_complete_timestamp_is_max_after_done() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,

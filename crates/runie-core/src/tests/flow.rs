@@ -34,7 +34,10 @@ fn test_complete_agent_flow() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     assert_eq!(state.session.messages.len(), 3);
     assert_eq!(state.session.messages[1].role, Role::Thought);
     assert_eq!(state.session.messages[2].role, Role::Assistant);
@@ -211,7 +214,10 @@ fn test_multiple_thoughts_for_sequential_requests() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::Done {
         id: "req.0".to_string(),
     });
@@ -224,7 +230,10 @@ fn test_multiple_thoughts_for_sequential_requests() {
     state.update(crate::Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     let thoughts: Vec<_> = state
         .session
         .messages
@@ -243,7 +252,10 @@ fn test_think_tags_split_into_thought_and_answer() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>reasoning</think>answer".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
@@ -276,7 +288,10 @@ fn test_think_tags_only_reasoning_removes_assistant() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>only reasoning</think>".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
@@ -299,7 +314,10 @@ fn test_unclosed_think_tag_hides_reasoning() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "visible<think>still reasoning".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
@@ -330,7 +348,10 @@ fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>reasoning</think>answer".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });

@@ -188,11 +188,15 @@ fn fact_events_do_not_convert_to_intent() {
             id: "t1".into(),
             duration_secs: 1.0,
             output: "ok".into(),
-        },
+        
+        input: None,},
         Event::Response {
             id: "r1".into(),
             content: "hello".into(),
-        },
+        
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),},
         Event::TurnComplete {
             id: "1".into(),
             duration_secs: 1.0,

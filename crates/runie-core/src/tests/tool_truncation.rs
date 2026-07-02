@@ -15,6 +15,7 @@ fn tool_output_truncated_to_max_lines() {
     });
     state.update(crate::Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: (0..10)
             .map(|i| format!("line {}", i))
@@ -52,6 +53,7 @@ fn tool_output_truncated_to_max_bytes() {
     });
     state.update(crate::Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "this is a long output".into(),
     });

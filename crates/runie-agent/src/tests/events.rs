@@ -17,6 +17,9 @@ fn test_agent_response_event() {
     let evt = Event::Response {
         id: "req.0".to_string(),
         content: "hello".to_string(),
+role: String::new(),
+timestamp: 0.0,
+provider: String::new(),
     };
     match evt {
         Event::Response { id, content } => {
@@ -51,6 +54,7 @@ fn test_agent_tool_start_event() {
 fn test_agent_tool_end_event() {
     let evt = Event::ToolEnd {
         id: "".to_string(),
+input: None,
         duration_secs: 1.5,
         output: "result".to_string(),
     };

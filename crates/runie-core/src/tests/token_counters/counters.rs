@@ -43,7 +43,10 @@ fn agent_response_increments_tokens_out() {
     state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     assert_eq!(
         state.agent.tokens_out, 1,
         "Output 'hello' = 1 token in tiktoken"
@@ -59,11 +62,17 @@ fn multiple_responses_accumulate_tokens_out() {
     state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: " world".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     // tiktoken: "hello" = 1, " world" = 1, total = 2
     assert_eq!(state.agent.tokens_out, 2);
 }
@@ -77,7 +86,10 @@ fn finish_turn_resets_turn_tokens() {
     state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello world".to_string(),
-    });
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),});
     // tiktoken: "hello world" = 2 tokens
     let expected = crate::tokens::estimate_tokens("hello world");
     assert_eq!(state.agent.turn_tokens_out, expected);

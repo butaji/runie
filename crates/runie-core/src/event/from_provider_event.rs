@@ -62,11 +62,7 @@ fn tool_input_delta(id: String, delta: String) -> Event {
 }
 
 fn tool_end(id: String) -> Event {
-    Event::ToolEnd {
-        id,
-        duration_secs: 0.0,
-        output: String::new(),
-    }
+    Event::tool_end(id, 0.0, String::new())
 }
 
 fn usage_event() -> Event {

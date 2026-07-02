@@ -4,10 +4,7 @@ use crate::stream_response::EmitFn;
 
 /// Emit a response message and the Done event.
 pub fn emit_response_and_done(emit: &EmitFn, id: &str, content: String) {
-    emit(runie_core::Event::Response {
-        id: id.to_owned(),
-        content,
-    });
+    emit(runie_core::Event::response(id, content));
     emit(runie_core::Event::Done { id: id.to_owned() });
 }
 

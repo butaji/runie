@@ -39,7 +39,8 @@ fn fact_events_are_classified() {
             id: "t1".into(),
             duration_secs: 0.5,
             output: "ok".into(),
-        },
+        
+        input: None,},
         Event::TurnComplete {
             id: "1".into(),
             duration_secs: 1.0,
@@ -140,11 +141,15 @@ fn intent_fact_partition_is_exhaustive() {
             id: "t1".into(),
             duration_secs: 1.0,
             output: "ok".into(),
-        },
+        
+        input: None,},
         Event::Response {
             id: "r1".into(),
             content: "hi".into(),
-        },
+        
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),},
         Event::TurnComplete {
             id: "1".into(),
             duration_secs: 1.0,
@@ -270,7 +275,8 @@ fn fact_events_return_none_from_into_intent() {
             id: "t1".into(),
             duration_secs: 1.0,
             output: "ok".into(),
-        },
+        
+        input: None,},
     ];
     for e in events {
         assert!(e.clone().into_intent().is_none(), "{e:?} must return None");

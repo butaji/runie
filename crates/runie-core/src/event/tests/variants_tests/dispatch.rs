@@ -19,6 +19,9 @@ fn all_agent_events_dispatch() {
     state.update(Event::Response {
         id: "r1".into(),
         content: "hello".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     let last = state.session().messages.last();
     assert!(last.is_some_and(|m| m.role == Role::Assistant && m.content() == "hello"));

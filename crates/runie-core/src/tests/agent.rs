@@ -187,7 +187,8 @@ fn tool_end_updates_timestamp() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: String::new(),
-    });
+    
+        input: None,});
     let t2 = state.session.messages[0].timestamp;
     assert!(
         t2 >= t1,

@@ -50,13 +50,13 @@ impl DurableCoreEvent {
             | Event::SkillsLoaded { .. }
             | Event::AuthLoaded { .. } => None,
             // Durable: message
-            // Durable: assistant response (uses now() since Response doesn't carry role/timestamp)
-            Event::Response { id, content } => Some(D::MessageSent {
+            // Durable: assistant response (uses stored role/timestamp/provider)
+            Event::Response { id, content, role, timestamp, provider } => Some(D::MessageSent {
                 id: id.clone(),
-                role: "assistant".into(),
+                role: if role.is_empty() { "assistant".into() } else { role.clone() },
                 content: content.clone(),
-                timestamp: crate::model::now(),
-                provider: String::new(),
+                timestamp: if *timestamp == 0.0 { crate::model::now() } else { *timestamp },
+                provider: provider.clone(),
             }),
             // Durable: replayed message (carries full metadata from session)
             Event::MessageReplayed {
@@ -319,6 +319,7 @@ impl TryFrom<&DurableCoreEvent> for Event {
             }),
             D::ToolResult { id, output, .. } => Ok(Event::ToolEnd {
                 id: id.clone(),
+                input: None,
                 duration_secs: 0.0,
                 output: output.clone(),
             }),
@@ -389,6 +390,9 @@ mod tests {
         let event = Event::Response {
             id: "r1".into(),
             content: "hello".into(),
+            role: "assistant".into(),
+            timestamp: 1000.0,
+            provider: "openai".into(),
         };
         let durable = DurableCoreEvent::try_from_event(&event);
         assert!(durable.is_some());
@@ -420,6 +424,7 @@ mod tests {
     fn durable_from_tool_end() {
         let event = Event::ToolEnd {
             id: "t1".into(),
+            input: None,
             duration_secs: 1.5,
             output: "done".into(),
         };

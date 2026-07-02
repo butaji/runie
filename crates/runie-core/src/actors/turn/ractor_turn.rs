@@ -208,11 +208,7 @@ impl RactorTurnActor {
         state.turn_state.current_tool_name = None;
         Self::emit(
             state,
-            Event::ToolEnd {
-                id,
-                duration_secs,
-                output,
-            },
+            Event::tool_end(id, duration_secs, output),
         );
     }
 

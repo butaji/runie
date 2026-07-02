@@ -57,7 +57,14 @@ pub enum Event {
     ThoughtDone { id: String },
     ToolStart { id: String, name: String, input: serde_json::Value },
     ToolInputDelta { id: String, content: String },
-    ToolEnd { id: String, duration_secs: f64, output: String },
+    /// Tool end with optional input for replay reconstruction.
+    ToolEnd {
+        id: String,
+        #[serde(skip)]
+        input: Option<serde_json::Value>,
+        duration_secs: f64,
+        output: String,
+    },
     ToolConstraintError {
         id: String,
         tool: String,
@@ -69,7 +76,17 @@ pub enum Event {
     TextEnd { id: String },
     ThinkingStart { id: String },
     ThinkingEnd { id: String },
-    Response { id: String, content: String },
+    /// Assistant response with optional durable metadata.
+    Response {
+        id: String,
+        content: String,
+        #[serde(skip)]
+        role: String,
+        #[serde(skip)]
+        timestamp: f64,
+        #[serde(skip)]
+        provider: String,
+    },
     TurnComplete { id: String, duration_secs: f64 },
     Done { id: String },
     Error { id: String, message: String },
@@ -1160,3 +1177,30 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("NewSession", || Event::NewSession),
     ("ResumeSession", || Event::ResumeSession),
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper constructors for variants with optional fields
+// ─────────────────────────────────────────────────────────────────────────────
+
+impl Event {
+    /// Create a Response with default durable fields.
+    pub fn response(id: impl Into<String>, content: impl Into<String>) -> Self {
+        Event::Response {
+            id: id.into(),
+            content: content.into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        }
+    }
+
+    /// Create a ToolEnd with default input field.
+    pub fn tool_end(id: impl Into<String>, duration_secs: f64, output: impl Into<String>) -> Self {
+        Event::ToolEnd {
+            id: id.into(),
+            input: None,
+            duration_secs,
+            output: output.into(),
+        }
+    }
+}

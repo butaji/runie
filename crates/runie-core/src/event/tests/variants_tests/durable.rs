@@ -6,7 +6,10 @@ fn durable_conversion_message_sent() {
     let evt = Event::Response {
         id: "r1".into(),
         content: "hello".into(),
-    };
+    
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),};
     let durable = evt.to_durable();
     assert!(matches!(
         durable,
@@ -34,7 +37,8 @@ fn durable_conversion_tool_result_preserves_id() {
         id: "t1".into(),
         duration_secs: 1.0,
         output: "done".into(),
-    };
+    
+        input: None,};
     let durable = evt.to_durable();
     assert!(
         matches!(durable, Some(DurableCoreEvent::ToolResult { id, output, success }) if id == "t1" && output == "done" && success)
