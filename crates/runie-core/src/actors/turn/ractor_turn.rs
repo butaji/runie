@@ -7,6 +7,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
+use tracing::instrument;
 use crate::model::{DeliveryMode, QueuedMessage, QueuedMessageKind};
 use crate::session::turn_queue::TurnQueue;
 use crate::Event;
@@ -284,6 +285,7 @@ impl Actor for RactorTurnActor {
         Ok(TurnActorState::new(bus))
     }
 
+    #[instrument(name = "turn_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
@@ -309,7 +311,7 @@ impl Actor for RactorTurnActor {
             } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode, reply),
             TurnMsg::Dequeue => Self::handle_dequeue(state),
             TurnMsg::Thinking { id } => Self::handle_thinking(state, id),
-            TurnMsg::ThoughtDone { .. } => Self::handle_thought_done(state),
+            TurnMsg::ThoughtDone { id: _ } => Self::handle_thought_done(state),
             TurnMsg::ToolStart { id, name } => Self::handle_tool_start(state, id, name),
             TurnMsg::ToolEnd {
                 id,
@@ -322,7 +324,7 @@ impl Actor for RactorTurnActor {
             TurnMsg::TurnComplete { id, duration_secs } => {
                 Self::handle_turn_complete(state, id, duration_secs)
             }
-            TurnMsg::Done { .. } => Self::handle_done(state),
+            TurnMsg::Done { id: _ } => Self::handle_done(state),
             TurnMsg::Error { id, message } => Self::handle_error(state, id, message),
             TurnMsg::UpdateSpeed { tokens_out } => Self::handle_update_speed(state, tokens_out),
             TurnMsg::NextId => Self::handle_next_id(state),
@@ -516,5 +518,48 @@ mod tests {
         })
         .await;
         assert!(result.is_ok(), "Second turn should start after DeliverQueued + RunIfQueued");
+    }
+
+    /// Verify that `#[instrument]` does not panic and handlers process messages normally.
+    /// This test exercises the instrumented handler path and ensures tracing spans are
+    /// created without errors.
+    #[tokio::test]
+    async fn turn_actor_handler_runs_with_tracing() {
+        use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+
+        // Try to initialize a no-op tracing subscriber to exercise the instrumented paths.
+        // Use try_init() to avoid panicking if a global subscriber is already set by
+        // another test.
+        let filter = EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new("info"));
+        let _ = tracing_subscriber::registry()
+            .with(filter)
+            .with(fmt::layer().with_target(false).without_time())
+            .try_init();
+
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
+
+        // Exercise the instrumented handler path with various messages.
+        handle
+            .send(TurnMsg::SubmitUserMessage {
+                content: "hello".into(),
+                id: "req.0".into(),
+                source: MessageSource::Fresh,
+            })
+            .await;
+
+        // Verify the message was processed (emits UserMessageSubmitted event).
+        let mut sub = bus.subscribe();
+        let found = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            while let Ok(evt) = sub.recv().await {
+                if matches!(evt, Event::UserMessageSubmitted { .. }) {
+                    return true;
+                }
+            }
+            false
+        })
+        .await;
+        assert!(found.unwrap_or(false), "Handler should process message successfully with tracing");
     }
 }

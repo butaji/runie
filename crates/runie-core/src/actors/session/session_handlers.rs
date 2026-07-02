@@ -4,6 +4,7 @@
 
 use camino::Utf8PathBuf;
 use std::path::PathBuf;
+use tracing::instrument;
 
 use crate::bus::EventBus;
 use crate::edit_preview::EditPreview;
@@ -463,6 +464,7 @@ impl RactorSessionActor {
     }
 
     /// Dispatch incoming session messages to their handlers.
+    #[instrument(name = "session_handler", skip_all, fields(msg = ?msg))]
     pub async fn handle_msg(state: &mut SessionActorState, msg: SessionMsg) {
         match msg {
             SessionMsg::SetTrust { path, decision } => {

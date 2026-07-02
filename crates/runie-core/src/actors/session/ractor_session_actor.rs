@@ -2,6 +2,7 @@
 
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
+use tracing::instrument;
 
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
@@ -61,6 +62,7 @@ impl Actor for RactorSessionActor {
         Ok(state)
     }
 
+    #[instrument(name = "session_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,

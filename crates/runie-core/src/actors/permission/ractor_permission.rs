@@ -4,6 +4,7 @@
 //! following the same pattern as the InputActor migration.
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
+use tracing::instrument;
 
 use std::collections::HashMap;
 
@@ -317,6 +318,7 @@ impl Actor for RactorPermissionActor {
         })
     }
 
+    #[instrument(name = "permission_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,

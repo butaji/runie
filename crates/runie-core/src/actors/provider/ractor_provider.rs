@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use ractor::async_trait as ractor_async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
+use tracing::instrument;
 
 #[cfg(test)]
 use crate::actors::config::RactorConfigActor;
@@ -235,6 +236,7 @@ impl Actor for RactorProviderActor {
         Ok(())
     }
 
+    #[instrument(name = "provider_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,

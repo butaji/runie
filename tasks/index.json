@@ -1976,7 +1976,7 @@
 {
   "file": "instrument-actor-handlers-with-tracing.md",
   "title": "Instrument actor handlers with tracing",
-  "status": "todo"
+  "status": "done"
 }
 {
   "file": "migrate-session-persistence-to-rusqlite.md",

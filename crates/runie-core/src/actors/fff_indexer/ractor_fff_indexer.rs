@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use tracing::instrument;
 
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
@@ -131,6 +132,7 @@ impl Actor for RactorFffIndexerActor {
         })
     }
 
+    #[instrument(name = "fff_indexer", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
