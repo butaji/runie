@@ -12,7 +12,9 @@ use crate::model_catalog::ModelInfo;
 use crate::provider_event::ProviderEvent;
 
 // `Provider` and `ProviderError` are defined in `runie-provider` and re-exported here.
-use crate::provider::{Provider, ProviderError, ProviderMetadata, RetryConfig};
+use crate::provider::{
+    Provider, ProviderError, ProviderMetadata, RetryConfig, REQUEST_TIMEOUT, CONNECT_TIMEOUT,
+};
 
 /// Process-global cache of HTTP clients keyed by `(provider_key, base_url)`.
 ///
@@ -29,8 +31,8 @@ fn get_cached_http_client(provider_key: &str, base_url: &str) -> Arc<reqwest::Cl
         .entry(key)
         .or_insert_with(|| {
             let client = reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .connect_timeout(std::time::Duration::from_secs(10))
+                .timeout(REQUEST_TIMEOUT)
+                .connect_timeout(CONNECT_TIMEOUT)
                 .build()
                 .unwrap_or_else(|_| reqwest::Client::new());
             Arc::new(client)

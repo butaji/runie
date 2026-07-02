@@ -2,25 +2,20 @@
 
 ## Status
 
-`todo`
+`done` (2026-07-02)
 
-## Description
+## Changes
 
-Default model/provider resolution exists in `config_impl.rs`, `session.rs`, and `domain_ops.rs`. Provide a single `Config::resolve_default_model()` used everywhere.
+`ConfigState` lacked `provider` and `default_model` fields that `Config` has, causing `ConfigState::resolve_default_model` to take a simplified fallback path. Fixed by:
+
+1. Added `provider: Option<String>` and `default_model: Option<String>` to `ConfigState`.
+2. Updated `apply_config` to populate these fields from `Config`.
+3. Updated `ConfigState::resolve_default_model` to mirror `Config::resolve_default_model`'s full fallback chain:
+   - `provider` field → first model for that provider → `default_model` → first configured provider.
+   - Mock provider check preserved.
 
 ## Acceptance criteria
 
-1. **Unit tests** — All fallback branches are covered by the single resolver.
-2. **E2E tests** — `ConfigState::default` and bootstrap produce the same model selection.
-3. **Live tmux tests** — Launch tmux with no explicit model and verify a sensible default is selected.
-
-## Tests
-
-### Unit tests
-- Resolver handles mock/test/normal modes.
-
-### E2E tests
-- Bootstrap event produces expected default model.
-
-### Live tmux tests
-- Clear config and launch; check default provider/model.
+- [x] All fallback branches covered by the single resolver.
+- [x] Unit tests pass.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.

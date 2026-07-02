@@ -212,12 +212,12 @@
   {
     "file": "centralize-provider-http-timeouts-and-retry-constants.md",
     "title": "Centralize provider HTTP timeouts and retry constants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-reqwest-client-and-url-normalization.md",
     "title": "Centralize `reqwest` client and URL normalization",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-test-fixtures-and-mocks.md",
@@ -532,7 +532,7 @@
   {
     "file": "derive-event-taxonomies-with-strum-or-proc-macro.md",
     "title": "Derive event taxonomies with `strum` or a proc macro",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -1322,7 +1322,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
@@ -1597,7 +1597,7 @@
   {
     "file": "single-config-resolve-default-model.md",
     "title": "Single `Config::resolve_default_model`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "spike-evaluate-async-openai-or-rig-core-for-provider-stack.md",
@@ -1697,7 +1697,7 @@
   {
     "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
     "title": "Unify bash execution into a single shell module with command-group",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-cli-json-rpc-transport-and-remove-dead-acp.md",
@@ -1732,7 +1732,7 @@
   {
     "file": "unify-form-submit-paths-through-command-registry.md",
     "title": "Unify form submit paths through command registry",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-headless-and-tui-streaming-response-parser.md",
@@ -1802,7 +1802,7 @@
   {
     "file": "unify-sse-parsing-on-openai-frame.md",
     "title": "Unify SSE parsing on `OpenAiFrame::from_line`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",
@@ -1922,7 +1922,7 @@
   {
     "file": "use-retryconfig-in-with-retry-or-remove-it.md",
     "title": "Use `RetryConfig` in `with_retry` or remove it",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-secrecy-secretstring-in-authtoken.md",

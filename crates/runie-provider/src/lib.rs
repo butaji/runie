@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod factory;
+pub mod http;
 pub mod mock;
 pub mod model_client;
 pub mod openai;
@@ -41,6 +42,9 @@ use anyhow::Result;
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 
+// Re-export HTTP timeout constants from runie-core so all provider crates share the same values.
+pub use runie_core::provider::{REQUEST_TIMEOUT, CONNECT_TIMEOUT};
+
 /// Re-export `BuiltProvider` from `runie-core`.
 pub use runie_core::actors::provider::BuiltProvider;
 
@@ -77,8 +81,8 @@ fn resolve_credentials(
         (api_key, meta.base_url.to_owned())
     };
     (
-        api_key.trim().to_owned(),
-        base_url.trim_end_matches('/').to_owned(),
+        http::normalize_api_key(&api_key),
+        http::normalize_base_url(&base_url),
     )
 }
 
@@ -204,10 +208,10 @@ async fn fetch_models(
         .timeout(timeout)
         .connect_timeout(timeout)
         .build()?;
-    let url = format!("{}/models", base_url.trim_end_matches('/'));
+    let url = http::request_url(base_url, "models");
     let resp = client
         .get(&url)
-        .header("Authorization", format!("Bearer {}", api_key.trim()))
+        .header("Authorization", http::bearer_header(api_key))
         .send()
         .await?;
 

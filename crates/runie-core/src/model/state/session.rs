@@ -100,6 +100,10 @@ pub enum ModelSource {
 /// Fields are public for test setup; production code should use accessors.
 #[derive(Clone)]
 pub struct ConfigState {
+    /// Default provider (from `[provider]` or first configured).
+    pub provider: Option<String>,
+    /// Default model (from `[model]`).
+    pub default_model: Option<String>,
     pub current_provider: String,
     pub current_model: String,
     pub keybindings: std::collections::HashMap<String, String>,
@@ -144,6 +148,8 @@ impl Default for ConfigState {
             (String::new(), String::new())
         };
         Self {
+            provider: None,
+            default_model: None,
             current_provider: provider,
             current_model: model,
             keybindings: default_keybindings(),

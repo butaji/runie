@@ -30,14 +30,9 @@ pub struct OpenAiProvider {
 impl OpenAiProvider {
     /// Create from explicit credentials (new HTTP client per instance).
     pub fn new(api_key: String, model: impl Into<String>) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(120))
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
-            client: Arc::new(client),
-            api_key: api_key.trim().to_owned(),
+            client: crate::http::build_client(),
+            api_key: crate::http::normalize_api_key(&api_key),
             model: model.into(),
             base_url: "https://api.openai.com/v1".to_owned(),
             model_meta: None,
@@ -69,7 +64,7 @@ impl OpenAiProvider {
     ) -> Self {
         Self {
             client,
-            api_key: api_key.trim().to_owned(),
+            api_key: crate::http::normalize_api_key(&api_key),
             model: model.into(),
             base_url: "https://api.openai.com/v1".to_owned(),
             model_meta: None,
@@ -80,7 +75,7 @@ impl OpenAiProvider {
     }
 
     pub fn with_base_url(mut self, url: impl Into<String>) -> Self {
-        self.base_url = url.into().trim_end_matches('/').to_owned();
+        self.base_url = crate::http::normalize_base_url(&url.into());
         self
     }
 

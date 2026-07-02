@@ -36,13 +36,8 @@ pub struct ModelClient {
 impl ModelClient {
     /// Create a new `ModelClient` with a pooled HTTP client.
     pub fn new(api_key: String, model: String, provider_key: String) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(120))
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
-            client: Arc::new(client),
+            client: crate::http::build_client(),
             api_key,
             model,
             provider_key,
@@ -55,7 +50,7 @@ impl ModelClient {
 
     /// Set the base URL.
     pub fn with_base_url(mut self, url: impl Into<String>) -> Self {
-        self.transport.base_url = url.into().trim_end_matches('/').to_owned();
+        self.transport.base_url = crate::http::normalize_base_url(&url.into());
         self
     }
 

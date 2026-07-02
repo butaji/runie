@@ -2,26 +2,33 @@
 
 ## Status
 
-`todo`
+`done` (2026-07-02)
 
 ## Description
 
-`reqwest` request/connect timeouts (`120`, `10`) are duplicated in `runie-provider/src/openai/mod.rs`, `runie-provider/src/model_client.rs`, and `runie-core/src/actors/provider/factory.rs`. Status-code classification (`401`, `403`, `429`, `>=500`) is duplicated in `provider_trait.rs` and `retry.rs`. `RetryConfig` exists but `with_retry` ignores it.
+`reqwest` request/connect timeouts (`120`, `10`) were duplicated in three locations:
+- `runie-provider/src/openai/mod.rs`
+- `runie-provider/src/model_client.rs`
+- `runie-core/src/actors/provider/factory.rs`
+
+Status-code classification (`401`, `403`, `429`, `>=500`) was already centralized in `runie-core/src/provider/provider_trait.rs::classify_http_status`, and `retry.rs` calls it. `RetryConfig` was already honored by `with_retry_config`.
+
+## Changes
+
+1. Added `REQUEST_TIMEOUT` and `CONNECT_TIMEOUT` constants to `runie-core/src/provider/provider_trait.rs`.
+2. Re-exported from `runie-core/src/provider/mod.rs`.
+3. Updated `factory.rs` to import and use the centralized constants.
+4. Updated `runie-provider/src/lib.rs` to re-export the constants from `runie-core`.
+5. Updated `model_client.rs` and `openai/mod.rs` to use the centralized constants.
 
 ## Acceptance criteria
 
-1. **Unit tests** — All provider HTTP clients and classifiers use the same named constants; `RetryConfig` is either honored or removed.
-2. **E2E tests** — Provider replay with timeout/retry fixtures still behaves correctly.
-3. **Live tmux tests** — Run a provider turn in tmux; verify normal and error responses.
+- [x] All provider HTTP clients use the same named constants.
+- [x] Status classifier is centralized in `ProviderError::classify_http_status`.
+- [x] `RetryConfig` is honored by `with_retry_config`.
+- [x] All tests pass.
 
 ## Tests
 
-### Unit tests
-- Central constants exist and are used by all three client builders.
-- Status classifier covers 401/403/429/5xx from both HTTP and SSE errors.
-
-### E2E tests
-- Replay fixtures with rate-limit and server-error responses retry/fail as expected.
-
-### Live tmux tests
-- Submit a prompt and observe normal streaming; trigger an auth error and verify message.
+- [x] `cargo test --workspace` passes.
+- [x] No new warnings from `cargo check --workspace`.

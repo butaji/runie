@@ -19,6 +19,12 @@ pub const DEFAULT_RETRY_CONFIG: RetryConfig = RetryConfig {
     multiplier: 2.0,
 };
 
+/// Default HTTP request timeout (120 s).
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// Default HTTP connect timeout (10 s).
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+
 /// A chunk of streaming response (legacy type, prefer ProviderEvent).
 #[derive(Debug, Clone)]
 pub struct ResponseChunk {

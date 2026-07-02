@@ -164,6 +164,9 @@ impl AppState {
     /// Apply a loaded config to all config-driven state fields.
     pub fn apply_config(&mut self, config: &crate::config::Config) {
         *self.config_mut().model_providers_mut() = config.model_providers.clone();
+        // Mirror Config's default provider/model fields so resolve_default_model is unified.
+        self.config_mut().provider = config.provider.clone();
+        self.config_mut().default_model = config.model.clone();
         if self.config().model_source != ModelSource::UserOverride {
             self.apply_active_model(config);
         }
@@ -239,17 +242,40 @@ impl AppState {
     }
 
     /// Resolve the default provider/model pair from ConfigState.
+    ///
+    /// Falls back through: explicit `provider` + `default_model`,
+    /// first configured provider's first model, and finally empty strings.
+    /// Mirrors `Config::resolve_default_model` so there is a single source of truth.
     pub fn resolve_default_model(&self) -> (String, String) {
-        let config = self.config();
-        // Try explicit provider field first
-        if let Some(provider) = config.model_providers().keys().next() {
-            if let Some(mp) = config.model_providers().get(provider) {
-                if let Some(model) = mp.models.first() {
-                    return (provider.clone(), model.clone());
-                }
+        if crate::provider::is_mock_enabled() {
+            return ("mock".into(), "echo".into());
+        }
+        let cfg = self.config();
+        if let Some(ref provider) = cfg.provider.as_ref().filter(|p| !p.is_empty()) {
+            let model = self
+                .first_model_for_provider(provider)
+                .or_else(|| cfg.default_model.clone())
+                .unwrap_or_default();
+            let provider_str = (&*provider).to_string();
+            return (provider_str, model);
+        }
+        // Fall back to the first provider in sorted order
+        let mut providers: Vec<_> = cfg.model_providers.iter().collect();
+        providers.sort_by_key(|(k, _)| *k);
+        if let Some((provider, mp)) = providers.into_iter().next() {
+            if let Some(model) = mp.models.first().cloned() {
+                return (provider.clone(), model);
             }
         }
         (String::new(), String::new())
+    }
+
+    /// Return the first model for a provider, if any.
+    fn first_model_for_provider(&self, provider: &str) -> Option<String> {
+        self.config()
+            .model_providers
+            .get(provider)
+            .and_then(|mp| mp.models.first().cloned())
     }
 
     /// Look up a configured provider from ConfigState.
