@@ -2,8 +2,8 @@
 //! Tests for runie-provider
 
 use crate::{
-    build_provider_from_boxed, build_provider_with_config, BuiltProviderFactory, MockProvider,
-    MockProviderBuilder, MockStreamingProvider, Provider, ProviderError, BuiltProvider,
+    build_provider_with_config, BuiltProviderFactory, MockProvider, MockProviderBuilder,
+    MockStreamingProvider, Provider, ProviderError,
 };
 use futures::StreamExt;
 use runie_core::actors::{

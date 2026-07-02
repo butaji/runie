@@ -4,7 +4,6 @@
 //! and keystroke sequences work correctly.
 
 use ratatui::backend::TestBackend;
-use runie_core::AppState;
 use crate::bootstrap::{BackendType, Keystroke, TuiRuntime};
 use std::sync::Arc;
 

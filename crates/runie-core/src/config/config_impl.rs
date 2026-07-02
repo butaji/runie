@@ -623,7 +623,6 @@ pub fn config_path() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::config::Config;
 
     #[test]

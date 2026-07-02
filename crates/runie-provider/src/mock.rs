@@ -642,7 +642,6 @@ mod tests {
     #[test]
     fn mock_provider_builder_creates_list_dir_fixture() {
         let provider = MockProviderBuilder::new().list_dir().build();
-        let messages = vec![ChatMessage::user("hello".to_string())];
         let chunks = response_from_fixture(provider.fixture.clone(), "hello", provider.echo_fallback);
         assert_eq!(chunks, vec![
             "I'll list the files in the current directory.\n".to_owned(),

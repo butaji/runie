@@ -363,7 +363,7 @@
 {"file": "unify-diff-generation-and-parsing-on-one-crate.md", "title": "Unify diff generation and parsing on one crate", "status": "done"}
 {"file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md", "title": "Unify edit_file and hashline_edit on patch-based edits", "status": "todo"}
 {"file": "unify-file-picker-and-panel-list-widget.md", "title": "Unify file picker and panel list widget", "status": "done"}
-{"file": "unify-form-submit-paths-through-command-registry.md", "title": "Unify form submit paths through command registry", "status": "todo"}
+{"file": "unify-form-submit-paths-through-command-registry.md", "title": "Unify form submit paths through command registry", "status": "done"}
 {"file": "unify-headless-and-tui-streaming-response-parser.md", "title": "Unify headless and TUI streaming response parser", "status": "done"}
 {"file": "unify-headless-runtime-bootstrap.md", "title": "Unify headless runtime bootstrap", "status": "done"}
 {"file": "unify-library-error-types-with-thiserror.md", "title": "Unify library error types with `thiserror`", "status": "done"}

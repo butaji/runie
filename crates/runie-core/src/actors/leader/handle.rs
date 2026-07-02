@@ -222,24 +222,9 @@ mod tests {
     /// Layer 1: Compile-time check that `LeaderHandle` exposes all required actor ref fields.
     ///
     /// Uses trait bounds to verify field names and types compile without constructing the struct.
-    /// This avoids `unsafe { mem::zeroed() }` which is UB for non-Copy types.
     #[test]
     fn leader_handle_exposes_all_actor_refs() {
         fn _assert_field<T: 'static>(_v: &T) {}
-
-        // Phantom data to hold field types without constructing LeaderHandle.
-        struct FieldChecker<T> {
-            _p: std::marker::PhantomData<T>,
-        }
-
-        impl<T> FieldChecker<T> {
-            fn check(_: &LeaderHandle)
-            where
-                T: std::borrow::Borrow<LeaderHandle>,
-            {
-                // no-op: only compile-time check
-            }
-        }
 
         // If this compiles, LeaderHandle has all required public fields.
         // We never construct a LeaderHandle, just verify the type resolves.

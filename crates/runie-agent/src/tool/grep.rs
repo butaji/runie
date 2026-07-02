@@ -245,7 +245,6 @@ mod tests {
 
     #[tokio::test]
     async fn grep_finds_matches() {
-        use std::io::Write;
         let temp_dir = tempfile::tempdir().unwrap();
 
         // Create test files

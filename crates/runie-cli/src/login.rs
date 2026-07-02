@@ -137,8 +137,7 @@ fn update_config(provider_key: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use runie_core::provider::known_providers;
+    use runie_core::provider::{find_provider, known_providers};
 
     #[test]
     fn lists_available_providers() {
@@ -149,7 +148,7 @@ mod tests {
 
     #[test]
     fn finds_known_provider() {
-        let p = runie_core::provider::find_provider("openai");
+        let p = find_provider("openai");
         assert!(p.is_some());
         let p = p.unwrap();
         assert_eq!(p.display_name, "OpenAI");
@@ -158,7 +157,7 @@ mod tests {
 
     #[test]
     fn finds_unknown_provider_returns_none() {
-        let p = runie_core::provider::find_provider("nonexistent-provider");
+        let p = find_provider("nonexistent-provider");
         assert!(p.is_none());
     }
 }

@@ -521,7 +521,7 @@ mod tests {
             truncation: crate::truncate::TruncationPolicy::default(),
             cancellation_token: CancellationToken::new(),
         };
-        agent_handle.send_message(AgentMsg::Run { command: cmd1 });
+        let _ = agent_handle.send_message(AgentMsg::Run { command: cmd1 });
 
         // Wait for first turn to complete.
         timeout(Duration::from_secs(5), async {
@@ -550,7 +550,7 @@ mod tests {
             truncation: crate::truncate::TruncationPolicy::default(),
             cancellation_token: CancellationToken::new(),
         };
-        agent_handle.send_message(AgentMsg::Run { command: cmd2 });
+        let _ = agent_handle.send_message(AgentMsg::Run { command: cmd2 });
 
         // Wait for second turn to complete.
         let mut turn2_done = false;
