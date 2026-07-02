@@ -14,7 +14,7 @@ use runie_core::message::Role;
 use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::tool::{
-    is_builtin_tool, is_cacheable_tool, parse_input, CacheEntry, ToolContext, ToolDef,
+    is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext,
     ToolOutput, ToolStatus, ToolResultCache,
 };
 use runie_core::tool::ParsedToolCall;
@@ -82,39 +82,11 @@ pub async fn execute_tool_call(
 
 /// Dispatch a tool call by name — calls ToolDef::execute directly.
 /// Permission evaluation is handled by the caller (`execute_tool_call`).
+///
+/// The dispatch is defined in `tool_registry.rs::dispatch_tool_impl`.
+/// This function is a wrapper that delegates to it.
 async fn dispatch_tool(name: &str, args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
-    match name {
-        "bash" => run_tool::<crate::tool::BashTool>(name, args, ctx).await,
-        "read_file" => run_tool::<crate::tool::ReadFileTool>(name, args, ctx).await,
-        "write_file" => run_tool::<crate::tool::WriteFileTool>(name, args, ctx).await,
-        "edit_file" => run_tool::<crate::tool::EditFileTool>(name, args, ctx).await,
-        "list_dir" => run_tool::<crate::tool::ListDirTool>(name, args, ctx).await,
-        "grep" => run_tool::<crate::tool::GrepTool>(name, args, ctx).await,
-        "find" => run_tool::<crate::tool::FindTool>(name, args, ctx).await,
-        "fetch_docs" => run_tool::<crate::tool::FetchDocsTool>(name, args, ctx).await,
-        "search" => run_tool::<crate::tool::SearchTool>(name, args, ctx).await,
-        "find_definitions" => run_tool::<crate::tool::FindDefinitionsTool>(name, args, ctx).await,
-        _ => unknown_tool_output(name, args.clone()),
-    }
-}
-
-/// Parse JSON args into typed input and call ToolDef::execute.
-async fn run_tool<T: ToolDef>(
-    name: &str,
-    args: &serde_json::Value,
-    ctx: &ToolContext,
-) -> ToolOutput {
-    match parse_input::<T::Input>(args) {
-        Ok(i) => T::execute(i, ctx).await,
-        Err(e) => ToolOutput {
-            tool_name: name.to_string(),
-            tool_args: args.clone(),
-            content: format!("Failed to parse tool input: {e}"),
-            bytes_transferred: None,
-            duration: Duration::from_millis(0),
-            status: ToolStatus::Error,
-        },
-    }
+    crate::tool_registry::dispatch_tool_impl(name, args, ctx).await
 }
 
 /// Check if a tool name is known.
@@ -161,17 +133,6 @@ fn blocked_output(tool_name: &str, args: serde_json::Value) -> ToolOutput {
         bytes_transferred: None,
         duration: Duration::from_millis(0),
         status: ToolStatus::Blocked,
-    }
-}
-
-fn unknown_tool_output(tool_name: &str, args: serde_json::Value) -> ToolOutput {
-    ToolOutput {
-        tool_name: tool_name.to_owned(),
-        tool_args: args,
-        content: format!("Error: unknown tool '{}'", tool_name),
-        bytes_transferred: None,
-        duration: Duration::from_millis(0),
-        status: ToolStatus::Error,
     }
 }
 
