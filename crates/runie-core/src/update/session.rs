@@ -200,7 +200,7 @@ impl AppState {
         steering_mode: DeliveryMode,
         follow_up_mode: DeliveryMode,
     ) {
-        use crate::message::{now, ChatMessage, Part, Role};
+        use crate::proto::message::{ChatMessageBuilder, MessageOrigin, Role};
 
         // Mutate authoritative TurnState, then sync to AgentState projection.
         let mut queue = TurnQueue::new(std::mem::take(&mut self.turn_state_mut().message_queue));
@@ -209,15 +209,12 @@ impl AppState {
             // Steering was delivered — sync to TurnState
             self.turn_state_mut().message_queue = queue.into_inner();
             let id = self.next_id();
-            self.session_mut().messages.push(ChatMessage {
-                role: Role::User,
-                timestamp: now(),
-                id: id.clone(),
-                parts: vec![Part::Text {
-                    content: r.content.clone(),
-                }],
-                ..Default::default()
-            });
+            let msg = ChatMessageBuilder::new(Role::User)
+                .id(id.clone())
+                .origin(MessageOrigin::Steering)
+                .text(r.content.clone())
+                .build();
+            self.session_mut().messages.push(msg);
             self.turn_state_mut()
                 .request_queue
                 .push_back((r.content, id));
@@ -229,15 +226,12 @@ impl AppState {
                 if let Some(r) = q.pop_all_follow_ups() {
                     self.turn_state_mut().message_queue = q.into_inner();
                     let id = self.next_id();
-                    self.session_mut().messages.push(ChatMessage {
-                        role: Role::User,
-                        timestamp: now(),
-                        id: id.clone(),
-                        parts: vec![Part::Text {
-                            content: r.content.clone(),
-                        }],
-                        ..Default::default()
-                    });
+                    let msg = ChatMessageBuilder::new(Role::User)
+                        .id(id.clone())
+                        .origin(MessageOrigin::FollowUp)
+                        .text(r.content.clone())
+                        .build();
+                    self.session_mut().messages.push(msg);
                     self.turn_state_mut()
                         .request_queue
                         .push_back((r.content, id));
@@ -250,15 +244,12 @@ impl AppState {
             // Follow-up was delivered
             self.turn_state_mut().message_queue = queue.into_inner();
             let id = self.next_id();
-            self.session_mut().messages.push(ChatMessage {
-                role: Role::User,
-                timestamp: now(),
-                id: id.clone(),
-                parts: vec![Part::Text {
-                    content: r.content.clone(),
-                }],
-                ..Default::default()
-            });
+            let msg = ChatMessageBuilder::new(Role::User)
+                .id(id.clone())
+                .origin(MessageOrigin::FollowUp)
+                .text(r.content.clone())
+                .build();
+            self.session_mut().messages.push(msg);
             self.turn_state_mut()
                 .request_queue
                 .push_back((r.content, id));

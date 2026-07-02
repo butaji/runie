@@ -504,3 +504,106 @@ fn abort_during_streaming_resets_timers() {
     assert!(state.agent.thinking_started_at.is_none());
     assert!(state.agent.tool_started_at.is_none());
 }
+
+// ── MessageOrigin tests ───────────────────────────────────────────────────────
+
+#[test]
+fn steering_message_has_steering_origin() {
+    let mut state = AppState::default();
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
+
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('i'));
+    state.update(Event::submit());
+
+    // Complete turn to trigger delivery
+    state.update(crate::Event::Done {
+        id: "req.0".to_string(),
+    });
+
+    // Dump session messages for debugging
+    eprintln!("Session messages: {:?}", state.session.messages);
+
+    // Find the delivered steering message
+    let steering_msg = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.content() == "hi" && m.role == Role::User);
+
+    assert!(
+        steering_msg.is_some(),
+        "Steering message should be in session"
+    );
+    assert!(matches!(
+        steering_msg.unwrap().metadata.origin,
+        crate::message::MessageOrigin::Steering
+    ));
+}
+
+#[test]
+fn follow_up_message_has_follow_up_origin() {
+    let mut state = AppState::default();
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
+
+    state.update(crate::Event::Input('f'));
+    state.update(crate::Event::Input('o'));
+    state.update(crate::Event::Input('l'));
+    state.update(crate::Event::Input('l'));
+    state.update(crate::Event::FollowUp);
+
+    // Complete turn to trigger delivery
+    state.update(crate::Event::Done {
+        id: "req.0".to_string(),
+    });
+
+    // Dump session messages for debugging
+    eprintln!("Session messages: {:?}", state.session.messages);
+
+    // Find the delivered follow-up message
+    let follow_up_msg = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.content() == "foll" && m.role == Role::User);
+
+    assert!(
+        follow_up_msg.is_some(),
+        "Follow-up message should be in session"
+    );
+    assert!(matches!(
+        follow_up_msg.unwrap().metadata.origin,
+        crate::message::MessageOrigin::FollowUp
+    ));
+}
+
+#[test]
+fn idle_submit_has_user_origin() {
+    let mut state = AppState::default();
+    state.turn_state.turn_active = false;
+    state.sync_agent_state();
+
+    state.update(crate::Event::Input('h'));
+    state.update(crate::Event::Input('e'));
+    state.update(crate::Event::Input('l'));
+    state.update(crate::Event::Input('l'));
+    state.update(Event::submit());
+
+    // Dump session messages for debugging
+    eprintln!("Session messages: {:?}", state.session.messages);
+
+    // Find the user message
+    let user_msg = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.content() == "hell" && m.role == Role::User);
+
+    assert!(user_msg.is_some(), "User message should be in session");
+    assert!(matches!(
+        user_msg.unwrap().metadata.origin,
+        crate::message::MessageOrigin::User
+    ));
+}

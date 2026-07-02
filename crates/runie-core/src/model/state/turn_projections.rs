@@ -274,21 +274,18 @@ impl AppState {
     /// Project SteeringDelivered fact into AppState.
     /// Removes from message_queue and adds to session.messages.
     pub(crate) fn apply_steering_delivered(&mut self, content: String, id: String) {
-        use crate::message::{now, ChatMessage, Part, Role};
+        use crate::proto::message::{ChatMessageBuilder, MessageOrigin};
         // Remove the delivered steering message from the queue.
         self.turn_state_mut().message_queue.retain(|m| {
             !(m.kind == crate::model::QueuedMessageKind::Steering && m.content == content)
         });
         // Add to session
-        self.session_mut().messages.push(ChatMessage {
-            role: Role::User,
-            timestamp: now(),
-            id: id.clone(),
-            parts: vec![Part::Text {
-                content: content.clone(),
-            }],
-            ..Default::default()
-        });
+        let msg = ChatMessageBuilder::new(crate::message::Role::User)
+            .id(id.clone())
+            .origin(MessageOrigin::Steering)
+            .text(content.clone())
+            .build();
+        self.session_mut().messages.push(msg);
         // Add to request_queue (for agent to pick up)
         self.turn_state_mut().request_queue.push_back((content, id));
         // Sync all fields from TurnState to AgentState using the From impl.
@@ -299,21 +296,18 @@ impl AppState {
     /// Project FollowUpDelivered fact into AppState.
     /// Removes from message_queue and adds to session.messages.
     pub(crate) fn apply_follow_up_delivered(&mut self, content: String, id: String) {
-        use crate::message::{now, ChatMessage, Part, Role};
+        use crate::proto::message::{ChatMessageBuilder, MessageOrigin};
         // Remove the delivered follow-up message from the queue.
         self.turn_state_mut().message_queue.retain(|m| {
             !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content == content)
         });
         // Add to session
-        self.session_mut().messages.push(ChatMessage {
-            role: Role::User,
-            timestamp: now(),
-            id: id.clone(),
-            parts: vec![Part::Text {
-                content: content.clone(),
-            }],
-            ..Default::default()
-        });
+        let msg = ChatMessageBuilder::new(crate::message::Role::User)
+            .id(id.clone())
+            .origin(MessageOrigin::FollowUp)
+            .text(content.clone())
+            .build();
+        self.session_mut().messages.push(msg);
         // Add to request_queue (for agent to pick up)
         self.turn_state_mut().request_queue.push_back((content, id));
         // Sync all fields from TurnState to AgentState using the From impl.
