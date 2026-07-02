@@ -1257,7 +1257,7 @@
   {
     "file": "fix-deliverqueued-race-in-uiactor.md",
     "title": "Fix DeliverQueued race in UiActor",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-permissionaction-serde-case-and-docs.md",
@@ -1272,7 +1272,7 @@
   {
     "file": "fix-initial-tui-snapshot-race-after-bootstrap.md",
     "title": "Fix initial TUI snapshot race after bootstrap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-leader-tcp-utf8-split-with-linescodec.md",

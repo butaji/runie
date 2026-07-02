@@ -209,6 +209,25 @@ impl UiActor {
         let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(16);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
+        // Drain all buffered bootstrap events before sending the first snapshot.
+        // Events from `Leader::start_with_bus()` (ConfigLoaded, TrustLoaded, etc.)
+        // are sent before UiActor's run() starts. Without draining, the first
+        // snapshot is rendered with empty/default state, causing a flash once
+        // those events arrive and are applied.
+        loop {
+            match rx.try_recv() {
+                Ok(evt) => {
+                    if self.handle_event_inner(evt, effect_tx.clone()).await {
+                        // Quit event — still publish a final snapshot before exiting.
+                        self.publish_snapshot();
+                        return;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::TryRecvError::Empty) => break,
+                Err(_) => break,
+            }
+        }
+
         let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
         self.state.ensure_fresh();
         let snap = self.build_paced_snapshot();

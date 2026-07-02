@@ -60,6 +60,10 @@ mod quit_shortcut;
 mod toggle_e2e;
 #[cfg(test)]
 mod vim_mode;
+#[cfg(test)]
+mod input_actor_routing;
+#[cfg(test)]
+mod uiactor_init;
 
 /// Helper: give a default state a connected model so input/status render.
 pub fn connect_model(state: &mut AppState) {
