@@ -1527,7 +1527,7 @@
   {
     "file": "route-fetch-docs-through-central-http-client.md",
     "title": "Route `fetch_docs` through the central HTTP client",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-permission-clearance-through-permissionactor.md",

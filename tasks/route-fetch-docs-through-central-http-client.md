@@ -2,6 +2,19 @@
 
 ## Status
 
+`done`
+
+## Implementation
+
+Updated `crates/runie-agent/src/tool/fetch_docs.rs` to use `runie_provider::http::build_client()` instead of direct `reqwest::get()` calls.
+
+The `fetch_docs` function now:
+1. Creates an HTTP client via `build_client()` which has consistent timeout configuration
+2. Uses `client.get(url).send()` instead of `reqwest::get(url)`
+3. Benefits from connection pooling via the shared client
+
+## Context
+
 `todo`
 
 ## Description

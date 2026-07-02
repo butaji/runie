@@ -2,6 +2,7 @@
 
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::tool::ToolDef;
+use runie_provider::http::build_client;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -51,9 +52,11 @@ impl ToolDef for FetchDocsTool {
 }
 
 async fn fetch_docs(library: &str) -> anyhow::Result<String> {
+    let client = build_client();
+
     // Step 1: Search for the library ID
     let search_url = format!("{}?q={}", SEARCH_URL, library);
-    let search_resp: serde_json::Value = reqwest::get(&search_url).await?.json().await?;
+    let search_resp: serde_json::Value = client.get(&search_url).send().await?.json().await?;
 
     let lib_id = search_resp["libs"]
         .as_array()
@@ -63,7 +66,7 @@ async fn fetch_docs(library: &str) -> anyhow::Result<String> {
 
     // Step 2: Fetch the documentation
     let doc_url = format!("{}/{}/llms.txt", DOC_BASE, lib_id);
-    let doc_resp = reqwest::get(&doc_url).await?;
+    let doc_resp = client.get(&doc_url).send().await?;
     let doc_text = doc_resp.text().await?;
 
     Ok(format!(
