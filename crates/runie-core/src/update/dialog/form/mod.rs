@@ -93,6 +93,13 @@ fn handle_form_input(state: &mut AppState, panel: &mut Panel, c: char) -> FormAc
     use FormAction as A;
     if panel.selected_form_field().is_some() {
         form_panel_edit_char(panel, c);
+        // Keep LoginFlowState.key in sync with the form field so SubmitKey
+        // receives the current value without requiring cmd_name on the panel.
+        if panel.id == "login-key" {
+            if let Some(flow) = state.login_flow_mut() {
+                flow.key.clone_from(panel.form_values.get("key").unwrap_or(&String::new()));
+            }
+        }
         return A::KeepOpen;
     }
     if let Some(ItemAction::Emit(evt)) = panel.find_button_by_accel(c) {
@@ -171,18 +178,52 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
             toggle_selected_checkbox(state, panel);
             A::KeepOpen
         }
+        // Intercept FormField: Enter while in the field should submit (not route
+        // through the command registry, which has no cmd_name for login-key).
+        Some(PanelItem::FormField { .. }) if panel.id == "login-key" => {
+            if key_field_empty(panel) {
+                state.warn("API key is required.");
+                return A::KeepOpen;
+            }
+            let provider = panel
+                .form_values
+                .get("provider")
+                .cloned()
+                .unwrap_or_else(|| state.active_provider());
+            let key = panel
+                .form_values
+                .get("key")
+                .cloned()
+                .unwrap_or_default();
+            A::Submit(Some(crate::Event::SubmitKey { provider, key }))
+        }
+        // Intercept FormSubmit for login-key: emit SubmitKey directly instead of
+        // routing through the command registry (the panel has no cmd_name, so
+        // route_form_submit would silently no-op).
+        Some(PanelItem::FormSubmit) if panel.id == "login-key" => {
+            if key_field_empty(panel) {
+                state.warn("API key is required.");
+                return A::KeepOpen;
+            }
+            let provider = panel
+                .form_values
+                .get("provider")
+                .cloned()
+                .unwrap_or_else(|| state.active_provider());
+            let key = panel
+                .form_values
+                .get("key")
+                .cloned()
+                .unwrap_or_default();
+            A::Submit(Some(crate::Event::SubmitKey { provider, key }))
+        }
         _ => route_form_submit(panel),
     }
 }
 
-/// Route a form submit to either the legacy submit factory (for panels
-/// without a cmd_name, e.g. login forms) or through the command registry.
-fn route_form_submit(panel: &mut Panel) -> FormAction {
-    use FormAction as A;
-    if panel.cmd_name.is_none() && panel.submit_factory.is_some() {
-        return A::Submit(form_build_submit(panel));
-    }
-    A::SubmitCommand {
+/// Route a form submit to the command registry.
+fn route_form_submit(panel: &Panel) -> FormAction {
+    FormAction::SubmitCommand {
         name: panel.cmd_name.clone().unwrap_or_default(),
         keys: panel.field_keys.clone(),
         values: panel.get_form_values().clone(),
@@ -418,13 +459,6 @@ fn dispatch_form_to_registry(
 fn serialize_form_values_ordered(keys: &[String], values: &HashMap<String, String>) -> String {
     let parts: Vec<String> = keys.iter().filter_map(|k| values.get(k).cloned()).collect();
     parts.join(" ")
-}
-
-/// Build the submit event for a form panel by reading form values.
-pub fn form_build_submit(panel: &mut Panel) -> Option<crate::Event> {
-    let factory = panel.submit_factory?;
-    let values = panel.get_form_values().clone();
-    Some(factory(&values))
 }
 
 #[cfg(test)]

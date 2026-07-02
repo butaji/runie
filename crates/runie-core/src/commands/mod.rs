@@ -9,18 +9,18 @@
 //! // Simple message command
 //! let _ = cmd("hello").msg("Hello!");
 //!
-//! // Full command definition
+//! // Form-based command: submit routes through command registry via form_with_handler
+//! // (see spec.rs for the FormHandler signature and build_form_stack_from_template)
+//! use runie_core::commands::CommandResult;
 //! let _ = cmd("save")
 //!     .desc("Save session")
 //!     .alias("s")
 //!     .category(CommandCategory::Session)
-//!     .form("Save", |f| {
-//!         f.field("Name", "session", "name").on_submit(|values| {
-//!             Event::RunSaveCommand {
-//!                 name: values.get("name").cloned().unwrap_or_default(),
-//!             }
-//!         })
-//!     });
+//!     .form_with_handler(
+//!         "Save Session",
+//!         |f| f.field("Name", "session", "name"),
+//!         |_state, _args| CommandResult::None,
+//!     );
 //! ```
 
 pub mod dsl;

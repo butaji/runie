@@ -33,11 +33,10 @@
 //!     .select("Theme", "runie", vec!["runie".into(), "dracula".into()], "theme");
 //!
 //! // Form view (filtering disabled, fields editable)
+//! // Submit routes through the command registry via cmd_name("save")
 //! let _ = form("save", "Save Session")
 //!     .field("Name", "session", "name")
-//!     .on_submit(|values| Event::RunSaveCommand {
-//!         name: values.get("name").cloned().unwrap_or_default(),
-//!     })
+//!     .cmd_name("save")
 //!     .into_stack();
 //!
 //! // Any panel can be switched to form view explicitly, e.g. a loading
@@ -65,5 +64,5 @@ pub use builders::{
     settings, theme_picker,
 };
 pub use item::{parse_accel, strip_accel, EventLabel, ItemAction, PanelItem};
-pub use panel::{FormSubmitFn, Panel, PanelView};
+pub use panel::{Panel, PanelView};
 pub use stack::{PanelId, PanelStack};
