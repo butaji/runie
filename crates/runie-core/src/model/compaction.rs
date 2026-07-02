@@ -1,8 +1,21 @@
 //! Session compaction and token accounting.
 
+use std::sync::LazyLock;
+
+use regex::Regex;
+
 use crate::message::{now, ChatMessage, MessageMetadata, MessageOrigin, Part};
 use crate::model::state::AppState;
 use crate::model::Role;
+
+// Lazy-initialized regex patterns (compiled once at first use).
+// Using LazyLock instead of unwrap on construction handles init errors gracefully.
+static FENCE_PAT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap()
+});
+static DETAILS_PAT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)<details>\s*\n?([\s\S]*?)</details>").unwrap()
+});
 
 impl AppState {
     /// Total tokens across all messages.
@@ -189,16 +202,12 @@ fn truncate_fenced_code_blocks(content: &mut String, keep: usize) -> (usize, boo
     let mut removed = 0usize;
     let mut modified = false;
 
-    // Regex for fenced code blocks: ``` optional-lang\n...\n```
-    // The closing ``` must be on its own line (or end of string).
-    let fence_pat = regex::Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap();
-
     // We need to iterate carefully since we modify the string.
     // Strategy: find all matches, compute truncated version, then rebuild.
     let mut result = String::with_capacity(content.len());
     let mut last_end = 0;
 
-    for cap in fence_pat.captures_iter(content) {
+    for cap in FENCE_PAT.captures_iter(content) {
         let full = cap.get(0).unwrap();
         let lang = cap.get(1).map(|m| m.as_str()).unwrap_or("");
         let inner = cap.get(2).map(|m| m.as_str()).unwrap_or("");
@@ -243,14 +252,10 @@ fn truncate_details_blocks(content: &mut String, keep: usize) -> (usize, bool) {
     let mut removed = 0usize;
     let mut modified = false;
 
-    // Match <details>...</details> blocks (case-insensitive, multiline).
-    let details_pat =
-        regex::Regex::new(r"(?i)<details>\s*\n?([\s\S]*?)</details>").unwrap();
-
     let mut result = String::with_capacity(content.len());
     let mut last_end = 0;
 
-    for cap in details_pat.captures_iter(content) {
+    for cap in DETAILS_PAT.captures_iter(content) {
         let full = cap.get(0).unwrap();
         let inner = cap.get(1).map(|m| m.as_str()).unwrap_or("");
 
