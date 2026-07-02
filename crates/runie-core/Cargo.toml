@@ -75,7 +75,11 @@ path-absolutize.workspace = true
 tokio-util.workspace = true
 metrics.workspace = true
 tiktoken.workspace = true
+camino.workspace = true
+tinytemplate.workspace = true
 serde_with.workspace = true
+validator.workspace = true
+chrono.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true

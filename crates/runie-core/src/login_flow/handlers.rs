@@ -270,17 +270,13 @@ fn persist_provider_config(
 ) {
     sync_config_cache(state, provider, base_url, key, selected);
 
-    // Extract handles before any async work to avoid borrow conflicts.
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-
-    if can_spawn {
-        let handles = handles.unwrap();
+    // Route through ConfigActor in production; fall back to direct save in tests.
+    if let Some(h) = state.actor_handles() {
         let provider = provider.to_owned();
         let base_url = base_url.to_owned();
         let key = key.to_owned();
         let selected = selected.to_vec();
-        let _ = handles.config.try_send(ConfigMsg::SaveProvider {
+        let _ = h.config.try_send(ConfigMsg::SaveProvider {
             name: provider,
             base_url,
             api_key: key,

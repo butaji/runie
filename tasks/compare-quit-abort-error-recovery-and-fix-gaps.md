@@ -1,6 +1,6 @@
 # Compare quit, abort, and error recovery and fix gaps
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Input / Commands
 **Priority**: P0
@@ -22,21 +22,21 @@ Compare how Grok Build and Runie handle quitting, aborting an active turn, and r
 
 ## Acceptance Criteria
 
-- [ ] Each scenario runs in both tools.
-- [ ] Runie `Ctrl+c`/`Ctrl+q` quit during active turn works.
-- [ ] Runie `Ctrl+s` abort returns to idle.
-- [ ] Provider/offline errors produce clear messages and return to idle.
-- [ ] Actionable findings become tasks with unit + E2E + live tmux AC.
-- [ ] `cargo test --workspace` passes after fixes.
+- [x] Each scenario runs in both tools.
+- [x] Runie `Ctrl+c`/`Ctrl+q` quit during active turn works.
+- [x] Runie `Ctrl+s` abort returns to idle.
+- [x] Provider/offline errors produce clear messages and return to idle.
+- [x] Actionable findings become tasks with unit + E2E + live tmux AC.
+- [x] `cargo test --workspace` passes after fixes.
 
 ## Tests
 
 ### Layer 2 — Event Handling
-- [ ] `ctrl_c_quits_during_turn` — `Ctrl+c` emits `Quit` even when `turn_active`.
-- [ ] `ctrl_s_aborts_during_turn` — `Ctrl+s` emits `Abort` and cancels the turn.
+- [x] `ctrl_c_quits_during_turn` — `Ctrl+c` emits `Quit` even when `turn_active`.
+- [x] `ctrl_s_aborts_during_turn` — `Ctrl+s` emits `Abort` and cancels the turn.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `tmux_quit_during_hello_loop` — live tmux script starts `hello` and quits successfully.
+- [x] `tmux_quit_during_hello_loop` — live tmux script starts `hello` and quits successfully.
 
 ## Files touched
 
@@ -59,4 +59,6 @@ This task is not complete until the fix is validated with all three levels:
 ## Notes
 
 - Overlaps with `fix-tui-quit-shortcuts-ignored-during-active-turn`.
+- Implementation was already present in the codebase. Verified that all quit/abort/error paths work correctly.
+- Added `run_tmux_scenario_quit_during` function to `scripts/tmux-smoke-test.sh` for the live tmux smoke test.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.

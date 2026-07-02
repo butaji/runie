@@ -5,6 +5,7 @@
 //! permission rules, and config sources.
 
 use runie_core::config::Config;
+use runie_core::proto::ProviderConfig;
 use runie_core::skills::{load_all, Skill};
 use runie_core::subagents::{PermissionMode, PromptMode, SubagentRegistry};
 
@@ -27,6 +28,12 @@ pub struct InspectReport {
     pub permissions: Vec<PermissionInfo>,
     pub providers: Vec<ProviderInfo>,
     pub model_catalog: Vec<ModelInfoEntry>,
+    /// Validation errors found in config.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub validation_errors: Vec<String>,
+    /// Hints for setting up providers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub setup_hints: Vec<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -97,6 +104,9 @@ impl InspectReport {
             .unwrap_or_default();
         let subagent_registry = SubagentRegistry::from_builtins();
 
+        let validation_errors = Self::validate_config(&config);
+        let setup_hints = Self::generate_setup_hints(&config);
+
         Self {
             config_sources: Self::discover_config_sources(),
             skill_items: Self::format_skills(skills),
@@ -105,7 +115,105 @@ impl InspectReport {
             permissions: Self::list_permissions(&config),
             providers: Self::list_providers(&config),
             model_catalog: Self::list_model_catalog(),
+            validation_errors,
+            setup_hints,
         }
+    }
+
+    /// Validate config and return error messages.
+    fn validate_config(config: &Config) -> Vec<String> {
+        let mut errors = Vec::new();
+
+        // Check if provider is set but not configured
+        if let Some(provider) = &config.provider {
+            if !provider.is_empty() {
+                if !config.model_providers.contains_key(provider) {
+                    errors.push(format!(
+                        "provider '{}' set as default but not configured in model_providers",
+                        provider
+                    ));
+                }
+            }
+        }
+
+        // Check if any configured providers have their API key
+        for (name, _) in &config.model_providers {
+            let api_key = config.resolve_api_key(name).unwrap_or_default();
+            if api_key.is_empty() {
+                let env_var = runie_core::provider::find_provider(name)
+                    .map(|p| p.env_var.clone())
+                    .unwrap_or_else(|| format!("{}_API_KEY", name.to_uppercase()));
+                errors.push(format!(
+                    "provider '{}': API key not found in keyring or {} environment variable",
+                    name, env_var
+                ));
+            }
+        }
+
+        // Check if default model exists for provider
+        if let Some(provider) = &config.provider {
+            if !provider.is_empty() {
+                if let Some(model) = config.default_model() {
+                    if !model.is_empty() {
+                        let model_str: &str = model;
+                        if !runie_core::model_catalog::model_catalog()
+                            .iter()
+                            .any(|m| m.provider == *provider && m.name == model_str) {
+                            errors.push(format!(
+                                "model '{}' not found in model catalog for provider '{}'",
+                                model, provider
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        errors
+    }
+
+    /// Generate actionable hints for setting up providers.
+    fn generate_setup_hints(config: &Config) -> Vec<String> {
+        let mut hints = Vec::new();
+
+        // Check if no providers are configured
+        if config.model_providers.is_empty() {
+            hints.push("No providers configured. Run `runie login` to set up a provider.".to_string());
+            hints.push("Or set a provider in ~/.runie/config.toml:".to_string());
+            hints.push("  provider = \"openai\"".to_string());
+            hints.push("  [model_providers.openai]".to_string());
+            hints.push("  base_url = \"https://api.openai.com/v1\"".to_string());
+            hints.push("  models = [\"gpt-4o\"]".to_string());
+            hints.push("".to_string());
+            hints.push("Then store your API key with: runie login --provider openai".to_string());
+        }
+
+        // Check for missing API keys
+        for (name, _) in &config.model_providers {
+            let api_key = config.resolve_api_key(name).unwrap_or_default();
+            if api_key.is_empty() {
+                let env_var = runie_core::provider::find_provider(name)
+                    .map(|p| p.env_var.clone())
+                    .unwrap_or_else(|| format!("{}_API_KEY", name.to_uppercase()));
+                hints.push(format!(
+                    "Missing API key for '{}'. Set {} or run `runie login --provider {}`",
+                    name, env_var, name
+                ));
+            }
+        }
+
+        // Check for environment variable hints
+        let providers = runie_core::provider::known_providers();
+        for provider in &providers {
+            if std::env::var(&provider.env_var).is_ok() {
+                hints.push(format!(
+                    "{} detected in environment. Add '{}' to model_providers in config to use it.",
+                    provider.env_var, provider.key
+                ));
+            }
+        }
+
+        hints
     }
 
     fn discover_config_sources() -> Vec<ConfigSource> {
@@ -260,6 +368,30 @@ impl InspectReport {
         self.print_permissions();
         self.print_providers();
         self.print_model_catalog();
+        self.print_diagnostics();
+    }
+
+    /// Print validation errors and setup hints.
+    fn print_diagnostics(&self) {
+        if !self.validation_errors.is_empty() {
+            println!("## Configuration Errors");
+            for error in &self.validation_errors {
+                println!("  ✗ {}", error);
+            }
+            println!();
+        }
+
+        if !self.setup_hints.is_empty() {
+            println!("## Setup Hints");
+            for hint in &self.setup_hints {
+                if hint.is_empty() {
+                    println!();
+                } else {
+                    println!("  → {}", hint);
+                }
+            }
+            println!();
+        }
     }
 
     fn print_config_sources(&self) {
@@ -408,6 +540,8 @@ impl InspectReport {
             permissions: &'a [PermissionInfo],
             providers: &'a [ProviderInfo],
             model_catalog: &'a [ModelInfoEntry],
+            validation_errors: &'a [String],
+            setup_hints: &'a [String],
         }
 
         let report = Report {
@@ -418,6 +552,8 @@ impl InspectReport {
             permissions: &self.permissions,
             providers: &self.providers,
             model_catalog: &self.model_catalog,
+            validation_errors: &self.validation_errors,
+            setup_hints: &self.setup_hints,
         };
 
         println!(

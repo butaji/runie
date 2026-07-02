@@ -16,8 +16,8 @@
 //! See [`kind`](kind) for the routing rules (facts → projection, intents → actors,
 //! control → system handler).
 
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 use crate::event::TransientLevel;
 use crate::settings::SettingsCategory;
@@ -59,7 +59,7 @@ pub enum Intent {
     // ── SessionActor ────────────────────────────────────────────────────────
     /// Request SessionActor to set a trust decision for a project path.
     SetTrust {
-        path: PathBuf,
+        path: Utf8PathBuf,
         decision: TrustDecision,
     },
     /// Request SessionActor to append to the input history.
@@ -74,7 +74,7 @@ pub enum Intent {
     },
     /// Request IoActor to write files and emit `FilesWritten`.
     WriteFiles {
-        edits: Vec<(PathBuf, String)>,
+        edits: Vec<(Utf8PathBuf, String)>,
     },
 
     // ── UiControl (not yet a dedicated actor) ─────────────────────────────

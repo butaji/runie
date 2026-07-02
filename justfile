@@ -5,15 +5,22 @@
 default:
     just --list
 
-# Run all workspace tests with 120s timeout (tests hanging >120s are killed)
-# Override timeout: RUST_TEST_TIMEOUT=60 just test
-# Pass through to cargo: just test -- --nocapture
+# Run all workspace tests with nextest (120s slow timeout per test)
+# Override slow-timeout: just test SLOW_TIMEOUT=60
+# Pass through to nextest: just test -- --no-fail-fast
 test:
-    RUST_TEST_TIMEOUT=120 cargo test --workspace
+    cargo nextest run --workspace
 
-# Run tests with output visible (still respects timeout)
+# Run tests with output visible
 test-verbose:
-    RUST_TEST_TIMEOUT=120 cargo test --workspace -- --nocapture
+    cargo nextest run --workspace --no-capture
+
+# Run doctests separately (nextest skips doctests by default)
+test-doc:
+    cargo test --workspace --doc
+
+# Run all tests including doctests (for final verification)
+test-all: test test-doc
 
 # Run clippy lints
 lint:
@@ -59,9 +66,9 @@ check:
 dev:
     ./dev.sh
 
-# Run verify-tests script (same as CI)
+# Run all tests (same as CI)
 verify-tests:
-    ./scripts/verify-tests.sh
+    cargo nextest run --workspace && cargo test --workspace --doc
 
 # Watch mode for TUI crate only
 watch-tui:

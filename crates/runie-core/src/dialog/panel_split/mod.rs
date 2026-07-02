@@ -3,7 +3,6 @@
 //! Split from dialog/panel.rs to stay under the 500-line limit.
 
 use super::{ItemAction, PanelItem};
-use crate::Event;
 
 // Re-export helpers
 mod helpers;
@@ -16,9 +15,6 @@ mod navigation;
 
 // Form methods
 mod form_methods;
-
-/// Function that builds the submit event from collected form values.
-pub type FormSubmitFn = fn(&std::collections::HashMap<String, String>) -> Event;
 
 /// Visual layout of a panel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -50,10 +46,8 @@ pub struct Panel {
     pub closable: bool,
     /// For form panels: stores form values (key -> value)
     pub form_values: std::collections::HashMap<String, String>,
-    /// For form panels: factory that turns form values into the submit event.
-    pub submit_factory: Option<FormSubmitFn>,
     /// For form panels: the canonical command name, used to route submissions
-    /// through the command registry instead of emitting raw events.
+    /// through the command registry.
     pub cmd_name: Option<String>,
     /// For form panels: ordered list of field keys, used to serialize form
     /// values as positional arguments for the command registry.

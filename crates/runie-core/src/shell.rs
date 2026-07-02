@@ -44,11 +44,12 @@ pub enum ShellStatus {
 /// - Uses `command-group` to kill the entire process tree when timeout expires.
 pub async fn run_bash(
     command: &str,
-    working_dir: &Path,
+    working_dir: impl AsRef<Path>,
     env: &HashMap<String, String>,
     timeout: Duration,
     shell: bool,
 ) -> ShellResult {
+    let working_dir = working_dir.as_ref();
     if shell {
         run_bash_shell(command, working_dir, env, timeout).await
     } else {

@@ -15,12 +15,6 @@ use crate::commands::dsl::CommandKind;
 pub enum NamedHandler {
     /// Simple handler function.
     Handler(fn(&mut AppState, &str) -> crate::commands::CommandResult),
-    /// Form with submit event.
-    Form {
-        title: &'static str,
-        fields: &'static [(&'static str, &'static str, &'static str)],
-        submit: fn(&std::collections::HashMap<String, String>) -> crate::Event,
-    },
     /// Form with custom handler.
     FormWithHandler {
         title: &'static str,
@@ -62,15 +56,6 @@ impl HandlerRegistry {
     pub fn to_command_kind(&self, name: &str) -> Option<CommandKind> {
         self.get(name).map(|h| match h {
             NamedHandler::Handler(f) => CommandKind::Handler(*f),
-            NamedHandler::Form {
-                title,
-                fields,
-                submit,
-            } => CommandKind::Form {
-                title,
-                fields,
-                submit: *submit,
-            },
             NamedHandler::FormWithHandler {
                 title,
                 fields,

@@ -60,6 +60,9 @@ async fn main() -> io::Result<()> {
     // Install human-panic hook for crash reports.
     human_panic::setup_panic!();
 
+    // Install color-eyre for better error chains.
+    let _ = color_eyre::install();
+
     tracing_init::init();
 
     let cli = Cli::parse();
@@ -82,10 +85,18 @@ async fn main() -> io::Result<()> {
     let leader = Leader::new();
     let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
     let provider_factory = std::sync::Arc::new(BuiltProviderFactory);
-    let leader_handle = leader
+    let leader_handle = match leader
         .start_with_bus(provider_factory, agent_factory, bus.clone())
         .await
-        .map_err(|e| io::Error::other(format!("leader bootstrap failed: {}", e)))?;
+    {
+        Ok(h) => h,
+        Err(e) => {
+            // Print the full error chain with anyhow's {:#} formatting.
+            eprintln!("Error: leader bootstrap failed: {:#}", e);
+            eprintln!("\nHint: Set RUST_LOG=debug for more details.");
+            return Ok(());
+        }
+    };
 
     let mut state = AppState::default();
     state.set_actor_handles(leader_handle.clone());

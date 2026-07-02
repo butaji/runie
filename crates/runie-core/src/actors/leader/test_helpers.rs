@@ -31,6 +31,9 @@ pub async fn test_leader_handle() -> LeaderHandle {
         fn run(&self, _cmd: LeaderAgentCmd) -> Pin<Box<dyn Future<Output = ()> + Send>> {
             Box::pin(std::future::pending())
         }
+        fn abort(&self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(std::future::pending())
+        }
     }
 
     struct NoOpProvider;

@@ -4,9 +4,8 @@
 //! **AppState field access guardrail**: ensures internal AppState fields are accessed
 //! through accessors, not directly.
 //!
-//! Note: Event taxonomy files (`src/event/generated/`) are committed to the repository.
-//! If you modify `src/event/taxonomy.json`, regenerate the files by running the script
-//! in `scripts/generate-event-taxonomy.sh` (or update manually).
+//! Note: Event taxonomy is defined inline in `src/event/mod.rs`.
+//! The `taxonomy.json` file is kept as documentation; edits require manual updates.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -128,6 +127,7 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "actors/leader/handle.rs",
         "update/input/text.rs",
         "update/input/submit.rs",
+        "commands/dsl/handlers/session/mod.rs",
         "retry.rs",
         "session/replay.rs",
         "login_flow/validation.rs",

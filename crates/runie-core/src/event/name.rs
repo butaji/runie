@@ -1,7 +1,7 @@
 //! Canonical event name mapping for bindable variants.
 //!
-//! Uses strum's `IntoStaticStr` for name extraction and the generated
-//! `EVENT_NAMES` table for bindable-variant lookup.
+//! Uses strum's `IntoStaticStr` for name extraction and the `EVENT_NAMES`
+//! table for bindable-variant lookup.
 
 use super::Event;
 use crate::event::EVENT_NAMES;

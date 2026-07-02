@@ -125,22 +125,11 @@ impl AppState {
         if content.is_empty() {
             return;
         }
-        // Route through TurnActor to maintain authoritative queue state
-        let handles = self.actor_handles().cloned();
-        if let Some(ref h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
-            } else {
-                // Test mode: apply synchronously
-                self.agent_state_mut()
-                    .message_queue
-                    .push(crate::model::QueuedMessage {
-                        content,
-                        kind: crate::model::QueuedMessageKind::FollowUp,
-                    });
-            }
+        // Route through TurnActor to maintain authoritative queue state.
+        // Fallback applies synchronously in tests without actor handles.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
         } else {
-            // Test mode without handles: apply synchronously
             self.agent_state_mut()
                 .message_queue
                 .push(crate::model::QueuedMessage {
@@ -178,11 +167,17 @@ impl AppState {
         let follow_up_mode = self.config().follow_up_mode;
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
+            // Fire-and-forget: send DeliverQueued to TurnActor.
+            // The reply port is dropped (reply ignored) — the caller is synchronous.
+            // TurnActor emits SteeringDelivered/FollowUpDelivered events which update
+            // AppState projections through the normal event dispatch loop.
+            // Do NOT clear message_queue directly — that is owned by TurnActor/SSOT.
             let _ = h.turn.try_send(TurnMsg::DeliverQueued {
                 steering_mode,
                 follow_up_mode,
+                // SAFETY: RpcReplyPort is Send+Sync; zeroed port is safe for fire-and-forget.
+                reply: unsafe { std::mem::zeroed() },
             });
-            self.agent_state_mut().message_queue.clear();
             self.view_mut().scroll = 0;
         } else {
             // Test mode: apply via projection methods directly

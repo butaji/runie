@@ -307,7 +307,7 @@
   {
     "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
     "title": "Fix CLI headless native tool loops after permission denied",
-    "status": "blocked"
+    "status": "done"
   },
   {
     "file": "fix-leader-status-hardcoded-actor-count.md",
@@ -912,7 +912,7 @@
   {
     "file": "add-sample-config-env-and-completions.md",
     "title": "Add sample config, env template, and completions",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "add-session-compaction-with-threshold-and-tool-pair-summarization.md",
@@ -987,7 +987,7 @@
   {
     "file": "centralize-tui-glyphs-and-theme-constants.md",
     "title": "Centralize TUI glyphs and theme constants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-tui-popup-layout-constants.md",
@@ -1942,7 +1942,7 @@
   {
     "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
     "title": "Use color-eyre and human-panic for CLI errors",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "use-dashmap-for-approval-registry.md",

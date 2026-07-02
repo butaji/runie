@@ -233,8 +233,10 @@ impl RactorPermissionActor {
     async fn handle_trust_project(state: &mut PermissionActorState) {
         let result = tokio::task::spawn_blocking(|| {
             let cwd = std::env::current_dir().unwrap_or_default();
+            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
+                .unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
             let mut tm = crate::trust::TrustManager::load();
-            tm.set(&cwd, crate::trust::TrustDecision::Trusted);
+            tm.set(&cwd_utf8, crate::trust::TrustDecision::Trusted);
             let _ = tm.save();
             tm.decisions()
         })
@@ -253,8 +255,10 @@ impl RactorPermissionActor {
     async fn handle_untrust_project(state: &mut PermissionActorState) {
         let result = tokio::task::spawn_blocking(|| {
             let cwd = std::env::current_dir().unwrap_or_default();
+            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
+                .unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
             let mut tm = crate::trust::TrustManager::load();
-            tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
+            tm.set(&cwd_utf8, crate::trust::TrustDecision::Untrusted);
             let _ = tm.save();
             tm.decisions()
         })

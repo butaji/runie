@@ -76,7 +76,10 @@ mod tests {
 
     fn ctx() -> ToolContext {
         ToolContext {
-            working_dir: std::env::current_dir().unwrap(),
+            working_dir: std::env::current_dir()
+                .ok()
+                .and_then(|p| camino::Utf8PathBuf::from_path_buf(p).ok())
+                .unwrap_or_else(|| camino::Utf8PathBuf::from(".")),
             ..Default::default()
         }
     }

@@ -105,11 +105,9 @@ impl AppState {
 
     /// Abort turn when entering vim nav mode.
     fn abort_turn_for_vim_nav(&mut self) {
-        let handles = self.actor_handles().cloned();
-        if let Some(ref h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.turn.try_send(TurnMsg::AbortTurn);
-            }
+        // Route through TurnActor; fall back in tests without actor handles.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.turn.try_send(TurnMsg::AbortTurn);
         } else {
             self.apply_turn_aborted();
         }

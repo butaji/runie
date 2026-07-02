@@ -29,6 +29,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use tinytemplate::TinyTemplate;
+
 use crate::resource_loader::{extract_body, extract_frontmatter};
 
 /// Prompt mode for a subagent — controls how much context is included.
@@ -64,14 +66,86 @@ pub struct SubagentType {
 }
 
 impl SubagentType {
-    /// Interpolate `{{variable}}` placeholders in the body.
+    /// Interpolate `{{variable}}` placeholders in the body using tinytemplate.
+    /// Variables not in `vars` are rendered as empty strings.
     pub fn interpolate(&self, vars: &HashMap<&str, &str>) -> String {
-        let mut out = self.body.clone();
-        for (key, val) in vars {
-            out = out.replace(&format!("{{{{{}}}}}", key), val);
+        // Convert {{var}} syntax to tinytemplate's {var} syntax.
+        let template_body = convert_braces(&self.body);
+        // Extract all variable names from the template to pre-populate context.
+        let var_names = extract_var_names(&template_body);
+        let mut context: HashMap<&str, &str> = HashMap::new();
+        for (k, v) in vars {
+            context.insert(*k, *v);
         }
-        out
+        for name in &var_names {
+            context.entry(name.as_str()).or_insert("");
+        }
+        let mut tt = TinyTemplate::new();
+        match tt.add_template("body", &template_body) {
+            Ok(()) => tt.render("body", &context).unwrap_or_else(|e| {
+                eprintln!("Render error: {:?}", e);
+                self.body.clone()
+            }),
+            Err(e) => {
+                eprintln!("Add template error: {:?}", e);
+                self.body.clone()
+            }
+        }
     }
+}
+
+/// Extract all variable names from a tinytemplate template.
+fn extract_var_names(template: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let chars: Vec<char> = template.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] != '{' {
+            // Found {name}, extract the name.
+            i += 1; // consume {
+            let start = i;
+            while i < chars.len() && chars[i] != '}' {
+                i += 1;
+            }
+            let name: String = chars[start..i].iter().collect();
+            if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                names.push(name);
+            }
+            if i < chars.len() {
+                i += 1; // consume }
+            }
+        } else {
+            i += 1;
+        }
+    }
+    names
+}
+
+/// Convert `{{var}}` template syntax to tinytemplate's `{var}` syntax.
+fn convert_braces(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        // Check for {{ (start of variable placeholder)
+        if chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] == '{' {
+            result.push('{');
+            i += 2; // skip both {
+        }
+        // Check for }} (end of variable placeholder)
+        else if chars[i] == '}' && i + 1 < chars.len() && chars[i + 1] == '}' {
+            result.push('}');
+            i += 2; // skip both }
+        }
+        // Single brace or non-brace character
+        else {
+            result.push(chars[i]);
+            i += 1;
+        }
+    }
+    result
 }
 
 /// Registry of all available subagent types.
@@ -266,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn interpolate_preserves_unknown_placeholders() {
+    fn interpolate_renders_single_braces_not_in_vars() {
         let st = SubagentType {
             name: "test".into(),
             description: "".into(),
@@ -274,12 +348,13 @@ mod tests {
             model: "inherit".into(),
             permission_mode: PermissionMode::Default,
             agents_md: false,
-            body: "task: {{task}}, unknown: {{unknown}}".into(),
+            body: "task: {{task}}, single brace: {literal}".into(),
         };
         let vars: HashMap<&str, &str> = [("task", "do it")].into();
         let interpolated = st.interpolate(&vars);
         assert!(interpolated.contains("task: do it"));
-        assert!(interpolated.contains("unknown: {{unknown}}"));
+        // Single braces get rendered as empty by TinyTemplate since they're not in vars
+        assert!(interpolated.contains("task: do it, single brace: "));
     }
 
     #[test]
@@ -387,5 +462,65 @@ Third paragraph.
         );
         assert_eq!(parse_permission_mode("plan"), PermissionMode::Plan);
         assert_eq!(parse_permission_mode("unknown"), PermissionMode::Default);
+    }
+
+    #[test]
+    fn convert_braces_converts_template_syntax() {
+        assert_eq!(convert_braces("{{var}}"), "{var}");
+        assert_eq!(convert_braces("{{task}} is done"), "{task} is done");
+        assert_eq!(convert_braces("task: {{task}}, user: {{user}}"), "task: {task}, user: {user}");
+    }
+
+    #[test]
+    fn convert_braces_preserves_single_braces() {
+        assert_eq!(convert_braces("{single}"), "{single}");
+        assert_eq!(convert_braces("{{double}} and {single}"), "{double} and {single}");
+        assert_eq!(convert_braces("text with {brace} inside"), "text with {brace} inside");
+    }
+
+    #[test]
+    fn convert_braces_handles_empty_and_edge_cases() {
+        assert_eq!(convert_braces(""), "");
+        assert_eq!(convert_braces("no braces"), "no braces");
+        // Triple opening, three closing: {{ + { + }} + } → {{}}
+        assert_eq!(convert_braces("{{{}}}"), "{{}}");
+        // Four opening, two closing: {{ + {{ + }} → {{{
+        assert_eq!(convert_braces("{{{{}}"), "{{}");
+    }
+
+    #[test]
+    fn interpolate_renders_known_variables() {
+        let st = SubagentType {
+            name: "test".into(),
+            description: "".into(),
+            prompt_mode: PromptMode::Full,
+            model: "inherit".into(),
+            permission_mode: PermissionMode::Default,
+            agents_md: false,
+            body: "Task: {{task}}, User: {{user}}".into(),
+        };
+        let vars: HashMap<&str, &str> = [("task", "fix bug"), ("user", "alice")].into();
+        let result = st.interpolate(&vars);
+        assert!(result.contains("Task: fix bug"));
+        assert!(result.contains("User: alice"));
+    }
+
+    #[test]
+    fn interpolate_renders_unknown_as_empty() {
+        let st = SubagentType {
+            name: "test".into(),
+            description: "".into(),
+            prompt_mode: PromptMode::Full,
+            model: "inherit".into(),
+            permission_mode: PermissionMode::Default,
+            agents_md: false,
+            body: "task: {{task}}, unknown: {{missing}}".into(),
+        };
+        let vars: HashMap<&str, &str> = [("task", "do it")].into();
+        let result = st.interpolate(&vars);
+        // Known variable is rendered
+        assert!(result.contains("task: do it"));
+        // Unknown variable {{missing}} renders as empty (TinyTemplate behavior)
+        assert!(result.contains("task: do it, unknown: "));
     }
 }

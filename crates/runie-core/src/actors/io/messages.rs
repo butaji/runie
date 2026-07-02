@@ -33,4 +33,8 @@ pub enum IoMsg {
     ReadClipboard,
     /// Suspend/resume the process.
     SuspendProcess,
+    /// Load skills from disk and emit a SkillsLoaded event.
+    LoadSkills,
+    /// Load auth storage and emit an AuthLoaded event.
+    LoadAuth,
 }

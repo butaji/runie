@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -13,9 +13,9 @@
 Replace with `tinytemplate` (lightweight) or `handlebars` if conditionals/loops are needed.
 
 ## Acceptance Criteria
-- [ ] Add dependency.
-- [ ] Port substitution to template engine.
-- [ ] Preserve current behavior.
+- [x] Add dependency.
+- [x] Port substitution to template engine.
+- [x] Preserve current behavior.
 
 ## Design Impact
 

@@ -5,9 +5,9 @@
 //! the UI should prompt the user. Untrusted projects default
 //! to read-only mode.
 
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrustDecision {
@@ -19,7 +19,7 @@ pub enum TrustDecision {
 /// Persisted to `~/.runie/trust.json`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TrustManager {
-    decisions: HashMap<PathBuf, TrustDecision>,
+    decisions: HashMap<Utf8PathBuf, TrustDecision>,
 }
 
 impl TrustManager {
@@ -38,40 +38,42 @@ impl TrustManager {
     pub fn save(&self) -> anyhow::Result<()> {
         let path = Self::load_path().ok_or_else(|| anyhow::anyhow!("No config directory"))?;
         let json = serde_json::to_string_pretty(self)?;
-        crate::io::atomic_write::atomic_write(&path, &json)?;
+        crate::io::atomic_write::atomic_write(path.as_ref(), &json)?;
         Ok(())
     }
 
     /// Get the trust decision for a path (exact match).
-    pub fn decision_for(&self, path: &Path) -> Option<TrustDecision> {
+    pub fn decision_for(&self, path: &Utf8PathBuf) -> Option<TrustDecision> {
         self.decisions.get(path).copied()
     }
 
     /// Set a trust decision for a path.
-    pub fn set(&mut self, path: &Path, decision: TrustDecision) {
-        self.decisions.insert(path.to_path_buf(), decision);
+    pub fn set(&mut self, path: &Utf8PathBuf, decision: TrustDecision) {
+        self.decisions.insert(path.clone(), decision);
     }
 
     /// Check if a path is trusted (explicitly trusted, or no decision yet).
-    pub fn is_trusted(&self, path: &Path) -> bool {
+    pub fn is_trusted(&self, path: &Utf8PathBuf) -> bool {
         matches!(self.decision_for(path), Some(TrustDecision::Trusted) | None)
     }
 
     /// Check if a path is explicitly untrusted.
-    pub fn is_untrusted(&self, path: &Path) -> bool {
+    pub fn is_untrusted(&self, path: &Utf8PathBuf) -> bool {
         matches!(self.decision_for(path), Some(TrustDecision::Untrusted))
     }
 
     /// Return a copy of all stored decisions.
-    pub fn decisions(&self) -> std::collections::HashMap<PathBuf, TrustDecision> {
+    pub fn decisions(&self) -> std::collections::HashMap<Utf8PathBuf, TrustDecision> {
         self.decisions.clone()
     }
 
-    fn load_path() -> Option<PathBuf> {
+    fn load_path() -> Option<Utf8PathBuf> {
         if let Ok(dir) = std::env::var("RUNIE_TEST_CONFIG_DIR") {
-            return Some(PathBuf::from(dir).join("trust.json"));
+            return Some(Utf8PathBuf::from(dir).join("trust.json"));
         }
-        dirs::config_dir().map(|d| d.join("runie").join("trust.json"))
+        dirs::config_dir()
+            .and_then(|d| Utf8PathBuf::from_path_buf(d).ok())
+            .map(|d| d.join("runie").join("trust.json"))
     }
 }
 
@@ -82,15 +84,15 @@ mod tests {
     #[test]
     fn trust_manager_default_empty() {
         let tm = TrustManager::default();
-        assert!(tm.decision_for(Path::new("/foo")).is_none());
+        assert!(tm.decision_for(&Utf8PathBuf::from("/foo")).is_none());
     }
 
     #[test]
     fn trust_sets_decision() {
         let mut tm = TrustManager::default();
-        tm.set(Path::new("/foo"), TrustDecision::Trusted);
+        tm.set(&Utf8PathBuf::from("/foo"), TrustDecision::Trusted);
         assert_eq!(
-            tm.decision_for(Path::new("/foo")),
+            tm.decision_for(&Utf8PathBuf::from("/foo")),
             Some(TrustDecision::Trusted)
         );
     }
@@ -98,22 +100,22 @@ mod tests {
     #[test]
     fn untrusted_defaults_untrusted() {
         let mut tm = TrustManager::default();
-        tm.set(Path::new("/foo"), TrustDecision::Untrusted);
-        assert!(tm.is_untrusted(Path::new("/foo")));
-        assert!(!tm.is_trusted(Path::new("/foo")));
+        tm.set(&Utf8PathBuf::from("/foo"), TrustDecision::Untrusted);
+        assert!(tm.is_untrusted(&Utf8PathBuf::from("/foo")));
+        assert!(!tm.is_trusted(&Utf8PathBuf::from("/foo")));
     }
 
     #[test]
     fn unknown_path_is_trusted_by_default() {
         let tm = TrustManager::default();
-        assert!(tm.is_trusted(Path::new("/unknown")));
+        assert!(tm.is_trusted(&Utf8PathBuf::from("/unknown")));
     }
 
     #[test]
     fn save_load_roundtrip() {
         let mut tm = TrustManager::default();
-        tm.set(Path::new("/project/a"), TrustDecision::Trusted);
-        tm.set(Path::new("/project/b"), TrustDecision::Untrusted);
+        tm.set(&Utf8PathBuf::from("/project/a"), TrustDecision::Trusted);
+        tm.set(&Utf8PathBuf::from("/project/b"), TrustDecision::Untrusted);
 
         let tmp = std::env::temp_dir().join(format!("runie_trust_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&tmp);
@@ -128,11 +130,11 @@ mod tests {
             serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
 
         assert_eq!(
-            loaded.decision_for(Path::new("/project/a")),
+            loaded.decision_for(&Utf8PathBuf::from("/project/a")),
             Some(TrustDecision::Trusted)
         );
         assert_eq!(
-            loaded.decision_for(Path::new("/project/b")),
+            loaded.decision_for(&Utf8PathBuf::from("/project/b")),
             Some(TrustDecision::Untrusted)
         );
     }

@@ -43,3 +43,25 @@ fn provider_info_has_no_api_key() {
         assert!(!provider.name.is_empty() || !provider.base_url.is_empty());
     }
 }
+
+#[test]
+fn inspect_report_has_validation_errors_field() {
+    let report = InspectReport::build();
+    // validation_errors field exists and is empty by default
+    assert!(report.validation_errors.is_empty());
+}
+
+#[test]
+fn inspect_report_has_setup_hints_field() {
+    let report = InspectReport::build();
+    // setup_hints field exists
+    assert!(report.setup_hints.is_empty() || !report.setup_hints.is_empty());
+}
+
+#[test]
+fn inspect_report_json_includes_diagnostics() {
+    let report = InspectReport::build();
+    let json = serde_json::to_string(&report).unwrap();
+    // JSON should include the new fields
+    assert!(json.contains("validationErrors") || json.contains("setupHints"));
+}

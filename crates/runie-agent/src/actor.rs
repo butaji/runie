@@ -352,6 +352,13 @@ impl runie_core::actors::leader::LeaderAgentHandle for LeaderAgentHandleImpl {
             let _ = inner.send_message(msg);
         })
     }
+
+    fn abort(&self) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        let inner = self.inner.clone();
+        Box::pin(async move {
+            let _ = inner.send_message(AgentMsg::Abort);
+        })
+    }
 }
 
 /// Factory for spawning agent actors (implements `AgentActorFactory`).

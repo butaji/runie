@@ -1,4 +1,4 @@
-//! Tests for event taxonomy — generated intent impl and kind/category.
+//! Tests for event taxonomy — intent impl, kind, and category.
 
 use crate::event::{intent::Intent, Event};
 use crate::model::ThinkingLevel;

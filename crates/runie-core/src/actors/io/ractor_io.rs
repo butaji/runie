@@ -83,6 +83,16 @@ impl RactorIoHandle {
         let _ = self.inner.send_message(IoMsg::SuspendProcess);
     }
 
+    /// Request loading skills from disk and emitting SkillsLoaded.
+    pub async fn load_skills(&self) {
+        let _ = self.inner.send_message(IoMsg::LoadSkills);
+    }
+
+    /// Request loading auth storage and emitting AuthLoaded.
+    pub async fn load_auth(&self) {
+        let _ = self.inner.send_message(IoMsg::LoadAuth);
+    }
+
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: IoMsg) -> Result<(), ractor::MessagingErr<IoMsg>> {
         self.inner.send_message(msg)
@@ -145,6 +155,8 @@ impl Actor for RactorIoActor {
             IoMsg::WriteClipboard { text } => self.write_clipboard(text).await,
             IoMsg::ReadClipboard => self.read_clipboard().await,
             IoMsg::SuspendProcess => self.suspend_process().await,
+            IoMsg::LoadSkills => self.load_skills().await,
+            IoMsg::LoadAuth => self.load_auth().await,
         }
         Ok(())
     }
@@ -177,8 +189,32 @@ impl RactorIoActor {
     async fn detect_env(&self) {
         let (git_info, cwd_name) = tokio::task::spawn_blocking(detect_env_sync)
             .await
-            .unwrap_or_default();
+            .unwrap_or_else(|e| {
+                tracing::warn!("env detection failed: {}", e);
+                (None, String::new())
+            });
         self.emit(Event::EnvDetected { git_info, cwd_name });
+    }
+
+    async fn load_skills(&self) {
+        let skills = tokio::task::spawn_blocking(crate::skills::load_all)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("skills load failed: {}", e);
+                Vec::new()
+            });
+        self.emit(Event::SkillsLoaded { skills });
+    }
+
+    async fn load_auth(&self) {
+        let auth = tokio::task::spawn_blocking(crate::auth::AuthStorage::load)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("auth load failed: {}", e);
+                crate::auth::AuthStorage::default()
+            });
+        let providers: Vec<String> = auth.providers().map(String::from).collect();
+        self.emit(Event::AuthLoaded { providers });
     }
 
     async fn share_session(&self, messages: Vec<ChatMessage>, display_name: Option<String>) {
@@ -404,6 +440,54 @@ mod tests {
             }
         }
         assert!(found, "Expected BashOutput event");
+    }
+
+    #[tokio::test]
+    async fn ractor_io_load_skills_emits_skills_loaded() {
+        let bus = EventBus::<Event>::new(16);
+        let mut sub = bus.subscribe();
+        let (handle, _cell, _) = RactorIoActor::spawn(bus).await.unwrap();
+
+        handle.load_skills().await;
+
+        // Wait for SkillsLoaded event
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
+        let mut found = false;
+        while !found && tokio::time::Instant::now() < deadline {
+            match tokio::time::timeout(deadline - tokio::time::Instant::now(), sub.recv()).await {
+                Ok(Ok(evt)) => {
+                    if matches!(evt, Event::SkillsLoaded { .. }) {
+                        found = true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+        assert!(found, "Expected SkillsLoaded event");
+    }
+
+    #[tokio::test]
+    async fn ractor_io_load_auth_emits_auth_loaded() {
+        let bus = EventBus::<Event>::new(16);
+        let mut sub = bus.subscribe();
+        let (handle, _cell, _) = RactorIoActor::spawn(bus).await.unwrap();
+
+        handle.load_auth().await;
+
+        // Wait for AuthLoaded event
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
+        let mut found = false;
+        while !found && tokio::time::Instant::now() < deadline {
+            match tokio::time::timeout(deadline - tokio::time::Instant::now(), sub.recv()).await {
+                Ok(Ok(evt)) => {
+                    if matches!(evt, Event::AuthLoaded { .. }) {
+                        found = true;
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+        assert!(found, "Expected AuthLoaded event");
     }
 
     // ── Git detection tests ──────────────────────────────────────────────────────

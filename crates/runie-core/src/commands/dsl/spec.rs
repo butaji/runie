@@ -4,9 +4,6 @@
 //! `CommandDef` is the runtime-owned version used by the registry.
 //! `build_cmd()` converts a `CommandSpec` to a `CommandDef`.
 
-#[cfg(test)]
-use std::collections::HashMap;
-
 use crate::dialog::dsl::FormPanel;
 use crate::dialog::PanelStack as CoreStack;
 use crate::model::AppState;
@@ -21,13 +18,7 @@ pub type FormHandler = fn(&mut AppState, &str) -> CommandResult;
 pub enum CommandKind {
     /// Custom handler function.
     Handler(fn(&mut AppState, &str) -> CommandResult),
-    /// Form dialog: args pre-fill fields, `.on_submit` runs when submitted.
-    Form {
-        title: &'static str,
-        fields: &'static [(&'static str, &'static str, &'static str)],
-        submit: fn(&std::collections::HashMap<String, String>) -> crate::Event,
-    },
-    /// Form dialog with a separate submission handler (open from palette, execute on submit).
+    /// Form dialog: open from palette, execute on submit via command registry.
     FormWithHandler {
         title: &'static str,
         fields: &'static [(&'static str, &'static str, &'static str)],
@@ -50,8 +41,6 @@ pub struct CommandSpec {
 }
 
 // ── CommandDef — runtime-owned version ─────────────────────────────────────────
-
-use crate::dialog::dsl::form as make_form;
 
 /// A single command definition — runtime-owned version stored in the registry.
 #[derive(Clone)]
@@ -123,15 +112,6 @@ impl CommandDef {
         self
     }
 
-    pub fn form<F>(self, title: &'static str, build: F) -> Self
-    where
-        F: FnOnce(FormPanel) -> FormPanel + Send + Sync + 'static,
-    {
-        let id = self.name.clone();
-        let template = build(make_form(id, title));
-        self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
-    }
-
     pub fn form_with_handler<Build>(
         self,
         title: &'static str,
@@ -183,18 +163,6 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
     }
     match &spec.kind {
         CommandKind::Handler(f) => cmd.handler(*f),
-        CommandKind::Form {
-            title,
-            fields,
-            submit,
-        } => {
-            let fields = *fields;
-            let submit = *submit;
-            let name = spec.name;
-            cmd.form(title, move |f| {
-                add_fields(f, fields).on_submit(submit).cmd_name(name)
-            })
-        }
         CommandKind::FormWithHandler {
             title,
             fields,
@@ -235,13 +203,6 @@ pub fn build_cmd_from_yaml(
         if let Some(kind) = handler_registry.to_command_kind(handler_name) {
             match kind {
                 CommandKind::Handler(f) => cmd = cmd.handler(f),
-                CommandKind::Form {
-                    title,
-                    fields,
-                    submit,
-                } => {
-                    cmd = cmd.form(title, move |f| add_fields(f, fields).on_submit(submit));
-                }
                 CommandKind::FormWithHandler {
                     title,
                     fields,
@@ -273,7 +234,6 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
     let args_list: Vec<&str> = args.split_whitespace().collect();
     let built = template.build();
     let mut panel = crate::dialog::Panel::new(built.id, built.title).form();
-    panel.submit_factory = built.submit_factory;
     panel.cmd_name = built.cmd_name;
     panel.field_keys = built.field_keys;
     let mut arg_idx = 0;
@@ -382,12 +342,6 @@ mod tests {
         assert!(matches!(def.flow, CommandFlow::Sub(_)));
     }
 
-    fn save_submit(values: &HashMap<String, String>) -> crate::Event {
-        crate::Event::RunSaveCommand {
-            name: crate::dialog::dsl::get_field(values, "name"),
-        }
-    }
-
     #[test]
     fn build_cmd_form_builds_panel_stack() {
         let spec = CommandSpec {
@@ -396,14 +350,15 @@ mod tests {
             aliases: &[],
             category: CommandCategory::Session,
             sub: false,
-            kind: CommandKind::Form {
+            kind: CommandKind::FormWithHandler {
                 title: "Save",
                 fields: &[("Name", "session", "name")],
-                submit: save_submit,
+                handler: |_, _| CommandResult::None,
             },
         };
         let def = build_cmd(&spec);
         assert!(matches!(def.flow, CommandFlow::PanelStack(_)));
+        assert!(def.form_handler.is_some());
     }
 
     // Layer 2: slash_command_parses_typed_args

@@ -45,7 +45,10 @@ impl DurableCoreEvent {
             | Event::MessageDequeued { .. }
             | Event::IdGenerated(_)
             | Event::AssistantMessageReady { .. }
-            | Event::Error { .. } => None,
+            | Event::Error { .. }
+            // Init load events — not persisted, only used during bootstrap
+            | Event::SkillsLoaded { .. }
+            | Event::AuthLoaded { .. } => None,
             // Durable: message
             // Durable: assistant response (uses now() since Response doesn't carry role/timestamp)
             Event::Response { id, content } => Some(D::MessageSent {

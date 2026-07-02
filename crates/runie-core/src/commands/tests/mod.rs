@@ -13,15 +13,24 @@ pub(super) fn run_slash(state: &mut AppState, text: &str) {
 
 /// Execute the handler function inside a command's flow, ignoring any
 /// `.sub()` wrapper that would otherwise push the current dialog onto
-/// the back stack.
+/// the back stack. Handles both simple `Handler` and `FormWithHandler`
+/// (PanelStack + form_handler) variants.
 pub(super) fn exec_handler(state: &mut AppState, name: &str, args: &str) -> CommandResult {
-    let cmd = state.registry.get(name).unwrap();
+    let cmd = state.registry.get(name).unwrap_or_else(|| panic!("command {name} not found"));
     match &cmd.flow {
         CommandFlow::Handler(f) => f(state, args),
         CommandFlow::Sub(inner) => match inner.as_ref() {
             CommandFlow::Handler(f) => f(state, args),
             _ => panic!("command {name} is not a handler"),
         },
+        CommandFlow::PanelStack(_) => {
+            // FormWithHandler: flow is PanelStack, actual handler is in form_handler field.
+            if let Some(f) = cmd.form_handler {
+                f(state, args)
+            } else {
+                panic!("command {name} has PanelStack flow but no form_handler")
+            }
+        }
         _ => panic!("command {name} is not a handler"),
     }
 }

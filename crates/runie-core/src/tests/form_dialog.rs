@@ -1,7 +1,6 @@
 #![allow(clippy::all)]
 //! Tests for command form dialogs.
 
-use crate::dialog::dsl::get_field;
 use crate::Event;
 
 use crate::commands::{DialogKind, DialogState};
@@ -199,13 +198,13 @@ fn all_form_commands_are_listed() {
         })
         .collect();
     // Sanity: we have multiple form commands
-    assert!(form_commands.len() >= 8, "expected at least 8 form commands, got {:?} (this is a sanity check; if a new form is added, ensure form_build_submit handles it)", form_commands);
+    assert!(form_commands.len() >= 8, "expected at least 8 form commands, got {:?} (this is a sanity check; if a new form is added, ensure it uses FormWithHandler in the registry)", form_commands);
 }
 
 #[test]
 fn invalid_fork_index_shows_error_for_out_of_range() {
     // /fork with an out-of-range index must surface a clear error, not
-    // silently dispatch with a default.
+    // silently dispatch with a default. Form routes through command registry.
     use crate::commands::{DialogKind, DialogState};
     use crate::dialog::{Panel, PanelStack};
     use crate::model::Role;
@@ -220,9 +219,8 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         ..Default::default()
     });
     let mut panel = Panel::new("fork", "Fork Session").form_field("Message index", "0", "index");
-    panel.submit_factory = Some(|values| Event::RunForkCommand {
-        message_index: crate::dialog::dsl::get_field(values, "index"),
-    });
+    panel.cmd_name = Some("fork".into());
+    panel.field_keys.push("index".into());
     panel.form_values.insert("index".into(), "999".into());
     state.open_dialog = Some(DialogState::Active {
         kind: DialogKind::Generic,
@@ -249,7 +247,7 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
 #[test]
 fn compact_with_invalid_keep_shows_error() {
     // /compact with a non-numeric keep value must surface a clear error,
-    // not silently fall back to 2000.
+    // not silently fall back to 2000. Form routes through command registry.
     use crate::commands::{DialogKind, DialogState};
     use crate::dialog::{Panel, PanelStack};
     use crate::model::Role;
@@ -257,10 +255,9 @@ fn compact_with_invalid_keep_shows_error() {
     let mut panel = Panel::new("compact", "Compact Context")
         .form_field("Keep tokens", "2000", "keep")
         .form_field("Focus", "f", "focus");
-    panel.submit_factory = Some(|values| Event::RunCompactCommand {
-        keep: crate::dialog::dsl::get_field(values, "keep"),
-        focus: crate::dialog::dsl::get_field(values, "focus"),
-    });
+    panel.cmd_name = Some("compact".into());
+    panel.field_keys.push("keep".into());
+    panel.field_keys.push("focus".into());
     panel
         .form_values
         .insert("keep".into(), "not-a-number".into());
@@ -385,33 +382,35 @@ fn form_button_activated_by_accelerator() {
 }
 
 #[test]
-fn form_field_submit_still_builds_form_values() {
+fn form_field_submits_via_command_registry() {
+    // A form with cmd_name set routes through the command registry.
     use crate::dialog::{ItemAction, Panel};
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
         .item("_Submit", ItemAction::Emit(Event::Save));
-    panel.submit_factory = Some(|values| Event::RunSaveCommand {
-        name: crate::dialog::dsl::get_field(values, "name"),
-    });
-    // On the form field, Enter should submit the form
+    panel.cmd_name = Some("save".into());
+    panel.field_keys.push("name".into());
+    panel.form_values.insert("name".into(), "myses".into());
+    // On the form field, Enter should submit the form via command registry
     panel.selected = 0;
     let mut state = crate::model::AppState::default();
     let action =
         crate::update::dialog::form_panel_action(&mut state, &mut panel, crate::Event::submit());
     assert!(matches!(
         action,
-        crate::update::dialog::FormAction::Submit(Some(Event::RunSaveCommand { .. }))
+        crate::update::dialog::FormAction::SubmitCommand { name, .. } if name == "save"
     ));
 }
 
 #[test]
-fn form_submit_button_uses_factory() {
+fn form_submit_button_routes_via_command_registry() {
+    // A form with cmd_name set uses SubmitCommand, not legacy submit factory.
     use crate::dialog::Panel;
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
-        .form_submit_with(|values| Event::RunSaveCommand {
-            name: get_field(values, "name"),
-        });
+        .form_submit();
+    panel.cmd_name = Some("save".into());
+    panel.field_keys.push("name".into());
     panel.form_values.insert("name".into(), "myses".into());
     // Move selection from the field to the FormSubmit button.
     panel.selected = 1;
@@ -423,9 +422,9 @@ fn form_submit_button_uses_factory() {
     assert!(
         matches!(
             action,
-            crate::update::dialog::FormAction::Submit(Some(Event::RunSaveCommand { .. }))
+            crate::update::dialog::FormAction::SubmitCommand { name, .. } if name == "save"
         ),
-        "Enter on FormSubmit button should use the submit factory"
+        "Enter on FormSubmit button should route via command registry"
     );
 }
 

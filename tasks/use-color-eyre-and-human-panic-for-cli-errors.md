@@ -2,7 +2,7 @@
 
 ## Status
 
-`partial`
+`done`
 
 ## Context
 
@@ -17,7 +17,7 @@ Adopt `color-eyre` for the TUI and `human-panic` for both binaries. Print the fu
 - [x] Add `color-eyre`/`human-panic` to workspace deps. — Done; both in Cargo.toml
 - [x] Install `human-panic` panic hook in both binaries. — Done; CLI at line 88, TUI at line 47
 - [x] Use `color_eyre::Result` in `runie-cli` and print the chain on error. — Done; color_eyre::install() at line 94, error chain printed at line 107
-- [ ] TUI uses `color-eyre` for startup errors. — NOT DONE; TUI main.rs does not use color_eyre
+- [x] TUI uses `color-eyre` for startup errors. — Done; added color_eyre::install() in TUI main.rs, bootstrap errors print with full anyhow chain ({:#} format), hint to set RUST_LOG
 
 ## Design Impact
 

@@ -39,15 +39,20 @@ impl AppState {
     // ── Trust ────────────────────────────────────────────────────────────────
 
     pub fn is_trusted(&mut self, path: &std::path::Path) -> bool {
-        match self.trust_decisions_mut().get(path) {
-            Some(crate::trust::TrustDecision::Trusted) | None => true,
+        // Convert &Path to Utf8PathBuf for lookup (paths are UTF-8 in practice).
+        let Some(utf8_path) = camino::Utf8PathBuf::from_path_buf(path.to_path_buf()).ok() else {
+            return true; // Non-UTF-8 paths default to trusted.
+        };
+        match self.trust_decisions_mut().get(&utf8_path) {
+            Some(crate::trust::TrustDecision::Trusted) => true,
             Some(crate::trust::TrustDecision::Untrusted) => false,
+            None => true, // No decision defaults to trusted.
         }
     }
 
     pub(crate) fn set_trust_decision(
         &mut self,
-        path: std::path::PathBuf,
+        path: camino::Utf8PathBuf,
         decision: crate::trust::TrustDecision,
     ) {
         self.trust_decisions_mut().insert(path, decision);
@@ -56,7 +61,7 @@ impl AppState {
     /// Set all trust decisions at once (used when loading from persistence).
     pub(crate) fn set_trust_decisions(
         &mut self,
-        decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
+        decisions: std::collections::HashMap<camino::Utf8PathBuf, crate::trust::TrustDecision>,
     ) {
         *self.trust_decisions_mut() = decisions;
     }
@@ -125,16 +130,15 @@ impl AppState {
             .map(|t| t.elapsed().as_secs_f64())
     }
 
-    /// Braille spinner frame (12-frame cycle) using throbber BRAILLE_SIX symbols.
-    /// throbber BRAILLE_SIX = [⠷,⠯,⠟,⠻,⠽,⠾].
+    /// Braille spinner frame (6-frame cycle) using throbber BRAILLE_SIX symbols
+    /// from `crate::labels::BRAILLE_SIX`.
     /// We index it backwards so that frame 0 → braille[5] = '⠋'.
-    /// The 12-frame sequence mirrors the original hand-rolled implementation.
     pub fn spinner_frame(&self) -> char {
-        const BRAILLE: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
+        use crate::labels::BRAILLE_SIX;
         const FRAMES: u32 = 6;
         let m = self.view().animation_frame % FRAMES;
         // Backwards index: frame 0 → braille[5], frame 5 → braille[0], frame 6 → braille[5]
-        BRAILLE[(FRAMES - 1 - m) as usize]
+        BRAILLE_SIX[(FRAMES - 1 - m) as usize]
     }
 
     // ── Session reset ──────────────────────────────────────────────────────
@@ -257,22 +261,18 @@ impl AppState {
     /// Fire-and-forget request to remove a provider via ConfigActor.
     pub fn remove_provider(&self, name: &str) {
         if let Some(h) = self.actor_handles() {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let name = name.to_owned();
-                let _ = h.config.try_send(ConfigMsg::RemoveProvider { name });
-            }
+            let name = name.to_owned();
+            let _ = h.config.try_send(ConfigMsg::RemoveProvider { name });
         }
     }
 
     /// Fire-and-forget request to update a provider's saved model list.
     pub fn set_provider_models(&self, name: &str, models: Vec<String>) {
         if let Some(h) = self.actor_handles() {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let name = name.to_owned();
-                let _ = h
-                    .config
-                    .try_send(ConfigMsg::SetProviderModels { name, models });
-            }
+            let name = name.to_owned();
+            let _ = h
+                .config
+                .try_send(ConfigMsg::SetProviderModels { name, models });
         }
     }
 
@@ -378,11 +378,9 @@ impl AppState {
             return;
         }
         self.config_mut().thinking_level = level;
-        let handles = self.actor_handles().cloned();
-        if let Some(h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.config.try_send(ConfigMsg::SetThinkingLevel { level });
-            }
+        // Fire-and-forget persist.  In tests without handles, mutation is already applied.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.config.try_send(ConfigMsg::SetThinkingLevel { level });
         }
         self.notify(
             format!(

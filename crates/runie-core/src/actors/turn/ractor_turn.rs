@@ -53,6 +53,28 @@ impl RactorTurnHandle {
         self.inner.send_message(msg)
     }
 
+    /// Deliver queued messages and wait for the actor to emit SteeringDelivered/
+    /// FollowUpDelivered before returning. Uses ractor RPC so delivery is atomic.
+    pub async fn deliver_queued(
+        &self,
+        steering_mode: crate::model::DeliveryMode,
+        follow_up_mode: crate::model::DeliveryMode,
+    ) -> super::messages::DeliverQueuedRpcResult {
+        use super::messages::DeliverQueuedRpcResult as R;
+        use ractor::rpc::CallResult;
+        match self.inner
+            .call(
+                |tx| TurnMsg::DeliverQueued { steering_mode, follow_up_mode, reply: tx },
+                None,
+            )
+            .await
+        {
+            Ok(CallResult::Success(r)) => R::Delivered(r),
+            Ok(CallResult::SenderError) => R::SenderError,
+            Ok(CallResult::Timeout) => R::ActorError("RPC timeout".to_string()),
+            Err(e) => R::ActorError(e.to_string()),
+        }
+    }
 }
 
 /// TurnActor using ractor State pattern.
@@ -158,51 +180,58 @@ impl RactorTurnActor {
         state: &mut TurnActorState,
         steering_mode: DeliveryMode,
         follow_up_mode: DeliveryMode,
+        reply: ractor::RpcReplyPort<Option<super::messages::DeliverQueuedResponse>>,
     ) {
-        if Self::try_deliver_steering(state, steering_mode) {
+        let steering_result = Self::try_deliver_steering(state, steering_mode);
+        if steering_result.is_some() {
             if follow_up_mode == DeliveryMode::All {
                 Self::try_deliver_follow_up(state, follow_up_mode);
             }
+            // SAFETY: RpcReplyPort is consumed exactly once here; send is infallible
+            // for a valid oneshot receiver, so unwrap is safe.
+            let _ = reply.send(steering_result.map(|(content, id)| {
+                super::messages::DeliverQueuedResponse::Steering { content, id }
+            }));
             return;
         }
-        Self::try_deliver_follow_up(state, follow_up_mode);
+        let follow_up_result = Self::try_deliver_follow_up(state, follow_up_mode);
+        let _ = reply.send(follow_up_result.map(|(content, id)| {
+            super::messages::DeliverQueuedResponse::FollowUp { content, id }
+        }));
     }
 
-    fn try_deliver_steering(state: &mut TurnActorState, mode: DeliveryMode) -> bool {
+    fn try_deliver_steering(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
         let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
         let result = queue.pop_steering(mode);
         state.turn_state.message_queue = queue.into_inner();
-        let (content, id) = match result {
-            None => return false,
-            Some(r) => {
-                let id = Self::next_id_internal(&mut state.turn_state);
-                state
-                    .turn_state
-                    .request_queue
-                    .push_back((r.content.clone(), id.clone()));
-                (r.content, id)
-            }
+        let r = match result {
+            None => return None,
+            Some(r) => r,
         };
-        Self::emit(state, Event::SteeringDelivered { content, id });
-        true
+        // Generate id first so we can move it into emit after cloning for the queue.
+        let id = Self::next_id_internal(&mut state.turn_state);
+        // Clone for queue, move into emit, and clone for return value.
+        state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+        let content = r.content;
+        Self::emit(state, Event::SteeringDelivered { content: content.clone(), id: id.clone() });
+        Some((content, id))
     }
 
-    fn try_deliver_follow_up(state: &mut TurnActorState, mode: DeliveryMode) {
+    fn try_deliver_follow_up(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
         let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
         let result = queue.pop_follow_up(mode);
         state.turn_state.message_queue = queue.into_inner();
-        let (content, id) = match result {
-            None => return,
-            Some(r) => {
-                let id = Self::next_id_internal(&mut state.turn_state);
-                state
-                    .turn_state
-                    .request_queue
-                    .push_back((r.content.clone(), id.clone()));
-                (r.content, id)
-            }
+        let r = match result {
+            None => return None,
+            Some(r) => r,
         };
-        Self::emit(state, Event::FollowUpDelivered { content, id });
+        // Generate id first so we can move it into emit after cloning for the queue.
+        let id = Self::next_id_internal(&mut state.turn_state);
+        // Clone for queue, move into emit, and use for return value.
+        state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+        let content = r.content;
+        Self::emit(state, Event::FollowUpDelivered { content: content.clone(), id: id.clone() });
+        Some((content, id))
     }
 
     fn next_id_internal(turn_state: &mut TurnState) -> String {
@@ -344,7 +373,8 @@ impl Actor for RactorTurnActor {
             TurnMsg::DeliverQueued {
                 steering_mode,
                 follow_up_mode,
-            } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode),
+                reply,
+            } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode, reply),
             TurnMsg::Dequeue => Self::handle_dequeue(state),
             TurnMsg::Thinking { id } => Self::handle_thinking(state, id),
             TurnMsg::ThoughtDone { .. } => Self::handle_thought_done(state),
@@ -517,24 +547,29 @@ mod tests {
         }
         assert!(found_completed, "First turn should complete");
 
-        // After TurnCompleted, DeliverQueued moves message from message_queue to request_queue
-        handle
-            .send(TurnMsg::DeliverQueued {
-                steering_mode: DeliveryMode::OneAtATime,
-                follow_up_mode: DeliveryMode::All,
-            })
+        // After TurnCompleted, DeliverQueued moves message from message_queue to request_queue.
+        // Uses RPC so TurnActor processes and emits FollowUpDelivered before returning.
+        use ractor::rpc::CallResult;
+        let result = handle
+            .inner
+            .call(
+                |tx| TurnMsg::DeliverQueued {
+                    steering_mode: DeliveryMode::OneAtATime,
+                    follow_up_mode: DeliveryMode::All,
+                    reply: tx,
+                },
+                Some(std::time::Duration::from_secs(2)),
+            )
             .await;
-
-        // Wait for FollowUpDelivered — with timeout to detect bugs
-        let result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
-            while let Ok(evt) = sub.recv().await {
-                if matches!(evt, Event::FollowUpDelivered { id, .. } if id == "req.1") {
-                    return;
-                }
+        match result {
+            Ok(CallResult::Success(Some(_))) => {}
+            Ok(CallResult::Success(None)) => {
+                panic!("DeliverQueued should have delivered the follow-up")
             }
-        })
-        .await;
-        assert!(result.is_ok(), "FollowUpDelivered should fire within 2s");
+            Ok(CallResult::SenderError) => panic!("Sender error on DeliverQueued"),
+            Ok(CallResult::Timeout) => panic!("DeliverQueued RPC timed out"),
+            Err(e) => panic!("DeliverQueued RPC failed: {:?}", e),
+        }
 
         // RunIfQueued starts the queued turn
         handle.send(TurnMsg::RunIfQueued).await;

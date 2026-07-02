@@ -12,7 +12,11 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
     registry.register("reload", NamedHandler::Handler(handle_reload));
     registry.register("diagnostics", NamedHandler::Handler(handle_diagnostics));
     registry.register("skills", NamedHandler::Handler(handle_skills));
-    registry.register("skill", NamedHandler::Handler(handle_skill));
+    registry.register("skill", NamedHandler::FormWithHandler {
+        title: "Show Skill",
+        fields: &[("Name", "skill-name", "name")],
+        handler: run_skill,
+    });
     registry.register("prompt", NamedHandler::Handler(handle_prompt));
     registry.register("hotkeys", NamedHandler::Handler(handle_hotkeys));
     registry.register("theme", NamedHandler::Handler(handle_theme));
@@ -58,18 +62,9 @@ pub fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Message(lines.join("\n"))
 }
 
-pub fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
+/// Handler for `/skill <name>` — shows skill info.
+pub fn run_skill(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
-    if name.is_empty() {
-        use crate::dialog::dsl::form;
-        let stack = form("skill", "Show Skill")
-            .field("Name", "skill-name", "name")
-            .on_submit(|values| crate::Event::RunSkillCommand {
-                name: crate::dialog::dsl::get_field(values, "name"),
-            })
-            .into_stack();
-        return CommandResult::OpenPanelStack(Box::new(stack));
-    }
     match state.skills().iter().find(|s| s.name == name) {
         Some(skill) => {
             let mut lines = vec![format!("Skill: {}", skill.name)];

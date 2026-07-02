@@ -37,19 +37,16 @@ pub fn update(state: &mut AppState, event: Event) {
 impl AppState {
     /// Try to spawn IO write via actor_handles, else fallback to sync.
     fn try_spawn_io_write(&mut self) -> bool {
-        // Extract handles before async work to avoid borrow conflicts.
+        // Clone handles first so we can borrow `self` mutably for drain.
         let handles = self.actor_handles().cloned();
-        let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-
-        if can_spawn {
+        if let Some(h) = handles {
             let edits: Vec<_> = self
                 .session_mut()
                 .pending_edits
                 .drain(..)
                 .map(|p| (p.path, p.proposed))
                 .collect();
-            let handles = handles.unwrap();
-            let _ = handles.io.try_send(crate::actors::IoMsg::WriteFiles { edits });
+            let _ = h.io.try_send(crate::actors::IoMsg::WriteFiles { edits });
             return true;
         }
         false

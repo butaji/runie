@@ -79,11 +79,10 @@ fn register_session_simple_handlers(
 }
 
 pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
-    if let Some(handles) = state.actor_handles().cloned() {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = handles.session.try_send(SessionMsg::List);
-            return CommandResult::None;
-        }
+    // Route through SessionActor in production; fall back to direct listing in tests.
+    if let Some(handles) = state.actor_handles() {
+        let _ = handles.session.try_send(SessionMsg::List);
+        return CommandResult::None;
     }
     match crate::session::replay::list_sessions() {
         Ok(sessions) if sessions.is_empty() => {
@@ -241,10 +240,13 @@ fn build_session_info(
     )
 }
 
-fn project_trust_status(_state: &AppState) -> &'static str {
+fn project_trust_status(state: &AppState) -> &'static str {
     let cwd = std::env::current_dir().unwrap_or_default();
-    let tm = crate::trust::TrustManager::load();
-    match tm.decision_for(&cwd) {
+    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    // Read from the AppState projection populated via Event::TrustLoaded.
+    // In test mode (no actor handles), trust_decisions may be empty;
+    // fall back to the default trust status.
+    match state.trust_decisions().get(&cwd_utf8) {
         Some(crate::trust::TrustDecision::Trusted) => "trusted",
         Some(crate::trust::TrustDecision::Untrusted) => "untrusted",
         None => "default",
@@ -260,6 +262,11 @@ pub fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
+    if let Some(handles) = state.actor_handles().cloned() {
+        let _ = handles.session.try_send(SessionMsg::ResumeMostRecent);
+        return CommandResult::None;
+    }
+    // Fallback for test mode without actor handles.
     let store = match crate::session::store::SessionStore::default_store() {
         Some(s) => s,
         None => return CommandResult::Message("No session store available.".into()),
@@ -288,4 +295,44 @@ fn find_most_recent_from_store(
         }
     }
     most_recent
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::AppState;
+    use crate::trust::TrustDecision;
+    use std::collections::HashMap;
+
+    #[test]
+    fn project_trust_status_reads_from_trust_decisions() {
+        let mut state = AppState::default();
+        // Pre-populate trust decisions (as Event::TrustLoaded would).
+        let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
+            .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
+        state.trust_decisions = HashMap::from([(cwd_utf8.clone(), TrustDecision::Trusted)]);
+
+        let status = project_trust_status(&state);
+        assert_eq!(status, "trusted");
+    }
+
+    #[test]
+    fn project_trust_status_default_when_no_decision() {
+        let state = AppState::default();
+        let status = project_trust_status(&state);
+        assert_eq!(status, "default");
+    }
+
+    #[test]
+    fn project_trust_status_untrusted() {
+        let mut state = AppState::default();
+        let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
+            .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
+        state.trust_decisions = HashMap::from([(cwd_utf8, TrustDecision::Untrusted)]);
+
+        let status = project_trust_status(&state);
+        assert_eq!(status, "untrusted");
+    }
 }

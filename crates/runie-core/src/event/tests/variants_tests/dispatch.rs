@@ -320,6 +320,12 @@ fn dispatcher_handles_all_variants() {
                 query: String::new(),
                 indexed: false,
             },
+            Event::SkillsLoaded { .. } => Event::HistoryAppend {
+                entry: String::new(),
+            },
+            Event::AuthLoaded { .. } => Event::HistoryAppend {
+                entry: String::new(),
+            },
 
             // IO effects (results)
             Event::GistShared { .. } => Event::GistShared {

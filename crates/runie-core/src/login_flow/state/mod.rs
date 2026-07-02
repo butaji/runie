@@ -2,6 +2,8 @@
 
 use std::collections::HashSet;
 
+use validator::Validate;
+
 /// Current step in the login flow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoginStep {
@@ -13,7 +15,9 @@ pub enum LoginStep {
 }
 
 /// Mutable state for the login dialog flow.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// Validation ensures required fields are non-empty when expected.
+#[derive(Debug, Clone, PartialEq, Validate)]
 pub struct LoginFlowState {
     pub step: LoginStep,
     pub provider: String,
@@ -111,6 +115,54 @@ impl LoginFlowState {
 
     pub fn is_done(&self) -> bool {
         self.step == LoginStep::Done
+    }
+
+    /// Validate the state based on the current step.
+    /// Returns `Ok(())` if the state is valid for the current step,
+    /// or an error message describing the validation failure.
+    pub fn validate_step(&self) -> Result<(), String> {
+        match &self.step {
+            LoginStep::ProviderPicker => {
+                // Provider should be empty at this step
+                if !self.provider.is_empty() {
+                    return Err("provider should be empty at ProviderPicker step".into());
+                }
+            }
+            LoginStep::KeyInput => {
+                // Provider must be set
+                if self.provider.is_empty() {
+                    return Err("provider is required at KeyInput step".into());
+                }
+            }
+            LoginStep::Validating => {
+                // Provider and key must be set
+                if self.provider.is_empty() {
+                    return Err("provider is required at Validating step".into());
+                }
+                if self.key.is_empty() {
+                    return Err("key is required at Validating step".into());
+                }
+            }
+            LoginStep::ModelSelect => {
+                // Provider must be set and validation must have succeeded
+                if self.provider.is_empty() {
+                    return Err("provider is required at ModelSelect step".into());
+                }
+                if !self.validated {
+                    return Err("validation must succeed before ModelSelect step".into());
+                }
+            }
+            LoginStep::Done => {
+                // All data should be finalized
+                if self.provider.is_empty() {
+                    return Err("provider is required at Done step".into());
+                }
+                if !self.validated {
+                    return Err("validation must succeed before Done step".into());
+                }
+            }
+        }
+        Ok(())
     }
 }
 

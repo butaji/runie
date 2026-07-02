@@ -148,3 +148,61 @@ fn fetched_models_disjoint_list() {
     assert!(flow.selected_models.contains("X"));
     assert!(flow.selected_models.contains("Y"));
 }
+
+#[cfg(test)]
+#[test]
+fn validate_step_provider_picker() {
+    let flow = LoginFlowState::new();
+    assert!(flow.validate_step().is_ok());
+}
+
+#[cfg(test)]
+#[test]
+fn validate_step_key_input() {
+    let flow = LoginFlowState::new().with_provider("minimax".into());
+    assert!(flow.validate_step().is_ok());
+
+    let mut flow = LoginFlowState::new();
+    flow.step = LoginStep::KeyInput;
+    assert!(flow.validate_step().is_err());
+}
+
+#[cfg(test)]
+#[test]
+fn validate_step_validating() {
+    let flow = LoginFlowState::new()
+        .with_provider("minimax".into())
+        .with_key("sk-test".into());
+    assert!(flow.validate_step().is_ok());
+
+    let mut flow = LoginFlowState::new();
+    flow.step = LoginStep::Validating;
+    flow.provider = "minimax".into();
+    assert!(flow.validate_step().is_err());
+
+    let mut flow = LoginFlowState::new();
+    flow.step = LoginStep::Validating;
+    flow.key = "sk-test".into();
+    assert!(flow.validate_step().is_err());
+}
+
+#[cfg(test)]
+#[test]
+fn validate_step_model_select() {
+    let flow = LoginFlowState::new()
+        .with_provider("minimax".into())
+        .with_key("sk-test".into())
+        .with_validation_success(vec!["M1".into()]);
+    assert!(flow.validate_step().is_ok());
+}
+
+#[cfg(test)]
+#[test]
+fn validate_step_done() {
+    let mut flow = LoginFlowState::new()
+        .with_provider("minimax".into())
+        .with_key("sk-test".into())
+        .with_validation_success(vec!["M1".into()]);
+    flow.step = LoginStep::Done;
+    assert!(flow.validate_step().is_ok());
+}

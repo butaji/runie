@@ -3,6 +3,7 @@
 //! Combines responsibilities from the former `PersistenceActor`,
 //! `SessionStoreActor`, and `session_actor.rs`.
 
+use camino::Utf8PathBuf;
 use std::path::PathBuf;
 
 use crate::edit_preview::EditPreview;
@@ -18,7 +19,7 @@ use crate::trust::TrustDecision;
 pub enum PersistenceMsg {
     /// Set a trust decision for a project path.
     SetTrust {
-        path: PathBuf,
+        path: Utf8PathBuf,
         decision: TrustDecision,
     },
     /// Append one entry to the input history file.
@@ -98,7 +99,7 @@ pub enum SessionMutationMsg {
 pub enum SessionMsg {
     // Trust + history
     SetTrust {
-        path: PathBuf,
+        path: Utf8PathBuf,
         decision: TrustDecision,
     },
     AppendHistory {
@@ -123,6 +124,8 @@ pub enum SessionMsg {
         session: Session,
     },
     List,
+    /// Find the most recent session and load it.
+    ResumeMostRecent,
     // Session state mutations
     AddUserMessage {
         content: String,

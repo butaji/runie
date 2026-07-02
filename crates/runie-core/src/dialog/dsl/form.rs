@@ -1,13 +1,11 @@
-//! Form Panel Builder - Fluent API for creating forms with submit handling
+//! Form Panel Builder - Fluent API for creating forms.
 
 use crate::dialog::Panel;
-use crate::Event;
 
-/// Form panel builder with submit handling.
+/// Form panel builder.
 ///
 /// The `cmd_name` field carries the canonical slash-command name so that
-/// form submissions can be routed through the command registry rather than
-/// emitting raw `RunXCommand` events.
+/// form submissions can be routed through the command registry.
 ///
 /// `field_keys` tracks field keys in declaration order so that multi-field
 /// form submissions can serialize values as positional arguments.
@@ -59,17 +57,6 @@ impl FormPanel {
         self
     }
 
-    /// Set the factory that produces the submit event from form values.
-    /// Also records the canonical command name so form submissions can be
-    /// dispatched through the command registry.
-    pub fn on_submit(
-        mut self,
-        factory: fn(&std::collections::HashMap<String, String>) -> Event,
-    ) -> Self {
-        self.panel = self.panel.form_submit_with(factory);
-        self
-    }
-
     /// Record the canonical slash-command name. When a form with a `cmd_name"
     /// is submitted, the submit handler routes through the command registry
     /// instead of emitting a raw `RunXCommand` event.
@@ -116,32 +103,25 @@ mod tests {
     use super::{form, get_field};
     use crate::dialog::dsl::panel;
     use crate::dialog::ItemAction;
-    use crate::Event;
-
-    fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
-        crate::Event::RunSaveCommand {
-            name: get_field(values, "name"),
-        }
-    }
 
     #[test]
     fn test_form_panel_builder() {
         let p = form("save", "Save")
             .field("Name", "session", "name")
             .field("Tags", "tag1, tag2", "tags")
-            .on_submit(save_submit)
             .build();
 
         assert!(p.is_form());
-        assert_eq!(p.items.len(), 3);
-        assert!(p.submit_factory.is_some());
+        // 2 form fields (submit button was removed when on_submit was removed
+        // in fix-deliverqueued-race; submit is now handled via CommandFormSubmit event
+        // routing in handle_form_dialog instead of a per-form submit factory).
+        assert_eq!(p.items.len(), 2);
     }
 
     #[test]
     fn test_form_to_stack() {
         let stack = form("save", "Save")
             .field("Name", "session", "name")
-            .on_submit(save_submit)
             .into_stack();
 
         assert_eq!(stack.len(), 1);

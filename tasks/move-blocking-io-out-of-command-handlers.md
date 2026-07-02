@@ -1,6 +1,6 @@
 # Move blocking IO out of command/update handlers
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P1

@@ -1,0 +1,50 @@
+# Nextest configuration for Runie
+# See: https://nexte.st/book/config
+
+# ----- Profile: default -----
+[profile.default]
+# Run 4 test threads in parallel
+test-threads = 4
+
+# Show stdout/stderr for failing tests
+failure-output = "immediate"
+
+# Slow timeout: kill tests hanging longer than 120 seconds
+slow-timeout = { period = "120s", terminate-after = 1 }
+
+# ----- Profile: ci (used in CI) -----
+[profile.ci]
+# Run with more parallelism in CI
+test-threads = 8
+
+# More verbose output in CI
+failure-output = "immediate"
+
+# Slow timeout: kill tests hanging longer than 120 seconds
+slow-timeout = { period = "120s", terminate-after = 1 }
+
+# ----- Profile: slow (for running slow tests) -----
+[profile.slow]
+test-threads = 1
+slow-timeout = { period = "300s", terminate-after = 2 }
+
+# ----- Test groups with specific timeouts -----
+# Slow integration tests
+[[profile.default.overrides]]
+filter = 'test(~integration~)'
+slow-timeout = { period = "300s", terminate-after = 2 }
+
+# Agent actor tests can be slow due to async operations
+[[profile.default.overrides]]
+filter = 'test(~agent~)'
+slow-timeout = { period = "180s", terminate-after = 2 }
+
+# Session actor tests
+[[profile.default.overrides]]
+filter = 'test(~session~)'
+slow-timeout = { period = "180s", terminate-after = 2 }
+
+# Provider replay tests (may involve network-like delays)
+[[profile.default.overrides]]
+filter = 'test(~replay~)'
+slow-timeout = { period = "180s", terminate-after = 2 }

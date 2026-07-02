@@ -20,6 +20,10 @@ impl AgentActorHandle {
         let _ = self.tx.send(AgentMsg::Run { command }).await;
     }
 
+    pub async fn abort(&self) {
+        let _ = self.tx.send(AgentMsg::Abort).await;
+    }
+
     pub async fn run_if_queued(&self, turn_handle: &RactorTurnHandle) {
         turn_handle
             .send(runie_core::actors::TurnMsg::RunIfQueued)
@@ -61,6 +65,10 @@ impl LeaderAgentActorHandle {
         self.inner.run(cmd).await;
     }
 
+    pub async fn abort(&self) {
+        self.inner.abort().await;
+    }
+
     pub async fn run_if_queued(&self, turn_handle: &RactorTurnHandle) {
         turn_handle
             .send(runie_core::actors::TurnMsg::RunIfQueued)
@@ -80,6 +88,9 @@ impl runie_core::actors::leader::LeaderAgentHandle for NoOpAgentHandle {
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(async {})
     }
+    fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async {})
+    }
 }
 
 /// Box over agent-handle variants so UiActor can hold either type without
@@ -96,6 +107,14 @@ impl AgentHandleBox {
         match self {
             Self::Actor(h) => h.run(command).await,
             Self::Leader(h) => h.run(command).await,
+        }
+    }
+
+    /// Send abort to cancel the currently running turn.
+    pub async fn abort(&self) {
+        match self {
+            Self::Actor(h) => h.abort().await,
+            Self::Leader(h) => h.abort().await,
         }
     }
 

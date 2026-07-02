@@ -25,12 +25,86 @@ pub async fn run(prompt: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_agent::headless::{run_headless_turn, HeadlessOptions};
+    use runie_core::event::headless::HeadlessEvent;
+    use runie_core::message::ChatMessage;
+    use runie_core::permissions::{AutoAllowSink, PermissionManager};
+    use runie_provider::MockProvider;
+    use std::sync::{Arc, Mutex};
 
+    /// Smoke: run_headless_cli produces HeadlessEvents via the on_event callback.
     #[tokio::test]
-    async fn print_mode_accepts_prompt() {
-        // Smoke test: verify the function accepts a prompt without panicking
-        let result = run("test").await;
-        // Will fail without config, but proves the dispatch works
-        assert!(result.is_err() || result.is_ok());
+    async fn print_mode_emits_jsonl_events() {
+        // Capture HeadlessEvents emitted during the turn.
+        let events: Arc<Mutex<Vec<HeadlessEvent>>> = Arc::new(Mutex::new(Vec::new()));
+        let captured = events.clone();
+
+        let messages = vec![
+            ChatMessage::system("You are helpful."),
+            ChatMessage::user("say hello"),
+        ];
+
+        let provider = MockProvider::default();
+        let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
+
+        let options = HeadlessOptions {
+            execute_tools: false,
+            max_tool_rounds: 5,
+            on_chunk: None,
+            on_event: Some(Box::new(move |evt: HeadlessEvent| {
+                captured.lock().unwrap().push(evt);
+            })),
+            permission_gate: runie_agent::PermissionGate::new(
+                PermissionManager::default(),
+                sink.clone(),
+            ),
+        };
+
+        run_headless_turn(messages, &provider, options)
+            .await
+            .expect("turn should succeed");
+
+        let events = events.lock().unwrap();
+        // The mock provider emits text, so we expect at least one Text event.
+        assert!(
+            events.iter().any(|e| matches!(e, HeadlessEvent::Text { .. })),
+            "expected at least one Text event, got: {:?}",
+            events
+        );
+        // Must emit End to mark the stream as finished.
+        assert!(
+            events.iter().any(|e| matches!(e, HeadlessEvent::End { .. })),
+            "expected an End event, got: {:?}",
+            events
+        );
+        // Every event must round-trip through JSONL serialization.
+        for evt in events.iter() {
+            let line = evt.to_json_line();
+            let parsed: HeadlessEvent = serde_json::from_str(&line).unwrap_or_else(|e| {
+                panic!("HeadlessEvent failed to round-trip as JSONL: {e}, line: {line}")
+            });
+            // Variants must match after round-trip.
+            let same_variant = match (&evt, &parsed) {
+                (HeadlessEvent::Text { .. }, HeadlessEvent::Text { .. }) => true,
+                (HeadlessEvent::Thinking { .. }, HeadlessEvent::Thinking { .. }) => true,
+                (HeadlessEvent::ToolCallStart { .. }, HeadlessEvent::ToolCallStart { .. }) => true,
+                (HeadlessEvent::ToolCallInputDelta { .. }, HeadlessEvent::ToolCallInputDelta { .. }) => true,
+                (HeadlessEvent::ToolCallEnd { .. }, HeadlessEvent::ToolCallEnd { .. }) => true,
+                (HeadlessEvent::PermissionRequest { .. }, HeadlessEvent::PermissionRequest { .. }) => true,
+                (HeadlessEvent::ToolResult { .. }, HeadlessEvent::ToolResult { .. }) => true,
+                (HeadlessEvent::Usage { .. }, HeadlessEvent::Usage { .. }) => true,
+                (HeadlessEvent::Error { .. }, HeadlessEvent::Error { .. }) => true,
+                (HeadlessEvent::End { .. }, HeadlessEvent::End { .. }) => true,
+                _ => false,
+            };
+            assert!(same_variant, "JSONL round-trip variant mismatch for {evt:?}, line: {line}");
+        }
+    }
+
+    /// Verify print mode's `run()` function accepts a prompt (smoke).
+    #[tokio::test]
+    async fn print_mode_run_smoke() {
+        // We cannot easily capture stdout in a test, so just verify `run` doesn't panic.
+        let _ = run("hello").await;
     }
 }

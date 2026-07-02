@@ -4,7 +4,7 @@ pub mod messages;
 mod speed_window;
 mod state;
 
-pub use messages::{NextIdResponse, TurnMsg};
+pub use messages::{DeliverQueuedResponse, DeliverQueuedRpcResult, NextIdResponse, TurnMsg};
 pub use speed_window::SpeedWindow;
 pub use state::TurnState;
 

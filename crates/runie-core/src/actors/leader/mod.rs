@@ -65,6 +65,9 @@ pub struct LeaderAgentCmd {
 pub trait LeaderAgentHandle: Send + Sync {
     /// Send a run command to the agent (fire-and-forget).
     fn run(&self, cmd: LeaderAgentCmd) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>>;
+
+    /// Send an abort command to cancel the currently running turn.
+    fn abort(&self) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>>;
 }
 
 /// Factory for spawning `AgentActor` instances.

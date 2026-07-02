@@ -12,8 +12,13 @@ pub fn format_timestamp(unix_secs: f64) -> String {
 
 // Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
+
+/// The 6-frame braille spinner symbols from throbber-widgets-tui BRAILLE_SIX.
+/// Index 0 → '⠷', index 5 → '⠋' (the default initial frame).
+pub const BRAILLE_SIX: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
+
 // throbber BRAILLE_SIX[5] = '⠋' — used as the default/initial spinner frame.
-pub const SPINNER: char = '⠋';
+pub const SPINNER: char = BRAILLE_SIX[5];
 
 /// Unified action text: spinner + tag + timer.
 /// Tags ending with "ing" (ongoing actions) automatically get "...".

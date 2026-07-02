@@ -125,6 +125,14 @@ impl AppState {
             self.apply_config(&config);
             return;
         }
+        if let Event::SkillsLoaded { skills } = event {
+            self.set_skills(skills);
+            return;
+        }
+        if let Event::AuthLoaded { providers } = event {
+            self.set_auth_providers(providers);
+            return;
+        }
         if self.try_handle_dialog_event_input(&event) {
             return;
         }

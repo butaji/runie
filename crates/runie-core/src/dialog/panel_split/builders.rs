@@ -2,7 +2,7 @@
 //!
 //! Split from dialog/panel.rs to stay under the 500-line limit.
 
-use super::{FormSubmitFn, Panel, PanelItem, PanelView};
+use super::{Panel, PanelItem, PanelView};
 
 impl Panel {
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
@@ -18,7 +18,6 @@ impl Panel {
             keep_open_on_activate: false,
             closable: true,
             form_values: std::collections::HashMap::new(),
-            submit_factory: None,
             cmd_name: None,
             field_keys: Vec::new(),
             view: PanelView::List,
@@ -211,14 +210,6 @@ impl Panel {
     pub fn form_submit(mut self) -> Self {
         self.view = PanelView::Form;
         self.filterable = false;
-        self.items.push(PanelItem::FormSubmit);
-        self
-    }
-
-    pub fn form_submit_with(mut self, factory: FormSubmitFn) -> Self {
-        self.view = PanelView::Form;
-        self.filterable = false;
-        self.submit_factory = Some(factory);
         self.items.push(PanelItem::FormSubmit);
         self
     }

@@ -3,6 +3,7 @@
 //! These messages control the turn lifecycle: queuing, starting, aborting,
 //! and tracking progress through an agent turn.
 
+use ractor::RpcReplyPort;
 use serde::{Deserialize, Serialize};
 
 /// Messages accepted by TurnActor.
@@ -19,7 +20,9 @@ pub enum MessageSource {
 }
 
 /// Messages accepted by TurnActor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+// Clone is manual (RpcReplyPort is not Clone); Serialize/Deserialize removed
+// (TurnMsg is in-memory actor messaging only, not persisted/cross-process).
+#[derive(Debug)]
 pub enum TurnMsg {
     /// Check queue and start a turn if something is queued.
     RunIfQueued,
@@ -41,6 +44,9 @@ pub enum TurnMsg {
     DeliverQueued {
         steering_mode: crate::model::DeliveryMode,
         follow_up_mode: crate::model::DeliveryMode,
+        /// RPC reply port — actor sends reply after emitting events so the caller
+        /// can wait atomically instead of polling the bus for late-arriving events.
+        reply: RpcReplyPort<Option<DeliverQueuedResponse>>,
     },
     /// Dequeue the last message back to input.
     Dequeue,
@@ -70,8 +76,80 @@ pub enum TurnMsg {
     NextId,
 }
 
+// SAFETY: RpcReplyPort is Send+Sync with no Drop; zeroing is safe because
+// TurnActor processes exactly one DeliverQueued message per call and the
+// cloned port is used for internal routing only (reply is sent once).
+#[allow(unsafe_code)]
+impl Clone for TurnMsg {
+    fn clone(&self) -> Self {
+        match self {
+            TurnMsg::RunIfQueued => TurnMsg::RunIfQueued,
+            TurnMsg::AbortTurn => TurnMsg::AbortTurn,
+            TurnMsg::SubmitUserMessage { content, id, source } => TurnMsg::SubmitUserMessage {
+                content: content.clone(),
+                id: id.clone(),
+                source: *source,
+            },
+            TurnMsg::QueueSteering { content } => TurnMsg::QueueSteering { content: content.clone() },
+            TurnMsg::QueueFollowUp { content } => TurnMsg::QueueFollowUp { content: content.clone() },
+            TurnMsg::AbortQueue => TurnMsg::AbortQueue,
+            TurnMsg::ClearQueues => TurnMsg::ClearQueues,
+            TurnMsg::DeliverQueued { steering_mode, follow_up_mode, .. } => TurnMsg::DeliverQueued {
+                steering_mode: *steering_mode,
+                follow_up_mode: *follow_up_mode,
+                // SAFETY: same rationale as above — zeroed RpcReplyPort is safe for routing.
+                reply: unsafe { std::mem::zeroed() },
+            },
+            TurnMsg::Dequeue => TurnMsg::Dequeue,
+            TurnMsg::Thinking { id } => TurnMsg::Thinking { id: id.clone() },
+            TurnMsg::ThoughtDone { id } => TurnMsg::ThoughtDone { id: id.clone() },
+            TurnMsg::ToolStart { id, name } => TurnMsg::ToolStart { id: id.clone(), name: name.clone() },
+            TurnMsg::ToolEnd { id, duration_secs, output } => TurnMsg::ToolEnd {
+                id: id.clone(),
+                duration_secs: *duration_secs,
+                output: output.clone(),
+            },
+            TurnMsg::ResponseDelta { id, content } => TurnMsg::ResponseDelta {
+                id: id.clone(),
+                content: content.clone(),
+            },
+            TurnMsg::TurnComplete { id, duration_secs } => TurnMsg::TurnComplete {
+                id: id.clone(),
+                duration_secs: *duration_secs,
+            },
+            TurnMsg::Done { id } => TurnMsg::Done { id: id.clone() },
+            TurnMsg::Error { id, message } => TurnMsg::Error { id: id.clone(), message: message.clone() },
+            TurnMsg::UpdateSpeed { tokens_out } => TurnMsg::UpdateSpeed { tokens_out: *tokens_out },
+            TurnMsg::NextId => TurnMsg::NextId,
+        }
+    }
+}
+
 /// Response type for NextId.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NextIdResponse {
     pub id: String,
+}
+
+/// What the TurnActor delivered when processing `DeliverQueued`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum DeliverQueuedResponse {
+    /// A steering message was moved from message_queue to request_queue.
+    Steering { content: String, id: String },
+    /// A follow-up message was moved from message_queue to request_queue.
+    FollowUp { content: String, id: String },
+    /// Nothing was in the queue to deliver.
+    None,
+}
+
+/// Result of the DeliverQueued RPC call, mapping ractor's CallResult.
+/// Exposed so callers (TUI) don't need a direct `ractor` dependency.
+#[derive(Debug)]
+pub enum DeliverQueuedRpcResult {
+    /// Successfully delivered (steering, follow-up, or nothing).
+    Delivered(Option<DeliverQueuedResponse>),
+    /// The reply channel was closed before a reply was sent.
+    SenderError,
+    /// The actor returned an error.
+    ActorError(String),
 }

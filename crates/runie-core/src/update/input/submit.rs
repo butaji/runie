@@ -100,12 +100,11 @@ impl AppState {
     }
 
     fn queue_steering_message(&mut self, content: String) {
-        let handles = self.actor_handles().cloned();
-        if let Some(ref h) = handles {
-            // Production mode: send to TurnActor (authoritative queue owner)
+        // Route through TurnActor to maintain authoritative queue state.
+        // Fallback applies synchronously in tests without actor handles.
+        if let Some(h) = self.actor_handles() {
             let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
         } else {
-            // Test mode without handles: apply synchronously to AppState projection
             self.agent_state_mut()
                 .message_queue
                 .push(crate::model::QueuedMessage {
@@ -129,10 +128,10 @@ impl AppState {
                 content.push(')');
             }
         }
-        // Route through TurnActor to maintain authoritative queue state
+        // Route through TurnActor to maintain authoritative queue state.
+        // Fallback applies synchronously in tests without actor handles.
         let handles = self.actor_handles().cloned();
-        if let Some(ref h) = handles {
-            // Production mode: send to TurnActor
+        if let Some(h) = handles {
             let id = format!("req.{}", self.agent_state().next_id);
             self.agent_state_mut().next_id += 1;
             let _ = h.turn.try_send(TurnMsg::SubmitUserMessage {
@@ -141,7 +140,6 @@ impl AppState {
                 source: MessageSource::Fresh,
             });
         } else {
-            // Test mode without handles: apply synchronously
             self.apply_user_message_sync(content);
         }
         self.view_mut().scroll = 0;
@@ -200,13 +198,14 @@ impl AppState {
         let handles = self.actor_handles().cloned();
 
         if let Some(ref h) = handles {
-            // Production mode: send to IoActor
-            // Use shell mode for tool commands to support metacharacters like pipes
+            // Production mode: send to IoActor (non-blocking)
             let command = command.to_owned();
             let _ = h.io.try_send(IoMsg::RunBash { command, shell: true });
             return;
         }
-        // Fallback: no actor handles — run bash synchronously.
+        // Test-only fallback: no actor handles, so we must run synchronously.
+        // This is acceptable because test handlers are synchronous and must block to
+        // produce a result. Production always has IoActor handles.
         use crate::shell::run_bash_sync;
         let cwd = std::env::current_dir().unwrap_or_default();
         let result = run_bash_sync(command, &cwd, &std::collections::HashMap::new(), true).output;

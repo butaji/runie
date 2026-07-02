@@ -1,34 +1,12 @@
 #!/bin/bash
-# Regenerate event taxonomy files from taxonomy.json.
+# NOTE: This script is obsolete.
 #
-# This script should be run when modifying crates/runie-core/src/event/taxonomy.json.
-# Generated files are committed to git, so this script only needs to be run manually
-# when making changes to the taxonomy.
+# Event taxonomy is now defined inline in `crates/runie-core/src/event/mod.rs`.
+# The taxonomy.json file is kept as documentation only.
 #
-# Usage:
-#   ./scripts/generate-event-taxonomy.sh
-#
-# Requirements:
-#   - Rust toolchain (cargo)
-#   - Run from repository root
+# To make changes:
+# 1. Edit `crates/runie-core/src/event/mod.rs` directly.
+# 2. Run `cargo test -p runie-core event::` to verify.
+# 3. Update `taxonomy.json` to match if needed.
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-CRATE_DIR="$ROOT_DIR/crates/runie-core"
-
-echo "Regenerating event taxonomy from taxonomy.json..."
-echo ""
-
-# The generation is done by build.rs when cargo builds the crate.
-# We trigger a rebuild by touching taxonomy.json.
-touch "$CRATE_DIR/src/event/taxonomy.json"
-
-# Run cargo check to trigger build.rs generation
-cd "$ROOT_DIR"
-cargo check -p runie-core 2>&1 | grep -E "(generated|error|warning:.*generated)" || true
-
-echo ""
-echo "Event taxonomy regenerated. Please review and commit the changes in:"
-echo "  $CRATE_DIR/src/event/generated/"
+echo "This script is obsolete. Event taxonomy is now in crates/runie-core/src/event/mod.rs."

@@ -1,14 +1,14 @@
 //! Tool context and status/output types.
 
+use camino::Utf8PathBuf;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::Duration;
 
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
 pub struct ToolContext {
-    pub working_dir: PathBuf,
+    pub working_dir: Utf8PathBuf,
     pub env: HashMap<String, String>,
     /// Agent ID when this tool is invoked by a subagent.
     pub agent_id: Option<String>,
@@ -17,7 +17,10 @@ pub struct ToolContext {
 impl Default for ToolContext {
     fn default() -> Self {
         Self {
-            working_dir: std::env::current_dir().unwrap_or_default(),
+            working_dir: std::env::current_dir()
+                .ok()
+                .and_then(|p| Utf8PathBuf::from_path_buf(p).ok())
+                .unwrap_or_else(|| Utf8PathBuf::from(".")),
             env: minimal_tool_env(),
             agent_id: None,
         }

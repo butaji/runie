@@ -98,14 +98,12 @@ fn handle_settings_toggle(state: &mut AppState) {
 fn handle_vim_mode_toggle(state: &mut AppState) {
     let new_value = !state.config().vim_mode;
     state.config_mut().vim_mode = new_value;
-    // Persist to config.toml via ConfigActor (clone handles for async)
-    let handles = state.actor_handles().cloned();
-    if let Some(h) = handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h
-                .config
-                .try_send(ConfigMsg::SetVimMode { enabled: new_value });
-        }
+    // Persist to config.toml via ConfigActor (fire-and-forget).
+    // In tests without handles, mutation is already applied above.
+    if let Some(h) = state.actor_handles() {
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetVimMode { enabled: new_value });
     }
     state.view_mut().cached_settings_valid = false;
 }
@@ -272,17 +270,15 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
             models: vec![],
         })
         .models = models.to_vec();
-    // Persist to config.toml via ConfigActor
-    let handles = state.actor_handles().cloned();
-    if let Some(h) = handles {
+    // Persist to config.toml via ConfigActor (fire-and-forget).
+    // In tests without handles, mutation is already applied above.
+    if let Some(h) = state.actor_handles() {
         let provider = provider.to_owned();
         let models = models.to_vec();
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.config.try_send(ConfigMsg::SetProviderModels {
-                name: provider,
-                models,
-            });
-        }
+        let _ = h.config.try_send(ConfigMsg::SetProviderModels {
+            name: provider,
+            models,
+        });
     }
 }
 

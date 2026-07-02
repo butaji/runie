@@ -11,6 +11,7 @@ workspace = true
 path = "src/lib.rs"
 
 [dependencies]
+camino.workspace = true
 runie-core.workspace = true
 runie-provider.workspace = true
 anyhow.workspace = true

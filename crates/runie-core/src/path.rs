@@ -15,7 +15,8 @@ pub fn resolve_path(raw: &str) -> PathBuf {
 
 /// Resolve a raw path string to an absolute, normalized path relative to the
 /// given working directory.
-pub fn resolve_path_in(raw: &str, working_dir: &Path) -> PathBuf {
+pub fn resolve_path_in(raw: &str, working_dir: impl AsRef<Path>) -> PathBuf {
+    let working_dir = working_dir.as_ref();
     let expanded = shellexpand::tilde(raw).into_owned();
     let path = Path::new(&expanded);
     // Use path-absolutize for cross-platform absolute + normalized paths.

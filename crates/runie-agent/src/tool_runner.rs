@@ -28,7 +28,7 @@ pub async fn execute_tool_call(
     gate: &PermissionGate,
 ) -> ToolOutput {
     let tool_name = &tool_call.name;
-    let perm_ctx = build_permission_context(tool_name, &tool_call.args, &ctx.working_dir);
+    let perm_ctx = build_permission_context(tool_name, &tool_call.args, ctx.working_dir.as_ref());
     match gate.evaluate(&perm_ctx).await {
         PermissionAction::Allow => {
             let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);

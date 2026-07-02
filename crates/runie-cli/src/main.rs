@@ -13,6 +13,7 @@ use clap::Parser;
 
 mod inspect;
 mod json;
+mod login;
 mod mcp;
 mod print;
 mod scope; // Required for ConfigScope ValueEnum impl
@@ -43,6 +44,15 @@ enum Command {
         /// Output as JSON
         #[arg(long)]
         json: bool,
+    },
+    /// Configure a provider with API key
+    Login {
+        /// Provider name (e.g., openai, anthropic, minimax)
+        #[arg(short, long)]
+        provider: Option<String>,
+        /// API key (will prompt if not provided)
+        #[arg(short, long)]
+        api_key: Option<String>,
     },
     /// JSON stdin/stdout for scripting
     Json,
@@ -110,6 +120,7 @@ async fn main() {
     let result = match cli.command {
         Command::Print { prompt } => run_print(&prompt).await,
         Command::Inspect { json } => run_inspect(json).await,
+        Command::Login { provider, api_key } => run_login(provider, api_key).await,
         Command::Json => run_json().await,
         Command::Server { stdio, yolo } => run_server(stdio, yolo).await,
         Command::Mcp { command } => run_mcp(command).await,
@@ -127,6 +138,10 @@ async fn main() {
 
 async fn run_inspect(json: bool) -> Result<()> {
     inspect::run(json).await
+}
+
+async fn run_login(provider: Option<String>, api_key: Option<String>) -> Result<()> {
+    login::run(provider, api_key).await
 }
 
 async fn run_print(prompt: &str) -> Result<()> {
@@ -263,8 +278,39 @@ mod tests {
         let help = Cli::command().render_help().to_string();
         assert!(help.contains("print"), "help should include print");
         assert!(help.contains("inspect"), "help should include inspect");
+        assert!(help.contains("login"), "help should include login");
         assert!(help.contains("json"), "help should include json");
         assert!(help.contains("server"), "help should include server");
         assert!(help.contains("mcp"), "help should include mcp");
+    }
+
+    #[test]
+    fn cli_parses_login() {
+        let cli = Cli::try_parse_from(["runie", "login"]).unwrap();
+        assert!(matches!(cli.command, Command::Login { provider: None, api_key: None }));
+    }
+
+    #[test]
+    fn cli_parses_login_with_provider() {
+        let cli = Cli::try_parse_from(["runie", "login", "--provider", "openai"]).unwrap();
+        match cli.command {
+            Command::Login { provider, api_key } => {
+                assert_eq!(provider, Some("openai".to_string()));
+                assert_eq!(api_key, None);
+            }
+            _ => panic!("Expected Login command"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_login_with_short_flags() {
+        let cli = Cli::try_parse_from(["runie", "login", "-p", "anthropic", "-a", "sk-test"]).unwrap();
+        match cli.command {
+            Command::Login { provider, api_key } => {
+                assert_eq!(provider, Some("anthropic".to_string()));
+                assert_eq!(api_key, Some("sk-test".to_string()));
+            }
+            _ => panic!("Expected Login command"),
+        }
     }
 }

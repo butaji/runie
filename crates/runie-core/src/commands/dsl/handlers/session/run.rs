@@ -80,10 +80,9 @@ pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
         return CommandResult::Message("Usage: /save name".into());
     }
     let session = crate::session::Session::from_state(state, name_owned.clone());
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-    if can_spawn {
-        let _ = handles.unwrap().session.try_send(SessionMsg::Save {
+    // Route through SessionActor in production; fall back to direct save in tests.
+    if let Some(h) = state.actor_handles() {
+        let _ = h.session.try_send(SessionMsg::Save {
             name: name_owned,
             session,
         });
@@ -149,13 +148,9 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
         return CommandResult::Message("Usage: /import path/to/session.json".into());
     }
     let path_buf = std::path::PathBuf::from(path);
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-    if can_spawn {
-        let _ = handles
-            .unwrap()
-            .session
-            .try_send(SessionMsg::Import { path: path_buf });
+    // Route through SessionActor in production; fall back to direct import in tests.
+    if let Some(h) = state.actor_handles() {
+        let _ = h.session.try_send(SessionMsg::Import { path: path_buf });
         return CommandResult::Message(format!("Importing session from '{}'…", path));
     }
     let json = match std::fs::read_to_string(&path_buf) {
@@ -184,10 +179,9 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
         .unwrap_or_else(|| "exported".into());
     let session = crate::session::Session::from_state(state, name);
     let path_buf = std::path::PathBuf::from(path);
-    let handles = state.actor_handles().cloned();
-    let can_spawn = handles.as_ref().is_some() && tokio::runtime::Handle::try_current().is_ok();
-    if can_spawn {
-        let _ = handles.unwrap().session.try_send(SessionMsg::Export {
+    // Route through SessionActor in production; fall back to direct export in tests.
+    if let Some(h) = state.actor_handles() {
+        let _ = h.session.try_send(SessionMsg::Export {
             path: path_buf,
             session,
         });
@@ -203,10 +197,8 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
 /// Helper: send a session message to SessionActor if the actor is available.
 fn send_session_msg(state: &AppState, msg: SessionMsg) -> bool {
     if let Some(handles) = state.actor_handles() {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = handles.session.try_send(msg);
-            return true;
-        }
+        let _ = handles.session.try_send(msg);
+        return true;
     }
     false
 }

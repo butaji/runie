@@ -38,13 +38,9 @@ impl AppState {
     fn persist_current_model(&self) {
         let provider = self.config().current_provider.clone();
         let model = self.config().current_model.clone();
-        let handles = self.actor_handles().cloned();
-        if let Some(handles) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = handles
-                    .config
-                    .try_send(ConfigMsg::SetDefaultModel { provider, model });
-            }
+        // Fire-and-forget persist.  In tests without actor handles, mutation is already applied.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.config.try_send(ConfigMsg::SetDefaultModel { provider, model });
         }
     }
 

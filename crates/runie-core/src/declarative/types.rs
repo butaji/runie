@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use serde::de::{self, Error as SerdeError, Visitor};
 use serde::{Deserialize, Deserializer};
+use validator::Validate;
 
 use crate::commands::CommandCategory;
 
@@ -86,10 +87,15 @@ pub enum CommandKindDef {
 }
 
 /// A form field definition.
-#[derive(Debug, Clone, Deserialize)]
+///
+/// Validation ensures label, placeholder, and key are non-empty strings.
+#[derive(Debug, Clone, Deserialize, Validate)]
 pub struct FormFieldDef {
+    #[validate(length(min = 1, message = "label cannot be empty"))]
     pub label: String,
+    #[validate(length(min = 1, message = "placeholder cannot be empty"))]
     pub placeholder: String,
+    #[validate(length(min = 1, message = "key cannot be empty"))]
     pub key: String,
 }
 
@@ -280,5 +286,45 @@ mod tests {
         );
         // Unknown returns error
         assert!(CommandCategory::from_str("nonexistent").is_err());
+    }
+
+    #[test]
+    fn form_field_def_valid() {
+        let field = FormFieldDef {
+            label: "Name".into(),
+            placeholder: "session-name".into(),
+            key: "name".into(),
+        };
+        assert!(field.validate().is_ok());
+    }
+
+    #[test]
+    fn form_field_def_empty_label() {
+        let field = FormFieldDef {
+            label: "".into(),
+            placeholder: "session-name".into(),
+            key: "name".into(),
+        };
+        assert!(field.validate().is_err());
+    }
+
+    #[test]
+    fn form_field_def_empty_placeholder() {
+        let field = FormFieldDef {
+            label: "Name".into(),
+            placeholder: "".into(),
+            key: "name".into(),
+        };
+        assert!(field.validate().is_err());
+    }
+
+    #[test]
+    fn form_field_def_empty_key() {
+        let field = FormFieldDef {
+            label: "Name".into(),
+            placeholder: "session-name".into(),
+            key: "".into(),
+        };
+        assert!(field.validate().is_err());
     }
 }

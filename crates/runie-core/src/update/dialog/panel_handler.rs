@@ -430,13 +430,12 @@ fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str)
 fn toggle_vim_mode(state: &mut AppState) {
     let new_value = !state.config().vim_mode;
     state.config_mut().vim_mode = new_value;
-    let handles = state.actor_handles().cloned();
-    if let Some(h) = handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h
-                .config
-                .try_send(ConfigMsg::SetVimMode { enabled: new_value });
-        }
+    // Persist to config.toml via ConfigActor (fire-and-forget).
+    // In tests without handles, mutation is already applied above.
+    if let Some(h) = state.actor_handles() {
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetVimMode { enabled: new_value });
     }
     state.view_mut().cached_settings_valid = false;
 }
@@ -444,13 +443,12 @@ fn toggle_vim_mode(state: &mut AppState) {
 fn toggle_telemetry(state: &mut AppState) {
     let new_enabled = !state.config().telemetry_enabled();
     state.config_mut().telemetry.enabled = new_enabled;
-    let handles = state.actor_handles().cloned();
-    if let Some(h) = handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.config.try_send(ConfigMsg::SetTelemetry {
-                enabled: new_enabled,
-            });
-        }
+    // Persist to config.toml via ConfigActor (fire-and-forget).
+    // In tests without handles, mutation is already applied above.
+    if let Some(h) = state.actor_handles() {
+        let _ = h.config.try_send(ConfigMsg::SetTelemetry {
+            enabled: new_enabled,
+        });
     }
     state.view_mut().cached_settings_valid = false;
 }
@@ -469,13 +467,12 @@ fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &
         _ => return,
     }
     state.config_mut().truncation = truncation.clone();
-    let handles = state.actor_handles().cloned();
-    if let Some(h) = handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h
-                .config
-                .try_send(ConfigMsg::SetTruncation { limits: truncation });
-        }
+    // Persist to config.toml via ConfigActor (fire-and-forget).
+    // In tests without handles, mutation is already applied above.
+    if let Some(h) = state.actor_handles() {
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetTruncation { limits: truncation });
     }
     state.view_mut().cached_settings_valid = false;
 }

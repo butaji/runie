@@ -36,6 +36,7 @@ toml_edit = "0.22"
 figment = { version = "0.10", features = ["toml", "env"] }
 dirs = "5.0"
 path-absolutize = "1.2"
+camino = { version = "1.1", features = ["serde1"] }
 nix = { version = "0.31", features = ["signal"] }
 base64 = "0.22"
 pulldown-cmark = "0.13"
@@ -83,6 +84,7 @@ secrecy = "0.8"
 indextree = "4.1"
 keyring = { version = "3", features = ["vendored"] }
 dotenvy = "0.15"
+chrono = { version = "0.4", features = ["serde"] }
 fs2 = "0.4"
 sha2 = "0.10"
 hex = "0.4"
@@ -101,6 +103,8 @@ include_dir = "0.7"
 tokio-util = "0.7"
 
 derive_builder = "0.20"
+tinytemplate = "1.0"
+validator = { version = "0.20", features = ["derive"] }
 serde_with = "1"
 async-trait = "0.1"
 ractor = "0.9"

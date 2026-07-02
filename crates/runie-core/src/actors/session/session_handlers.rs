@@ -2,6 +2,7 @@
 //!
 //! Extracted from `ractor_session_actor.rs` to satisfy the 500-line file limit.
 
+use camino::Utf8PathBuf;
 use std::path::PathBuf;
 
 use crate::bus::EventBus;
@@ -220,7 +221,7 @@ impl RactorSessionActor {
     /// Handle set trust decision.
     pub async fn handle_set_trust(
         state: &mut SessionActorState,
-        path: PathBuf,
+        path: Utf8PathBuf,
         decision: TrustDecision,
     ) {
         state.trust.set(&path, decision);
@@ -359,6 +360,43 @@ impl RactorSessionActor {
         }
     }
 
+    /// Handle resume most recent session.
+    pub async fn handle_resume_most_recent(state: &mut SessionActorState) {
+        let store = state.store.clone();
+        let res = tokio::task::spawn_blocking(move || {
+            let names = store.list().ok()?;
+            let mut most_recent = None;
+            let mut most_recent_time = 0.0f64;
+            for name in names {
+                if let Ok(Some(meta)) = store.load_metadata(&name) {
+                    if meta.updated_at > most_recent_time {
+                        most_recent_time = meta.updated_at;
+                        most_recent = Some(name);
+                    }
+                }
+            }
+            most_recent
+        }).await;
+
+        match res {
+            Ok(Some(name)) => {
+                Self::handle_load(state, name).await;
+            }
+            Ok(None) => {
+                state.emit(Event::SessionOperationFailed {
+                    operation: "resume".to_owned(),
+                    error: "No sessions to resume.".to_owned(),
+                });
+            }
+            Err(e) => {
+                state.emit(Event::SessionOperationFailed {
+                    operation: "resume".to_owned(),
+                    error: e.to_string(),
+                });
+            }
+        }
+    }
+
     /// Handle import session.
     pub async fn handle_import(state: &mut SessionActorState, path: PathBuf) {
         let path_clone = path.clone();
@@ -422,6 +460,7 @@ impl RactorSessionActor {
             SessionMsg::Save { name, session } => Self::handle_save(state, name, session).await,
             SessionMsg::Delete { name } => Self::handle_delete(state, name).await,
             SessionMsg::List => Self::handle_list(state).await,
+            SessionMsg::ResumeMostRecent => Self::handle_resume_most_recent(state).await,
             SessionMsg::AddUserMessage { content, images } => {
                 Self::handle_add_user_message(state, content, images)
             }

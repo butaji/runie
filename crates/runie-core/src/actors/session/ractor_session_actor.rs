@@ -128,4 +128,39 @@ mod tests {
             "Expected SessionChanged event after adding user message"
         );
     }
+
+    #[tokio::test]
+    async fn ractor_session_resume_most_recent_emits_session_operation_failed() {
+        // When no sessions exist, handle_resume_most_recent emits SessionOperationFailed.
+        let bus = EventBus::<Event>::new(16);
+        let mut sub = bus.subscribe();
+
+        // Directly call the handler (same logic as ResumeMostRecent message).
+        // In a fresh temp-store actor, no sessions exist → expect failure event.
+        use crate::session::store::SessionStore;
+        use crate::actors::session::session_handlers::RactorSessionActor;
+        let store = SessionStore::new(std::env::temp_dir().join("runie_test_resume_nonexistent"));
+        let state = &mut crate::actors::session::session_handlers::SessionActorState {
+            bus: bus.clone(),
+            trust: crate::trust::TrustManager::default(),
+            store,
+            session_state: crate::model::SessionState::default(),
+            next_id: 0,
+        };
+        RactorSessionActor::handle_resume_most_recent(state).await;
+
+        let found = wait_for_event(&mut sub, |e| {
+            matches!(
+                e,
+                Event::SessionOperationFailed {
+                    operation,
+                    error: _
+                } if operation == "resume"
+            )
+        }).await;
+        assert!(
+            found,
+            "Expected SessionOperationFailed(resume) when no sessions exist"
+        );
+    }
 }

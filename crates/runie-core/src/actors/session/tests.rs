@@ -101,6 +101,6 @@ async fn session_actor_reset_via_handle() {
 #[test]
 fn trust_manager_default_is_untrusted() {
     let manager = TrustManager::default();
-    let path = PathBuf::from("/tmp/test");
+    let path = camino::Utf8PathBuf::from("/tmp/test");
     assert!(manager.decision_for(&path).is_none());
 }

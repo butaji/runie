@@ -91,7 +91,9 @@ fn input_box_and_status_bar_visible_after_model_connected() {
 
 #[test]
 fn apply_config_ignores_stale_top_level_provider() {
-    // Ensure no API key env var is set for this test
+    // Use ENV_LOCK to prevent parallel test interference
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let prev_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::remove_var("OPENAI_API_KEY");
 
     let _path = clean_config();
@@ -113,6 +115,12 @@ model = "gpt-4o"
     );
     assert!(state.config.current_provider.is_empty());
     assert!(state.config.current_model.is_empty());
+
+    // Restore prior env state
+    match prev_key {
+        Some(v) => std::env::set_var("OPENAI_API_KEY", v),
+        None => std::env::remove_var("OPENAI_API_KEY"),
+    }
 }
 
 #[test]

@@ -41,7 +41,7 @@ pub struct AppState {
     pub registry: crate::commands::CommandRegistry,
     pub skills: Vec<crate::skills::Skill>,
     pub prompts: Vec<crate::prompts::PromptTemplate>,
-    pub trust_decisions: std::collections::HashMap<std::path::PathBuf, crate::trust::TrustDecision>,
+    pub trust_decisions: std::collections::HashMap<camino::Utf8PathBuf, crate::trust::TrustDecision>,
     pub transient_message: Option<String>,
     pub transient_until: Option<std::time::Instant>,
     pub transient_level: Option<crate::event::TransientLevel>,

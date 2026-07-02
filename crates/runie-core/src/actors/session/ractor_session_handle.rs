@@ -1,5 +1,6 @@
 //! Ractor-based SessionActor handle.
 
+use camino::Utf8PathBuf;
 use std::path::PathBuf;
 
 use ractor::ActorRef;
@@ -27,7 +28,9 @@ impl RactorSessionHandle {
 
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
-        let _ = self.inner.send_message(SessionMsg::SetTrust { path, decision });
+        let path_utf8 = Utf8PathBuf::from_path_buf(path)
+            .unwrap_or_else(|_| Utf8PathBuf::from("."));
+        let _ = self.inner.send_message(SessionMsg::SetTrust { path: path_utf8, decision });
     }
 
     /// Append an entry to the history file.
@@ -58,6 +61,16 @@ impl RactorSessionHandle {
     /// Request listing saved sessions.
     pub async fn list(&self) {
         let _ = self.inner.send_message(SessionMsg::List);
+    }
+
+    /// Request resuming the most recent session.
+    pub async fn resume_most_recent(&self) {
+        let _ = self.inner.send_message(SessionMsg::ResumeMostRecent);
+    }
+
+    /// Try to request resuming the most recent session (fire-and-forget).
+    pub fn try_resume_most_recent(&self) {
+        let _ = self.inner.send_message(SessionMsg::ResumeMostRecent);
     }
 
     /// Try to add a user message (fire-and-forget).

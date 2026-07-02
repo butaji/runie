@@ -130,13 +130,11 @@ impl AppState {
             return;
         }
         self.config_mut().theme_name = name.clone();
-        // Persist to config.toml via ConfigActor (clone handles for async)
-        let handles = self.actor_handles().cloned();
-        if let Some(h) = handles {
+        // Persist to config.toml via ConfigActor (fire-and-forget).
+        // In tests without actor handles, the mutation is already applied above.
+        if let Some(h) = self.actor_handles() {
             let name_clone = name.clone();
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.config.try_send(ConfigMsg::SetTheme { name: name_clone });
-            }
+            let _ = h.config.try_send(ConfigMsg::SetTheme { name: name_clone });
         }
         self.add_system_msg(format!("Theme switched to '{}'", name));
     }
@@ -155,12 +153,15 @@ impl AppState {
     }
 
     pub(crate) fn stop_turn(&mut self) {
-        // Route through TurnActor to maintain authoritative turn state
-        let handles = self.actor_handles().cloned();
-        if let Some(ref h) = handles {
-            if tokio::runtime::Handle::try_current().is_ok() {
-                let _ = h.turn.try_send(TurnMsg::AbortTurn);
-            }
+        // Route through TurnActor to maintain authoritative turn state.
+        // Also send AgentMsg::Abort directly to the agent actor for cancellation.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.turn.try_send(TurnMsg::AbortTurn);
+            // Route abort directly to agent actor (not through event bus).
+            let agent = h.agent.clone();
+            tokio::spawn(async move {
+                agent.abort().await;
+            });
         } else {
             // Fallback for tests without actor handles
             self.apply_turn_aborted();
@@ -254,14 +255,12 @@ pub fn control_event(state: &mut AppState, event: Event) {
 fn handle_toggle_vim_mode(state: &mut AppState) {
     let new_value = !state.config().vim_mode;
     state.config_mut().vim_mode = new_value;
-    // Persist to config.toml via ConfigActor (clone handles for async)
-    let handles = state.actor_handles().cloned();
-    if let Some(h) = handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h
-                .config
-                .try_send(ConfigMsg::SetVimMode { enabled: new_value });
-        }
+    // Persist to config.toml via ConfigActor (fire-and-forget).
+    // In tests without handles, the mutation is already applied above.
+    if let Some(h) = state.actor_handles() {
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetVimMode { enabled: new_value });
     }
     state.view_mut().cached_settings_valid = false;
     state.view_mut().dirty = true;
@@ -281,14 +280,11 @@ fn handle_new_session(state: &mut AppState) {
 }
 
 fn handle_clear_queues(state: &mut AppState) {
-    // Route through TurnActor to maintain authoritative queue state
-    let handles = state.actor_handles().cloned();
-    if let Some(ref h) = handles {
-        if tokio::runtime::Handle::try_current().is_ok() {
-            let _ = h.turn.try_send(TurnMsg::ClearQueues);
-        }
+    // Route through TurnActor to maintain authoritative queue state.
+    // Fallback clears queues directly in tests without actor handles.
+    if let Some(h) = state.actor_handles() {
+        let _ = h.turn.try_send(TurnMsg::ClearQueues);
     } else {
-        // Fallback for tests without actor handles
         state.agent_state_mut().request_queue.clear();
         state.agent_state_mut().message_queue.clear();
     }

@@ -8,8 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # Kill tests that hang longer than 120 seconds.
-  RUST_TEST_TIMEOUT: "120"
 
 jobs:
   test:
@@ -19,10 +17,15 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/rust-setup
 
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
       - name: Run tests
         run: |
           echo "=== Running all tests ==="
-          ./scripts/verify-tests.sh
+          cargo nextest run --workspace --profile ci
+          echo "=== Running doctests ==="
+          cargo test --workspace --doc
 
   fmt:
     name: Rustfmt

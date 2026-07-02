@@ -58,9 +58,10 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
 fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecision) {
     use crate::event::TransientLevel;
     let cwd = std::env::current_dir().unwrap_or_default();
+    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
     // Update state synchronously (mirrors TrustActor logic for unit test compatibility).
     // TrustActor also processes this async for persistence.
-    state.set_trust_decision(cwd.clone(), decision);
+    state.set_trust_decision(cwd_utf8.clone(), decision);
     let new_read_only = !matches!(decision, crate::trust::TrustDecision::Trusted);
     state.config_mut().read_only = new_read_only;
     // Remove welcome message and notify when trusted
@@ -71,19 +72,19 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
             .retain(|m| m.id != "trust_welcome");
         state.messages_changed();
         state.notify(
-            format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
+            format!("Project '{}' trusted. Read-only disabled.", cwd_utf8),
             TransientLevel::Success,
         );
     } else {
         state.notify(
-            format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
+            format!("Project '{}' untrusted. Read-only enabled.", cwd_utf8),
             TransientLevel::Warning,
         );
     }
     // Also send to SessionActor async for persistence
     if let Some(handles) = state.actor_handles() {
         let handles = handles.clone();
-        let cwd_async = cwd;
+        let cwd_async = cwd_utf8;
         let _ = handles.session.try_send(SessionMsg::SetTrust {
             path: cwd_async,
             decision,

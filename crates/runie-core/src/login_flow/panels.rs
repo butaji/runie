@@ -1,6 +1,5 @@
 //! Login flow panel builders.
 
-use crate::dialog::dsl::get_field;
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::provider::{display_name, known_providers};
 
@@ -33,15 +32,9 @@ pub fn build_key_input(state: &LoginFlowState) -> Panel {
         .header(format!("Enter your {} API key", name))
         .form_field_value("API Key", "sk-...", "key", state.key.clone())
         .form_hidden("provider", state.provider.clone())
-        .form_submit_with(login_key_submit)
+        .form_submit()
+        .item("_Submit", ItemAction::Emit(crate::Event::Save))
         .item("_Cancel", ItemAction::Emit(crate::Event::Abort))
-}
-
-fn login_key_submit(values: &std::collections::HashMap<String, String>) -> crate::event::Event {
-    crate::Event::SubmitKey {
-        provider: get_field(values, "provider"),
-        key: get_field(values, "key"),
-    }
 }
 
 /// Build the "verifying API key" panel shown while waiting for the provider.

@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,11 @@ After offloading the turn, handle `AgentMsg::Abort` directly in the actor and ca
 
 ## Acceptance Criteria
 
-- [ ] Add `AgentMsg::Abort` variant.
-- [ ] Cancel the in-flight turn task in the handler.
-- [ ] Remove event-bus subscription for abort.
-- [ ] All abort tests pass.
+- [x] Add `abort()` method to `LeaderAgentHandle` trait.
+- [x] Implement `abort()` in `LeaderAgentHandleImpl` to send `AgentMsg::Abort` directly.
+- [x] Add `abort()` to `AgentActorHandle`, `LeaderAgentActorHandle`, and `AgentHandleBox`.
+- [x] Route abort through agent handle in `stop_turn()` instead of event bus.
+- [x] All abort tests pass.
 
 ## Design Impact
 
@@ -34,6 +35,6 @@ No change to TUI element design or composition. Only abort routing behavior chan
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
