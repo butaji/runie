@@ -1998,5 +1998,60 @@
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
     "status": "todo"
+  },
+  {
+    "file": "centralize-provider-http-timeouts-and-retry-constants.md",
+    "title": "Centralize provider HTTP timeouts and retry constants",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-actor-channel-capacities-and-timeouts.md",
+    "title": "Centralize actor channel capacities and timeouts",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-tui-glyphs-and-theme-constants.md",
+    "title": "Centralize TUI glyphs and theme constants",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-tui-popup-layout-constants.md",
+    "title": "Centralize TUI popup layout constants",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-tool-default-limits.md",
+    "title": "Centralize tool default limits",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-byte-and-duration-formatting-thresholds.md",
+    "title": "Centralize byte and duration formatting thresholds",
+    "status": "todo"
+  },
+  {
+    "file": "centralize-ui-strings-module.md",
+    "title": "Centralize UI strings module",
+    "status": "todo"
+  },
+  {
+    "file": "replace-magic-numbers-in-command-form-handlers.md",
+    "title": "Replace magic numbers in command form handlers",
+    "status": "todo"
+  },
+  {
+    "file": "move-tunable-values-from-constants-to-config.md",
+    "title": "Move tunable values from constants to config",
+    "status": "todo"
+  },
+  {
+    "file": "add-convention-against-magic-numbers.md",
+    "title": "Add convention / lint against magic numbers",
+    "status": "todo"
+  },
+  {
+    "file": "execute-magic-numbers-cleanup-roadmap.md",
+    "title": "Execute magic numbers cleanup roadmap",
+    "status": "todo"
   }
 ]
