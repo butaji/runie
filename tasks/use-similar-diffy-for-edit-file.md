@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done` — `diffy` is used in `edit_file.rs` for patch creation and validation; unit tests for multi-line edits and ambiguous matches pass.
 
 ## Description
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-**partial** — edit_file now uses `diffy::create_patch` for patch verification.
+**done** — edit_file uses `diffy::create_patch` for patch verification; all acceptance criteria satisfied.
 
 ## Context
 

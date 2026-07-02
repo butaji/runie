@@ -224,7 +224,7 @@
 {"file": "persist-session-tree-and-branch-state.md", "title": "Persist session tree and branch state", "status": "done"}
 {"file": "plumb-keyringstore-into-builtproviderfactory.md", "title": "Plumb KeyringStore into BuiltProviderFactory", "status": "done"}
 {"file": "prepare-grok-build-reference-for-comparison.md", "title": "Prepare Grok Build reference for comparison", "status": "todo"}
-{"file": "preserve-rich-message-and-tool-data-in-durable-events.md", "title": "Preserve rich message and tool data in durable events", "status": "todo"}
+{"file": "preserve-rich-message-and-tool-data-in-durable-events.md", "title": "Preserve rich message and tool data in durable events", "status": "partial"}
 {"file": "propagate-actor-spawn-errors-instead-of-panicking.md", "title": "Propagate actor spawn errors instead of panicking", "status": "done"}
 {"file": "propagate-secretstring-through-provider-stack.md", "title": "Propagate SecretString through provider stack", "status": "todo"}
 {"file": "reconnect-tui-agent-actor-channel.md", "title": "Reconnect or remove TUI `AgentActor` channel", "status": "done"}
@@ -361,7 +361,7 @@
 {"file": "unify-core-and-tui-line-count-computation.md", "title": "Unify core and TUI line-count computation", "status": "done"}
 {"file": "unify-declarative-resource-loader.md", "title": "Unify declarative resource loader", "status": "done"}
 {"file": "unify-diff-generation-and-parsing-on-one-crate.md", "title": "Unify diff generation and parsing on one crate", "status": "done"}
-{"file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md", "title": "Unify edit_file and hashline_edit on patch-based edits", "status": "partial"}
+{"file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md", "title": "Unify edit_file and hashline_edit on patch-based edits", "status": "done"}
 {"file": "unify-file-picker-and-panel-list-widget.md", "title": "Unify file picker and panel list widget", "status": "done"}
 {"file": "unify-form-submit-paths-through-command-registry.md", "title": "Unify form submit paths through command registry", "status": "done"}
 {"file": "unify-headless-and-tui-streaming-response-parser.md", "title": "Unify headless and TUI streaming response parser", "status": "done"}
@@ -406,7 +406,7 @@
 {"file": "use-serde_with-for-provider-event-serde.md", "title": "Use serde_with for provider event serde", "status": "done"}
 {"file": "use-shell-words-for-slash-command-parsing.md", "title": "Use shell-words for slash command parsing", "status": "done"}
 {"file": "use-shell-words-in-harness-skills.md", "title": "Use shell-words in harness skills", "status": "done"}
-{"file": "use-similar-diffy-for-edit-file.md", "title": "Use `similar`/`diffy` for `edit_file`", "status": "todo"}
+{"file": "use-similar-diffy-for-edit-file.md", "title": "Use `similar`/`diffy` for `edit_file`", "status": "done"}
 {"file": "use-strum-for-event-intent-names.md", "title": "Use `strum` to derive `Event`/`Intent`/`EventKind` names", "status": "done"}
 {"file": "use-strum-for-hook-event-parsing.md", "title": "Use strum for hook event parsing", "status": "done"}
 {"file": "use-tagged-enum-for-declarative-command-kind.md", "title": "Use tagged enum for declarative command kind", "status": "done"}

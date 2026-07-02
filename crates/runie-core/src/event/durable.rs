@@ -79,10 +79,11 @@ impl DurableCoreEvent {
                 input: input.clone(),
             }),
             // Durable: tool result
-            Event::ToolEnd { id, output, .. } => Some(D::ToolResult {
+            Event::ToolEnd { id, output, duration_secs, .. } => Some(D::ToolResult {
                 id: id.clone(),
                 output: output.clone(),
                 success: true,
+                duration_secs: *duration_secs,
             }),
             // Durable: model switch
             Event::SwitchModel { provider, model, .. } => Some(D::ModelSwitched {
@@ -317,10 +318,10 @@ impl TryFrom<&DurableCoreEvent> for Event {
                 name: name.clone(),
                 input: input.clone(),
             }),
-            D::ToolResult { id, output, .. } => Ok(Event::ToolEnd {
+            D::ToolResult { id, output, success: _, duration_secs } => Ok(Event::ToolEnd {
                 id: id.clone(),
                 input: None,
-                duration_secs: 0.0,
+                duration_secs: *duration_secs,
                 output: output.clone(),
             }),
             D::ModelSwitched { provider, model } => Ok(Event::SwitchModel {
@@ -362,6 +363,8 @@ pub enum DurableCoreEvent {
         id: String,
         output: String,
         success: bool,
+        #[serde(default)]
+        duration_secs: f64,
     },
     /// The user switched the active model or provider.
     ModelSwitched { provider: String, model: String },
@@ -433,7 +436,7 @@ mod tests {
         let durable = durable.unwrap();
         assert!(matches!(
             durable,
-            DurableCoreEvent::ToolResult { id, output, success: true }
+            DurableCoreEvent::ToolResult { id, output, success: true, duration_secs: 1.5 }
             if id == "t1" && output == "done"
         ));
     }
@@ -579,6 +582,7 @@ mod tests {
             id: "t1".into(),
             output: "result".into(),
             success: true,
+            duration_secs: 0.0,
         };
         let event: Result<Event, _> = Event::try_from(&durable);
         assert!(event.is_ok());
@@ -677,6 +681,26 @@ mod tests {
         }
     }
 
+    #[test]
+    fn tool_result_roundtrip() {
+        // Event::ToolEnd → DurableCoreEvent::ToolResult → Event::ToolEnd (preserves duration_secs)
+        let original = Event::ToolEnd {
+            id: "t1".into(),
+            input: None,
+            duration_secs: 3.5,
+            output: "result".into(),
+        };
+        let durable = DurableCoreEvent::try_from_event(&original).unwrap();
+        let recovered: Event = Event::try_from(&durable).unwrap();
+        match (original, recovered) {
+            (
+                Event::ToolEnd { duration_secs: d1, .. },
+                Event::ToolEnd { duration_secs: d2, .. },
+            ) => assert_eq!(d1, d2),
+            _ => panic!("round-trip mismatch"),
+        }
+    }
+
     // ── Serde roundtrip for DurableCoreEvent ─────────────────────────────────
 
     #[test]
@@ -714,6 +738,35 @@ mod tests {
             durable,
             DurableCoreEvent::ModelSwitched { provider, model }
             if provider == "openai" && model == "gpt-4"
+        ));
+    }
+
+    #[test]
+    fn durable_tool_result_preserves_duration() {
+        let durable = DurableCoreEvent::ToolResult {
+            id: "t1".into(),
+            output: "done".into(),
+            success: true,
+            duration_secs: 2.5,
+        };
+        let json = serde_json::to_string(&durable).unwrap();
+        let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
+        match parsed {
+            DurableCoreEvent::ToolResult { duration_secs, .. } => {
+                assert_eq!(duration_secs, 2.5);
+            }
+            _ => panic!("Expected ToolResult"),
+        }
+    }
+
+    #[test]
+    fn durable_tool_result_backward_compatible() {
+        // Old JSON without duration_secs should default to 0.0
+        let json = r#"{"event":"toolResult","id":"t1","output":"done","success":true}"#;
+        let durable: DurableCoreEvent = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            durable,
+            DurableCoreEvent::ToolResult { duration_secs, .. } if duration_secs == 0.0
         ));
     }
 }

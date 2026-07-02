@@ -1,8 +1,17 @@
-//! UiActor — owns `AppState` and is the sole state mutator.
+//! UiActor module — owns `AppState` and is the sole state mutator.
 //!
-//! The actor subscribes to the shared `EventBus<Event>`, applies every event to
-//! `AppState`, sends fresh `Snapshot`s to the render task via a `watch` channel,
-//! and triggers side-effects (agent spawns, clipboard, etc.) without blocking.
+//! Split into focused submodules:
+//! - `input.rs` — Input handling, autocomplete detection, form detection
+//! - `submit.rs` — Submit content dispatch
+//! - `effects.rs` — Effects dispatch
+//! - `helpers.rs` — Utility functions
+
+pub mod effects;
+pub mod helpers;
+pub mod input;
+pub mod submit;
+
+pub use crate::ui_actor_agent_handles::{AgentActorHandle, AgentHandleBox, LeaderAgentActorHandle};
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -12,15 +21,11 @@ use runie_agent::truncate::TruncationPolicy;
 use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::actors::RactorInputHandle;
 use runie_core::bus::{EventBus, Receiver};
-use runie_core::commands::{DialogKind, DialogState};
 use runie_core::update::dialog::handle_form_dialog;
 use runie_core::{AppState, Event, Snapshot};
 
-use crate::effects::EffectCommand;
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TermCaps;
-
-pub use crate::ui_actor_agent_handles::{AgentHandleBox, AgentActorHandle, LeaderAgentActorHandle};
 
 const ANIM_MS: u64 = 100;
 
@@ -316,7 +321,7 @@ impl UiActor {
 
         if !matches!(&evt, Event::InputChanged { .. }) {
             self.update_paced_renderer(&evt);
-            self.dispatch_effect(&evt, effect_tx.clone()).await;
+            effects::dispatch(self, &evt, effect_tx.clone()).await;
         }
         if *self.state.should_quit_mut() {
             return true;
@@ -393,7 +398,7 @@ impl UiActor {
         // Permission-dialog guard: suppress navigation/editing keys while dialog is open.
         // y/n/a are handled in the special case below.
         if self.state.permission_request_opt().is_some()
-            && is_navigation_or_editing_event(evt)
+            && helpers::is_navigation_or_editing_event(evt)
         {
             return;
         }
@@ -452,7 +457,7 @@ impl UiActor {
     async fn handle_submit_event(&mut self) {
         // If a form dialog is open, route Enter to the form instead of the input box.
         // This is the path that makes /save, /load, /compact etc. submittable.
-        if is_form_dialog_open(&self.state) {
+        if helpers::is_form_dialog_open(&self.state) {
             handle_form_dialog(&mut self.state, Event::CommandFormSubmit);
             return;
         }
@@ -512,32 +517,6 @@ impl UiActor {
         self.state.update(evt);
     }
 
-    /// Dispatch effects via IoActor.
-    async fn dispatch_effect(&mut self, evt: &Event, effect_tx: tokio::sync::mpsc::Sender<Event>) {
-        if let Some(cmd) = EffectCommand::try_from_event(evt, &mut self.state, &self.caps) {
-            // For login validation, handle separately
-            if matches!(cmd, EffectCommand::LoginFlowSubmitKey { .. }) {
-                let flow = self.state.login_flow().cloned();
-                if let Some(f) = flow {
-                    let tx = effect_tx.clone();
-                    let provider_handle = self
-                        .state
-                        .actor_handles()
-                        .as_ref()
-                        .map(|h| h.provider.clone());
-                    if let Some(handle) = provider_handle {
-                        tokio::spawn(crate::effects::login::run(f.provider, f.key, tx, handle.clone()));
-                    }
-                }
-            } else {
-                let state_clone = self.state.clone();
-                tokio::spawn(async move {
-                    cmd.dispatch_async(&state_clone).await;
-                });
-            }
-        }
-    }
-
     /// Build a snapshot with the paced streaming tail applied.
     fn build_paced_snapshot(&mut self) -> Snapshot {
         self.state.ensure_fresh();
@@ -555,71 +534,8 @@ impl UiActor {
     }
 
     /// Check if a command is a quit command (matches slash-command semantics).
-    fn is_quit_command(content: &str) -> bool {
+    pub(crate) fn is_quit_command(content: &str) -> bool {
         matches!(content.trim(), "/q" | "/quit" | "/exit")
-    }
-
-    /// Detect autocomplete trigger characters ('@' or '/') typed at end of input.
-    /// Opens the command palette or file picker accordingly.
-    fn detect_autocomplete_trigger(
-        &mut self,
-        prev_input: &str,
-        _prev_cursor: usize,
-        new_input: &str,
-        new_cursor: usize,
-    ) {
-        // Detect '@' or '/' typed at end of input (not inside existing autocomplete).
-        let was_empty_or_space =
-            prev_input.is_empty() || prev_input.ends_with(' ') || prev_input.ends_with('\n');
-
-        if was_empty_or_space
-            && !new_input.is_empty()
-            && new_cursor == new_input.len()
-            && self.state.completion().at_suggestions.is_none()
-        {
-            let last_char = new_input.chars().last().unwrap();
-            if last_char == '@' {
-                // Open file picker via event.
-                // UiActor-specific: save input state before picker opens (projection state).
-                let (input_text, cursor) = (new_input.to_owned(), new_cursor);
-                self.state.input_mut().file_picker_backup =
-                    Some((input_text, cursor, cursor, false));
-                // Route through event: UiActor's apply_event will call
-                // dialog_toggle_event which calls open_at_file_picker_all.
-                self.apply_event(Event::AtFilePicker);
-            } else if last_char == '/' && !Self::is_quit_command(new_input) {
-                // Open command palette via event.
-                // UiActor-specific: clear input projection before palette opens.
-                self.state.input_mut().input = String::new();
-                self.state.input_mut().cursor_pos = 0;
-                // Route through event: UiActor's apply_event will call
-                // dialog_toggle_event which calls open_command_palette.
-                self.apply_event(Event::ToggleCommandPalette);
-            }
-        }
-    }
-
-    /// Handle autocomplete trigger at current cursor position.
-    fn handle_at_trigger(&mut self) {
-        let input = self.state.input();
-        let is_empty_or_space =
-            input.input.is_empty() || input.input.ends_with(' ') || input.input.ends_with('\n');
-        if is_empty_or_space
-            || self.state.completion().at_suggestions.is_some()
-            || input.input.ends_with('@')
-        {
-            return;
-        }
-
-        let last_char = input.input.chars().last().unwrap();
-        if last_char == '@' && input.cursor_pos == input.input.len() {
-            // File picker: already opened in detect_autocomplete_trigger.
-            return;
-        }
-
-        if last_char == '/' && !Self::is_quit_command(&input.input) {
-            // Command palette: already opened in detect_autocomplete_trigger.
-        }
     }
 
     /// Clear agent-running flag and queue.
@@ -662,50 +578,13 @@ impl UiActor {
 
     /// Dispatch submit content (slash command, form submission, steering, or user message).
     pub(crate) async fn dispatch_submit_content(&mut self, content: String) {
-        // If a form dialog is open and chat input is empty, this is a form submission
-        // (the form field content lives in the panel, not the chat input).
-        // Route through handle_form_dialog so Enter on the submit button works.
-        if self.state.open_dialog().is_some() && content.is_empty() {
-            let form_handled = self.maybe_submit_form();
-            if form_handled {
-                // Form was submitted → dialog is now closed, command dispatched.
-                self.state.view_mut().scroll = 0;
-                self.state.view_mut().dirty = true;
-                return;
-            }
-            // Not a form panel — fall through to close dialog and handle as slash command.
-        }
-        // Close any open dialog (e.g., command palette) before executing the command.
-        *self.state.open_dialog_mut() = None;
-        // Slash command handling.
-        if let Some(result) = self.state.handle_slash(&content) {
-            // Extract Abort/ClearQueues from CommandResult::Events before applying,
-            // so UiActor flags are cleared even though handle_event_inner is bypassed.
-            let has_abort = matches!(&result, runie_core::commands::CommandResult::Events(evts) if evts.iter().any(|e| matches!(e, Event::Abort)));
-            self.state.apply_command_result(result);
-            if has_abort {
-                self.clear_turn_state(true).await;
-            }
-            self.state.view_mut().scroll = 0;
-            self.state.view_mut().dirty = true;
-            return;
-        }
-        // Steering (follow-up during active turn): route through TurnActor to
-        // maintain authoritative queue state. When the turn completes,
-        // UiActor::handle_event_inner calls DeliverQueued + RunIfQueued to start
-        // the queued turn.
-        if self.state.agent_state().turn_active {
-            self.state.queue_steering_and_update_history(content);
-            return;
-        }
-        // Normal user message submission.
-        self.state.submit_user_message_and_update_history(content);
+        submit::dispatch(self, content).await;
     }
 
     /// If a form panel is open, emit CommandFormSubmit and return true.
     /// Returns `false` if no form panel is open, so the caller knows to use the
     /// fallback behavior (close dialog and handle as slash command).
-    fn maybe_submit_form(&mut self) -> bool {
+    pub(crate) fn maybe_submit_form(&mut self) -> bool {
         // Quick check: is a dialog open and is it a form?
         if self.state.open_dialog().is_none() {
             return false;
@@ -732,69 +611,4 @@ impl UiActor {
         let snap = self.build_paced_snapshot();
         let _ = self.render_tx.send(snap);
     }
-}
-
-/// Returns `true` for events that should be silently consumed (no-op) while
-/// a permission dialog is open. These keys must NOT deny the request and must
-/// NOT be routed to the input box.
-///
-/// This intentionally does NOT include `Event::Input` — those are handled
-/// separately in `handle_input_event` to resolve the permission.
-fn is_navigation_or_editing_event(evt: &Event) -> bool {
-    matches!(
-        evt,
-        Event::Escape
-            | Event::Backspace
-            | Event::Newline
-            | Event::DeleteWord
-            | Event::DeleteToEnd
-            | Event::DeleteToStart
-            | Event::KillChar
-            | Event::Undo
-            | Event::Redo
-            | Event::Paste(_)
-            | Event::CursorLeft
-            | Event::CursorRight
-            | Event::CursorStart
-            | Event::CursorEnd
-            | Event::CursorWordLeft
-            | Event::CursorWordRight
-            | Event::HistoryPrev
-            | Event::HistoryNext
-            | Event::PageUp
-            | Event::PageDown
-            | Event::GoToTop
-            | Event::GoToBottom
-            | Event::Submit
-            | Event::MouseScrollUp
-            | Event::MouseScrollDown
-            | Event::MouseClick { .. }
-            | Event::MouseMove { .. }
-            | Event::TerminalSize { .. }
-    )
-}
-
-/// Returns `true` if a Generic dialog with a form panel is currently open
-/// and no login flow is active.
-///
-/// Used to route Enter/Tab to the command form handler instead of the input box.
-/// Login flow dialogs also use Generic + Form panels but have their own submission
-/// mechanism (button actions emit `Event::Save`), so they are excluded.
-fn is_form_dialog_open(state: &AppState) -> bool {
-    // Exclude login flow: it uses Generic+Form panels but its submit button
-    // emits Event::Save (handled by login_flow_event), not CommandFormSubmit.
-    if state.login_flow().is_some() {
-        return false;
-    }
-    state.open_dialog().is_some_and(|d| {
-        if let DialogState::Active {
-            kind: DialogKind::Generic,
-            panels,
-        } = d
-        {
-            panels.current().is_some_and(|p| p.is_form())
-        } else {
-            false
-        }
-    })
 }

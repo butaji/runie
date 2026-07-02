@@ -3932,6 +3932,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "camino",
+ "diffy",
  "futures",
  "git2",
  "ignore",
