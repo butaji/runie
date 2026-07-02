@@ -132,7 +132,6 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "update/input/submit.rs",
         "commands/dsl/handlers/session/mod.rs",
         "retry.rs",
-        "session/replay.rs",
         "login_flow/validation.rs",
         "model/state/input.rs",
     ];

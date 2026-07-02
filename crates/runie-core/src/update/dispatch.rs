@@ -258,10 +258,8 @@ fn apply_session_loaded(
     metadata: &Option<Box<crate::session::SessionMetadata>>,
 ) {
     crate::session::replay::replay_events(state, events);
-    if let Some(meta) = metadata {
-        state.session_mut().session_display_name = Some(meta.display_name.clone());
-        state.session_mut().session_created_at = meta.created_at;
-        state.session_mut().session_updated_at = meta.updated_at;
+    if let Some(ref meta) = metadata {
+        state.restore_session_metadata(meta);
     }
     state.configure_token_tracker();
     state.messages_changed();

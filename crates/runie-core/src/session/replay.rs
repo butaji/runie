@@ -38,7 +38,7 @@ pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
             );
         }
         DurableCoreEvent::SessionRenamed { name } => {
-            state.session_mut().session_display_name = Some(name.clone());
+            state.set_session_display_name(Some(name.clone()));
         }
         DurableCoreEvent::ToolCalled { .. }
         | DurableCoreEvent::ToolResult { .. }
@@ -66,7 +66,7 @@ pub fn state_to_durable_events(state: &AppState) -> Vec<DurableCoreEvent> {
     session_to_durable_events(&crate::session::Session::from_state(
         state,
         state
-            .session
+            .session()
             .session_display_name
             .clone()
             .unwrap_or_else(|| "session".into()),
@@ -128,7 +128,7 @@ fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
     SessionMetadata {
         id: name.to_owned(),
         display_name: state
-            .session
+            .session()
             .session_display_name
             .clone()
             .unwrap_or_else(|| name.to_owned()),
@@ -178,14 +178,7 @@ pub fn load_session_from_store(
 
 fn restore_metadata(name: &str, state: &mut AppState, store: &SessionStore) -> anyhow::Result<()> {
     if let Some(meta) = store.load_metadata(name)? {
-        // Only overwrite session_display_name if the metadata's display_name
-        // differs from the session name — identical names mean the metadata is
-        // just storing the session name as a fallback, not a custom display.
-        if meta.display_name != name {
-            state.session_mut().session_display_name = Some(meta.display_name.clone());
-        }
-        state.session_mut().session_created_at = meta.created_at;
-        state.session_mut().session_updated_at = meta.updated_at;
+        state.restore_session_metadata(&meta);
     }
     Ok(())
 }
@@ -229,9 +222,9 @@ mod tests {
 
     fn sample_state() -> AppState {
         let mut state = AppState::default();
-        state.config.current_provider = "anthropic".into();
-        state.config.current_model = "claude-3".into();
-        state.session.messages.push(ChatMessage {
+        state.config_mut().current_provider = "anthropic".into();
+        state.config_mut().current_model = "claude-3".into();
+        state.session_mut().messages.push(ChatMessage {
             role: Role::User,
             parts: vec![crate::message::Part::Text {
                 content: "Hello".into(),
@@ -240,7 +233,7 @@ mod tests {
             id: "msg.1".into(),
             ..Default::default()
         });
-        state.session.messages.push(ChatMessage {
+        state.session_mut().messages.push(ChatMessage {
             role: Role::Assistant,
             parts: vec![crate::message::Part::Text {
                 content: "Hi!".into(),
@@ -269,9 +262,9 @@ mod tests {
         let events = state_to_durable_events(&state);
         let mut loaded = AppState::default();
         replay_events(&mut loaded, &events);
-        assert_eq!(loaded.session.messages.len(), 2);
-        assert_eq!(loaded.session.messages[0].content(), "Hello");
-        assert_eq!(loaded.config.current_provider, "anthropic");
+        assert_eq!(loaded.session().messages.len(), 2);
+        assert_eq!(loaded.session().messages[0].content(), "Hello");
+        assert_eq!(loaded.config().current_provider, "anthropic");
     }
 
     #[test]
@@ -305,25 +298,26 @@ mod tests {
         let loaded_events = store.load_events("load_test").unwrap();
         replay_events(&mut loaded, &loaded_events);
 
-        assert_eq!(loaded.session.messages.len(), 2);
-        assert_eq!(loaded.session.messages[0].content(), "Hello");
-        assert_eq!(loaded.session.messages[1].content(), "Hi!");
-        assert_eq!(loaded.config.current_provider, "anthropic");
-        assert_eq!(loaded.config.current_model, "claude-3");
+        assert_eq!(loaded.session().messages.len(), 2);
+        assert_eq!(loaded.session().messages[0].content(), "Hello");
+        assert_eq!(loaded.session().messages[1].content(), "Hi!");
+        assert_eq!(loaded.config().current_provider, "anthropic");
+        assert_eq!(loaded.config().current_model, "claude-3");
     }
 
     #[test]
     fn save_and_load_roundtrip() {
         let store = test_store();
         let mut state = sample_state();
-        state.session_mut().session_display_name = Some("roundtrip".into());
+        // Use a different display name so SessionRenamed is persisted.
+        state.set_session_display_name(Some("My Roundtrip Session".into()));
 
         let events = state_to_durable_events(&state);
         store.append_batch("roundtrip", &events).unwrap();
         store
             .update_metadata(&SessionMetadata {
                 id: "roundtrip".into(),
-                display_name: "roundtrip".into(),
+                display_name: "My Roundtrip Session".into(),
                 created_at: 10.0,
                 updated_at: 20.0,
                 message_count: 2,
@@ -336,8 +330,14 @@ mod tests {
         let mut loaded = AppState::default();
         let events = store.load_events("roundtrip").unwrap();
         replay_events(&mut loaded, &events);
-        assert_eq!(loaded.session.messages.len(), 2);
-        assert_eq!(loaded.config.current_provider, "anthropic");
+        // SessionRenamed persisted and replayed (display_name != id in metadata,
+        // so restore_metadata defers to replay_events' SessionRenamed)
+        assert_eq!(
+            loaded.session().session_display_name,
+            Some("My Roundtrip Session".into())
+        );
+        assert_eq!(loaded.session().messages.len(), 2);
+        assert_eq!(loaded.config().current_provider, "anthropic");
     }
 
     /// Layer 4: Verify that after a completed mock turn (simulating a real turn
@@ -361,7 +361,7 @@ mod tests {
         state.complete_turn("req.0".into(), 0.5);
 
         // Verify session has the expected messages
-        assert_eq!(state.session.messages.len(), 4); // user, thought, assistant, turn_complete
+        assert_eq!(state.session().messages.len(), 4); // user, thought, assistant, turn_complete
 
         // Simulate `/save`: convert state to durable events and persist
         let events = state_to_durable_events(&state);

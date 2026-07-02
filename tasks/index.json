@@ -310,7 +310,7 @@
 {"file": "replace-vacuous-print-mode-test-with-replay-test.md", "title": "Replace vacuous print mode test with replay test", "status": "done"}
 {"file": "replace-verify-tests-with-cargo-nextest.md", "title": "Replace verify-tests.sh with cargo-nextest", "status": "done"}
 {"file": "replace-xor-auth-with-keyring.md", "title": "Replace XOR-obfuscated auth storage with OS keyring", "status": "done"}
-{"file": "replay-sessions-via-events-through-appstate.md", "title": "Replay sessions via events through `AppState`", "status": "todo"}
+{"file": "replay-sessions-via-events-through-appstate.md", "title": "Replay sessions via events through `AppState`", "status": "done"}
 {"file": "rescope-terminal-capability-task-to-current-module.md", "title": "Rescope terminal capability task to current module layout", "status": "done"}
 {"file": "resolve-runie-util-micro-crate-vs-core-re-exports.md", "title": "Resolve runie-util micro-crate vs core re-exports", "status": "done"}
 {"file": "restructure-runieerror-with-typed-variants.md", "title": "Restructure `RunieError` with typed variants", "status": "done"}

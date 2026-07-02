@@ -431,4 +431,23 @@ impl AppState {
     pub fn truncation(&self) -> &crate::config::TruncationSection {
         &self.config().truncation
     }
+
+    // ── Session replay helpers ───────────────────────────────────────────────
+
+    /// Restore session metadata (timestamps and display name) from persisted store.
+    /// Used by session replay after applying durable events.
+    pub fn restore_session_metadata(&mut self, meta: &crate::session::SessionMetadata) {
+        self.session_mut().session_created_at = meta.created_at;
+        self.session_mut().session_updated_at = meta.updated_at;
+        // Only overwrite display_name if it differs from the session id
+        // (identical names mean the metadata is storing the session id as fallback)
+        if meta.display_name != meta.id {
+            self.session_mut().session_display_name = Some(meta.display_name.clone());
+        }
+    }
+
+    /// Set session display name (replay helper).
+    pub fn set_session_display_name(&mut self, name: Option<String>) {
+        self.session_mut().session_display_name = name;
+    }
 }
