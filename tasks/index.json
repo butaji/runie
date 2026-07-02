@@ -275,7 +275,7 @@
 {"file":"replace-build-linter-with-clippy-ci.md","title":"Replace custom build.rs linter with Clippy / CI","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"replace-clipboard-dead-code-with-arboard-or-osc52.md","title":"Replace clipboard dead code with arboard","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"replace-config-validator-with-jsonschema.md","title":"Replace custom config validator with `jsonschema`","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
-{"file":"replace-custom-form-rendering-with-tui-textarea.md","title":"Replace custom form rendering with `tui-textarea`/`tui-input`","status":"todo","blocked_by":[],"blocked_reason":"none","supersedes":null}
+{"file":"replace-custom-form-rendering-with-tui-textarea.md","title":"Replace custom form rendering with `tui-textarea`/`tui-input`","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"replace-custom-git-detection-with-git2.md","title":"Replace custom git detection with git2","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"replace-custom-helpers-with-crates.md","title":"Replace custom path/glob/fuzzy/keybinding helpers with crates","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"replace-custom-input-box-with-tui-textarea.md","title":"Replace custom input box with `tui-textarea`","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
