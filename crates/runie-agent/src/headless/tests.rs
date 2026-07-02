@@ -162,7 +162,7 @@ async fn headless_cli_smoke_with_mock() {
         on_chunk: None,
         on_event: None,
     };
-    let result = run_headless_cli(Some("mock"), Some("echo"), messages, sink, opts)
+    let result = run_headless_cli(Some("mock"), Some("echo"), messages, sink, opts, None)
         .await
         .unwrap();
     assert!(!result.content.is_empty());

@@ -18,7 +18,7 @@ pub async fn run(prompt: &str) -> Result<()> {
             println!("{}", event.to_json_line());
         })),
     );
-    runie_agent::run_headless_cli(None, None, messages, sink, opts).await?;
+    runie_agent::run_headless_cli(None, None, messages, sink, opts, None).await?;
     Ok(())
 }
 

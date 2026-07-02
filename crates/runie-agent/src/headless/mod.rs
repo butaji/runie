@@ -32,18 +32,19 @@ use std::sync::Arc;
 /// Run a headless turn with a fresh runtime, a PermissionGate, and an ApprovalSink.
 ///
 /// This is the shared helper used by `runie-cli print`, `runie-cli json`, and `runie-cli server`.
+///
+/// The `factory` parameter allows injecting a custom provider factory (e.g., for replay).
+/// When `None`, defaults to `BuiltProviderFactory::new()`.
 pub async fn run_headless_cli(
     provider_name: Option<&str>,
     provider_model: Option<&str>,
     messages: Vec<ChatMessage>,
     sink: Arc<dyn runie_core::permissions::ApprovalSink>,
     options: HeadlessCliOptions,
+    factory: Option<Arc<dyn runie_core::actors::provider::ProviderFactory>>,
 ) -> Result<HeadlessResult> {
-    let runtime = HeadlessRuntime::spawn(
-        EventBus::<Event>::new(10),
-        Arc::new(BuiltProviderFactory::new()),
-    )
-    .await?;
+    let factory = factory.unwrap_or_else(|| Arc::new(BuiltProviderFactory::new()));
+    let runtime = HeadlessRuntime::spawn(EventBus::<Event>::new(10), factory).await?;
     let provider = runtime.provider(provider_name, provider_model).await?;
     let opts = build_headless_options(sink, options);
     let result = run_headless_turn(messages, &provider, opts).await;

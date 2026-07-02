@@ -90,7 +90,7 @@ async fn run_json_turn(
         })),
     );
 
-    run_headless_cli(provider_name, model, messages, sink, opts).await
+    run_headless_cli(provider_name, model, messages, sink, opts, None).await
 }
 
 fn build_json_response(result: HeadlessResult, duration_ms: u64) -> JsonResponse {

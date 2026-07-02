@@ -157,7 +157,7 @@ async fn handle_chat(params: &Value) -> Result<Value> {
 
     let sink = build_sink(false);
     let opts = headless_options();
-    let result = run_headless_cli(None, None, msgs, sink, opts).await?;
+    let result = run_headless_cli(None, None, msgs, sink, opts, None).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 
@@ -171,7 +171,7 @@ async fn handle_complete(params: &Value) -> Result<Value> {
 
     let sink = build_sink(false);
     let opts = headless_options();
-    let result = run_headless_cli(None, None, msgs, sink, opts).await?;
+    let result = run_headless_cli(None, None, msgs, sink, opts, None).await?;
     Ok(serde_json::json!({ "content": result.content }))
 }
 

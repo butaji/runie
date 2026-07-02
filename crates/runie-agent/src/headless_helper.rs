@@ -64,7 +64,7 @@ pub async fn run_headless(
 ) -> anyhow::Result<crate::HeadlessResult> {
     let sink = build_sink(yolo);
     let opts = build_options(on_chunk, None);
-    crate::run_headless_cli(None, None, messages, sink, opts).await
+    crate::run_headless_cli(None, None, messages, sink, opts, None).await
 }
 
 #[cfg(test)]
