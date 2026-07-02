@@ -39,6 +39,9 @@ impl LeaderAgentHandle for MockAgentHandle {
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Box::pin(async {})
     }
+    fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async {})
+    }
 }
 
 fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
@@ -58,6 +61,7 @@ fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     let ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
+        None,
         None,
         kb_tx,
         bus,

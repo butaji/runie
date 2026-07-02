@@ -361,6 +361,9 @@ async fn ui_actor_dispatch_submit_closes_palette() {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
             Box::pin(async {})
         }
+        fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+            Box::pin(async {})
+        }
     }
 
     let agent_handle =
@@ -375,6 +378,7 @@ async fn ui_actor_dispatch_submit_closes_palette() {
     let mut ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
+        None,
         None,
         kb_tx,
         bus,

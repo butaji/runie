@@ -38,6 +38,9 @@ impl LeaderAgentHandle for TestAgentHandle {
         self.commands.lock().push(cmd);
         Box::pin(async {})
     }
+    fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async {})
+    }
 }
 
 // ── Layer 2: Event handling tests ─────────────────────────────────────────────
@@ -61,6 +64,7 @@ fn make_ui_with_test_agent() -> (crate::ui_actor::UiActor, TestAgentHandle) {
     let ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(handle),
+        None,
         None,
         kb_tx,
         bus,
@@ -278,6 +282,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
         state,
         crate::ui_actor_agent_handles::AgentHandleBox::Leader(handle),
         None,
+        None,
         kb_tx,
         bus.clone(),
         shutdown_tx,
@@ -367,6 +372,7 @@ async fn done_from_shared_bus_does_not_clear_guard() {
     let mut ui = crate::ui_actor::UiActor::with_agent_handle(
         state,
         crate::ui_actor_agent_handles::AgentHandleBox::Leader(handle),
+        None,
         None,
         kb_tx,
         bus,

@@ -1102,7 +1102,7 @@
   {
     "file": "deduplicate-input-event-mapping-between-forwarder-and-uiactor.md",
     "title": "Deduplicate input-event mapping between forwarder and `UiActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "delete-dynprovider-and-providerconfigbox-wrappers.md",

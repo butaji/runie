@@ -40,6 +40,9 @@ impl LeaderAgentHandle for MockAgentHandle {
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Box::pin(async {})
     }
+    fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async {})
+    }
 }
 
 fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
@@ -56,10 +59,11 @@ fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     let (shutdown_tx, _) = tokio::sync::oneshot::channel();
     let caps = crate::terminal::caps::TermCaps::default();
 
-    // Pass None for turn_handle since these tests don't need it.
+    // Pass None for turn_handle and input_handle since these tests don't need them.
     let ui = UiActor::with_agent_handle(
         state,
         AgentHandleBox::Leader(agent_handle),
+        None,
         None,
         kb_tx,
         bus,

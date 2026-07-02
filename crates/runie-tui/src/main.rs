@@ -119,88 +119,22 @@ fn init_terminal_state(state: &mut AppState) {
 }
 
 /// Forwarder: raw events come in via `input_rx` and are routed through InputMsg
-/// to the leader's InputActor. InputActor is the single source of truth for input
-/// state; UiActor applies state from InputChanged events.
+/// to the leader's InputActor via the canonical `route_to_input_actor` helper.
+/// InputActor is the single source of truth for input state;
+/// UiActor applies state from InputChanged events.
 async fn input_forwarder_task(
     mut input_rx: mpsc::Receiver<Event>,
     input_handle: runie_core::actors::RactorInputHandle,
     submit_tx: mpsc::Sender<Event>,
 ) {
-    use runie_core::actors::InputMsg;
-    // Local helper: fire-and-forget send to InputActor (sync send_message with no-op await).
-    async fn send_input(handle: &runie_core::actors::RactorInputHandle, msg: InputMsg) {
-        let _ = handle.send_message(msg);
-    }
     while let Some(evt) = input_rx.recv().await {
-        match &evt {
-            Event::Input(c) => {
-                send_input(&input_handle, InputMsg::InsertChar(*c)).await;
-            }
-            Event::Backspace => {
-                send_input(&input_handle, InputMsg::Backspace).await;
-            }
-            Event::Newline => {
-                send_input(&input_handle, InputMsg::Newline).await;
-            }
-            Event::DeleteWord => {
-                send_input(&input_handle, InputMsg::DeleteWord).await;
-            }
-            Event::DeleteToEnd => {
-                send_input(&input_handle, InputMsg::DeleteToEnd).await;
-            }
-            Event::DeleteToStart => {
-                send_input(&input_handle, InputMsg::DeleteToStart).await;
-            }
-            Event::CursorLeft => {
-                send_input(&input_handle, InputMsg::CursorLeft).await;
-            }
-            Event::CursorRight => {
-                send_input(&input_handle, InputMsg::CursorRight).await;
-            }
-            Event::CursorStart => {
-                send_input(&input_handle, InputMsg::CursorStart).await;
-            }
-            Event::CursorEnd => {
-                send_input(&input_handle, InputMsg::CursorEnd).await;
-            }
-            Event::CursorWordLeft => {
-                send_input(&input_handle, InputMsg::CursorWordLeft).await;
-            }
-            Event::CursorWordRight => {
-                send_input(&input_handle, InputMsg::CursorWordRight).await;
-            }
-            Event::HistoryPrev => {
-                send_input(&input_handle, InputMsg::HistoryPrev).await;
-            }
-            Event::HistoryNext => {
-                send_input(&input_handle, InputMsg::HistoryNext).await;
-            }
-            Event::Undo => {
-                send_input(&input_handle, InputMsg::Undo).await;
-            }
-            Event::Redo => {
-                send_input(&input_handle, InputMsg::Redo).await;
-            }
-            Event::Paste(s) => {
-                send_input(&input_handle, InputMsg::Paste(s.clone())).await;
-            }
-            Event::PasteImage => {
-                send_input(&input_handle, InputMsg::PasteImage).await;
-            }
-            Event::Submit => {
-                // Submit must be handled by UiActor so it can capture the input
-                // content before InputActor clears it. Forward it on a dedicated
-                // channel; UiActor will then send InputMsg::Submit itself.
-                let _ = submit_tx.send(evt).await;
-            }
-            // Quit, ForceQuit, and Abort must reach UiActor even during an active
-            // turn. Forward them on the same submit channel; UiActor handles them
-            // at top priority before any turn logic.
-            Event::Quit | Event::ForceQuit | Event::Abort => {
-                let _ = submit_tx.send(evt).await;
-            }
-            _ => {}
+        // Use the canonical router — one place to maintain the event → InputMsg mapping.
+        if runie_tui::input_mapping::route_to_input_actor(&input_handle, &evt).await {
+            continue;
         }
+        // Events not routed to InputActor are forwarded to UiActor via the
+        // submit channel (Submit, Quit, ForceQuit, Abort).
+        let _ = submit_tx.send(evt).await;
     }
 }
 
@@ -225,6 +159,7 @@ async fn spawn_background_tasks(
         state,
         bus_rx,
         leader_handle.turn.clone(),
+        leader_handle.input.clone(),
         kb_tx,
         bus.clone(),
         shutdown_tx,
@@ -310,12 +245,13 @@ fn spawn_ui_actor_with_external_rx(
     state: AppState,
     bus_rx: runie_core::bus::Receiver<Event>,
     turn_handle: RactorTurnHandle,
+    input_handle: runie_core::actors::RactorInputHandle,
     kb_tx: watch::Sender<HashMap<String, String>>,
     bus: EventBus<Event>,
     shutdown_tx: oneshot::Sender<()>,
     caps: terminal::caps::TermCaps,
 ) -> UiActor {
-    UiActor::with_external_bus_rx(state, bus_rx, turn_handle, kb_tx, bus, shutdown_tx, caps)
+    UiActor::with_external_bus_rx(state, bus_rx, turn_handle, input_handle, kb_tx, bus, shutdown_tx, caps)
 }
 
 async fn input_reader(

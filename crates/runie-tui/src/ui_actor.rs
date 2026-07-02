@@ -10,7 +10,9 @@ use std::time::Duration;
 use runie_agent::AgentCommand;
 use runie_agent::truncate::TruncationPolicy;
 use runie_core::actors::turn::RactorTurnHandle;
+use runie_core::actors::RactorInputHandle;
 use runie_core::bus::{EventBus, Receiver};
+use runie_core::commands::{DialogKind, DialogState};
 use runie_core::update::dialog::handle_form_dialog;
 use runie_core::{AppState, Event, Snapshot};
 
@@ -54,6 +56,9 @@ pub struct UiActor {
     /// Turn actor handle for draining the queue after a turn completes.
     /// Stored here so UiActor can call run_if_queued after Done is processed.
     turn_handle: Option<RactorTurnHandle>,
+    /// Input actor handle for sending InputMsg to InputActor.
+    /// Stored here so UiActor can route input events without going through actor_handles.
+    input_handle: Option<RactorInputHandle>,
     /// Placeholder receiver stored when UiActor is created with `with_external_bus_rx`.
     /// Consumed by `run_with_external_rx`.
     _bus_rx: Option<Receiver<Event>>,
@@ -68,6 +73,7 @@ impl UiActor {
         state: AppState,
         agent_handle: AgentActorHandle,
         turn_handle: RactorTurnHandle,
+        input_handle: RactorInputHandle,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -77,6 +83,7 @@ impl UiActor {
             state,
             AgentHandleBox::Actor(agent_handle),
             Some(turn_handle),
+            Some(input_handle),
             kb_tx,
             bus,
             shutdown_tx,
@@ -95,6 +102,7 @@ impl UiActor {
         mut state: AppState,
         bus_rx: Receiver<Event>,
         turn_handle: RactorTurnHandle,
+        input_handle: RactorInputHandle,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -119,6 +127,7 @@ impl UiActor {
             agent_running: false,
             pending_queued_turn: false,
             turn_handle: Some(turn_handle),
+            input_handle: Some(input_handle),
             // Store the pre-created receiver for run_with_external_rx
             _bus_rx: Some(bus_rx),
         }
@@ -132,6 +141,7 @@ impl UiActor {
         mut state: AppState,
         agent_handle: AgentHandleBox,
         turn_handle: Option<RactorTurnHandle>,
+        input_handle: Option<RactorInputHandle>,
         kb_tx: tokio::sync::watch::Sender<HashMap<String, String>>,
         bus: EventBus<Event>,
         shutdown_tx: tokio::sync::oneshot::Sender<()>,
@@ -156,6 +166,7 @@ impl UiActor {
             agent_running: false,
             pending_queued_turn: false,
             turn_handle,
+            input_handle,
             _bus_rx: None,
         }
     }
@@ -343,32 +354,39 @@ impl UiActor {
     }
 
     /// Route input events through InputActor instead of applying directly.
-    /// InputChanged events are the single source of truth for input state.
+    /// Route input events through `route_to_input_actor` (the canonical mapping).
+    /// UiActor-specific cases (permission dialog y/n/a, Submit, InputChanged) are
+    /// handled separately; everything else is routed via the shared helper.
+    ///
+    /// UiActor must NEVER mutate `AppState.input` directly — only through `apply_event`.
     async fn handle_input_event(&mut self, evt: &Event) {
-        // If a permission dialog is open, consume navigation/editing keys silently.
-        // They must NOT deny the request and must NOT be routed to the input box.
-        // y/n/a character keys are handled separately below.
+        // Permission-dialog guard: suppress navigation/editing keys while dialog is open.
+        // y/n/a are handled in the special case below.
         if self.state.permission_request_opt().is_some()
             && is_navigation_or_editing_event(evt)
         {
             return;
         }
+
+        // Canonical routing via the shared helper (one place to maintain the mapping).
+        if let Some(ref handle) = self.input_handle {
+            if crate::input_mapping::route_to_input_actor(handle, evt).await {
+                return;
+            }
+        }
+
+        // UiActor-specific event handling (not routed to InputActor).
         match evt {
             Event::Input(c) => {
                 // Intercept y/n/a keys when a permission dialog is open.
-                // Route to permission actor instead of input box.
                 if let Some(req) = self.state.permission_request_opt() {
                     match c.to_ascii_lowercase() {
                         'y' | 'n' | 'a' => {
-                            // y/n/a resolve the permission; input continues to input box.
-                            // Note: 'a' (Always allow) maps to Allow for now.
-                            // Full always-allow behavior requires trust rule updates.
                             let action = match c.to_ascii_lowercase() {
                                 'y' | 'a' => runie_core::permissions::PermissionAction::Allow,
                                 'n' => runie_core::permissions::PermissionAction::Deny,
                                 _ => return,
                             };
-                            // Resolve permission and clear the request.
                             if let Some(handles) = self.state.actor_handles() {
                                 handles
                                     .permission
@@ -381,77 +399,7 @@ impl UiActor {
                         _ => {}
                     }
                 }
-                self.apply_event(evt.clone());
-                self.send_input_msg(runie_core::actors::InputMsg::InsertChar(*c))
-                    .await;
-            }
-            Event::Backspace => {
-                self.send_input_msg(runie_core::actors::InputMsg::Backspace)
-                    .await;
-            }
-            Event::Newline => {
-                self.send_input_msg(runie_core::actors::InputMsg::Newline)
-                    .await;
-            }
-            Event::DeleteWord => {
-                self.send_input_msg(runie_core::actors::InputMsg::DeleteWord)
-                    .await;
-            }
-            Event::DeleteToEnd => {
-                self.send_input_msg(runie_core::actors::InputMsg::DeleteToEnd)
-                    .await;
-            }
-            Event::DeleteToStart => {
-                self.send_input_msg(runie_core::actors::InputMsg::DeleteToStart)
-                    .await;
-            }
-            Event::KillChar => {
-                self.send_input_msg(runie_core::actors::InputMsg::KillChar)
-                    .await;
-            }
-            Event::Undo => {
-                self.send_input_msg(runie_core::actors::InputMsg::Undo)
-                    .await;
-            }
-            Event::Redo => {
-                self.send_input_msg(runie_core::actors::InputMsg::Redo)
-                    .await;
-            }
-            Event::Paste(text) => {
-                self.send_input_msg(runie_core::actors::InputMsg::Paste(text.clone()))
-                    .await;
-            }
-            Event::CursorLeft => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorLeft)
-                    .await;
-            }
-            Event::CursorRight => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorRight)
-                    .await;
-            }
-            Event::CursorStart => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorStart)
-                    .await;
-            }
-            Event::CursorEnd => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorEnd)
-                    .await;
-            }
-            Event::CursorWordLeft => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorWordLeft)
-                    .await;
-            }
-            Event::CursorWordRight => {
-                self.send_input_msg(runie_core::actors::InputMsg::CursorWordRight)
-                    .await;
-            }
-            Event::HistoryPrev => {
-                self.send_input_msg(runie_core::actors::InputMsg::HistoryPrev)
-                    .await;
-            }
-            Event::HistoryNext => {
-                self.send_input_msg(runie_core::actors::InputMsg::HistoryNext)
-                    .await;
+                // Non-permission Input events would have been routed above.
             }
             Event::Submit => {
                 self.handle_submit_event().await;
@@ -466,7 +414,14 @@ impl UiActor {
     }
 
     /// Handle the Submit event by capturing content and sending to InputActor.
+    /// If a form dialog is open, route to the form handler instead.
     async fn handle_submit_event(&mut self) {
+        // If a form dialog is open, route Enter to the form instead of the input box.
+        // This is the path that makes /save, /load, /compact etc. submittable.
+        if is_form_dialog_open(&self.state) {
+            handle_form_dialog(&mut self.state, Event::CommandFormSubmit);
+            return;
+        }
         let content = self.state.input().input().trim().to_owned();
         self.pending_submit = if content.is_empty() {
             None
@@ -477,14 +432,21 @@ impl UiActor {
             .await;
     }
 
-    /// Handle InputChanged: apply authoritative state and trigger side effects.
+    /// Handle InputChanged: route through apply_event so all state mutations
+    /// flow through one canonical path, then trigger side effects.
+    /// UiActor must NEVER mutate AppState.input directly — only through apply_event.
     async fn handle_input_changed(&mut self, state: &runie_core::InputState) {
+        // Capture prev_input BEFORE apply_event changes self.state.input.
         let prev_input = self.prev_input.clone();
         let prev_cursor_pos = self.prev_cursor_pos;
         let new_input = state.input().to_owned();
         let new_cursor_pos = state.cursor_pos;
 
-        *self.state.input_mut() = (*state).clone();
+        // Route through apply_event — the single source of truth for state mutations.
+        // UiActor must NOT mutate AppState.input directly.
+        self.apply_event(Event::InputChanged {
+            state: Box::new((*state).clone()),
+        });
 
         self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos);
 
@@ -551,12 +513,16 @@ impl UiActor {
         snap
     }
 
+    /// Return a reference to the stored InputActor handle.
+    fn input_handle(&self) -> Option<&RactorInputHandle> {
+        self.input_handle.as_ref()
+    }
+
     /// Fire-and-forget send to InputActor.
     async fn send_input_msg(&self, msg: runie_core::actors::InputMsg) {
-        let Some(handles) = self.state.actor_handles() else {
-            return;
-        };
-        let _ = handles.input.send_message(msg);
+        if let Some(ref handle) = self.input_handle {
+            let _ = handle.send_message(msg);
+        }
     }
 
     /// Check if a command is a quit command (matches slash-command semantics).
@@ -639,40 +605,19 @@ impl UiActor {
                 turn_handle.send(runie_core::actors::TurnMsg::ClearQueues).await;
             } else {
                 // TurnCompleted: deliver queued messages and start the next turn.
+                // Uses ractor RPC so TurnActor emits FollowUpDelivered/SteeringDelivered
+                // before this function returns — no polling, no late-arriving-event race.
                 let steering_mode = self.state.config().steering_mode;
                 let follow_up_mode = self.state.config().follow_up_mode;
-                turn_handle.send(runie_core::actors::TurnMsg::DeliverQueued {
-                    steering_mode,
-                    follow_up_mode,
-                }).await;
-                // Wait briefly for FollowUpDelivered before draining the queue.
-                // TurnErrored does NOT emit FollowUpDelivered, so skip the wait.
-                let bus = self.bus.clone();
-                let delivered = tokio::time::timeout(
-                    std::time::Duration::from_millis(100),
-                    async move {
-                        let mut sub = bus.subscribe();
-                        loop {
-                            match sub.recv().await {
-                                Ok(evt) if matches!(
-                                    &evt,
-                                    Event::FollowUpDelivered { .. }
-                                        | Event::SteeringDelivered { .. }
-                                ) => {
-                                    break;
-                                }
-                                _ => {
-                                    // Drain other events; re-processed by UiActor::run().
-                                }
-                            }
-                        }
-                    },
-                )
-                .await;
-                if delivered.is_err() {
-                    tracing::debug!(
-                        "FollowUpDelivered timeout, proceeding with run_if_queued"
-                    );
+                use runie_core::actors::turn::DeliverQueuedRpcResult as DQR;
+                let deliver_result = turn_handle
+                    .deliver_queued(steering_mode, follow_up_mode)
+                    .await;
+                match deliver_result {
+                    DQR::Delivered(Some(_)) => tracing::debug!("Queued turn delivered"),
+                    DQR::Delivered(None) => tracing::debug!("No queued turn to deliver"),
+                    DQR::SenderError => tracing::warn!("DeliverQueued RPC sender error"),
+                    DQR::ActorError(e) => tracing::warn!("DeliverQueued RPC error: {}", e),
                 }
                 self.agent_handle.run_if_queued(turn_handle).await;
             }
@@ -791,4 +736,29 @@ fn is_navigation_or_editing_event(evt: &Event) -> bool {
             | Event::MouseMove { .. }
             | Event::TerminalSize { .. }
     )
+}
+
+/// Returns `true` if a Generic dialog with a form panel is currently open
+/// and no login flow is active.
+///
+/// Used to route Enter/Tab to the command form handler instead of the input box.
+/// Login flow dialogs also use Generic + Form panels but have their own submission
+/// mechanism (button actions emit `Event::Save`), so they are excluded.
+fn is_form_dialog_open(state: &AppState) -> bool {
+    // Exclude login flow: it uses Generic+Form panels but its submit button
+    // emits Event::Save (handled by login_flow_event), not CommandFormSubmit.
+    if state.login_flow().is_some() {
+        return false;
+    }
+    state.open_dialog().is_some_and(|d| {
+        if let DialogState::Active {
+            kind: DialogKind::Generic,
+            panels,
+        } = d
+        {
+            panels.current().is_some_and(|p| p.is_form())
+        } else {
+            false
+        }
+    })
 }
