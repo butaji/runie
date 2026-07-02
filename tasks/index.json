@@ -448,7 +448,7 @@
     {
       "file": "create-grok-fixture-loader-and-normalizer.md",
       "title": "Create Grok fixture loader and normalizer",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "dedupe-turn-queue-delivery-logic.md",
