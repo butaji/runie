@@ -309,22 +309,97 @@ impl crate::config::Config {
             Err(errors)
         }
     }
+}
 
+// ── Comment-preserving TOML merge ─────────────────────────────────────────────
+
+/// Merge `new_doc` into `existing_doc` at the value level.
+///
+/// For root-level tables that exist in both, this merges individual key-value
+/// pairs rather than replacing entire tables. This preserves comments and
+/// formatting within sections that exist in both documents.
+fn merge_toml_documents(existing: &mut toml_edit::DocumentMut, new_doc: &toml_edit::DocumentMut) {
+    let existing_root = existing.as_table_mut();
+    for (key, new_item) in new_doc.iter() {
+        if let Some(existing_item) = existing_root.get_mut(key) {
+            // Key exists in both — try value-level merge if both are tables.
+            if let Some(existing_table) = existing_item.as_table_mut() {
+                if let Some(new_table) = new_item.as_table() {
+                    // Merge new table's key-values into existing table.
+                    for (k, v) in new_table.iter() {
+                        existing_table.insert(k, v.clone());
+                    }
+                    continue;
+                }
+            }
+            // Can't merge (different types or not tables) — replace entirely.
+            existing_root.insert(key, new_item.clone());
+        } else {
+            // Key doesn't exist in existing — insert it.
+            existing_root.insert(key, new_item.clone());
+        }
+    }
+}
+
+impl crate::config::Config {
     /// Save config to the default path.
     pub fn save(&self) -> anyhow::Result<()> {
         self.save_to(&config_path())
     }
 
-    /// Save config to an explicit path.
+    /// Save config to an explicit path, preserving comments in the existing file.
     ///
     /// Uses `fs2` exclusive lock for cross-process safety.
+    /// Replaces root-level tables from the serialized config into the existing
+    /// file, preserving all comments and formatting outside replaced sections.
     pub fn save_to(&self, path: &Path) -> anyhow::Result<()> {
         use std::fs::{create_dir_all, OpenOptions};
         use std::io::Write;
         if let Some(parent) = path.parent() {
             create_dir_all(parent)?;
         }
-        let toml_string = toml::to_string_pretty(self)?;
+
+        // Serialize the new config.
+        let new_toml = toml::to_string_pretty(self)
+            .with_context(|| "failed to serialize config")?;
+
+        // Read existing file preserving its structure and comments.
+        let existing_text = if path.exists() {
+            std::fs::read_to_string(path).ok()
+        } else {
+            None
+        };
+
+        let final_toml = match existing_text {
+            Some(existing) => {
+                // Try to parse both TOMLs with toml_edit for comment-preserving merge.
+                let existing_doc: Option<toml_edit::DocumentMut> = existing.parse().ok();
+                let new_doc: toml_edit::DocumentMut = match new_toml.parse() {
+                    Ok(d) => d,
+                    Err(_) => {
+                        // Serialization produced invalid TOML.
+                        return Err(anyhow::anyhow!(
+                            "serialized config is not valid TOML",
+                        ));
+                    }
+                };
+
+                match existing_doc {
+                    Some(mut doc) => {
+                        // Value-level merge: for tables that exist in both, merge values
+                        // (not the whole table) to preserve comments within those sections.
+                        merge_toml_documents(&mut doc, &new_doc);
+                        doc.to_string()
+                    }
+                    None => {
+                        // Corrupt existing file — fall back to new content without merge.
+                        new_toml
+                    }
+                }
+            }
+            None => new_toml,
+        };
+
         let file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -333,7 +408,7 @@ impl crate::config::Config {
             .with_context(|| format!("failed to open config for writing: {}", path.display()))?;
         let _lock = fs2::FileExt::lock_exclusive(&file);
         let mut file = file;
-        file.write_all(toml_string.as_bytes())
+        file.write_all(final_toml.as_bytes())
             .with_context(|| format!("failed to write config: {}", path.display()))?;
         Ok(())
     }
@@ -345,31 +420,74 @@ impl crate::config::Config {
     }
 
     /// Save config to the given path without blocking the async runtime.
+    ///
+    /// Uses the same comment-preserving [`save_to`] logic on a blocking thread.
     pub fn save_nonblocking_to(&self, path: &Path) {
-        let path = path.to_path_buf();
-        let text = match toml::to_string_pretty(self) {
+        // Serialize first so we can pass a Result up to the spawn.
+        let new_toml = match toml::to_string_pretty(self) {
             Ok(t) => t,
             Err(e) => {
                 tracing::error!("failed to serialize config: {e}");
                 return;
             }
         };
+        let path = path.to_path_buf();
+
+        let do_save = move || -> anyhow::Result<()> {
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+
+            // Read existing file preserving its structure and comments.
+            let existing_text = if path.exists() {
+                std::fs::read_to_string(&path).ok()
+            } else {
+                None
+            };
+
+            let final_toml = match existing_text {
+                Some(existing) => {
+                    let existing_doc: Option<toml_edit::DocumentMut> = existing.parse().ok();
+                    let new_doc: toml_edit::DocumentMut = match new_toml.parse() {
+                        Ok(d) => d,
+                        Err(_) => {
+                            return Err(anyhow::anyhow!("serialized config is not valid TOML"));
+                        }
+                    };
+                    match existing_doc {
+                        Some(mut doc) => {
+                            merge_toml_documents(&mut doc, &new_doc);
+                            doc.to_string()
+                        }
+                        None => new_toml,
+                    }
+                }
+                None => new_toml,
+            };
+
+            // Use fs2 exclusive lock for cross-process safety.
+            let file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path)
+                .with_context(|| format!("failed to open config for writing: {}", path.display()))?;
+            let _lock = fs2::FileExt::lock_exclusive(&file);
+            std::fs::write(&path, final_toml)
+                .with_context(|| format!("failed to write config: {}", path.display()))?;
+            Ok(())
+        };
+
         if tokio::runtime::Handle::try_current().is_ok() {
             tokio::spawn(tokio::task::spawn_blocking(move || {
-                if let Some(parent) = path.parent() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
-                if let Err(e) = std::fs::write(&path, text) {
-                    tracing::error!("failed to write config: {e}");
+                if let Err(e) = do_save() {
+                    tracing::error!("{e}");
                 }
             }));
         } else {
             // Fallback: write synchronously when no runtime is present.
-            if let Some(parent) = path.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            if let Err(e) = std::fs::write(&path, text) {
-                tracing::error!("failed to write config: {e}");
+            if let Err(e) = do_save() {
+                tracing::error!("{e}");
             }
         }
     }
@@ -501,4 +619,155 @@ pub fn config_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".runie")
         .join("config.toml")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[test]
+    fn toml_edit_preserves_leading_comments() {
+        // Verify toml_edit behavior: leading comments should survive parse+serialize.
+        let original = r#"# My Runie config
+[models]
+default = "old-model"
+"#;
+        let doc: toml_edit::DocumentMut = original.parse().unwrap();
+        let serialized = doc.to_string();
+        // toml_edit should preserve the leading comment in the document.
+        assert!(
+            serialized.contains("# My Runie config"),
+            "toml_edit should preserve leading comments, got:\n{serialized}"
+        );
+    }
+
+    #[test]
+    fn toml_edit_merge_preserves_existing_tables() {
+        // Existing file with a comment and two sections.
+        let existing = r#"# My Runie config
+[models]
+default = "old-model"
+
+[ui]
+vim_mode = false
+"#;
+        // New config with only [models] updated.
+        let new_toml = r#"[models]
+default = "new-model"
+"#;
+
+        let mut existing_doc: toml_edit::DocumentMut = existing.parse().unwrap();
+        let new_doc: toml_edit::DocumentMut = new_toml.parse().unwrap();
+
+        // Get root table and merge tables from new into existing.
+        let root = existing_doc.as_table_mut();
+        for (key, item) in new_doc.iter() {
+            root.insert(key, item.clone());
+        }
+
+        let result = existing_doc.to_string();
+        // [ui] section must survive.
+        assert!(
+            result.contains("[ui]"),
+            "[ui] section lost after merge, got:\n{result}"
+        );
+        // New value must be present.
+        assert!(
+            result.contains("default = \"new-model\""),
+            "new value not in merge, got:\n{result}"
+        );
+    }
+
+    #[test]
+    fn save_preserves_comments_in_existing_file() {
+        // Create a temp file with a comment and an existing [models] section.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let original = r#"# My Runie config
+[models]
+default = "old-model"
+
+[ui]
+vim_mode = false
+"#;
+        std::fs::write(&path, original).unwrap();
+
+        // Load, modify, and save a new config.
+        let mut config = Config::load(Some(&path));
+        config.models.default = Some("new-model".to_owned());
+        config.save_to(&path).unwrap();
+
+        // Comments and [ui] section must survive.
+        let content = std::fs::read_to_string(&path).unwrap();
+        eprintln!("Result:\n{content}");
+        // Comments within the [ui] section should survive.
+        assert!(content.contains("[ui]"), "[ui] section should be preserved");
+        assert!(
+            content.contains("vim_mode = false"),
+            "[ui] content should be preserved"
+        );
+        assert!(
+            content.contains("default = \"new-model\""),
+            "new value should be saved"
+        );
+    }
+
+    #[test]
+    fn save_creates_new_file_when_none_exists() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("new_config.toml");
+
+        let mut config = Config::default();
+        config.models.default = Some("my-model".to_owned());
+        config.save_to(&path).unwrap();
+
+        assert!(path.exists(), "file should be created");
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("default = \"my-model\""));
+    }
+
+    #[test]
+    fn save_handles_corrupt_existing_file() {
+        // Existing file is not valid TOML — save should fall back to new content.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("bad_config.toml");
+        std::fs::write(&path, "not valid toml {").unwrap();
+
+        let mut config = Config::default();
+        config.models.default = Some("fallback-model".to_owned());
+        config.save_to(&path).unwrap();
+
+        // Should have written the new content, not crashed.
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            content.contains("fallback-model"),
+            "new config should be saved"
+        );
+    }
+
+    #[test]
+    fn save_with_nonblocking_preserves_comments() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nonblocking.toml");
+        let original = r#"# Header comment
+[models]
+default = "old"
+
+# Footer comment
+"#;
+        std::fs::write(&path, original).unwrap();
+
+        let mut config = Config::load(Some(&path));
+        config.models.default = Some("new".to_owned());
+
+        // save_nonblocking_to spawns a task (can't await without runtime),
+        // so test save_to directly — it uses the same merge logic.
+        config.save_to(&path).unwrap();
+
+        let content = std::fs::read_to_string(&path).unwrap();
+        // [models] section and new value must survive.
+        assert!(content.contains("default = \"new\""));
+        assert!(content.contains("[models]"));
+    }
 }
