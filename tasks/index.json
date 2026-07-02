@@ -928,7 +928,7 @@
     {
       "file": "gate-test-support-with-cfg-test.md",
       "title": "Gate test support with `#[cfg(test)]`",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "generate-event-taxonomy-or-delete-generated-files.md",

@@ -6,11 +6,12 @@
 mod arch_guardrails;
 #[cfg(test)]
 mod magic_number_lint;
-#[allow(unused)]
+#[cfg(test)]
 mod support;
 
-// Re-export shared test helpers.  This is unconditional so that
-// runie_core::tests_support in lib.rs can reference them even in non-test builds.
+// Re-export shared test helpers.  Gated so this module compiles as an empty
+// shell in non-test builds.
+#[cfg(test)]
 pub use support::{exec, fresh_state, seed_providers, tmp_store, type_str};
 
 #[cfg(test)]

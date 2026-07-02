@@ -1,14 +1,54 @@
 //! Shared test helpers for AppState manipulation.
 //!
-//! Re-exports the canonical implementations from `runie_core` so that both
-//! `runie-core` tests and `runie-testing` consumers import the same helpers
-//! without duplicating the logic.
-//!
-//! The canonical source lives in `runie-core/src/tests/support.rs`, which has
-//! access to internal seeding APIs (`seed_providers`).  This module re-exports
-//! the three shared helpers (`fresh_state`, `type_str`, `exec`) so that
-//! `runie-testing` consumers can import from one place.
-pub use runie_core::tests_support::{exec, fresh_state, type_str};
+//! These helpers are implemented here (not re-exported from `runie_core::tests_support`)
+//! so that `runie-testing` does not depend on `runie_core::tests_support` being available
+//! at compile time.  `runie-core` owns the canonical implementations in
+//! `runie-core/src/tests/support.rs`; `runie-testing` duplicates them here for
+//! self-contained test use.
+
+use runie_core::config::ModelProvider;
+use runie_core::event::Event;
+use runie_core::model::AppState;
+
+/// Seed `state.config.model_providers` with the given provider configurations.
+fn seed_providers(state: &mut AppState, providers: &[(String, String, String, Vec<String>)]) {
+    for (name, base_url, api_key, models) in providers {
+        state.config_mut().model_providers_mut().insert(
+            name.clone(),
+            ModelProvider {
+                provider_type: None,
+                base_url: base_url.clone(),
+                api_key: api_key.clone(),
+                models: models.clone(),
+            },
+        );
+    }
+}
+
+/// Returns a fresh `AppState` with default values and mock provider configured.
+pub fn fresh_state() -> AppState {
+    let mut state = AppState::default();
+    seed_providers(
+        &mut state,
+        &[("mock".into(), "".into(), "".into(), vec!["echo".into()])],
+    );
+    state
+}
+
+/// Simulates typing `text` into the input buffer of `state`.
+pub fn type_str(state: &mut AppState, text: &str) {
+    for c in text.chars() {
+        state.update(Event::Input(c));
+    }
+}
+
+/// Set input buffer directly and submit — bypasses the command palette.
+/// Use for slash commands that need arguments.
+pub fn exec(state: &mut AppState, text: &str) {
+    state.input_mut().input = text.into();
+    state.input_mut().cursor_pos = text.len();
+    state.update(Event::Submit);
+}
 
 #[cfg(test)]
 mod tests {

@@ -113,13 +113,18 @@ mod tests;
 /// Internal helpers (`ENV_LOCK`, `seed_providers`, `tmp_store`, `minimal_session`)
 /// stay in `tests/support.rs` and are NOT re-exported.
 ///
-/// `pub mod` (unconditional) so the module is compiled even when `runie-core`
-/// is built as a dev-dependency of `runie-testing`.
+/// The module is unconditional so it compiles when `runie-core` is a dev-dependency
+/// of `runie-testing` (non-test build).  The actual helpers live in
+/// `tests/support.rs` which is gated `#[cfg(test)]`, so this module's re-exports
+/// are only non-empty in test builds.
 #[allow(unused)]
 pub mod tests_support {
     // Re-export from the pub-re-exports in tests/mod.rs.
+    #[cfg(test)]
     pub use crate::tests::exec;
+    #[cfg(test)]
     pub use crate::tests::fresh_state;
+    #[cfg(test)]
     pub use crate::tests::type_str;
 }
 
