@@ -1,357 +1,21 @@
 //! Ractor-based TurnActor implementation.
 //!
-//! Migrated from custom Actor trait to ractor for consistency with the rest
-//! of the actor system.
+//! This module re-exports the actor implementation and hosts the test suite.
+//! Implementation details are split into focused modules:
+//! - `handlers.rs` — all message handler functions
+//! - `actor.rs` — the Actor trait impl and spawn function
+//! - `state.rs` — TurnState struct
+//! - `types.rs` — TurnActorState and RactorTurnHandle
 
-use ractor::{Actor, ActorProcessingErr, ActorRef};
-
-use crate::actors::ractor_adapter::spawn_ractor;
-use crate::bus::EventBus;
-use tracing::instrument;
-use crate::model::{DeliveryMode, QueuedMessage, QueuedMessageKind};
-use crate::session::turn_queue::TurnQueue;
-use crate::Event;
-
-use super::messages::{NextIdResponse, TurnMsg};
-use super::state::TurnState;
-use super::types::{RactorTurnHandle, TurnActorState};
-
-/// TurnActor using ractor State pattern.
-pub struct RactorTurnActor;
-
-impl RactorTurnActor {
-    fn emit(state: &TurnActorState, event: Event) {
-        state.bus.publish(event);
-    }
-
-    fn handle_run_if_queued(state: &mut TurnActorState) {
-        if state.turn_state.turn_active {
-            return;
-        }
-        let Some((content, id)) = state.turn_state.pop_queue() else {
-            return;
-        };
-        state.turn_state.start_turn();
-        Self::emit(
-            state,
-            Event::TurnStarted {
-                id: id.clone(),
-                request_id: id,
-                content,
-            },
-        );
-    }
-
-    fn handle_abort_turn(state: &mut TurnActorState) {
-        let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
-        for msg in &messages {
-            Self::emit(
-                state,
-                Event::QueueAborted {
-                    content: msg.content.clone(),
-                },
-            );
-        }
-        state.turn_state.stop_turn();
-        Self::emit(state, Event::TurnAborted);
-    }
-
-    fn handle_submit_user_message(
-        state: &mut TurnActorState,
-        content: String,
-        id: String,
-        source: super::messages::MessageSource,
-    ) {
-        // Only emit UserMessageSubmitted for fresh submits.
-        // For queued/delivered messages, the content is already in the session
-        // via FollowUpDelivered -> deliver_queued -> UserMessageSubmitted.
-        if source == super::messages::MessageSource::Fresh {
-            Self::emit(
-                state,
-                Event::UserMessageSubmitted {
-                    id: id.clone(),
-                    content: content.clone(),
-                },
-            );
-        }
-        state.turn_state.request_queue.push_back((content, id));
-        state.turn_state.next_id += 1;
-        // Only auto-start for fresh submits; queued messages are started via
-        // RunIfQueued after TurnCompleted/DeliverQueued.
-        if source == super::messages::MessageSource::Fresh {
-            Self::handle_run_if_queued(state);
-        }
-    }
-
-    fn handle_queue_steering(state: &mut TurnActorState, content: String) {
-        state.turn_state.message_queue.push(QueuedMessage {
-            content,
-            kind: QueuedMessageKind::Steering,
-        });
-    }
-
-    fn handle_queue_follow_up(state: &mut TurnActorState, content: String) {
-        state.turn_state.message_queue.push(QueuedMessage {
-            content,
-            kind: QueuedMessageKind::FollowUp,
-        });
-    }
-
-    fn handle_abort_queue(state: &mut TurnActorState) {
-        let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
-        for msg in &messages {
-            Self::emit(
-                state,
-                Event::QueueAborted {
-                    content: msg.content.clone(),
-                },
-            );
-        }
-    }
-
-    fn handle_clear_queues(state: &mut TurnActorState) {
-        state.turn_state.request_queue.clear();
-        state.turn_state.message_queue.clear();
-        Self::emit(state, Event::QueuesCleared);
-    }
-
-    fn handle_deliver_queued(
-        state: &mut TurnActorState,
-        steering_mode: DeliveryMode,
-        follow_up_mode: DeliveryMode,
-        reply: ractor::RpcReplyPort<Option<super::messages::DeliverQueuedResponse>>,
-    ) {
-        let steering_result = Self::try_deliver_steering(state, steering_mode);
-        if steering_result.is_some() {
-            if follow_up_mode == DeliveryMode::All {
-                Self::try_deliver_follow_up(state, follow_up_mode);
-            }
-            // SAFETY: RpcReplyPort is consumed exactly once here; send is infallible
-            // for a valid oneshot receiver, so unwrap is safe.
-            let _ = reply.send(steering_result.map(|(content, id)| {
-                super::messages::DeliverQueuedResponse::Steering { content, id }
-            }));
-            return;
-        }
-        let follow_up_result = Self::try_deliver_follow_up(state, follow_up_mode);
-        let _ = reply.send(follow_up_result.map(|(content, id)| {
-            super::messages::DeliverQueuedResponse::FollowUp { content, id }
-        }));
-    }
-
-    fn try_deliver_steering(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
-        let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
-        let result = queue.pop_steering(mode);
-        state.turn_state.message_queue = queue.into_inner();
-        let r = result?;
-        // Generate id first so we can move it into emit after cloning for the queue.
-        let id = Self::next_id_internal(&mut state.turn_state);
-        // Clone for queue, move into emit, and clone for return value.
-        state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
-        let content = r.content;
-        Self::emit(state, Event::SteeringDelivered { content: content.clone(), id: id.clone() });
-        Some((content, id))
-    }
-
-    fn try_deliver_follow_up(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
-        let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
-        let result = queue.pop_follow_up(mode);
-        state.turn_state.message_queue = queue.into_inner();
-        let r = result?;
-        // Generate id first so we can move it into emit after cloning for the queue.
-        let id = Self::next_id_internal(&mut state.turn_state);
-        // Clone for queue, move into emit, and use for return value.
-        state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
-        let content = r.content;
-        Self::emit(state, Event::FollowUpDelivered { content: content.clone(), id: id.clone() });
-        Some((content, id))
-    }
-
-    fn next_id_internal(turn_state: &mut TurnState) -> String {
-        let id = format!("req.{}", turn_state.next_id);
-        turn_state.next_id += 1;
-        id
-    }
-
-    fn handle_dequeue(state: &mut TurnActorState) {
-        let content = state.turn_state.message_queue.pop().map(|m| m.content);
-        if let Some(content) = content {
-            Self::emit(state, Event::MessageDequeued { content });
-        }
-    }
-
-    fn handle_thinking(state: &mut TurnActorState, id: String) {
-        state.turn_state.thinking_started_at = Some(std::time::Instant::now());
-        Self::emit(state, Event::Thinking { id });
-    }
-
-    fn handle_thought_done(state: &mut TurnActorState) {
-        state.turn_state.thinking_started_at = None;
-    }
-
-    fn handle_tool_start(state: &mut TurnActorState, id: String, name: String) {
-        state.turn_state.tool_started_at = Some(std::time::Instant::now());
-        state.turn_state.current_tool_name = Some(name.clone());
-        state.turn_state.intermediate_step_count += 1;
-        Self::emit(
-            state,
-            Event::ToolStart {
-                id,
-                name,
-                input: serde_json::Value::Null,
-            },
-        );
-    }
-
-    fn handle_tool_end(state: &mut TurnActorState, id: String, duration_secs: f64, output: String) {
-        state.turn_state.tool_started_at = None;
-        state.turn_state.current_tool_name = None;
-        Self::emit(
-            state,
-            Event::tool_end(id, duration_secs, output),
-        );
-    }
-
-    fn handle_response_delta(state: &mut TurnActorState, id: String, content: String) {
-        let was_streaming = state.turn_state.streaming;
-        if !was_streaming {
-            state.turn_state.streaming = true;
-            Self::emit(state, Event::StreamStarted { id: id.clone() });
-        }
-        Self::emit(state, Event::ResponseDelta { id, content });
-    }
-
-    fn handle_turn_complete(state: &mut TurnActorState, id: String, duration_secs: f64) {
-        state.turn_state.turn_started_at = None;
-        state.turn_state.turn_tokens_out = 0;
-        Self::emit(state, Event::TurnComplete { id, duration_secs });
-    }
-
-    fn handle_done(state: &mut TurnActorState) {
-        state.turn_state.streaming = false;
-        state.turn_state.turn_active = false;
-        state.turn_state.inflight = state.turn_state.inflight.saturating_sub(1);
-        state.turn_state.current_tool_name = None;
-        Self::emit(state, Event::TurnCompleted);
-    }
-
-    fn handle_error(state: &mut TurnActorState, id: String, message: String) {
-        state.turn_state.streaming = false;
-        state.turn_state.turn_active = false;
-        state.turn_state.inflight = 0;
-        Self::emit(state, Event::TurnErrored { id, message });
-    }
-
-    fn handle_update_speed(state: &mut TurnActorState, tokens_out: usize) {
-        state.turn_state.tokens_out = tokens_out;
-        state.turn_state.turn_tokens_out = tokens_out;
-        state.turn_state.speed_window.record(tokens_out);
-        state.turn_state.speed_tps = state.turn_state.speed_window.speed();
-        state.turn_state.last_speed_update = Some(std::time::Instant::now());
-        state.turn_state.tokens_at_last_speed = tokens_out;
-        let tokens_in = state.turn_state.tokens_in;
-        let speed_tps = state.turn_state.speed_tps;
-        Self::emit(
-            state,
-            Event::TokenStatsUpdated {
-                tokens_in,
-                tokens_out,
-                speed_tps,
-            },
-        );
-    }
-
-    fn handle_next_id(state: &mut TurnActorState) {
-        let id = Self::next_id_internal(&mut state.turn_state);
-        Self::emit(state, Event::IdGenerated(NextIdResponse { id }));
-    }
-}
-
-#[ractor::async_trait]
-impl Actor for RactorTurnActor {
-    type Msg = TurnMsg;
-    type State = TurnActorState;
-    type Arguments = EventBus<Event>;
-
-    async fn pre_start(
-        &self,
-        _myself: ActorRef<Self::Msg>,
-        bus: Self::Arguments,
-    ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(TurnActorState::new(bus))
-    }
-
-    #[instrument(name = "turn_actor", skip_all, fields(msg = ?msg))]
-    async fn handle(
-        &self,
-        _myself: ActorRef<Self::Msg>,
-        msg: Self::Msg,
-        state: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        match msg {
-            TurnMsg::RunIfQueued => Self::handle_run_if_queued(state),
-            TurnMsg::AbortTurn => Self::handle_abort_turn(state),
-            TurnMsg::SubmitUserMessage {
-                content,
-                id,
-                source,
-            } => Self::handle_submit_user_message(state, content, id, source),
-            TurnMsg::QueueSteering { content } => Self::handle_queue_steering(state, content),
-            TurnMsg::QueueFollowUp { content } => Self::handle_queue_follow_up(state, content),
-            TurnMsg::AbortQueue => Self::handle_abort_queue(state),
-            TurnMsg::ClearQueues => Self::handle_clear_queues(state),
-            TurnMsg::DeliverQueued {
-                steering_mode,
-                follow_up_mode,
-                reply,
-            } => Self::handle_deliver_queued(state, steering_mode, follow_up_mode, reply),
-            TurnMsg::Dequeue => Self::handle_dequeue(state),
-            TurnMsg::Thinking { id } => Self::handle_thinking(state, id),
-            TurnMsg::ThoughtDone { id: _ } => Self::handle_thought_done(state),
-            TurnMsg::ToolStart { id, name } => Self::handle_tool_start(state, id, name),
-            TurnMsg::ToolEnd {
-                id,
-                duration_secs,
-                output,
-            } => Self::handle_tool_end(state, id, duration_secs, output),
-            TurnMsg::ResponseDelta { id, content } => {
-                Self::handle_response_delta(state, id, content)
-            }
-            TurnMsg::TurnComplete { id, duration_secs } => {
-                Self::handle_turn_complete(state, id, duration_secs)
-            }
-            TurnMsg::Done { id: _ } => Self::handle_done(state),
-            TurnMsg::Error { id, message } => Self::handle_error(state, id, message),
-            TurnMsg::UpdateSpeed { tokens_out } => Self::handle_update_speed(state, tokens_out),
-            TurnMsg::NextId => Self::handle_next_id(state),
-        }
-        Ok(())
-    }
-}
-
-impl RactorTurnActor {
-    /// Spawn a `RactorTurnActor` on the given event bus.
-    ///
-    /// Returns a `Result` to allow callers to handle spawn failures gracefully.
-    pub async fn spawn(
-        bus: EventBus<Event>,
-    ) -> anyhow::Result<(
-        RactorTurnHandle,
-        ractor::ActorCell,
-        tokio::task::JoinHandle<()>,
-    )> {
-        let (handle, join, cell) =
-            spawn_ractor(None, Self, bus)
-                .await
-                .map_err(|e| anyhow::anyhow!("RactorTurnActor spawn failed: {}", e))?;
-        Ok((RactorTurnHandle::new(handle), cell, join))
-    }
-}
+// Re-export the actor for backward compatibility.
+pub use crate::actors::turn::actor::RactorTurnActor;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::super::*;
     use crate::actors::turn::messages::MessageSource;
+    use crate::bus::EventBus;
+    use crate::Event;
 
     #[tokio::test]
     async fn run_if_queued_starts_turn() {
@@ -423,14 +87,9 @@ mod tests {
 
     /// Regression test: QueueFollowUp puts in message_queue; DeliverQueued moves it to
     /// request_queue (via FollowUpDelivered); RunIfQueued starts the next turn.
-    ///
-    /// Flow: SubmitUserMessage → RunIfQueued → TurnStarted
-    ///       QueueFollowUp (queues to message_queue)
-    ///       Done → TurnCompleted (turn_active becomes false)
-    ///       DeliverQueued → FollowUpDelivered (moves to request_queue, generates new id)
-    ///       RunIfQueued → TurnStarted (starts second turn with new id)
     #[tokio::test]
     async fn queue_follow_up_after_done_starts_queued_turn() {
+        use crate::model::DeliveryMode;
         let bus = EventBus::<Event>::new(16);
         let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
         let mut sub = bus.subscribe();
@@ -462,7 +121,7 @@ mod tests {
             })
             .await;
 
-        // First turn completes - Done message results in TurnCompleted event
+        // First turn completes
         handle
             .send(TurnMsg::Done { id: "req.0".into() })
             .await;
@@ -478,7 +137,6 @@ mod tests {
         assert!(found_completed, "First turn should complete");
 
         // After TurnCompleted, DeliverQueued moves message from message_queue to request_queue.
-        // Uses RPC so TurnActor processes and emits FollowUpDelivered before returning.
         use ractor::rpc::CallResult;
         let result = handle
             .inner
@@ -504,7 +162,7 @@ mod tests {
         // RunIfQueued starts the queued turn
         handle.send(TurnMsg::RunIfQueued).await;
 
-        // After RunIfQueued, second turn should start — with timeout
+        // After RunIfQueued, second turn should start
         let result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             while let Ok(evt) = sub.recv().await {
                 if matches!(evt, Event::TurnStarted { id, .. } if id == "req.1") {
@@ -517,15 +175,10 @@ mod tests {
     }
 
     /// Verify that `#[instrument]` does not panic and handlers process messages normally.
-    /// This test exercises the instrumented handler path and ensures tracing spans are
-    /// created without errors.
     #[tokio::test]
     async fn turn_actor_handler_runs_with_tracing() {
         use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-        // Try to initialize a no-op tracing subscriber to exercise the instrumented paths.
-        // Use try_init() to avoid panicking if a global subscriber is already set by
-        // another test.
         let filter = EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| EnvFilter::new("info"));
         let _ = tracing_subscriber::registry()
@@ -536,7 +189,6 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
 
-        // Exercise the instrumented handler path with various messages.
         handle
             .send(TurnMsg::SubmitUserMessage {
                 content: "hello".into(),
@@ -545,7 +197,6 @@ mod tests {
             })
             .await;
 
-        // Verify the message was processed (emits UserMessageSubmitted event).
         let mut sub = bus.subscribe();
         let found = tokio::time::timeout(std::time::Duration::from_secs(1), async {
             while let Ok(evt) = sub.recv().await {

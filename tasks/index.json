@@ -340,7 +340,7 @@
 {"file": "split-large-core-files-into-focused-modules.md", "title": "Split large core files into focused modules", "status": "todo"}
 {"file": "split-modelclient-and-turnsession.md", "title": "Split ModelClient and TurnSession", "status": "done"}
 {"file": "split-panel-handler-into-focused-modules.md", "title": "Split `panel_handler.rs` into focused modules", "status": "done"}
-{"file": "split-ractor-turn-actor-into-focused-modules.md", "title": "Split `ractor_turn.rs` into focused modules", "status": "todo"}
+{"file": "split-ractor-turn-actor-into-focused-modules.md", "title": "Split `ractor_turn.rs` into focused modules", "status": "done"}
 {"file": "split-runie-agent-actor-into-focused-modules.md", "title": "Split `runie-agent/src/actor.rs` into focused modules", "status": "todo"}
 {"file": "split-uiactor-into-focused-modules.md", "title": "Split `ui_actor.rs` into focused modules", "status": "todo"}
 {"file": "standardize-error-types-on-thiserror-with-source-chains.md", "title": "Standardize error types on thiserror with source chains", "status": "done"}
