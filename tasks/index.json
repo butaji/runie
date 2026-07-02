@@ -1747,7 +1747,7 @@
   {
     "file": "split-large-core-files-into-focused-modules.md",
     "title": "Split large core files into focused modules",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "split-modelclient-and-turnsession.md",

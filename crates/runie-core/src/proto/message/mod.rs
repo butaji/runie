@@ -1,524 +1,39 @@
 //! Message types shared across the application.
+//!
+//! Key types:
+//! - [`Role`] — participant role in a conversation
+//! - [`MessageOrigin`] — origin of a message
+//! - [`ChatMessage`] — a conversation message; built with [`ChatMessageBuilder`]
+//! - [`ToolCall`] — a structured tool invocation
+//! - [`Part`] — typed content blocks inside a message
+//! - [`validate_message`] / [`validate_messages`] — structural validation
 
-use derive_builder::Builder;
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-
+pub mod chat_message;
+pub mod metadata;
 pub mod parts;
+pub mod role;
+pub mod tool_call;
+pub mod validation;
+
+// ── Re-exports ────────────────────────────────────────────────────────────────
 
 pub use parts::Part;
+pub use role::{MessageOrigin, Role};
+pub use tool_call::ToolCall;
+pub use validation::{validate_message, validate_messages, SanitizeError};
 
-/// A first-class tool invocation carried by an assistant message.
-///
-/// `args` is the structured argument object. Use `arguments_string()` to get
-/// the JSON-encoded wire format expected by OpenAI-compatible APIs.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ToolCall {
-    pub id: String,
-    pub name: String,
-    /// Structured arguments. Serializes to JSON string for OpenAI wire format.
-    #[serde(default)]
-    pub args: serde_json::Value,
-}
+// Re-export for compatibility with `crate::proto::message::now()`.
+pub use chat_message::now;
 
-impl ToolCall {
-    pub fn new(id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
-        Self {
-            id: id.into(),
-            name: name.into(),
-            args,
-        }
-    }
-
-    /// Construct a ToolCall from a JSON string for the arguments field.
-    pub fn with_json_args(
-        id: impl Into<String>,
-        name: impl Into<String>,
-        arguments: impl AsRef<str>,
-    ) -> Self {
-        let args: serde_json::Value =
-            serde_json::from_str(arguments.as_ref()).unwrap_or(serde_json::Value::Null);
-        Self::new(id, name, args)
-    }
-
-    /// Serialize arguments to a JSON string for the OpenAI wire format.
-    pub fn arguments_string(&self) -> String {
-        serde_json::to_string(&self.args).unwrap_or_else(|_| "{}".to_owned())
-    }
-
-    /// Convert a `Part::ToolCall` into a `ToolCall`; other part variants become empty.
-    pub fn from_part(part: Part) -> Self {
-        match part {
-            Part::ToolCall { id, name, args } => Self { id, name, args },
-            _ => Self::new(String::new(), String::new(), serde_json::Value::Null),
-        }
-    }
-}
-
-#[derive(
-    Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, strum::Display, strum::EnumString,
-)]
-#[strum(serialize_all = "snake_case")]
-pub enum Role {
-    #[default]
-    User,
-    Thought,
-    Assistant,
-    Tool,
-    TurnComplete,
-    System,
-}
-
-impl Role {
-    /// String representation (snake_case).
-    pub fn as_str(&self) -> &'static str {
-        // Matches #[strum(serialize_all = "snake_case")] on the enum.
-        match self {
-            Role::User => "user",
-            Role::Thought => "thought",
-            Role::Assistant => "assistant",
-            Role::Tool => "tool",
-            Role::TurnComplete => "turn_complete",
-            Role::System => "system",
-        }
-    }
-
-    /// Convert from API string representation.
-    pub fn parse(s: &str) -> Option<Self> {
-        Self::from_str(s).ok()
-    }
-}
-
-/// Metadata for chat messages (compaction and visibility control).
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
-pub struct MessageMetadata {
-    /// Message is pinned and won't be compacted.
-    #[serde(default)]
-    pub pinned: bool,
-    /// Message is hidden from user display but still sent to the model.
-    #[serde(default)]
-    pub hidden_from_user: bool,
-    /// Message is omitted from persistence (ephemeral).
-    #[serde(default)]
-    pub ephemeral: bool,
-    /// This message is a compaction summary (replaces older messages).
-    #[serde(default)]
-    pub compacted: bool,
-    /// Origin of the message (used for turn scheduling).
-    #[serde(default)]
-    pub origin: MessageOrigin,
-}
-
-/// Origin of a message, used to distinguish user messages from injected content.
-#[derive(
-    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, strum::Display,
-    strum::EnumString, strum::IntoStaticStr,
-)]
-#[strum(serialize_all = "snake_case")]
-pub enum MessageOrigin {
-    /// Direct user input.
-    #[default]
-    User,
-    /// Tool result injected into the conversation.
-    Tool,
-    /// System message or prompt injection.
-    System,
-    /// Compaction summary (replaces older messages).
-    Compaction,
-    /// Steering or guidance message.
-    Steering,
-    /// Follow-up from user after turn completion.
-    FollowUp,
-    /// Session context injection (e.g., @file, @search).
-    Context,
-}
-
-pub fn now() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs_f64())
-        .unwrap_or(0.0)
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Builder)]
-#[builder(build_fn(skip))]
-pub struct ChatMessage {
-    #[builder(setter(into, name = "set_role"))]
-    pub role: Role,
-    #[builder(default = "crate::proto::message::now()", setter(into, name = "set_timestamp"))]
-    #[serde(default)]
-    pub timestamp: f64,
-    #[builder(default, setter(into, name = "set_id"))]
-    #[serde(default)]
-    pub id: String,
-    #[builder(default = "String::new()", setter(into, name = "set_provider"))]
-    #[serde(default)]
-    pub provider: String,
-    #[builder(default, setter(into))]
-    #[serde(default)]
-    pub metadata: MessageMetadata,
-    #[builder(default, setter(into, strip_option, name = "set_tool_call_id"))]
-    pub tool_call_id: Option<String>,
-    #[builder(default, setter(strip_option, name = "set_provider_metadata"))]
-    pub provider_metadata: Option<serde_json::Value>,
-    #[builder(default, setter(name = "set_parts"))]
-    #[serde(default)]
-    pub parts: Vec<Part>,
-}
-
-impl ChatMessage {
-    /// Returns the concatenated text content from all `Part::Text` variants.
-    pub fn content(&self) -> String {
-        self.parts
-            .iter()
-            .filter_map(|p| match p {
-                Part::Text { content } => Some(content.as_str()),
-                _ => None,
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    }
-
-    /// Returns tool calls extracted from `Part::ToolCall` variants.
-    pub fn tool_calls(&self) -> Vec<ToolCall> {
-        self.parts
-            .iter()
-            .filter_map(|p| match p {
-                Part::ToolCall { id, name, args } => Some(ToolCall {
-                    id: id.clone(),
-                    name: name.clone(),
-                    args: args.clone(),
-                }),
-                _ => None,
-            })
-            .collect()
-    }
-
-    /// Push a text part, or append to the last text part if one exists.
-    pub fn push_text_part(&mut self, content: &str) {
-        if content.is_empty() {
-            return;
-        }
-        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
-            last.push_str(content);
-        } else {
-            self.parts.push(Part::Text {
-                content: content.to_owned(),
-            });
-        }
-    }
-
-    /// Set the last text part's content (or push a new text part).
-    pub fn set_text_part(&mut self, content: String) {
-        if let Some(Part::Text { content: last }) = self.parts.last_mut() {
-            *last = content;
-        } else {
-            self.parts.push(Part::Text { content });
-        }
-    }
-
-    pub fn system(content: impl Into<String>) -> Self {
-        Self::new(Role::System, content)
-    }
-
-    pub fn user(content: impl Into<String>) -> Self {
-        Self::new(Role::User, content)
-    }
-
-    pub fn assistant(content: impl Into<String>) -> Self {
-        Self::new(Role::Assistant, content)
-    }
-
-    pub fn tool_result(content: impl Into<String>) -> Self {
-        Self::new(Role::Tool, content)
-    }
-
-    pub fn tool(content: impl Into<String>) -> Self {
-        Self::new(Role::Tool, content)
-    }
-
-    pub fn with_id(mut self, id: impl Into<String>) -> Self {
-        self.id = id.into();
-        self
-    }
-
-    pub fn with_timestamp(mut self, timestamp: f64) -> Self {
-        self.timestamp = timestamp;
-        self
-    }
-
-    pub fn with_tool_call_id(mut self, id: impl Into<String>) -> Self {
-        self.tool_call_id = Some(id.into());
-        self
-    }
-
-    pub fn with_tool_calls(mut self, calls: Vec<ToolCall>) -> Self {
-        for tc in calls {
-            self.parts.push(Part::ToolCall {
-                id: tc.id,
-                name: tc.name,
-                args: tc.args,
-            });
-        }
-        self
-    }
-
-    pub fn with_parts(mut self, parts: Vec<Part>) -> Self {
-        self.parts = parts;
-        self
-    }
-
-    pub fn new(role: Role, content: impl Into<String>) -> Self {
-        let content = content.into();
-        Self {
-            role,
-            timestamp: now(),
-            id: String::new(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_call_id: None,
-            provider_metadata: None,
-            parts: if content.is_empty() {
-                Vec::new()
-            } else {
-                vec![Part::Text { content }]
-            },
-        }
-    }
-}
-
-/// Builder for `ChatMessage` with helper constructors and typed setters.
-///
-/// Enforces valid message structure at construction time:
-/// - `Role::Assistant` messages must have non-empty text OR tool calls
-/// - `Role::Tool` messages must have a `tool_call_id`
-/// - `Role::Thought` messages require content
-///
-/// For constructing message sequences (validation of dangling tool calls,
-/// orphan results, role ordering), use [`validate_messages`] instead.
-impl ChatMessageBuilder {
-    pub fn new(role: Role) -> Self {
-        let mut builder = Self::default();
-        builder.set_role(role);
-        builder
-    }
-
-    pub fn user(content: impl Into<String>) -> Self {
-        Self::new(Role::User).text(content)
-    }
-
-    pub fn assistant(content: impl Into<String>) -> Self {
-        Self::new(Role::Assistant).text(content)
-    }
-
-    pub fn system(content: impl Into<String>) -> Self {
-        Self::new(Role::System).text(content)
-    }
-
-    pub fn tool(content: impl Into<String>) -> Self {
-        Self::new(Role::Tool).text(content)
-    }
-
-    pub fn thought(content: impl Into<String>) -> Self {
-        Self::new(Role::Thought).text(content)
-    }
-
-    /// Append text content, or merge with the last text part if one exists.
-    pub fn text(mut self, content: impl Into<String>) -> Self {
-        let content = content.into();
-        if content.is_empty() {
-            return self;
-        }
-        let parts = self.parts.get_or_insert_with(Vec::new);
-        if let Some(Part::Text { content: last }) = parts.last_mut() {
-            last.push_str(&content);
-        } else {
-            parts.push(Part::Text { content });
-        }
-        self
-    }
-
-    pub fn reasoning(mut self, content: impl Into<String>) -> Self {
-        let content = content.into();
-        if content.is_empty() {
-            return self;
-        }
-        let parts = self.parts.get_or_insert_with(Vec::new);
-        parts.push(Part::Reasoning { content });
-        self
-    }
-
-    pub fn tool_call(
-        mut self,
-        id: impl Into<String>,
-        name: impl Into<String>,
-        args: serde_json::Value,
-    ) -> Self {
-        let parts = self.parts.get_or_insert_with(Vec::new);
-        parts.push(Part::tool_call(id, name, args));
-        self
-    }
-
-    pub fn tool_result(mut self, id: impl Into<String>, output: impl Into<String>) -> Self {
-        let parts = self.parts.get_or_insert_with(Vec::new);
-        parts.push(Part::tool_result(id, output));
-        self
-    }
-
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
-        self
-    }
-
-    pub fn timestamp(mut self, ts: f64) -> Self {
-        self.timestamp = Some(ts);
-        self
-    }
-
-    pub fn provider(mut self, provider: impl Into<String>) -> Self {
-        self.provider = Some(provider.into());
-        self
-    }
-
-    pub fn tool_call_id(mut self, id: impl Into<String>) -> Self {
-        self.tool_call_id = Some(Some(id.into()));
-        self
-    }
-
-    pub fn pinned(mut self) -> Self {
-        self.metadata.get_or_insert_with(Default::default).pinned = true;
-        self
-    }
-
-    pub fn hidden_from_user(mut self) -> Self {
-        self.metadata.get_or_insert_with(Default::default).hidden_from_user = true;
-        self
-    }
-
-    pub fn ephemeral(mut self) -> Self {
-        self.metadata.get_or_insert_with(Default::default).ephemeral = true;
-        self
-    }
-
-    pub fn origin(mut self, origin: MessageOrigin) -> Self {
-        self.metadata.get_or_insert_with(Default::default).origin = origin;
-        self
-    }
-
-    pub fn build(self) -> ChatMessage {
-        let role = self.role.unwrap_or(Role::User);
-        let timestamp = self.timestamp.unwrap_or_else(now);
-        let id = self.id.unwrap_or_default();
-        let provider = self.provider.unwrap_or_default();
-        let metadata = self.metadata.unwrap_or_default();
-        let parts = self.parts.unwrap_or_default();
-        ChatMessage {
-            role,
-            timestamp,
-            id,
-            provider,
-            metadata,
-            tool_call_id: self.tool_call_id.flatten(),
-            provider_metadata: self.provider_metadata.flatten(),
-            parts,
-        }
-    }
-}
-
-/// Validate a single message for structural validity.
-/// Returns `None` if valid, `Some(reason)` if not.
-pub fn validate_message(msg: &ChatMessage) -> Option<&'static str> {
-    match msg.role {
-        Role::Assistant => {
-            let has_text = msg.parts.iter().any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
-            let has_tc = msg.parts.iter().any(|p| matches!(p, Part::ToolCall { .. }));
-            if !has_text && !has_tc {
-                return Some("assistant message has no text or tool calls");
-            }
-        }
-        Role::Tool => {
-            if msg.tool_call_id.is_none() {
-                return Some("tool message missing tool_call_id");
-            }
-        }
-        Role::Thought => {
-            let has_text = msg.parts.iter().any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
-            if !has_text {
-                return Some("thought message has no content");
-            }
-        }
-        Role::User | Role::System | Role::TurnComplete => {}
-    }
-    None
-}
-
-/// Validate a sequence of messages for structural validity.
-///
-/// Checks:
-/// - Every tool message has a matching tool call id in a preceding assistant message
-/// - Assistant messages are not empty (no text, no tool calls)
-///
-/// Use this after building a message history, not instead of per-message construction.
-pub fn validate_messages(messages: &[ChatMessage]) -> Vec<SanitizeError> {
-    let mut errors = Vec::new();
-
-    // Collect all valid tool call ids
-    let tool_call_ids: std::collections::HashSet<_> = messages
-        .iter()
-        .filter(|m| m.role == Role::Assistant)
-        .flat_map(|m| m.tool_calls())
-        .filter(|tc| !tc.id.is_empty())
-        .map(|tc| tc.id)
-        .collect();
-
-    for msg in messages {
-        // Check tool message has matching tool call
-        if msg.role == Role::Tool {
-            if let Some(ref id) = msg.tool_call_id {
-                if !tool_call_ids.contains(id) {
-                    errors.push(SanitizeError::OrphanToolResult {
-                        tool_call_id: id.clone(),
-                    });
-                }
-            } else {
-                errors.push(SanitizeError::OrphanToolResult {
-                    tool_call_id: "<missing>".to_owned(),
-                });
-            }
-        }
-
-        // Check assistant not empty
-        if msg.role == Role::Assistant {
-            let has_text = !msg.content().trim().is_empty();
-            let has_tc = !msg.tool_calls().is_empty();
-            if !has_text && !has_tc {
-                errors.push(SanitizeError::RemovedMessage {
-                    role: Role::Assistant,
-                    reason: "empty message",
-                });
-            }
-        }
-    }
-
-    errors
-}
-
-/// Re-export SanitizeError so callers can use it without importing from sanitize.
-#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
-pub enum SanitizeError {
-    #[error("dangling tool call: {tool_call_id}")]
-    DanglingToolCall { tool_call_id: String },
-    #[error("orphan tool result: {tool_call_id}")]
-    OrphanToolResult { tool_call_id: String },
-    #[error("removed {role:?} message: {reason}")]
-    RemovedMessage { role: Role, reason: &'static str },
-}
-
-// ── Serialization round-trip tests ─────────────────────────────────────────────
+// Back-compat re-exports for callers that use the old module path.
+pub use chat_message::{ChatMessage, ChatMessageBuilder};
+pub use metadata::MessageMetadata;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Role tests ────────────────────────────────────────────────────────────
 
     #[test]
     fn role_as_str_matches_provider_expectations() {
@@ -528,19 +43,15 @@ mod tests {
         assert_eq!(Role::Tool.as_str(), "tool");
     }
 
+    // ── ChatMessage content tests ─────────────────────────────────────────────
+
     #[test]
     fn chat_message_content_getter_concatenates_text_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "a".into(),
-                },
-                Part::Reasoning {
-                    content: "r".into(),
-                },
-                Part::Text {
-                    content: "b".into(),
-                },
+                Part::Text { content: "a".into() },
+                Part::Reasoning { content: "r".into() },
+                Part::Text { content: "b".into() },
             ],
             ..Default::default()
         };
@@ -551,14 +62,8 @@ mod tests {
     fn chat_message_tool_calls_getter_extracts_from_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "hi".into(),
-                },
-                Part::ToolCall {
-                    id: "c1".into(),
-                    name: "bash".into(),
-                    args: serde_json::json!({}),
-                },
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) },
             ],
             ..Default::default()
         };
@@ -577,29 +82,25 @@ mod tests {
     #[test]
     fn chat_message_no_text_parts_returns_empty_content() {
         let msg = ChatMessage {
-            parts: vec![Part::ToolCall {
-                id: "c1".into(),
-                name: "bash".into(),
-                args: serde_json::json!({}),
-            }],
+            parts: vec![Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) }],
             ..Default::default()
         };
         assert_eq!(msg.content(), "");
     }
+
+    // ── Serialization round-trip tests ───────────────────────────────────────
 
     #[test]
     fn chat_message_round_trip_json() {
         let msg = ChatMessage {
             role: Role::User,
             timestamp: 1234567890.0,
-            id: "msg-1".to_string(),
-            provider: "openai".to_string(),
+            id: "msg-1".into(),
+            provider: "openai".into(),
             metadata: MessageMetadata::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::Text {
-                content: "hello".into(),
-            }],
+            parts: vec![Part::Text { content: "hello".into() }],
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
@@ -615,14 +116,8 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text {
-                    content: "hello".into(),
-                },
-                Part::ToolCall {
-                    id: "call_1".into(),
-                    name: "list_dir".into(),
-                    args: serde_json::json!({"path": "."}),
-                },
+                Part::Text { content: "hello".into() },
+                Part::ToolCall { id: "call_1".into(), name: "list_dir".into(), args: serde_json::json!({"path": "."}) },
             ],
             ..Default::default()
         };
@@ -680,7 +175,6 @@ mod tests {
             .text(" part 2")
             .build();
         assert_eq!(msg.content(), "part 1 part 2");
-        // Should be a single text part
         assert_eq!(msg.parts.len(), 1);
     }
 
@@ -699,7 +193,10 @@ mod tests {
             .tool_call("call_1", "bash", serde_json::json!({"cmd": "ls"}))
             .build();
         assert_eq!(msg.content(), "calling tool");
-        assert!(msg.parts.iter().any(|p| matches!(p, Part::ToolCall { name: n, .. } if n == "bash")));
+        assert!(msg
+            .parts
+            .iter()
+            .any(|p| matches!(p, Part::ToolCall { name: n, .. } if n == "bash")));
     }
 
     #[test]
