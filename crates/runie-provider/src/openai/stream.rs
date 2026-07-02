@@ -106,6 +106,14 @@ async fn build_eventsource_with_retry(
 
     // Wrap EventSource creation in backon: retry on transient errors,
     // but only during stream establishment (before SSE data starts).
+    let retry_config = provider.retry_config().cloned().unwrap_or_default();
+    // max_attempts includes the initial call, so max_times (retries) = max_attempts - 1.
+    // Use saturating_sub to handle max_attempts = 0 or 1 (no retries).
+    let backoff = ExponentialBuilder::default()
+        .with_max_times(retry_config.max_attempts.saturating_sub(1) as usize)
+        .with_min_delay(retry_config.initial_delay)
+        .with_max_delay(retry_config.max_delay)
+        .with_factor(retry_config.multiplier as f32);
     let es = (move || {
         let b = builder.try_clone().expect("request builder is cloneable");
         async move {
@@ -117,8 +125,8 @@ async fn build_eventsource_with_retry(
             Ok(es)
         }
     })
-    .retry(ExponentialBuilder::default())
-    .when(|e: &anyhow::Error| crate::retry::is_retryable(e))
+    .retry(backoff)
+    .when(crate::retry::is_retryable)
     .await?;
 
     Ok(es)

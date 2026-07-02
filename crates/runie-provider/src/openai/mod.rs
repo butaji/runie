@@ -23,6 +23,8 @@ pub struct OpenAiProvider {
     model_meta: Option<crate::ModelMeta>,
     tools: Vec<serde_json::Value>,
     tool_choice: Option<serde_json::Value>,
+    /// Retry configuration for transient failures during stream establishment.
+    retry_config: Option<crate::RetryConfig>,
 }
 
 impl OpenAiProvider {
@@ -41,6 +43,7 @@ impl OpenAiProvider {
             model_meta: None,
             tools: Vec::new(),
             tool_choice: None,
+            retry_config: None,
         }
     }
 
@@ -54,6 +57,7 @@ impl OpenAiProvider {
             model_meta: None,
             tools: Vec::new(),
             tool_choice: None,
+            retry_config: None,
         }
     }
 
@@ -71,6 +75,7 @@ impl OpenAiProvider {
             model_meta: None,
             tools: Vec::new(),
             tool_choice: None,
+            retry_config: None,
         }
     }
 
@@ -94,6 +99,11 @@ impl OpenAiProvider {
         self
     }
 
+    pub fn with_retry_config(mut self, config: crate::RetryConfig) -> Self {
+        self.retry_config = Some(config);
+        self
+    }
+
     pub fn model(&self) -> &str {
         &self.model
     }
@@ -108,6 +118,10 @@ impl OpenAiProvider {
 
     pub fn tool_choice(&self) -> Option<&serde_json::Value> {
         self.tool_choice.as_ref()
+    }
+
+    pub fn retry_config(&self) -> Option<&crate::RetryConfig> {
+        self.retry_config.as_ref()
     }
 }
 

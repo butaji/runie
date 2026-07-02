@@ -5,7 +5,7 @@
 //! stream starts emitting events. Once the stream has started, any error is
 //! surfaced immediately.
 
-use crate::ProviderError;
+use crate::{ProviderError, RetryConfig};
 use anyhow::Error;
 use backon::{ExponentialBuilder, Retryable};
 use futures::Future;
@@ -66,12 +66,40 @@ pub fn is_retryable(e: &Error) -> bool {
 }
 
 /// Retry a fallible async operation with exponential backoff using `backon`.
+///
+/// Uses default retry parameters. For custom retry behavior, use
+/// [`with_retry_config`](with_retry_config).
 pub async fn with_retry<F, Fut, T>(f: F) -> Result<T, Error>
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<T, Error>>,
 {
-    f.retry(ExponentialBuilder::default())
+    with_retry_config(f, &RetryConfig::default()).await
+}
+
+/// Retry a fallible async operation with custom retry configuration.
+///
+/// Converts `RetryConfig` to backon's `ExponentialBuilder`:
+/// - `max_attempts` → `with_max_times()` (backon counts total attempts)
+/// - `initial_delay` → `with_min_delay()`
+/// - `max_delay` → `with_max_delay()`
+/// - `multiplier` → `with_factor()`
+pub async fn with_retry_config<F, Fut, T>(
+    f: F,
+    config: &RetryConfig,
+) -> Result<T, Error>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<T, Error>>,
+{
+    // max_attempts includes the initial call, so max_times (retries) = max_attempts - 1.
+    // Use saturating_sub to handle max_attempts = 0 or 1 (no retries).
+    let builder = ExponentialBuilder::default()
+        .with_max_times(config.max_attempts.saturating_sub(1) as usize)
+        .with_min_delay(config.initial_delay)
+        .with_max_delay(config.max_delay)
+        .with_factor(config.multiplier as f32);
+    f.retry(builder)
         .when(is_retryable)
         .await
 }
@@ -81,6 +109,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::time::Duration;
 
     // ── Layer 1: classify_http_status produces typed variants ─────────────────────
     // Both HTTP and SSE paths use this shared classifier, so testing it covers both.
@@ -338,5 +367,77 @@ mod tests {
         assert!(result.is_err());
         // Only one attempt for non-retryable error
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
+
+    // ── Layer 1: with_retry_config honors RetryConfig ───────────────────────────
+
+    #[tokio::test]
+    async fn with_retry_config_respects_max_attempts() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let counter_clone = counter.clone();
+        // Config allows 3 attempts (max_attempts = 3)
+        let config = RetryConfig::new(3, Duration::from_millis(1), Duration::from_secs(1), 1.0);
+        let result: Result<i32, anyhow::Error> = with_retry_config(
+            move || {
+                let c = counter_clone.clone();
+                async move {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    // Use a retryable error message
+                    Err(anyhow::anyhow!("rate limit exceeded"))
+                }
+            },
+            &config,
+        )
+        .await;
+        assert!(result.is_err());
+        // Should have exactly 3 attempts (max_attempts)
+        assert_eq!(counter.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn with_retry_config_respects_no_retry() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let counter_clone = counter.clone();
+        // Config disables retries (max_attempts = 1)
+        let config = RetryConfig::no_retry();
+        let result: Result<i32, anyhow::Error> = with_retry_config(
+            move || {
+                let c = counter_clone.clone();
+                async move {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    Err(anyhow::anyhow!("rate limit"))
+                }
+            },
+            &config,
+        )
+        .await;
+        assert!(result.is_err());
+        // Should have exactly 1 attempt (no retries)
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn with_retry_config_succeeds_after_one_retry() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let counter_clone = counter.clone();
+        let config = RetryConfig::new(5, Duration::from_millis(1), Duration::from_secs(1), 1.0);
+        let result: Result<i32, anyhow::Error> = with_retry_config(
+            move || {
+                let c = counter_clone.clone();
+                async move {
+                    let n = c.fetch_add(1, Ordering::SeqCst);
+                    if n == 0 {
+                        Err(anyhow::anyhow!("rate limit"))
+                    } else {
+                        Ok::<_, Error>(42)
+                    }
+                }
+            },
+            &config,
+        )
+        .await;
+        assert_eq!(result.unwrap(), 42);
+        // Should have exactly 2 attempts
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
     }
 }
