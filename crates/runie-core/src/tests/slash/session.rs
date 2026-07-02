@@ -1,10 +1,11 @@
 #![allow(clippy::all)]
-use super::{exec, tmp_store, ENV_LOCK};
+use super::{exec, tmp_store};
 use crate::commands::DialogKind;
 use crate::message::Part;
 use crate::model::Role;
 use crate::tests::{fresh_state, type_str};
 use crate::Event;
+use runie_testing::with_env;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -75,21 +76,19 @@ fn slash_with_extra_whitespace_trimmed() {
 
 #[test]
 fn save_trims_whitespace() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    with_env(|env| {
+        let store = tmp_store();
+        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
 
-    let store = tmp_store();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
+        let mut state = fresh_state();
+        exec(&mut state, "/save  trimmed"); // Opens form with pre-filled name
+        state.update(Event::submit()); // Submits the form
 
-    let mut state = fresh_state();
-    exec(&mut state, "/save  trimmed"); // Opens form with pre-filled name
-    state.update(Event::submit()); // Submits the form
-
-    // Should save with trimmed name
-    let jsonl_path =
-        crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
-    assert!(jsonl_path.exists(), "whitespace should be trimmed");
-
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
+        // Should save with trimmed name
+        let jsonl_path =
+            crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
+        assert!(jsonl_path.exists(), "whitespace should be trimmed");
+    });
 }
 
 #[test]
@@ -213,82 +212,75 @@ fn history_lists_recent_inputs() {
 
 #[test]
 fn resume_loads_most_recent_session() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    // Clean up RUNIE_MOCK to ensure is_mock_enabled() returns false during session replay
-    let prev_mock = std::env::var("RUNIE_MOCK").ok();
-    std::env::remove_var("RUNIE_MOCK");
+    with_env(|env| {
+        // Clean up RUNIE_MOCK to ensure is_mock_enabled() returns false during session replay
+        env.remove("RUNIE_MOCK");
 
-    let store = tmp_store();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
+        let store = tmp_store();
+        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
 
-    // Save an older session
-    let mut older = fresh_state();
-    older.config.current_provider = "anthropic".into();
-    older.config.current_model = "claude-3".into();
-    older.session.messages.push(crate::model::ChatMessage {
-        role: Role::User,
-        timestamp: 1.0,
-        id: "u.older".into(),
-        parts: vec![Part::Text {
-            content: "older".into(),
-        }],
-        ..Default::default()
+        // Save an older session
+        let mut older = fresh_state();
+        older.config.current_provider = "anthropic".into();
+        older.config.current_model = "claude-3".into();
+        older.session.messages.push(crate::model::ChatMessage {
+            role: Role::User,
+            timestamp: 1.0,
+            id: "u.older".into(),
+            parts: vec![Part::Text {
+                content: "older".into(),
+            }],
+            ..Default::default()
+        });
+        crate::session::replay::save_session("older", &older).unwrap();
+
+        // Save a newer session
+        let mut newer = fresh_state();
+        // Verify fresh_state gives ConfigDefault
+        assert_eq!(
+            newer.config.model_source,
+            crate::model::ModelSource::ConfigDefault,
+            "fresh_state should give ConfigDefault, got {:?}",
+            newer.config.model_source
+        );
+        newer.config.current_provider = "openai".into();
+        newer.config.current_model = "gpt-4o".into();
+        newer.session.messages.push(crate::model::ChatMessage {
+            role: Role::User,
+            timestamp: 2.0,
+            id: "u.newer".into(),
+            parts: vec![Part::Text {
+                content: "newer".into(),
+            }],
+            ..Default::default()
+        });
+        crate::session::replay::save_session("newer", &newer).unwrap();
+
+        let mut state = fresh_state();
+        exec(&mut state, "/resume");
+
+        assert_eq!(
+            state.config.current_provider, "openai",
+            "loads newer provider"
+        );
+        assert_eq!(state.config.current_model, "gpt-4o", "loads newer model");
+        assert!(
+            state
+                .session
+                .messages
+                .iter()
+                .any(|m| m.content() == "newer"),
+            "newer message loaded"
+        );
+        assert!(
+            !state
+                .session
+                .messages
+                .iter()
+                .any(|m| m.content() == "older"),
+            "older message not loaded"
+        );
     });
-    crate::session::replay::save_session("older", &older).unwrap();
-
-    // Save a newer session
-    let mut newer = fresh_state();
-    // Verify fresh_state gives ConfigDefault
-    assert_eq!(
-        newer.config.model_source,
-        crate::model::ModelSource::ConfigDefault,
-        "fresh_state should give ConfigDefault, got {:?}",
-        newer.config.model_source
-    );
-    newer.config.current_provider = "openai".into();
-    newer.config.current_model = "gpt-4o".into();
-    newer.session.messages.push(crate::model::ChatMessage {
-        role: Role::User,
-        timestamp: 2.0,
-        id: "u.newer".into(),
-        parts: vec![Part::Text {
-            content: "newer".into(),
-        }],
-        ..Default::default()
-    });
-    crate::session::replay::save_session("newer", &newer).unwrap();
-
-    let mut state = fresh_state();
-    exec(&mut state, "/resume");
-
-    assert_eq!(
-        state.config.current_provider, "openai",
-        "loads newer provider"
-    );
-    assert_eq!(state.config.current_model, "gpt-4o", "loads newer model");
-    assert!(
-        state
-            .session
-            .messages
-            .iter()
-            .any(|m| m.content() == "newer"),
-        "newer message loaded"
-    );
-    assert!(
-        !state
-            .session
-            .messages
-            .iter()
-            .any(|m| m.content() == "older"),
-        "older message not loaded"
-    );
-
-    // Restore prior RUNIE_MOCK state
-    match prev_mock {
-        Some(v) => std::env::set_var("RUNIE_MOCK", v),
-        None => std::env::remove_var("RUNIE_MOCK"),
-    }
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
 }
 
 

@@ -3,8 +3,8 @@ use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::exec;
 use crate::tests::fresh_state;
-use crate::tests::support::ENV_LOCK;
 use crate::Event;
+use runie_testing::with_env;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut AppState, cmd: &str) {
@@ -162,34 +162,34 @@ fn import_loads_file() {
 #[test]
 fn roundtrip_save_load_preserves_display_name() {
     use crate::session::replay::{load_session, save_snapshot};
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    let dir = std::env::temp_dir().join(format!("runie_roundtrip_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    // Create the directory before using it (SessionStore doesn't auto-create)
-    std::fs::create_dir_all(&dir).unwrap();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", &dir) };
+    with_env(|env| {
+        let dir = std::env::temp_dir().join(format!("runie_roundtrip_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        // Create the directory before using it (SessionStore doesn't auto-create)
+        std::fs::create_dir_all(&dir).unwrap();
+        env.set("RUNIE_SESSIONS_DIR", dir.to_str().unwrap_or("/tmp"));
 
-    let session = crate::session::Session {
-        name: "roundtrip".to_string(),
-        display_name: Some("Display Name".to_string()),
-        created_at: 1.0,
-        updated_at: 2.0,
-        messages: vec![],
-        provider: "mock".into(),
-        model: "echo".into(),
-        theme_name: "default".into(),
-        thinking_level: crate::model::ThinkingLevel::Off,
-        read_only: false,
-        session_tree: None,
-    };
-    save_snapshot("roundtrip", &session).unwrap();
+        let session = crate::session::Session {
+            name: "roundtrip".to_string(),
+            display_name: Some("Display Name".to_string()),
+            created_at: 1.0,
+            updated_at: 2.0,
+            messages: vec![],
+            provider: "mock".into(),
+            model: "echo".into(),
+            theme_name: "default".into(),
+            thinking_level: crate::model::ThinkingLevel::Off,
+            read_only: false,
+            session_tree: None,
+        };
+        save_snapshot("roundtrip", &session).unwrap();
 
-    let mut state = crate::model::AppState::default();
-    load_session("roundtrip", &mut state).unwrap();
-    assert_eq!(
-        state.session.session_display_name,
-        Some("Display Name".to_string())
-    );
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
-    let _ = std::fs::remove_dir_all(&dir);
+        let mut state = crate::model::AppState::default();
+        load_session("roundtrip", &mut state).unwrap();
+        assert_eq!(
+            state.session.session_display_name,
+            Some("Display Name".to_string())
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    });
 }

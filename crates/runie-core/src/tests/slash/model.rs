@@ -1,9 +1,10 @@
 #![allow(clippy::all)]
-use super::{exec, tmp_store, ENV_LOCK};
+use super::{exec, tmp_store};
 use crate::commands::DialogKind;
 use crate::model::Role;
 use crate::tests::{fresh_state, seed_providers, type_str};
 use crate::Event;
+use runie_testing::with_env;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -192,59 +193,55 @@ fn provider_dialog_shows_edit_models_action() {
 
 #[test]
 fn save_creates_session_file() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    with_env(|env| {
+        let store = tmp_store();
+        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
 
-    let store = tmp_store();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
+        let mut state = fresh_state();
+        type_str(&mut state, "hello world");
+        state.update(Event::submit());
+        exec(&mut state, "/save mysession"); // Opens form with pre-filled name
+        state.update(Event::submit()); // Submits the form
 
-    let mut state = fresh_state();
-    type_str(&mut state, "hello world");
-    state.update(Event::submit());
-    exec(&mut state, "/save mysession"); // Opens form with pre-filled name
-    state.update(Event::submit()); // Submits the form
+        let jsonl_path =
+            crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
+        assert!(jsonl_path.exists(), "session file created");
 
-    let jsonl_path =
-        crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
-    assert!(jsonl_path.exists(), "session file created");
-
-    let sys_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::System)
-        .collect();
-    let last = sys_msgs.last().expect("system msg");
-    assert!(last.content().contains("saved"), "confirmation shown");
-
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
+        let sys_msgs: Vec<_> = state
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.role == Role::System)
+            .collect();
+        let last = sys_msgs.last().expect("system msg");
+        assert!(last.content().contains("saved"), "confirmation shown");
+    });
 }
 
 #[test]
 fn save_preserves_messages_provider_model() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    with_env(|env| {
+        let store = tmp_store();
+        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
 
-    let store = tmp_store();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
+        let mut state = fresh_state();
+        state.config.current_provider = "openai".to_string();
+        state.config.current_model = "gpt-4o".to_string();
+        type_str(&mut state, "test message");
+        state.update(Event::submit());
+        exec(&mut state, "/save preserved"); // Opens form with pre-filled name
+        state.update(Event::submit()); // Submits the form
 
-    let mut state = fresh_state();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
-    type_str(&mut state, "test message");
-    state.update(Event::submit());
-    exec(&mut state, "/save preserved"); // Opens form with pre-filled name
-    state.update(Event::submit()); // Submits the form
-
-    let jsonl_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
-    let events = jsonl_store.load_events("preserved").unwrap();
-    let mut loaded = crate::model::AppState::default();
-    crate::session::replay::replay_events(&mut loaded, &events);
-    assert_eq!(loaded.config.current_provider, "openai");
-    assert_eq!(loaded.config.current_model, "gpt-4o");
-    assert_eq!(loaded.session.messages.len(), 1);
-    assert_eq!(loaded.session.messages[0].content(), "test message");
-    assert_eq!(loaded.session.messages[0].role, Role::User);
-
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
+        let jsonl_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
+        let events = jsonl_store.load_events("preserved").unwrap();
+        let mut loaded = crate::model::AppState::default();
+        crate::session::replay::replay_events(&mut loaded, &events);
+        assert_eq!(loaded.config.current_provider, "openai");
+        assert_eq!(loaded.config.current_model, "gpt-4o");
+        assert_eq!(loaded.session.messages.len(), 1);
+        assert_eq!(loaded.session.messages[0].content(), "test message");
+        assert_eq!(loaded.session.messages[0].role, Role::User);
+    });
 }
 
 #[test]

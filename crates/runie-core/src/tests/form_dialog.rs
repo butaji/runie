@@ -5,8 +5,8 @@ use crate::Event;
 
 use crate::commands::{DialogKind, DialogState};
 use crate::message::Part;
-use crate::tests::support::ENV_LOCK;
 use crate::tests::{fresh_state, tmp_store, type_str};
+use runie_testing::with_env;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -96,45 +96,45 @@ fn form_save_accepts_input() {
 
 #[test]
 fn form_submit_executes_command() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    let store = tmp_store();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
-    let mut state = fresh_state();
-    palette_select(&mut state, "save");
-    // Verify form is open
-    assert!(
-        state.open_dialog.is_some(),
-        "form should be open after submit"
-    );
-    // Check the dialog type - take dialog to inspect, then restore
-    let form_is_form = if let Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
-    {
-        if let Some(panel) = stack.current() {
-            panel.is_form()
+    with_env(|env| {
+        let store = tmp_store();
+        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        let mut state = fresh_state();
+        palette_select(&mut state, "save");
+        // Verify form is open
+        assert!(
+            state.open_dialog.is_some(),
+            "form should be open after submit"
+        );
+        // Check the dialog type - take dialog to inspect, then restore
+        let form_is_form = if let Some(crate::commands::DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: stack,
+        }) = &state.open_dialog
+        {
+            if let Some(panel) = stack.current() {
+                panel.is_form()
+            } else {
+                false
+            }
         } else {
             false
-        }
-    } else {
-        false
-    };
-    assert!(form_is_form, "panel should be a form");
-    // Type a name - these go to input, but should be routed to form
-    state.update(crate::Event::Input('m'));
-    state.update(crate::Event::Input('y'));
-    state.update(crate::Event::Input('s'));
-    state.update(crate::Event::Input('e'));
-    state.update(crate::Event::Input('s'));
-    // Submit the form
-    state.update(Event::submit());
-    // Should close dialog and execute save
-    assert!(state.open_dialog.is_none(), "dialog should close");
-    let jsonl_path =
-        crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
-    assert!(jsonl_path.exists(), "session should be saved");
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
+        };
+        assert!(form_is_form, "panel should be a form");
+        // Type a name - these go to input, but should be routed to form
+        state.update(crate::Event::Input('m'));
+        state.update(crate::Event::Input('y'));
+        state.update(crate::Event::Input('s'));
+        state.update(crate::Event::Input('e'));
+        state.update(crate::Event::Input('s'));
+        // Submit the form
+        state.update(Event::submit());
+        // Should close dialog and execute save
+        assert!(state.open_dialog.is_none(), "dialog should close");
+        let jsonl_path =
+            crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("myses");
+        assert!(jsonl_path.exists(), "session should be saved");
+    });
 }
 
 #[test]

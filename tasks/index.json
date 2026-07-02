@@ -63,7 +63,7 @@
     {
       "file": "add-in-memory-backends-for-unit-tests.md",
       "title": "Add in-memory backends for unit tests",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "add-json-file-logging-for-tui.md",

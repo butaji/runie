@@ -1,6 +1,7 @@
 use crate::model::{AppState, Role};
 use crate::tests::{exec, fresh_state};
 use crate::Event;
+use runie_testing::with_env;
 
 fn dispatch(state: &mut AppState, events: &[Event]) {
     for e in events {
@@ -231,38 +232,35 @@ fn test_sessions_command_shows_system_message() {
 
 #[test]
 fn test_save_and_load_session() {
-    use crate::tests::support::ENV_LOCK;
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    with_env(|env| {
+        let tmp = std::env::temp_dir().join("runie_session_cmd_test");
+        let _ = std::fs::remove_dir_all(&tmp);
+        env.set("RUNIE_SESSIONS_DIR", tmp.to_str().unwrap_or("/tmp"));
 
-    let tmp = std::env::temp_dir().join("runie_session_cmd_test");
-    let _ = std::fs::remove_dir_all(&tmp);
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", &tmp) };
+        let mut state = fresh_state();
+        state.update(crate::Event::Input('h'));
+        state.update(crate::Event::Input('i'));
+        state.update(Event::submit());
+        exec(&mut state, "/save test_session"); // Opens form with pre-filled name
+        state.update(Event::CommandFormSubmit); // Submits the form
+        assert!(state
+            .session
+            .messages
+            .iter()
+            .any(|m| m.role == Role::System && m.content().contains("saved")));
 
-    let mut state = fresh_state();
-    state.update(crate::Event::Input('h'));
-    state.update(crate::Event::Input('i'));
-    state.update(Event::submit());
-    exec(&mut state, "/save test_session"); // Opens form with pre-filled name
-    state.update(Event::CommandFormSubmit); // Submits the form
-    assert!(state
-        .session
-        .messages
-        .iter()
-        .any(|m| m.role == Role::System && m.content().contains("saved")));
-
-    let mut state2 = fresh_state();
-    exec(&mut state2, "/load test_session"); // Opens form with pre-filled name
-    state2.update(Event::CommandFormSubmit); // Submits the form
-    assert!(state2
-        .session
-        .messages
-        .iter()
-        .any(|m| m.role == Role::System && m.content().contains("loaded")));
-    assert!(state2
-        .session
-        .messages
-        .iter()
-        .any(|m| m.role == Role::User && m.content() == "hi"));
-
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
+        let mut state2 = fresh_state();
+        exec(&mut state2, "/load test_session"); // Opens form with pre-filled name
+        state2.update(Event::CommandFormSubmit); // Submits the form
+        assert!(state2
+            .session
+            .messages
+            .iter()
+            .any(|m| m.role == Role::System && m.content().contains("loaded")));
+        assert!(state2
+            .session
+            .messages
+            .iter()
+            .any(|m| m.role == Role::User && m.content() == "hi"));
+    });
 }

@@ -1,11 +1,12 @@
 #![allow(clippy::all)]
 //! Theme slash command tests
 
-use super::slash::{exec, tmp_store, ENV_LOCK};
+use super::slash::{exec, tmp_store};
 use crate::commands::DialogKind;
 use crate::model::Role;
 use crate::tests::fresh_state;
 use crate::Event;
+use runie_testing::with_env;
 
 /// Open palette and select a command by name
 fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
@@ -93,23 +94,21 @@ fn theme_no_args_opens_selector_dialog() {
 
 #[test]
 fn theme_persisted_in_session() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    with_env(|env| {
+        let store = tmp_store();
+        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
 
-    let store = tmp_store();
-    unsafe { std::env::set_var("RUNIE_SESSIONS_DIR", store.dir().to_path_buf()) };
+        let mut state = fresh_state();
+        state.config.theme_name = "nord".to_string();
+        exec(&mut state, "/save themed"); // Opens form with pre-filled name
+        state.update(Event::submit()); // Submits the form
 
-    let mut state = fresh_state();
-    state.config.theme_name = "nord".to_string();
-    exec(&mut state, "/save themed"); // Opens form with pre-filled name
-    state.update(Event::submit()); // Submits the form
-
-    let jsonl_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
-    let events = jsonl_store.load_events("themed").unwrap();
-    let mut loaded = crate::model::AppState::default();
-    crate::session::replay::replay_events(&mut loaded, &events);
-    assert_eq!(loaded.config.theme_name, "nord");
-
-    unsafe { std::env::remove_var("RUNIE_SESSIONS_DIR") };
+        let jsonl_store = crate::session::store::SessionStore::new(store.dir().to_path_buf());
+        let events = jsonl_store.load_events("themed").unwrap();
+        let mut loaded = crate::model::AppState::default();
+        crate::session::replay::replay_events(&mut loaded, &events);
+        assert_eq!(loaded.config.theme_name, "nord");
+    });
 }
 
 #[test]
