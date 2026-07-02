@@ -1532,7 +1532,7 @@
   {
     "file": "route-permission-clearance-through-permissionactor.md",
     "title": "Route permission clearance through `PermissionActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-provider-confignone-through-credentialresolver.md",
