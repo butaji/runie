@@ -2059,6 +2059,96 @@
       "file": "write-runie-vs-grok-build-findings-report.md",
       "title": "Write Runie vs Grok Build findings report",
       "status": "todo"
+    },
+    {
+      "file": "restructure-runieerror-with-typed-variants.md",
+      "title": "Restructure `RunieError` with typed variants",
+      "status": "todo"
+    },
+    {
+      "file": "stop-flattening-provider-errors-into-strings.md",
+      "title": "Stop flattening provider errors into strings",
+      "status": "todo"
+    },
+    {
+      "file": "replace-production-expect-panics-with-result-propagation.md",
+      "title": "Replace production `expect`/`unwrap` panics with `Result` propagation",
+      "status": "todo"
+    },
+    {
+      "file": "fix-env-lock-isolation-and-remove-duplicates.md",
+      "title": "Fix env lock isolation and remove duplicates",
+      "status": "todo"
+    },
+    {
+      "file": "gate-test-support-with-cfg-test.md",
+      "title": "Gate test support with `#[cfg(test)]`",
+      "status": "todo"
+    },
+    {
+      "file": "add-in-memory-backends-for-unit-tests.md",
+      "title": "Add in-memory backends for unit tests",
+      "status": "todo"
+    },
+    {
+      "file": "eliminate-real-sleeps-in-provider-tests.md",
+      "title": "Eliminate real sleeps in provider tests",
+      "status": "todo"
+    },
+    {
+      "file": "add-parameterized-tests-with-test-case.md",
+      "title": "Add parameterized tests with `test-case`",
+      "status": "todo"
+    },
+    {
+      "file": "add-tracing-to-runie-provider.md",
+      "title": "Add tracing to `runie-provider`",
+      "status": "todo"
+    },
+    {
+      "file": "instrument-actor-handlers-with-tracing.md",
+      "title": "Instrument actor handlers with tracing",
+      "status": "todo"
+    },
+    {
+      "file": "replace-eprintln-println-with-tracing.md",
+      "title": "Replace `eprintln!`/`println!` with tracing",
+      "status": "todo"
+    },
+    {
+      "file": "add-json-file-logging-for-tui.md",
+      "title": "Add JSON file logging for TUI",
+      "status": "todo"
+    },
+    {
+      "file": "feature-gate-heavy-runie-core-subsystems.md",
+      "title": "Feature-gate heavy `runie-core` subsystems",
+      "status": "todo"
+    },
+    {
+      "file": "remove-unused-workspace-dependencies.md",
+      "title": "Remove unused workspace dependencies",
+      "status": "todo"
+    },
+    {
+      "file": "fix-unix-only-dependencies-in-runie-core.md",
+      "title": "Fix Unix-only dependencies in `runie-core`",
+      "status": "todo"
+    },
+    {
+      "file": "break-runie-testing-dev-dependency-cycle.md",
+      "title": "Break `runie-testing` dev-dependency cycle",
+      "status": "todo"
+    },
+    {
+      "file": "add-features-to-runie-provider.md",
+      "title": "Add features to `runie-provider`",
+      "status": "todo"
+    },
+    {
+      "file": "execute-third-pass-architecture-review-roadmap.md",
+      "title": "Execute third-pass architecture review roadmap",
+      "status": "todo"
     }
   ]
 }
