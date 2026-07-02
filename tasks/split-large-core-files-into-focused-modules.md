@@ -2,7 +2,7 @@
 
 ## Status
 
-`partial` — `proto/message/mod.rs` (845→342 lines), `provider/provider_trait.rs` (663→347 lines), and `event/durable.rs` (772→387 lines) split into focused modules + tests. Remaining: `actors/fff_indexer/mod.rs` (669), `actors/permission/ractor_permission.rs` (685), `actors/io/ractor_io.rs` (633).
+`partial` — `proto/message/mod.rs`, `provider/provider_trait.rs`, `event/durable.rs`, and `actors/io/ractor_io.rs` split into focused modules + tests. Remaining: `actors/fff_indexer/mod.rs` (669), `actors/permission/ractor_permission.rs` (685).
 
 ## Description
 
@@ -14,6 +14,8 @@ The following production files exceed the advertised 500-line limit and mix resp
   - Split into: `provider_trait.rs` (main) + `tests.rs` (tests)
 - ~~`crates/runie-core/src/event/durable.rs`~~ — **DONE** (772→387 lines)
   - Split into: `durable.rs` (main) + `tests.rs` (tests)
+- ~~`crates/runie-core/src/actors/io/ractor_io.rs`~~ — **DONE** (633→346 lines)
+  - Split into: `ractor_io.rs` (main) + `tests.rs` (tests)
 - `crates/runie-core/src/actors/fff_indexer/mod.rs` — 669 lines
 - `crates/runie-core/src/actors/fff_indexer/mod.rs` — 669 lines
 - `crates/runie-core/src/actors/permission/ractor_permission.rs` — 685 lines
@@ -39,6 +41,14 @@ Split `crates/runie-core/src/event/durable.rs` (772 lines) into 2 focused files:
 |------|-------|----------|
 | `event/durable.rs` | 387 | Main enum, conversions, implementations |
 | `event/durable/tests.rs` | 387 | Unit tests |
+
+### ractor_io.rs split
+Split `crates/runie-core/src/actors/io/ractor_io.rs` (633 lines) into 2 focused files:
+
+| File | Lines | Contains |
+|------|-------|----------|
+| `actors/io/ractor_io.rs` | 346 | Main actor, message handling, git detection |
+| `actors/io/ractor_io/tests.rs` | 289 | Unit tests |
 
 Public API preserved. All tests pass via `cargo test --workspace`.
 
