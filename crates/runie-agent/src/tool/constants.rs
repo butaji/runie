@@ -17,6 +17,3 @@ pub const SEARCH_DEFAULT_LIMIT: usize = 50;
 
 /// Default maximum matches per file for content search.
 pub const SEARCH_DEFAULT_MAX_MATCHES: usize = 10;
-
-/// Default maximum depth for find fallback traversal.
-pub const FIND_FALLBACK_MAX_DEPTH: usize = 10;

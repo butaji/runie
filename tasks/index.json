@@ -5,6 +5,11 @@
     "status": "done"
   },
   {
+    "file": "TEMPLATE.md",
+    "title": "Task Title",
+    "status": "todo"
+  },
+  {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
     "status": "done"
@@ -72,7 +77,7 @@
   {
     "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
     "title": "Add message origin metadata to fix follow-up continuity",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "add-openai-provider-fixtures.md",
@@ -132,7 +137,7 @@
   {
     "file": "adopt-snapshot-journal-jsonl-pattern.md",
     "title": "Adopt snapshot + append-only JSONL journal pattern",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
@@ -877,7 +882,7 @@
   {
     "file": "generate-tool-dispatch-from-single-registry.md",
     "title": "Generate tool dispatch from a single registry",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "graceful-leader-shutdown-with-joinset-timeout.md",
@@ -1342,7 +1347,7 @@
   {
     "file": "replace-grep-find-shellouts-with-walkdir-ignore-regex.md",
     "title": "Replace grep/find shell-outs with `walkdir`/`ignore`/`regex`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-keymap-modifier-tables-with-crokey-map.md",
@@ -1352,7 +1357,7 @@
   {
     "file": "replace-layered-config-merge-with-figment.md",
     "title": "Replace custom layered config merge with Figment",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
@@ -1577,7 +1582,7 @@
   {
     "file": "simplify-permission-policy-chain-to-ruleset-match.md",
     "title": "Simplify permission policy chain to a ruleset match",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "simplify-slash-command-dsl.md",
@@ -1682,7 +1687,7 @@
   {
     "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
     "title": "Track orphan spawned tasks in provider, IO, and session actors",
-    "status": "wontfix"
+    "status": "partial"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -1842,7 +1847,7 @@
   {
     "file": "use-atomic-writes-for-config-and-session-files.md",
     "title": "Use atomic writes for config and session files",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-bytesize-humantime-for-tool-formatting.md",
@@ -1972,7 +1977,7 @@
   {
     "file": "use-textwrap-for-blockquote-word-wrap.md",
     "title": "Use `textwrap` for blockquote word wrap",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
