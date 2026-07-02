@@ -21,7 +21,6 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod approval_registry;
 pub mod default_tool_approve;
 pub mod file_access_ask;
 pub mod gate;
@@ -29,7 +28,6 @@ pub mod git_tracked_write;
 pub mod rules;
 mod sink;
 
-pub use approval_registry::ApprovalRegistry;
 pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;
 pub use gate::PermissionGate;

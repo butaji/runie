@@ -5,12 +5,14 @@
 
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
+use std::collections::HashMap;
+
 use super::super::config::RactorConfigHandle;
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::PermissionRequestState;
-use crate::permissions::{ApprovalRegistry, PermissionAction, PermissionSet};
+use crate::permissions::{PermissionAction, PermissionSet};
 
 use super::messages::PermissionMsg;
 
@@ -124,10 +126,11 @@ impl RactorPermissionHandle {
 
 /// Ractor State for PermissionActor — holds all mutable state.
 /// EventBus is Clone and publish takes &self, no Mutex needed.
-/// ApprovalRegistry is kept wrapped in Mutex because it's process-wide.
+/// Pending approval channels are stored directly in state since ractor
+/// processes messages sequentially (no concurrent access to state).
 pub struct PermissionActorState {
-    /// The authoritative approval registry (process-wide).
-    pub registry: ApprovalRegistry,
+    /// Pending approval reply channels keyed by request id.
+    pending: HashMap<String, tokio::sync::oneshot::Sender<PermissionAction>>,
     /// Current permission request state.
     pub current_request: Option<PermissionRequestState>,
     /// Bridge to the event bus for publishing facts.
@@ -169,8 +172,8 @@ impl RactorPermissionActor {
         input: serde_json::Value,
         reply: tokio::sync::oneshot::Sender<PermissionAction>,
     ) {
-        // Store the reply channel in ApprovalRegistry so ResolvePermission can send.
-        state.registry.register(&request_id, reply);
+        // Store the reply channel so ResolvePermission can send the user's choice.
+        state.pending.insert(request_id.clone(), reply);
 
         state.current_request = Some(PermissionRequestState {
             request_id: request_id.clone(),
@@ -190,7 +193,10 @@ impl RactorPermissionActor {
         request_id: String,
         action: PermissionAction,
     ) {
-        state.registry.resolve(&request_id, action);
+        // Look up and resolve the pending reply channel.
+        if let Some(reply) = state.pending.remove(&request_id) {
+            let _ = reply.send(action);
+        }
         if state
             .current_request
             .as_ref()
@@ -203,7 +209,10 @@ impl RactorPermissionActor {
     }
 
     fn handle_cancel_permission(state: &mut PermissionActorState, request_id: String) {
-        state.registry.resolve(&request_id, PermissionAction::Deny);
+        // Cancel by sending Deny on the pending channel.
+        if let Some(reply) = state.pending.remove(&request_id) {
+            let _ = reply.send(PermissionAction::Deny);
+        }
         if state
             .current_request
             .as_ref()
@@ -300,7 +309,7 @@ impl Actor for RactorPermissionActor {
             }
         };
         Ok(PermissionActorState {
-            registry: ApprovalRegistry::new(),
+            pending: HashMap::new(),
             current_request: None,
             bus: args.bus,
             rules,
@@ -601,5 +610,73 @@ mod tests {
         let rules_after = handle.get_rules().await;
         let bash_after = rules_after.effective_action("bash", None, None);
         assert_eq!(bash_after, PermissionAction::Allow, "bash should be Allow after /trust bash always");
+    }
+
+    // ── Layer 1: Pending map direct access tests ─────────────────────────────
+    // These tests verify the inlined pending map behavior that replaced ApprovalRegistry.
+
+    /// Test that canceling a pending permission request sends Deny.
+    #[tokio::test]
+    async fn cancel_permission_sends_deny() {
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell, _join) =
+            RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+
+        let rx = handle
+            .ask_permission("req-cancel-1".into(), "bash".into(), serde_json::json!({}))
+            .await;
+
+        // Cancel the request
+        handle.cancel_permission("req-cancel-1".into()).await;
+
+        // Verify the receiver gets Deny
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), rx).await;
+        assert!(result.is_ok(), "Should receive a result");
+        assert_eq!(result.unwrap(), Ok(PermissionAction::Deny));
+    }
+
+    /// Test that resolving an unknown request does nothing (no panic).
+    #[tokio::test]
+    async fn resolve_unknown_request_is_noop() {
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell, _join) =
+            RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+
+        // Try to resolve a non-existent request - should not panic
+        handle
+            .resolve_permission("nonexistent".into(), PermissionAction::Allow)
+            .await;
+
+        // Verify no request is pending
+        assert!(handle.current_request_id().await.is_none());
+    }
+
+    /// Test that multiple concurrent permission requests are independent.
+    #[tokio::test]
+    async fn multiple_concurrent_requests_are_independent() {
+        let bus = EventBus::<Event>::new(16);
+        let (handle, _cell, _join) =
+            RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+
+        // Ask for two permissions concurrently
+        let rx_a = handle
+            .ask_permission("req-multi-a".into(), "read_file".into(), serde_json::json!({}))
+            .await;
+        let rx_b = handle
+            .ask_permission("req-multi-b".into(), "bash".into(), serde_json::json!({}))
+            .await;
+
+        // Resolve the first one with Allow
+        handle
+            .resolve_permission("req-multi-a".into(), PermissionAction::Allow)
+            .await;
+
+        // Verify only the first one is resolved
+        let result_a = tokio::time::timeout(std::time::Duration::from_millis(100), rx_a).await;
+        let result_b = tokio::time::timeout(std::time::Duration::from_millis(100), rx_b).await;
+
+        assert!(result_a.is_ok(), "First request should be resolved");
+        assert_eq!(result_a.unwrap(), Ok(PermissionAction::Allow));
+        assert!(result_b.is_err(), "Second request should still be pending");
     }
 }

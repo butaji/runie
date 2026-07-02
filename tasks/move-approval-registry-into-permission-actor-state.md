@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -14,10 +14,10 @@ Move the pending-reply map into `PermissionActorState` and delete the `ApprovalR
 
 ## Acceptance Criteria
 
-- [ ] Add pending map field to `PermissionActorState`.
-- [ ] Remove `ApprovalRegistry` module.
-- [ ] Update `RactorPermissionActor` handlers to use state.
-- [ ] All permission/approval tests pass.
+- [x] Add pending map field to `PermissionActorState`.
+- [x] Remove `ApprovalRegistry` module.
+- [x] Update `RactorPermissionActor` handlers to use state.
+- [x] All permission/approval tests pass.
 
 ## Design Impact
 
