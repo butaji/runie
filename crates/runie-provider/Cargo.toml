@@ -36,5 +36,5 @@ reqwest-eventsource.workspace = true
 test-case.workspace = true
 insta.workspace = true
 tempfile.workspace = true
-runie-testing.workspace = true
+runie-testing = { workspace = true, features = ["provider"] }
 wiremock.workspace = true

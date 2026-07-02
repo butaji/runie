@@ -43,7 +43,7 @@ pub use model_client::{ModelClient, TurnSession};
 pub use openai::OpenAiProvider;
 
 #[cfg(feature = "mock")]
-pub use mock::{MockProvider, MockStreamingProvider};
+pub use mock::{MockProvider, MockProviderBuilder, MockStreamingProvider};
 pub use runie_core::proto::ProviderConfig;
 use std::sync::Arc;
 

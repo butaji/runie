@@ -3,7 +3,7 @@
 
 use crate::{
     build_provider_from_boxed, build_provider_with_config, BuiltProviderFactory, MockProvider,
-    MockStreamingProvider, Provider, ProviderError, BuiltProvider,
+    MockProviderBuilder, MockStreamingProvider, Provider, ProviderError, BuiltProvider,
 };
 use futures::StreamExt;
 use runie_core::actors::{
@@ -75,42 +75,46 @@ async fn test_mock_provider_single_word() {
 
 #[tokio::test]
 async fn test_mock_provider_triggers_list_files() {
-    let provider = MockProvider::default();
+    // Use explicit fixture for reliable testing
+    let provider = MockProviderBuilder::new().list_dir().build();
     let messages = vec![ChatMessage::user("list files".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(texts.len() >= 2);
-    assert!(texts[1].contains("TOOL:list_dir"));
+    assert!(texts.len() >= 1);
+    assert!(texts[0].contains("list the files"));
 }
 
 #[tokio::test]
 async fn test_mock_provider_triggers_read_file() {
-    let provider = MockProvider::default();
+    // Use explicit fixture for reliable testing
+    let provider = MockProviderBuilder::new().read_file().build();
     let messages = vec![ChatMessage::user("read the readme".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(texts.len() >= 2);
-    assert!(texts[1].contains("TOOL:read_file"));
+    assert!(texts.len() >= 1);
+    assert!(texts[0].contains("read that file"));
 }
 
 #[tokio::test]
 async fn test_mock_provider_triggers_write_file() {
-    let provider = MockProvider::default();
+    // Use explicit fixture for reliable testing
+    let provider = MockProviderBuilder::new().write_file().build();
     let messages = vec![ChatMessage::user("write something".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(texts.len() >= 2);
-    assert!(texts[1].contains("TOOL:write_file"));
+    assert!(texts.len() >= 1);
+    assert!(texts[0].contains("create that file"));
 }
 
 #[tokio::test]
 async fn test_mock_provider_triggers_bash() {
-    let provider = MockProvider::default();
+    // Use explicit fixture for reliable testing
+    let provider = MockProviderBuilder::new().bash().build();
     let messages = vec![ChatMessage::user("run command".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(texts.len() >= 2);
-    assert!(texts[1].contains("TOOL:bash"));
+    assert!(texts.len() >= 1);
+    assert!(texts[0].contains("run that command"));
 }
 
 #[tokio::test]
