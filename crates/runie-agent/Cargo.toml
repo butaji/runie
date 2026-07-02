@@ -33,6 +33,6 @@ ignore.workspace = true
 regex.workspace = true
 
 [dev-dependencies]
-runie-testing.workspace = true
+runie-testing = { workspace = true, features = ["provider", "agent"] }
 toml.workspace = true
 tempfile.workspace = true

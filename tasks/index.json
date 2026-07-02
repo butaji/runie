@@ -198,7 +198,7 @@
     {
       "file": "break-runie-testing-dev-dependency-cycle.md",
       "title": "Break `runie-testing` dev-dependency cycle",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "buffer-tcp-lines-in-leader-server.md",

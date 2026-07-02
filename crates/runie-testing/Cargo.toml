@@ -7,10 +7,13 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+provider = ["runie-provider"]
+agent = ["runie-agent"]
+
 [dependencies]
 runie-core.workspace = true
-runie-agent.workspace = true
-runie-provider.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
@@ -23,5 +26,7 @@ parking_lot.workspace = true
 uuid.workspace = true
 include_dir.workspace = true
 regex.workspace = true
+runie-provider = { workspace = true, optional = true }
+runie-agent = { workspace = true, optional = true }
 
 [dev-dependencies]
