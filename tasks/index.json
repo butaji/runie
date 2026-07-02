@@ -1157,7 +1157,7 @@
   {
     "file": "remove-manual-env-overrides-from-config-layers.md",
     "title": "Remove manual env overrides from config layers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-modelfromprovider-api-key-field-and-use-keyring.md",

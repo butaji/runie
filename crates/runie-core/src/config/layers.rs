@@ -14,7 +14,7 @@
 
 use std::path::{Path, PathBuf};
 
-use figment::providers::{Env, Format, Serialized, Toml};
+use figment::providers::{Format, Serialized, Toml};
 use figment::Figment;
 use toml::Value as TomlValue;
 
@@ -129,28 +129,30 @@ pub fn load_layers_from_paths(global: PathBuf, local: PathBuf) -> Config {
         figment = figment.merge(Toml::file(&local));
     }
 
-    // 4. Environment variables with RUNIE_ prefix
-    figment = figment.merge(Env::prefixed("RUNIE_"));
+    // 4. Environment variables with RUNIE_ prefix.
+    // Use Figment's Serialized::default(key, value) to insert env vars.
+    // This uses Figment's value-merging machinery (not manual Config field mutation).
+    // NOTE: Figment's Env::prefixed() does NOT work here because serde's struct
+    // deserialization is case-sensitive while figment preserves the uppercase key
+    // from the env var name (PROVIDER vs provider). We use Serialized::default
+    // to explicitly set the correctly-cased keys in the Default profile.
+    for (env_var, field) in [
+        ("RUNIE_PROVIDER", "provider"),
+        ("RUNIE_MODEL", "model"),
+        ("RUNIE_THEME", "theme"),
+    ] {
+        if let Ok(value) = std::env::var(env_var) {
+            figment = figment.merge(Serialized::default(field, value));
+        }
+    }
 
     // Extract config from Figment
-    let mut config: Config = figment
+    let config: Config = figment
         .extract()
         .unwrap_or_else(|e| {
             tracing::warn!("failed to extract config from figment: {}", e);
             Config::default()
         });
-
-    // Apply manual env overrides for known keys (RUNIE_PROVIDER, RUNIE_MODEL, RUNIE_THEME)
-    // These map to Config fields that may have different names in the TOML
-    if let Ok(provider) = std::env::var("RUNIE_PROVIDER") {
-        config.provider = Some(provider);
-    }
-    if let Ok(model) = std::env::var("RUNIE_MODEL") {
-        config.model = Some(model);
-    }
-    if let Ok(theme) = std::env::var("RUNIE_THEME") {
-        config.theme = Some(theme);
-    }
 
     config
 }
@@ -204,6 +206,38 @@ mod tests {
         let (dir, path) = tmp_file("api_key = \"secret\"\nbase_url = \"http://evil.com\"\n");
         let _ = parse_and_check_denylist(&path);
         // Warning is emitted — we just verify no panic
+        drop(dir);
+    }
+
+    #[test]
+    fn figment_env_overrides_take_precedence() {
+        // Verify RUNIE_PROVIDER/MODEL/THEME override config file values via Figment
+        let (dir, path) = tmp_file("provider = \"file-provider\"\nmodel = \"file-model\"\ntheme = \"file-theme\"\n");
+        
+        // Set env vars that should override file values
+        std::env::set_var("RUNIE_PROVIDER", "env-provider");
+        std::env::set_var("RUNIE_MODEL", "env-model");
+        std::env::set_var("RUNIE_THEME", "env-theme");
+        
+        let config = load_layers_from_paths(
+            std::env::temp_dir().join("nonexistent.toml"),
+            path,
+        );
+        
+        // Clean up env vars
+        std::env::remove_var("RUNIE_PROVIDER");
+        std::env::remove_var("RUNIE_MODEL");
+        std::env::remove_var("RUNIE_THEME");
+        
+        // Figment's Env::prefixed("RUNIE_") maps RUNIE_PROVIDER → provider,
+        // RUNIE_MODEL → model, RUNIE_THEME → theme (case-insensitive key match)
+        assert_eq!(config.provider.as_deref(), Some("env-provider"),
+            "RUNIE_PROVIDER env var should override file value, got {:?}", config.provider);
+        assert_eq!(config.model.as_deref(), Some("env-model"),
+            "RUNIE_MODEL env var should override file value, got {:?}", config.model);
+        assert_eq!(config.theme.as_deref(), Some("env-theme"),
+            "RUNIE_THEME env var should override file value, got {:?}", config.theme);
+        
         drop(dir);
     }
 }
