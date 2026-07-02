@@ -1,6 +1,6 @@
 # Route app init loads through actors
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P1
