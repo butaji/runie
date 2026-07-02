@@ -112,7 +112,7 @@
   {
     "file": "add-structural-message-truncation-for-context-window.md",
     "title": "Add structural message truncation for context window",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md",
