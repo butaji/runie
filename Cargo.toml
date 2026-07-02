@@ -86,6 +86,7 @@ keyring = { version = "3", features = ["vendored"] }
 dotenvy = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 fs2 = "0.4"
+indexmap = { version = "2.8", features = ["serde"] }
 sha2 = "0.10"
 hex = "0.4"
 ansi_colours = "1.2"

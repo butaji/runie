@@ -65,7 +65,7 @@ impl AppState {
 
     pub fn trust_decisions(
         &self,
-    ) -> &std::collections::HashMap<camino::Utf8PathBuf, crate::trust::TrustDecision> {
+    ) -> &indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision> {
         &self.trust_decisions
     }
 
@@ -171,7 +171,7 @@ impl AppState {
 
     pub(crate) fn trust_decisions_mut(
         &mut self,
-    ) -> &mut std::collections::HashMap<camino::Utf8PathBuf, crate::trust::TrustDecision> {
+    ) -> &mut indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision> {
         &mut self.trust_decisions
     }
 

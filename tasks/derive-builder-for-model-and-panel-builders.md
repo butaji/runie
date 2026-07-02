@@ -2,20 +2,27 @@
 
 ## Status
 
-`todo`
+`partial`
 
 ## Context
 
 `ModelCapabilities`/`ModelInfo` and `Panel` builders are hand-written consuming builders (~70–270 LOC each).
+
+**Current state (2026-07-02):**
+- `ModelCapabilities` — `#[derive(Builder)]` ✓
+- `ModelInfo` — `#[derive(Builder)]` ✓
+- `Panel` — custom fluent builder methods (not `derive_builder`); the builder methods have custom normalization and UI-specific behavior that makes `derive_builder` a poor fit.
+
+The task is `partial`: model structs are done, Panel remains.
 
 ## Goal
 
 Use `derive_builder` or `typed-builder` for `ModelCapabilities`, `ModelInfo`, and `Panel` builders; keep custom helpers where the macro cannot express them.
 
 ## Acceptance Criteria
-- [ ] Add derive to model structs.
-- [ ] Add derive to panel builder.
-- [ ] Update call sites and tests.
+- [x] Add derive to model structs. ✓ (`ModelCapabilities`, `ModelInfo`)
+- [ ] Add derive to panel builder. (Panel has custom normalization in `with_title` and UI-specific behavior; `derive_builder` may not be a good fit)
+- [x] Update call sites and tests. ✓
 
 ## Design Impact
 

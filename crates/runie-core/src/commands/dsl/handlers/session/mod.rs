@@ -9,6 +9,13 @@ use crate::commands::CommandResult;
 use crate::commands::dsl::handlers::NamedHandler;
 use crate::model::AppState;
 
+// ── Form field defaults ──────────────────────────────────────────────────────
+
+/// Default token count for the `/compact` command form.
+pub const COMPACT_DEFAULT_KEEP_TOKENS: &str = "2000";
+/// Default message index for the `/fork` command form.
+pub const FORK_DEFAULT_MESSAGE_INDEX: &str = "0";
+
 /// Register all session handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
     register_session_form_handlers(registry);
@@ -47,14 +54,14 @@ fn register_session_form_handlers(
     registry.register("compact", NamedHandler::FormWithHandler {
         title: "Compact Context",
         fields: &[
-            ("Keep tokens", "2000", "keep"),
+            ("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"),
             ("Focus", "optional focus keyword", "focus"),
         ],
         handler: run::run_compact,
     });
     registry.register("fork", NamedHandler::FormWithHandler {
         title: "Fork Session",
-        fields: &[("Message index", "0", "index")],
+        fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")],
         handler: run::run_fork,
     });
     registry.register("name", NamedHandler::FormWithHandler {
@@ -302,7 +309,7 @@ mod tests {
     use super::*;
     use crate::model::AppState;
     use crate::trust::TrustDecision;
-    use std::collections::HashMap;
+    use indexmap::indexmap;
 
     #[test]
     fn project_trust_status_reads_from_trust_decisions() {
@@ -311,7 +318,7 @@ mod tests {
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
         let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
             .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
-        state.trust_decisions = HashMap::from([(cwd_utf8.clone(), TrustDecision::Trusted)]);
+        state.trust_decisions = indexmap! { cwd_utf8.clone() => TrustDecision::Trusted };
 
         let status = project_trust_status(&state);
         assert_eq!(status, "trusted");
@@ -330,7 +337,7 @@ mod tests {
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
         let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
             .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
-        state.trust_decisions = HashMap::from([(cwd_utf8, TrustDecision::Untrusted)]);
+        state.trust_decisions = indexmap! { cwd_utf8 => TrustDecision::Untrusted };
 
         let status = project_trust_status(&state);
         assert_eq!(status, "untrusted");

@@ -6,6 +6,7 @@ const SPAWNED_ACTOR_COUNT: usize = 9;
 
 use tokio::sync::{broadcast, mpsc};
 
+use crate::actors::SHUTDOWN_TIMEOUT_SECS;
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
 
@@ -148,7 +149,7 @@ impl LeaderHandle {
 
         // Await all join handles in parallel with a timeout.
         // Uses tokio::join! for concurrent await since we need all to complete.
-        let timeout_duration = std::time::Duration::from_secs(5);
+        let timeout_duration = std::time::Duration::from_secs(SHUTDOWN_TIMEOUT_SECS);
         let result = tokio::time::timeout(timeout_duration, async {
             let mut errors = Vec::new();
             for join in all_joins {

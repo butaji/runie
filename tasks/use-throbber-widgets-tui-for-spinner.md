@@ -2,20 +2,27 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
 `crates/runie-core/src/model/state/domain_ops.rs`, `labels.rs`, `runie-tui/src/status_bar.rs`, and `theme/glyph.rs` compute a hand-rolled 12-frame braille spinner from `animation_frame % 12`.
+
+## Implementation
+
+`throbber-widgets-tui` was already a dependency. `fix-throbber-inversion-and-use-throbber-widgets-tui.md` completed the integration:
+- `status_bar.rs` now uses `Throbber::render_stateful_widget` directly
+- Hand-rolled `BRAILLE_SIX` array and `throbber_current_symbol` function removed
+- Inversion removed from throbber initialization and `spinner_frame()`
 
 ## Goal
 
 Replace with `throbber-widgets-tui` (`Throbber`/`ThrobberState`).
 
 ## Acceptance Criteria
-- [ ] Add dependency.
-- [ ] Replace custom frame math.
-- [ ] Preserve visual output; update spinner tests.
+- [x] Add dependency. ✓ (`throbber-widgets-tui` was already a dependency)
+- [x] Replace custom frame math. ✓ (Throbber widget used directly)
+- [x] Preserve visual output; update spinner tests. ✓ (709 tests pass)
 
 ## Design Impact
 

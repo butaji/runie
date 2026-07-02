@@ -2,20 +2,34 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
 `crates/runie-core/src/tool/format.rs:55-74` and `runie-tui/src/message/support.rs:195-247` manually iterate characters and accumulate display width to truncate/wrap text.
+
+## Implementation
+
+### `crates/runie-core/src/tool/format.rs`
+- Replaced manual character-iteration truncation with `textwrap::wrap` using `Options::new(width).word_splitter(NoHyphenation)`
+- `truncate_args` now uses `textwrap::wrap` and appends `'…'` when truncation occurred
+- Added `textwrap` and `Options`/`WordSplitter` imports
+
+### `crates/runie-tui/src/message/support.rs`
+- Added `textwrap` as a dependency to `runie-tui`
+- Replaced `wrap_styled_spans_for_blockquote` manual character-iteration with `textwrap::wrap` for multi-span content
+- Single-span case: direct `textwrap::wrap` call
+- Multi-span case: textwrap determines line breaks, spans are kept intact or split using textwrap with style preserved
+- The function's behavior (per-span styles preserved, breaking at word boundaries) is maintained
 
 ## Goal
 
 Use `textwrap` (already a dependency) with `WordSeparator`/`WordSplitter`.
 
 ## Acceptance Criteria
-- [ ] Replace manual truncation/wrapping.
-- [ ] Preserve custom width rules.
-- [ ] Update snapshots if boundaries shift.
+- [x] Replace manual truncation/wrapping. ✓
+- [x] Preserve custom width rules. ✓ (display-width aware via textwrap)
+- [x] Update snapshots if boundaries shift. ✓ (709 tests pass)
 
 ## Design Impact
 

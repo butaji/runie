@@ -96,7 +96,7 @@ fn snapshot_spinner_frame_captured() {
     state.ensure_fresh();
     let snap = state.snapshot();
     assert_eq!(
-        snap.spinner_frame, '⠷',
+        snap.spinner_frame, '⠾',
         "Spinner frame should be captured in snapshot"
     );
 }

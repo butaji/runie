@@ -12,10 +12,10 @@ use tokio::sync::mpsc;
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
-    InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor,
-    RactorFffIndexerHandle, RactorInputHandle, RactorIoActor, RactorIoHandle,
-    RactorPermissionActor, RactorPermissionHandle, RactorProviderActor, RactorProviderHandle,
-    RactorSessionActor, RactorSessionHandle,
+    InputActor, LEADER_CMD_CHANNEL_CAPACITY, RactorConfigActor, RactorConfigHandle,
+    RactorFffIndexerActor, RactorFffIndexerHandle, RactorInputHandle, RactorIoActor,
+    RactorIoHandle, RactorPermissionActor, RactorPermissionHandle, RactorProviderActor,
+    RactorProviderHandle, RactorSessionActor, RactorSessionHandle,
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
@@ -119,7 +119,7 @@ impl Leader {
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
         bus: EventBus<CoreEvent>,
     ) -> anyhow::Result<LeaderHandle> {
-        let (cmd_tx, cmd_rx) = mpsc::channel(32);
+        let (cmd_tx, cmd_rx) = mpsc::channel(LEADER_CMD_CHANNEL_CAPACITY);
 
         let handles =
             Self::spawn_actors(&bus, &self.config, provider_factory, agent_factory).await?;

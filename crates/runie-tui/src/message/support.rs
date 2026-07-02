@@ -193,48 +193,56 @@ pub fn render_blockquote_from_spans(text: &str, base_color: Color) -> Vec<Line<'
 }
 
 /// Wrap styled spans for blockquote rendering.
+///
+/// Uses `textwrap` for display-width-aware wrapping. Each original span is kept
+/// intact where possible; long spans are broken character-by-character (preserving
+/// style). The result is a list of rows, each row being a list of spans that fit
+/// within `max_width`.
 #[allow(clippy::assigning_clones, clippy::redundant_clone)]
 fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec<MdSpan>> {
-    let mut result = Vec::new();
-    let mut current_row = Vec::new();
-    let mut current_width = 0u16;
+    let max_w = max_width as usize;
+
+    // For simple single-span content, use textwrap directly.
+    if spans.len() == 1 {
+        let span = &spans[0];
+        if display_width::width(&span.content) <= max_width {
+            return vec![vec![span.clone()]];
+        }
+        // Break long single span using textwrap, keeping the style.
+        let wrapped = textwrap::wrap(&span.content, max_w);
+        return wrapped
+            .into_iter()
+            .map(|line| vec![MdSpan { content: line.into_owned(), style: span.style }])
+            .collect();
+    }
+
+    // Multi-span case: use textwrap to determine line breaks, then map spans.
+    // Strategy: wrap the concatenated content, then reconstruct spans per line.
+    // For simplicity, we keep spans intact where they fit; break only at span boundaries
+    // (which may cause slight overfilling but preserves per-span styles).
+    let mut result: Vec<Vec<MdSpan>> = Vec::new();
+    let mut current_row: Vec<MdSpan> = Vec::new();
+    let mut current_width = 0usize;
 
     for span in spans.iter().cloned() {
-        let span_width = display_width::width(&span.content);
-        if current_width + span_width > max_width && !current_row.is_empty() {
+        let span_width = display_width::width(&span.content) as usize;
+
+        // If adding this span exceeds max_width, start a new row.
+        if current_width + span_width > max_w && !current_row.is_empty() {
             result.push(std::mem::take(&mut current_row));
             current_width = 0;
         }
-        if span_width > max_width {
-            // Break long span
-            let mut partial = String::new();
-            let mut partial_width = 0u16;
-            for c in span.content.chars() {
-                let char_width = display_width::width(&c.to_string());
-                if partial_width + char_width > max_width && !partial.is_empty() {
-                    if !current_row.is_empty() {
-                        result.push(std::mem::take(&mut current_row));
-                    }
-                    current_row.push(MdSpan {
-                        content: partial.clone(),
-                        style: span.style,
-                    });
-                    current_width = display_width::width(&partial);
-                    partial.clear();
-                    partial_width = 0;
-                }
-                partial.push(c);
-                partial_width += char_width;
-            }
-            if !partial.is_empty() {
-                if current_width + partial_width > max_width && !current_row.is_empty() {
+
+        if span_width > max_w {
+            // Long span: break using textwrap, each fragment keeps the same style.
+            let wrapped = textwrap::wrap(&span.content, max_w);
+            for line in wrapped {
+                let line_owned = line.into_owned();
+                if !current_row.is_empty() {
                     result.push(std::mem::take(&mut current_row));
                 }
-                current_row.push(MdSpan {
-                    content: partial,
-                    style: span.style,
-                });
-                current_width += partial_width;
+                current_row.push(MdSpan { content: line_owned, style: span.style });
+                current_width = display_width::width(&current_row[0].content) as usize;
             }
         } else {
             current_row.push(span);
@@ -243,6 +251,11 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
     }
     if !current_row.is_empty() {
         result.push(current_row);
+    }
+
+    // Edge case: empty result (shouldn't happen but handle gracefully).
+    if result.is_empty() {
+        result.push(Vec::new());
     }
     result
 }

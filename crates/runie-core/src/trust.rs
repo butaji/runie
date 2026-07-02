@@ -6,8 +6,8 @@
 //! to read-only mode.
 
 use camino::Utf8PathBuf;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrustDecision {
@@ -19,7 +19,7 @@ pub enum TrustDecision {
 /// Persisted to `~/.runie/trust.json`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TrustManager {
-    decisions: HashMap<Utf8PathBuf, TrustDecision>,
+    decisions: IndexMap<Utf8PathBuf, TrustDecision>,
 }
 
 impl TrustManager {
@@ -63,7 +63,7 @@ impl TrustManager {
     }
 
     /// Return a copy of all stored decisions.
-    pub fn decisions(&self) -> std::collections::HashMap<Utf8PathBuf, TrustDecision> {
+    pub fn decisions(&self) -> IndexMap<Utf8PathBuf, TrustDecision> {
         self.decisions.clone()
     }
 

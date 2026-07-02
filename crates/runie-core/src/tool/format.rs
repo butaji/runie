@@ -3,6 +3,7 @@
 use super::{ToolOutput, ToolStatus};
 use bytesize::ByteSize;
 use humantime::format_duration as humantime_fmt;
+use textwrap::{Options, WordSplitter};
 
 // ─── Byte Formatting Thresholds ─────────────────────────────────────────────────
 
@@ -69,24 +70,21 @@ pub fn tool_error(
 const ARGS_TRUNCATE_WIDTH: usize = 40;
 
 /// Truncate args to a maximum display width, appending '…' if truncated.
+/// Uses `textwrap` for display-width-aware truncation.
 pub(crate) fn truncate_args(args: &str) -> String {
-    let display_width = crate::display_width::width(args) as usize;
-    if display_width <= ARGS_TRUNCATE_WIDTH {
+    if (crate::display_width::width(args) as usize) <= ARGS_TRUNCATE_WIDTH {
         return args.to_owned();
     }
-
-    let mut result = String::new();
-    let mut current_width = 0usize;
-    for c in args.chars() {
-        let char_width = crate::display_width::width(&c.to_string()) as usize;
-        if current_width + char_width > ARGS_TRUNCATE_WIDTH - 1 {
-            result.push('…');
-            break;
-        }
-        result.push(c);
-        current_width += char_width;
+    // textwrap::wrap returns lines; take the first line and append '…'.
+    let opt = Options::new(ARGS_TRUNCATE_WIDTH)
+        .word_splitter(WordSplitter::NoHyphenation);
+    let lines = textwrap::wrap(args, opt);
+    let first = lines.first().map(|s| s.as_ref()).unwrap_or(args);
+    if first.len() < args.len() {
+        format!("{first}…")
+    } else {
+        first.to_string()
     }
-    result
 }
 
 /// Format a tool label with args, truncated if needed.

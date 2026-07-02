@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 
+use crate::actors::CONFIG_WATCHER_DEBOUNCE_MS;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
@@ -394,7 +395,7 @@ pub(super) fn spawn_config_watcher(myself: ActorRef<ConfigMsg>, path: PathBuf) {
 
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel();
-        let debouncer = match new_debouncer(std::time::Duration::from_millis(300), tx) {
+        let debouncer = match new_debouncer(std::time::Duration::from_millis(CONFIG_WATCHER_DEBOUNCE_MS), tx) {
             Ok(d) => d,
             Err(e) => {
                 tracing::error!("config watcher: create debouncer failed: {e:?}");

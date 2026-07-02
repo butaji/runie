@@ -61,7 +61,7 @@ impl AppState {
     /// Set all trust decisions at once (used when loading from persistence).
     pub(crate) fn set_trust_decisions(
         &mut self,
-        decisions: std::collections::HashMap<camino::Utf8PathBuf, crate::trust::TrustDecision>,
+        decisions: indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision>,
     ) {
         *self.trust_decisions_mut() = decisions;
     }
@@ -132,13 +132,12 @@ impl AppState {
 
     /// Braille spinner frame (6-frame cycle) using throbber BRAILLE_SIX symbols
     /// from `crate::labels::BRAILLE_SIX`.
-    /// We index it backwards so that frame 0 → braille[5] = '⠋'.
+    /// Uses forward indexing matching the Throbber widget.
     pub fn spinner_frame(&self) -> char {
         use crate::labels::BRAILLE_SIX;
         const FRAMES: u32 = 6;
         let m = self.view().animation_frame % FRAMES;
-        // Backwards index: frame 0 → braille[5], frame 5 → braille[0], frame 6 → braille[5]
-        BRAILLE_SIX[(FRAMES - 1 - m) as usize]
+        BRAILLE_SIX[m as usize]
     }
 
     // ── Session reset ──────────────────────────────────────────────────────

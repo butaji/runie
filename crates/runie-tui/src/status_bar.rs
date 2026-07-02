@@ -2,11 +2,10 @@
 
 use ratatui::{
     layout::{Constraint, Rect},
-    text::Span,
     widgets::Paragraph,
     Frame,
 };
-use throbber_widgets_tui::ThrobberState;
+use throbber_widgets_tui::{symbols::throbber::BRAILLE_SIX, Throbber, ThrobberState};
 
 use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};
@@ -28,45 +27,44 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect, throbber: &mut Throbbe
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
 }
 
-/// Render the left side of the status bar. The spinner char is overlaid as a
-/// throbber widget at the start of the area, using BRAILLE_SIX symbols from
-/// throbber-widgets-tui.
+/// Render the left side of the status bar. The spinner uses the Throbber
+/// widget directly from throbber-widgets-tui, replacing the hand-rolled
+/// symbol-overlay approach.
 fn render_left_with_throbber(
     f: &mut Frame,
     snap: &Snapshot,
     area: Rect,
     throbber: &mut ThrobberState,
 ) {
-    // Build text parts (without the spinner char — the throbber overlays it).
-    // The leading space is where the spinner will be overlaid.
+    // Build text parts.
     let text_parts = build_left_text_parts(snap);
-    let left_text = format!(" {} · ", text_parts.join(" · "));
 
-    // Render the paragraph first (spinner position will be overwritten).
+    // Split area: [spinner][status_text]
+    // Spinner takes 2 cells (symbol + trailing space), rest is text.
+    let spinner_width = 2;
+    let (spinner_area, text_area) = {
+        let splits = ratatui::layout::Layout::default()
+            .direction(ratatui::layout::Direction::Horizontal)
+            .constraints([
+                Constraint::Length(spinner_width),
+                Constraint::Min(0),
+            ])
+            .split(area);
+        (splits[0], splits[1])
+    };
+
+    // Render the throbber widget directly (no manual symbol extraction).
+    let throbber_widget = Throbber::default()
+        .throbber_set(BRAILLE_SIX)
+        .style(style_status_idle());
+    f.render_stateful_widget(throbber_widget, spinner_area, throbber);
+
+    // Render status text after the spinner.
+    let left_text = format!(" · {}", text_parts.join(" · "));
     f.render_widget(
         Paragraph::new(left_text).style(style_status_idle()),
-        area,
+        text_area,
     );
-
-    // Overlay the throbber spinner at the start of the left area.
-    // We use BRAILLE_SIX from throbber-widgets-tui to replace the hand-rolled
-    // 12-frame braille spinner math.
-    // Build a span with just the current spinner symbol (width 1).
-    let spinner = throbber_current_symbol(throbber);
-    let spinner_span = Span::raw(spinner).style(style_status_idle());
-    // Place spinner at position 0, overwriting the leading space in " Working... · "
-    let _ = f.buffer_mut().set_span(area.x, area.y, &spinner_span, 1);
-
-    // Advance throbber state for the next frame.
-    throbber.calc_next();
-}
-
-/// Get the current spinner symbol from throbber state.
-/// Matches the BRAILLE_SIX symbols used in domain_ops.rs.
-fn throbber_current_symbol(throbber: &ThrobberState) -> String {
-    const BRAILLE_SIX: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
-    let idx = throbber.index().unsigned_abs() as usize % BRAILLE_SIX.len();
-    BRAILLE_SIX[idx].to_string()
 }
 
 /// Build status bar text parts without the spinner char.

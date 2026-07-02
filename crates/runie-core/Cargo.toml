@@ -64,6 +64,7 @@ hex = { workspace = true }
 dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
+indexmap.workspace = true
 arboard.workspace = true
 which.workspace = true
 ignore.workspace = true

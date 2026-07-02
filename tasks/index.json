@@ -182,7 +182,7 @@
   {
     "file": "centralize-actor-channel-capacities-and-timeouts.md",
     "title": "Centralize actor channel capacities and timeouts",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -232,7 +232,7 @@
   {
     "file": "centralize-tui-glyphs-and-theme-constants.md",
     "title": "Centralize TUI glyphs and theme constants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-tui-popup-layout-constants.md",
@@ -517,7 +517,7 @@
   {
     "file": "derive-builder-for-model-and-panel-builders.md",
     "title": "Derive builders for model and panel builders",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "derive-chatmessage-builder-with-derive-builder.md",
@@ -777,7 +777,7 @@
   {
     "file": "fix-throbber-inversion-and-use-throbber-widgets-tui.md",
     "title": "Fix throbber inversion and use `throbber_widgets_tui`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-tui-at-file-picker-shows-no-files.md",
@@ -867,7 +867,7 @@
   {
     "file": "generate-event-taxonomy-or-delete-generated-files.md",
     "title": "Generate event taxonomy or delete generated files",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "generate-tool-dispatch-from-single-registry.md",
@@ -1207,7 +1207,7 @@
   {
     "file": "remove-timeout-polling-from-uiactor-and-actors.md",
     "title": "Remove timeout polling from `UiActor` and actors",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
@@ -1367,7 +1367,7 @@
   {
     "file": "replace-magic-numbers-in-command-form-handlers.md",
     "title": "Replace magic numbers in command form handlers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
@@ -1892,7 +1892,7 @@
   {
     "file": "use-indexmap-for-config-trust-and-subagent-maps.md",
     "title": "Use indexmap for config trust and subagent maps",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
@@ -1972,12 +1972,12 @@
   {
     "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
     "title": "Use textwrap for truncate_args and blockquote wrap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-throbber-widgets-tui-for-spinner.md",
     "title": "Use throbber-widgets-tui for spinner",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-tokio-main-in-cli-instead-of-custom-block-on.md",

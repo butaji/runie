@@ -36,6 +36,7 @@ mod tests;
 // ─────────────────────────────────────────────────────────────────────────────
 
 use camino::Utf8PathBuf;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, IntoStaticStr, VariantNames};
 
@@ -278,7 +279,7 @@ pub enum Event {
     #[serde(skip)]
     ViewChanged { state: Box<crate::model::ViewState> },
     CompletionChanged { state: Box<crate::model::CompletionState> },
-    TrustLoaded { decisions: std::collections::HashMap<Utf8PathBuf, crate::trust::TrustDecision> },
+    TrustLoaded { decisions: IndexMap<Utf8PathBuf, crate::trust::TrustDecision> },
     TrustChanged { path: Utf8PathBuf, decision: crate::trust::TrustDecision },
     TrustSet { path: Utf8PathBuf, decision: crate::trust::TrustDecision },
     ReadOnlyChanged { enabled: bool },

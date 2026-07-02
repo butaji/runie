@@ -4,7 +4,11 @@
 //! receiving typed messages. This module contains the actors that live inside
 //! a running session.
 
+pub mod constants;
 pub mod ractor_adapter;
+pub use constants::{
+    CONFIG_WATCHER_DEBOUNCE_MS, LEADER_CMD_CHANNEL_CAPACITY, SHUTDOWN_TIMEOUT_SECS,
+};
 pub use ractor_adapter::spawn_ractor;
 
 pub mod config;

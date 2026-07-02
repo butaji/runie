@@ -88,19 +88,12 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
 pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
     state.ensure_fresh();
     let snap = state.snapshot();
-    // Initialize throbber state from the view animation frame so the rendered
-    // spinner matches snap.spinner_frame (tests that check specific frames need this).
-    // spinner_frame() uses backward indexing: frame 0 → braille[5], frame 5 → braille[0]
-    // So for animation_frame=3, spinner_frame() returns braille[2] = '⠟'
-    // We need to initialize throbber to index 2 so it renders '⠟'
+    // Initialize throbber state from the view animation frame.
+    // ThrobberState uses i8 index that wraps within the symbol set size.
     let mut throbber = ThrobberState::default();
     let raw_idx = (state.view().animation_frame % 6) as i8;
-    // Backward index: braille[(6 - 1 - raw_idx) as usize]
-    // throbber index maps to braille[throbber.index as usize]
-    // So throbber.index = (6 - 1 - raw_idx) = 5 - raw_idx
-    let throbber_idx = (5 - raw_idx + 6) % 6; // Ensure positive
-    if throbber_idx != 0 {
-        throbber.calc_step(throbber_idx as i8);
+    if raw_idx != 0 {
+        throbber.calc_step(raw_idx);
     }
     draw_snapshot(f, &snap, &mut throbber);
 }

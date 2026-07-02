@@ -2045,6 +2045,8 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -4016,6 +4018,7 @@ dependencies = [
  "humantime",
  "ignore",
  "include_dir",
+ "indexmap",
  "indextree",
  "jsonschema",
  "keyring",
@@ -4130,6 +4133,7 @@ dependencies = [
  "supports-color",
  "supports-hyperlinks",
  "syntect",
+ "textwrap 0.16.2",
  "throbber-widgets-tui",
  "tokio",
  "tokio-util",
