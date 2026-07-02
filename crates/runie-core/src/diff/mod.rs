@@ -177,17 +177,20 @@ fn diffy_to_canonical(p: &Patch<str>) -> Diff {
                     diffy::Line::Delete(s) => {
                         let n = ol;
                         ol += 1;
-                        lines.push(DiffLine::Removed((*s).to_string(), Some(n)));
+                        let content = s.trim_end_matches('\n');
+                        lines.push(DiffLine::Removed(content.to_string(), Some(n)));
                     }
                     diffy::Line::Insert(s) => {
                         let n = nl;
                         nl += 1;
-                        lines.push(DiffLine::Added((*s).to_string(), Some(n)));
+                        let content = s.trim_end_matches('\n');
+                        lines.push(DiffLine::Added(content.to_string(), Some(n)));
                     }
                     diffy::Line::Context(s) => {
                         ol += 1;
                         nl += 1;
-                        lines.push(DiffLine::Context((*s).to_string()));
+                        let content = s.trim_end_matches('\n');
+                        lines.push(DiffLine::Context(content.to_string()));
                     }
                 }
             }

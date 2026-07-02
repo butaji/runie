@@ -1152,7 +1152,7 @@
   {
     "file": "remove-legacy-diff-fallback-parser.md",
     "title": "Remove legacy diff fallback parser",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-manual-env-overrides-from-config-layers.md",
@@ -1967,7 +1967,7 @@
   {
     "file": "use-textwrap-for-blockquote-word-wrap.md",
     "title": "Use `textwrap` for blockquote word wrap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",

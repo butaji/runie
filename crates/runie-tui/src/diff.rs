@@ -103,7 +103,8 @@ mod tests {
 
     #[test]
     fn parses_simple_diff() {
-        let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,3 +1,4 @@\n line1\n-old\n+new\n line3";
+        // Note: trailing newline required for diffy to parse correctly
+        let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,3 +1,3 @@\n line1\n-old\n+new\n line3\n";
         let parsed = Diff::parse(diff);
 
         assert_eq!(parsed.old_path, "a/test.txt");
@@ -129,7 +130,8 @@ mod tests {
 
     #[test]
     fn parses_hunk_header() {
-        let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,5 +1,7 @@ context";
+        // Single context line, so @@ -1,1 +1,1 @@
+        let diff = "--- a/test.txt\n+++ b/test.txt\n@@ -1,1 +1,1 @@ context\n";
         let parsed = Diff::parse(diff);
         assert!(!parsed.hunks.is_empty());
         assert!(parsed.hunks.iter().any(|h| !h.header.is_empty()));
