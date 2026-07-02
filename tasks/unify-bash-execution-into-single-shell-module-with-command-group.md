@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Context
 
@@ -19,11 +19,11 @@ Create a single `runie_core::shell` module using `tokio::process::Command` + `co
 
 ## Acceptance Criteria
 
-- [ ] One `run_bash` async function in `runie-core` used by agent tool, IO actor, and update tools.
-- [ ] Use `command-group` (or `nix` process groups) to kill the whole tree on timeout.
-- [ ] Preserve `ToolStatus::TimedOut` semantics.
-- [ ] `shell-words` parses commands; direct execution by default, `sh -c` only when explicitly requested.
-- [ ] All existing bash tool tests pass.
+- [x] One `run_bash` async function in `runie-core` used by agent tool, IO actor, and update tools.
+- [x] Use `command-group` (or `nix` process groups) to kill the whole tree on timeout.
+- [x] Preserve `ToolStatus::TimedOut` semantics.
+- [x] `shell-words` parses commands; direct execution by default, `sh -c` only when explicitly requested.
+- [x] All existing bash tool tests pass.
 
 ## Design Impact
 
@@ -40,6 +40,6 @@ No change to TUI element design or composition. Only bash tool execution behavio
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
 ## Completion Validation
 
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+- [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [x] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
