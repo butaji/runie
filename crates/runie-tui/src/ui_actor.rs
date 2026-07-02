@@ -46,9 +46,11 @@ pub struct UiActor {
     /// Pending submit content captured before sending InputMsg::Submit.
     /// Dispatched after InputChanged is applied so state is clean.
     pending_submit: Option<String>,
-    /// Guards against duplicate agent runs when TurnStarted arrives multiple times.
-    /// Set true when agent_handle.run() is called; cleared when Done is received.
-    pub(crate) agent_running: bool,
+    /// Tracks whether a turn was active (agent was spawned) in the previous turn cycle.
+    /// Set when an agent is spawned; cleared when `TurnCompleted`/`Abort` resets the state.
+    /// Used by the guard to block a `TurnStarted` that arrives after `Done` clears
+    /// `turn_active` but before the guard has settled for the new cycle.
+    turn_was_active: bool,
     /// True when the pending turn was started from a delivered (queued) message,
     /// not a fresh user submit. When true, UiActor skips calling submit_user_message
     /// for TurnStarted because the content was already delivered via FollowUpDelivered.
@@ -124,7 +126,7 @@ impl UiActor {
             prev_input,
             prev_cursor_pos,
             pending_submit: None,
-            agent_running: false,
+            turn_was_active: false,
             pending_queued_turn: false,
             turn_handle: Some(turn_handle),
             input_handle: Some(input_handle),
@@ -163,7 +165,7 @@ impl UiActor {
             prev_input,
             prev_cursor_pos,
             pending_submit: None,
-            agent_running: false,
+            turn_was_active: false,
             pending_queued_turn: false,
             turn_handle,
             input_handle,
@@ -287,12 +289,13 @@ impl UiActor {
         quit
     }
 
-    /// Handle a single event without publishing. Returns `true` when the actor
-    /// should shut down.
-    /// Returns whether the agent is currently running.
+    /// Return whether an agent turn is in flight.
+    /// True when a turn is currently active (`turn_active`) or was active in the
+    /// previous cycle (`turn_was_active`). After `Done` clears `turn_active`, the
+    /// guard keeps `turn_was_active = true` until `TurnCompleted`/`Abort`.
     #[cfg(test)]
     pub(crate) fn agent_running(&self) -> bool {
-        self.agent_running
+        self.state.agent_state().turn_active || self.turn_was_active
     }
 
     /// Handle a single event without publishing. Returns `true` when the actor
@@ -302,8 +305,13 @@ impl UiActor {
         if matches!(&evt, Event::Quit | Event::ForceQuit) {
             return true;
         }
+        // Capture whether the turn was already active BEFORE apply_event runs.
+        // apply_event is called inside handle_input_event, so this must be at the
+        // very top to capture the pre-event state.
+        let prev_turn_active = self.state.agent_state().turn_active;
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
-
+        // Track whether `Done` was just applied so `agent_running()` stays true until
+        // `TurnCompleted`/`Abort`. Done clears `turn_active` but must not clear the guard.
         self.handle_input_event(&evt).await;
 
         if !matches!(&evt, Event::InputChanged { .. }) {
@@ -325,12 +333,14 @@ impl UiActor {
             self.pending_queued_turn = true;
         }
 
+
         if let Event::TurnStarted { request_id, content, .. } = &evt {
             // Guard: prevent duplicate agent spawns if TurnStarted arrives multiple times.
-            // The agent runs as a background task; set the flag before spawning so
-            // any subsequent TurnStarted in the same event-loop iteration is also blocked.
-            if !self.agent_running {
-                self.agent_running = true;
+            // prev_turn_active was captured at the top of this function, BEFORE
+            // apply_event (inside handle_input_event) updated the projection.
+            // turn_was_active is set when an agent was spawned in the previous turn cycle.
+            if !prev_turn_active && !self.turn_was_active {
+                self.turn_was_active = true;
                 let provider = self.state.config().current_provider.clone();
                 let model = self.state.config().current_model.clone();
                 let cmd = AgentCommand {
@@ -368,6 +378,7 @@ impl UiActor {
             let is_abort = matches!(&evt, Event::Abort);
             self.clear_turn_state(is_abort).await;
         }
+
 
         false
     }
@@ -611,7 +622,10 @@ impl UiActor {
     /// For Abort: clears the queue so a new session starts clean.
     /// For TurnCompleted: delivers queued messages and starts the next turn.
     async fn clear_turn_state(&mut self, is_abort: bool) {
-        self.agent_running = false;
+        // Derive agent_running from turn_active (updated by apply_event for
+        // TurnCompleted/TurnErrored, or cleared directly for Abort).
+        self.state.agent_state_mut().turn_active = false;
+        self.turn_was_active = false;
         self.pending_queued_turn = false;
         if let Some(ref turn_handle) = self.turn_handle {
             if is_abort {
