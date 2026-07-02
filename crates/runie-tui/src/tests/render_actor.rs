@@ -108,6 +108,9 @@ fn snapshot_scrollbar_metrics_match_state() {
         state.update(Event::Response {
             id: format!("m{}", i),
             content: format!("line {}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -125,6 +128,9 @@ fn render_actor_does_not_need_mutable_state() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     let snap = state.snapshot();
@@ -156,10 +162,16 @@ fn ui_actor_snapshot_after_events() {
     state.update(Event::Response {
         id: "msg.1".to_string(),
         content: "Hello!".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Response {
         id: "msg.2".to_string(),
         content: "How can I help?".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
 
     // Feed tool call events
@@ -170,6 +182,7 @@ fn ui_actor_snapshot_after_events() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 1.5,
         output: "done".to_string(),
     });

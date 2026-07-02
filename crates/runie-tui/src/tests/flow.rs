@@ -37,6 +37,9 @@ fn test_agent_response_creates_messages() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.session.messages[0].role, Role::Thought);
@@ -56,6 +59,9 @@ fn test_agent_done_clears_streaming() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hi".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Done {
         id: "req.0".to_string(),
@@ -79,6 +85,9 @@ fn test_sequential_fifo_a_then_b() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Done {
         id: "req.0".to_string(),
@@ -92,6 +101,9 @@ fn test_sequential_fifo_a_then_b() {
     state.update(Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     let thoughts: Vec<_> = state
         .session
@@ -154,6 +166,7 @@ fn test_list_files_message_content() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 1.0,
         output: String::new(),
     });
@@ -166,6 +179,9 @@ fn test_list_files_message_content() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "\nsrc/main.rs".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
 
     let assistant = state

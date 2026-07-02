@@ -64,6 +64,9 @@ fn two_messages_have_spacer_between_and_after() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "B".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();

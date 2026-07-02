@@ -54,6 +54,7 @@ fn test_formatted_labels_short_names() {
             },
             Event::ToolEnd {
                 id: "".to_string(),
+                input: None,
                 duration_secs: 0.3,
                 output: String::new(),
             },
@@ -92,6 +93,7 @@ fn full_tool_flow_events() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: String::new(),
         },
@@ -100,6 +102,9 @@ fn full_tool_flow_events() -> Vec<Event> {
         Event::Response {
             id: "req.0".into(),
             content: "Here are the files:".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::TurnComplete {
             id: "req.0".into(),

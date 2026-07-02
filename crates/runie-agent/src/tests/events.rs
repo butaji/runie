@@ -22,7 +22,7 @@ timestamp: 0.0,
 provider: String::new(),
     };
     match evt {
-        Event::Response { id, content } => {
+        Event::Response { id, content, .. } => {
             assert_eq!(id, "req.0");
             assert_eq!(content, "hello");
         }
@@ -63,6 +63,7 @@ input: None,
             id: _,
             duration_secs,
             output,
+            ..
         } => {
             assert!((duration_secs - 1.5).abs() < 0.001);
             assert_eq!(output, "result");

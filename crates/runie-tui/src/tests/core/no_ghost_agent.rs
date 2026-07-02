@@ -29,6 +29,9 @@ fn assistant_with_tool_marker_not_rendered() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "TOOL:list_dir.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -44,6 +47,9 @@ fn assistant_with_mixed_text_and_tool_not_rendered() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -59,6 +65,9 @@ fn assistant_with_structured_tool_not_rendered() {
         content:
             r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#
                 .into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -76,6 +85,9 @@ fn assistant_pure_text_renders_normally() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello world".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -96,6 +108,9 @@ fn no_agent_during_thinking_phase() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Let me think...".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -113,6 +128,9 @@ fn no_agent_during_thinking_even_with_tool() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -132,6 +150,9 @@ fn thought_renders_after_thought_done() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
@@ -158,6 +179,9 @@ fn post_tool_assistant_renders() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
     state.update(Event::ToolStart {
@@ -167,12 +191,16 @@ fn post_tool_assistant_renders() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1".into(),
     });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -222,6 +250,9 @@ fn verify_no_agent_with_tool_response(state: &mut AppState) {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list the files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     assert!(
@@ -247,6 +278,7 @@ fn verify_no_agent_during_tool(state: &mut AppState) {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a\nb\nc".into(),
     });
@@ -261,6 +293,9 @@ fn verify_final_response_shows(state: &mut AppState) {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Here are your files.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     assert_eq!(
@@ -296,6 +331,9 @@ fn streaming_chunks_no_flicker() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Let me ".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     assert!(
@@ -307,6 +345,9 @@ fn streaming_chunks_no_flicker() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "check ".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     assert!(
@@ -318,6 +359,9 @@ fn streaming_chunks_no_flicker() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "TOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     assert!(

@@ -312,6 +312,9 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "hello ".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ToolStart {
         id: "req.0".into(),
@@ -320,6 +323,7 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1".into(),
     });
@@ -327,6 +331,9 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "world".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 

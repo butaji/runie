@@ -44,6 +44,9 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -74,6 +77,9 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Response 1".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Done {
         id: "req.0".to_string(),
@@ -117,6 +123,9 @@ fn test_render_agent_response() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
@@ -169,6 +178,9 @@ fn test_agent_message_is_left_aligned_plain_text() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "left side".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     terminal.draw(|f| view(f, &mut state)).unwrap();
 
@@ -300,6 +312,9 @@ fn think_blocks_not_rendered() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "<think>hidden thought</think>visible answer".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();

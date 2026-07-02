@@ -12,6 +12,9 @@ fn latest_message_visible_at_bottom() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -30,6 +33,9 @@ fn large_thought_clipped_from_top_not_bottom() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "before".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Thinking { id: "req.0".into() });
     let mut thought = "◆ Thought 1.0s\n".to_string();
@@ -39,11 +45,17 @@ fn large_thought_clipped_from_top_not_bottom() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: thought,
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "after".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -66,6 +78,9 @@ fn scroll_up_shows_older_content() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -91,6 +106,9 @@ fn scrollbar_visible_when_content_overflows() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -117,6 +135,7 @@ fn tool_output_latest_lines_visible() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -138,6 +157,9 @@ fn new_message_pushes_old_upward() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -149,6 +171,9 @@ fn new_message_pushes_old_upward() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -166,6 +191,9 @@ fn partial_element_at_top_when_overflow() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "first".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     let mut thought = "◆ Thought 1.0s\n".to_string();
     for i in 1..=20 {
@@ -175,11 +203,17 @@ fn partial_element_at_top_when_overflow() {
     state.update(Event::Response {
         id: "req.1".into(),
         content: thought,
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.1".into() });
     state.update(Event::Response {
         id: "req.2".into(),
         content: "last".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -196,6 +230,9 @@ fn scroll_position_preserved_during_streaming() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -205,6 +242,9 @@ fn scroll_position_preserved_during_streaming() {
     state.update(Event::Response {
         id: "req.99".into(),
         content: "new".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -222,6 +262,9 @@ fn at_bottom_auto_scrolls_to_show_new() {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();

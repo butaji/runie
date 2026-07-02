@@ -15,10 +15,16 @@ fn first_turn_before_collapse() -> Vec<Event> {
         Event::Response {
             id: "req.0".into(),
             content: "I'll list files.\n".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "TOOL:list_dir:.".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ThoughtDone { id: "req.0".into() },
     ]
@@ -33,12 +39,16 @@ fn first_turn_after_collapse() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: "file1\nfile2".into(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "Done.".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::TurnComplete {
             id: "req.0".into(),
@@ -54,10 +64,16 @@ fn turn_events(id: &str, content: &str, tool: &str, output: &str) -> Vec<Event> 
         Event::Response {
             id: id.into(),
             content: content.into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::Response {
             id: id.into(),
             content: format!("TOOL:{}.", tool),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ThoughtDone { id: id.into() },
         Event::ToolStart {
@@ -67,6 +83,7 @@ fn turn_events(id: &str, content: &str, tool: &str, output: &str) -> Vec<Event> 
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: output.into(),
         },
@@ -80,10 +97,16 @@ fn multiple_tool_first_half() -> Vec<Event> {
         Event::Response {
             id: "req.0".into(),
             content: "I'll do two things.\n".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "TOOL:list_dir:.".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ThoughtDone { id: "req.0".into() },
         Event::ToolStart {
@@ -93,6 +116,7 @@ fn multiple_tool_first_half() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: "a".into(),
         },
@@ -105,10 +129,16 @@ fn multiple_tool_second_half() -> Vec<Event> {
         Event::Response {
             id: "req.0".into(),
             content: "Now grep.\n".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "TOOL:grep:fn main:.".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ThoughtDone { id: "req.0".into() },
         Event::ToolStart {
@@ -118,6 +148,7 @@ fn multiple_tool_second_half() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.3,
             output: "result".into(),
         },
@@ -131,10 +162,16 @@ fn single_thought_events(id: &str, reasoning: &str, output: &str) -> Vec<Event> 
         Event::Response {
             id: id.into(),
             content: format!("{}\n", reasoning),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::Response {
             id: id.into(),
             content: "TOOL:ls.".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ThoughtDone { id: id.into() },
         Event::ToolStart {
@@ -144,6 +181,7 @@ fn single_thought_events(id: &str, reasoning: &str, output: &str) -> Vec<Event> 
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.1,
             output: output.into(),
         },

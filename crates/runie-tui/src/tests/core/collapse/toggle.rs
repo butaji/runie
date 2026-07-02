@@ -17,10 +17,16 @@ fn thought_created_via_pipeline_is_expanded() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.\n".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -42,6 +48,7 @@ fn tool_created_via_pipeline_is_expanded() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
     });
@@ -61,6 +68,9 @@ fn toggle_expand_collapses_all_thoughts() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -85,6 +95,7 @@ fn toggle_expand_collapses_all_tools() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1".to_string(),
     });

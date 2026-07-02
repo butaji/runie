@@ -38,6 +38,7 @@ fn large_tool_output_latest_visible_at_bottom() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -60,6 +61,9 @@ fn final_response_visible_after_full_turn() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
     state.update(Event::ToolStart {
@@ -73,12 +77,16 @@ fn final_response_visible_after_full_turn() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::TurnComplete {
         id: "req.0".into(),
@@ -179,6 +187,9 @@ fn scrolled_up_does_not_auto_scroll_during_streaming() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "new streaming content".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -209,6 +220,9 @@ fn scroll_preserved_until_user_scrolls_down_during_streaming() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "first chunk".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     let first_scroll = state.view.scroll;
@@ -216,6 +230,9 @@ fn scroll_preserved_until_user_scrolls_down_during_streaming() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: " second chunk that is long enough to wrap to additional lines".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 

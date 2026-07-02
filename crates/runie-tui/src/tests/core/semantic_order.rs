@@ -13,6 +13,9 @@ fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
     state.update(Event::Response {
         id: "req.0".into(),
         content: response.into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ToolStart {
         id: "req.0".into(),
@@ -21,6 +24,7 @@ fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: tool_output.into(),
     });
@@ -103,6 +107,9 @@ fn agent_before_tool_preserved_during_turn() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ToolStart {
         id: "req.0".into(),
@@ -111,6 +118,7 @@ fn agent_before_tool_preserved_during_turn() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".into(),
     });
@@ -132,12 +140,16 @@ fn no_reorder_when_no_tools() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".into(),
     });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::TurnComplete {
         id: "req.0".into(),
@@ -163,6 +175,9 @@ fn thought_stays_before_tool_after_reorder() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
     run_tool_turn(&mut state, "Done!", "file1");

@@ -150,10 +150,16 @@ fn thought_captures_assistant_reasoning() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list the files.\n".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -186,6 +192,9 @@ fn assistant_preserved_when_no_tools() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Here is the answer.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -216,6 +225,7 @@ fn tool_stores_output() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
     });

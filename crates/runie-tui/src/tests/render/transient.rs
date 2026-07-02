@@ -129,6 +129,9 @@ fn streaming_tail_renders_when_turn_active() {
     state.update(runie_core::event::Event::Response {
         id: "test.1".into(),
         content: "Hello world".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     // Add streaming tail
     state.update(runie_core::event::Event::ResponseDelta {

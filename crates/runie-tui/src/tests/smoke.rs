@@ -105,6 +105,9 @@ fn agent_response_renders() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     let content = draw_state(&mut state);
     assert!(content.contains("→ Hello"), "Should render agent prefix");
@@ -121,6 +124,7 @@ fn tool_done_renders() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: String::new(),
     });

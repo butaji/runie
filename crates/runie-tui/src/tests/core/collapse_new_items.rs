@@ -21,6 +21,9 @@ fn global_collapse_persists_after_agent_response() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -30,6 +33,9 @@ fn global_collapse_persists_after_agent_response() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Here they are.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
@@ -57,6 +63,9 @@ fn thought_events(id: &str, content: &str) -> Vec<Event> {
         Event::Response {
             id: id.into(),
             content: content.into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ThoughtDone { id: id.into() },
     ]
@@ -101,6 +110,7 @@ fn global_collapse_persists_after_second_tool() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".to_string(),
     });
@@ -113,6 +123,7 @@ fn global_collapse_persists_after_second_tool() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.3,
         output: "b".to_string(),
     });
@@ -146,6 +157,9 @@ fn new_thought_respects_global_collapse_flag() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -158,6 +172,9 @@ fn new_thought_respects_global_collapse_flag() {
     state.update(Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.1".to_string(),
@@ -188,6 +205,7 @@ fn new_tool_respects_global_collapse_flag() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".to_string(),
     });
@@ -204,6 +222,7 @@ fn new_tool_respects_global_collapse_flag() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.3,
         output: "b".to_string(),
     });

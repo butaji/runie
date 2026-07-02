@@ -34,6 +34,7 @@ fn long_tool_output_truncated_with_ellipsis() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -61,6 +62,7 @@ fn truncated_tool_output_keeps_header() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: (0..10)
             .map(|i| format!("file{}", i))

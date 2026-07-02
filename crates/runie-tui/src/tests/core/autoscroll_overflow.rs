@@ -34,6 +34,9 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
@@ -61,6 +64,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -84,6 +88,9 @@ fn verify_final_done_visible(state: &mut AppState, height: usize) {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -210,6 +217,7 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });

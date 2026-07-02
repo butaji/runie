@@ -20,10 +20,16 @@ fn setup_thought_and_tool(state: &mut AppState) {
             Event::Response {
                 id: "req.0".into(),
                 content: "I'll list files.\n".into(),
+                role: String::new(),
+                timestamp: 0.0,
+                provider: String::new(),
             },
             Event::Response {
                 id: "req.0".into(),
                 content: "TOOL:list_dir:.".into(),
+                role: String::new(),
+                timestamp: 0.0,
+                provider: String::new(),
             },
             Event::ThoughtDone { id: "req.0".into() },
         ],
@@ -41,6 +47,7 @@ fn run_tool(state: &mut AppState, output: &str) {
             },
             Event::ToolEnd {
                 id: "".to_string(),
+                input: None,
                 duration_secs: 0.5,
                 output: output.into(),
             },
@@ -74,6 +81,9 @@ fn finish_turn(state: &mut AppState) {
             Event::Response {
                 id: "req.0".into(),
                 content: "Done.".into(),
+                role: String::new(),
+                timestamp: 0.0,
+                provider: String::new(),
             },
             Event::Done { id: "req.0".into() },
         ],
@@ -152,6 +162,9 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
             Event::Response {
                 id: "req.0".into(),
                 content: "Done.".into(),
+                role: String::new(),
+                timestamp: 0.0,
+                provider: String::new(),
             },
             Event::Done { id: "req.0".into() },
         ],
@@ -178,6 +191,9 @@ fn e2e_new_thought_respects_global_collapse() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "First.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -192,6 +208,9 @@ fn e2e_new_thought_respects_global_collapse() {
     state.update(Event::Response {
         id: "req.1".to_string(),
         content: "Second.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.1".to_string(),
@@ -241,6 +260,9 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -253,6 +275,7 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1".to_string(),
     });

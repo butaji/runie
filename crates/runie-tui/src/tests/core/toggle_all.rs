@@ -162,6 +162,9 @@ fn new_thought_respects_global_collapse_when_true() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -192,6 +195,9 @@ fn new_thought_respects_global_expand_when_false() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -221,6 +227,7 @@ fn new_tool_respects_global_collapse_when_true() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".to_string(),
     });
@@ -249,6 +256,7 @@ fn new_tool_respects_global_expand_when_false() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".to_string(),
     });

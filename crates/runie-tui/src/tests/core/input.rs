@@ -132,6 +132,9 @@ fn message_change_bumps_cache_gen() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     assert!(
         state.cache_generation() > gen_before,

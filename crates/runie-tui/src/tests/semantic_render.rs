@@ -18,6 +18,9 @@ fn agent_response_visible_after_large_tool() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ToolStart {
         id: "req.0".into(),
@@ -30,6 +33,7 @@ fn agent_response_visible_after_large_tool() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -57,6 +61,9 @@ fn agent_at_bottom_tool_files_above() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Here are the files.".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ToolStart {
         id: "req.0".into(),
@@ -69,6 +76,7 @@ fn agent_at_bottom_tool_files_above() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -103,6 +111,9 @@ fn turn_complete_always_last_visible() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ToolStart {
         id: "req.0".into(),
@@ -111,6 +122,7 @@ fn turn_complete_always_last_visible() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a\nb\nc".into(),
     });

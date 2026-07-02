@@ -162,6 +162,7 @@ fn submit_then_large_response_stays_at_bottom() {
         .join("\n");
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output,
     });
@@ -196,6 +197,9 @@ fn streaming_large_content_scroll_zero_shows_latest() {
         state.update(Event::Response {
             id: "req.0".into(),
             content: format!("line{}\n", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -209,6 +213,9 @@ fn streaming_large_content_scroll_zero_shows_latest() {
     state.update(Event::Response {
         id: "req.0".into(),
         content,
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 

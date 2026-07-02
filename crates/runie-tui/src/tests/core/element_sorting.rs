@@ -51,6 +51,9 @@ fn response_after_tool_events() -> Vec<Event> {
         Event::Response {
             id: "req.0".into(),
             content: "Let me ".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::ToolStart {
             id: "req.0".into(),
@@ -59,12 +62,16 @@ fn response_after_tool_events() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: "file.txt".into(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "check files.".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::TurnComplete {
             id: "req.0".into(),
@@ -108,16 +115,25 @@ fn multiple_response_chunks_preserve_creation_order() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     // Second chunk updates same assistant (bumps timestamp)
     state.update(Event::Response {
         id: "req.0".into(),
         content: "world".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     // Third chunk
     state.update(Event::Response {
         id: "req.0".into(),
         content: "!".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::TurnComplete {
         id: "req.0".into(),
@@ -149,16 +165,23 @@ fn thought_before_agent_events() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: "a".into(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "Result".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::Response {
             id: "req.0".into(),
             content: " done".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::TurnComplete {
             id: "req.0".into(),
@@ -207,12 +230,16 @@ fn turn_complete_last_during_turn_despite_updates() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "a".into(),
     });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::TurnComplete {
         id: "req.0".into(),
@@ -222,6 +249,9 @@ fn turn_complete_last_during_turn_despite_updates() {
     state.update(Event::Response {
         id: "req.0".into(),
         content: "".into(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -248,12 +278,16 @@ fn turn_then_user_events() -> Vec<Event> {
         },
         Event::ToolEnd {
             id: "".to_string(),
+            input: None,
             duration_secs: 0.5,
             output: "a".into(),
         },
         Event::Response {
             id: "req.0".into(),
             content: "T1".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         },
         Event::TurnComplete {
             id: "req.0".into(),

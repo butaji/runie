@@ -11,6 +11,9 @@ fn add_messages(state: &mut AppState, count: usize) {
         state.update(Event::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
         });
     }
     state.ensure_fresh();
@@ -42,6 +45,9 @@ fn latest_agent_response_visible_when_at_bottom() {
     state.update(Event::Response {
         id: "req.99".to_string(),
         content: "Latest response".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -64,10 +70,16 @@ fn latest_thought_visible_when_at_bottom() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.\n".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -94,6 +106,7 @@ fn latest_tool_visible_when_at_bottom() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1\nfile2\nfile3".to_string(),
     });
@@ -113,10 +126,13 @@ fn sticky_bottom_clips_top_not_bottom() {
     state.update(Event::Thinking {
         id: "req.99".to_string(),
     });
-    state.update(Event::Response { id: "req.99".to_string(), content: "Reasoning line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\n".to_string() });
+    state.update(Event::Response { id: "req.99".to_string(), content: "Reasoning line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\n".to_string(), role: String::new(), timestamp: 0.0, provider: String::new() });
     state.update(Event::Response {
         id: "req.99".to_string(),
         content: "TOOL:list_dir:.".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.99".to_string(),
@@ -141,6 +157,9 @@ fn user_scrolled_up_does_not_see_new_content() {
     state.update(Event::Response {
         id: "req.99".to_string(),
         content: "Hidden response".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
 
@@ -180,6 +199,9 @@ fn mixed_content_latest_visible() {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "◆ Thought 1.0s\nReasoning line 1\nReasoning line 2".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
@@ -191,12 +213,16 @@ fn mixed_content_latest_visible() {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
     });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Done!".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.ensure_fresh();
     state.view.scroll = 0;

@@ -141,6 +141,7 @@ pub fn simulate_list_files_flow(state: &mut AppState) {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 1.0,
         output: String::new(),
     });
@@ -153,6 +154,9 @@ pub fn simulate_list_files_flow(state: &mut AppState) {
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "src/main.rs\nlib.rs".to_string(),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
     state.update(Event::TurnComplete {
         id: "req.0".to_string(),
@@ -179,6 +183,7 @@ pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     });
     state.update(Event::ToolEnd {
         id: "".to_string(),
+        input: None,
         duration_secs: 0.5,
         output: String::new(),
     });
@@ -187,5 +192,8 @@ pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.update(Event::Response {
         id,
         content: format!("Files for turn {}\n", i),
+        role: String::new(),
+        timestamp: 0.0,
+        provider: String::new(),
     });
 }
