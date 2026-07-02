@@ -190,6 +190,11 @@
     "status": "done"
   },
   {
+    "file": "audit-mock-provider-delay-constants.md",
+    "title": "Audit mock provider delay constants",
+    "status": "todo"
+  },
+  {
     "file": "audit-tasks-for-events-based-ssot-actor-compliance.md",
     "title": "Audit tasks for events-based SSOT actor compliance",
     "status": "done"
@@ -228,6 +233,11 @@
     "file": "centralize-actor-channel-capacities-and-timeouts.md",
     "title": "Centralize actor channel capacities and timeouts",
     "status": "done"
+  },
+  {
+    "file": "centralize-agent-approval-timeout-and-max-tool-rounds.md",
+    "title": "Centralize agent approval timeout and max tool rounds",
+    "status": "todo"
   },
   {
     "file": "centralize-built-in-tool-names.md",
@@ -685,6 +695,11 @@
     "status": "done"
   },
   {
+    "file": "execute-second-pass-magic-numbers-cleanup.md",
+    "title": "Execute second-pass magic numbers cleanup",
+    "status": "todo"
+  },
+  {
     "file": "execute-third-pass-architecture-review-roadmap.md",
     "title": "Execute third-pass architecture review roadmap",
     "status": "done"
@@ -1112,6 +1127,16 @@
   {
     "file": "move-tunable-values-from-constants-to-config.md",
     "title": "Move tunable values from constants to config",
+    "status": "todo"
+  },
+  {
+    "file": "name-keyring-token-preview-and-build-lint-lookback.md",
+    "title": "Name keyring token preview and build lint lookback",
+    "status": "todo"
+  },
+  {
+    "file": "name-tui-and-cli-channel-capacities.md",
+    "title": "Name TUI and CLI channel capacities",
     "status": "todo"
   },
   {
@@ -1975,6 +2000,11 @@
     "status": "done"
   },
   {
+    "file": "update-build-rs-comment-on-magic-number-guardrail.md",
+    "title": "Update build.rs comment on magic-number guardrail",
+    "status": "todo"
+  },
+  {
     "file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md",
     "title": "Update `ProviderProtocol` doc to reflect `wontfix` decision",
     "status": "done"
@@ -2052,7 +2082,7 @@
   {
     "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
     "title": "Use MCP tool annotations instead of custom permission constants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-notify-directly-in-config-actor.md",
@@ -2207,36 +2237,6 @@
   {
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
-    "status": "todo"
-  },
-  {
-    "file": "centralize-agent-approval-timeout-and-max-tool-rounds.md",
-    "title": "Centralize agent approval timeout and max tool rounds",
-    "status": "todo"
-  },
-  {
-    "file": "name-keyring-token-preview-and-build-lint-lookback.md",
-    "title": "Name keyring token preview and build lint lookback",
-    "status": "todo"
-  },
-  {
-    "file": "name-tui-and-cli-channel-capacities.md",
-    "title": "Name TUI and CLI channel capacities",
-    "status": "todo"
-  },
-  {
-    "file": "update-build-rs-comment-on-magic-number-guardrail.md",
-    "title": "Update build.rs comment on magic-number guardrail",
-    "status": "todo"
-  },
-  {
-    "file": "audit-mock-provider-delay-constants.md",
-    "title": "Audit mock provider delay constants",
-    "status": "todo"
-  },
-  {
-    "file": "execute-second-pass-magic-numbers-cleanup.md",
-    "title": "Execute second-pass magic numbers cleanup",
     "status": "todo"
   }
 ]
