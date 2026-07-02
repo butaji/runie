@@ -1802,7 +1802,7 @@
   {
     "file": "unify-sse-parsing-on-openai-frame.md",
     "title": "Unify SSE parsing on `OpenAiFrame::from_line`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-tool-call-accumulators-into-single-state-machine.md",

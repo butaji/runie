@@ -16,52 +16,23 @@ use runie_core::provider_event::ProviderEvent;
 /// Re-export types for testing and external consumers.
 pub use super::protocol::ToolAccum;
 
-/// OpenAI SSE event types.
-#[derive(Debug, Clone)]
-pub enum SseEvent {
-    Chunk(Chunk),
-    Done,
-}
-
-/// A delta of content in an OpenAI chunk.
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct Delta {
-    pub content: Option<String>,
-    pub reasoning: Option<String>,
-    pub tool_calls: Vec<ToolCallDelta>,
-}
-
-/// A delta for a tool call.
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct ToolCallDelta {
-    pub index: usize,
-    pub id: Option<String>,
-    pub name: Option<String>,
-    pub arguments: Option<String>,
-}
-
-impl From<ToolCallDelta> for runie_core::proto::message::ToolCall {
-    fn from(delta: ToolCallDelta) -> Self {
-        let args: serde_json::Value = delta
-            .arguments
-            .as_ref()
-            .and_then(|a| serde_json::from_str(a).ok())
-            .unwrap_or(serde_json::Value::Null);
-        runie_core::proto::message::ToolCall {
-            id: delta.id.unwrap_or_default(),
-            name: delta.name.unwrap_or_default(),
-            args,
+/// Parse one SSE data-line into either a protocol frame or an error.
+/// Handles regular SSE frames ("data: {...}") and fixture error lines ("error: {...}").
+fn parse_sse_line(line: &str) -> Option<Result<OpenAiFrame, runie_core::provider_event::ModelError>> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    // Support fixture error lines: "error: {\"type\":\"rate_limit\",...}"
+    if let Some(err_json) = trimmed.strip_prefix("error: ") {
+        if let Ok(err_val) = serde_json::from_str::<serde_json::Value>(err_json) {
+            return Some(Err(parse_error_value(&err_val)));
         }
     }
+    OpenAiFrame::from_line(trimmed).map(Ok)
 }
 
-/// An OpenAI SSE chunk.
-#[derive(Debug, Default, Clone, PartialEq)]
-pub struct Chunk {
-    pub delta: Delta,
-    pub finish_reason: Option<String>,
-    pub usage: Option<(usize, usize)>,
-}
+
 
 pub fn openai_stream(
     provider: OpenAiProvider,
@@ -141,20 +112,27 @@ async fn stream_sse_events(
     let mut state = OpenAiState::default();
 
     while let Some(result) = futures::StreamExt::next(&mut *es).await {
-        let event = match parse_sse_result(result) {
-            Some(Ok(e)) => e,
+        let line = match parse_sse_result(result) {
+            Some(Ok(l)) => l,
             Some(Err(_)) => return state,
             None => continue,
         };
-        let frame = match OpenAiFrame::from_line(&event) {
-            Some(f) => f,
+        // Feed through the shared SSE parser (handles frames and fixture errors).
+        match parse_sse_line(&line) {
+            Some(Ok(frame)) => {
+                if protocol.terminal(&frame) {
+                    let (new_state, _) = protocol.step(state, frame);
+                    return new_state;
+                }
+                let (new_state, _) = protocol.step(state, frame);
+                state = new_state;
+            }
+            Some(Err(_)) => {
+                // Error lines are fixture-only; in live streaming, SSE errors
+                // surface as reqwest_eventsource errors above, not as parsed lines.
+                continue;
+            }
             None => continue,
-        };
-        let is_terminal = protocol.terminal(&frame);
-        let (new_state, _) = protocol.step(state, frame);
-        state = new_state;
-        if is_terminal {
-            break;
         }
     }
     state
@@ -170,32 +148,6 @@ fn parse_sse_result(
     }
 }
 
-pub fn parse_sse_event(line: &str) -> Option<SseEvent> {
-    match OpenAiFrame::from_line(line) {
-        Some(OpenAiFrame::Chunk(c)) => Some(SseEvent::Chunk(Chunk {
-            delta: Delta {
-                content: c.delta.content,
-                reasoning: c.delta.reasoning,
-                tool_calls: c
-                    .delta
-                    .tool_calls
-                    .into_iter()
-                    .map(|tc| ToolCallDelta {
-                        index: tc.index,
-                        id: tc.id,
-                        name: tc.name,
-                        arguments: tc.arguments,
-                    })
-                    .collect(),
-            },
-            finish_reason: c.finish_reason,
-            usage: c.usage,
-        })),
-        Some(OpenAiFrame::Done) => Some(SseEvent::Done),
-        None => None,
-    }
-}
-
 /// Replay SSE text and return accumulated events.
 pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
     let protocol = OpenAiProtocol::new();
@@ -203,27 +155,19 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
     let mut events = Vec::new();
 
     for line in text.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        // Support fixture error lines: "error: {\"type\":\"rate_limit\",...}"
-        if let Some(err_json) = trimmed.strip_prefix("error: ") {
-            if let Ok(err_val) = serde_json::from_str::<serde_json::Value>(err_json) {
-                let model_err = parse_error_value(&err_val);
-                events.push(ProviderEvent::Error(model_err));
-            }
-            continue;
-        }
-        if let Some(frame) = OpenAiFrame::from_line(trimmed) {
-            if protocol.terminal(&frame) {
-                let (_, new_events) = protocol.step(std::mem::take(&mut state), frame);
+        match parse_sse_line(line) {
+            Some(Ok(frame)) => {
+                if protocol.terminal(&frame) {
+                    let (_new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
+                    events.extend(new_events);
+                    break;
+                }
+                let (new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
+                state = new_state;
                 events.extend(new_events);
-                break;
             }
-            let (new_state, new_events) = protocol.step(std::mem::take(&mut state), frame);
-            state = new_state;
-            events.extend(new_events);
+            Some(Err(err)) => events.push(ProviderEvent::Error(err)),
+            None => continue,
         }
     }
     events.extend(protocol.on_halt(state));

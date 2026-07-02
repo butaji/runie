@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Description
 
@@ -10,9 +10,13 @@
 
 ## Acceptance criteria
 
-1. **Unit tests** — Live and replay SSE lines produce identical parsed frames.
-2. **E2E tests** — Provider replay fixtures still stream correctly.
-3. **Live tmux tests** — Run a streaming turn in tmux and verify chunks are rendered.
+- [x] **Unit tests** — Live and replay SSE lines produce identical parsed frames.
+- [x] **E2E tests** — Provider replay fixtures still stream correctly.
+- [x] **Live tmux tests** — Run a streaming turn in tmux and verify chunks are rendered.
+
+## Implementation
+
+Extracted `parse_sse_line(line: &str) -> Option<Result<OpenAiFrame, ModelError>>` as the shared parser used by both `replay_sse` and `stream_sse_events`. Removed the intermediate `SseEvent`/`Chunk`/`Delta`/`ToolCallDelta` types from `stream.rs` (they now live in `protocol.rs` alongside their usage). Deleted `parse_sse_event` (dead-weight wrapper) and rewrote its two tests to use `OpenAiFrame::from_line` directly. Renamed tests to `openai_frame_parses_text_delta` and `openai_frame_parses_done`. Both `stream_sse_events` and `replay_sse` now call `OpenAiFrame::from_line` and `protocol.step()` directly — no intermediate type conversions.
 
 ## Tests
 

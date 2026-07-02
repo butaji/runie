@@ -159,7 +159,7 @@ mod tests {
     use request::build_request_body;
     use runie_core::proto::message::{ChatMessage, Part, Role};
     use runie_core::provider_event::{ProviderEvent, StopReason};
-    use stream::{parse_sse_event, SseEvent};
+    use super::protocol::OpenAiFrame;
 
     fn test_provider() -> OpenAiProvider {
         OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
@@ -308,11 +308,12 @@ mod tests {
         );
     }
 
+    /// Verify `OpenAiFrame::from_line` (the canonical parser) handles a text delta.
     #[test]
-    fn parse_sse_event_text_delta() {
+    fn openai_frame_parses_text_delta() {
         let line = r#"data: {"choices":[{"delta":{"content":"hi"}}]}"#;
-        match parse_sse_event(line) {
-            Some(SseEvent::Chunk(chunk)) => {
+        match OpenAiFrame::from_line(line) {
+            Some(OpenAiFrame::Chunk(chunk)) => {
                 assert_eq!(chunk.delta.content, Some("hi".to_string()));
                 assert!(chunk.delta.tool_calls.is_empty());
             }
@@ -320,11 +321,12 @@ mod tests {
         }
     }
 
+    /// Verify `OpenAiFrame::from_line` (the canonical parser) handles [DONE].
     #[test]
-    fn parse_sse_event_done() {
+    fn openai_frame_parses_done() {
         assert!(matches!(
-            parse_sse_event("data: [DONE]"),
-            Some(SseEvent::Done)
+            OpenAiFrame::from_line("data: [DONE]"),
+            Some(OpenAiFrame::Done)
         ));
     }
 

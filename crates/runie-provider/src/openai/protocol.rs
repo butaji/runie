@@ -2,12 +2,51 @@
 //!
 //! Transforms OpenAI SSE frames (`OpenAiFrame`) into `ProviderEvent`s.
 
-use super::stream::{Chunk, Delta, ToolCallDelta};
 use super::types::{ChunkJson, ToolCallJson};
 use crate::protocol::ProviderProtocol;
 use runie_core::lifecycle::LifecycleState;
 use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::collections::{BTreeMap, HashSet};
+
+/// A delta of content in an OpenAI chunk.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Delta {
+    pub content: Option<String>,
+    pub reasoning: Option<String>,
+    pub tool_calls: Vec<ToolCallDelta>,
+}
+
+/// A delta for a tool call.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct ToolCallDelta {
+    pub index: usize,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub arguments: Option<String>,
+}
+
+impl From<ToolCallDelta> for runie_core::proto::message::ToolCall {
+    fn from(delta: ToolCallDelta) -> Self {
+        let args: serde_json::Value = delta
+            .arguments
+            .as_ref()
+            .and_then(|a| serde_json::from_str(a).ok())
+            .unwrap_or(serde_json::Value::Null);
+        runie_core::proto::message::ToolCall {
+            id: delta.id.unwrap_or_default(),
+            name: delta.name.unwrap_or_default(),
+            args,
+        }
+    }
+}
+
+/// An OpenAI SSE chunk.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Chunk {
+    pub delta: Delta,
+    pub finish_reason: Option<String>,
+    pub usage: Option<(usize, usize)>,
+}
 
 /// OpenAI protocol state machine.
 #[derive(Debug)]
