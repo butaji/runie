@@ -957,7 +957,7 @@
   {
     "file": "make-tui-render-loop-async-with-watch-channel.md",
     "title": "Make TUI render loop async with watch channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "merge-agentstate-into-turnstate-projection.md",

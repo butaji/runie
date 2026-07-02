@@ -25,7 +25,7 @@ use runie_tui::{
     app_init, keymap, terminal, terminal_setup, theme, ui,
     ui_actor::{AgentHandleBox, LeaderAgentActorHandle, UiActor},
 };
-use std::{collections::HashMap, io, time::Duration};
+use std::{collections::HashMap, io, sync::Arc};
 use throbber_widgets_tui::ThrobberState;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -195,55 +195,84 @@ fn spawn_agent_tasks(
     caps: terminal::caps::TermCaps,
 ) {
     tokio::spawn(input_reader(input_tx, kb_rx));
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    std::thread::spawn(move || render_loop(terminal, rx, caps));
-    tokio::spawn(render_forwarder(render_rx, tx));
+    tokio::spawn(async_render_loop(terminal, render_rx, caps));
 }
 
-async fn render_forwarder(
-    mut render_rx: watch::Receiver<Snapshot>,
-    tx: std::sync::mpsc::SyncSender<Snapshot>,
-) {
-    loop {
-        let snap = render_rx.borrow_and_update().clone();
-        if tx.try_send(snap).is_err() {
-            // Render thread is backed up — skip this frame.
-        }
-        if render_rx.changed().await.is_err() {
-            break;
-        }
+/// Wrapper for Terminal that can be shared across blocking tasks.
+struct RenderTerminal {
+    inner: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
+}
+
+impl RenderTerminal {
+    fn size(&self) -> std::io::Result<(u16, u16)> {
+        self.inner.size().map(|r| (r.width, r.height))
+    }
+
+    fn clear(&mut self) -> std::io::Result<()> {
+        self.inner.clear().map(|_| ())
+    }
+
+    fn draw(&mut self, f: impl FnOnce(&mut ratatui::Frame)) -> std::io::Result<()> {
+        self.inner.draw(f).map(|_| ())
     }
 }
 
-fn render_loop(
-    mut terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
-    rx: std::sync::mpsc::Receiver<Snapshot>,
+/// Async render loop using tokio watch channel.
+///
+/// Uses Arc<Mutex<>> to share the terminal between blocking tasks.
+/// spawn_blocking is used for terminal operations (size, clear, draw)
+/// to avoid blocking the async executor.
+async fn async_render_loop(
+    terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
+    mut render_rx: watch::Receiver<Snapshot>,
     caps: terminal::caps::TermCaps,
 ) {
-    const FRAME_TIME: Duration = Duration::from_millis(16);
     let mut last_size: Option<(u16, u16)> = None;
-    let mut throbber = ThrobberState::default();
+    let throbber = std::sync::Arc::new(parking_lot::Mutex::new(ThrobberState::default()));
+    let term = std::sync::Arc::new(parking_lot::Mutex::new(RenderTerminal { inner: terminal }));
 
     loop {
-        let mut snap = match rx.recv_timeout(FRAME_TIME) {
-            Ok(s) => s,
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
-        };
-        while let Ok(s) = rx.try_recv() {
-            snap = s;
+        // Wait for the next snapshot. If sender is dropped, we're done.
+        // watch::Receiver::changed() ensures we get the latest value.
+        if render_rx.changed().await.is_err() {
+            break;
         }
 
-        let new_size = terminal
-            .size()
-            .map(|r| (r.width, r.height))
-            .unwrap_or((0, 0));
+        // Get the latest snapshot. Watch channel ensures this is the most recent value.
+        let snap = render_rx.borrow().clone();
+
+        // Get terminal size (blocking)
+        let term_clone = Arc::clone(&term);
+        let new_size = match tokio::task::spawn_blocking(move || {
+            let guard = term_clone.lock();
+            guard.size()
+        }).await {
+            Ok(Ok(s)) => s,
+            _ => continue,
+        };
+
+        // Clear on size change (blocking)
         if last_size != Some(new_size) {
-            let _ = terminal.clear();
+            let term_clone = Arc::clone(&term);
+            let _ = tokio::task::spawn_blocking(move || {
+                let mut guard = term_clone.lock();
+                guard.clear()
+            }).await;
             last_size = Some(new_size);
         }
+
+        // Set theme
         theme::set_current_theme_with_caps(&snap.theme_name, caps);
-        let _ = terminal.draw(|f| ui::draw_snapshot(f, &snap, &mut throbber));
+
+        // Draw (blocking)
+        let term_clone = Arc::clone(&term);
+        let throbber_clone = Arc::clone(&throbber);
+        let snap = snap;
+        let _ = tokio::task::spawn_blocking(move || {
+            let mut term_guard = term_clone.lock();
+            let mut throbber_guard = throbber_clone.lock();
+            term_guard.draw(|f| ui::draw_snapshot(f, &snap, &mut throbber_guard))
+        }).await;
     }
 }
 
