@@ -24,3 +24,11 @@ Some literals are constants but should be user-configurable: HTTP timeouts, retr
 
 ### Live tmux tests
 - Set `RUNIE_` env overrides and launch.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `ConfigActor` owns config values; constants become configurable.
+- [ ] **Trigger events:** Config load events trigger value updates.
+- [ ] **Observer events:** Config changes propagate via existing events.
+- [ ] **No direct mutations:** Config values must be set through `ConfigActor`, not direct mutation.
+- [ ] **No new mirrors:** Config values are authoritative in `ConfigActor`; no duplicate storage.
+- [ ] **Async work observed:** Config loading is synchronous; no new async work introduced.

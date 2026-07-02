@@ -37,3 +37,11 @@ No change to TUI element design or composition. Only durable event format change
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `SessionActor` owns session state; durable events are the persistence format.
+- [ ] **Trigger events:** `SessionSaved` triggers durable event serialization.
+- [ ] **Observer events:** `SessionLoaded` notifies observers of restored state.
+- [ ] **No direct mutations:** Durable events must not introduce direct state mutations.
+- [ ] **No new mirrors:** Durable events are the authoritative persistence format; no duplicates.
+- [ ] **Async work observed:** Persistence is in `SessionActor` via `spawn_blocking`.

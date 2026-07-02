@@ -35,3 +35,11 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (type change; actors remain authoritative).
+- [ ] **Trigger events:** N/A (type change doesn't introduce new state transitions).
+- [ ] **Observer events:** N/A (type change doesn't emit events).
+- [ ] **No direct mutations:** N/A (type change doesn't change state ownership).
+- [ ] **No new mirrors:** N/A (type change doesn't introduce new state).
+- [ ] **Async work observed:** N/A (type change doesn't introduce new async work).

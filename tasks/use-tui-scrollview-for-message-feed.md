@@ -35,3 +35,11 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (UI-only change; `UiActor` scroll state is a projection).
+- [ ] **Trigger events:** Scroll events (`PageUp`, `PageDown`, etc.) are already defined in `Event`.
+- [ ] **Observer events:** N/A (scroll rendering is a read-only projection).
+- [ ] **No direct mutations:** Scroll state must not mutate actor-owned state directly.
+- [ ] **No new mirrors:** Scroll position is a UI projection, not authoritative storage.
+- [ ] **Async work observed:** N/A (synchronous rendering).

@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - Save and resume a session in tmux.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `SessionActor` owns session state; replay emits events through it.
+- [ ] **Trigger events:** `SessionLoaded`, durable events trigger state updates.
+- [ ] **Observer events:** Replay emits events; `AppState` is updated through `AppState::update`.
+- [ ] **No direct mutations:** Replay must not directly mutate `AppState`; emit events instead.
+- [ ] **No new mirrors:** Session state is authoritative in `SessionActor`; no duplicates.
+- [ ] **Async work observed:** Replay is synchronous; no new async work introduced.

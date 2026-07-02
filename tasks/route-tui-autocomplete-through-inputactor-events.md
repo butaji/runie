@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - In tmux, type `@` to open file picker and `/` to open command palette.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `InputActor` owns input state; autocomplete routes through it.
+- [ ] **Trigger events:** `OpenAtFilePicker`, `OpenCommandPalette` trigger autocomplete.
+- [ ] **Observer events:** `InputChanged`, `AutocompleteOpened` notify observers.
+- [ ] **No direct mutations:** `UiActor` must not directly mutate `InputActor` state; emit events instead.
+- [ ] **No new mirrors:** Input state is authoritative in `InputActor`; no duplicates.
+- [ ] **Async work observed:** N/A (synchronous autocomplete handling).

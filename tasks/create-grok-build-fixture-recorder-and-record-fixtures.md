@@ -50,3 +50,11 @@ This task is not complete until the fix is validated with all three levels:
 - All other comparison tasks depend on these fixtures and replay them.
 - Re-recording should be a rare, deliberate operation.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (recorder doesn't introduce actor state).
+- [ ] **Trigger events:** N/A (recorder doesn't emit events).
+- [ ] **Observer events:** N/A (recorder doesn't observe events).
+- [ ] **No direct mutations:** Recorder uses temp copies; doesn't mutate source repo.
+- [ ] **No new mirrors:** Fixtures are test data, not authoritative state.
+- [ ] **Async work observed:** N/A (recorder is a script, not async Rust).

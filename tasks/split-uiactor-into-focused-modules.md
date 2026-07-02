@@ -24,3 +24,11 @@
 
 ### Live run tests
 - Launch the app in tmux, type input, submit a message, and observe effects.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `UiActor` owns UI state; split modules remain within `UiActor`.
+- [ ] **Trigger events:** Input events (`KeyEvent`, `Submit`, etc.) trigger state changes.
+- [ ] **Observer events:** UI state changes emit events to update projections.
+- [ ] **No direct mutations:** Split modules must not introduce direct mutation of other actors' state.
+- [ ] **No new mirrors:** Each split module must not create authoritative copies of state.
+- [ ] **Async work observed:** Any async work (e.g., effect dispatch) must have a JoinHandle owner.

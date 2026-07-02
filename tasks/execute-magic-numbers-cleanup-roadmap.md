@@ -24,3 +24,11 @@ Track the phased cleanup of magic numbers and hardcoded values. Success metrics:
 
 ### Live tmux tests
 - Complete a coding session in tmux.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (cleanup roadmap; actors remain authoritative).
+- [ ] **Trigger events:** N/A (cleanup roadmap doesn't introduce state transitions).
+- [ ] **Observer events:** N/A (cleanup roadmap doesn't emit events).
+- [ ] **No direct mutations:** N/A (cleanup roadmap doesn't change state ownership).
+- [ ] **No new mirrors:** N/A (cleanup roadmap doesn't introduce new state).
+- [ ] **Async work observed:** N/A (cleanup roadmap doesn't introduce async work).

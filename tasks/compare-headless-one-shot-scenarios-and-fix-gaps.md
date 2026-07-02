@@ -60,3 +60,11 @@ This task is not complete until the fix is validated with all three levels:
 - The CLI headless native-tool loop (`fix-cli-headless-native-tool-permission-denied-loop`) is expected to surface here.
 - Do not mutate the Runie repo; run tools in a temp fixture copy.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `AgentActor`/`TurnActor` own headless state.
+- [ ] **Trigger events:** Headless prompts trigger agent processing.
+- [ ] **Observer events:** Tool calls, responses emit events.
+- [ ] **No direct mutations:** Headless processing must emit events, not mutate directly.
+- [ ] **No new mirrors:** Headless state is authoritative in actors; no duplicates.
+- [ ] **Async work observed:** Tool execution has JoinHandle owners.

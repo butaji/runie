@@ -35,3 +35,11 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (DSL translation is a utility; actors remain authoritative).
+- [ ] **Trigger events:** DSL keystrokes translate to `Event` variants.
+- [ ] **Observer events:** N/A (translation doesn't emit events).
+- [ ] **No direct mutations:** DSL translation doesn't mutate actor state.
+- [ ] **No new mirrors:** Tool aliases are mappings, not authoritative state.
+- [ ] **Async work observed:** N/A (synchronous translation).

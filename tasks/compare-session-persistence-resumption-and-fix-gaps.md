@@ -60,3 +60,11 @@ This task is not complete until the fix is validated with all three levels:
 
 - Depends on the `/save` form submit fix; comparison can start once that lands.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `SessionActor` owns session state.
+- [ ] **Trigger events:** `SessionSaved`, `SessionLoaded` trigger persistence.
+- [ ] **Observer events:** `SessionListUpdated` notifies observers.
+- [ ] **No direct mutations:** Session changes must go through `SessionActor`.
+- [ ] **No new mirrors:** Session state is authoritative in `SessionActor`; no duplicates.
+- [ ] **Async work observed:** Persistence is in `SessionActor` via `spawn_blocking`.

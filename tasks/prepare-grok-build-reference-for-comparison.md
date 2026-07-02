@@ -45,3 +45,11 @@ This task is not complete until the fix is validated with all three levels:
 - If authentication is unavailable, this task becomes a documented blocker and the comparison proceeds using published Grok Build documentation as a secondary reference.
 - Do not run Grok Build inside the `runie-dev` working directory; always use a temp copy.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (system setup; no actor state involved).
+- [ ] **Trigger events:** N/A (system setup doesn't introduce state transitions).
+- [ ] **Observer events:** N/A (system setup doesn't emit events).
+- [ ] **No direct mutations:** N/A (system setup doesn't change state ownership).
+- [ ] **No new mirrors:** N/A (system setup doesn't introduce new state).
+- [ ] **Async work observed:** N/A (system setup is synchronous).

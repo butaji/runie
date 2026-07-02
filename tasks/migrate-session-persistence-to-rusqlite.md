@@ -39,3 +39,11 @@ No change to TUI element design or composition. Only session persistence behavio
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `SessionActor` owns session state; SQLite is the persistence backend.
+- [ ] **Trigger events:** `SessionSaved`, `SessionLoaded`, `SessionListUpdated` trigger persistence.
+- [ ] **Observer events:** `SessionLoaded`, `SessionListUpdated` notify observers.
+- [ ] **No direct mutations:** Session changes must go through `SessionActor`, not direct SQLite writes.
+- [ ] **No new mirrors:** SQLite is the authoritative store; no in-memory duplicates.
+- [ ] **Async work observed:** SQLite operations are blocking IO; must run in `spawn_blocking` or dedicated task.

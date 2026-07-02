@@ -24,3 +24,11 @@ Several small helpers for fuzzy matching, path/glob expansion, keybinding parsin
 
 ### Live run tests
 - Open the command palette, file picker, and submit a slash command in tmux.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (utility function replacements; actors remain authoritative).
+- [ ] **Trigger events:** N/A (helper replacements don't introduce new state transitions).
+- [ ] **Observer events:** N/A (helper replacements don't emit events).
+- [ ] **No direct mutations:** N/A (helper replacements don't change state ownership).
+- [ ] **No new mirrors:** N/A (helper replacements don't introduce new state).
+- [ ] **Async work observed:** N/A (synchronous helper functions).

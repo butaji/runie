@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - Open a form dialog and edit fields.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (UI-only change; `UiActor` state projection unchanged).
+- [ ] **Trigger events:** `Submit` event triggers form submission.
+- [ ] **Observer events:** Form state changes emit UI events via `UiActor`.
+- [ ] **No direct mutations:** Form widget changes must not mutate actor-owned state directly.
+- [ ] **No new mirrors:** Form state must be a projection, not authoritative storage.
+- [ ] **Async work observed:** N/A (synchronous rendering).

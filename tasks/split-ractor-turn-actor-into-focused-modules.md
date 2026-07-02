@@ -24,3 +24,11 @@
 
 ### Live run tests
 - Queue multiple turns in tmux and verify each completes in order.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `TurnActor` owns turn state; split modules remain within `TurnActor`.
+- [ ] **Trigger events:** `TurnMsg` variants (`RunIfQueued`, `SubmitUserMessage`, etc.) trigger state transitions.
+- [ ] **Observer events:** `TurnStarted`, `TurnComplete`, `TurnAborted`, etc. notify observers.
+- [ ] **No direct mutations:** Split modules must not introduce direct mutation of other actors' state.
+- [ ] **No new mirrors:** Each split module must not create authoritative copies of turn state.
+- [ ] **Async work observed:** Turn processing is already observed via event emission.

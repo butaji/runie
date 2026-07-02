@@ -51,3 +51,11 @@ This task is not complete until the fix is validated with all three levels:
 - The harness should prefer headless mode for deterministic assertions and use tmux only for TUI-specific scenarios.
 - Keep the script under 500 lines; extract helpers if needed.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (test harness; actors remain authoritative).
+- [ ] **Trigger events:** N/A (test harness doesn't introduce state transitions).
+- [ ] **Observer events:** N/A (test harness doesn't emit events).
+- [ ] **No direct mutations:** Harness isolates file mutations to temp copies.
+- [ ] **No new mirrors:** Harness doesn't introduce authoritative state.
+- [ ] **Async work observed:** Harness runs tools in isolated processes.

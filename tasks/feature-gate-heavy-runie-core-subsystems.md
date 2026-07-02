@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - Run stripped-down build in tmux.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (feature gates; actors remain authoritative).
+- [ ] **Trigger events:** N/A (feature gates don't introduce state transitions).
+- [ ] **Observer events:** N/A (feature gates don't emit events).
+- [ ] **No direct mutations:** N/A (feature gates don't change state ownership).
+- [ ] **No new mirrors:** N/A (feature gates don't introduce new state).
+- [ ] **Async work observed:** N/A (feature gates don't introduce async work).

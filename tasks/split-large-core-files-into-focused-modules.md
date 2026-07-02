@@ -34,3 +34,11 @@ The following production files exceed the advertised 500-line limit and mix resp
 
 ### Live run tests
 - Start tmux and exercise message display, file search, permission prompts, and bash tools.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (refactoring; actors and state ownership unchanged).
+- [ ] **Trigger events:** N/A (refactoring; no new state transitions).
+- [ ] **Observer events:** N/A (refactoring; no new observers).
+- [ ] **No direct mutations:** Split modules must not introduce direct state mutations; all changes go through existing actors.
+- [ ] **No new mirrors:** Each split module must not create authoritative copies of actor-owned state.
+- [ ] **Async work observed:** Any new async work spawned during split must be awaited or have a JoinHandle owner.

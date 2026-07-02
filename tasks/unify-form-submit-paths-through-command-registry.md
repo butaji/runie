@@ -37,3 +37,11 @@ No change to TUI element design or composition. Only form submission behavior ch
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `UiActor` owns UI state; form submission routes through command registry.
+- [ ] **Trigger events:** `Submit` event triggers form submission via registry.
+- [ ] **Observer events:** Form submission emits events via command handlers.
+- [ ] **No direct mutations:** Form submission must not directly mutate actor state; use commands.
+- [ ] **No new mirrors:** Command registry is authoritative for form handling; no duplicates.
+- [ ] **Async work observed:** Command handlers are synchronous; async commands have JoinHandle owners.

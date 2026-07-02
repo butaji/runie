@@ -37,3 +37,11 @@ No change to TUI element design or composition. Only config/secrets behavior cha
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `ConfigActor` owns config; keyring is the key storage.
+- [ ] **Trigger events:** Config load triggers key resolution from keyring.
+- [ ] **Observer events:** N/A (keyring resolution doesn't emit events).
+- [ ] **No direct mutations:** Key resolution must not directly mutate state.
+- [ ] **No new mirrors:** Keyring is authoritative; no in-memory duplicates.
+- [ ] **Async work observed:** Keyring access is synchronous; no new async work.

@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - Submit with invalid config and read the error dialog.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (error type change; actors remain authoritative).
+- [ ] **Trigger events:** N/A (error type change doesn't introduce state transitions).
+- [ ] **Observer events:** Typed errors are part of events.
+- [ ] **No direct mutations:** N/A (error type change doesn't change state ownership).
+- [ ] **No new mirrors:** N/A (error type change doesn't introduce new state).
+- [ ] **Async work observed:** N/A (error type change doesn't introduce async work).

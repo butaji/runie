@@ -24,3 +24,11 @@ The SSOT ADR requires every spawned task to have an owner. This task adds an inv
 
 ### Live run tests
 - Start a session in tmux, exercise tools and turns, then exit and check for leaked tasks.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (this task enforces the SSOT rule itself).
+- [ ] **Trigger events:** N/A (this task adds lint enforcement, not state transitions).
+- [ ] **Observer events:** N/A (this task adds lint enforcement, not event emission).
+- [ ] **No direct mutations:** N/A (this task adds lint enforcement, not state changes).
+- [ ] **No new mirrors:** N/A (this task adds lint enforcement, not state storage).
+- [ ] **Async work observed:** This task ensures all async work is observed.

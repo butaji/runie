@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - Open a codebase and request definitions.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `IoActor` owns file IO; tree-sitter analysis is a utility.
+- [ ] **Trigger events:** N/A (analysis doesn't introduce state transitions).
+- [ ] **Observer events:** Analysis results emit tool output events.
+- [ ] **No direct mutations:** N/A (analysis doesn't mutate state).
+- [ ] **No new mirrors:** N/A (analysis is a utility).
+- [ ] **Async work observed:** File parsing in `spawn_blocking`.

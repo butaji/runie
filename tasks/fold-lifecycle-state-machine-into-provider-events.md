@@ -37,3 +37,11 @@ No change to TUI element design or composition. Only event-generation behavior c
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `ProviderActor` owns the streaming state machine; lifecycle tracking moves from `LifecycleState` to provider.
+- [ ] **Trigger events:** `ProviderEvent` variants (`TextDelta`, `ThinkingDelta`) trigger lifecycle tracking.
+- [ ] **Observer events:** `TextStart`, `TextEnd`, `ThinkingStart`, `ThinkingEnd` notify observers.
+- [ ] **No direct mutations:** Provider emits lifecycle events; no direct `AppState` mutation.
+- [ ] **No new mirrors:** `LifecycleState` is removed; lifecycle tracking becomes a pure function in provider.
+- [ ] **Async work observed:** Provider streaming is already observed via `ProviderEvent` channel.

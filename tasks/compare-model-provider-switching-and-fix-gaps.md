@@ -61,3 +61,11 @@ This task is not complete until the fix is validated with all three levels:
 
 - Overlaps with `fix-slash-command-model-provider-report-no-providers`.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `ConfigActor` owns `Config`; provider/model state is authoritative there.
+- [ ] **Trigger events:** `SwitchModel`, `RunNameCommand` trigger config changes.
+- [ ] **Observer events:** `ModelSwitched`, `ProviderConfigured` notify observers of config changes.
+- [ ] **No direct mutations:** Config changes must go through `ConfigActor`; no direct `AppState` mutation.
+- [ ] **No new mirrors:** Provider/model state in UI must be a projection from events, not a duplicate store.
+- [ ] **Async work observed:** Provider detection/validation must be awaited or have a JoinHandle owner.

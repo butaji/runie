@@ -24,3 +24,11 @@ Production code panics in `tool/shim/mod.rs`, `model/compaction.rs`, `session/tr
 
 ### Live tmux tests
 - Submit a message that triggers a parser edge case.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (error handling change; actors remain authoritative).
+- [ ] **Trigger events:** N/A (error handling doesn't introduce new state transitions).
+- [ ] **Observer events:** Parse errors may emit `Error` events or return `Result`.
+- [ ] **No direct mutations:** N/A (error handling doesn't change state ownership).
+- [ ] **No new mirrors:** N/A (error handling doesn't introduce new state).
+- [ ] **Async work observed:** Errors in async contexts must be propagated, not silently dropped.

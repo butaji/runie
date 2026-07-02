@@ -24,3 +24,11 @@ Track integration of the second-pass review using the Pareto prioritization in `
 
 ### Live tmux tests
 - Run a complete coding session in tmux.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (review roadmap; actors remain authoritative).
+- [ ] **Trigger events:** N/A (review roadmap doesn't introduce state transitions).
+- [ ] **Observer events:** N/A (review roadmap doesn't emit events).
+- [ ] **No direct mutations:** N/A (review roadmap doesn't change state ownership).
+- [ ] **No new mirrors:** N/A (review roadmap doesn't introduce new state).
+- [ ] **Async work observed:** N/A (review roadmap doesn't introduce async work).

@@ -57,3 +57,11 @@ This task is not complete until the fix is validated with all three levels:
 
 - May overlap with existing tasks `delete-or-fix-dead-mcp-feature-flag` and `implement-or-remove-mcp-runtime-scaffolding`.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** Depends on outcome: `SubagentActor`/`McpConnectionManager` remain authoritative.
+- [ ] **Trigger events:** Subagent/MCP events trigger state transitions.
+- [ ] **Observer events:** Subagent/MCP results emit events to observers.
+- [ ] **No direct mutations:** Subagent/MCP changes must emit events, not mutate directly.
+- [ ] **No new mirrors:** Subagent/MCP state is authoritative in owning actor; no duplicates.
+- [ ] **Async work observed:** Subagent/MCP operations have JoinHandle owners.

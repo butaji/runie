@@ -43,3 +43,11 @@ No change to TUI element design or composition. Only bash tool security behavior
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `IoActor` owns bash execution; sandboxing is a layer on top.
+- [ ] **Trigger events:** `IoMsg::RunBash` triggers sandbox check.
+- [ ] **Observer events:** `PermissionRequest` emitted for sandboxed commands.
+- [ ] **No direct mutations:** Sandboxing must not directly mutate actor state.
+- [ ] **No new mirrors:** Sandbox state is ephemeral; no authoritative storage.
+- [ ] **Async work observed:** Sandbox execution is in `IoActor` via `spawn_blocking`.

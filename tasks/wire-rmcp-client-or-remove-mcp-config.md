@@ -24,3 +24,11 @@ MCP server config exists but there is no runtime client. Either wire `rmcp` clie
 
 ### Live tmux tests
 - Add a simple MCP server and run a tool through it.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `McpConnectionManager` owns MCP state if wired.
+- [ ] **Trigger events:** MCP tool calls trigger MCP client invocations.
+- [ ] **Observer events:** MCP tool results emit events to observers.
+- [ ] **No direct mutations:** MCP operations must emit events, not mutate directly.
+- [ ] **No new mirrors:** MCP state is authoritative in `McpConnectionManager` if wired.
+- [ ] **Async work observed:** MCP client operations have JoinHandle owners.

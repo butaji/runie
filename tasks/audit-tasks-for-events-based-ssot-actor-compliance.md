@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+**done** — All 54 todo tasks have been audited; SSOT/Event Compliance checklist added to each.
 
 ## Context
 

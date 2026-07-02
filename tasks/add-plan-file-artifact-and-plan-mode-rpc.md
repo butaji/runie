@@ -35,3 +35,11 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `SessionActor` or `PlanActor` owns plan state.
+- [ ] **Trigger events:** `PlanModeEnabled`, `PlanSaved`, `PlanForked` trigger plan operations.
+- [ ] **Observer events:** `PlanModeEnabled`, `PlanLoaded` notify observers.
+- [ ] **No direct mutations:** Plan changes must emit events, not mutate state directly.
+- [ ] **No new mirrors:** Plan file is the authoritative artifact; no in-memory duplicates.
+- [ ] **Async work observed:** Plan file IO must be in `spawn_blocking` or have a JoinHandle owner.

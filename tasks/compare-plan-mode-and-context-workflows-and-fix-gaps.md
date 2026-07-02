@@ -58,3 +58,11 @@ This task is not complete until the fix is validated with all three levels:
 
 - Plan mode may be out of scope for the current milestone; documenting the intentional difference is acceptable if decided.
 > **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** Depends on outcome: either `PlanActor` or existing actors remain authoritative.
+- [ ] **Trigger events:** Plan mode events trigger write tool blocking.
+- [ ] **Observer events:** Plan approval/rejection events notify observers.
+- [ ] **No direct mutations:** Plan mode must emit events, not mutate state directly.
+- [ ] **No new mirrors:** Plan state is authoritative in the owning actor; no duplicates.
+- [ ] **Async work observed:** Plan approval is synchronous; no new async work.

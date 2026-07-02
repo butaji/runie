@@ -38,3 +38,11 @@ No change to TUI element design or composition. Only the provider implementation
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `ProviderActor` owns provider state; adapter must emit events through `ProviderActor`.
+- [ ] **Trigger events:** Adapter receives crate streams; emits `ProviderEvent` variants.
+- [ ] **Observer events:** `ProviderEvent` variants notify `ProviderActor` and downstream consumers.
+- [ ] **No direct mutations:** Adapter must not directly mutate actor state; emit events instead.
+- [ ] **No new mirrors:** Adapter is a thin conversion layer, not a state store.
+- [ ] **Async work observed:** Crate streaming must be awaited; dropped streams must be handled.

@@ -37,3 +37,11 @@ No change to TUI element design or composition. Only file-edit tool behavior cha
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** `IoActor` owns file IO; unified edit logic routes through it.
+- [ ] **Trigger events:** `IoMsg::WriteFiles` triggers edit application.
+- [ ] **Observer events:** `FilesWritten` event emitted after edit.
+- [ ] **No direct mutations:** Edit must go through `IoActor`; no direct file mutation.
+- [ ] **No new mirrors:** File system is authoritative; no in-memory duplicates.
+- [ ] **Async work observed:** File IO is in `IoActor` via `spawn_blocking`.

@@ -36,3 +36,11 @@ No change to TUI element design or composition unless explicitly noted. Only imp
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (UI-only change; `UiActor` state projection unchanged).
+- [ ] **Trigger events:** Key events still map to same actions.
+- [ ] **Observer events:** N/A (UI rendering doesn't emit events).
+- [ ] **No direct mutations:** Widget changes must not mutate actor-owned state directly.
+- [ ] **No new mirrors:** Widget state must be a projection, not authoritative storage.
+- [ ] **Async work observed:** N/A (synchronous rendering).

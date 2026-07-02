@@ -24,3 +24,11 @@
 
 ### Live tmux tests
 - Prompt the agent to refactor a function.
+
+### SSOT/Event Compliance
+- [ ] **Actor/SSOT:** N/A (utility function change; `IoActor` remains authoritative for file IO).
+- [ ] **Trigger events:** N/A (edit application doesn't introduce new state transitions).
+- [ ] **Observer events:** `FilesWritten` event emitted after edit.
+- [ ] **No direct mutations:** Edit must go through `IoActor` for file IO.
+- [ ] **No new mirrors:** N/A (utility function change).
+- [ ] **Async work observed:** File IO is in `IoActor` via `spawn_blocking`.
