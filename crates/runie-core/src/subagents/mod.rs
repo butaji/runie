@@ -83,11 +83,11 @@ impl SubagentType {
         let mut tt = TinyTemplate::new();
         match tt.add_template("body", &template_body) {
             Ok(()) => tt.render("body", &context).unwrap_or_else(|e| {
-                eprintln!("Render error: {:?}", e);
+                tracing::warn!("Render error: {:?}", e);
                 self.body.clone()
             }),
             Err(e) => {
-                eprintln!("Add template error: {:?}", e);
+                tracing::warn!("Add template error: {:?}", e);
                 self.body.clone()
             }
         }

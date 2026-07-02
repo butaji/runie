@@ -91,9 +91,9 @@ async fn main() -> io::Result<()> {
     {
         Ok(h) => h,
         Err(e) => {
-            // Print the full error chain with anyhow's {:#} formatting.
-            eprintln!("Error: leader bootstrap failed: {:#}", e);
-            eprintln!("\nHint: Set RUST_LOG=debug for more details.");
+            // Log the full error chain with anyhow's {:#} formatting.
+            tracing::error!("Leader bootstrap failed: {:#}", e);
+            tracing::error!("Hint: Set RUST_LOG=debug for more details.");
             return Ok(());
         }
     };

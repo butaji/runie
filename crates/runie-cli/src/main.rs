@@ -129,9 +129,9 @@ async fn main() {
     };
 
     if let Err(e) = result {
-        // Print the full error chain with color-eyre formatting.
-        eprintln!("Error: {:#}", e.context("CLI command failed"));
-        eprintln!("\nHint: Set RUST_LOG=debug for more details, or RUST_LOG=trace for verbose output.");
+        // Log the full error chain with color-eyre formatting.
+        tracing::error!("CLI command failed: {:#}", e);
+        tracing::error!("Hint: Set RUST_LOG=debug for more details, or RUST_LOG=trace for verbose output.");
         std::process::exit(1);
     }
 }
