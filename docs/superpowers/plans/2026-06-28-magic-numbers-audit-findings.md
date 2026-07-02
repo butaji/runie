@@ -77,3 +77,28 @@
 | `crates/runie-core/src/model/state/types.rs` | 77–103 | prompt suffixes / I Ching symbols | Hardcoded copy/symbols |
 | `crates/runie-core/src/update/system.rs` | 25 | `Duration::from_secs(5)` | Transient message timeout |
 | Many handler files | many | usage/error/copy strings | Scattered UI copy |
+
+## Second-pass findings (recent commits after 2026-06-28)
+
+### Production code
+
+| File | Line | Literal | Issue | Recommended constant |
+|------|------|---------|-------|----------------------|
+| `crates/runie-agent/src/actor/handlers.rs` | 65 | `60` | Permission-request timeout duplicates `EmitApprovalSink::new()` default | `DEFAULT_PERMISSION_TIMEOUT_SECS` in `emit_approval_sink.rs` |
+| `crates/runie-agent/src/actor/mod.rs` | 215 | `5` | Max tool rounds duplicates `HeadlessCliOptions` default | `DEFAULT_MAX_TOOL_ROUNDS` in `headless_helper.rs` |
+| `crates/runie-core/src/auth/keyring.rs` | 35 | `8` | Token-preview length in mismatch error | `TOKEN_PREVIEW_LEN` |
+| `crates/runie-core/build.rs` | 453 | `10` | Lookback window for `#[allow(...)]` above `tokio::spawn` | `SPAWN_LINT_ATTR_LOOKBACK_LINES` |
+| `crates/runie-tui/src/ui_actor/mod.rs` | 216 | `16` | Effect forwarder `mpsc` capacity | `EFFECT_CHANNEL_CAPACITY` |
+| `crates/runie-cli/src/inspect/mod.rs` | 579 | `16` | `EventBus` capacity for inspect config actor | `INSPECT_BUS_CAPACITY` |
+
+### Lower-priority / test code
+
+| File | Line | Literal | Issue | Recommended constant |
+|------|------|---------|-------|----------------------|
+| `crates/runie-provider/src/lib.rs` | 143 | `5`, `10` | Mock provider delay range (ms) | `MOCK_DELAY_MIN_MS`, `MOCK_DELAY_MAX_MS` |
+| `crates/runie-core/build.rs` | header vs impl | `10` vs `1000` | Comment says guardrail catches literals `>= 10`; code catches `>= 1000` | Update comment to match code |
+
+### Good examples
+
+- `crates/runie-core/src/session/store.rs:25-39` — compaction thresholds are named constants.
+- `crates/runie-provider/src/openai/request.rs:8` — `MAX_TOOL_CALL_ID_LEN: usize = 64`.

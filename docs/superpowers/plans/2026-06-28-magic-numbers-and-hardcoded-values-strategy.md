@@ -57,6 +57,7 @@ When you see a literal, ask:
 - Add a project convention note to `AGENTS.md`.
 - Consider a `clippy::numeric_literal` lint or a custom grep check in CI for new raw literals in non-test code (not blocking initially).
 - Review new PRs for unexplained literals.
+- Update the build-script comment to match the actual magic-number threshold it enforces.
 
 ## Phasing
 
