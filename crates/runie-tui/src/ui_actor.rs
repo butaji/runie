@@ -579,18 +579,22 @@ impl UiActor {
         {
             let last_char = new_input.chars().last().unwrap();
             if last_char == '@' {
-                // Open file picker.
+                // Open file picker via event.
+                // UiActor-specific: save input state before picker opens (projection state).
                 let (input_text, cursor) = (new_input.to_owned(), new_cursor);
                 self.state.input_mut().file_picker_backup =
                     Some((input_text, cursor, cursor, false));
-                runie_core::update::dialog::open_at_file_picker_all(&mut self.state);
-                self.state.view_mut().dirty = true;
+                // Route through event: UiActor's apply_event will call
+                // dialog_toggle_event which calls open_at_file_picker_all.
+                self.apply_event(Event::AtFilePicker);
             } else if last_char == '/' && !Self::is_quit_command(new_input) {
-                // Open command palette.
+                // Open command palette via event.
+                // UiActor-specific: clear input projection before palette opens.
                 self.state.input_mut().input = String::new();
                 self.state.input_mut().cursor_pos = 0;
-                runie_core::update::dialog::open_command_palette_with_filter(&mut self.state, "");
-                self.state.view_mut().dirty = true;
+                // Route through event: UiActor's apply_event will call
+                // dialog_toggle_event which calls open_command_palette.
+                self.apply_event(Event::ToggleCommandPalette);
             }
         }
     }

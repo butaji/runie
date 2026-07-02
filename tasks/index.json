@@ -229,7 +229,7 @@
 {"file": "propagate-secretstring-through-provider-stack.md", "title": "Propagate SecretString through provider stack", "status": "todo"}
 {"file": "reconnect-tui-agent-actor-channel.md", "title": "Reconnect or remove TUI `AgentActor` channel", "status": "done"}
 {"file": "refine-permission-dialog-key-handling.md", "title": "Refine permission dialog key handling", "status": "done"}
-{"file": "regenerate-config-schema-and-fix-permission-mode-description.md", "title": "Regenerate config schema and fix PermissionMode description", "status": "todo"}
+{"file": "regenerate-config-schema-and-fix-permission-mode-description.md", "title": "Regenerate config schema and fix PermissionMode description", "status": "done"}
 {"file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md", "title": "Regenerate index and mark typed ChatMessage builder done", "status": "done"}
 {"file": "remove-agent-handlebox-dead-code-or-wire-queue-drain.md", "title": "Remove AgentHandleBox dead code or wire run_if_queued", "status": "done"}
 {"file": "remove-authtoken-custom-serde-wrappers.md", "title": "Remove AuthToken custom serde wrappers", "status": "wontfix"}
@@ -324,7 +324,7 @@
 {"file": "route-fetch-docs-through-central-http-client.md", "title": "Route `fetch_docs` through the central HTTP client", "status": "done"}
 {"file": "route-permission-clearance-through-permissionactor.md", "title": "Route permission clearance through `PermissionActor`", "status": "done"}
 {"file": "route-provider-confignone-through-credentialresolver.md", "title": "Route provider config=None through CredentialResolver", "status": "done"}
-{"file": "route-tui-autocomplete-through-inputactor-events.md", "title": "Route TUI autocomplete through `InputActor` events", "status": "todo"}
+{"file": "route-tui-autocomplete-through-inputactor-events.md", "title": "Route TUI autocomplete through `InputActor` events", "status": "done"}
 {"file": "scope-diff-comparison-to-headless-unified-output.md", "title": "Scope diff comparison to headless unified output", "status": "todo"}
 {"file": "share-configured-reqwest-client-for-provider.md", "title": "Share configured reqwest client for provider", "status": "done"}
 {"file": "shorten-approval-sink-timeout-and-wire-cancellation.md", "title": "Shorten approval sink timeout and wire cancellation", "status": "done"}
