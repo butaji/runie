@@ -177,7 +177,7 @@ fn classify_lines_with_pulldown(
         if let Some(result) = classify_normal_line(trimmed) {
             match result {
                 LineClass::Empty | LineClass::Plain => stable_count = i + 1,
-                LineClass::Fence(_) => {
+                LineClass::Fence => {
                     in_fence = true;
                     in_open_construct = true;
                 }
@@ -196,7 +196,7 @@ fn classify_lines_with_pulldown(
 enum LineClass {
     Empty,
     Plain,
-    Fence(String),
+    Fence,
     TableStart,
 }
 
@@ -227,8 +227,7 @@ fn classify_normal_line(trimmed: &str) -> Option<LineClass> {
     }
 
     if has_code_block {
-        let lang = trimmed.trim_start_matches("```").trim().to_owned();
-        return Some(LineClass::Fence(lang));
+        return Some(LineClass::Fence);
     }
 
     if has_table_separator {
