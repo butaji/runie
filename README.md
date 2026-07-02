@@ -137,6 +137,7 @@ If you have credits there, Runie helps you use them.
 | TUI | `./target/release/runie-tui` |
 | Print | `./target/release/runie print "..."` |
 | Inspect | `./target/release/runie inspect` |
+| Login | `./target/release/runie login` |
 | JSON | `./target/release/runie json` |
 | Server | `./target/release/runie server` |
 | MCP | `./target/release/runie mcp list\|add\|remove` |

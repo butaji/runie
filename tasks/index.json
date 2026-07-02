@@ -287,7 +287,7 @@
   {
     "file": "collapse-commandkinddef-into-commandkind.md",
     "title": "Collapse `CommandKindDef` into `CommandKind`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-dialogstate-variants.md",
@@ -702,7 +702,7 @@
   {
     "file": "fix-config-docs-and-readme-misalignments.md",
     "title": "Fix config docs and README misalignments",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-deliverqueued-race-in-uiactor.md",

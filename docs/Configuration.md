@@ -26,6 +26,7 @@ Each provider requires an API key. Configure multiple providers:
 ```toml
 [model_providers.anthropic]
 type = "anthropic"
+base_url = "https://api.anthropic.com"
 api_key = "sk-ant-..."
 
 [model_providers.openai]
