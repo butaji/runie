@@ -1,3 +1,4 @@
+Updated status to done
 [
   {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
@@ -2012,7 +2013,7 @@
   {
     "file": "use-untagged-enum-for-provider-error-bodies.md",
     "title": "Use an untagged enum for provider error bodies",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-validator-for-form-and-config-inputs.md",

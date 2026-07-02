@@ -78,21 +78,40 @@ pub struct UsageJson {
 
 /// An SSE error body returned by OpenAI-compatible APIs.
 ///
-/// Example JSON:
+/// Uses an untagged enum to handle both wrapped (`error.message`) and flat (`message`) shapes.
+///
+/// Example JSON (wrapped):
 /// ```json
 /// {"error":{"message":"Rate limit exceeded","type":"rate_limit_error","code":"rate_limit"}}
 /// ```
+///
+/// Example JSON (flat / MiniMax-style):
+/// ```json
+/// {"message":"context length exceeded","code":"context_length_exceeded","type":"invalid_request_error"}
+/// ```
 #[derive(Debug, Clone, Deserialize)]
-pub struct ErrorBodyJson {
-    #[serde(default)]
-    pub error: Option<ErrorDetailJson>,
-    /// MiniMax-style flat error body (no `error` wrapper).
-    #[serde(default)]
-    pub message: Option<String>,
+#[serde(untagged)]
+pub enum ErrorBodyJson {
+    /// Wrapped error with `error` object containing the details.
+    Wrapped(WrappedError),
+    /// Flat error with fields at the top level (MiniMax-style).
+    Flat(FlatError),
+}
+
+/// Wrapped error structure with `error` object.
+#[derive(Debug, Clone, Deserialize)]
+pub struct WrappedError {
+    pub error: ErrorDetailJson,
+}
+
+/// Flat error structure with fields at top level (MiniMax-style).
+#[derive(Debug, Clone, Deserialize)]
+pub struct FlatError {
+    pub message: String,
     #[serde(default)]
     pub code: Option<String>,
-    #[serde(default)]
-    pub r#type: Option<String>,
+    #[serde(rename = "type", default)]
+    pub type_: Option<String>,
     #[serde(default)]
     pub param: Option<String>,
     #[serde(rename = "retry_after", default)]
@@ -115,40 +134,37 @@ pub struct ErrorDetailJson {
 }
 
 impl ErrorBodyJson {
-    /// Returns the error message, trying `error.message` first, then the flat `message` field.
+    /// Returns the error message.
     pub fn message(&self) -> &str {
-        self.error
-            .as_ref()
-            .and_then(|e| e.message.as_deref())
-            .or(self.message.as_deref())
-            .unwrap_or("unknown error")
+        match self {
+            ErrorBodyJson::Wrapped(w) => w.error.message.as_deref().unwrap_or("unknown error"),
+            ErrorBodyJson::Flat(f) => f.message.as_str(),
+        }
     }
 
-    /// Returns the error code string, trying `error.code` first, then the flat `code` field.
+    /// Returns the error code string.
     pub fn code(&self) -> &str {
-        self.error
-            .as_ref()
-            .and_then(|e| e.code.as_deref())
-            .or(self.code.as_deref())
-            .unwrap_or("")
+        match self {
+            ErrorBodyJson::Wrapped(w) => w.error.code.as_deref().unwrap_or(""),
+            ErrorBodyJson::Flat(f) => f.code.as_deref().unwrap_or(""),
+        }
     }
 
-    /// Returns the error type string, trying `error.type` first, then the flat `type` field.
+    /// Returns the error type string.
     pub fn type_(&self) -> &str {
-        self.error
-            .as_ref()
-            .and_then(|e| e.type_.as_deref())
-            .or(self.r#type.as_deref())
-            .unwrap_or("")
+        match self {
+            ErrorBodyJson::Wrapped(w) => w.error.type_.as_deref().unwrap_or(""),
+            ErrorBodyJson::Flat(f) => f.type_.as_deref().unwrap_or(""),
+        }
     }
 
-    /// Returns the retry-after seconds, trying `error.retry_after` first, then the flat field.
+    /// Returns the retry-after seconds.
     pub fn retry_after_secs(&self) -> Option<u32> {
-        self.error
-            .as_ref()
-            .and_then(|e| e.retry_after)
-            .or(self.retry_after)
-            .map(|v| v as u32)
+        let secs = match self {
+            ErrorBodyJson::Wrapped(w) => w.error.retry_after,
+            ErrorBodyJson::Flat(f) => f.retry_after,
+        };
+        secs.map(|v| v as u32)
     }
 }
 
