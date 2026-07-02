@@ -10,7 +10,6 @@ fn seed_provider(state: &mut AppState, name: &str, models: Vec<String>) {
         ModelProvider {
             provider_type: None,
             base_url: String::new(),
-            api_key: String::new(),
             models,
         },
     );

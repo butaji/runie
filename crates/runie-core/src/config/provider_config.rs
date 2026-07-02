@@ -2,9 +2,12 @@
 
 impl crate::proto::provider::ProviderConfig for crate::config::Config {
     fn resolve_api_key(&self, provider: &str) -> Option<String> {
+        // API keys are resolved from environment variables or OS keyring,
+        // not from the config file.
         let mut resolver = crate::auth::CredentialResolver::new();
         for (name, p) in &self.model_providers {
-            resolver.set_config(name, non_empty(&p.api_key), non_empty(&p.base_url));
+            // Only pass base_url; api_key comes from env/keyring
+            resolver.set_config(name, None, non_empty(&p.base_url));
         }
         resolver.resolve_api_key(provider)
     }
@@ -12,7 +15,7 @@ impl crate::proto::provider::ProviderConfig for crate::config::Config {
     fn resolve_base_url(&self, provider: &str) -> Option<String> {
         let mut resolver = crate::auth::CredentialResolver::new();
         for (name, p) in &self.model_providers {
-            resolver.set_config(name, non_empty(&p.api_key), non_empty(&p.base_url));
+            resolver.set_config(name, None, non_empty(&p.base_url));
         }
         resolver.resolve_base_url(provider)
     }

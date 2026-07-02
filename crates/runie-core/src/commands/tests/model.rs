@@ -15,7 +15,6 @@ fn make_config(providers: &[(String, Vec<String>)]) -> Config {
             ModelProvider {
                 provider_type: None,
                 base_url: format!("https://{}.example.com", name),
-                api_key: "test-key".into(),
                 models: models.clone(),
             },
         );

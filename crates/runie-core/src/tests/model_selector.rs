@@ -42,7 +42,6 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
             ModelProvider {
                 provider_type: None,
                 base_url: String::new(),
-                api_key: String::new(),
                 models: models.clone(),
             },
         );

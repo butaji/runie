@@ -18,14 +18,14 @@ pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 /// Seed `state.config.model_providers` with the given provider configurations.
 /// Each entry is `(Name, base_url, api_key, models)`.
+/// Note: api_key is no longer stored in config - it's resolved from keyring/env.
 pub fn seed_providers(state: &mut AppState, providers: &[(String, String, String, Vec<String>)]) {
-    for (name, base_url, api_key, models) in providers {
+    for (name, base_url, _api_key, models) in providers {
         state.config_mut().model_providers_mut().insert(
             name.clone(),
             ModelProvider {
                 provider_type: None,
                 base_url: base_url.clone(),
-                api_key: api_key.clone(),
                 models: models.clone(),
             },
         );

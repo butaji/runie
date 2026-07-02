@@ -56,7 +56,6 @@ fn toggle_provider_model_disables_model_and_switches_active() {
             .unwrap_or_else(|| crate::config::ModelProvider {
                 provider_type: None,
                 base_url: "https://api.openai.com/v1".into(),
-                api_key: "sk-test".into(),
                 models: vec!["gpt-4o".into(), "gpt-4o-mini".into()],
             }),
     );
@@ -95,7 +94,6 @@ fn toggle_provider_model_enables_missing_model() {
         crate::config::ModelProvider {
             provider_type: None,
             base_url: "https://api.openai.com/v1".into(),
-            api_key: "sk-test".into(),
             models: vec!["gpt-4o".into()],
         },
     );

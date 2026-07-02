@@ -312,6 +312,13 @@ fn sync_config_cache(
     api_key: &str,
     models: &[String],
 ) {
+    // Store api_key in keyring (never in config)
+    if !api_key.is_empty() {
+        if let Err(e) = crate::auth::set_keyring_value(provider, api_key) {
+            tracing::warn!("failed to store api_key in keyring: {}", e);
+        }
+    }
+
     let providers = state.config_mut().model_providers_mut();
     providers.insert(
         provider.into(),
@@ -320,7 +327,6 @@ fn sync_config_cache(
                 .get(provider)
                 .and_then(|p| p.provider_type.clone()),
             base_url: base_url.into(),
-            api_key: api_key.into(),
             models: models.into(),
         },
     );

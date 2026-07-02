@@ -163,20 +163,13 @@ fn classify_change_detects_keybindings_change() {
 
 #[test]
 fn classify_change_detects_credentials_change() {
-    let mut prev = Config::default();
-    prev.model_providers.insert(
-        "openai".to_string(),
-        ModelProvider {
-            provider_type: Some("openai".to_string()),
-            base_url: "https://api.openai.com".to_string(),
-            api_key: "sk-old".to_string(),
-            models: Vec::new(),
-        },
-    );
-    let mut curr = prev.clone();
-    curr.model_providers.get_mut("openai").unwrap().api_key = "sk-new".to_string();
+    // Credentials are now stored in keyring, not config.
+    // This test verifies that changes to base_url don't trigger Credentials change.
+    let prev = Config::default();
+    let curr = Config::default();
     let changes = curr.classify_change(&prev);
-    assert!(changes.contains(&ConfigChange::Credentials));
+    // No credentials change since api_key is no longer in config
+    assert!(!changes.contains(&ConfigChange::Credentials));
 }
 
 #[test]

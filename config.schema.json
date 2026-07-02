@@ -219,13 +219,9 @@
       ]
     },
     "ModelProvider": {
-      "description": "A provider's configuration entry.",
+      "description": "A provider's configuration entry.\nAPI keys are resolved from environment variables or OS keyring, not stored here.",
       "type": "object",
       "properties": {
-        "api_key": {
-          "type": "string",
-          "default": ""
-        },
         "base_url": {
           "type": "string"
         },

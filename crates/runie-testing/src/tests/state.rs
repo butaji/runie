@@ -11,14 +11,14 @@ use runie_core::event::Event;
 use runie_core::model::AppState;
 
 /// Seed `state.config.model_providers` with the given provider configurations.
+/// Note: api_key is no longer stored in config - it's resolved from keyring/env.
 fn seed_providers(state: &mut AppState, providers: &[(String, String, String, Vec<String>)]) {
-    for (name, base_url, api_key, models) in providers {
+    for (name, base_url, _api_key, models) in providers {
         state.config_mut().model_providers_mut().insert(
             name.clone(),
             ModelProvider {
                 provider_type: None,
                 base_url: base_url.clone(),
-                api_key: api_key.clone(),
                 models: models.clone(),
             },
         );

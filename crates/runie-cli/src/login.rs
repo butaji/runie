@@ -118,7 +118,6 @@ fn update_config(provider_key: &str) -> Result<()> {
         .or_insert_with(|| runie_core::config::ModelProvider {
             provider_type: None,
             base_url: provider_meta.base_url,
-            api_key: String::new(), // API key stored in keyring, not config
             models: provider_meta.models.iter().map(|m| m.name.clone()).collect(),
         });
     

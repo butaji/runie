@@ -77,24 +77,17 @@ pub fn save_provider_to_path(
     api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
-    // Try to store api_key in keyring first; if retrieval fails, fall back to config
-    let keyring_available = if !api_key.is_empty() {
-        crate::auth::set_and_verify_keyring(name, api_key).is_ok()
-    } else {
-        true
-    };
-
-    // Store api_key in config only if keyring is unavailable/unverified
-    let stored_api_key = if keyring_available {
-        String::new()
-    } else {
-        api_key.to_owned()
-    };
+    // Store api_key in keyring (never in config)
+    if !api_key.is_empty() {
+        if let Err(e) = crate::auth::set_and_verify_keyring(name, api_key) {
+            tracing::warn!("failed to store api_key in keyring for {}: {}", name, e);
+            // Continue anyway - the keyring might be unavailable but we can still save the config
+        }
+    }
 
     let n = name.to_owned();
     let b = base_url.to_owned();
     let m = models.to_vec();
-    let stored = stored_api_key;
     with_exclusive_lock(path, move |config| {
         let provider_type = config
             .model_providers
@@ -105,7 +98,6 @@ pub fn save_provider_to_path(
             ModelProvider {
                 provider_type,
                 base_url: b.clone(),
-                api_key: stored.clone(),
                 models: m.clone(),
             },
         );
@@ -218,7 +210,6 @@ fn default_empty_provider() -> ModelProvider {
     ModelProvider {
         provider_type: None,
         base_url: String::new(),
-        api_key: String::new(),
         models: Vec::new(),
     }
 }

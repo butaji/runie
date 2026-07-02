@@ -48,13 +48,12 @@ pub struct ModelsSection {
 // ============================================================================
 
 /// A provider's configuration entry.
+/// API keys are resolved from environment variables or OS keyring, not stored here.
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize, JsonSchema)]
 pub struct ModelProvider {
     #[serde(rename = "type")]
     pub provider_type: Option<String>,
     pub base_url: String,
-    #[serde(default)]
-    pub api_key: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub models: Vec<String>,
 }

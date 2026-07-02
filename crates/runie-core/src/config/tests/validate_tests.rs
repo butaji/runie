@@ -297,7 +297,6 @@ fn registry_validation_rejects_unknown_configured_provider() {
         crate::config::ModelProvider {
             provider_type: Some("fake".to_string()),
             base_url: "https://fake.example.com".to_string(),
-            api_key: "fake-key".to_string(),
             models: vec![],
         },
     );

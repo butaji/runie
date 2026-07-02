@@ -85,11 +85,8 @@ pub fn remove_provider_config(name: &str) -> anyhow::Result<()> {
 pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> {
     with_read_lock(|config| {
         let p = config.model_providers.get(name)?;
-        // API key resolution is handled by CredentialResolver via config.resolve_api_key(),
-        // which uses the unified priority: env → dotenv → keyring → config.
-        let api_key = config
-            .resolve_api_key(name)
-            .unwrap_or_else(|| p.api_key.clone());
+        // API key resolution uses env → dotenv → keyring (no config fallback)
+        let api_key = config.resolve_api_key(name).unwrap_or_default();
         Some((p.base_url.clone(), api_key, p.models.clone()))
     })
 }
@@ -281,7 +278,7 @@ api_key = "sk-openai"
             .model_providers
             .get("minimax")
             .expect("minimax entry");
-        assert_eq!(minimax.api_key, ""); // migrated to keyring
+        // api_key is no longer stored in config - it's in keyring
         assert_eq!(minimax.base_url, "https://api.minimaxi.chat/v1");
     }
 
@@ -330,8 +327,9 @@ api_key = "sk-openai"
 
         // After migration, api_key is removed from config (stored in keyring)
         let loaded = crate::config::Config::load(Some(&path));
-        assert_eq!(loaded.model_providers.get("minimax").unwrap().api_key, "");
-        assert_eq!(loaded.model_providers.get("openai").unwrap().api_key, "");
+        // api_key is no longer stored in config - it's in keyring
+        assert!(loaded.model_providers.get("minimax").is_some());
+        assert!(loaded.model_providers.get("openai").is_some());
     }
 
     #[test]
