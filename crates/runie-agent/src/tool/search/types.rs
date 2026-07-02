@@ -1,11 +1,13 @@
 use git2::Status as GitStatus;
 use serde::Serialize;
 
+use crate::tool::constants::{SEARCH_DEFAULT_LIMIT, SEARCH_DEFAULT_MAX_MATCHES};
+
 /// Default max results per search.
-pub(crate) const DEFAULT_LIMIT: usize = 50;
+pub(crate) const DEFAULT_LIMIT: usize = SEARCH_DEFAULT_LIMIT;
 
 /// Default max matches per file for content search.
-pub(crate) const DEFAULT_MAX_MATCHES: usize = 10;
+pub(crate) const DEFAULT_MAX_MATCHES: usize = SEARCH_DEFAULT_MAX_MATCHES;
 
 /// Search result payload.
 #[derive(Debug, Serialize)]

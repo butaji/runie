@@ -1,5 +1,6 @@
 //! `find_definitions` tool — locate symbol definitions using content search.
 
+use crate::tool::constants::FIND_DEFINITIONS_DEFAULT_LIMIT;
 use crate::tool::search::fff_helpers::{
     build_error_json, build_error_json_with_instant, with_search_index,
 };
@@ -26,9 +27,6 @@ pub struct FindDefinitionsInput {
     #[serde(default)]
     pub limit: Option<usize>,
 }
-
-/// Default max results.
-const DEFAULT_LIMIT: usize = 30;
 
 /// Max file size for content indexing (2 MiB).
 const MAX_FILE_SIZE: usize = 2 * 1024 * 1024;
@@ -168,7 +166,7 @@ impl ToolDef for FindDefinitionsTool {
                     index,
                     &input.symbol,
                     &input.glob,
-                    input.limit.unwrap_or(DEFAULT_LIMIT),
+                    input.limit.unwrap_or(FIND_DEFINITIONS_DEFAULT_LIMIT),
                     start,
                 ))
             },

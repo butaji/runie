@@ -4,6 +4,22 @@ use super::{ToolOutput, ToolStatus};
 use bytesize::ByteSize;
 use humantime::format_duration as humantime_fmt;
 
+// ─── Byte Formatting Thresholds ─────────────────────────────────────────────────
+
+/// Threshold in bytes before applying kilobyte formatting.
+const BYTES_PER_KB: u64 = 1_000;
+
+/// Threshold in bytes before applying megabyte formatting.
+const BYTES_PER_MB: u64 = 1_000_000;
+
+/// Threshold in bytes before applying gigabyte formatting.
+const BYTES_PER_GB: u64 = 1_000_000_000;
+
+// ─── Duration Formatting Thresholds ────────────────────────────────────────────
+
+/// Threshold in seconds before switching to minute/second formatting.
+const SECONDS_PER_MINUTE: f64 = 60.0;
+
 /// Locate an executable on PATH using the `which` crate.
 pub fn which_tool(name: &str) -> Option<String> {
     which::which(name)
@@ -119,14 +135,14 @@ pub fn compact_json_args(args: &serde_json::Value) -> String {
 /// - `format_bytes(1234)` → `"1.2k"`
 /// - `format_bytes(3_456_789)` → `"3.5M"`
 pub fn format_bytes(bytes: u64) -> String {
-    if bytes < 1000 {
+    if bytes < BYTES_PER_KB {
         return bytes.to_string();
     }
     let formatted = ByteSize(bytes).to_string();
     // bytesize v1.x auto-scales to the smallest unit ≥ 1000. Override the
     // 1-MiB boundary so 1_000_000 formats as "1.0M" (matching the original).
     // Only the KB path uses bytesize (and needs lowercasing); MB/GB are direct.
-    if bytes < 1_000_000 {
+    if bytes < BYTES_PER_MB {
         // bytesize output: "X.X KB" or "X.X MB" — strip "B" + space, lowercase unit.
         formatted
             .replace(' ', "")
@@ -137,11 +153,11 @@ pub fn format_bytes(bytes: u64) -> String {
                 _ => c,
             })
             .collect()
-    } else if bytes < 1_000_000_000 {
-        let mb = bytes as f64 / 1_000_000.0;
+    } else if bytes < BYTES_PER_GB {
+        let mb = bytes as f64 / BYTES_PER_MB as f64;
         format!("{:.1}M", mb)
     } else {
-        let gb = bytes as f64 / 1_000_000_000.0;
+        let gb = bytes as f64 / BYTES_PER_GB as f64;
         format!("{:.1}G", gb)
     }
 }
@@ -157,7 +173,7 @@ pub fn format_bytes(bytes: u64) -> String {
 /// - `format_duration(12.3)` → `"12.3s"`
 /// - `format_duration(65.0)` → `"1m5s"`
 pub fn format_duration(secs: f64) -> String {
-    if secs < 60.0 {
+    if secs < SECONDS_PER_MINUTE {
         format!("{:.1}s", secs)
     } else {
         humantime_fmt(std::time::Duration::from_secs_f64(secs))

@@ -1012,7 +1012,7 @@
   {
     "file": "centralize-byte-and-duration-formatting-thresholds.md",
     "title": "Centralize byte and duration formatting thresholds",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-provider-http-timeouts-and-retry-constants.md",
@@ -1027,7 +1027,7 @@
   {
     "file": "centralize-tool-default-limits.md",
     "title": "Centralize tool default limits",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-unix-now-helper.md",

@@ -1,5 +1,6 @@
 //! Grep tool — searches for patterns in files.
 
+use crate::tool::constants::GREP_DEFAULT_LIMIT;
 use crate::tool::which_tool_async;
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::path::resolve_path_in;
@@ -50,7 +51,7 @@ impl ToolDef for GrepTool {
             input.glob.as_deref(),
             input.ignore_case.unwrap_or(false),
             input.literal.unwrap_or(false),
-            input.limit.unwrap_or(100),
+            input.limit.unwrap_or(GREP_DEFAULT_LIMIT),
             start,
         )
         .await

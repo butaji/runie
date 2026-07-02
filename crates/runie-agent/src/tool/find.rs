@@ -1,5 +1,6 @@
 //! Find tool — searches for files matching a pattern.
 
+use crate::tool::constants::{FIND_DEFAULT_LIMIT, FIND_FALLBACK_MAX_DEPTH};
 use crate::tool::{which_tool_async, ToolContext, ToolOutput, ToolStatus};
 use runie_core::path::resolve_path_in;
 use runie_core::tool::ToolDef;
@@ -36,7 +37,7 @@ impl ToolDef for FindTool {
         let start = Instant::now();
         let path_str = input.path.as_deref().unwrap_or(".");
         let full_path = resolve_path_in(path_str, &ctx.working_dir);
-        let content = run_find(&input.pattern, &full_path, input.limit.unwrap_or(100))
+        let content = run_find(&input.pattern, &full_path, input.limit.unwrap_or(FIND_DEFAULT_LIMIT))
             .await
             .unwrap_or_else(|e| format!("Error running find: {}", e));
         let status = determine_find_status(&content);
@@ -106,13 +107,13 @@ async fn run_find_fallback(
     let output = if pattern.contains('/') {
         Command::new("find")
             .arg(path_str)
-            .args(["-maxdepth", "10", "-path", &format!("*/{}", pattern)])
+            .args(["-maxdepth", &FIND_FALLBACK_MAX_DEPTH.to_string(), "-path", &format!("*/{}", pattern)])
             .output()
             .await?
     } else {
         Command::new("find")
             .arg(path_str)
-            .args(["-maxdepth", "10", "-name", pattern])
+            .args(["-maxdepth", &FIND_FALLBACK_MAX_DEPTH.to_string(), "-name", pattern])
             .output()
             .await?
     };

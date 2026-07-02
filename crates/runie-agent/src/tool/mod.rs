@@ -9,6 +9,7 @@ pub use runie_core::tool::{
 };
 
 mod bash;
+mod constants;
 mod edit_file;
 mod fetch_docs;
 mod find;
