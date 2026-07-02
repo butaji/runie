@@ -261,7 +261,8 @@ fn submit_queues_when_turn_active_without_actor_handles() {
     assert!(state.actor_handles().is_none());
 
     // Simulate an active turn
-    state.agent_state_mut().turn_active = true;
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
 
     // Submit a message
     state.input_mut().input = "queued message".to_string();
@@ -285,7 +286,8 @@ fn submit_while_turn_active_queues_message() {
     assert!(state.actor_handles().is_none());
 
     // Simulate an active turn
-    state.agent_state_mut().turn_active = true;
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
 
     // Simulate submit while turn is active
     state.input_mut().input = "queued message".to_string();
@@ -306,7 +308,8 @@ fn multiple_submits_while_turn_active_queue_all() {
     assert!(state.actor_handles().is_none());
 
     // Simulate an active turn
-    state.agent_state_mut().turn_active = true;
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
 
     // First submission
     state.input_mut().input = "first".to_string();

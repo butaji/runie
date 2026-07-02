@@ -59,6 +59,19 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Set turn_active and sync to AgentState projection.
+    /// For test setup: use this instead of setting `turn_state.turn_active` directly.
+    pub fn set_turn_active(&mut self, active: bool) {
+        self.turn_state.turn_active = active;
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+    }
+
+    /// Sync AgentState projection from TurnState.
+    /// Call after directly modifying `turn_state` fields.
+    pub fn sync_agent_state(&mut self) {
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+    }
+
     /// Create a test AppState with specific transient message.
     #[doc(hidden)]
     pub fn __with_transient_test(
@@ -99,12 +112,14 @@ impl AppState {
         if let Some(ref h) = handles {
             let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content: content.clone() });
         } else {
-            self.agent_state_mut()
+            // Mutate authoritative TurnState, then sync to AgentState projection.
+            self.turn_state_mut()
                 .message_queue
                 .push(crate::model::QueuedMessage {
                     content: content.clone(),
                     kind: crate::model::QueuedMessageKind::Steering,
                 });
+            *self.agent_state_mut() = AgentState::from(&self.turn_state);
         }
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;

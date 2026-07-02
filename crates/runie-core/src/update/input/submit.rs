@@ -8,6 +8,7 @@
 use crate::actors::{IoMsg, SessionMsg, TurnMsg};
 use crate::actors::turn::messages::MessageSource;
 use crate::message::{now, ChatMessage, Role};
+use crate::model::state::AgentState;
 use crate::model::AppState;
 
 impl AppState {
@@ -72,8 +73,9 @@ impl AppState {
     }
 
     fn estimate_and_add_tokens(&mut self, content: &str) {
-        let agent = self.agent_state_mut();
-        agent.tokens_in += agent.token_tracker.estimate_input(content);
+        let tokens = self.turn_state.token_tracker.estimate_input(content);
+        self.turn_state_mut().tokens_in += tokens;
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     fn try_handle_bang_command(&mut self, content: &str) -> Option<()> {
@@ -105,12 +107,14 @@ impl AppState {
         if let Some(h) = self.actor_handles() {
             let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
         } else {
-            self.agent_state_mut()
+            // Mutate authoritative TurnState, then sync to AgentState projection.
+            self.turn_state_mut()
                 .message_queue
                 .push(crate::model::QueuedMessage {
                     content,
                     kind: crate::model::QueuedMessageKind::Steering,
                 });
+            *self.agent_state_mut() = AgentState::from(&self.turn_state);
         }
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
@@ -132,8 +136,7 @@ impl AppState {
         // Fallback applies synchronously in tests without actor handles.
         let handles = self.actor_handles().cloned();
         if let Some(h) = handles {
-            let id = format!("req.{}", self.agent_state().next_id);
-            self.agent_state_mut().next_id += 1;
+            let id = self.next_id();
             let _ = h.turn.try_send(TurnMsg::SubmitUserMessage {
                 content,
                 id,
@@ -158,9 +161,9 @@ impl AppState {
             }],
             ..Default::default()
         });
-        self.agent_state_mut()
-            .request_queue
-            .push_back((content, id));
+        // Mutate authoritative TurnState, then sync to AgentState projection.
+        self.turn_state_mut().request_queue.push_back((content, id));
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
     pub fn apply_command_result(&mut self, result: crate::commands::CommandResult) {

@@ -1,35 +1,40 @@
 use crate::labels::{tool_done, tool_running};
 use crate::message::{now, Part};
 use crate::metrics;
+use crate::model::state::AgentState;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::agent::thought::{plan_thought, ThoughtPlan};
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
-        self.agent_state_mut().streaming = true;
-        self.agent_state_mut().current_request_id = Some(id);
-        self.agent_state_mut().thinking_started_at = Some(std::time::Instant::now());
-        self.agent_state_mut().turn_active = true;
-        self.agent_state_mut().current_action = Some("Thinking".to_owned());
-        self.agent
+        // Mutate authoritative TurnState, then sync to AgentState projection.
+        self.turn_state_mut().streaming = true;
+        self.turn_state_mut().current_request_id = Some(id);
+        self.turn_state_mut().thinking_started_at = Some(std::time::Instant::now());
+        self.turn_state_mut().turn_active = true;
+        self.turn_state_mut().current_action = Some("Thinking".to_owned());
+        self.turn_state
             .turn_started_at
             .get_or_insert_with(std::time::Instant::now);
         // Reset streaming buffer for new turn
-        self.agent_state_mut().streaming_buffer.reset();
+        self.turn_state_mut().streaming_buffer.reset();
         // Init speed tracking for this turn
-        self.agent_state_mut().turn_tokens_out = 0;
-        self.agent_state_mut().last_speed_update = Some(std::time::Instant::now());
-        self.agent_state_mut().tokens_at_last_speed = self.agent_state_mut().tokens_out;
-        self.agent_state_mut().speed_tps = 0.0;
+        self.turn_state_mut().turn_tokens_out = 0;
+        self.turn_state_mut().last_speed_update = Some(std::time::Instant::now());
+        self.turn_state_mut().tokens_at_last_speed = self.turn_state.tokens_out;
+        self.turn_state_mut().speed_tps = 0.0;
         // Keep existing rolling window - it auto-evicts to 1000 tokens
-        let tokens = self.agent_state().tokens_out;
-        self.agent_state_mut().speed_window.record(tokens);
+        let tokens = self.turn_state.tokens_out;
+        self.turn_state_mut().speed_window.record(tokens);
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
     }
     pub(crate) fn add_thought(&mut self, id: String) {
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
         self.agent_state_mut().current_action = None;
         self.agent_state_mut().thinking_started_at = None;
+        // Clear thinking state on authoritative TurnState.
+        self.turn_state_mut().thinking_started_at = None;
         self.flush_buffered_response(&id);
         let (insert_idx, plan) = if let Some(idx) = self.find_assistant_by_id(&id) {
             let plan = plan_thought(&self.session_mut().messages[idx].content(), duration);
@@ -154,11 +159,14 @@ impl AppState {
             return;
         }
         let n = self
-            .agent_state_mut()
+            .turn_state_mut()
             .token_tracker
             .estimate_output(content);
-        self.agent_state_mut().tokens_out += n;
-        self.agent_state_mut().turn_tokens_out += n;
+        // Update authoritative TurnState and sync only the token fields to AgentState.
+        self.turn_state_mut().tokens_out += n;
+        self.turn_state_mut().turn_tokens_out += n;
+        self.agent_state_mut().tokens_out = self.turn_state.tokens_out;
+        self.agent_state_mut().turn_tokens_out = self.turn_state.turn_tokens_out;
     }
     pub(crate) fn find_cached_assistant_index(&mut self, id: &str) -> Option<usize> {
         let idx = self.agent_state_mut().last_assistant_index?;

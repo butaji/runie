@@ -1,4 +1,5 @@
 use crate::message::{now, Part};
+use crate::model::state::AgentState;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::strip_tool_markers;
 
@@ -97,23 +98,22 @@ impl AppState {
     }
 
     pub(crate) fn finish_turn(&mut self, id: String) {
-        let assistant_idx = self.agent_state_mut().last_assistant_index;
-        let remaining_tail = self
-            .agent_state_mut()
-            .streaming_buffer
-            .force_flush()
-            .join("");
+        // Read from TurnState (authoritative source), not derived agent.
+        let assistant_idx = self.turn_state.last_assistant_index;
+        let remaining_tail = self.turn_state.streaming_buffer.force_flush().join("");
         if !remaining_tail.is_empty() {
             if let Some(idx) = assistant_idx {
                 self.append_to_message(idx, &remaining_tail);
             }
         }
-        self.agent_state_mut().streaming_buffer.reset();
+        self.turn_state_mut().streaming_buffer.reset();
         self.close_open_parts(assistant_idx, &remaining_tail);
         self.strip_tools_from_assistant();
         self.remove_empty_assistant();
         self.clear_turn_state(&id);
-        self.agent_state_mut().last_assistant_index = None;
+        // Set on turn_state, then sync to agent.
+        self.turn_state_mut().last_assistant_index = None;
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.deliver_queued();
         // NOTE: Do NOT clear message_queue here. In production mode, TurnActor
         // emits SteeringDelivered/FollowUpDelivered which sync the queue. In test
@@ -168,29 +168,34 @@ impl AppState {
     }
 
     fn clear_turn_state(&mut self, id: &str) {
-        if self.agent_state_mut().current_request_id.as_deref() == Some(id) {
-            self.agent_state_mut().current_request_id = None;
+        // Mutate authoritative TurnState only — do NOT sync here.
+        // Fields managed by other functions (like last_assistant_index, streaming)
+        // are synced by those functions. Clearing them here would overwrite changes.
+        if self.turn_state.current_request_id.as_deref() == Some(id) {
+            self.turn_state_mut().current_request_id = None;
         }
-        self.agent_state_mut().current_tool_name = None;
-        self.agent_state_mut().current_action = None;
-        self.agent_state_mut().intermediate_step_count = 0;
-        self.agent_state_mut().thought_seq = 0;
-        self.agent_state_mut().turn_active = false;
-        self.agent_state_mut().turn_started_at = None;
-        self.view_mut().vim_nav_pending = false;
-        self.agent_state_mut().inflight = self.agent_state_mut().inflight.saturating_sub(1);
+        self.turn_state_mut().current_tool_name = None;
+        self.turn_state_mut().current_action = None;
+        self.turn_state_mut().intermediate_step_count = 0;
+        self.turn_state_mut().thought_seq = 0;
+        self.turn_state_mut().turn_active = false;
+        self.turn_state_mut().turn_started_at = None;
+        self.turn_state_mut().inflight = self.turn_state.inflight.saturating_sub(1);
         // Reset per-turn speed tracking (but keep speed_window for continuity)
-        self.agent_state_mut().turn_tokens_out = 0;
-        self.agent_state_mut().speed_tps = 0.0;
-        self.agent_state_mut().last_speed_update = None;
+        self.turn_state_mut().turn_tokens_out = 0;
+        self.turn_state_mut().speed_tps = 0.0;
+        self.turn_state_mut().last_speed_update = None;
+        self.view_mut().vim_nav_pending = false;
     }
 
     fn maybe_end_streaming(&mut self) {
-        if self.agent_state_mut().inflight == 0 && self.agent_state_mut().request_queue.is_empty() {
-            self.agent_state_mut().streaming = false;
-            if self.agent_state_mut().current_request_id.is_none() {
-                self.agent_state_mut().thinking_started_at = None;
+        // Read from TurnState, mutate through turn_state_mut, sync to AgentState.
+        if self.turn_state.inflight == 0 && self.turn_state.request_queue.is_empty() {
+            self.turn_state_mut().streaming = false;
+            if self.turn_state.current_request_id.is_none() {
+                self.turn_state_mut().thinking_started_at = None;
             }
+            *self.agent_state_mut() = AgentState::from(&self.turn_state);
         }
     }
 
@@ -267,21 +272,23 @@ impl AppState {
     }
 
     fn reset_agent_state(&mut self) {
-        let a = self.agent_state_mut();
-        a.streaming = false;
-        a.turn_active = false;
-        a.current_request_id = None;
-        a.inflight = 0;
-        a.turn_started_at = None;
-        a.thinking_started_at = None;
-        a.tool_started_at = None;
-        a.current_tool_name = None;
-        a.current_action = None;
-        a.turn_tokens_out = 0;
-        a.intermediate_step_count = 0;
-        a.thought_seq = 0;
-        a.last_assistant_index = None;
-        a.streaming_buffer.reset();
+        // Mutate authoritative TurnState, then sync to AgentState projection.
+        self.turn_state_mut().streaming = false;
+        self.turn_state_mut().turn_active = false;
+        self.turn_state_mut().current_request_id = None;
+        self.turn_state_mut().inflight = 0;
+        self.turn_state_mut().turn_started_at = None;
+        self.turn_state_mut().thinking_started_at = None;
+        self.turn_state_mut().tool_started_at = None;
+        self.turn_state_mut().current_tool_name = None;
+        self.turn_state_mut().current_action = None;
+        self.turn_state_mut().turn_tokens_out = 0;
+        self.turn_state_mut().intermediate_step_count = 0;
+        self.turn_state_mut().thought_seq = 0;
+        self.turn_state_mut().last_assistant_index = None;
+        self.turn_state_mut().streaming_buffer.reset();
+        // Sync authoritative fields to AgentState projection.
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.view_mut().vim_nav_pending = false;
     }
 }

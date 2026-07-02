@@ -19,8 +19,11 @@ fn test_complete_agent_flow() {
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
     assert!(!state.agent.streaming);
-    state.pop_queue();
-    state.agent.streaming = true;
+    // Pop from authoritative turn_state queue, not agent queue.
+    state.turn_state.pop_queue();
+    // Set streaming on authoritative TurnState and sync to AgentState.
+    state.turn_state_mut().streaming = true;
+    state.sync_agent_state();
     state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
@@ -63,7 +66,8 @@ fn test_second_submit_while_turn_active_queues_message() {
     assert_eq!(state.session.messages[0].content(), "A");
 
     // Simulate what spawn_if_queued should do: set turn_active
-    state.agent.turn_active = true;
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
 
     // Second message while turn is active
     state.update(crate::Event::Input('B'));
@@ -89,7 +93,8 @@ fn test_queued_message_appears_after_turn_completes() {
     // Submit first message and simulate agent start
     state.update(crate::Event::Input('A'));
     state.update(Event::submit());
-    state.agent.turn_active = true;
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
 
     // Submit second message while agent is working
     state.update(crate::Event::Input('B'));
@@ -125,7 +130,8 @@ fn submit_queued_message(state: &mut AppState, ch: char) {
 fn test_three_messages_one_at_a_time() {
     let mut state = fresh_state();
     submit_queued_message(&mut state, '1');
-    state.agent.turn_active = true;
+    state.turn_state.turn_active = true;
+    state.sync_agent_state();
 
     submit_queued_message(&mut state, '2');
     submit_queued_message(&mut state, '3');

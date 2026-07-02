@@ -4,7 +4,7 @@
 //! They are kept in a separate file to keep the source files under 500 lines.
 
 use super::ranking;
-use super::{AppState, CommandUsage, ModelSource};
+use super::{AgentState, AppState, CommandUsage, ModelSource};
 use crate::actors::{ConfigMsg, LeaderHandle};
 use crate::event::TransientLevel;
 
@@ -76,8 +76,9 @@ impl AppState {
     // ── ID generation ───────────────────────────────────────────────────────
 
     pub fn next_id(&mut self) -> String {
-        let id = format!("req.{}", self.agent_state().next_id);
-        self.agent_state_mut().next_id += 1;
+        let id = format!("req.{}", self.turn_state.next_id);
+        self.turn_state_mut().next_id += 1;
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         id
     }
 

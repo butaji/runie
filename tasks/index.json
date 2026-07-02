@@ -962,7 +962,7 @@
   {
     "file": "merge-agentstate-into-turnstate-projection.md",
     "title": "Merge AgentState into a TurnState projection",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
@@ -1137,7 +1137,7 @@
   {
     "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
     "title": "Remove direct `AppState` mutation from core update handlers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
