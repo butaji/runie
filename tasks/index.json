@@ -877,7 +877,7 @@
   {
     "file": "add-convention-against-magic-numbers.md",
     "title": "Add convention / lint against magic numbers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-event-assertion-helpers-to-runie-testing.md",

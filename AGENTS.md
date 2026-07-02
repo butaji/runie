@@ -167,8 +167,11 @@ The build script at `crates/runie-core/build.rs` enforces:
 | Check | Scope | Fail-on-violation |
 |-------|-------|-------------------|
 | AppState field access patterns | Production code only | Yes |
+| Magic numbers (>= 1000) | Production code only | Yes |
 
 **AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
+
+**Magic number guardrail** prevents raw numeric literals (>= 1000) in production code. Numbers below 1000, underscore-separated numbers, hex literals, HTTP status codes, JSON-RPC error codes, and numbers in test code are exempt. Use named constants for buffer sizes, timeouts, and thresholds.
 
 **GUIDELINES (Not Enforced)**
 

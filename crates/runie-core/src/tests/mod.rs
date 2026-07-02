@@ -4,6 +4,8 @@
 
 #[cfg(test)]
 mod arch_guardrails;
+#[cfg(test)]
+mod magic_number_lint;
 #[allow(unused)]
 mod support;
 
