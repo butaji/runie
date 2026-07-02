@@ -9,16 +9,15 @@
 use include_dir::Dir;
 use crate::commands::dsl::handlers::HANDLER_REGISTRY;
 use crate::commands::dsl::spec::build_cmd_from_yaml;
-use crate::commands::dsl::spec::CommandDef;
-use crate::declarative::types::DeclarativeCommandYaml;
+use crate::commands::Command;
 
 /// Embed resources/commands/ at compile time via include_dir.
 /// This avoids a hand-maintained list: adding a new .yaml file is enough.
 static COMMANDS_DIR: Dir<'static> =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/resources/commands");
 
-/// Load all embedded commands as `spec::CommandDef`.
-pub fn load_embedded_commands() -> Vec<CommandDef> {
+/// Load all embedded commands as `Command`.
+pub fn load_embedded_commands() -> Vec<Command> {
     let handler_registry = &*HANDLER_REGISTRY;
     COMMANDS_DIR
         .files()
@@ -30,7 +29,7 @@ pub fn load_embedded_commands() -> Vec<CommandDef> {
 fn load_single_command_file(
     f: &include_dir::File<'_>,
     handler_registry: &crate::commands::dsl::handlers::HandlerRegistry,
-) -> Option<CommandDef> {
+) -> Option<Command> {
     let path = f.path();
     let extension = path.extension()?.to_str()?;
     if extension != "yaml" && extension != "yml" {
@@ -39,7 +38,7 @@ fn load_single_command_file(
 
     // Safe: YAML files in resources/commands/ are always UTF-8.
     let yaml_contents = std::str::from_utf8(f.contents()).ok()?;
-    let yaml: DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
+    let yaml: crate::declarative::types::DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
         Ok(y) => y,
         Err(e) => {
             tracing::warn!(

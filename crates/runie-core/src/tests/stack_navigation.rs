@@ -190,12 +190,14 @@ fn check_command_is_sub(reg: &crate::commands::CommandRegistry, name: &str) -> O
 
     match reg.get(name) {
         Some(def) => {
-            let flow = match &def.flow {
-                CommandFlow::Sub(inner) => inner.as_ref(),
-                other => other,
+            let flow = def.flow();
+            // Check if inner flow opens a dialog
+            let opens_sub = match &flow {
+                CommandFlow::Sub(inner) => matches!(inner.as_ref(), CommandFlow::PanelStack(_) | CommandFlow::Handler(_)),
+                CommandFlow::PanelStack(_) | CommandFlow::Handler(_) => true,
+                _ => false,
             };
-            let opens_sub = matches!(flow, CommandFlow::PanelStack(_) | CommandFlow::Handler(_));
-            let is_sub = matches!(def.flow, CommandFlow::Sub(_));
+            let is_sub = matches!(flow, CommandFlow::Sub(_));
             if !is_sub {
                 Some(format!("'{}' is missing .sub()", name))
             } else if !opens_sub {
@@ -294,7 +296,7 @@ fn sub_command_pushes_current_dialog_to_back_stack() {
             .unwrap_or_else(|| panic!("{} not registered", name));
         // The flow must be Sub-wrapped.
         assert!(
-            matches!(def.flow, CommandFlow::Sub(_)),
+            matches!(def.flow(), CommandFlow::Sub(_)),
             "'{}' must be wrapped in CommandFlow::Sub (use .sub() in DSL)",
             name
         );

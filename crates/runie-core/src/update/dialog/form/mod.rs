@@ -448,7 +448,7 @@ fn dispatch_form_to_registry(
     let result = if let Some(handler) = cmd.form_handler {
         handler(state, &args)
     } else {
-        cmd.flow.clone().exec(state, name, &args)
+        cmd.flow().clone().exec(state, name, &args)
     };
     super::router::process_command_result(state, result);
 }

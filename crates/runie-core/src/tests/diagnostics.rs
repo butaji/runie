@@ -7,7 +7,7 @@ fn diagnostics_emits_event() {
     let mut state = AppState::default();
     let cmd = state.registry.get("diagnostics").unwrap();
     let cmd_name = cmd.name.clone();
-    let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
+    let result = cmd.flow().clone().exec(&mut state, &cmd_name, "");
     assert!(matches!(
         result,
         crate::commands::CommandResult::Event(crate::Event::ShowDiagnostics)

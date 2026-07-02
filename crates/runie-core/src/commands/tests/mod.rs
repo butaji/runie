@@ -17,7 +17,7 @@ pub(super) fn run_slash(state: &mut AppState, text: &str) {
 /// (PanelStack + form_handler) variants.
 pub(super) fn exec_handler(state: &mut AppState, name: &str, args: &str) -> CommandResult {
     let cmd = state.registry.get(name).unwrap_or_else(|| panic!("command {name} not found"));
-    match &cmd.flow {
+    match cmd.flow() {
         CommandFlow::Handler(f) => f(state, args),
         CommandFlow::Sub(inner) => match inner.as_ref() {
             CommandFlow::Handler(f) => f(state, args),

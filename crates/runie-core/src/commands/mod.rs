@@ -1,6 +1,9 @@
 //! Command Registry — unified slash commands and command palette
 //!
-//! # DSL Quick Reference
+//! # Unified Command Model
+//!
+//! - `Command` is the canonical runtime representation stored in the registry.
+//! - `Action` is the enum describing what the command does.
 //!
 //! ```
 //! use runie_core::commands::{CommandCategory, cmd};
@@ -10,7 +13,6 @@
 //! let _ = cmd("hello").msg("Hello!");
 //!
 //! // Form-based command: submit routes through command registry via form_with_handler
-//! // (see spec.rs for the FormHandler signature and build_form_stack_from_template)
 //! use runie_core::commands::CommandResult;
 //! let _ = cmd("save")
 //!     .desc("Save session")
@@ -28,11 +30,8 @@ mod registry;
 #[cfg(test)]
 mod tests;
 
-pub use dsl::{CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType};
+pub use dsl::{cmd, Action, Command, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType, FormHandler};
 pub use registry::{filter_commands, CommandRegistry, DialogKind, DialogState};
-
-/// Shorthand for creating commands
-pub use dsl::cmd;
 
 /// One row in the command palette.
 #[derive(Debug, Clone)]

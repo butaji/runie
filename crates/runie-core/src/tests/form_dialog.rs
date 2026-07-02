@@ -186,11 +186,14 @@ fn all_form_commands_are_listed() {
         .list()
         .iter()
         .filter_map(|def| {
-            let flow = match &def.flow {
-                CommandFlow::Sub(inner) => inner.as_ref(),
-                other => other,
+            let flow = def.flow();
+            // Unwrap Sub if present, then check for PanelStack
+            let is_panel = match flow {
+                CommandFlow::Sub(inner) => matches!(inner.as_ref(), CommandFlow::PanelStack(_)),
+                CommandFlow::PanelStack(_) => true,
+                _ => false,
             };
-            if matches!(flow, CommandFlow::PanelStack(_)) {
+            if is_panel {
                 Some(def.name.clone())
             } else {
                 None

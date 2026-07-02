@@ -38,4 +38,6 @@ mod tests;
 pub mod types;
 
 pub use loader::{load_commands_from_dir, load_skills_from_dir, DeclarativeLoader};
+// NOTE: CommandDef from types is deprecated in favor of Command from commands::dsl::command
+// Keeping for backward compatibility during migration
 pub use types::{CommandDef, SkillDef, Trigger};

@@ -224,7 +224,7 @@ fn thinking_does_not_create_a_form_panel() {
     let cmd = reg.get("thinking").expect("thinking command");
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
-    let result = cmd.flow.clone().exec(&mut state, "thinking", "");
+    let result = cmd.flow().clone().exec(&mut state, "thinking", "");
     match result {
         CommandResult::OpenPanelStack(stack) => {
             let panel = stack.current().expect("panel");

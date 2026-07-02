@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use crate::commands::dsl::spec::FormHandler;
+use crate::commands::dsl::command::FormHandler;
 use crate::model::AppState;
 
 use crate::commands::dsl::CommandKind;

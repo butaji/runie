@@ -234,8 +234,8 @@ fn get_handler(
     def: &crate::commands::CommandDef,
 ) -> Option<fn(&mut AppState, &str) -> CommandResult> {
     use crate::commands::CommandFlow;
-    match &def.flow {
-        CommandFlow::Handler(f) => Some(*f),
+    match def.flow() {
+        CommandFlow::Handler(f) => Some(f),
         _ => None,
     }
 }

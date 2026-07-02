@@ -281,7 +281,7 @@ impl AppState {
 
         match self.registry().get(name) {
             Some(spec) => {
-                let (cmd_name, flow) = (spec.name.clone(), spec.flow.clone());
+                let (cmd_name, flow) = (spec.name.clone(), spec.flow().clone());
                 self.record_command_usage(&cmd_name);
                 let result = flow.exec(self, &cmd_name, &args);
                 if matches!(result, CommandResult::None) {

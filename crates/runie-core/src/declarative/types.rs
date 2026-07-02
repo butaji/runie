@@ -82,7 +82,7 @@ pub struct FormFieldDef {
 }
 
 /// A command definition loaded from a YAML file.
-/// This is the typed deserialization target; convert to `CommandDef` via `From`.
+/// This is the typed deserialization target; convert to `Command` via `build_cmd_from_yaml`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DeclarativeCommandYaml {
     pub name: String,
@@ -103,9 +103,6 @@ pub struct DeclarativeCommandYaml {
     /// The command kind discriminated by the `type` field.
     #[serde(flatten)]
     pub kind: CommandKind,
-}
-
-impl DeclarativeCommandYaml {
 }
 
 /// Deserialize a category string.
@@ -185,18 +182,18 @@ pub struct SkillDef {
 }
 
 /// A loaded command definition from a YAML file.
+/// NOTE: This is kept for backward compatibility but the canonical representation
+/// is now `Command` from `commands::dsl::command`.
 #[derive(Debug, Clone)]
 pub struct CommandDef {
     pub name: String,
     pub description: String,
-    /// Category — uses the shared `CommandCategory` from commands DSL.
     pub category: CommandCategory,
     pub intent: String,
     pub shortcut: Option<String>,
     pub aliases: Vec<String>,
     pub has_subcommands: bool,
     pub file_path: PathBuf,
-    /// The parsed kind from YAML (used by `build_cmd_from_yaml` to look up the handler).
     pub yaml_kind: CommandKind,
 }
 

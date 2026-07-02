@@ -98,8 +98,8 @@ fn rank_commands_with_query_filters() {
 }
 
 fn get_handler(def: &CommandDef) -> Option<fn(&mut AppState, &str) -> CommandResult> {
-    match &def.flow {
-        CommandFlow::Handler(f) => Some(*f),
+    match def.flow() {
+        CommandFlow::Handler(f) => Some(f),
         _ => None,
     }
 }

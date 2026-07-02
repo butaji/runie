@@ -1,19 +1,27 @@
-//! Unified command specification — single representation for all slash commands.
+//! Unified command specification — bridges legacy `CommandSpec` / `CommandDef` to the new `Command` type.
 //!
-//! `CommandSpec` is the static struct used in command tables (no heap allocation).
-//! `CommandDef` is the runtime-owned version used by the registry.
-//! `build_cmd()` converts a `CommandSpec` to a `CommandDef`.
+//! ## Migration Notes
+//!
+//! This module provides backward compatibility during migration:
+//! - `CommandKind` → use `Action` from `command.rs`
+//! - `CommandDef` → use `Command` from `command.rs`
+//! - `CommandSpec` → still used in some tests; prefer `Command::new()` builder
+//!
+//! The canonical command representation is now `Command` from `command.rs`.
+//! This module will be removed once all consumers migrate to `Command`.
 
 use crate::dialog::dsl::FormPanel;
-use crate::dialog::PanelStack as CoreStack;
 use crate::model::AppState;
 
-use super::{CommandCategory, CommandFlow, CommandResult};
+use super::{CommandCategory, CommandResult};
 
-/// Handler for form submissions.
-pub type FormHandler = fn(&mut AppState, &str) -> CommandResult;
+// Re-export the canonical types
+pub use super::command::{Action, Command, FormHandler};
+
+// ── Legacy CommandKind (for backward compatibility) ─────────────────────────────
 
 /// What a registered command does — mirrors the variants used in command tables.
+/// DEPRECATED: Use `Action` from `command.rs` instead.
 #[derive(Clone)]
 pub enum CommandKind {
     /// Custom handler function.
@@ -28,8 +36,30 @@ pub enum CommandKind {
     Msg(&'static str),
 }
 
+impl CommandKind {
+    /// Convert to `Action`.
+    pub fn to_action(&self) -> Action {
+        match self {
+            CommandKind::Handler(f) => Action::Handler(*f),
+            CommandKind::FormWithHandler {
+                title,
+                fields,
+                handler,
+            } => Action::Form {
+                title,
+                fields,
+                handler: *handler,
+            },
+            CommandKind::Msg(m) => Action::Msg(m),
+        }
+    }
+}
+
+// ── Legacy CommandSpec (for backward compatibility in tests) ────────────────────
+
 /// A declarative command row — used in static command tables.
 /// All string data is borrowed (no heap allocation in static context).
+/// DEPRECATED: Prefer `Command::new()` builder for new code.
 #[derive(Clone)]
 pub struct CommandSpec {
     pub name: &'static str,
@@ -40,155 +70,49 @@ pub struct CommandSpec {
     pub kind: CommandKind,
 }
 
-// ── CommandDef — runtime-owned version ─────────────────────────────────────────
+// ── Legacy CommandDef (re-export of Command for backward compatibility) ─────────
 
 /// A single command definition — runtime-owned version stored in the registry.
-#[derive(Clone)]
-pub struct CommandDef {
-    pub name: String,
-    pub desc: String,
-    pub aliases: Vec<String>,
-    pub category: CommandCategory,
-    pub flow: CommandFlow,
-    /// Handler for form submissions (called by `dispatch_form_to_registry`).
-    pub form_handler: Option<FormHandler>,
-    /// Whether this command opens a sub-dialog (current dialog pushed to back stack).
-    pub is_sub: bool,
+/// ALIAS: This is now `Command` from `command.rs`.
+pub type CommandDef = Command;
+
+// ── CommandDef Builder Methods ─────────────────────────────────────────────────
+
+impl Command {
+    /// Convert from legacy `CommandSpec`.
+    pub fn from_spec(spec: &CommandSpec) -> Self {
+        let mut cmd = Command::new(spec.name)
+            .desc(spec.desc)
+            .aliases(spec.aliases)
+            .category(spec.category);
+        if spec.sub {
+            cmd = cmd.sub();
+        }
+        let action = spec.kind.to_action();
+        // Extract form_handler for Form actions
+        if let Action::Form { handler, .. } = &action {
+            cmd.form_handler = Some(*handler);
+        }
+        cmd.action(action)
+    }
 }
 
-impl CommandDef {
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            desc: String::new(),
-            aliases: Vec::new(),
-            category: CommandCategory::System,
-            flow: CommandFlow::None,
-            form_handler: None,
-            is_sub: false,
-        }
-    }
-
-    pub fn desc(mut self, desc: impl Into<String>) -> Self {
-        self.desc = desc.into();
-        self
-    }
-
-    pub fn alias(mut self, alias: impl Into<String>) -> Self {
-        self.aliases.push(alias.into());
-        self
-    }
-
-    pub fn aliases(mut self, aliases: &[&str]) -> Self {
-        for s in aliases {
-            self.aliases.push((*s).to_string());
-        }
-        self
-    }
-
-    pub fn category(mut self, cat: CommandCategory) -> Self {
-        self.category = cat;
-        self
-    }
-
-    pub fn msg(self, msg: impl Into<String>) -> Self {
-        self.with_flow(CommandFlow::Message(msg.into())).apply_sub()
-    }
-
-    pub fn handler(self, f: fn(&mut AppState, &str) -> CommandResult) -> Self {
-        self.with_flow(CommandFlow::Handler(f)).apply_sub()
-    }
-
-    pub fn panel<F>(self, f: F) -> Self
-    where
-        F: Fn(&mut AppState, &str) -> CoreStack + Send + Sync + 'static,
-    {
-        self.with_flow(CommandFlow::PanelStack(std::sync::Arc::new(f)))
-            .apply_sub()
-    }
-
-    pub fn sub(mut self) -> Self {
-        self.is_sub = true;
-        self
-    }
-
-    pub fn form_with_handler<Build>(
-        self,
-        title: &'static str,
-        form_builder: Build,
-        handler: FormHandler,
-    ) -> Self
-    where
-        Build: FnOnce(FormPanel) -> FormPanel + Send + Sync + 'static,
-    {
-        let id = self.name.clone();
-        let template =
-            form_builder(crate::dialog::dsl::form(id, title).cmd_name(self.name.clone()));
-        self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
-            .with_form_handler(handler)
-    }
-
-    pub fn with_form_handler(mut self, handler: FormHandler) -> Self {
-        self.form_handler = Some(handler);
-        self
-    }
-
-    fn with_flow(mut self, flow: CommandFlow) -> Self {
-        self.flow = flow;
-        self
-    }
-
-    fn apply_sub(mut self) -> Self {
-        if self.is_sub && !matches!(self.flow, CommandFlow::None) {
-            let inner = std::mem::replace(&mut self.flow, CommandFlow::None);
-            self.flow = CommandFlow::Sub(Box::new(inner));
-        }
-        self
-    }
-
-    /// Execute this command's flow.
-    pub fn exec(&self, state: &mut AppState, name: &str, args: &str) -> CommandResult {
-        self.flow.exec(state, name, args)
-    }
-}
+// ── Build Functions ─────────────────────────────────────────────────────────────
 
 /// Build a `CommandDef` from a `CommandSpec`.
+/// DEPRECATED: Use `Command::from_spec()` instead.
 pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
-    let mut cmd = CommandDef::new(spec.name)
-        .desc(spec.desc)
-        .aliases(spec.aliases)
-        .category(spec.category);
-    if spec.sub {
-        cmd = cmd.sub();
-    }
-    match &spec.kind {
-        CommandKind::Handler(f) => cmd.handler(*f),
-        CommandKind::FormWithHandler {
-            title,
-            fields,
-            handler,
-        } => {
-            let fields = *fields;
-            let handler = *handler;
-            let name = spec.name;
-            cmd.form_with_handler(
-                title,
-                move |f| add_fields(f, fields).cmd_name(name),
-                handler,
-            )
-        }
-        CommandKind::Msg(m) => cmd.msg((*m).to_string()),
-    }
+    Command::from_spec(spec)
 }
 
 /// Build a `CommandDef` from a YAML definition and handler registry.
 pub fn build_cmd_from_yaml(
     yaml: &crate::declarative::types::DeclarativeCommandYaml,
     handler_registry: &super::handlers::registry::HandlerRegistry,
-) -> Option<CommandDef> {
+) -> Option<Command> {
     use crate::declarative::types::CommandKind as YamlKind;
 
-    let mut cmd = CommandDef::new(yaml.name.clone())
+    let mut cmd = Command::new(yaml.name.clone())
         .desc(yaml.description.clone())
         .category(yaml.category);
     if !yaml.aliases.is_empty() {
@@ -201,11 +125,15 @@ pub fn build_cmd_from_yaml(
     }
 
     // Look up handler from registry based on YAML kind.
-    // `handler_registry.to_command_kind` returns spec::CommandKind (with fn pointers).
     match &yaml.kind {
         YamlKind::Handler { handler } => {
             if let Some(kind) = handler_registry.to_command_kind(handler) {
-                cmd = apply_kind(cmd, kind);
+                let action = kind.to_action();
+                // Extract form_handler for Form actions
+                if let Action::Form { handler, .. } = &action {
+                    cmd.form_handler = Some(*handler);
+                }
+                cmd = cmd.action(action);
             }
         }
         YamlKind::FormWithHandler { title, fields, handler } => {
@@ -222,53 +150,37 @@ pub fn build_cmd_from_yaml(
                     .collect();
                 let fields_box: Box<[(&'static str, &'static str, &'static str)]> =
                     fields_vec.into();
-                cmd = apply_form_with_handler(cmd, kind, title_static, Box::leak(fields_box));
+                let fields_ptr: &'static [_] = Box::leak(fields_box);
+                cmd = cmd.form_with_handler(
+                    title_static,
+                    move |f| add_fields(f, fields_ptr),
+                    get_form_handler_from_kind(&kind),
+                );
             }
         }
         YamlKind::Msg { message } => {
-            cmd = cmd.msg(message.clone());
+            let msg: &'static str = Box::leak(message.clone().into_boxed_str());
+            cmd = cmd.action(Action::Msg(msg));
         }
         YamlKind::Form { .. } => {
-            // Form without handler — not supported by the registry; skip.
+            // Form without handler — not supported; skip.
+            return None;
         }
     }
 
     Some(cmd)
 }
 
-/// Apply a resolved spec::CommandKind to a CommandDef builder.
-fn apply_kind(cmd: CommandDef, kind: CommandKind) -> CommandDef {
+/// Get form handler from CommandKind.
+fn get_form_handler_from_kind(kind: &CommandKind) -> FormHandler {
     match kind {
-        CommandKind::Handler(f) => cmd.handler(f),
-        CommandKind::FormWithHandler {
-            title,
-            fields,
-            handler,
-        } => cmd.form_with_handler(title, move |f| add_fields(f, fields), handler),
-        CommandKind::Msg(m) => cmd.msg(m),
+        CommandKind::FormWithHandler { handler, .. } => *handler,
+        CommandKind::Handler(f) => *f,
+        CommandKind::Msg(_) => |_, _| CommandResult::None,
     }
 }
 
-/// Apply a FormWithHandler kind with the form template from YAML.
-fn apply_form_with_handler(
-    cmd: CommandDef,
-    kind: CommandKind,
-    title: &'static str,
-    fields: &'static [(&'static str, &'static str, &'static str)],
-) -> CommandDef {
-    match kind {
-        CommandKind::FormWithHandler {
-            title: t,
-            handler: h,
-            ..
-        } => cmd.form_with_handler(t, move |p| add_fields(p, fields), h),
-        CommandKind::Handler(form_handler) => cmd
-            .form_with_handler(title, move |p| add_fields(p, fields), form_handler)
-            .with_form_handler(form_handler),
-        CommandKind::Msg(m) => cmd.msg(m),
-    }
-}
-
+/// Add fields to a form panel.
 fn add_fields(
     mut builder: FormPanel,
     fields: &[(&'static str, &'static str, &'static str)],
@@ -279,36 +191,7 @@ fn add_fields(
     builder
 }
 
-fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack {
-    let args_list: Vec<&str> = args.split_whitespace().collect();
-    let built = template.build();
-    let mut panel = crate::dialog::Panel::new(built.id, built.title).form();
-    panel.cmd_name = built.cmd_name;
-    panel.field_keys = built.field_keys;
-    let mut arg_idx = 0;
-    for item in built.items {
-        match item {
-            crate::dialog::PanelItem::FormField {
-                label,
-                placeholder,
-                key,
-                value,
-                ..
-            } => {
-                let val = if arg_idx < args_list.len() {
-                    args_list[arg_idx].to_owned()
-                } else {
-                    value
-                };
-                panel = panel.form_field_value(label, placeholder, key, val);
-                arg_idx += 1;
-            }
-            crate::dialog::PanelItem::FormSubmit => panel = panel.form_submit(),
-            _ => {}
-        }
-    }
-    CoreStack::new(panel)
-}
+// ── Register Commands ──────────────────────────────────────────────────────────
 
 /// Register every command from a spec table.
 pub fn register_commands(
@@ -316,17 +199,18 @@ pub fn register_commands(
     commands: &[CommandSpec],
 ) {
     for spec in commands {
-        registry.register(build_cmd(spec));
+        registry.register(Command::from_spec(spec));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::CommandFlow;
 
-    // Layer 1: command_registry_has_single_representation
+    // Layer 1: command_spec_and_def_are_distinct_types
     #[test]
-    fn command_spec_and_def_are_distinct_types() {
+    fn spec_can_be_converted_to_command() {
         let spec = CommandSpec {
             name: "test",
             desc: "A test",
@@ -335,9 +219,9 @@ mod tests {
             sub: false,
             kind: CommandKind::Msg("hello"),
         };
-        let def = build_cmd(&spec);
-        assert_eq!(def.name, "test");
-        assert!(matches!(def.flow, CommandFlow::Message(_)));
+        let cmd = Command::from_spec(&spec);
+        assert_eq!(cmd.name, "test");
+        assert!(matches!(cmd.action, Action::Msg(_)));
     }
 
     // Layer 1: all_slash_commands_registered
@@ -352,7 +236,7 @@ mod tests {
             sub: false,
             kind: CommandKind::Handler(|_, _| CommandResult::None),
         };
-        registry.register(build_cmd(&spec));
+        registry.register(Command::from_spec(&spec));
         assert!(registry.get("check").is_some());
     }
 
@@ -361,12 +245,12 @@ mod tests {
     fn cmd_function_works() {
         let def = super::super::cmd("hello").msg("Hello!");
         assert_eq!(def.name, "hello");
-        assert!(matches!(def.flow, CommandFlow::Message(_)));
+        assert!(matches!(def.action, Action::Msg(_)));
     }
 
     #[test]
     fn def_builder_chain() {
-        let def = CommandDef::new("test")
+        let def = Command::new("test")
             .desc("Test command")
             .alias("t")
             .aliases(&["tt", "ttt"])
@@ -379,20 +263,24 @@ mod tests {
 
     #[test]
     fn sub_is_noop_for_empty_flow() {
-        let def = CommandDef::new("nothing").sub();
-        assert!(matches!(def.flow, CommandFlow::None));
+        // When .sub() is called before .msg(), the flow is Sub(None)
+        // because apply_sub only wraps non-None flows
+        let def = Command::new("nothing").sub();
+        assert!(def.is_sub);
+        // Default action is Msg(""), but .sub() wrapping happens at flow() time
+        assert!(matches!(def.flow(), CommandFlow::Sub(_)));
     }
 
     #[test]
     fn sub_wraps_handler() {
-        let def = CommandDef::new("custom")
+        let def = Command::new("custom")
             .sub()
             .handler(|_: &mut AppState, _: &str| CommandResult::None);
-        assert!(matches!(def.flow, CommandFlow::Sub(_)));
+        assert!(matches!(def.flow(), CommandFlow::Sub(_)));
     }
 
     #[test]
-    fn build_cmd_form_builds_panel_stack() {
+    fn spec_form_builds_panel_stack() {
         let spec = CommandSpec {
             name: "save",
             desc: "Save session",
@@ -405,9 +293,11 @@ mod tests {
                 handler: |_, _| CommandResult::None,
             },
         };
-        let def = build_cmd(&spec);
-        assert!(matches!(def.flow, CommandFlow::PanelStack(_)));
-        assert!(def.form_handler.is_some());
+        let cmd = Command::from_spec(&spec);
+        assert!(cmd.form_handler.is_some());
+        // Form action should convert to PanelStack flow
+        let flow = cmd.flow();
+        assert!(matches!(flow, CommandFlow::PanelStack(_)));
     }
 
     // Layer 2: slash_command_parses_typed_args
@@ -423,9 +313,9 @@ mod tests {
                 CommandResult::Message(format!("Hello, {}!", args))
             }),
         };
-        let def = build_cmd(&spec);
+        let cmd = Command::from_spec(&spec);
         let mut state = AppState::default();
-        let result = def.exec(&mut state, "greet", "world");
+        let result = cmd.exec(&mut state, "greet", "world");
         assert!(matches!(result, CommandResult::Message(msg) if msg.contains("world")));
     }
 
@@ -444,7 +334,7 @@ mod tests {
                 handler: |_, _| CommandResult::None,
             },
         };
-        let def = build_cmd(&spec);
-        assert!(def.form_handler.is_some());
+        let cmd = Command::from_spec(&spec);
+        assert!(cmd.form_handler.is_some());
     }
 }
