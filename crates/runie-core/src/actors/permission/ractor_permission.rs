@@ -204,6 +204,7 @@ impl RactorPermissionActor {
             .unwrap_or(false)
         {
             state.current_request = None;
+            state.emit(Event::PermissionRequestDismissed);
         }
         state.emit(Event::PermissionResponse { request_id, action });
     }

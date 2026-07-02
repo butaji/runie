@@ -422,8 +422,13 @@ impl UiActor {
                                     .permission
                                     .try_resolve_permission(req.request_id.clone(), action);
                             }
-                            *self.state.permission_request_mut() = None;
-                            self.state.view_mut().dirty = true;
+                            // Route permission clearance through event: emit PermissionRequestDismissed
+                            // and apply it locally so state is updated synchronously.
+                            // The PermissionActor also emits this event (see handle_resolve_permission),
+                            // so in a full system this may be processed twice (harmless).
+                            let dismiss = Event::PermissionRequestDismissed;
+                            self.bus.publish(dismiss.clone());
+                            self.apply_event(dismiss);
                         }
                         _ => {}
                     }
