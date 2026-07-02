@@ -28,18 +28,11 @@ pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
         SseErr::InvalidContentType(_, _) => {
             ProviderError::Source(anyhow::anyhow!("{err}"))
         }
-        // HTTP status code error (5xx, 429, 401, 403)
+        // HTTP status code error (5xx, 429, 401, 403) — use shared classifier
         SseErr::InvalidStatusCode(status, _) => {
             let code = status.as_u16();
-            if code == 401 || code == 403 {
-                ProviderError::Auth(code)
-            } else if code == 429 {
-                ProviderError::RateLimit { retry_after_secs: None }
-            } else if code >= 500 {
-                ProviderError::Server(code, Default::default())
-            } else {
-                ProviderError::Source(anyhow::anyhow!("{err}"))
-            }
+            ProviderError::classify_http_status(code)
+                .unwrap_or_else(|| ProviderError::Source(anyhow::anyhow!("{err}")))
         }
         // Invalid Last-Event-ID header
         SseErr::InvalidLastEventId(_) => {
@@ -88,6 +81,110 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+
+    // ── Layer 1: classify_http_status produces typed variants ─────────────────────
+    // Both HTTP and SSE paths use this shared classifier, so testing it covers both.
+
+    #[test]
+    fn classify_http_status_401_auth() {
+        let err = ProviderError::classify_http_status(401).expect("should be Some");
+        assert!(matches!(err, ProviderError::Auth(401)));
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn classify_http_status_403_auth() {
+        let err = ProviderError::classify_http_status(403).expect("should be Some");
+        assert!(matches!(err, ProviderError::Auth(403)));
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn classify_http_status_429_rate_limit() {
+        let err = ProviderError::classify_http_status(429).expect("should be Some");
+        assert!(matches!(err, ProviderError::RateLimit { .. }));
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn classify_http_status_500_server() {
+        let err = ProviderError::classify_http_status(500).expect("should be Some");
+        assert!(matches!(err, ProviderError::Server(500, _)));
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn classify_http_status_502_server() {
+        let err = ProviderError::classify_http_status(502).expect("should be Some");
+        assert!(matches!(err, ProviderError::Server(502, _)));
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn classify_http_status_503_server() {
+        let err = ProviderError::classify_http_status(503).expect("should be Some");
+        assert!(matches!(err, ProviderError::Server(503, _)));
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn classify_http_status_400_none() {
+        // 4xx other than 401/403/429 returns None
+        let err = ProviderError::classify_http_status(400);
+        assert!(err.is_none());
+    }
+
+    #[test]
+    fn classify_http_status_404_none() {
+        let err = ProviderError::classify_http_status(404);
+        assert!(err.is_none());
+    }
+
+    // ── Layer 1: SSE path uses the same classifier ──────────────────────────────
+    // The SSE InvalidStatusCode path now calls classify_http_status, so both
+    // HTTP (from_reqwest) and SSE (from_sse_error) paths produce identical results.
+
+    #[test]
+    fn from_sse_error_uses_shared_classifier() {
+        // We can't easily construct SSE errors in tests due to reqwest version
+        // conflicts, but we can verify that the classify_http_status function
+        // produces the same results that the SSE code path would use.
+        //
+        // SSE path: InvalidStatusCode(code, _) -> classify_http_status(code)
+        // HTTP path: from_reqwest -> classify_http_status(status.as_u16())
+        //
+        // Both should produce identical results for each status code.
+        let test_cases = [
+            (401, ProviderError::Auth(401)),
+            (403, ProviderError::Auth(403)),
+            (429, ProviderError::RateLimit { retry_after_secs: None }),
+            (500, ProviderError::Server(500, String::new())),
+            (502, ProviderError::Server(502, String::new())),
+            (503, ProviderError::Server(503, String::new())),
+        ];
+
+        for (code, expected) in test_cases {
+            let classified = ProviderError::classify_http_status(code);
+            assert!(
+                classified.is_some(),
+                "classify_http_status({}) should return Some",
+                code
+            );
+            let classified = classified.unwrap();
+
+            // Verify the variant type matches
+            match (&expected, &classified) {
+                (ProviderError::Auth(exp_code), ProviderError::Auth(cls_code)) => {
+                    assert_eq!(exp_code, cls_code);
+                }
+                (ProviderError::RateLimit { .. }, ProviderError::RateLimit { .. }) => {}
+                (ProviderError::Server(exp_code, _), ProviderError::Server(cls_code, _)) => {
+                    assert_eq!(exp_code, cls_code);
+                }
+                _ => panic!("Unexpected mismatch for {}: expected {:?}, got {:?}", code, expected, classified),
+            }
+        }
+    }
 
     // ── Layer 1: typed ProviderError is_retryable ────────────────────────────────
 

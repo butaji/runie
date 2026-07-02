@@ -91,6 +91,20 @@ impl Clone for ProviderError {
 }
 
 impl ProviderError {
+    /// Classify an HTTP status code into a typed `ProviderError` variant.
+    /// Returns `None` if the status code doesn't warrant a typed error.
+    pub fn classify_http_status(code: u16) -> Option<Self> {
+        if code == 401 || code == 403 {
+            Some(ProviderError::Auth(code))
+        } else if code == 429 {
+            Some(ProviderError::RateLimit { retry_after_secs: None })
+        } else if code >= 500 {
+            Some(ProviderError::Server(code, Default::default()))
+        } else {
+            None
+        }
+    }
+
     /// Returns true if this error is retryable (transient, not fatal).
     pub fn is_retryable(&self) -> bool {
         match self {
@@ -120,15 +134,8 @@ impl ProviderError {
     pub fn from_reqwest(err: &reqwest::Error) -> Self {
         if let Some(status) = err.status() {
             let code = status.as_u16();
-            if code == 401 || code == 403 {
-                return ProviderError::Auth(code);
-            }
-            if code == 429 {
-                // Retry-After can be extracted via the response body or headers when available
-                return ProviderError::RateLimit { retry_after_secs: None };
-            }
-            if code >= 500 {
-                return ProviderError::Server(code, Default::default());
+            if let Some(typed) = ProviderError::classify_http_status(code) {
+                return typed;
             }
             // 4xx other than 401/403/429 — wrap as source error
             return ProviderError::Source(anyhow::anyhow!("{}", err));
