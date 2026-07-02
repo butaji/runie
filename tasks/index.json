@@ -1,5 +1,9 @@
-Updated status to done
 [
+  {
+    "file": "062-add-tool-result-cache-expiry.md",
+    "title": "Add tool result cache with TTL expiry",
+    "status": "done"
+  },
   {
     "file": "actually-collapse-actor-handles-to-typed-map.md",
     "title": "Actually collapse `ActorHandles` to a typed map",
@@ -323,7 +327,7 @@ Updated status to done
   {
     "file": "compare-diff-edit-output-and-fix-gaps.md",
     "title": "Compare diff and edit output and fix gaps",
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "file": "compare-file-context-picker-and-fix-gaps.md",
@@ -1088,7 +1092,7 @@ Updated status to done
   {
     "file": "regenerate-config-schema-and-fix-permission-mode-description.md",
     "title": "Regenerate config schema and fix PermissionMode description",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md",
@@ -1323,7 +1327,7 @@ Updated status to done
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
@@ -1548,7 +1552,7 @@ Updated status to done
   {
     "file": "scope-diff-comparison-to-headless-unified-output.md",
     "title": "Scope diff comparison to headless unified output",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "share-configured-reqwest-client-for-provider.md",
@@ -1968,7 +1972,7 @@ Updated status to done
   {
     "file": "use-textwrap-for-blockquote-word-wrap.md",
     "title": "Use `textwrap` for blockquote word wrap",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
@@ -2048,11 +2052,6 @@ Updated status to done
   {
     "file": "wire-user-permission-rules-into-agent-gate.md",
     "title": "Wire user permission rules into the agent permission gate",
-    "status": "done"
-  },
-  {
-    "file": "062-add-tool-result-cache-expiry.md",
-    "title": "Add tool result cache with TTL expiry",
     "status": "done"
   },
   {
