@@ -4,7 +4,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Paragraph, Wrap},
+    widgets::{List, ListItem, ListState, Paragraph},
     Frame,
 };
 use runie_core::dialog::{Panel, PanelItem};
@@ -41,7 +41,7 @@ pub(super) fn render_list(
     let bg = Style::default().bg(color_bg_panel());
 
     render_header(f, header_lines, header_height, inner, bg);
-    render_item_list(f, item_lines, scroll, bg);
+    render_item_list(f, item_lines, scroll, bg, selected_line);
     render_hotkeys(f, show_breadcrumb, root_closable, inner, bg);
 }
 
@@ -69,14 +69,22 @@ fn render_header(
     f.render_widget(Paragraph::new(header_lines).style(bg), header_area);
 }
 
-fn render_item_list(f: &mut Frame, item_lines: Vec<Line<'_>>, scroll: ScrollLayout, bg: Style) {
-    f.render_widget(
-        Paragraph::new(item_lines)
-            .style(bg)
-            .wrap(Wrap { trim: false })
-            .scroll((scroll.offset as u16, 0)),
-        scroll.area,
-    );
+fn render_item_list(
+    f: &mut Frame,
+    item_lines: Vec<Line<'_>>,
+    scroll: ScrollLayout,
+    bg: Style,
+    selected_line: Option<usize>,
+) {
+    let list_items: Vec<ListItem<'_>> =
+        item_lines.into_iter().map(ListItem::new).collect();
+
+    let mut list_state = ListState::default();
+    list_state.select(selected_line);
+    *list_state.offset_mut() = scroll.offset;
+
+    f.render_stateful_widget(List::new(list_items).style(bg), scroll.area, &mut list_state);
+
     if scroll.show_bar {
         render_scrollbar(
             f,

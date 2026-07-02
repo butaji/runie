@@ -2,7 +2,7 @@
 
 ## Status
 
-`todo`
+`partial`
 
 ## Context
 
@@ -10,7 +10,7 @@
 
 **Status:**
 - [x] Input box (`ui/input.rs`) — Done via `replace-custom-input-box-with-tui-textarea.md`
-- [ ] Panel list (`popups/panel/list.rs`) — Remaining
+- [x] Panel list (`popups/panel/list.rs`) — Done via `List` + `ListState`
 - [ ] Form renderer (`popups/panel/form.rs`) — Remaining (supersedes `replace-custom-form-rendering-with-tui-textarea.md`)
 
 ## Goal
@@ -19,7 +19,7 @@ Replace them with `tui-textarea` / `ratatui::widgets::List` while preserving the
 
 ## Acceptance Criteria
 - [x] Replace custom input box with `tui-textarea`. (Done - see `replace-custom-input-box-with-tui-textarea.md`)
-- [ ] Replace custom panel list with `ratatui::widgets::List` + `ListState`.
+- [x] Replace custom panel list with `ratatui::widgets::List` + `ListState`.
 - [ ] Replace form inputs with `tui-textarea` single-line or `tui-input`.
 - [ ] Snapshots match.
 
