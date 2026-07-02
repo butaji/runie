@@ -237,7 +237,7 @@
   {
     "file": "centralize-tui-popup-layout-constants.md",
     "title": "Centralize TUI popup layout constants",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-ui-strings-module.md",
@@ -1322,7 +1322,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",

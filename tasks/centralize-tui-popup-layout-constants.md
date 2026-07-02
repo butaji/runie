@@ -2,6 +2,25 @@
 
 ## Status
 
+`done`
+
+## Implementation
+
+Created `crates/runie-tui/src/popups/layout_constants.rs` with centralized constants:
+- `POPUP_WIDTH = 60`
+- `POPUP_HEIGHT = 18`
+- `POPUP_MIN_WIDTH = 20`
+- `POPUP_MIN_HEIGHT = 6`
+- `PATH_DISPLAY_COUNT = 8`
+- `PATH_POPUP_BORDER = 4`
+- `HOTKEY_AREA_HEIGHT = 2`
+
+Updated references in:
+- `crates/runie-tui/src/popups.rs`
+- `crates/runie-tui/src/popups/panel/mod.rs`
+
+## Context
+
 `todo`
 
 ## Description

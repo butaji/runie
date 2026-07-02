@@ -1,3 +1,7 @@
+//! Popup rendering — command palette, path suggestions, permission dialog.
+//!
+//! Layout constants are centralized in `layout_constants.rs`.
+
 use ratatui::{
     layout::Rect,
     style::Style,
@@ -12,6 +16,7 @@ use crate::theme::{
     GLYPH_SELECTED, GLYPH_UNSELECTED,
 };
 
+pub mod layout_constants;
 pub mod panel;
 pub mod permission;
 pub mod welcome;
@@ -45,12 +50,12 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
 }
 
 fn path_popup_area(area: Rect, item_count: usize) -> Rect {
-    let display_count = item_count.min(8) as u16;
-    let max_height = display_count + 4;
+    let display_count = item_count.min(layout_constants::PATH_DISPLAY_COUNT as usize) as u16;
+    let max_height = display_count + layout_constants::PATH_POPUP_BORDER;
     Rect {
         x: area.x + 1,
         y: area.y + area.height.saturating_sub(4 + max_height),
-        width: area.width.saturating_sub(2).max(20),
+        width: area.width.saturating_sub(2).max(layout_constants::POPUP_MIN_WIDTH),
         height: max_height,
     }
 }
@@ -89,8 +94,8 @@ fn path_suggestion_line(
 }
 
 pub fn palette_popup_rect(area: Rect) -> Rect {
-    let popup_width = 60u16.min(area.width.saturating_sub(4)).max(20);
-    let popup_height = 18u16.min(area.height.saturating_sub(4)).max(6);
+    let popup_width = layout_constants::POPUP_WIDTH.min(area.width.saturating_sub(4)).max(layout_constants::POPUP_MIN_WIDTH);
+    let popup_height = layout_constants::POPUP_HEIGHT.min(area.height.saturating_sub(4)).max(layout_constants::POPUP_MIN_HEIGHT);
     Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
         y: area.y + (area.height.saturating_sub(popup_height)) / 2,

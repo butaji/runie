@@ -3,6 +3,8 @@
 use ratatui::{layout::Rect, style::Style, widgets::Paragraph, Frame};
 use runie_core::Snapshot;
 
+use crate::popups::layout_constants::HOTKEY_AREA_HEIGHT;
+
 use crate::popups::{clear_panel_bg, palette_popup_rect};
 use crate::theme::{block_popup, color_bg_panel};
 
@@ -62,8 +64,9 @@ pub(super) fn hotkey_area(inner: &Rect) -> Rect {
     }
 }
 
+/// Height of the hotkey hint area at the bottom of panels.
 pub(super) const fn hotkey_area_height() -> u16 {
-    2
+    HOTKEY_AREA_HEIGHT
 }
 
 pub(super) struct ScrollLayout {
