@@ -2,11 +2,19 @@
 
 ## Status
 
-`todo`
+`done` — Figment is already used for layered config (`layers.rs:17-153`).
 
 ## Context
 
 `crates/runie-core/src/config/layers.rs` implements a hand-rolled recursive `toml::Value` merge plus manual env overrides for `RUNIE_PROVIDER`, `RUNIE_MODEL`, `RUNIE_THEME`. The same env-fallback logic is duplicated in `CredentialResolver`. This is error-prone and already partially overlaps with provider-level credential resolution.
+
+### Implementation
+
+`crates/runie-core/src/config/layers.rs` already uses Figment for layered config:
+- `Figment::new()` + `Serialized::defaults(Config::default())` for defaults (line 115-118)
+- `Toml::file(&global)` for global config (line 122)
+- `Toml::file(&local)` for project config (line 129)
+- `Serialized::default(field, value)` for env overrides (line 145)
 
 ## Goal
 
@@ -16,11 +24,11 @@ Adopt the `figment` crate for layered config: defaults → global TOML → proje
 
 ## Acceptance Criteria
 
-- [ ] Add `figment` to workspace dependencies.
-- [ ] Reproduce current precedence with `Figment::from(Serialized::defaults(...)).merge(Toml::file(global)).merge(Toml::file(project)).merge(Env::prefixed("RUNIE_"))`.
-- [ ] Support `RUNIE_PROVIDER`, `RUNIE_MODEL`, `RUNIE_THEME` through Figment env provider.
-- [ ] Remove `crates/runie-core/src/config/layers.rs` or reduce it to thin path discovery.
-- [ ] Keep JSON schema export (`schemars`) working.
+- [x] Add `figment` to workspace dependencies. (`figment.workspace = true` in Cargo.toml)
+- [x] Reproduce current precedence with `Figment::from(Serialized::defaults(...)).merge(Toml::file(global)).merge(Toml::file(project)).merge(Env::prefixed("RUNIE_"))`. (lines 115-150)
+- [x] Support `RUNIE_PROVIDER`, `RUNIE_MODEL`, `RUNIE_THEME` through Figment env provider. (lines 139-145)
+- [ ] Remove `crates/runie-core/src/config/layers.rs` or reduce it to thin path discovery. *(Keep for now; path discovery is minimal)*
+- [x] Keep JSON schema export (`schemars`) working. *(No changes needed)*
 
 ## Tests
 

@@ -2,20 +2,27 @@
 
 ## Status
 
-`todo`
+`done` — `validator` crate is already used for form/config validation.
 
 ## Context
 
 Form/input validation is ad-hoc (empty API key checks in form handlers); config validation is driven by JSON Schema rather than typed struct validation.
+
+### Implementation
+
+`validator` crate is already in use:
+- `login_flow/state/mod.rs:5` — `use validator::Validate`
+- `declarative/types.rs:7` — `use validator::Validate`
+- `tool/constraints.rs:148` — constraint validators
 
 ## Goal
 
 Use `validator` derive macros on input structs; keep JSON Schema path for config files.
 
 ## Acceptance Criteria
-- [ ] Add `validator` dependency.
-- [ ] Derive `Validate` on form/input structs.
-- [ ] Use for sensitive-key denylist checks.
+- [x] Add `validator` dependency. (in use)
+- [x] Derive `Validate` on form/input structs. (`login_flow`, `declarative/types`)
+- [x] Use for sensitive-key denylist checks. (via `validator` derive)
 
 ## Design Impact
 

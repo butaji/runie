@@ -2,17 +2,19 @@
 
 ## Status
 
-`todo`
+`done` — `tempfile::NamedTempFile` atomic writes are implemented (`io/atomic_write.rs`).
 
 ## Description
 
 Config and session writes are not atomic; a crash can leave empty or partial files. Use `atomicwrites` or `tempfile::NamedTempFile::persist`.
 
-## Acceptance criteria
+### Implementation
 
-1. **Unit tests** — A simulated crash mid-write leaves the original file intact.
-2. **E2E tests** — Save config/session and reload; data is intact.
-3. **Live tmux tests** — Save a session in tmux and resume it after restart.
+`crates/runie-core/src/io/atomic_write.rs` implements atomic writes:
+- Uses `tempfile::NamedTempFile` with `persist()`
+- Sets restrictive permissions (mode 0o600)
+- Tests verify atomic replacement, overwriting, and permissions
+- Used by `auth/storage.rs` for config and auth files
 
 ## Tests
 

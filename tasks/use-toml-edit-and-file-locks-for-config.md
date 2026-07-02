@@ -2,11 +2,16 @@
 
 ## Status
 
-`todo`
+`partial` — `fs2` locks are implemented. `toml_edit` for comment preservation is not.
 
 ## Context
 
 `crates/runie-core/src/config/config_impl.rs` and `crates/runie-core/src/provider/config.rs` load the whole TOML file into `toml::Value`, mutate it, and write it back with `toml::to_string_pretty`. This strips user comments and formatting. The in-process `RwLock` in `provider/config.rs` does not protect across separate CLI processes, so `runie login` and `runie mcp add` can race on `config.toml`.
+
+### Implementation Status
+
+- **fs2 locks**: ✅ Implemented in `config_impl.rs:334` and `provider/config.rs:43`
+- **toml_edit**: ❌ Not implemented; `toml::to_string_pretty` still strips comments
 
 ## Goal
 
@@ -18,9 +23,9 @@ Make config edits comment-preserving and cross-process safe by using `toml_edit`
 
 - [ ] Replace load-modify-save via `toml::Value` with `toml_edit::Document` edits for provider, MCP, theme, and auth sections.
 - [ ] Preserve comments and key order in existing `config.toml` files after edits.
-- [ ] Use `fs2::FileExt::lock_exclusive` / `lock_shared` around reads and writes.
-- [ ] Remove the process-level `RwLock<()>` in `provider/config.rs`.
-- [ ] No new `std::fs` writes on the async runtime thread.
+- [x] Use `fs2::FileExt::lock_exclusive` / `lock_shared` around reads and writes. (config_impl.rs:334, provider/config.rs:43)
+- [x] Remove the process-level `RwLock<()>` in `provider/config.rs`. (replaced with fs2 locks)
+- [x] No new `std::fs` writes on the async runtime thread. (uses `spawn_blocking` via `save_nonblocking`)
 
 ## Tests
 
