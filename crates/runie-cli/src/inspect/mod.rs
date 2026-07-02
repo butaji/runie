@@ -8,6 +8,7 @@ use runie_core::config::Config;
 use runie_core::proto::ProviderConfig;
 use runie_core::skills::{load_all, Skill};
 use runie_core::subagents::{PermissionMode, PromptMode, SubagentRegistry};
+use secrecy::ExposeSecret;
 
 use std::collections::HashSet;
 
@@ -137,7 +138,10 @@ impl InspectReport {
 
         // Check if any configured providers have their API key
         for name in config.model_providers.keys() {
-            let api_key = config.resolve_api_key(name).unwrap_or_default();
+            let api_key = config
+                .resolve_api_key(name)
+                .map(|s| s.expose_secret().clone())
+                .unwrap_or_default();
             if api_key.is_empty() {
                 let env_var = runie_core::provider::find_provider(name)
                     .map(|p| p.env_var.clone())
@@ -189,7 +193,10 @@ impl InspectReport {
 
         // Check for missing API keys
         for name in config.model_providers.keys() {
-            let api_key = config.resolve_api_key(name).unwrap_or_default();
+            let api_key = config
+                .resolve_api_key(name)
+                .map(|s| s.expose_secret().clone())
+                .unwrap_or_default();
             if api_key.is_empty() {
                 let env_var = runie_core::provider::find_provider(name)
                     .map(|p| p.env_var.clone())

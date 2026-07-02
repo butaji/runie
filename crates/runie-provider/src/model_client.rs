@@ -4,6 +4,7 @@
 //! the credentials for a provider+model pair. Multiple `TurnSession`s share one
 //! `ModelClient` so HTTP/WS connections are reused across turns.
 
+use secrecy::SecretString;
 use std::sync::Arc;
 
 /// HTTP transport configuration for a model client.
@@ -19,12 +20,14 @@ pub struct ModelClientTransport {
 ///
 /// The client is built once and reused across all turns, enabling HTTP connection
 /// pooling (HTTP/2 multiplexing, keep-alive, and TCP connection reuse).
+///
+/// API keys are stored as `SecretString` to prevent accidental exposure.
 #[derive(Clone)]
 pub struct ModelClient {
     /// The HTTP client with connection pooling.
     pub client: Arc<reqwest::Client>,
-    /// The API key for authentication.
-    pub api_key: String,
+    /// The API key for authentication (stored as SecretString).
+    pub api_key: SecretString,
     /// Model name (e.g. "gpt-4o").
     pub model: String,
     /// Provider registry key (e.g. "openai").
@@ -38,7 +41,7 @@ impl ModelClient {
     pub fn new(api_key: String, model: String, provider_key: String) -> Self {
         Self {
             client: crate::http::build_client(),
-            api_key,
+            api_key: SecretString::from(api_key),
             model,
             provider_key,
             transport: ModelClientTransport {

@@ -5,6 +5,8 @@
 //!
 //! For actor-based config operations, see `actors/config/file_helpers.rs`.
 
+use secrecy::ExposeSecret;
+
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 
@@ -86,7 +88,11 @@ pub fn get_provider_config(name: &str) -> Option<(String, String, Vec<String>)> 
     with_read_lock(|config| {
         let p = config.model_providers.get(name)?;
         // API key resolution uses env → dotenv → keyring (no config fallback)
-        let api_key = config.resolve_api_key(name).unwrap_or_default();
+        // Expose the secret at the boundary since this is the last stop before use
+        let api_key = config
+            .resolve_api_key(name)
+            .map(|s| s.expose_secret().clone())
+            .unwrap_or_default();
         Some((p.base_url.clone(), api_key, p.models.clone()))
     })
 }

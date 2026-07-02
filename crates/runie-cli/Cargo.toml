@@ -26,6 +26,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 color-eyre.workspace = true
 human-panic.workspace = true
+secrecy.workspace = true
 clap_complete = { workspace = true, optional = true }
 
 [features]

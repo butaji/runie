@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use secrecy::{ExposeSecret, SecretString};
+
 // ---------------------------------------------------------------------------
 // Unified Credential Resolver
 // ---------------------------------------------------------------------------
@@ -13,16 +15,20 @@ use std::sync::Arc;
 /// 3. OS keyring
 /// 4. Config file
 ///
+/// API keys are stored as `SecretString` throughout the resolver to prevent
+/// accidental exposure in logs or error messages. The secret value is only
+/// revealed at the HTTP boundary via `ExposeSecret`.
+///
 /// The keyring backend is injectable via `Arc<dyn KeyringStore>`, enabling
 /// tests to use `MockKeyringStore` without OS keychain access.
 #[derive(Clone)]
 pub struct CredentialResolver {
     /// Environment variables captured at construction.
-    env: HashMap<String, String>,
+    env: HashMap<String, SecretString>,
     /// Variables loaded from .env file via dotenvy.
-    dotenv: HashMap<String, String>,
+    dotenv: HashMap<String, SecretString>,
     /// Provider config entries (provider name -> (api_key, base_url)).
-    entries: HashMap<String, (Option<String>, Option<String>)>,
+    entries: HashMap<String, (Option<SecretString>, Option<String>)>,
     /// Keyring storage backend (injectable for tests).
     store: Arc<dyn super::KeyringStore>,
 }
@@ -46,7 +52,9 @@ impl Default for CredentialResolver {
 impl CredentialResolver {
     /// Create a new resolver using the OS keyring.
     pub fn new() -> Self {
-        let env: HashMap<String, String> = std::env::vars().collect();
+        let env: HashMap<String, SecretString> = std::env::vars()
+            .map(|(k, v)| (k, SecretString::from(v)))
+            .collect();
         let dotenv = Self::load_dotenv();
         Self {
             env,
@@ -68,7 +76,9 @@ impl CredentialResolver {
 
     /// Create a resolver with an injectable keyring store (for tests).
     pub fn with_store(store: Arc<dyn super::KeyringStore>) -> Self {
-        let env: HashMap<String, String> = std::env::vars().collect();
+        let env: HashMap<String, SecretString> = std::env::vars()
+            .map(|(k, v)| (k, SecretString::from(v)))
+            .collect();
         let dotenv = Self::load_dotenv();
         Self {
             env,
@@ -95,11 +105,12 @@ impl CredentialResolver {
     ///
     /// Uses `dotenvy::from_filename_iter` to read the .env file directly into
     /// a HashMap without mutating the process environment.
-    fn load_dotenv() -> HashMap<String, String> {
+    fn load_dotenv() -> HashMap<String, SecretString> {
         match dotenvy::from_filename_iter(".env") {
             Ok(iter) => iter
                 .filter_map(|result| result.ok())
                 .filter(|(key, _)| key.ends_with("_API_KEY") || key.ends_with("_BASE_URL"))
+                .map(|(k, v)| (k, SecretString::from(v)))
                 .collect(),
             Err(_) => HashMap::new(),
         }
@@ -109,31 +120,34 @@ impl CredentialResolver {
     pub fn set_config(
         &mut self,
         provider: &str,
-        api_key: Option<String>,
+        api_key: Option<SecretString>,
         base_url: Option<String>,
     ) {
         self.entries.insert(provider.to_lowercase(), (api_key, base_url));
     }
 
     /// Resolve the API key for a provider using the standard priority chain.
-    pub fn resolve_api_key(&self, provider: &str) -> Option<String> {
+    ///
+    /// Returns a `SecretString` to prevent accidental exposure. Use `.expose_secret()`
+    /// only at the HTTP boundary where the key is actually needed.
+    pub fn resolve_api_key(&self, provider: &str) -> Option<SecretString> {
         let env_key = format!("{}_API_KEY", provider.to_uppercase());
 
         // 1. Environment variable
         if let Some(val) = self.env.get(&env_key) {
-            if !val.is_empty() {
+            if !val.expose_secret().is_empty() {
                 return Some(val.clone());
             }
         }
 
         // 2. .env file
         if let Some(val) = self.dotenv.get(&env_key) {
-            if !val.is_empty() {
+            if !val.expose_secret().is_empty() {
                 return Some(val.clone());
             }
         }
 
-        // 3. Keyring (via injectable store)
+        // 3. Keyring (via injectable store) - already returns SecretString
         if let Ok(Some(token)) = self.store.get(provider) {
             return Some(token);
         }
@@ -142,24 +156,26 @@ impl CredentialResolver {
         self.entries
             .get(&provider.to_lowercase())
             .and_then(|(api_key, _)| api_key.clone())
-            .filter(|s| !s.is_empty())
+            .filter(|s| !s.expose_secret().is_empty())
     }
 
     /// Resolve the base URL for a provider using the standard priority chain.
     pub fn resolve_base_url(&self, provider: &str) -> Option<String> {
         let env_key = format!("{}_BASE_URL", provider.to_uppercase());
 
-        // 1. Environment variable
+        // 1. Environment variable (now stored as SecretString, expose for base_url)
         if let Some(val) = self.env.get(&env_key) {
-            if !val.is_empty() {
-                return Some(val.clone());
+            let s = val.expose_secret();
+            if !s.is_empty() {
+                return Some(s.clone());
             }
         }
 
-        // 2. .env file
+        // 2. .env file (now stored as SecretString, expose for base_url)
         if let Some(val) = self.dotenv.get(&env_key) {
-            if !val.is_empty() {
-                return Some(val.clone());
+            let s = val.expose_secret();
+            if !s.is_empty() {
+                return Some(s.clone());
             }
         }
 
@@ -174,16 +190,29 @@ impl CredentialResolver {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use secrecy::{ExposeSecret, SecretString};
     use super::super::{KeyringStore, MockKeyringStore};
     use super::*;
+
+    fn ss(s: &str) -> SecretString {
+        SecretString::from(s.to_owned())
+    }
+
+    /// Helper to compare Option<SecretString> by exposing the secret.
+    fn assert_secret_eq(result: Option<&SecretString>, expected: &str) {
+        match result {
+            Some(s) => assert_eq!(s.expose_secret(), expected),
+            None => panic!("expected Some({:?}), got None", expected),
+        }
+    }
 
     #[test]
     fn resolver_priority_env_over_keyring() {
         let mut resolver = CredentialResolver::empty();
-        resolver.env.insert("TESTPROVIDER_API_KEY".to_owned(), "env-key".to_owned());
+        resolver.env.insert("TESTPROVIDER_API_KEY".to_owned(), ss("env-key"));
 
         let result = resolver.resolve_api_key("testprovider");
-        assert_eq!(result, Some("env-key".to_owned()));
+        assert_secret_eq(result.as_ref(), "env-key");
     }
 
     #[test]
@@ -191,14 +220,11 @@ mod tests {
         let mut resolver = CredentialResolver::empty();
         resolver.set_config(
             "testprovider",
-            Some("config-key".to_owned()),
+            Some(ss("config-key")),
             Some("http://config".to_owned()),
         );
 
-        assert_eq!(
-            resolver.resolve_api_key("testprovider"),
-            Some("config-key".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("testprovider").as_ref(), "config-key");
         assert_eq!(
             resolver.resolve_base_url("testprovider"),
             Some("http://config".to_owned())
@@ -208,27 +234,19 @@ mod tests {
     #[test]
     fn resolver_prefers_env_over_dotenv() {
         let mut resolver = CredentialResolver::empty();
-        resolver
-            .env
-            .insert("TEST_API_KEY".to_owned(), "env-key".to_owned());
-        resolver.dotenv.insert("TEST_API_KEY".to_owned(), "dotenv-key".to_owned());
+        resolver.env.insert("TEST_API_KEY".to_owned(), ss("env-key"));
+        resolver.dotenv.insert("TEST_API_KEY".to_owned(), ss("dotenv-key"));
 
-        assert_eq!(
-            resolver.resolve_api_key("test"),
-            Some("env-key".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("test").as_ref(), "env-key");
     }
 
     #[test]
     fn resolver_prefers_dotenv_over_config() {
         let mut resolver = CredentialResolver::empty();
-        resolver.dotenv.insert("TEST_API_KEY".to_owned(), "dotenv-key".to_owned());
-        resolver.set_config("test", Some("config-key".to_owned()), None);
+        resolver.dotenv.insert("TEST_API_KEY".to_owned(), ss("dotenv-key"));
+        resolver.set_config("test", Some(ss("config-key")), None);
 
-        assert_eq!(
-            resolver.resolve_api_key("test"),
-            Some("dotenv-key".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("test").as_ref(), "dotenv-key");
     }
 
     #[test]
@@ -247,10 +265,7 @@ mod tests {
         // Pre-load the mock store
         mock.set("injected", "mock-token").unwrap();
 
-        assert_eq!(
-            resolver.resolve_api_key("injected"),
-            Some("mock-token".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("injected").as_ref(), "mock-token");
     }
 
     #[test]
@@ -259,7 +274,7 @@ mod tests {
         let resolver = CredentialResolver::with_store(mock);
 
         // Provider not in mock store, not in env, not in dotenv, not in config
-        assert_eq!(resolver.resolve_api_key("missing"), None);
+        assert!(resolver.resolve_api_key("missing").is_none());
     }
 
     #[test]
@@ -268,13 +283,10 @@ mod tests {
         mock.set("priority_test", "mock-token").unwrap();
 
         let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
-        resolver.env.insert("PRIORITY_TEST_API_KEY".to_owned(), "env-token".to_owned());
+        resolver.env.insert("PRIORITY_TEST_API_KEY".to_owned(), ss("env-token"));
 
         // Env should win over mock store
-        assert_eq!(
-            resolver.resolve_api_key("priority_test"),
-            Some("env-token".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("priority_test").as_ref(), "env-token");
     }
 
     #[test]
@@ -283,13 +295,10 @@ mod tests {
         mock.set("dotenv_test", "mock-token").unwrap();
 
         let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
-        resolver.dotenv.insert("DOTENV_TEST_API_KEY".to_owned(), "dotenv-token".to_owned());
+        resolver.dotenv.insert("DOTENV_TEST_API_KEY".to_owned(), ss("dotenv-token"));
 
         // dotenv should win over mock store
-        assert_eq!(
-            resolver.resolve_api_key("dotenv_test"),
-            Some("dotenv-token".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("dotenv_test").as_ref(), "dotenv-token");
     }
 
     #[test]
@@ -298,12 +307,9 @@ mod tests {
         mock.set("config_test", "mock-token").unwrap();
 
         let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
-        resolver.set_config("config_test", Some("config-token".to_owned()), None);
+        resolver.set_config("config_test", Some(ss("config-token")), None);
 
         // mock store should win over config
-        assert_eq!(
-            resolver.resolve_api_key("config_test"),
-            Some("mock-token".to_owned())
-        );
+        assert_secret_eq(resolver.resolve_api_key("config_test").as_ref(), "mock-token");
     }
 }

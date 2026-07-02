@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use secrecy::SecretString;
 use runie_core::proto::ProviderConfig;
 
 /// Resolves provider configuration from multiple sources.
@@ -70,7 +71,10 @@ impl ProviderConfigResolver {
     }
 
     /// Resolve the API key for a provider, checking environment first.
-    pub fn resolve_api_key(&self, provider: &str) -> Option<String> {
+    ///
+    /// Returns a `SecretString` to prevent accidental exposure. Use `.expose_secret()`
+    /// only at the HTTP boundary where the key is actually needed.
+    pub fn resolve_api_key(&self, provider: &str) -> Option<SecretString> {
         // First try the unified resolver (env, dotenv, keyring)
         if let Some(key) = self.inner.resolve_api_key(provider) {
             return Some(key);
@@ -93,10 +97,15 @@ impl ProviderConfigResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use secrecy::ExposeSecret;
     use std::sync::Arc;
 
+    fn ss(s: &str) -> SecretString {
+        SecretString::from(s.to_owned())
+    }
+
     struct TestConfig {
-        api_key: Option<String>,
+        api_key: Option<SecretString>,
         base_url: Option<String>,
     }
 
@@ -107,7 +116,7 @@ mod tests {
     }
 
     impl runie_core::proto::ProviderConfig for TestConfig {
-        fn resolve_api_key(&self, _provider: &str) -> Option<String> {
+        fn resolve_api_key(&self, _provider: &str) -> Option<SecretString> {
             self.api_key.clone()
         }
 
@@ -121,7 +130,7 @@ mod tests {
         // Set env var BEFORE creating resolver (env is captured at construction)
         std::env::set_var("TESTPROVIDER_API_KEY", "env-key");
         let test_config = TestConfig {
-            api_key: Some("config-key".to_string()),
+            api_key: Some(ss("config-key")),
             base_url: Some("http://example.com".to_string()),
         };
         let resolver = ProviderConfigResolver::new(
@@ -132,13 +141,13 @@ mod tests {
         let result = resolver.resolve_api_key("testprovider");
         std::env::remove_var("TESTPROVIDER_API_KEY");
 
-        assert_eq!(result, Some("env-key".to_string()));
+        assert_eq!(result.as_ref().map(|s| s.expose_secret().as_str()), Some("env-key"));
     }
 
     #[test]
     fn resolve_config_fallback() {
         let test_config = TestConfig {
-            api_key: Some("config-key".to_string()),
+            api_key: Some(ss("config-key")),
             base_url: Some("http://example.com".to_string()),
         };
         // Use with_config to avoid environment variable interference
@@ -147,7 +156,7 @@ mod tests {
         // Without env var, should use config
         let result = resolver.resolve_api_key("testprovider");
 
-        assert_eq!(result, Some("config-key".to_string()));
+        assert_eq!(result.as_ref().map(|s| s.expose_secret().as_str()), Some("config-key"));
     }
 
     #[test]
@@ -159,7 +168,7 @@ mod tests {
         // Use with_config to avoid environment variable interference
         let resolver = ProviderConfigResolver::with_config(test_config);
 
-        assert_eq!(resolver.resolve_api_key("testprovider"), None);
+        assert!(resolver.resolve_api_key("testprovider").is_none());
         assert_eq!(resolver.resolve_base_url("testprovider"), None);
     }
 
@@ -173,7 +182,7 @@ mod tests {
         let resolver = ProviderConfigResolver::with_config(test_config);
 
         // dotenv should be used when config doesn't have the value
-        assert_eq!(resolver.resolve_api_key("nonexistent"), None);
+        assert!(resolver.resolve_api_key("nonexistent").is_none());
     }
 
     #[test]
@@ -198,6 +207,6 @@ mod tests {
             Some("http://test.example.com".to_string())
         );
         // Should return None since neither config nor keyring has an API key
-        assert_eq!(resolver.resolve_api_key("testprovider"), None);
+        assert!(resolver.resolve_api_key("testprovider").is_none());
     }
 }

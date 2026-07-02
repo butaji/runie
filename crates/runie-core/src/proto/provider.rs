@@ -5,6 +5,8 @@
 
 use std::fmt;
 
+use secrecy::SecretString;
+
 /// Resolves provider credentials from configuration sources.
 ///
 /// Priority order:
@@ -13,7 +15,10 @@ use std::fmt;
 /// 3. Config file entries
 pub trait ProviderConfig: Send + Sync + fmt::Debug {
     /// Resolve the API key for a provider.
-    fn resolve_api_key(&self, provider: &str) -> Option<String>;
+    ///
+    /// Returns a `SecretString` to prevent accidental exposure. Use `.expose_secret()`
+    /// only at the HTTP boundary where the key is actually needed.
+    fn resolve_api_key(&self, provider: &str) -> Option<SecretString>;
 
     /// Resolve the base URL for a provider.
     fn resolve_base_url(&self, provider: &str) -> Option<String>;

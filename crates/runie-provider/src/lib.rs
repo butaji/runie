@@ -2,6 +2,7 @@
 
 //! Runie Provider - Concrete LLM provider implementations
 
+use secrecy::ExposeSecret;
 use tracing::Instrument;
 
 pub mod config;
@@ -68,15 +69,17 @@ pub fn is_known(key: &str) -> bool {
 }
 
 /// Resolve API key and base URL for a provider.
+///
+/// Returns `(api_key, base_url)` where api_key is a `SecretString`.
 fn resolve_credentials(
     key: &str,
     meta: &ProviderMeta,
     config: Option<Arc<dyn ProviderConfig>>,
-) -> (String, String) {
+) -> (secrecy::SecretString, String) {
     let (api_key, base_url) = if let Some(cfg) = config {
         let resolver = config::ProviderConfigResolver::new(cfg);
         (
-            resolver.resolve_api_key(key).unwrap_or_default(),
+            resolver.resolve_api_key(key),
             resolver
                 .resolve_base_url(key)
                 .unwrap_or_else(|| meta.base_url.to_owned()),
@@ -85,13 +88,11 @@ fn resolve_credentials(
         // When no config is provided, use CredentialResolver for unified priority:
         // env var → dotenv → keyring → config
         let resolver = runie_core::auth::CredentialResolver::new();
-        let api_key = resolver
-            .resolve_api_key(key)
-            .unwrap_or_default();
+        let api_key = resolver.resolve_api_key(key);
         (api_key, meta.base_url.to_owned())
     };
     (
-        http::normalize_api_key(&api_key),
+        api_key.unwrap_or_else(|| secrecy::SecretString::from(String::new())),
         http::normalize_base_url(&base_url),
     )
 }
@@ -119,7 +120,7 @@ pub fn build_provider(
     let meta = find_provider(key).ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
 
     let (api_key, base_url) = resolve_credentials(key, &meta, config);
-    if api_key.is_empty() && !is_mock_enabled() {
+    if api_key.expose_secret().is_empty() && !is_mock_enabled() {
         return Err(ProviderError::MissingApiKey(meta.env_var.to_owned().into()));
     }
 
@@ -147,10 +148,12 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
 }
 
 #[cfg(feature = "openai")]
-fn build_openai_provider(api_key: String, model: &str, base_url: &str) -> Box<dyn Provider> {
+fn build_openai_provider(api_key: secrecy::SecretString, model: &str, base_url: &str) -> Box<dyn Provider> {
     // Use the cached HTTP client so TCP connections are reused across turns.
     let client = BuiltProvider::cached_http_client("openai", base_url);
-    let p = OpenAiProvider::from_http_client(client, api_key, model).with_base_url(base_url);
+    // Convert SecretString to String for OpenAiProvider (normalization happens inside)
+    let api_key_str = api_key.expose_secret().to_string();
+    let p = OpenAiProvider::from_http_client(client, api_key_str, model).with_base_url(base_url);
     let p = if let Some(meta) = find_model(model) {
         p.with_model_meta(meta)
     } else {

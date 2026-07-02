@@ -233,7 +233,7 @@
 {"file":"prepare-grok-build-reference-for-comparison.md","title":"Prepare Grok Build reference for comparison","status":"todo","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"preserve-rich-message-and-tool-data-in-durable-events.md","title":"Preserve rich message and tool data in durable events","status":"partial","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"propagate-actor-spawn-errors-instead-of-panicking.md","title":"Propagate actor spawn errors instead of panicking","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
-{"file":"propagate-secretstring-through-provider-stack.md","title":"Propagate SecretString through provider stack","status":"todo","blocked_by":[],"blocked_reason":"none","supersedes":null}
+{"file":"propagate-secretstring-through-provider-stack.md","title":"Propagate SecretString through provider stack","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"reconnect-tui-agent-actor-channel.md","title":"Reconnect or remove TUI `AgentActor` channel","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"refine-permission-dialog-key-handling.md","title":"Refine permission dialog key handling","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}
 {"file":"regenerate-config-schema-and-fix-permission-mode-description.md","title":"Regenerate config schema and fix PermissionMode description","status":"done","blocked_by":[],"blocked_reason":"none","supersedes":null}

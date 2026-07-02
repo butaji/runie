@@ -6,6 +6,7 @@ mod request;
 pub mod stream;
 pub mod types;
 
+use secrecy::SecretString;
 use crate::model_client::ModelClient;
 use std::sync::Arc;
 
@@ -13,11 +14,14 @@ use std::sync::Arc;
 ///
 /// The `client` field holds an `Arc<reqwest::Client>` so multiple
 /// `OpenAiProvider` instances can share the same connection pool.
+///
+/// API keys are stored as `SecretString` to prevent accidental exposure.
+/// The secret value is only revealed at the HTTP boundary via `ExposeSecret`.
 #[derive(Clone)]
 pub struct OpenAiProvider {
     /// Shared HTTP client (potentially shared across provider instances).
     client: Arc<reqwest::Client>,
-    api_key: String,
+    api_key: SecretString,
     model: String,
     base_url: String,
     model_meta: Option<crate::ModelMeta>,
@@ -32,7 +36,7 @@ impl OpenAiProvider {
     pub fn new(api_key: String, model: impl Into<String>) -> Self {
         Self {
             client: crate::http::build_client(),
-            api_key: crate::http::normalize_api_key(&api_key),
+            api_key: SecretString::from(crate::http::normalize_api_key(&api_key)),
             model: model.into(),
             base_url: "https://api.openai.com/v1".to_owned(),
             model_meta: None,
@@ -64,7 +68,7 @@ impl OpenAiProvider {
     ) -> Self {
         Self {
             client,
-            api_key: crate::http::normalize_api_key(&api_key),
+            api_key: SecretString::from(crate::http::normalize_api_key(&api_key)),
             model: model.into(),
             base_url: "https://api.openai.com/v1".to_owned(),
             model_meta: None,
@@ -432,9 +436,10 @@ mod tests {
 
     #[test]
     fn provider_trims_api_key_and_base_url() {
+        use secrecy::ExposeSecret;
         let p = OpenAiProvider::new("  sk-padded\n ".to_string(), "gpt-4o")
             .with_base_url("https://api.example.com/v1/");
-        assert_eq!(p.api_key, "sk-padded");
+        assert_eq!(p.api_key.expose_secret(), "sk-padded");
         assert_eq!(p.base_url, "https://api.example.com/v1");
     }
 

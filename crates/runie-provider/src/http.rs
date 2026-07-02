@@ -8,6 +8,8 @@
 
 use std::sync::Arc;
 
+use secrecy::ExposeSecret;
+
 use reqwest::Client;
 
 /// Build a `reqwest::Client` with standard timeouts.
@@ -38,6 +40,11 @@ pub fn bearer_header(api_key: &str) -> String {
     format!("Bearer {}", normalize_api_key(api_key))
 }
 
+/// Build an Authorization header value for a Bearer token from a SecretString.
+pub fn bearer_header_secret(api_key: &secrecy::SecretString) -> String {
+    format!("Bearer {}", normalize_api_key(api_key.expose_secret()))
+}
+
 /// Format a full request URL from a base URL and a path.
 pub fn request_url(base_url: &str, path: &str) -> String {
     let base = normalize_base_url(base_url);
@@ -47,7 +54,13 @@ pub fn request_url(base_url: &str, path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use secrecy::SecretString;
+
     use super::*;
+
+    fn ss(s: &str) -> SecretString {
+        SecretString::from(s.to_owned())
+    }
 
     #[test]
     fn normalize_base_url_strips_trailing_slash() {
@@ -71,6 +84,12 @@ mod tests {
     fn bearer_header_includes_normalized_key() {
         assert_eq!(bearer_header("  key123  "), "Bearer key123");
         assert_eq!(bearer_header("key123"), "Bearer key123");
+    }
+
+    #[test]
+    fn bearer_header_secret_includes_normalized_key() {
+        assert_eq!(bearer_header_secret(&ss("  key123  ")), "Bearer key123");
+        assert_eq!(bearer_header_secret(&ss("key123")), "Bearer key123");
     }
 
     #[test]

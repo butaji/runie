@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use secrecy::SecretString;
+use secrecy::ExposeSecret;
 
 use crate::auth::AuthToken;
 
@@ -26,12 +26,15 @@ pub fn set_and_verify_keyring(provider: &str, token: &str) -> anyhow::Result<()>
     let store = OsKeyringStore::new();
     store.set(provider, token)?;
     match store.get(provider) {
-        Ok(Some(stored)) if stored == token => Ok(()),
-        Ok(Some(stored)) => Err(anyhow::anyhow!(
-            "keyring returned different token (len={}): {:?}",
-            stored.len(),
-            &stored[..stored.len().min(8)]
-        )),
+        Ok(Some(stored)) if stored.expose_secret() == token => Ok(()),
+        Ok(Some(stored)) => {
+            let s = stored.expose_secret();
+            Err(anyhow::anyhow!(
+                "keyring returned different token (len={}): {:?}",
+                s.len(),
+                &s[..s.len().min(8)]
+            ))
+        }
         Ok(None) => Err(anyhow::anyhow!("keyring retrieval returned None after set")),
         Err(e) => Err(anyhow::anyhow!("keyring retrieval failed: {e}")),
     }
@@ -51,6 +54,7 @@ pub fn set_keyring(provider: &str, token: &str) -> anyhow::Result<()> {
 pub fn get_keyring(provider: &str) -> anyhow::Result<String> {
     OsKeyringStore::new()
         .get(provider)?
+        .map(|s| s.expose_secret().clone())
         .ok_or_else(|| anyhow::anyhow!("keyring: no entry for '{provider}'"))
 }
 
@@ -69,7 +73,7 @@ pub fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
                 provider.to_owned(),
                 AuthToken {
                     provider: provider.to_owned(),
-                    token: SecretString::from(token),
+                    token,
                     expires_at: None,
                 },
             );

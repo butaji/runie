@@ -1,6 +1,7 @@
 //! Concrete [`ProviderFactory`] implementation backed by `BuiltProvider`.
 
 use async_trait::async_trait;
+use secrecy::ExposeSecret;
 use std::sync::Arc;
 
 use crate::config::ProviderConfigResolver;
@@ -73,7 +74,11 @@ impl ProviderFactory for BuiltProviderFactory {
             .resolve_base_url(provider)
             .or_else(|| default_base_url(provider))
             .unwrap_or_default();
-        let api_key = resolver.resolve_api_key(provider).unwrap_or_default();
+        // Expose secret at the boundary where credentials are needed
+        let api_key = resolver
+            .resolve_api_key(provider)
+            .map(|s| s.expose_secret().clone())
+            .unwrap_or_default();
         (base_url, api_key)
     }
 }

@@ -1,7 +1,9 @@
 //! ProviderConfig implementation for `crate::proto::provider::ProviderConfig`.
 
+use secrecy::SecretString;
+
 impl crate::proto::provider::ProviderConfig for crate::config::Config {
-    fn resolve_api_key(&self, provider: &str) -> Option<String> {
+    fn resolve_api_key(&self, provider: &str) -> Option<SecretString> {
         // API keys are resolved from environment variables or OS keyring,
         // not from the config file.
         let mut resolver = crate::auth::CredentialResolver::new();

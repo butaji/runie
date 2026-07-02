@@ -2,6 +2,7 @@
 //!
 //! Uses the `ProviderProtocol` trait to handle SSE frames.
 
+
 use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
 use super::request::build_request_body;
 use super::types::ErrorBodyJson;
@@ -93,9 +94,10 @@ async fn build_eventsource_with_retry(
 
         tracing::trace!(url = %url, body_size = %body.to_string().len(), "building request");
 
+        // Expose secret only at the HTTP boundary
         let builder = client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", api_key.trim()))
+            .header("Authorization", crate::http::bearer_header_secret(&api_key))
             .header("Content-Type", "application/json")
             .json(&body);
 

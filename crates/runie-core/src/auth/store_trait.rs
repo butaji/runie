@@ -4,7 +4,9 @@
 //! with `OsKeyringStore` (production) and `MockKeyringStore` (testing) backends.
 
 use std::collections::HashMap;
+
 use parking_lot::RwLock;
+use secrecy::SecretString;
 
 // ── Trait ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +20,8 @@ pub trait KeyringStore: Send + Sync {
 
     /// Retrieve a token for the given provider.
     /// Returns `Ok(Some(token))` if found, `Ok(None)` if not present.
-    fn get(&self, provider: &str) -> anyhow::Result<Option<String>>;
+    /// Returns `SecretString` to prevent accidental exposure in logs.
+    fn get(&self, provider: &str) -> anyhow::Result<Option<SecretString>>;
 
     /// Delete the token for the given provider.
     fn delete(&self, provider: &str) -> anyhow::Result<()>;
@@ -49,10 +52,10 @@ impl KeyringStore for OsKeyringStore {
         Ok(())
     }
 
-    fn get(&self, provider: &str) -> anyhow::Result<Option<String>> {
+    fn get(&self, provider: &str) -> anyhow::Result<Option<SecretString>> {
         let entry = keyring::Entry::new("runie", &format!("provider:{provider}"))?;
         match entry.get_password() {
-            Ok(token) => Ok(Some(token)),
+            Ok(token) => Ok(Some(SecretString::from(token))),
             Err(keyring::Error::NoEntry) => Ok(None),
             Err(e) => Err(anyhow::anyhow!("keyring error: {e}")),
         }
@@ -92,8 +95,8 @@ impl KeyringStore for MockKeyringStore {
         Ok(())
     }
 
-    fn get(&self, provider: &str) -> anyhow::Result<Option<String>> {
-        Ok(self.entries.read().get(provider).cloned())
+    fn get(&self, provider: &str) -> anyhow::Result<Option<SecretString>> {
+        Ok(self.entries.read().get(provider).map(|s| SecretString::from(s.clone())))
     }
 
     fn delete(&self, provider: &str) -> anyhow::Result<()> {
@@ -107,7 +110,12 @@ impl KeyringStore for MockKeyringStore {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use secrecy::ExposeSecret;
     use super::*;
+
+    fn ss(s: &str) -> SecretString {
+        SecretString::from(s.to_owned())
+    }
 
     // OS keyring tests interact with the real macOS/Linux keychain.
     // Run with: cargo test --ignored -- os_keyring
@@ -120,7 +128,7 @@ mod tests {
         let provider = format!("test_os_{}", std::process::id());
         store.set(&provider, "secret-token").unwrap();
         let result = store.get(&provider).unwrap();
-        assert_eq!(result, Some("secret-token".to_owned()));
+        assert_eq!(result.as_ref().map(|s| s.expose_secret().as_str()), Some("secret-token"));
         store.delete(&provider).unwrap();
     }
 
@@ -129,7 +137,7 @@ mod tests {
     fn os_keyring_get_nonexistent() {
         let store = OsKeyringStore::new();
         let result = store.get("nonexistent_provider_xyz_abc").unwrap();
-        assert_eq!(result, None);
+        assert!(result.is_none());
     }
 
     #[test]
@@ -144,8 +152,8 @@ mod tests {
     fn mock_keyring_set_and_get() {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-test").unwrap();
-        assert_eq!(store.get("openai").unwrap(), Some("sk-test".to_owned()));
-        assert_eq!(store.get("anthropic").unwrap(), None);
+        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-test"));
+        assert!(store.get("anthropic").unwrap().is_none());
     }
 
     #[test]
@@ -153,7 +161,7 @@ mod tests {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-old").unwrap();
         store.set("openai", "sk-new").unwrap();
-        assert_eq!(store.get("openai").unwrap(), Some("sk-new".to_owned()));
+        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-new"));
     }
 
     #[test]
@@ -161,7 +169,7 @@ mod tests {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-test").unwrap();
         store.delete("openai").unwrap();
-        assert_eq!(store.get("openai").unwrap(), None);
+        assert!(store.get("openai").unwrap().is_none());
     }
 
     #[test]
@@ -170,7 +178,7 @@ mod tests {
         // Deleting a non-existent key should succeed
         let result = store.delete("never_existed");
         assert!(result.is_ok());
-        assert_eq!(store.get("never_existed").unwrap(), None);
+        assert!(store.get("never_existed").unwrap().is_none());
     }
 
     #[test]
@@ -181,6 +189,6 @@ mod tests {
         store.set("openai", "sk-thread").unwrap();
 
         // Verify the shared store has the value
-        assert_eq!(store_clone.get("openai").unwrap(), Some("sk-thread".to_owned()));
+        assert_eq!(store_clone.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-thread"));
     }
 }
