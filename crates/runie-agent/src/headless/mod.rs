@@ -41,7 +41,7 @@ pub async fn run_headless_cli(
 ) -> Result<HeadlessResult> {
     let runtime = HeadlessRuntime::spawn(
         EventBus::<Event>::new(10),
-        Arc::new(BuiltProviderFactory),
+        Arc::new(BuiltProviderFactory::new()),
     )
     .await?;
     let provider = runtime.provider(provider_name, provider_model).await?;

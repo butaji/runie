@@ -84,7 +84,7 @@ async fn main() -> io::Result<()> {
 
     let leader = Leader::new();
     let agent_factory = std::sync::Arc::new(AgentActorFactoryImpl);
-    let provider_factory = std::sync::Arc::new(BuiltProviderFactory);
+    let provider_factory = std::sync::Arc::new(BuiltProviderFactory::new());
     let leader_handle = match leader
         .start_with_bus(provider_factory, agent_factory, bus.clone())
         .await

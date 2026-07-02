@@ -55,6 +55,20 @@ impl ProviderConfigResolver {
         }
     }
 
+    /// Create a resolver with an injectable keyring store.
+    ///
+    /// This allows tests to use `MockKeyringStore` without hitting the OS keyring.
+    /// Uses an empty environment to avoid environment variable interference in tests.
+    pub fn with_keyring_store(
+        config: Arc<dyn ProviderConfig>,
+        store: Arc<dyn runie_core::auth::KeyringStore>,
+    ) -> Self {
+        Self {
+            inner: runie_core::auth::CredentialResolver::with_store_empty_env(store),
+            fallback: Some(config),
+        }
+    }
+
     /// Resolve the API key for a provider, checking environment first.
     pub fn resolve_api_key(&self, provider: &str) -> Option<String> {
         // First try the unified resolver (env, dotenv, keyring)
@@ -160,5 +174,30 @@ mod tests {
 
         // dotenv should be used when config doesn't have the value
         assert_eq!(resolver.resolve_api_key("nonexistent"), None);
+    }
+
+    #[test]
+    fn with_keyring_store_uses_mock_keyring() {
+        // This test verifies that with_keyring_store uses the injected store
+        // instead of the OS keyring.
+        use runie_core::auth::MockKeyringStore;
+
+        let test_config = TestConfig {
+            api_key: None,
+            base_url: Some("http://test.example.com".to_string()),
+        };
+        let mock_store = Arc::new(MockKeyringStore::new());
+        let resolver = ProviderConfigResolver::with_keyring_store(
+            Arc::new(test_config) as Arc<dyn runie_core::proto::ProviderConfig>,
+            mock_store,
+        );
+
+        // Should use config's base_url since no keyring entry exists
+        assert_eq!(
+            resolver.resolve_base_url("testprovider"),
+            Some("http://test.example.com".to_string())
+        );
+        // Should return None since neither config nor keyring has an API key
+        assert_eq!(resolver.resolve_api_key("testprovider"), None);
     }
 }

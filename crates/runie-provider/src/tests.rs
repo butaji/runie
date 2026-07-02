@@ -403,7 +403,7 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory))
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory::new()))
             .await
             .unwrap();
 
@@ -422,7 +422,7 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory))
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory::new()))
             .await
             .unwrap();
 
@@ -469,7 +469,7 @@ api_key = "sk-test"
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _) =
         ConfigActor::spawn(bus.clone(), Some(config_path), None).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory))
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory::new()))
             .await
             .unwrap();
 

@@ -78,6 +78,19 @@ impl CredentialResolver {
         }
     }
 
+    /// Create a resolver with an injectable keyring store and empty environment.
+    ///
+    /// This is useful for tests that need isolation from both the environment
+    /// and the OS keyring.
+    pub fn with_store_empty_env(store: Arc<dyn super::KeyringStore>) -> Self {
+        Self {
+            env: HashMap::new(),
+            dotenv: HashMap::new(),
+            entries: HashMap::new(),
+            store,
+        }
+    }
+
     /// Load .env file using dotenvy, returning only API-related variables.
     ///
     /// Uses `dotenvy::from_filename_iter` to read the .env file directly into

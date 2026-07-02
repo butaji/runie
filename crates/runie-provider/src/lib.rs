@@ -244,7 +244,7 @@ pub async fn spawn_headless_runtime(
 
     runie_core::headless_runtime::HeadlessRuntime::spawn(
         EventBus::<Event>::new(10),
-        Arc::new(BuiltProviderFactory),
+        Arc::new(BuiltProviderFactory::new()),
     )
     .await
 }

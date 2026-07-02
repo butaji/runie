@@ -1052,7 +1052,7 @@
   {
     "file": "plumb-keyringstore-into-builtproviderfactory.md",
     "title": "Plumb KeyringStore into BuiltProviderFactory",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "prepare-grok-build-reference-for-comparison.md",
