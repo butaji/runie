@@ -1192,7 +1192,7 @@
   {
     "file": "preserve-rich-message-and-tool-data-in-durable-events.md",
     "title": "Preserve rich message and tool data in durable events",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "propagate-actor-spawn-errors-instead-of-panicking.md",

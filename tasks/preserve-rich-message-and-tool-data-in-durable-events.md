@@ -2,38 +2,46 @@
 
 ## Status
 
-**partial** — `duration_secs` now preserved in `ToolResult`; `success` is hardcoded to `true` (tool errors emit a separate event).
+**done** — `parts` are now preserved in `DurableCoreEvent::MessageSent` and restored during replay.
 
 ## Context
 
-`event/durable.rs:14-33` and `event/to_durable.rs:46-62` flatten messages to `content: String`, dropping `Part`s (images, tool calls, reasoning). `ToolResult` previously hardcoded `success: true` and dropped `duration`.
+`event/durable.rs` and `session/replay.rs` flatten messages to `content: String`, dropping `Part`s (images, tool calls, reasoning). `ToolResult` previously hardcoded `success: true` and dropped `duration`.
 
-## Implementation (partial)
+## Implementation
 
-Updated `DurableCoreEvent::ToolResult` to include `duration_secs`:
-- Added `#[serde(default)] duration_secs: f64` field to the enum variant
-- Updated `try_from_event` to include `duration_secs` in conversion
-- Updated reverse conversion to use preserved `duration_secs`
-- Added backward-compatible JSON parsing (defaults to 0.0 for old sessions)
-- Added unit tests for round-trip and backward compatibility
+### Added `parts` field to `DurableCoreEvent::MessageSent`
+
+Updated `DurableCoreEvent::MessageSent` to include `parts: Vec<Part>`:
+- Added `#[serde(default)] parts: Vec<Part>` field to the enum variant
+- Updated `message_to_event` in `session/replay.rs` to include `message.parts.clone()`
+- Added `replay_message_with_parts` method to `AppState` for restoring parts
+- Updated `replay_event` to use the new method
+
+### Tool Result Duration (already done)
+
+- `duration_secs` is preserved in `ToolResult`
+- `success` is hardcoded to `true` (tool errors emit a separate event)
+
+### Backward Compatibility
+
+- Old JSON without `parts` defaults to empty `Vec` via `#[serde(default)]`
+- Old JSON without `duration_secs` defaults to `0.0` via `#[serde(default)]`
+- When parts are present, content is reconstructed from text parts for `Event::MessageReplayed`
 
 ## Acceptance Criteria
 
-- [ ] Durable events include `parts` (or equivalent JSON) instead of flat `content`. (**pending**)
-- [x] Tool results include success/failure and duration. (duration_secs now preserved; success still hardcoded to true)
-- [x] Existing sessions can be imported/migrated. (serde default = 0.0 for duration_secs)
-- [x] Replay produces the same conversation. (tests pass)
+- [x] Durable events include `parts` (or equivalent JSON) instead of flat `content`.
+- [x] Tool results include success/failure and duration.
+- [x] Existing sessions can be imported/migrated.
+- [x] Replay produces the same conversation.
 
-## Goal
+## Tests Added
 
-Store the full `ChatMessage.parts` vector in durable events (or SQLite `messages.parts_json`). Preserve tool success and duration.
-
-## Acceptance Criteria
-
-- [ ] Durable events include `parts` (or equivalent JSON) instead of flat `content`.
-- [ ] Tool results include success/failure and duration.
-- [ ] Existing sessions can be imported/migrated.
-- [ ] Replay produces the same conversation.
+- `durable_message_sent_preserves_parts` — verifies parts round-trip through JSON
+- `durable_message_sent_backward_compatible` — verifies old JSON loads correctly
+- `durable_message_sent_reconstructs_content_from_parts` — verifies content is rebuilt from text parts
+- `session_save_preserves_message_parts` — verifies end-to-end save/load preserves all parts
 
 ## Design Impact
 

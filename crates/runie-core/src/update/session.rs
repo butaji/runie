@@ -108,6 +108,34 @@ impl AppState {
         });
         self.messages_changed();
     }
+
+    /// Replay a persisted message with full parts into the session.
+    pub(crate) fn replay_message_with_parts(
+        &mut self,
+        id: String,
+        role: String,
+        content: String,
+        timestamp: f64,
+        provider: String,
+        parts: Vec<runie_core::message::Part>,
+    ) {
+        let role = crate::model::Role::parse(&role).unwrap_or(crate::model::Role::Assistant);
+        // If parts are present, use them; otherwise fall back to single text part.
+        let final_parts = if parts.is_empty() {
+            vec![runie_core::message::Part::Text { content }]
+        } else {
+            parts
+        };
+        self.session_mut().messages.push(crate::model::ChatMessage {
+            role,
+            timestamp,
+            id,
+            provider,
+            parts: final_parts,
+            ..Default::default()
+        });
+        self.messages_changed();
+    }
 }
 
 // ── Message queue (merged from queue.rs) ─────────────────────────────────────

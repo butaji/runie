@@ -340,6 +340,7 @@ mod tests {
                     content: content.into(),
                     timestamp: ts,
                     provider: String::new(),
+                    parts: Vec::new(),
                 },
             )
             .unwrap();
@@ -352,6 +353,7 @@ mod tests {
             content: content.into(),
             timestamp: ts,
             provider: String::new(),
+            parts: Vec::new(),
         }
     }
 

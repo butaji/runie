@@ -124,7 +124,8 @@ fn durable_from_message_replayed() {
             role,
             content,
             timestamp,
-            provider
+            provider,
+            ..
         }
         if id == "r1" && role == "user" && content == "hello"
             && timestamp == 1234.5 && provider == "anthropic"
@@ -165,6 +166,7 @@ fn event_from_message_sent() {
         content: "hello".into(),
         timestamp: 100.0,
         provider: "openai".into(),
+        parts: Vec::new(),
     };
     let event: Result<Event, _> = Event::try_from(&durable);
     assert!(event.is_ok());
@@ -327,6 +329,7 @@ fn durable_message_sent_roundtrips_through_json() {
         content: "test".into(),
         timestamp: 999.0,
         provider: "".into(),
+        parts: Vec::new(),
     };
     let json = serde_json::to_string(&durable).unwrap();
     let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
@@ -384,4 +387,89 @@ fn durable_tool_result_backward_compatible() {
         durable,
         DurableCoreEvent::ToolResult { duration_secs, .. } if duration_secs == 0.0
     ));
+}
+
+#[test]
+fn durable_message_sent_preserves_parts() {
+    use crate::proto::message::Part;
+
+    let parts = vec![
+        Part::Text { content: "Hello".into() },
+        Part::Reasoning { content: "thinking".into() },
+        Part::tool_call("call_1", "bash", serde_json::json!({"cmd": "ls"})),
+    ];
+    let durable = DurableCoreEvent::MessageSent {
+        id: "m1".into(),
+        role: "assistant".into(),
+        content: "Hello".into(),
+        timestamp: 100.0,
+        provider: "openai".into(),
+        parts: parts.clone(),
+    };
+
+    // Serialize and deserialize
+    let json = serde_json::to_string(&durable).unwrap();
+    let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
+
+    match parsed {
+        DurableCoreEvent::MessageSent { parts: parsed_parts, .. } => {
+            assert_eq!(parsed_parts.len(), 3);
+            assert!(matches!(&parsed_parts[0], Part::Text { content } if content == "Hello"));
+            assert!(matches!(&parsed_parts[1], Part::Reasoning { content } if content == "thinking"));
+            assert!(matches!(&parsed_parts[2], Part::ToolCall { name, .. } if name == "bash"));
+        }
+        _ => panic!("Expected MessageSent"),
+    }
+}
+
+#[test]
+fn durable_message_sent_backward_compatible() {
+    // Old JSON without parts should default to empty Vec
+    let json = r#"{"event":"messageSent","id":"m1","role":"assistant","content":"Hello","timestamp":100.0,"provider":"openai"}"#;
+    let durable: DurableCoreEvent = serde_json::from_str(json).unwrap();
+    match durable {
+        DurableCoreEvent::MessageSent { parts, .. } => {
+            assert!(parts.is_empty());
+        }
+        _ => panic!("Expected MessageSent"),
+    }
+
+    // Content should still be preserved for backward compatibility
+    let durable2: DurableCoreEvent = serde_json::from_str(json).unwrap();
+    let event: Result<Event, _> = Event::try_from(&durable2);
+    assert!(event.is_ok());
+    match event.unwrap() {
+        Event::MessageReplayed { content, .. } => {
+            assert_eq!(content, "Hello");
+        }
+        _ => panic!("Expected MessageReplayed"),
+    }
+}
+
+#[test]
+fn durable_message_sent_reconstructs_content_from_parts() {
+    use crate::proto::message::Part;
+
+    // When parts are present, content should be reconstructed from text parts
+    let durable = DurableCoreEvent::MessageSent {
+        id: "m1".into(),
+        role: "assistant".into(),
+        content: "".into(), // Old field might be empty
+        timestamp: 100.0,
+        provider: "openai".into(),
+        parts: vec![
+            Part::Text { content: "Part 1".into() },
+            Part::Text { content: " Part 2".into() },
+            Part::Reasoning { content: "hidden".into() },
+        ],
+    };
+
+    let event: Event = Event::try_from(&durable).unwrap();
+    match event {
+        Event::MessageReplayed { content, .. } => {
+            // Content should be reconstructed from text parts only (not reasoning)
+            assert_eq!(content, "Part 1 Part 2");
+        }
+        _ => panic!("Expected MessageReplayed"),
+    }
 }

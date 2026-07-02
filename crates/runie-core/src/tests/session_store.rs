@@ -17,6 +17,7 @@ fn append_msg(store: &SessionStore, sid: &str, mid: &str, role: &str, content: &
                 content: content.into(),
                 timestamp: ts,
                 provider: String::new(),
+                parts: Vec::new(),
             },
         )
         .unwrap();
@@ -59,6 +60,7 @@ fn atomic_batch_survives_crash() {
             content: "First".into(),
             timestamp: 1.0,
             provider: String::new(),
+            parts: Vec::new(),
         },
         DurableCoreEvent::MessageSent {
             id: "2".into(),
@@ -66,6 +68,7 @@ fn atomic_batch_survives_crash() {
             content: "Second".into(),
             timestamp: 2.0,
             provider: String::new(),
+            parts: Vec::new(),
         },
         DurableCoreEvent::MessageSent {
             id: "3".into(),
@@ -73,6 +76,7 @@ fn atomic_batch_survives_crash() {
             content: "Third".into(),
             timestamp: 3.0,
             provider: String::new(),
+            parts: Vec::new(),
         },
     ];
 
@@ -180,6 +184,7 @@ fn multiple_sessions_isolated() {
                 content: "S1".into(),
                 timestamp: 1.0,
                 provider: String::new(),
+                parts: Vec::new(),
             },
         )
         .unwrap();
@@ -192,6 +197,7 @@ fn multiple_sessions_isolated() {
                 content: "S2".into(),
                 timestamp: 2.0,
                 provider: String::new(),
+                parts: Vec::new(),
             },
         )
         .unwrap();

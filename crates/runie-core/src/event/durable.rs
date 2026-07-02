@@ -9,6 +9,7 @@
 //! return `None`.
 
 use crate::Event;
+use crate::proto::message::Part;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -57,6 +58,8 @@ impl DurableCoreEvent {
                 content: content.clone(),
                 timestamp: if *timestamp == 0.0 { crate::model::now() } else { *timestamp },
                 provider: provider.clone(),
+                // Event::Response only carries flat content; parts preserved via session save path.
+                parts: Vec::new(),
             }),
             // Durable: replayed message (carries full metadata from session)
             Event::MessageReplayed {
@@ -71,6 +74,8 @@ impl DurableCoreEvent {
                 content: content.clone(),
                 timestamp: *timestamp,
                 provider: provider.clone(),
+                // Event::MessageReplayed only carries flat content; parts preserved via session save path.
+                parts: Vec::new(),
             }),
             // Durable: tool call
             Event::ToolStart { id, name, input } => Some(D::ToolCalled {
@@ -304,11 +309,22 @@ impl TryFrom<&DurableCoreEvent> for Event {
     fn try_from(event: &DurableCoreEvent) -> Result<Event, <Event as TryFrom<&DurableCoreEvent>>::Error> {
         use DurableCoreEvent as D;
         match event {
-            D::MessageSent { id, role, content, timestamp, provider } => {
+            D::MessageSent { id, role, content, timestamp, provider, parts } => {
                 Ok(Event::MessageReplayed {
                     id: id.clone(),
                     role: role.clone(),
-                    content: content.clone(),
+                    content: if parts.is_empty() {
+                        content.clone()
+                    } else {
+                        // Reconstruct content from parts for backward compatibility.
+                        parts.iter()
+                            .filter_map(|p| match p {
+                                Part::Text { content } => Some(content.as_str()),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>()
+                            .join("")
+                    },
                     timestamp: *timestamp,
                     provider: provider.clone(),
                 })
@@ -351,6 +367,10 @@ pub enum DurableCoreEvent {
         timestamp: f64,
         #[serde(default)]
         provider: String,
+        /// Structured parts (text, reasoning, tool calls, tool results).
+        /// When present, supersedes `content` for replay.
+        #[serde(default)]
+        parts: Vec<Part>,
     },
     /// An LLM invoked a tool.
     ToolCalled {

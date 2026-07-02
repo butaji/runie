@@ -28,13 +28,15 @@ pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
             content,
             timestamp,
             provider,
+            parts,
         } => {
-            state.replay_message(
+            state.replay_message_with_parts(
                 id.clone(),
                 role.clone(),
                 content.clone(),
                 *timestamp,
                 provider.clone(),
+                parts.clone(),
             );
         }
         DurableCoreEvent::SessionRenamed { name } => {
@@ -119,6 +121,7 @@ fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
             content: message.content(),
             timestamp: message.timestamp,
             provider: message.provider.clone(),
+            parts: message.parts.clone(),
         }),
     }
 }
@@ -265,6 +268,66 @@ mod tests {
         assert_eq!(loaded.session().messages.len(), 2);
         assert_eq!(loaded.session().messages[0].content(), "Hello");
         assert_eq!(loaded.config().current_provider, "anthropic");
+    }
+
+    #[test]
+    fn session_save_preserves_message_parts() {
+        use crate::message::Part;
+
+        let store = test_store();
+        let mut state = AppState::default();
+        state.config_mut().current_provider = "anthropic".into();
+        state.config_mut().current_model = "claude-3".into();
+
+        // Add a user message
+        state.session_mut().messages.push(ChatMessage {
+            role: Role::User,
+            parts: vec![Part::Text {
+                content: "Hello".into(),
+            }],
+            timestamp: 1.0,
+            id: "u1".into(),
+            ..Default::default()
+        });
+
+        // Add an assistant message with reasoning and tool call parts
+        state.session_mut().messages.push(ChatMessage {
+            role: Role::Assistant,
+            parts: vec![
+                Part::text("I'll help you"),
+                Part::reasoning("thinking about this"),
+                Part::tool_call("call_1", "bash", serde_json::json!({"cmd": "ls"})),
+            ],
+            timestamp: 2.0,
+            id: "a1".into(),
+            provider: "openai".into(),
+            ..Default::default()
+        });
+
+        // Save the session
+        let events = state_to_durable_events(&state);
+        store.append_batch("parts_test", &events).unwrap();
+
+        // Load the session
+        let loaded_events = store.load_events("parts_test").unwrap();
+        let mut loaded_state = AppState::default();
+        replay_events(&mut loaded_state, &loaded_events);
+
+        // Verify parts are preserved
+        let msgs = &loaded_state.session().messages;
+        assert_eq!(msgs.len(), 2);
+
+        // User message should have text part
+        assert_eq!(msgs[0].role, Role::User);
+        assert_eq!(msgs[0].parts.len(), 1);
+        assert!(matches!(&msgs[0].parts[0], Part::Text { content } if content == "Hello"));
+
+        // Assistant message should have all three parts
+        assert_eq!(msgs[1].role, Role::Assistant);
+        assert_eq!(msgs[1].parts.len(), 3);
+        assert!(matches!(&msgs[1].parts[0], Part::Text { content } if content == "I'll help you"));
+        assert!(matches!(&msgs[1].parts[1], Part::Reasoning { content } if content == "thinking about this"));
+        assert!(matches!(&msgs[1].parts[2], Part::ToolCall { name, .. } if name == "bash"));
     }
 
     #[test]
