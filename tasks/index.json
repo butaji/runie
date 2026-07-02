@@ -313,7 +313,7 @@
     {
       "file": "collapse-intent-into-shared-event-payloads.md",
       "title": "Collapse `Intent` into shared event payloads",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",

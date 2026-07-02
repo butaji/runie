@@ -1,7 +1,7 @@
 #![allow(clippy::all)]
 //! Tests for Event variants.
 
-use crate::event::{intent::Intent, EventKind};
+use crate::event::EventKind;
 use crate::Event;
 
 // Re-export submodules for organization
@@ -119,33 +119,33 @@ fn event_name_round_trip() {
     }
 }
 
-/// Layer 2: verify that Intent events have a path to typed Intent via into_intent().
+/// Layer 2: verify that Intent events have a path to Event via into_intent().
 /// This test ensures the taxonomy is used for typed intent conversion.
 #[test]
-fn intent_events_have_typed_intent_conversion() {
-    // Verify key intent events convert to typed Intent
-    let test_cases: Vec<(Event, fn(Intent) -> bool)> = vec![
-        (Event::Input('x'), |i| matches!(i, Intent::Input('x'))),
-        (Event::Submit, |i| matches!(i, Intent::Submit)),
+fn intent_events_have_typed_event_conversion() {
+    // Verify key intent events convert to Event
+    let test_cases: Vec<(Event, fn(Event) -> bool)> = vec![
+        (Event::Input('x'), |i| matches!(i, Event::Input('x'))),
+        (Event::Submit, |i| matches!(i, Event::Submit)),
         (
             Event::SwitchModel {
                 provider: "openai".into(),
                 model: "gpt-4".into(),
                 explicit: true,
             },
-            |i| matches!(i, Intent::SwitchModel { provider, model, explicit } if provider == "openai" && model == "gpt-4" && explicit),
+            |i| matches!(i, Event::SwitchModel { provider, model, explicit } if provider == "openai" && model == "gpt-4" && explicit),
         ),
         (
             Event::RunSaveCommand {
                 name: "test".into(),
             },
-            |i| matches!(i, Intent::RunSaveCommand { name } if name == "test"),
+            |i| matches!(i, Event::RunSaveCommand { name } if name == "test"),
         ),
         (Event::ToggleCommandPalette, |i| {
-            matches!(i, Intent::ToggleCommandPalette)
+            matches!(i, Event::ToggleCommandPalette)
         }),
         (Event::ForkSession { message_index: 5 }, |i| {
-            matches!(i, Intent::ForkSession { message_index: 5 })
+            matches!(i, Event::ForkSession { message_index: 5 })
         }),
     ];
 
@@ -157,17 +157,17 @@ fn intent_events_have_typed_intent_conversion() {
             "{:?} should be classified as Intent",
             event
         );
-        // Verify it converts to typed Intent
+        // Verify it converts to Event
         let intent = event.clone().into_intent();
         assert!(
             intent.is_some(),
-            "{:?} should convert to Some(Intent)",
+            "{:?} should convert to Some(Event)",
             event
         );
         let intent = intent.unwrap();
         assert!(
             check(intent),
-            "{:?} converted to wrong Intent variant",
+            "{:?} converted to wrong Event variant",
             event
         );
     }

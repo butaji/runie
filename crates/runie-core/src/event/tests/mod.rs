@@ -1,6 +1,6 @@
 //! Tests for event taxonomy — intent impl, kind, and category.
 
-use crate::event::{intent::Intent, Event};
+use crate::event::Event;
 use crate::model::ThinkingLevel;
 use crate::permissions::PermissionAction;
 
@@ -48,8 +48,8 @@ fn intent_events_return_some() {
     let e = Event::SwitchTheme {
         name: "dark".into(),
     };
-    let i = e.into_intent().expect("SwitchTheme must convert to Intent");
-    assert!(matches!(i, Intent::SetTheme { .. }));
+    let i = e.into_intent().expect("SwitchTheme must convert to intent");
+    assert!(matches!(i, Event::SwitchTheme { .. }));
 
     let e = Event::Quit;
     assert!(e.into_intent().is_some(), "Quit must convert to Intent");
