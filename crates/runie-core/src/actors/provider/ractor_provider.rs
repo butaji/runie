@@ -134,6 +134,7 @@ impl RactorProviderActor {
     ) -> (RactorProviderHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
         use crate::provider::Provider;
         use anyhow::Result;
+        use async_trait::async_trait;
         use std::pin::Pin;
         use std::sync::Arc;
 
@@ -153,6 +154,8 @@ impl RactorProviderActor {
             }
         }
         struct TestFactory;
+
+        #[async_trait]
         impl ProviderFactory for TestFactory {
             fn build(
                 &self,
@@ -166,13 +169,8 @@ impl RactorProviderActor {
                     model.into(),
                 ))
             }
-            fn validate_key(
-                &self,
-                _: &str,
-                _: &str,
-            ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
-            {
-                Box::pin(async { Ok(vec![]) })
+            async fn validate_key(&self, _: &str, _: &str) -> anyhow::Result<Vec<String>> {
+                Ok(vec![])
             }
             fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
                 ("http://localhost".into(), "sk-test".into())
@@ -327,6 +325,7 @@ mod tests {
     use crate::message::ChatMessage;
     use crate::provider::{Provider, ProviderError};
     use crate::provider_event::ProviderEvent;
+    use async_trait::async_trait;
     use std::pin::Pin;
 
     /// A minimal mock provider that always returns empty.
@@ -342,6 +341,8 @@ mod tests {
     }
 
     struct MockFactory;
+
+    #[async_trait]
     impl ProviderFactory for MockFactory {
         fn build(
             &self,
@@ -355,13 +356,8 @@ mod tests {
                 model.into(),
             ))
         }
-        fn validate_key(
-            &self,
-            _: &str,
-            _: &str,
-        ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
-        {
-            Box::pin(async { Ok(vec!["model-a".into(), "model-b".into()]) })
+        async fn validate_key(&self, _: &str, _: &str) -> anyhow::Result<Vec<String>> {
+            Ok(vec!["model-a".into(), "model-b".into()])
         }
         fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
             ("http://localhost".into(), "sk-test".into())
@@ -423,6 +419,7 @@ mod tests {
 
         // Factory that delays validate_key by 100ms to simulate network latency.
         struct SlowFactory;
+        #[async_trait]
         impl ProviderFactory for SlowFactory {
             fn build(
                 &self,
@@ -436,16 +433,9 @@ mod tests {
                     model.into(),
                 ))
             }
-            fn validate_key(
-                &self,
-                _: &str,
-                _: &str,
-            ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>>
-            {
-                Box::pin(async move {
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                    Ok(vec!["model-a".into(), "model-b".into()])
-                })
+            async fn validate_key(&self, _: &str, _: &str) -> anyhow::Result<Vec<String>> {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                Ok(vec!["model-a".into(), "model-b".into()])
             }
             fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {
                 ("http://localhost".into(), "sk-test".into())

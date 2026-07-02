@@ -4082,6 +4082,7 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "async-stream",
+ "async-trait",
  "backon",
  "dotenvy",
  "futures",

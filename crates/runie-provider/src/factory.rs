@@ -1,7 +1,6 @@
 //! Concrete [`ProviderFactory`] implementation backed by `BuiltProvider`.
 
-use std::future::Future;
-use std::pin::Pin;
+use async_trait::async_trait;
 use std::sync::Arc;
 
 use crate::config::ProviderConfigResolver;
@@ -44,6 +43,7 @@ impl BuiltProviderFactory {
     }
 }
 
+#[async_trait]
 impl ProviderFactory for BuiltProviderFactory {
     fn build(
         &self,
@@ -58,14 +58,8 @@ impl ProviderFactory for BuiltProviderFactory {
         )
     }
 
-    fn validate_key(
-        &self,
-        base_url: &str,
-        api_key: &str,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
-        let base_url = base_url.to_owned();
-        let api_key = api_key.to_owned();
-        Box::pin(async move { validate_api_key(&base_url, &api_key).await })
+    async fn validate_key(&self, base_url: &str, api_key: &str) -> anyhow::Result<Vec<String>> {
+        validate_api_key(base_url, api_key).await
     }
 
     fn resolve_credentials(&self, provider: &str, config: &Config) -> (String, String) {

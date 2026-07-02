@@ -5,6 +5,7 @@ use crate::Event as CoreEvent;
 use crate::actors::provider::{BuiltProvider, ProviderFactory};
 use crate::provider::{Provider, ProviderError};
 use crate::provider_event::ProviderEvent;
+use async_trait::async_trait;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -47,6 +48,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
     }
 
     struct TestProviderFactory;
+
+    #[async_trait]
     impl ProviderFactory for TestProviderFactory {
         fn build(
             &self,
@@ -60,12 +63,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
                 model.into(),
             ))
         }
-        fn validate_key(
-            &self,
-            _: &str,
-            _: &str,
-        ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
-            Box::pin(async { Ok(vec![]) })
+        async fn validate_key(&self, _: &str, _: &str) -> anyhow::Result<Vec<String>> {
+            Ok(vec![])
         }
         fn resolve_credentials(&self, _: &str, _: &crate::Config) -> (String, String) {
             ("http://localhost".into(), "sk-test".into())

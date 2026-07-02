@@ -457,6 +457,7 @@ mod tests {
 
     struct TestFactory;
 
+    #[async_trait]
     impl ProviderFactory for TestFactory {
         fn build(
             &self,
@@ -471,12 +472,8 @@ mod tests {
             ))
         }
 
-        fn validate_key(
-            &self,
-            _: &str,
-            _: &str,
-        ) -> Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
-            Box::pin(async { Ok(vec!["test-model".into()]) })
+        async fn validate_key(&self, _: &str, _: &str) -> anyhow::Result<Vec<String>> {
+            Ok(vec!["test-model".into()])
         }
 
         fn resolve_credentials(&self, _: &str, _: &Config) -> (String, String) {

@@ -1,6 +1,6 @@
 //! Unit tests for `ProviderActor`.
 
-use std::future::Future;
+use async_trait::async_trait;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -62,6 +62,7 @@ impl MockFactory {
     }
 }
 
+#[async_trait]
 impl ProviderFactory for MockFactory {
     fn build(
         &self,
@@ -76,14 +77,10 @@ impl ProviderFactory for MockFactory {
             .expect("mock build result not configured")
     }
 
-    fn validate_key(
-        &self,
-        _base_url: &str,
-        _api_key: &str,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send + '_>> {
+    async fn validate_key(&self, _base_url: &str, _api_key: &str) -> anyhow::Result<Vec<String>> {
         let result = self.validate_result.lock().unwrap().take();
-        let result = result.expect("mock validate result not configured");
-        Box::pin(async move { result.map_err(anyhow::Error::msg) })
+        result.expect("mock validate result not configured")
+            .map_err(anyhow::Error::msg)
     }
 
     fn resolve_credentials(&self, _provider: &str, _config: &Config) -> (String, String) {
