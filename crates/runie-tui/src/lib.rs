@@ -20,6 +20,7 @@ pub mod ui;
 // ── Terminal setup (moved from runie-term) ────────────────────────────────────
 
 pub mod app_init;
+pub mod bootstrap;
 pub mod dry_run_cmd;
 pub mod effects;
 pub mod keymap;

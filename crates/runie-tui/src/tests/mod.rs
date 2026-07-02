@@ -64,6 +64,8 @@ mod vim_mode;
 mod input_actor_routing;
 #[cfg(test)]
 mod uiactor_init;
+#[cfg(test)]
+mod bootstrap_e2e;
 
 /// Helper: give a default state a connected model so input/status render.
 pub fn connect_model(state: &mut AppState) {

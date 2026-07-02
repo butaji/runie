@@ -24,7 +24,7 @@
 {"file": "add-sample-config-env-and-completions.md", "title": "Add sample config, env template, and completions", "status": "done"}
 {"file": "add-session-compaction-with-threshold-and-tool-pair-summarization.md", "title": "Add session compaction with threshold and tool-pair summarization", "status": "todo"}
 {"file": "add-structural-message-truncation-for-context-window.md", "title": "Add structural message truncation for context window", "status": "done"}
-{"file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md", "title": "Add testable TUI bootstrap with ProviderFactory and keystrokes", "status": "todo"}
+{"file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md", "title": "Add testable TUI bootstrap with ProviderFactory and keystrokes", "status": "done"}
 {"file": "add-tracing-to-runie-provider.md", "title": "Add tracing to `runie-provider`", "status": "done"}
 {"file": "adopt-camino-utf8pathbuf-for-internal-paths.md", "title": "Adopt camino Utf8PathBuf for internal paths", "status": "todo"}
 {"file": "adopt-metrics-facade-for-telemetry.md", "title": "Adopt metrics facade for telemetry", "status": "done"}
