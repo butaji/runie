@@ -287,7 +287,7 @@
   {
     "file": "collapse-commandkinddef-into-commandkind.md",
     "title": "Collapse `CommandKindDef` into `CommandKind`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "collapse-dialogstate-variants.md",
@@ -322,7 +322,7 @@
   {
     "file": "compare-diff-edit-output-and-fix-gaps.md",
     "title": "Compare diff and edit output and fix gaps",
-    "status": "blocked"
+    "status": "todo"
   },
   {
     "file": "compare-file-context-picker-and-fix-gaps.md",
@@ -702,7 +702,7 @@
   {
     "file": "fix-config-docs-and-readme-misalignments.md",
     "title": "Fix config docs and README misalignments",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-deliverqueued-race-in-uiactor.md",
@@ -1052,7 +1052,7 @@
   {
     "file": "plumb-keyringstore-into-builtproviderfactory.md",
     "title": "Plumb KeyringStore into BuiltProviderFactory",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "prepare-grok-build-reference-for-comparison.md",
@@ -1087,7 +1087,7 @@
   {
     "file": "regenerate-config-schema-and-fix-permission-mode-description.md",
     "title": "Regenerate config schema and fix PermissionMode description",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md",
@@ -1322,7 +1322,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
@@ -1407,7 +1407,7 @@
   {
     "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
     "title": "Replace RpcReply with ractor::RpcReplyPort",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-session-tree-with-arena-crate.md",
@@ -1547,7 +1547,7 @@
   {
     "file": "scope-diff-comparison-to-headless-unified-output.md",
     "title": "Scope diff comparison to headless unified output",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "share-configured-reqwest-client-for-provider.md",

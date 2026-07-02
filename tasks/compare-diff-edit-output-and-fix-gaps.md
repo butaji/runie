@@ -12,22 +12,22 @@
 
 ## Description
 
-Compare how Grok Build and Runie present file edits and diffs. Grok Build shows clean unified diffs and an approve/reject flow. Runie has diff rendering but it may be unclear or incomplete. Identify gaps and fix with unit + E2E tests.
+Compare how Grok Build and Runie produce unified diff output for file edits. Grok Build shows clean unified diffs. Runie has diff rendering via `Diff::to_unified_string()`. Identify gaps and fix with unit + E2E tests.
 
-## Scenario Set
+> **Note**: Runie does not have a TUI approve/reject flow for edits. TUI edit approval is deferred to a separate feature task.
 
-1. Prompt for a small edit: `"add a doc comment to src/lib.rs"`.
-2. Observe diff rendering in Grok Build.
-3. Observe diff rendering in Runie.
-4. Approve or reject the edit.
+## Scenario Set (Headless)
+
+1. Record Grok Build diff output for an edit prompt.
+2. Compare against Runie's `Diff::to_unified_string()` for the same file change.
+3. Identify rendering gaps.
 
 ## Acceptance Criteria
 
-- [ ] Each scenario runs in both tools in a temp repo.
-- [ ] Runie diff output is readable and matches the intended change.
-- [ ] Approve/reject flow (if present) is navigable.
-- [ ] Actionable findings become tasks with unit + E2E + live tmux AC.
-- [ ] `cargo test --workspace` passes after fixes.
+- [ ] Headless diff comparison scenario defined.
+- [ ] Runie `Diff::to_unified_string()` produces readable unified diffs.
+- [ ] Gaps documented and actionable findings become separate tasks.
+- [ ] `cargo test --workspace` passes after any fixes.
 
 ## Tests
 
@@ -35,7 +35,7 @@ Compare how Grok Build and Runie present file edits and diffs. Grok Build shows 
 - [ ] `diff_renders_unified_change` — `TestBackend` shows `+` / `-` lines correctly.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `harness_edit_diff_parity` — both tools produce comparable diff output for the same prompt.
+- [ ] `diff_unified_string_matches_expected` — `Diff::to_unified_string()` produces expected format.
 
 ## Files touched
 
@@ -45,7 +45,7 @@ Compare how Grok Build and Runie present file edits and diffs. Grok Build shows 
 
 ## Fixture / Replay Strategy
 
-Use recorded Grok Build fixtures for edit prompts, diff output, and approve/reject flows. Runie tests validate against the recorded diff format; do not invoke live Grok Build from `cargo test` or CI.
+Use recorded Grok Build fixtures for diff output. Runie tests validate against the recorded diff format; do not invoke live Grok Build from `cargo test` or CI.
 
 ## Validation
 
@@ -53,9 +53,10 @@ This task is not complete until the fix is validated with all three levels:
 
 1. **Unit tests** — cover the state/logic change in isolation.
 2. **E2E tests** — cover the event handling and/or provider-replay path.
-3. **Live tmux tests** — `scripts/tmux-smoke-test.sh mock` (or the relevant scenario) passes in a real terminal.
+3. **Live tmux tests** — diff rendering smoke test in tmux (deferred to separate task if no TUI flow exists).
 
 ## Notes
 
-- This may surface that Runie lacks an edit tool or approval flow for edits.
-> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+- Runie does not have a TUI approve/reject flow for edits; this is a separate feature.
+- Focus is on headless/unified output comparison, not TUI interaction.
+> **Live tmux testing session required:** N/A (headless comparison only; TUI flow deferred).
