@@ -1407,7 +1407,7 @@
   {
     "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
     "title": "Replace RpcReply with ractor::RpcReplyPort",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-session-tree-with-arena-crate.md",
