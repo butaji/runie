@@ -42,7 +42,7 @@
   {
     "file": "remove-duplicate-input-mutation-in-uiactor.md",
     "title": "Remove duplicate input mutation in UiActor",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "route-app-init-loads-through-actors.md",

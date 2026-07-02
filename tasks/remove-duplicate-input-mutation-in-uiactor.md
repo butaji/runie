@@ -1,6 +1,6 @@
 # Remove duplicate input mutation in UiActor
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Input / Commands
 **Priority**: P1
