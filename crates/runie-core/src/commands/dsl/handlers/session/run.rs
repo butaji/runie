@@ -76,31 +76,33 @@ pub fn run_compact(_state: &mut AppState, args: &str) -> CommandResult {
 
 /// Save the current session.  Args: session name.
 pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
+    use crate::ui_strings::session as s;
     let name_owned = name.trim().to_owned();
     if name_owned.is_empty() {
-        return CommandResult::Message("Usage: /save name".into());
+        return CommandResult::Message(s::SAVE_USAGE.into());
     }
     let session = crate::session::Session::from_state(state, name_owned.clone());
     // Route through SessionActor in production; fall back to direct save in tests.
     if let Some(h) = state.actor_handles() {
         let _ = h.session.try_send(SessionMsg::Save {
-            name: name_owned,
+            name: name_owned.clone(),
             session,
         });
-        CommandResult::Message(format!("Saving session '{}'…", name.trim()))
+        CommandResult::Message(s::saving_session(&name_owned))
     } else {
         match crate::session::replay::save_session(&name_owned, state) {
-            Ok(_) => CommandResult::Message(format!("Session '{}' saved.", name_owned)),
-            Err(e) => CommandResult::Message(format!("Could not save session: {}", e)),
+            Ok(_) => CommandResult::Message(s::session_saved(&name_owned)),
+            Err(e) => CommandResult::Message(s::save_error(&e.to_string())),
         }
     }
 }
 
 /// Load a saved session.  Args: session name.
 pub fn run_load(state: &mut AppState, name: &str) -> CommandResult {
+    use crate::ui_strings::session as s;
     let name = name.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /load name".into());
+        return CommandResult::Message(s::LOAD_USAGE.into());
     }
     if send_session_msg(
         state,
@@ -111,19 +113,17 @@ pub fn run_load(state: &mut AppState, name: &str) -> CommandResult {
         return CommandResult::None;
     }
     match crate::session::replay::load_session(name, state) {
-        Ok(_) => CommandResult::Message(format!("Session '{}' loaded.", name)),
-        Err(_) => CommandResult::Message(format!(
-            "Session '{}' not found. Use /sessions to list saved sessions.",
-            name
-        )),
+        Ok(_) => CommandResult::Message(s::session_loaded(name)),
+        Err(_) => CommandResult::Message(s::session_not_found(name)),
     }
 }
 
 /// Delete a saved session.  Args: session name.
 pub fn run_delete(state: &mut AppState, name: &str) -> CommandResult {
+    use crate::ui_strings::session as s;
     let name = name.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /delete name".into());
+        return CommandResult::Message(s::DELETE_USAGE.into());
     }
     if send_session_msg(
         state,
@@ -134,44 +134,43 @@ pub fn run_delete(state: &mut AppState, name: &str) -> CommandResult {
         return CommandResult::None;
     }
     match crate::session::replay::delete_session(name) {
-        Ok(_) => CommandResult::Message(format!("Session '{}' deleted.", name)),
-        Err(_) => CommandResult::Message(format!(
-            "Session '{}' not found. Use /sessions to list saved sessions.",
-            name
-        )),
+        Ok(_) => CommandResult::Message(s::session_deleted(name)),
+        Err(_) => CommandResult::Message(s::session_not_found(name)),
     }
 }
 
 /// Import a session from a JSON file.  Args: file path.
 pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
+    use crate::ui_strings::session as s;
     let path = path.trim();
     if path.is_empty() {
-        return CommandResult::Message("Usage: /import path/to/session.json".into());
+        return CommandResult::Message(s::IMPORT_USAGE.into());
     }
     let path_buf = std::path::PathBuf::from(path);
     // Route through SessionActor in production; fall back to direct import in tests.
     if let Some(h) = state.actor_handles() {
         let _ = h.session.try_send(SessionMsg::Import { path: path_buf });
-        return CommandResult::Message(format!("Importing session from '{}'…", path));
+        return CommandResult::Message(s::importing_session(path));
     }
     let json = match std::fs::read_to_string(&path_buf) {
         Ok(s) => s,
-        Err(_) => return CommandResult::Message(format!("Could not read '{}'", path)),
+        Err(_) => return CommandResult::Message(s::import_read_error(path)),
     };
     match serde_json::from_str::<crate::session::Session>(&json) {
         Ok(session) => {
             state.restore_session(&session);
-            CommandResult::Message(format!("Session imported from '{}'", path))
+            CommandResult::Message(s::session_imported(path))
         }
-        Err(_) => CommandResult::Message(format!("Could not import session from '{}'", path)),
+        Err(_) => CommandResult::Message(s::import_error(path)),
     }
 }
 
 /// Export the current session to a JSON file.  Args: file path.
 pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
+    use crate::ui_strings::session as s;
     let path = path.trim();
     if path.is_empty() {
-        return CommandResult::Message("Usage: /export path/to/session.json".into());
+        return CommandResult::Message(s::EXPORT_USAGE.into());
     }
     let name = state
         .session()
@@ -186,12 +185,12 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
             path: path_buf,
             session,
         });
-        return CommandResult::Message(format!("Exporting session to '{}'…", path));
+        return CommandResult::Message(s::exporting_session(path));
     }
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();
     match std::fs::write(&path_buf, json) {
-        Ok(_) => CommandResult::Message(format!("Session exported to '{}'", path)),
-        Err(e) => CommandResult::Message(format!("Could not export: {}", e)),
+        Ok(_) => CommandResult::Message(s::session_exported(path)),
+        Err(e) => CommandResult::Message(s::export_error(&e.to_string())),
     }
 }
 

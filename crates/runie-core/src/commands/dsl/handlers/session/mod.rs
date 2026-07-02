@@ -93,10 +93,10 @@ pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
     }
     match crate::session::replay::list_sessions() {
         Ok(sessions) if sessions.is_empty() => {
-            CommandResult::Message("No saved sessions. Use /save name to create one.".into())
+            CommandResult::Message(crate::ui_strings::session::NO_SAVED_SESSIONS.into())
         }
-        Ok(sessions) => CommandResult::Message(format!("Saved sessions:\n{}", sessions.join("\n"))),
-        Err(e) => CommandResult::Message(format!("Could not list sessions: {}", e)),
+        Ok(sessions) => CommandResult::Message(crate::ui_strings::session::saved_sessions(&sessions)),
+        Err(e) => CommandResult::Message(crate::ui_strings::session::session_list_error(&e.to_string())),
     }
 }
 
@@ -121,20 +121,20 @@ pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.session_mut().session_created_at = now;
     state.session_mut().session_updated_at = now;
     state.messages_changed();
-    state.add_system_msg("New session started".into());
+    state.add_system_msg(crate::ui_strings::session::NEW_SESSION_STARTED.into());
     // Emit Abort so UiActor clears agent_running; ClearQueues clears the queue.
     CommandResult::Events(vec![crate::Event::Abort, crate::Event::ClearQueues])
 }
 
 pub fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
     state.reset_session();
-    CommandResult::Message("State cleared.".into())
+    CommandResult::Message(crate::ui_strings::session::STATE_CLEARED.into())
 }
 
 pub fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
     let messages = state.session().messages();
     if messages.is_empty() {
-        return CommandResult::Message("No history.".into());
+        return CommandResult::Message(crate::ui_strings::session::NO_HISTORY.into());
     }
 
     let role_label = |role: &crate::message::Role| match role {
@@ -166,18 +166,14 @@ pub fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
         })
         .collect();
 
-    CommandResult::Message(format!(
-        "Conversation history ({} messages):\n{}",
-        total,
-        entries.join("\n")
-    ))
+    CommandResult::Message(crate::ui_strings::session::history(total, &entries))
 }
 
 pub fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
     let tokens = session_token_count(state);
     let (user, assistant, tool) = count_messages_by_role(state);
     let info = build_session_info(state, tokens, (user, assistant, tool));
-    CommandResult::Message(info)
+    CommandResult::Message(crate::ui_strings::session::session_info(&info))
 }
 
 fn session_token_count(state: &AppState) -> usize {
@@ -269,6 +265,7 @@ pub fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
+    use crate::ui_strings::session as s;
     if let Some(handles) = state.actor_handles().cloned() {
         let _ = handles.session.try_send(SessionMsg::ResumeMostRecent);
         return CommandResult::None;
@@ -276,14 +273,14 @@ pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     // Fallback for test mode without actor handles.
     let store = match crate::session::store::SessionStore::default_store() {
         Some(s) => s,
-        None => return CommandResult::Message("No session store available.".into()),
+        None => return CommandResult::Message(s::NO_SESSION_STORE.into()),
     };
     match find_most_recent_from_store(&store) {
         Some(name) => match crate::session::replay::load_session_from_store(&name, state, &store) {
-            Ok(_) => CommandResult::Message(format!("Loaded '{}'.", name)),
-            Err(_) => CommandResult::Message("Could not load session.".into()),
+            Ok(_) => CommandResult::Message(s::session_resumed(&name)),
+            Err(_) => CommandResult::Message(s::RESUME_LOAD_FAILED.into()),
         },
-        None => CommandResult::Message("No sessions to resume.".into()),
+        None => CommandResult::Message(s::NO_SESSIONS_TO_RESUME.into()),
     }
 }
 

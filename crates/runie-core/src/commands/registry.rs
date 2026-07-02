@@ -262,6 +262,7 @@ mod dialog_state_tests {
 impl AppState {
     /// Dispatch a slash command
     pub fn handle_slash(&mut self, content: &str) -> Option<CommandResult> {
+        use crate::ui_strings::commands as c;
         if !content.starts_with('/') {
             return None;
         }
@@ -271,9 +272,7 @@ impl AppState {
         let tokens: Vec<String> = match shell_words::split(input) {
             Ok(tokens) => tokens,
             Err(e) => {
-                return Some(CommandResult::Message(format!(
-                    "Invalid command syntax: {e}. Try /help."
-                )));
+                return Some(CommandResult::Message(c::invalid_syntax(&e.to_string())));
             }
         };
 
@@ -291,9 +290,7 @@ impl AppState {
                     Some(result)
                 }
             }
-            None => Some(CommandResult::Message(format!(
-                "Unknown command: /{name}. Try /help."
-            ))),
+            None => Some(CommandResult::Message(c::unknown_command(name))),
         }
     }
 }

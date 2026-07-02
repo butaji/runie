@@ -35,7 +35,7 @@ pub fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
         .map(|m| m.content())
         .unwrap_or_default();
     if text.is_empty() {
-        return CommandResult::Message("No assistant response to copy".into());
+        return CommandResult::Message(crate::ui_strings::system::NOTHING_TO_COPY.into());
     }
     CommandResult::Event(crate::Event::CopyToClipboard(text))
 }
@@ -53,30 +53,29 @@ pub fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
+    use crate::ui_strings::system as s;
     if state.skills().is_empty() {
-        return CommandResult::Warning("No skills loaded.".into());
+        return CommandResult::Warning(s::NO_SKILLS.into());
     }
-    let lines: Vec<_> = std::iter::once("Loaded skills:".into())
-        .chain(state.skills().iter().map(|s| format!("  {}", s.summary())))
+    let lines: Vec<_> = std::iter::once(s::LOADED_SKILLS.into())
+        .chain(state.skills().iter().map(|sk| format!("  {}", sk.summary())))
         .collect();
     CommandResult::Message(lines.join("\n"))
 }
 
 /// Handler for `/skill <name>` — shows skill info.
 pub fn run_skill(state: &mut AppState, args: &str) -> CommandResult {
+    use crate::ui_strings::system as s;
     let name = args.trim();
-    match state.skills().iter().find(|s| s.name == name) {
+    match state.skills().iter().find(|sk| sk.name == name) {
         Some(skill) => {
-            let mut lines = vec![format!("Skill: {}", skill.name)];
-            if !skill.description.is_empty() {
-                lines.push(format!("Description: {}", skill.description));
-            }
-            if !skill.context.is_empty() {
-                lines.push(format!("Context: {}", skill.context));
-            }
-            CommandResult::Message(lines.join("\n"))
+            CommandResult::Message(s::skill_info(
+                &skill.name,
+                Some(&skill.description),
+                Some(&skill.context),
+            ))
         }
-        None => CommandResult::Message(format!("Skill '{}' not found. Use /skills.", name)),
+        None => CommandResult::Message(s::skill_not_found(name)),
     }
 }
 

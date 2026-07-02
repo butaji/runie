@@ -20,12 +20,11 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
 }
 
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
+    use crate::ui_strings::model as m;
     let rest = args.trim();
     if rest.is_empty() {
         return if !has_any_available_provider(state) {
-            CommandResult::Message(
-                "No connected providers. Use /provider to add a provider first.".into(),
-            )
+            CommandResult::Message(m::NO_PROVIDERS.into())
         } else {
             CommandResult::OpenDialog(DialogType::ModelSelector)
         };
@@ -37,23 +36,20 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
             let provider = state.config_mut().current_provider.clone();
             switch_to_model(state, &provider, parts[0])
         }
-        _ => CommandResult::Message(format!(
-            "Current: {}/{}. Format: /model provider/model or /model model",
-            state.config().current_provider,
-            state.config().current_model
+        _ => CommandResult::Message(m::usage(
+            &state.config().current_provider,
+            &state.config().current_model,
         )),
     }
 }
 
 fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> CommandResult {
+    use crate::ui_strings::model as m;
     if !is_model_configured(state, provider, model) {
-        return CommandResult::Warning(format!(
-            "Model {}/{} is not available. Connect the provider and choose models with /provider.",
-            provider, model
-        ));
+        return CommandResult::Warning(m::model_unavailable(provider, model));
     }
     state.switch_model(provider.to_owned(), model.to_owned(), true);
-    CommandResult::Message(format!("Switched to {}/{}", provider, model))
+    CommandResult::Message(m::model_switched(provider, model))
 }
 
 fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
@@ -64,6 +60,7 @@ fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
 }
 
 pub fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
+    use crate::ui_strings::model as m;
     let rest = args.trim();
     if rest.is_empty() {
         return open_thinking_panel(state);
@@ -71,12 +68,9 @@ pub fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     match rest.parse::<ThinkingLevel>() {
         Ok(level) => {
             state.config_mut().thinking_level = level;
-            CommandResult::Message(format!(
-                "Thinking level set to: {}",
-                state.config().thinking_level.as_str()
-            ))
+            CommandResult::Message(m::thinking_level(state.config().thinking_level.as_str()))
         }
-        Err(e) => CommandResult::Message(format!("Error: {e}")),
+        Err(e) => CommandResult::Message(m::thinking_error(&e.to_string())),
     }
 }
 
@@ -101,18 +95,15 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
 }
 
 pub fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
+    use crate::ui_strings::model as m;
     if !has_any_available_provider(state) {
-        return CommandResult::Message(
-            "No connected providers. Use /provider to add a provider first.".into(),
-        );
+        return CommandResult::Message(m::NO_PROVIDERS.into());
     }
     CommandResult::OpenDialog(DialogType::ScopedModels)
 }
 
 pub fn run_thinking(state: &mut AppState, level: ThinkingLevel) {
+    use crate::ui_strings::model as m;
     state.config_mut().thinking_level = level;
-    state.add_system_msg(format!(
-        "Thinking level set to: {}",
-        state.config().thinking_level.as_str()
-    ));
+    state.add_system_msg(m::thinking_level(state.config().thinking_level.as_str()));
 }

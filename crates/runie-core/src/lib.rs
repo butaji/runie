@@ -86,6 +86,9 @@ pub mod tracing_init;
 /// Metrics facade for telemetry (counters, histograms, gauges).
 pub mod metrics;
 
+/// Centralized user-facing strings (errors, warnings, info, help).
+pub mod ui_strings;
+
 pub mod theme_tokens;
 
 pub mod tokens;

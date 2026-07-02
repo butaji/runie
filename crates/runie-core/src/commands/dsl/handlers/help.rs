@@ -23,7 +23,7 @@ pub fn quit(_: &mut AppState, _: &str) -> CommandResult {
 fn build_help_panel(state: &AppState) -> Panel {
     let mut panel = Panel::new("help", " Commands ")
         .with_filter()
-        .header("Type to filter · Esc closes");
+        .header(crate::ui_strings::help::FILTER_HEADER);
 
     let mut last_category: Option<crate::commands::CommandCategory> = None;
     let mut items: Vec<_> = state.registry().list();
