@@ -45,7 +45,7 @@ textwrap.workspace = true
 notify.workspace = true
 notify-debouncer-mini.workspace = true
 regex.workspace = true
-winnow.workspace = true
+# winnow.workspace = true  # unused - cargo machete
 glob.workspace = true
 shellexpand.workspace = true
 shell-words.workspace = true
@@ -86,7 +86,7 @@ metrics.workspace = true
 tiktoken.workspace = true
 camino.workspace = true
 tinytemplate.workspace = true
-serde_with.workspace = true
+# serde_with.workspace = true  # unused - cargo machete
 validator.workspace = true
 chrono.workspace = true
 

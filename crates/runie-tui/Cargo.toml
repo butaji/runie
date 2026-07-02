@@ -32,7 +32,6 @@ dirs.workspace = true
 serde_json.workspace = true
 syntect.workspace = true
 unicode-width.workspace = true
-base64.workspace = true
 tui-markdown.workspace = true
 crokey.workspace = true
 parking_lot.workspace = true
@@ -41,7 +40,6 @@ color-eyre.workspace = true
 clap.workspace = true
 throbber-widgets-tui = "0.11"
 textwrap.workspace = true
-ratatui-textarea = "0.9.2"
 
 [target.'cfg(unix)'.dependencies]
 nix.workspace = true
