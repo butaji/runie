@@ -113,7 +113,7 @@
     {
       "file": "add-project-level-config-layer-and-keyring-secrets.md",
       "title": "Add project-level config layer and keyring secrets",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "add-sample-config-env-and-completions.md",
