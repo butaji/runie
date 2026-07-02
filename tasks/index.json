@@ -72,7 +72,7 @@
   {
     "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
     "title": "Add MCP tool schema cache and connection manager",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
@@ -137,7 +137,7 @@
   {
     "file": "adopt-snapshot-journal-jsonl-pattern.md",
     "title": "Adopt snapshot + append-only JSONL journal pattern",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-testing-helpers-across-all-tests.md",
@@ -542,7 +542,7 @@
   {
     "file": "derive-event-taxonomies-with-strum-or-proc-macro.md",
     "title": "Derive event taxonomies with `strum` or a proc macro",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
@@ -882,7 +882,7 @@
   {
     "file": "generate-tool-dispatch-from-single-registry.md",
     "title": "Generate tool dispatch from a single registry",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "graceful-leader-shutdown-with-joinset-timeout.md",
@@ -1332,7 +1332,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
@@ -1357,7 +1357,7 @@
   {
     "file": "replace-layered-config-merge-with-figment.md",
     "title": "Replace custom layered config merge with Figment",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-leftover-macros-with-functions.md",
@@ -1582,7 +1582,7 @@
   {
     "file": "simplify-permission-policy-chain-to-ruleset-match.md",
     "title": "Simplify permission policy chain to a ruleset match",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "simplify-slash-command-dsl.md",
@@ -1687,7 +1687,7 @@
   {
     "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
     "title": "Track orphan spawned tasks in provider, IO, and session actors",
-    "status": "partial"
+    "status": "wontfix"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -1742,7 +1742,7 @@
   {
     "file": "unify-form-submit-paths-through-command-registry.md",
     "title": "Unify form submit paths through command registry",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "unify-headless-and-tui-streaming-response-parser.md",
@@ -1847,7 +1847,7 @@
   {
     "file": "use-atomic-writes-for-config-and-session-files.md",
     "title": "Use atomic writes for config and session files",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-bytesize-humantime-for-tool-formatting.md",
@@ -1977,7 +1977,7 @@
   {
     "file": "use-textwrap-for-blockquote-word-wrap.md",
     "title": "Use `textwrap` for blockquote word wrap",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
