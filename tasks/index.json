@@ -205,7 +205,7 @@
 {"file": "make-tui-render-loop-async-with-watch-channel.md", "title": "Make TUI render loop async with watch channel", "status": "done"}
 {"file": "merge-agentstate-into-turnstate-projection.md", "title": "Merge AgentState into a TurnState projection", "status": "done"}
 {"file": "migrate-production-actors-to-ractor.md", "title": "Migrate production actors to `ractor`", "status": "done"}
-{"file": "migrate-session-persistence-to-rusqlite.md", "title": "Migrate session persistence to rusqlite", "status": "todo"}
+{"file": "migrate-session-persistence-to-rusqlite.md", "title": "Migrate session persistence to rusqlite", "status": "wontfix"}
 {"file": "migrate-subagent-loader-to-resource-loader.md", "title": "Migrate subagent loader to unified resource loader", "status": "done"}
 {"file": "migrate-tui-and-cli-to-leader-bootstrap.md", "title": "Migrate TUI and CLI to `Leader::start`", "status": "done"}
 {"file": "move-approval-registry-into-permission-actor-state.md", "title": "Move ApprovalRegistry into PermissionActor state", "status": "done"}
@@ -428,7 +428,7 @@
 {"file": "wire-rmcp-client-or-remove-mcp-config.md", "title": "Wire `rmcp` client or remove MCP config", "status": "todo"}
 {"file": "wire-user-permission-rules-into-agent-gate.md", "title": "Wire user permission rules into the agent permission gate", "status": "done"}
 {"file": "write-runie-vs-grok-build-findings-report.md", "title": "Write Runie vs Grok Build findings report", "status": "todo"}
-{"file": "resolve-sqlite-vs-jsonl-persistence-conflict.md", "title": "Resolve SQLite vs JSONL persistence conflict", "status": "todo"}
+{"file": "resolve-sqlite-vs-jsonl-persistence-conflict.md", "title": "Resolve SQLite vs JSONL persistence conflict", "status": "done"}
 {"file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md", "title": "Update `ProviderProtocol` doc to reflect `wontfix` decision", "status": "todo"}
 {"file": "merge-duplicate-tui-widget-replacement-tasks.md", "title": "Merge duplicate TUI widget replacement tasks", "status": "todo"}
 {"file": "merge-duplicate-session-persistence-tasks.md", "title": "Merge duplicate session persistence tasks", "status": "todo"}

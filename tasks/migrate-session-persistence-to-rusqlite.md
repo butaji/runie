@@ -2,15 +2,19 @@
 
 ## Status
 
-`todo`
+`wontfix`
 
-## Context
+## Decision
+
+The project will **not** use SQLite for session persistence. JSONL is the canonical persistence format. The issues described below must be solved within the JSONL path (atomic writes, snapshot+journal, compaction, indexing).
+
+## Context (historical)
 
 `session/store.rs` uses JSONL with a header line. `session/persistence/header.rs:40-48` rewrites the header on metadata changes with `File::create` (truncate) then re-reads the body. A crash between truncate and rewrite destroys the entire session. Listing is O(N·M) and durable events drop rich data.
 
-## Goal
+## Goal (rejected)
 
-Replace JSONL session persistence with `rusqlite` (bundled feature). Store messages, metadata, tree edges, and tool results in a relational schema. One-time import existing `.jsonl` sessions.
+~~Replace JSONL session persistence with `rusqlite` (bundled feature).~~ Rejected. Keep JSONL and fix the problems listed in `standardize-session-persistence-on-jsonl.md`.
 
 ## Acceptance Criteria
 

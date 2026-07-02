@@ -2,11 +2,11 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Description
 
-`tasks/migrate-session-persistence-to-rusqlite.md` contradicts the done decision in `tasks/standardize-session-persistence-on-jsonl.md`. Officially close the SQLite task as `wontfix` and document the decision.
+`tasks/migrate-session-persistence-to-rusqlite.md` contradicted the done decision in `tasks/standardize-session-persistence-on-jsonl.md`. The SQLite task has been closed as `wontfix`; JSONL is the only persistence format.
 
 ## Acceptance criteria
 
