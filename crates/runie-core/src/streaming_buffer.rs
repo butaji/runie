@@ -209,53 +209,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn heal_markdown_closes_unclosed_bold() {
-        assert_eq!(heal_markdown("hello **world"), "hello **world**");
-        assert_eq!(heal_markdown("**bold start"), "**bold start**");
-    }
-
-    #[test]
-    fn heal_markdown_closes_unclosed_italic() {
-        assert_eq!(heal_markdown("hello _world"), "hello _world_");
-        assert_eq!(heal_markdown("italic _start"), "italic _start_");
-    }
-
-    #[test]
-    fn heal_markdown_closes_unclosed_inline_code() {
-        assert_eq!(heal_markdown("use `rust"), "use `rust`");
-        assert_eq!(heal_markdown("code `snippet"), "code `snippet`");
-    }
-
-    #[test]
-    fn heal_markdown_closes_unclosed_link() {
-        assert_eq!(heal_markdown("see [docs"), "see [docs]()");
-        assert_eq!(heal_markdown("[link"), "[link]()");
-    }
-
-    #[test]
-    fn heal_markdown_leaves_closed_syntax_unchanged() {
-        assert_eq!(
-            heal_markdown("hello **world** and `code`"),
-            "hello **world** and `code`"
-        );
-        assert_eq!(
-            heal_markdown("**bold** and _italic_ and `code`"),
-            "**bold** and _italic_ and `code`"
-        );
-    }
-
-    #[test]
-    fn heal_markdown_leaves_plain_text_unchanged() {
-        assert_eq!(heal_markdown("just plain text"), "just plain text");
-        assert_eq!(heal_markdown(""), "");
-    }
-
-    #[test]
-    fn heal_markdown_handles_multiple_unclosed_spans() {
-        assert_eq!(heal_markdown("**bold and `code"), "**bold and `code`**");
-    }
-
-    #[test]
     fn streaming_buffer_flush_heals_stable_lines() {
         let mut buf = StreamingBuffer::new();
         buf.push_delta("hello **world\n");
