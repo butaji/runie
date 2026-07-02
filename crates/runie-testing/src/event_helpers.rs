@@ -37,7 +37,7 @@ where
     F: Fn(&Event) -> bool,
 {
     let guard = events.lock();
-    if guard.iter().any(|e| predicate(e)) {
+    if guard.iter().any(predicate) {
         return;
     }
     panic!(

@@ -10,7 +10,7 @@ use path_absolutize::Absolutize;
 /// Resolve a raw path string to an absolute, normalized path using the current
 /// working directory.
 pub fn resolve_path(raw: &str) -> PathBuf {
-    resolve_path_in(raw, &std::env::current_dir().unwrap_or_default())
+    resolve_path_in(raw, std::env::current_dir().unwrap_or_default())
 }
 
 /// Resolve a raw path string to an absolute, normalized path relative to the
@@ -21,13 +21,13 @@ pub fn resolve_path_in(raw: &str, working_dir: impl AsRef<Path>) -> PathBuf {
     let path = Path::new(&expanded);
     // Use path-absolutize for cross-platform absolute + normalized paths.
     // This handles `.` and `..` components, as well as Windows paths properly.
-    let absolute = if path.is_absolute() {
+    
+    if path.is_absolute() {
         path.absolutize().unwrap_or_else(|_| path.to_path_buf())
     } else {
         let joined = working_dir.join(path);
-        joined.absolutize().unwrap_or_else(|_| joined)
-    };
-    absolute
+        joined.absolutize().unwrap_or(joined)
+    }
 }
 
 #[cfg(test)]

@@ -30,7 +30,7 @@ impl RactorPermissionHandle {
 
     /// Query the current pending request ID, if any.
     pub async fn current_request_id(&self) -> Option<String> {
-        match self.inner.call(|tx| PermissionMsg::GetCurrentRequest(tx), None).await {
+        match self.inner.call(PermissionMsg::GetCurrentRequest, None).await {
             Ok(ractor::rpc::CallResult::Success(v)) => v,
             _ => None,
         }
@@ -102,7 +102,7 @@ impl RactorPermissionHandle {
 
     /// Query the current permission rule set.
     pub async fn get_rules(&self) -> PermissionSet {
-        match self.inner.call(|tx| PermissionMsg::GetRules(tx), None).await {
+        match self.inner.call(PermissionMsg::GetRules, None).await {
             Ok(ractor::rpc::CallResult::Success(rules)) => rules,
             _ => PermissionSet::default(),
         }

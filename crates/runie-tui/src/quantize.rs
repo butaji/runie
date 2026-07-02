@@ -78,9 +78,9 @@ fn ansi256_to_16(idx: u8) -> u8 {
     for i in 0..16u8 {
         let (cr, cg, cb) = ansi_colours::rgb_from_ansi256(i);
         // Euclidean distance in RGB space
-        let dr = (r as i32 - cr as i32).abs() as u32;
-        let dg = (g as i32 - cg as i32).abs() as u32;
-        let db = (b as i32 - cb as i32).abs() as u32;
+        let dr = (r as i32 - cr as i32).unsigned_abs();
+        let dg = (g as i32 - cg as i32).unsigned_abs();
+        let db = (b as i32 - cb as i32).unsigned_abs();
         let dist = dr * dr + dg * dg + db * db;
         if dist < min_dist {
             min_dist = dist;

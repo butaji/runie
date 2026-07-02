@@ -142,10 +142,7 @@ impl RactorTurnActor {
         let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
         let result = queue.pop_steering(mode);
         state.turn_state.message_queue = queue.into_inner();
-        let r = match result {
-            None => return None,
-            Some(r) => r,
-        };
+        let r = result?;
         // Generate id first so we can move it into emit after cloning for the queue.
         let id = Self::next_id_internal(&mut state.turn_state);
         // Clone for queue, move into emit, and clone for return value.
@@ -159,10 +156,7 @@ impl RactorTurnActor {
         let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
         let result = queue.pop_follow_up(mode);
         state.turn_state.message_queue = queue.into_inner();
-        let r = match result {
-            None => return None,
-            Some(r) => r,
-        };
+        let r = result?;
         // Generate id first so we can move it into emit after cloning for the queue.
         let id = Self::next_id_internal(&mut state.turn_state);
         // Clone for queue, move into emit, and use for return value.

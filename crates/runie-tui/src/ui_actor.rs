@@ -424,7 +424,6 @@ impl UiActor {
                             }
                             *self.state.permission_request_mut() = None;
                             self.state.view_mut().dirty = true;
-                            return;
                         }
                         _ => {}
                     }

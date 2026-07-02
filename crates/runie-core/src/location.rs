@@ -121,12 +121,10 @@ pub fn parse_search_query(input: &str) -> SearchQuery {
         if token.starts_with("*.") || token.starts_with("**/") || token.starts_with('*') {
             // Glob pattern
             constraints.push(SearchConstraint::Glob(token.to_owned()));
-        } else if token.starts_with("git:") {
-            constraints.push(SearchConstraint::GitStatus(token[4..].to_owned()));
-        } else if token.starts_with('!') {
-            constraints.push(SearchConstraint::Not(token[1..].to_owned()));
-        } else if token.starts_with("git:") && token.len() > 4 {
-            constraints.push(SearchConstraint::GitStatus(token[4..].to_owned()));
+        } else if let Some(stripped) = token.strip_prefix("git:") {
+            constraints.push(SearchConstraint::GitStatus(stripped.to_owned()));
+        } else if let Some(stripped) = token.strip_prefix('!') {
+            constraints.push(SearchConstraint::Not(stripped.to_owned()));
         } else if !text.is_empty() {
             text.push(' ');
             text.push_str(token);
@@ -185,7 +183,7 @@ fn extract_location(input: &str) -> (&str, Option<Location>) {
         };
 
         if let Some(loc) = loc {
-            let clean_path = path.trim_end_matches(|c| c == '/' || c == '\\');
+            let clean_path = path.trim_end_matches(['/', '\\']);
             return (clean_path, Some(loc));
         }
     }

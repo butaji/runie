@@ -20,6 +20,7 @@ use crate::provider::{
 ///
 /// This enables connection reuse across turns: each unique provider+URL pair shares
 /// one `reqwest::Client`, so TCP connections and HTTP/2 streams are pooled.
+#[allow(clippy::type_complexity)]
 static HTTP_CLIENT_CACHE: OnceLock<Mutex<HashMap<(String, String), Arc<reqwest::Client>>>> =
     OnceLock::new();
 

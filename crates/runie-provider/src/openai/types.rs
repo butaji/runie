@@ -120,7 +120,7 @@ impl ErrorBodyJson {
         self.error
             .as_ref()
             .and_then(|e| e.message.as_deref())
-            .or_else(|| self.message.as_deref())
+            .or(self.message.as_deref())
             .unwrap_or("unknown error")
     }
 
@@ -129,7 +129,7 @@ impl ErrorBodyJson {
         self.error
             .as_ref()
             .and_then(|e| e.code.as_deref())
-            .or_else(|| self.code.as_deref())
+            .or(self.code.as_deref())
             .unwrap_or("")
     }
 
@@ -138,7 +138,7 @@ impl ErrorBodyJson {
         self.error
             .as_ref()
             .and_then(|e| e.type_.as_deref())
-            .or_else(|| self.r#type.as_deref())
+            .or(self.r#type.as_deref())
             .unwrap_or("")
     }
 

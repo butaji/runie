@@ -126,18 +126,17 @@ impl InspectReport {
 
         // Check if provider is set but not configured
         if let Some(provider) = &config.provider {
-            if !provider.is_empty() {
-                if !config.model_providers.contains_key(provider) {
+            if !provider.is_empty()
+                && !config.model_providers.contains_key(provider) {
                     errors.push(format!(
                         "provider '{}' set as default but not configured in model_providers",
                         provider
                     ));
                 }
-            }
         }
 
         // Check if any configured providers have their API key
-        for (name, _) in &config.model_providers {
+        for name in config.model_providers.keys() {
             let api_key = config.resolve_api_key(name).unwrap_or_default();
             if api_key.is_empty() {
                 let env_var = runie_core::provider::find_provider(name)
@@ -189,7 +188,7 @@ impl InspectReport {
         }
 
         // Check for missing API keys
-        for (name, _) in &config.model_providers {
+        for name in config.model_providers.keys() {
             let api_key = config.resolve_api_key(name).unwrap_or_default();
             if api_key.is_empty() {
                 let env_var = runie_core::provider::find_provider(name)

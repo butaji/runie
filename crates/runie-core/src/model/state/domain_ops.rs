@@ -251,12 +251,12 @@ impl AppState {
             return ("mock".into(), "echo".into());
         }
         let cfg = self.config();
-        if let Some(ref provider) = cfg.provider.as_ref().filter(|p| !p.is_empty()) {
+        if let Some(provider) = cfg.provider.as_ref().filter(|p| !p.is_empty()) {
             let model = self
                 .first_model_for_provider(provider)
                 .or_else(|| cfg.default_model.clone())
                 .unwrap_or_default();
-            let provider_str = (&*provider).to_string();
+            let provider_str = (&provider).to_string();
             return (provider_str, model);
         }
         // Fall back to the first provider in sorted order

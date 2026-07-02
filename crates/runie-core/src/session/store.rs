@@ -138,7 +138,7 @@ impl SessionStore {
         }
 
         let _lock: SharedLock = shared_lock(&path)?;
-        Ok(read_header(&path)?)
+        read_header(&path)
     }
 
     /// Delete a session's file.

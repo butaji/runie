@@ -24,6 +24,7 @@ pub enum ToolResult {
 
 impl ToolResult {
     /// Convert to the harness skill `ToolCallResult`.
+    #[allow(clippy::wrong_self_convention)]
     fn to_call_result(self) -> ToolCallResult {
         match self {
             ToolResult::Success(output) => ToolCallResult::SkipWithOutput(output),

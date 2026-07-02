@@ -175,7 +175,7 @@ fn flat_files(base: &str, limit: usize) -> Vec<String> {
         let name = entry.file_name().to_string_lossy().to_string();
         results.push(name);
     }
-    results.sort_by(|a, b| a.cmp(b));
+    results.sort();
     results
 }
 

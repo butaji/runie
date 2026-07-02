@@ -80,7 +80,7 @@ impl FffSearchState {
     /// Record that a file was accessed (read or selected) to boost its frecency score.
     /// This is a best-effort operation — failures are silently ignored.
     pub fn record_file_access(&self, path: &std::path::Path) {
-        if let Some(rel) = path.strip_prefix(&self.project_path).ok() {
+        if let Ok(rel) = path.strip_prefix(&self.project_path) {
             self.index.record_access(rel);
         }
     }
@@ -254,7 +254,7 @@ impl SearchIndex {
         }
 
         // Get git status for all files.
-        if let Some(repo) = git2::Repository::open(root).ok() {
+        if let Ok(repo) = git2::Repository::open(root) {
             let mut opts = git2::StatusOptions::new();
             opts.include_untracked(true);
             opts.recurse_untracked_dirs(true);

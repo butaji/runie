@@ -229,7 +229,7 @@ impl RactorAgentActor {
             let result = turn.await;
 
             if let Err(e) = result {
-                let _ = Self::publish_error_and_done(&bus_for_task, &command_id, format!("Agent error: {e}"));
+                Self::publish_error_and_done(&bus_for_task, &command_id, format!("Agent error: {e}"));
             }
 
             // Notify actor to clear current_turn_* state.

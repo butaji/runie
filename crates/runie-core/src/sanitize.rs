@@ -14,7 +14,7 @@ use crate::proto::message::{validate_messages, SanitizeError};
 /// Validate a message sequence and normalize whitespace.
 ///
 /// Order: validate first, then trim — so trimming doesn't mask validation errors.
-pub fn sanitize_messages(messages: &mut Vec<crate::message::ChatMessage>) -> Vec<SanitizeError> {
+pub fn sanitize_messages(messages: &mut [crate::message::ChatMessage]) -> Vec<SanitizeError> {
     let errors = validate_messages(messages);
     trim_messages(messages);
     errors

@@ -113,7 +113,7 @@ impl AgentCommandBuilder {
             read_only: self.read_only.unwrap_or(false),
             skills_context: self.skills_context.unwrap_or_default(),
             system_prompt: self.system_prompt.unwrap_or_default(),
-            truncation: self.truncation.unwrap_or_else(|| crate::truncate::TruncationPolicy::default()),
+            truncation: self.truncation.unwrap_or_default(),
             cancellation_token: self.cancellation_token.unwrap_or_else(|| {
                 tokio_util::sync::CancellationToken::new()
             }),

@@ -20,7 +20,7 @@ pub fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
 
     // Create temp file in same directory for atomic rename using tempfile
     let tmp = NamedTempFile::new_in(parent)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
 
     // Acquire exclusive advisory lock on target file
     let lock_path = path.with_extension("lock");
@@ -47,7 +47,7 @@ pub fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
 
         // Atomically rename temp to target while still holding the lock
         tmp.persist(path)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
 
         // Set permissions on the final file too (belt and suspenders)
         #[cfg(unix)]

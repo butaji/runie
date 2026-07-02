@@ -39,7 +39,7 @@ impl RactorConfigHandle {
 
     /// Request the current in-memory config.
     pub async fn get_config(&self) -> Option<Config> {
-        match self.inner.call(|tx| ConfigMsg::GetConfig(tx), None).await {
+        match self.inner.call(ConfigMsg::GetConfig, None).await {
             Ok(ractor::rpc::CallResult::Success(config)) => Some(config),
             _ => None,
         }
@@ -47,7 +47,7 @@ impl RactorConfigHandle {
 
     /// Request the list of configured providers.
     pub async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
-        match self.inner.call(|tx| ConfigMsg::GetConfiguredProviders(tx), None).await {
+        match self.inner.call(ConfigMsg::GetConfiguredProviders, None).await {
             Ok(ractor::rpc::CallResult::Success(v)) => Some(v),
             _ => None,
         }
@@ -127,7 +127,7 @@ impl RactorConfigHandle {
 
     /// Load layered config (global + project) and return the effective config.
     pub async fn load_layers(&self) -> Option<Config> {
-        match self.inner.call(|tx| ConfigMsg::LoadLayers(tx), None).await {
+        match self.inner.call(ConfigMsg::LoadLayers, None).await {
             Ok(ractor::rpc::CallResult::Success(config)) => Some(config),
             _ => None,
         }

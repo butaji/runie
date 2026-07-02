@@ -34,6 +34,7 @@ impl CommandCategory {
     ///
     /// Standard values: `Core`, `Session`, `Model`, `Safety`, `System` (any case).
     /// Aliases: `tool`, `help`, `unknown`, `""` → `System`.
+    #[allow(clippy::result_unit_err)]
     pub fn parse_case_insensitive(s: &str) -> Result<Self, ()> {
         // Try strum first (case-insensitive standard variants).
         if let Ok(cat) = Self::from_str(s) {

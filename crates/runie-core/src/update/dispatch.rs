@@ -176,12 +176,12 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
                     .retain(|m| m.id != "trust_welcome");
                 state.messages_changed();
                 state.notify(
-                    format!("Project '{}' trusted. Read-only disabled.", &*path),
+                    format!("Project '{}' trusted. Read-only disabled.", path),
                     TransientLevel::Success,
                 );
             } else {
                 state.notify(
-                    format!("Project '{}' untrusted. Read-only enabled.", &*path),
+                    format!("Project '{}' untrusted. Read-only enabled.", path),
                     TransientLevel::Warning,
                 );
             }
