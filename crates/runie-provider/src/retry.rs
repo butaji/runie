@@ -122,63 +122,43 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::time::Duration;
+    use test_case::test_case;
 
     // ── Layer 1: classify_http_status produces typed variants ─────────────────────
     // Both HTTP and SSE paths use this shared classifier, so testing it covers both.
+    // Parameterized with (status_code, expected_variant, expected_retryable).
 
-    #[test]
-    fn classify_http_status_401_auth() {
-        let err = ProviderError::classify_http_status(401).expect("should be Some");
-        assert!(matches!(err, ProviderError::Auth(401)));
-        assert!(!err.is_retryable());
-    }
-
-    #[test]
-    fn classify_http_status_403_auth() {
-        let err = ProviderError::classify_http_status(403).expect("should be Some");
-        assert!(matches!(err, ProviderError::Auth(403)));
-        assert!(!err.is_retryable());
-    }
-
-    #[test]
-    fn classify_http_status_429_rate_limit() {
-        let err = ProviderError::classify_http_status(429).expect("should be Some");
-        assert!(matches!(err, ProviderError::RateLimit { .. }));
-        assert!(err.is_retryable());
-    }
-
-    #[test]
-    fn classify_http_status_500_server() {
-        let err = ProviderError::classify_http_status(500).expect("should be Some");
-        assert!(matches!(err, ProviderError::Server(500, _)));
-        assert!(err.is_retryable());
-    }
-
-    #[test]
-    fn classify_http_status_502_server() {
-        let err = ProviderError::classify_http_status(502).expect("should be Some");
-        assert!(matches!(err, ProviderError::Server(502, _)));
-        assert!(err.is_retryable());
-    }
-
-    #[test]
-    fn classify_http_status_503_server() {
-        let err = ProviderError::classify_http_status(503).expect("should be Some");
-        assert!(matches!(err, ProviderError::Server(503, _)));
-        assert!(err.is_retryable());
-    }
-
-    #[test]
-    fn classify_http_status_400_none() {
-        // 4xx other than 401/403/429 returns None
-        let err = ProviderError::classify_http_status(400);
-        assert!(err.is_none());
-    }
-
-    #[test]
-    fn classify_http_status_404_none() {
-        let err = ProviderError::classify_http_status(404);
-        assert!(err.is_none());
+    #[test_case(401, "Auth(401)", false)]
+    #[test_case(403, "Auth(403)", false)]
+    #[test_case(429, "RateLimit", true)]
+    #[test_case(500, "Server(500)", true)]
+    #[test_case(502, "Server(502)", true)]
+    #[test_case(503, "Server(503)", true)]
+    #[test_case(400, "None", false)]  // 4xx other than 401/403/429 returns None
+    #[test_case(404, "None", false)]
+    #[test_case(418, "None", false)]  // Additional 4xx cases
+    fn classify_http_status(code: u16, _variant: &str, retryable: bool) {
+        let err = ProviderError::classify_http_status(code);
+        match code {
+            401 | 403 => {
+                let err = err.expect("should be Some for auth errors");
+                assert!(matches!(err, ProviderError::Auth(c) if c == code));
+                assert_eq!(err.is_retryable(), retryable);
+            }
+            429 => {
+                let err = err.expect("should be Some for rate limit");
+                assert!(matches!(err, ProviderError::RateLimit { .. }));
+                assert_eq!(err.is_retryable(), retryable);
+            }
+            500..=599 => {
+                let err = err.expect("should be Some for server errors");
+                assert!(matches!(err, ProviderError::Server(c, _) if c == code));
+                assert_eq!(err.is_retryable(), retryable);
+            }
+            _ => {
+                assert!(err.is_none(), "status {} should return None", code);
+            }
+        }
     }
 
     // ── Layer 1: SSE path uses the same classifier ──────────────────────────────
@@ -229,47 +209,29 @@ mod tests {
 
     // ── Layer 1: typed ProviderError is_retryable ────────────────────────────────
 
-    #[test]
-    fn is_retryable_true_for_typed_rate_limit() {
+    #[test_case(ProviderError::RateLimit { retry_after_secs: None }, true)]
+    #[test_case(ProviderError::Timeout, true)]
+    #[test_case(ProviderError::Network("connection refused".into()), true)]
+    #[test_case(ProviderError::Server(502, Default::default()), true)]
+    #[test_case(ProviderError::Auth(401), false)]
+    #[test_case(ProviderError::ContextLength(128_000), false)]
+    fn is_retryable_for_typed_errors(typed: ProviderError, expected: bool) {
         // Wrap the typed ProviderError as anyhow::Error so downcast works
-        let typed: ProviderError = ProviderError::RateLimit { retry_after_secs: None };
         let err: anyhow::Error = typed.into();
-        assert!(is_retryable(&err));
+        assert_eq!(is_retryable(&err), expected);
     }
 
-    #[test]
-    fn is_retryable_true_for_typed_timeout() {
-        let typed: ProviderError = ProviderError::Timeout;
-        let err: anyhow::Error = typed.into();
-        assert!(is_retryable(&err));
-    }
-
-    #[test]
-    fn is_retryable_true_for_typed_network() {
-        let typed: ProviderError = ProviderError::Network("connection refused".into());
-        let err: anyhow::Error = typed.into();
-        assert!(is_retryable(&err));
-    }
-
-    #[test]
-    fn is_retryable_false_for_typed_auth() {
-        let typed: ProviderError = ProviderError::Auth(401);
-        let err: anyhow::Error = typed.into();
-        assert!(!is_retryable(&err));
-    }
-
-    #[test]
-    fn is_retryable_false_for_typed_context_length() {
-        let typed: ProviderError = ProviderError::ContextLength(128_000);
-        let err: anyhow::Error = typed.into();
-        assert!(!is_retryable(&err));
-    }
-
-    #[test]
-    fn is_retryable_true_for_typed_server_error() {
-        let typed: ProviderError = ProviderError::Server(502, Default::default());
-        let err: anyhow::Error = typed.into();
-        assert!(is_retryable(&err));
+    #[test_case("server overloaded", true)]
+    #[test_case("rate limit exceeded", true)]
+    #[test_case("timeout error", true)]
+    #[test_case("connection refused", true)]
+    #[test_case("try again later", true)]
+    #[test_case("401 Unauthorized", false)]
+    #[test_case("400 Bad Request", false)]
+    #[test_case("invalid request", false)]
+    fn is_retryable_for_string_errors(msg: &'static str, expected: bool) {
+        let err = anyhow::anyhow!(msg);
+        assert_eq!(is_retryable(&err), expected);
     }
 
     #[tokio::test]
@@ -304,42 +266,6 @@ mod tests {
         assert_eq!(result.unwrap(), 42);
         // backon retries with exponential backoff
         assert!(counter.load(Ordering::SeqCst) >= 2);
-    }
-
-    #[test]
-    fn retryable_detects_server_errors() {
-        let err = anyhow::anyhow!("server overloaded");
-        assert!(is_retryable(&err));
-    }
-
-    #[test]
-    fn retryable_detects_rate_limit() {
-        let err = anyhow::anyhow!("rate limit exceeded");
-        assert!(is_retryable(&err));
-    }
-
-    #[test]
-    fn retryable_detects_timeout() {
-        let err = anyhow::anyhow!("timeout error");
-        assert!(is_retryable(&err));
-    }
-
-    #[test]
-    fn retryable_detects_connection_error() {
-        let err = anyhow::anyhow!("connection refused");
-        assert!(is_retryable(&err));
-    }
-
-    #[test]
-    fn retryable_rejects_auth_errors() {
-        let err = anyhow::anyhow!("401 Unauthorized");
-        assert!(!is_retryable(&err));
-    }
-
-    #[test]
-    fn retryable_rejects_client_errors() {
-        let err = anyhow::anyhow!("400 Bad Request");
-        assert!(!is_retryable(&err));
     }
 
     // ── Layer 1: retryable error triggers multiple attempts ───────────────────

@@ -79,6 +79,7 @@ human-panic = "2"
 
 insta = { version = "1.41", features = ["yaml"] }
 tempfile = "3"
+test-case = "3.1"
 thiserror = "2"
 secrecy = "0.8"
 indextree = "4.1"

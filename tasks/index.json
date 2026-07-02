@@ -98,7 +98,7 @@
     {
       "file": "add-parameterized-tests-with-test-case.md",
       "title": "Add parameterized tests with `test-case`",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "add-plan-file-artifact-and-plan-mode-rpc.md",
