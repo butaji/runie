@@ -943,7 +943,7 @@
     {
       "file": "live-tui-smoke-test-real-minimax.md",
       "title": "Live TUI smoke test with real MiniMax provider",
-      "status": "partial"
+      "status": "wontfix"
     },
     {
       "file": "load-slash-commands-with-include-dir.md",
@@ -1683,7 +1683,7 @@
     {
       "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
       "title": "Track orphan spawned tasks in provider, IO, and session actors",
-      "status": "partial"
+      "status": "wontfix"
     },
     {
       "file": "type-and-unify-provider-model-layer.md",
