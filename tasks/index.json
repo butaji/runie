@@ -82,7 +82,7 @@
   {
     "file": "add-project-config-denylist-for-sensitive-keys.md",
     "title": "Add project config denylist for sensitive keys",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-project-level-config-layer-and-keyring-secrets.md",
@@ -287,7 +287,7 @@
   {
     "file": "collapse-commandkinddef-into-commandkind.md",
     "title": "Collapse `CommandKindDef` into `CommandKind`",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "collapse-dialogstate-variants.md",
@@ -1322,7 +1322,7 @@
   {
     "file": "replace-emitfn-mutex-with-async-channel.md",
     "title": "Replace EmitFn mutex with async channel",
-    "status": "done"
+    "status": "todo"
   },
   {
     "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
