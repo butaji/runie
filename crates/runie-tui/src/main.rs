@@ -63,7 +63,8 @@ async fn main() -> io::Result<()> {
     // Install color-eyre for better error chains.
     let _ = color_eyre::install();
 
-    tracing_init::init();
+    // Initialize tracing for TUI mode: JSON file logging + compact error console.
+    tracing_init::init_tui();
 
     let cli = Cli::parse();
     if cli.dry_run || cli.preview {

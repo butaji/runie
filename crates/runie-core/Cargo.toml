@@ -57,6 +57,7 @@ reqwest = { workspace = true, features = ["blocking"] }
 tempfile.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+tracing-appender.workspace = true
 keyring.workspace = true
 ringbuffer.workspace = true
 secrecy = { workspace = true, features = ["serde"] }

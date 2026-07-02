@@ -60,7 +60,7 @@ shell-words = "1.1"
 command-group = { version = "5", features = ["with-tokio"] }
 sublime_fuzzy = "0.7"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
 parking_lot = "0.12"
 notify = "7.0"

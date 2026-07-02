@@ -68,7 +68,7 @@
     {
       "file": "add-json-file-logging-for-tui.md",
       "title": "Add JSON file logging for TUI",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "add-jsonschema-validation-to-configactor-load.md",

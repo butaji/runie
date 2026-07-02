@@ -87,6 +87,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     // Session persistence with SQLite
     "session/sqlite_store.rs",
     "session/db.rs",
+    // Tracing initialization — creates log directory on startup
+    "tracing_init.rs",
 ];
 
 /// Patterns that indicate sync IO in production domain code.
