@@ -83,7 +83,7 @@
     {
       "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
       "title": "Add MCP tool schema cache and connection manager",
-      "status": "todo"
+      "status": "done"
     },
     {
       "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",

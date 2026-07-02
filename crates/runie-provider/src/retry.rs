@@ -110,9 +110,8 @@ where
     }
     .instrument(span)
     .await;
-    match &result {
-        Ok(_) => tracing::debug!("provider retry succeeded"),
-        Err(_) => {}
+    if result.is_ok() {
+        tracing::debug!("provider retry succeeded");
     }
     result
 }

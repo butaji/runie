@@ -235,13 +235,13 @@ fn parse_line_strategies(
 
     if looks_like_markup {
         // Markup found but failed to parse — return an error.
-        if try_parse_non_xml_tool(trimmed).is_none() {
-            return vec![Err(ToolParseError {
-                raw: original.to_owned(),
-                reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
-            })];
+        if let Some(tool) = try_parse_non_xml_tool(trimmed) {
+            return vec![Ok(tool)];
         }
-        return vec![Ok(try_parse_non_xml_tool(trimmed).unwrap())];
+        return vec![Err(ToolParseError {
+            raw: original.to_owned(),
+            reason: "invalid [TOOL_CALL] markup or unknown tool name".into(),
+        })];
     }
 
     // Fall back to the legacy multi-tool parser.
