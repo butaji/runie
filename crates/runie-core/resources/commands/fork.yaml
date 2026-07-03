@@ -1,0 +1,13 @@
+name: fork
+description: Fork session from a message
+category: Session
+sub: true
+triggers:
+  - /fork
+type: form_with_handler
+handler: fork
+title: "Fork Session"
+fields:
+  - label: Message index
+    placeholder: "0"
+    key: index

@@ -1,0 +1,8 @@
+name: new
+description: Start new session
+category: Session
+sub: false
+triggers:
+  - /new
+type: handler
+handler: new

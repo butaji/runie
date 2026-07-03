@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "id": "review",
+      "role_prompt": "Review the code.",
+      "task_description": "Read and review files.",
+      "model_trait": "nonexistent_trait"
+    }
+  ],
+  "synthesis_trait": "general",
+  "summary": "Review code.",
+  "rationale": "Testing bad trait."
+}

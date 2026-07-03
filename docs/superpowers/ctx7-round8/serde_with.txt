@@ -1,0 +1,163 @@
+### Duration Serialization Example
+
+Source: https://github.com/jonasbb/serde_with/blob/master/serde_with_macros/README.md
+
+Illustrates how `Foo::Durations` serializes a vector of `Duration` objects into a JSON array of seconds.
+
+```json
+{
+    "Durations": [5, 3600, 0]
+}
+```
+
+--------------------------------
+
+### Custom Enum Serialization with Serde As
+
+Source: https://github.com/jonasbb/serde_with/blob/master/README.md
+
+Illustrates how to use `serde_as` to customize the serialization of enum variants, including converting Durations to seconds and encoding byte vectors to hex.
+
+```rust
+use std::time::Duration;
+
+#[serde_as]
+#[derive(Deserialize, Serialize)]
+enum Foo {
+    Durations(
+        // Serialize them into a list of number as seconds
+        #[serde_as(as = "Vec<DurationSeconds>")]
+        Vec<Duration>,
+    ),
+    Bytes {
+        // We can treat a Vec like a map with duplicates.
+        // JSON only allows string keys, so convert i32 to strings
+        // The bytes will be hex encoded
+        #[serde_as(as = "Map<DisplayFromStr, Hex>")]
+        bytes: Vec<(i32, Vec<u8>)>
+    }
+}
+
+// This will serialize
+Foo::Durations(
+    vec![Duration::new(5, 0), Duration::new(3600, 0), Duration::new(0, 0)]
+)
+// into this JSON
+{
+    "Durations": [5, 3600, 0]
+}
+
+// and serializes
+Foo::Bytes {
+    bytes: vec![
+        (1, vec![0, 1, 2]),
+        (-100, vec![100, 200, 255]),
+        (1, vec![0, 111, 222]),
+    ],
+}
+// into this JSON
+{
+    "Bytes": {
+        "bytes": {
+            "1": "000102",
+            "-100": "64c8ff",
+            "1": "006fde"
+        }
+    }
+}
+```
+
+--------------------------------
+
+### Serialize/Deserialize with Display and FromStr
+
+Source: https://github.com/jonasbb/serde_with/blob/master/README.md
+
+Use the `DisplayFromStr` converter with `#[serde_as]` to serialize a type using its `Display` trait and deserialize using its `FromStr` trait. This is useful for types like `u8` or `url::Url`.
+
+```rust
+#[serde_as]
+#[derive(Deserialize, Serialize)]
+struct Foo {
+    // Serialize with Display, deserialize with FromStr
+    #[serde_as(as = "DisplayFromStr")]
+    bar: u8,
+}
+
+// This will serialize
+Foo {bar: 12}
+
+// into this JSON
+{"bar": "12"}
+```
+
+--------------------------------
+
+### Custom Serialization with serde_as
+
+Source: https://github.com/jonasbb/serde_with/blob/master/serde_with/src/guide.md
+
+Demonstrates using the `serde_as` attribute to customize serialization for fields. It shows how to use `DisplayFromStr` for types like `Ipv4Addr` and how to treat a `Vec` as a `Map` with custom type conversions.
+
+```rust
+use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr, Map};
+use std::net::Ipv4Addr;
+
+#[serde_as]
+#[derive(Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize)]
+struct Data {
+    // Type does not implement Serialize or Deserialize
+    #[serde_as(as = "DisplayFromStr")]
+    address: Ipv4Addr,
+    // Treat the Vec like a map with duplicates
+    // Convert u32 into a String and keep the String the same type
+    #[serde_as(as = "Map<DisplayFromStr, _>")]
+    vec_as_map: Vec<(u32, String)>;
+}
+
+let data = Data {
+    address: Ipv4Addr::new(192, 168, 0, 1),
+    vec_as_map: vec![
+        (123, "Hello".into()),
+        (456, "World".into()),
+        (123, "Hello".into()),
+    ],
+};
+
+let json = r#"{ 
+  "address": "192.168.0.1",
+  "vec_as_map": {
+    "123": "Hello",
+    "456": "World",
+    "123": "Hello"
+  }
+}"#;
+
+// Test Serialization
+assert_eq!(json, serde_json::to_string_pretty(&data).unwrap());
+// Test Deserialization
+assert_eq!(data, serde_json::from_str(json).unwrap());
+```
+
+--------------------------------
+
+### Custom Serialization for Duration
+
+Source: https://github.com/jonasbb/serde_with/blob/master/serde_with/src/guide/serde_as.md
+
+This example shows how to implement custom serialization for a `Duration` type using `SerializeAs`. It allows `Duration` to be serialized as a `DurationDef`.
+
+```rust
+# #[cfg(any())] {
+impl SerializeAs<Duration> for DurationDef {
+    fn serialize_as<S>(value: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        DurationDef::serialize(value, serializer)
+    }
+}
+# }
+```

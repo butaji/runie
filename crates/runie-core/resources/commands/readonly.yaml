@@ -1,0 +1,11 @@
+# Safety commands
+name: readonly
+description: Toggle read-only mode
+aliases:
+  - ro
+category: Safety
+sub: false
+triggers:
+  - /readonly
+type: handler
+handler: readonly

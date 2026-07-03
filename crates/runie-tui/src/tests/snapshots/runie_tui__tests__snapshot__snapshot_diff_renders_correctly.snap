@@ -1,0 +1,6 @@
+---
+source: crates/runie-tui/src/tests/snapshot.rs
+expression: output
+---
+   1-old                                
+   1+new

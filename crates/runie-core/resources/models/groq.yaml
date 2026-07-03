@@ -1,0 +1,18 @@
+# Groq provider metadata
+key: groq
+display_name: Groq
+base_url: https://api.groq.com/openai/v1
+env_var: GROQ_API_KEY
+models:
+  - name: llama-3.3-70b-versatile
+    cost_prompt: 0.59
+    cost_completion: 0.79
+    context_window: 128000
+  - name: gemma2-9b-it
+    cost_prompt: 0.2
+    cost_completion: 0.2
+    context_window: 128000
+  - name: mixtral-8x7b-32768
+    cost_prompt: 0.24
+    cost_completion: 0.24
+    context_window: 128000

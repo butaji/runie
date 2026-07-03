@@ -1,0 +1,5 @@
+---
+source: crates/runie-tui/src/tests/snapshot.rs
+expression: output
+---
+ → Hello from the agent.          00:00

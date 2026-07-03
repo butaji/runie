@@ -1,0 +1,9 @@
+# List skills command
+name: skills
+description: List loaded skills
+category: System
+sub: false
+triggers:
+  - /skills
+type: handler
+handler: skills

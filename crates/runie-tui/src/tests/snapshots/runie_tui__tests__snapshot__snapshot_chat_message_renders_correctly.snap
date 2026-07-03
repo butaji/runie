@@ -1,0 +1,6 @@
+---
+source: crates/runie-tui/src/tests/snapshot.rs
+expression: output
+---
+                                        
+ ❯ Hello, world!                  00:00

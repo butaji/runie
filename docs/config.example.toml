@@ -1,0 +1,134 @@
+# Runie Configuration
+# Copy this file to ~/.runie/config.toml and customize as needed.
+# See docs/Configuration.md for full documentation.
+
+# ── Provider & Model ─────────────────────────────────────────────────────────────
+
+# Default provider name (must match a key in [model_providers])
+provider = "anthropic"
+
+# Default model (legacy, use [models].default instead)
+model = "claude-sonnet-4-6"
+
+# ── Model Providers ──────────────────────────────────────────────────────────────
+
+[model_providers.anthropic]
+type = "anthropic"
+# API key: set via ANTHROPIC_API_KEY env var, or uncomment below
+# api_key = "sk-ant-..."
+
+[model_providers.openai]
+type = "openai"
+base_url = "https://api.openai.com/v1"
+# api_key = "sk-..."
+
+[model_providers.deepseek]
+type = "openai-compatible"
+base_url = "https://api.deepseek.com/v1"
+# api_key = "sk-..."
+
+[model_providers.grok]
+type = "openai-compatible"
+base_url = "https://api.x.ai/v1"
+# api_key = "xai-..."
+
+[model_providers.minimax]
+type = "openai-compatible"
+base_url = "https://api.minimax.chat/v1"
+# api_key = "..."
+
+[model_providers.ollama]
+type = "openai-compatible"
+base_url = "http://localhost:11434/v1"
+# api_key = "ollama"  # use "ollama" for local Ollama
+
+# ── Model Selection ─────────────────────────────────────────────────────────────
+
+[models]
+# Default model when none specified (provider/model-name format)
+default = "anthropic/claude-sonnet-4-6"
+
+# Scoped models list (shown in model selector UI)
+scoped = [
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-3-5-sonnet",
+    "openai/gpt-4o",
+    "deepseek/deepseek-chat",
+]
+
+# ── Truncation ─────────────────────────────────────────────────────────────────
+
+[truncation]
+# Maximum lines to keep in conversation context
+max_lines = 2000
+# Maximum bytes per message before truncation
+max_bytes = 51200
+
+# ── Permissions ────────────────────────────────────────────────────────────────
+
+[permissions]
+# Permission mode: default, accept_edits, auto, dont_ask, bypass_permissions, plan
+mode = "default"
+
+# Explicit permission rules
+# [[permissions.rules]]
+# tool = "bash"
+# action = "ask"
+#
+# [[permissions.rules]]
+# tool = "read_*"
+# action = "allow"
+# path = "~/.config/**"
+
+# ── UI Settings ─────────────────────────────────────────────────────────────────
+
+[ui]
+# Enable Vim keybindings
+vim_mode = true
+
+# ── Thinking Level ──────────────────────────────────────────────────────────────
+# Thinking level for reasoning-intensive tasks: Off, Low, Medium, High
+thinking_level = "Off"
+
+# ── Telemetry ─────────────────────────────────────────────────────────────────
+
+[telemetry]
+# Anonymous usage telemetry
+enabled = false
+
+# ── Hooks (optional) ────────────────────────────────────────────────────────────
+# Run commands on events: turn_start, turn_complete, tool_start, tool_end
+
+# [hooks.commands]
+# turn_complete = ["echo 'Turn complete'"]
+
+# ── Keybindings (optional) ─────────────────────────────────────────────────────
+# Override default keybindings
+
+# [keybindings]
+# "ctrl-c" = "abort"
+# "ctrl-q" = "quit"
+
+# ── Prompts (optional) ─────────────────────────────────────────────────────────
+
+# [prompts]
+# Custom system prompt override
+# custom = "You are a helpful coding assistant."
+
+# ── Theme (optional) ───────────────────────────────────────────────────────────
+# Theme name (defaults to terminal theme)
+# theme = "catppuccin-mocha"
+
+# ── MCP Servers (optional) ──────────────────────────────────────────────────────
+# Model Context Protocol server configurations
+
+# [[mcp.servers]]
+# command = ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+# transport = "stdio"
+# scope = "global"  # or "project"
+
+# [[mcp.servers.my-server]]
+# command = ["npx", "-y", "@my/mcp-server"]
+# transport = "http"
+# url = "http://localhost:8080"
+# headers = { "Authorization" = "Bearer token" }

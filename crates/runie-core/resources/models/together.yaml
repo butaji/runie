@@ -1,0 +1,14 @@
+# Together AI provider metadata
+key: together
+display_name: Together AI
+base_url: https://api.together.xyz/v1
+env_var: TOGETHER_API_KEY
+models:
+  - name: meta-llama/Llama-3.3-70B-Instruct-Turbo
+    cost_prompt: 0.88
+    cost_completion: 0.88
+    context_window: 128000
+  - name: deepseek-ai/DeepSeek-V3
+    cost_prompt: 1.25
+    cost_completion: 1.25
+    context_window: 128000

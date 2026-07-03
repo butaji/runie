@@ -1,0 +1,13 @@
+name: name
+description: Set session display name
+category: Session
+sub: true
+triggers:
+  - /name
+type: form_with_handler
+handler: name
+title: "Set Session Name"
+fields:
+  - label: Name
+    placeholder: session-name
+    key: name

@@ -1,0 +1,47 @@
+# Remove `Mutex<EventBus>` wrappers from actor `State`
+
+**Status**: done
+**Milestone**: R7
+**Category**: Architecture / Actors
+**Priority**: P2
+
+**Depends on**: use-ractor-state-for-actor-mutable-state
+**Blocks**: none
+
+## Description
+
+Several actors held `EventBus<Event>` inside `parking_lot::Mutex` in their ractor `State`. `EventBus` is `Clone` and `publish` takes `&self`, so the `Mutex` was pure overhead. Now all actors hold the bus directly.
+
+## Acceptance Criteria
+
+- [x] Remove `Mutex<EventBus>` from `RactorTurnActor`, `RactorSessionActor`, `InputActor`, `RactorConfigActor`, `RactorPermissionActor` state.
+- [x] Update `emit` helpers to take `&self` (no longer needed since publish is already &self).
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
+
+## Tests
+
+### Layer 1 — State/Logic
+- [x] `actor_emits_event_without_mutex` — state mutation succeeds.
+
+### Layer 4 — Provider Replay / Mock-Tool E2E
+- [x] `turn_events_still_reach_ui` — events reach UI after refactor.
+
+## Files touched
+
+- `crates/runie-core/src/actors/turn/ractor_turn.rs`
+- `crates/runie-core/src/actors/session/ractor_session_actor.rs`
+- `crates/runie-core/src/actors/input/actor.rs`
+- `crates/runie-core/src/actors/config/config_handle.rs`
+- `crates/runie-core/src/actors/permission/ractor_permission.rs`
+
+## Notes
+
+- `EventBus` is already `Clone`; no locking is needed for publish.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

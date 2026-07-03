@@ -2,28 +2,51 @@
 name = "runie-tui"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "runie-tui"
+path = "src/main.rs"
+
 [dependencies]
-runie-core = { path = "../runie-core" }
-runie-agent = { path = "../runie-agent" }
-runie-ai = { path = "../runie-ai" }
-ratatui = { workspace = true }
-ratatui-textarea = "0.9"
-crossterm = { workspace = true }
-opaline = "0.1"
-tracing = { workspace = true }
-syntect = "5"
-once_cell = { workspace = true }
-regex = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-rand = { workspace = true }
-tokio = { workspace = true }
-tokio-util = { workspace = true }
-uuid = { workspace = true }
+runie-core.workspace = true
+supports-color.workspace = true
+supports-hyperlinks.workspace = true
+runie-agent.workspace = true
+runie-provider.workspace = true
+ratatui.workspace = true
+crossterm.workspace = true
+ansi_colours.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+futures.workspace = true
+opaline.workspace = true
+dirs.workspace = true
+serde_json.workspace = true
+syntect.workspace = true
+unicode-width.workspace = true
+tui-markdown.workspace = true
+tui-popup.workspace = true
+tui-scrollview.workspace = true
+tui-input.workspace = true
+crokey.workspace = true
+parking_lot.workspace = true
+human-panic.workspace = true
+color-eyre.workspace = true
+clap.workspace = true
+throbber-widgets-tui = "0.11"
+textwrap.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
 
 [dev-dependencies]
-serde_json = "1.0"
-insta = { version = "1.39", features = ["yaml", "redactions"] }
+insta.workspace = true
+runie-testing = { path = "../runie-testing" }

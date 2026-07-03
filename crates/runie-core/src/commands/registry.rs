@@ -1,0 +1,341 @@
+#![allow(clippy::items_after_test_module)]
+//! Command Registry - manages command registration and dispatch
+
+use super::{CommandCategory, CommandDef, CommandResult};
+use crate::declarative::types::DeclarativeCommandYaml;
+use crate::dialog::PanelStack;
+use crate::model::AppState;
+use std::collections::HashMap;
+use strum::{Display, EnumString};
+
+/// Registry of all commands
+#[derive(Clone)]
+pub struct CommandRegistry {
+    commands: HashMap<String, CommandDef>,
+    aliases: HashMap<String, String>,
+}
+
+impl CommandRegistry {
+    /// Create a new registry with embedded built-in commands.
+    pub fn new() -> Self {
+        let embedded = crate::commands::dsl::embedded_commands::load_embedded_commands();
+        let mut registry = Self {
+            commands: HashMap::new(),
+            aliases: HashMap::new(),
+        };
+        for def in embedded {
+            registry.register(def);
+        }
+        registry
+    }
+
+    /// Create a registry with commands loaded from YAML files (at runtime).
+    /// This merges commands from YAML files with embedded built-ins.
+    pub fn with_commands(commands: Vec<DeclarativeCommandYaml>) -> Self {
+        let mut registry = Self::new();
+        for cmd in commands {
+            registry.register_from_yaml(cmd);
+        }
+        registry
+    }
+
+    pub fn register(&mut self, def: CommandDef) {
+        for alias in &def.aliases {
+            self.aliases.insert(alias.clone(), def.name.clone());
+        }
+        self.commands.insert(def.name.clone(), def);
+    }
+
+    /// Register a command from YAML definition.
+    fn register_from_yaml(&mut self, yaml: DeclarativeCommandYaml) {
+        let handler_registry = &super::dsl::handlers::HANDLER_REGISTRY;
+        let cmd = super::dsl::spec::build_cmd_from_yaml(&yaml, handler_registry);
+        if let Some(cmd) = cmd {
+            self.register(cmd);
+        }
+    }
+
+    pub fn get(&self, name: &str) -> Option<&CommandDef> {
+        self.commands
+            .get(name)
+            .or_else(|| self.aliases.get(name).and_then(|n| self.commands.get(n)))
+    }
+
+    pub fn list(&self) -> Vec<&CommandDef> {
+        let mut defs: Vec<_> = self.commands.values().collect();
+        defs.sort_by_key(|d| (&d.category, &d.name));
+        defs
+    }
+
+    pub fn list_by_category(&self) -> Vec<(CommandCategory, Vec<&CommandDef>)> {
+        let mut result: Vec<(CommandCategory, Vec<&CommandDef>)> = Vec::new();
+        for def in self.list() {
+            if let Some(last) = result.last_mut() {
+                if last.0 == def.category {
+                    last.1.push(def);
+                    continue;
+                }
+            }
+            result.push((def.category, vec![def]));
+        }
+        result
+    }
+
+    /// Number of registered commands.
+    pub fn len(&self) -> usize {
+        self.commands.len()
+    }
+
+    /// Check if registry is empty.
+    pub fn is_empty(&self) -> bool {
+        self.commands.is_empty()
+    }
+}
+
+impl Default for CommandRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Filter commands by name/description
+pub fn filter_commands<'a>(reg: &'a CommandRegistry, query: &str) -> Vec<&'a CommandDef> {
+    let q = query.to_lowercase();
+    reg.list()
+        .into_iter()
+        .filter(|d| d.name.to_lowercase().contains(&q) || d.desc.to_lowercase().contains(&q))
+        .collect()
+}
+
+// ============================================================================
+// Dialog State (for UI layer)
+// ============================================================================
+
+/// Kind of active dialog — which panel was opened.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, EnumString)]
+#[strum(serialize_all = "PascalCase")]
+pub enum DialogKind {
+    CommandPalette,
+    ModelSelector,
+    Settings,
+    ScopedModels,
+    SessionTree,
+    Generic,
+}
+
+/// Active dialog state — collapsed from 7 variants to 2.
+/// `Welcome` is the initial screen; `Active` covers all panel-backed dialogs.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DialogState {
+    Welcome,
+    Active {
+        kind: DialogKind,
+        panels: PanelStack,
+    },
+}
+
+impl DialogState {
+    /// Access the panel stack if this is an `Active` dialog.
+    pub fn panel_stack(&self) -> Option<&PanelStack> {
+        match self {
+            DialogState::Welcome => None,
+            DialogState::Active { kind: _, panels } => Some(panels),
+        }
+    }
+
+    /// Mutably access the panel stack if this is an `Active` dialog.
+    pub fn panel_stack_mut(&mut self) -> Option<&mut PanelStack> {
+        match self {
+            DialogState::Welcome => None,
+            DialogState::Active { kind: _, panels } => Some(panels),
+        }
+    }
+}
+
+// ============================================================================
+// DialogState state machine tests
+// ============================================================================
+
+#[cfg(test)]
+mod dialog_state_tests {
+    use super::*;
+
+    #[test]
+    fn dialog_panel_stack_accessor() {
+        // Welcome state has no panel stack
+        let mut welcome = DialogState::Welcome;
+        assert!(welcome.panel_stack().is_none());
+        assert!(welcome.panel_stack_mut().is_none());
+
+        // Active state exposes the panel stack
+        let stack = PanelStack::new(crate::dialog::Panel::new("test", "Test"));
+        let active = DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack.clone(),
+        };
+        assert_eq!(active.panel_stack(), Some(&stack));
+    }
+
+    #[test]
+    fn dialog_transitions_are_valid() {
+        let welcome = DialogState::Welcome;
+        assert!(welcome.panel_stack().is_none());
+
+        let stack = PanelStack::new(crate::dialog::Panel::new("test", "Test"));
+        for kind in [
+            DialogKind::CommandPalette,
+            DialogKind::ModelSelector,
+            DialogKind::Settings,
+            DialogKind::ScopedModels,
+            DialogKind::SessionTree,
+            DialogKind::Generic,
+        ] {
+            let active = DialogState::Active {
+                kind,
+                panels: stack.clone(),
+            };
+            assert!(
+                active.panel_stack().is_some(),
+                "{kind:?} should have a panel stack"
+            );
+        }
+    }
+
+    #[test]
+    fn dialog_prompt_data_unique() {
+        let welcome = DialogState::Welcome;
+        let welcome2 = DialogState::Welcome;
+        assert_eq!(welcome, welcome2);
+
+        let stack = PanelStack::new(crate::dialog::Panel::new("a", "A"));
+        let active_a = DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack.clone(),
+        };
+        let active_b = DialogState::Active {
+            kind: DialogKind::ModelSelector,
+            panels: stack.clone(),
+        };
+        assert_ne!(active_a, active_b);
+
+        let stack2 = PanelStack::new(crate::dialog::Panel::new("b", "B"));
+        let active_c = DialogState::Active {
+            kind: DialogKind::CommandPalette,
+            panels: stack2,
+        };
+        assert_ne!(active_a, active_c);
+    }
+
+    #[test]
+    fn active_variant_carries_kind() {
+        let stack = PanelStack::new(crate::dialog::Panel::new("x", "X"));
+        let active = DialogState::Active {
+            kind: DialogKind::Settings,
+            panels: stack,
+        };
+        assert!(active.panel_stack().is_some());
+        assert!(!matches!(active, DialogState::Welcome));
+    }
+
+    #[test]
+    fn test_dialog_kind_round_trip() {
+        use std::str::FromStr;
+        for dk in [
+            DialogKind::CommandPalette,
+            DialogKind::ModelSelector,
+            DialogKind::Settings,
+            DialogKind::ScopedModels,
+            DialogKind::SessionTree,
+            DialogKind::Generic,
+        ] {
+            let s = dk.to_string();
+            let parsed = DialogKind::from_str(&s);
+            assert_eq!(parsed, Ok(dk), "round-trip failed for {dk:?}");
+        }
+    }
+}
+
+// ============================================================================
+// Command Dispatch
+// ============================================================================
+
+impl AppState {
+    /// Dispatch a slash command
+    pub fn handle_slash(&mut self, content: &str) -> Option<CommandResult> {
+        use crate::ui_strings::commands as c;
+        if !content.starts_with('/') {
+            return None;
+        }
+
+        let input = content.trim_start_matches('/');
+        // Use shell-words to properly parse quoted args and flags
+        let tokens: Vec<String> = match shell_words::split(input) {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                return Some(CommandResult::Message(c::invalid_syntax(&e.to_string())));
+            }
+        };
+
+        let name = tokens.first().map(|s| s.as_str()).unwrap_or(input);
+        let args = tokens.get(1..).map(|t| t.join(" ")).unwrap_or_default();
+
+        match self.registry().get(name) {
+            Some(spec) => {
+                let (cmd_name, flow) = (spec.name.clone(), spec.flow().clone());
+                self.record_command_usage(&cmd_name);
+                let result = flow.exec(self, &cmd_name, &args);
+                if matches!(result, CommandResult::None) {
+                    None
+                } else {
+                    Some(result)
+                }
+            }
+            None => Some(CommandResult::Message(c::unknown_command(name))),
+        }
+    }
+}
+
+// ============================================================================
+// Shell-words parsing tests
+// ============================================================================
+
+#[cfg(test)]
+mod slash_parsing_tests {
+
+    #[test]
+    fn simple_command_with_single_arg() {
+        // /save my-session
+        let input = "save my-session";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "my-session"]);
+    }
+
+    #[test]
+    fn quoted_arg_preserves_spaces() {
+        // "/save my session" should parse as save + "my session"
+        let input = "save \"my session\"";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "my session"]);
+    }
+
+    #[test]
+    fn multiple_args() {
+        let input = "save session1 keep 1000";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "session1", "keep", "1000"]);
+    }
+
+    #[test]
+    fn empty_args() {
+        let input = "save";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save"]);
+    }
+
+    #[test]
+    fn single_quoted_arg() {
+        let input = "save 'my session'";
+        let tokens: Vec<String> = shell_words::split(input).unwrap();
+        assert_eq!(tokens, vec!["save", "my session"]);
+    }
+}

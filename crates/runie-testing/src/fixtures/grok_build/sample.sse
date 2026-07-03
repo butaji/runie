@@ -1,0 +1,10 @@
+# Sample Grok Build SSE fixture
+# This file contains sample Grok output for testing
+
+data: {"id":"sess_sample123","object":"chat.completion.chunk","created":1712500000,"model":"grok-3","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
+
+data: {"id":"sess_sample123","object":"chat.completion.chunk","created":1712500000,"model":"grok-3","choices":[{"index":0,"delta":{"content":" world"},"finish_reason":null}]}
+
+data: {"id":"sess_sample123","object":"chat.completion.chunk","created":1712500000,"model":"grok-3","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]

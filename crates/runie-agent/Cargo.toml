@@ -2,28 +2,47 @@
 name = "runie-agent"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
 license.workspace = true
 
-[dependencies]
-runie-core = { path = "../runie-core" }
-runie-ai = { path = "../runie-ai" }
-runie-tools = { path = "../runie-tools" }
-serde = { workspace = true }
-serde_json = { workspace = true }
-async-trait = { workspace = true }
-thiserror = { workspace = true }
-tokio = { workspace = true }
-tokio-util = { workspace = true }
-futures = { workspace = true }
-tracing = { workspace = true }
-chrono = { workspace = true }
-uuid = { workspace = true }
-anyhow = { workspace = true }
-
-[dev-dependencies]
-tempfile = { workspace = true }
-async-stream = { workspace = true }
+[lints]
+workspace = true
 
 [features]
-harness = []
+# Enable all runie-core features by default so that the workspace builds with full functionality.
+default = ["mcp", "git", "keyring", "clipboard", "watch", "tiktoken"]
+mcp = ["runie-core/mcp"]
+git = ["runie-core/git"]
+keyring = ["runie-core/keyring"]
+clipboard = ["runie-core/clipboard"]
+watch = ["runie-core/watch"]
+tiktoken = ["runie-core/tiktoken"]
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+camino.workspace = true
+diffy.workspace = true
+runie-core = { workspace = true, features = ["mcp", "git", "keyring", "clipboard", "watch", "tiktoken"] }
+runie-provider.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }
+tokio-util.workspace = true
+futures.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+git2.workspace = true
+schemars.workspace = true
+strum.workspace = true
+ractor.workspace = true
+parking_lot.workspace = true
+ignore.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+runie-testing = { workspace = true, features = ["provider", "agent"] }
+toml.workspace = true
+tempfile.workspace = true

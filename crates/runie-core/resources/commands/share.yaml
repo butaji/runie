@@ -1,0 +1,8 @@
+name: share
+description: Share session as GitHub gist
+category: Session
+sub: false
+triggers:
+  - /share
+type: handler
+handler: share

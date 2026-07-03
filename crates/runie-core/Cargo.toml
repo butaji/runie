@@ -2,14 +2,119 @@
 name = "runie-core"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
 license.workspace = true
+build = "build.rs"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[build-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = { workspace = true }
+
+[features]
+default = []
+
+# Heavy / optional subsystems — each ships zero deps unless the feature is enabled.
+# Consumers who need the subsystem add the feature to their dependency on runie-core.
+# Feature names match the cargo convention of lowercase-with-hyphens.
+
+git       = ["dep:git2"]                  # git-status checks in fff indexer + git-tracked-write
+watch     = ["dep:notify", "dep:notify-debouncer-mini"]  # file-system watcher in ConfigActor
+keyring   = ["dep:keyring"]               # OS keyring credential storage
+clipboard = ["dep:arboard"]               # OS clipboard read/write
+mcp       = ["dep:rmcp"]   # MCP client + timestamp cache (rmcp pulls chrono)
+tiktoken  = ["dep:tiktoken"]             # accurate token counting via tiktoken
+landlock  = ["dep:landlock"]              # Linux Landlock LSM sandboxing
 
 [dependencies]
-serde = { workspace = true }
-serde_json = { workspace = true }
-async-trait = { workspace = true }
-thiserror = { workspace = true }
-chrono = { workspace = true }
-uuid = { workspace = true }
-tracing = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+rmcp = { workspace = true, optional = true }
+schemars.workspace = true
+jsonschema.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+diffy.workspace = true
+dirs.workspace = true
+base64.workspace = true
+unicode-segmentation.workspace = true
+toml.workspace = true
+toml_edit.workspace = true
+figment.workspace = true
+tokio.workspace = true
+futures.workspace = true
+pulldown-cmark.workspace = true
+pulldown-cmark-frontmatter.workspace = true
+quick-xml.workspace = true
+unicode-width.workspace = true
+textwrap.workspace = true
+notify               = { workspace = true, optional = true }
+notify-debouncer-mini = { workspace = true, optional = true }
+regex.workspace = true
+# winnow.workspace = true  # unused - cargo machete
+glob.workspace = true
+shellexpand.workspace = true
+shell-words.workspace = true
+command-group.workspace = true
+sublime_fuzzy.workspace = true
+strum.workspace = true
+git2  = { workspace = true, optional = true }
+reqwest = { workspace = true, features = ["blocking"] }
+tempfile.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+keyring = { workspace = true, optional = true }
+ringbuffer.workspace = true
+secrecy = { workspace = true, features = ["serde"] }
+sha2 = { workspace = true }
+hex = { workspace = true }
+dotenvy.workspace = true
+fs2.workspace = true
+indextree.workspace = true
+chrono.workspace = true
+indexmap.workspace = true
+arboard = { workspace = true, optional = true }
+which.workspace = true
+ignore.workspace = true
+globset.workspace = true
+bytesize.workspace = true
+humantime.workspace = true
+include_dir.workspace = true
+crokey.workspace = true
+path-absolutize.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+async-trait.workspace = true
+derive_builder.workspace = true
+ractor.workspace = true
+parking_lot.workspace = true
+tokio-util.workspace = true
+metrics.workspace = true
+tiktoken = { workspace = true, optional = true }
+camino.workspace = true
+tinytemplate.workspace = true
+# serde_with.workspace = true  # unused - cargo machete
+validator.workspace = true
+landlock = { workspace = true, optional = true }
+
+[target.'cfg(unix)'.dependencies]
+crossterm.workspace = true
+nix.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+criterion = "0.5"
+runie-testing = { path = "../runie-testing" }
+
+[[bench]]
+name = "snapshot"
+harness = false
+
+[[example]]
+name = "write_config_schema"

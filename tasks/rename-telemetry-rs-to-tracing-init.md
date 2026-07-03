@@ -1,0 +1,45 @@
+# Rename `telemetry.rs` to `tracing_init.rs`
+
+**Status**: done
+**Note**: Verified 2026-06-29 — `tracing_init.rs` exists and `telemetry.rs` does not exist.
+**Milestone**: R7
+**Category**: Observability
+**Priority**: P3
+
+**Depends on**: extract-shared-tracing-subscriber-init
+**Blocks**: none
+
+## Description
+
+`crates/runie-core/src/telemetry.rs` now only initializes the tracing subscriber. Rename it to avoid confusion with the old telemetry collector concept.
+
+## Acceptance Criteria
+
+- [x] Rename `telemetry.rs` to `tracing_init.rs`.
+- [x] Update `pub mod telemetry` to `pub mod tracing_init`.
+- [x] Update all call sites.
+- [x] `cargo check --workspace` and `cargo test --workspace` pass.
+
+## Tests
+
+### Layer 1 — State/Logic
+- [x] `tracing_init_module_exists` — module renamed and exports preserved.
+
+## Files touched
+
+- `crates/runie-core/src/telemetry.rs`
+- `crates/runie-core/src/lib.rs`
+- `crates/runie-tui/src/main.rs`
+- `crates/runie-cli/src/main.rs`
+
+## Notes
+
+- Pure rename; no behavior change.
+> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
+## Completion Validation
+
+Before marking this task complete, confirm all three validation gates:
+
+- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
+- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
+- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).

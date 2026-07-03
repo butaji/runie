@@ -1,0 +1,9 @@
+# Theme command
+name: theme
+description: Switch theme or list available themes
+category: System
+sub: true
+triggers:
+  - /theme
+type: handler
+handler: theme

@@ -1,0 +1,118 @@
+### Create Transport from TCP Stream (Client)
+
+Source: https://docs.rs/rmcp/latest/rmcp/transport/index.html
+
+This example demonstrates how to create a client transport using a TCP stream. It requires the `client` feature to be enabled. The code connects to a specified address, serves the stream as a client transport, and then lists available tools.
+
+```rust
+#[cfg(feature = "client")]
+
+// create transport from tcp stream
+#[cfg(feature = "client")]
+async fn client() -> Result<(), Box<dyn std::error::Error>> {
+    let stream = tokio::net::TcpSocket::new_v4()? 
+        .connect("127.0.0.1:8001".parse()?)
+        .await?;
+    let client = ().serve(stream).await?;
+    let tools = client.peer().list_tools(Default::default()).await?;
+    println!("{:?}", tools);
+    Ok(())
+}
+```
+
+--------------------------------
+
+### List Tools Request - Peer Client
+
+Source: https://docs.rs/rmcp/latest/rmcp/service/struct.Peer.html?search=
+
+Lists available tools with optional pagination parameters. Available only on the 'client' crate feature.
+
+```rust
+pub async fn list_tools( &self, params: Option<PaginatedRequestParams>, ) -> Result<ListToolsResult, ServiceError>
+```
+
+--------------------------------
+
+### Call Tool Request - Peer Client
+
+Source: https://docs.rs/rmcp/latest/rmcp/service/struct.Peer.html?search=
+
+Calls a tool with the specified parameters. Available only on the 'client' crate feature.
+
+```rust
+pub async fn call_tool( &self, params: CallToolRequestParams, ) -> Result<CallToolResult, ServiceError>
+```
+
+--------------------------------
+
+### Peer::call_tool
+
+Source: https://docs.rs/rmcp/latest/rmcp/service/struct.Peer.html
+
+Calls a specific tool with the given parameters. Available only on the client feature.
+
+```APIDOC
+## Peer::call_tool
+
+### Description
+Calls a specific tool with the given parameters.
+
+### Method
+`async fn call_tool(&self, params: CallToolRequestParams) -> Result<CallToolResult, ServiceError>`
+
+### Parameters
+#### Path Parameters
+None
+
+#### Query Parameters
+None
+
+#### Request Body
+- **params** (CallToolRequestParams) - Required - The parameters for the tool call.
+
+### Request Example
+```json
+{
+  "example": "CallToolRequestParams"
+}
+```
+
+### Response
+#### Success Response (200)
+- **CallToolResult** - The result of the tool call.
+
+#### Response Example
+```json
+{
+  "example": "CallToolResult"
+}
+```
+```
+
+--------------------------------
+
+### List All Tools
+
+Source: https://docs.rs/rmcp/latest/rmcp/service/struct.Peer.html?search=
+
+Retrieves a list of all available tools. This is a wrapper for `Peer<RoleClient>::list_tools` that ensures all tools are fetched by making multiple calls if necessary. Available only when the `client` feature is enabled.
+
+```APIDOC
+## list_all_tools
+
+### Description
+A wrapper method for `Peer<RoleClient>::list_tools`. This function will call `Peer<RoleClient>::list_tools` multiple times until all tools are listed.
+
+### Method
+`list_all_tools`
+
+### Parameters
+None
+
+### Returns
+- `Result<Vec<Tool>, ServiceError>`: A vector of `Tool` objects or a `ServiceError`.
+
+### Availability
+Available on **crate feature`client`** only.
+```

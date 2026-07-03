@@ -1,0 +1,50 @@
+---
+source: crates/runie-provider/tests/minimax_replay.rs
+expression: events
+---
+[
+    TextStart {
+        id: "text",
+    },
+    TextDelta(
+        "<think>\nThe user wants me to list project",
+    ),
+    ThinkingStart {
+        id: "reasoning",
+    },
+    ThinkingDelta(
+        "The user wants me to list project",
+    ),
+    TextDelta(
+        " files and then read the README.md file. I've already listed the directory. Now I need to read the README.md file.",
+    ),
+    ThinkingDelta(
+        " files and then read the README.md file. I've already listed the directory. Now I need to read the README.md file.",
+    ),
+    TextDelta(
+        "\n<tool_call>\n<invoke name=\"read_file\">\n<path>README.md</path>\n</invoke>\n</tool_call>",
+    ),
+    ToolCallStart {
+        id: "call_def456",
+        name: "read_file",
+    },
+    ToolCallInputDelta {
+        id: "call_def456",
+        delta: "{\"path\": \"README.md\"}",
+    },
+    TextDelta(
+        "",
+    ),
+    ToolCallEnd {
+        id: "call_def456",
+    },
+    TextEnd {
+        id: "text",
+    },
+    ThinkingEnd {
+        id: "reasoning",
+    },
+    Finish {
+        reason: Stop,
+    },
+]

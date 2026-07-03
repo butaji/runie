@@ -1,0 +1,12 @@
+# Quit command
+name: quit
+description: Quit application
+aliases:
+  - q
+  - exit
+category: Core
+sub: false
+triggers:
+  - /quit
+type: handler
+handler: quit

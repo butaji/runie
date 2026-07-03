@@ -1,0 +1,7 @@
+---
+source: crates/runie-tui/src/tests/snapshot.rs
+expression: output
+---
+ ✓ Run list_files 1.2s                  
+ src/main.rs                            
+ lib.rs

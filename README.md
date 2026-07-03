@@ -1,218 +1,187 @@
 # Runie
 
-**Agentic Harness with TUI.** You just register all the models you use, it makes sure you use them the most efficient way.
+<p align="center">
+  <b>Stop letting your AI credits rot.</b><br>
+  One terminal. Every model. Zero waste.
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#why-runie">Why</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#the-loop">The loop</a> ·
+  <a href="#providers">Providers</a> ·
+  <a href="#development">Dev</a>
+</p>
 
 ```bash
 cargo build --release
 ./target/release/runie
 ```
 
-## Overview
+---
 
-Runie is a terminal-based AI coding harness that provides an interactive TUI for multi-model agent execution. It combines streaming responses, tool execution, permission gating, and multi-agent orchestration in a unified interface.
+## Why Runie
 
-## Architecture
+You pay for OpenAI, Anthropic, Groq, OpenRouter, Gemini, DeepSeek. Most of those credits sit unused while you default to whatever chat tab is already open.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                      runie-cli                          │
-│                   (CLI entry point)                     │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-         ┌───────────┴───────────┐
-         │                       │
-    ┌────▼────┐            ┌──────▼─────┐
-    │runie-tui│            │runie-orchest│
-    │   TUI   │            │   -rator   │
-    └────┬────┘            └──────┬─────┘
-         │                       │
-    ┌────▼───────────────────────▼─────┐
-    │         runie-agent              │
-    │   Agent loop + streaming + tools │
-    └────┬──────────────────────────────┘
-         │
-    ┌────▼────┐     ┌────────────┐     ┌───────────┐
-    │runie-ai │────▶│runie-tools │────▶│runie-core │
-    │Provider │     │  Tools     │     │  Types    │
-    └─────────┘     └────────────┘     └───────────┘
-```
+Runie fixes the interface problem. It lives in your terminal, talks to every provider, and lets you swap models mid-task without losing context.
 
-### Crates
+No browser. No paste dance. No wasted credits.
 
-| Crate | Purpose |
-|-------|---------|
-| `runie-core` | Shared types: Message, Tool, Session, Context, SlashCommand |
-| `runie-ai` | Model providers with unified API, streaming, token usage |
-| `runie-agent` | Agent loop engine, event streaming, permission gating |
-| `runie-tools` | Tool implementations: bash, read/write/edit files, search |
-| `runie-tui` | Terminal UI: feed, input, global tags, top bar, command palette |
-| `runie-router` | Request routing logic |
-| `runie-orchestrator` | Multi-agent: spawn, handoff, collect, supervise |
-| `runie-cli` | CLI binary (`runie`) and `cargo-pantry` |
+## What it does
 
-## Model Support
-
-Runie supports multiple providers through a unified provider interface:
-
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4 |
-| **Anthropic** | claude-3-5-sonnet, claude-3-opus, claude-3-sonnet, claude-3-haiku |
-| **Google** | gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-flash-8b, gemini-2.0-flash |
-| **MiniMax** | MiniMax API compatible |
-| **Rig** | OpenRouter-compatible endpoints |
+|  |  |
+|---|---|
+| 🧠 **Multi-model routing** | Switch provider/model mid-session with `/model anthropic/claude-sonnet-4-6` |
+| 🛡️ **Permission-gated tools** | `ReadFile`, `ListDir`, `WriteFile`, `EditFile`, `Bash`, `Grep`, `Find`, `FetchDocs` only with your approval |
+| 💾 **Forkable sessions** | Save, load, fork, branch. Your history is local JSONL you own |
+| ⚡ **Terminal-native** | Keyboard-driven TUI next to your editor |
+| 🔄 **Scoped model cycling** | Rotate your configured shortlist with one hotkey |
+| 🤖 **Team mode (R4)** | Orchestrator designs multi-agent workflows and routes roles to the best models |
 
 ## Features
 
-### TUI Components
+### One session. Every model.
 
-| Component | Description |
-|-----------|-------------|
-| **Feed** | Scrollable message list with assistant/user/tool messages, code blocks |
-| **Input Bar** | Multi-line input with history (`↑`/`↓`), shift+enter for newlines |
-| **Global Tags** | Token count, cost display; spinner + status during execution |
-| **Top Bar** | Model indicator, session info, background job status |
-| **Status Bar** | Agent state, thinking indicator, turn counter |
-| **Command Palette** | Fuzzy-matched commands (`Ctrl+K`), usage tracking |
-| **Permission Modal** | Tool execution approval with Allow/Deny/Skip/AllowAlways |
-| **Model Picker** | Switch models mid-session |
-| **Session Tree** | Browse/fork conversation branches |
-| **Diff Viewer** | Side-by-side file diffs |
+```text
+> refactor error handling to use thiserror
+[Runie proposes a diff]
 
-### Slash Commands
+/approve
+[Runie applies it]
 
-| Command | Aliases | Description |
-|---------|---------|-------------|
-| `/new` | `/n` | Start new session |
-| `/clear` | `/c` | Clear conversation |
-| `/model <name>` | `/m` | Switch model |
-| `/tree` | `/t` | Open session tree |
-| `/fork` | `/f` | Fork at current position |
-| `/copy` | | Copy last response |
-| `/cost` | | Show cost statistics |
-| `/quit` | `/q`, `/exit` | Exit |
-| `/help` | `/h` | Show help |
+/model deepseek/deepseek-chat
+> write a regression test
+[Cheaper model writes the test]
 
-### Tool Execution
-
-Tools are permission-gated with caching:
-
-| Tool | Description |
-|------|-------------|
-| `bash` | Execute shell commands |
-| `read_file` | Read file contents |
-| `write_file` | Create/overwrite files |
-| `edit_file` | In-place file edits |
-| `search` | Search by name or content pattern |
-
-Permission decisions:
-- **Allow** — single execution
-- **AllowAlways** — cached for session
-- **Skip** — skip this tool call
-- **Deny** — reject
-
-### Multi-Agent Orchestration
-
-```rust
-// Spawn subagents for parallel tasks
-let handle = orchestrator.spawn(task, &context).await?;
-
-// Handoff context between agents
-orchestrator.handoff(from, to, &context).await?;
-
-// Collect results
-let results = orchestrator.collect(handles).await?;
+/save retry-backoff-fix
 ```
 
-Features: task priorities (Low/Medium/High/Critical), max turns limits, tool allowlists, read-only mode.
+Use the right brain for the right job—and finally spend the credits you already bought.
 
-### Configuration
+### Tools that ask first
 
-Layered resolution (later layers override earlier):
+Runie can read, list, write, edit, run shell commands, grep, find, and fetch docs—but never silently. Every write shows a diff. Every shell command asks. `/readonly` disables edits entirely.
 
-1. Defaults
-2. Global config (`~/.runie/config.toml` or `RUNIE_HOME/config.toml`)
-3. Project config (`.runie/config.toml`)
-4. Environment variables (`RUNIE_MODEL`, `RUNIE_PROVIDER`, `RUNIE_API_KEY`, etc.)
-5. CLI arguments
+### Sessions you own
 
-```toml
-# ~/.runie/config.toml
-model = "gpt-4o"
-provider = "openai"
-max_turns = 10
-enable_thinking = true
+- `/save refactor-auth`
+- `/load refactor-auth`
+- `/fork 12`
+- `/tree`
+
+Your context survives restarts, branches, and forks. It lives on your disk, not a server.
+
+### Terminal commands
+
+| Shortcut / command | Action |
+|---|---|
+| `Ctrl+P` | Open command palette |
+| `Ctrl+L` | Switch model |
+| `Shift+Tab` | Cycle thinking level |
+| `@path/to/file` | Reference a file inline |
+| `/` | Slash command palette |
+
+## The loop
+
+```text
+> @src/lib.rs why does this retry never back off?
+[explains the bug]
+
+> rewrite with exponential backoff
+[proposes diff]
+
+/approve
+[applies edit]
+
+/model groq/llama-3.3-70b-versatile
+> write a regression test
+[switches model, writes test]
+
+/save retry-backoff
 ```
 
-## Quick Start
+Inspect. Edit. Approve. Route. Save.
+
+## Quick start
 
 ```bash
 # Build
 cargo build --release
 
 # Interactive TUI
-./target/release/runie
+./target/release/runie-tui
 
-# With mock provider (no API key)
-./target/release/runie --mock
+# No API key? Use the mock provider
+RUNIE_MOCK=1 ./target/release/runie-tui
 
-# CLI one-shot mode
-./target/release/runie run "Explain this code"
-
-# Custom config directory
-./target/release/runie --dev-folder=./tmp_config
-
-# Resume session
-./target/release/runie --session <session-id>
+# One-shot CLI
+./target/release/runie print "find unused imports"
 ```
 
-## Keyboard Shortcuts
+Add keys in `~/.runie/config.toml`. See [docs/Configuration.md](docs/Configuration.md) for the full reference.
 
-| Shortcut | Action |
-|----------|--------|
-| `Enter` | Submit message |
-| `Shift+Enter` | New line in input |
-| `Ctrl+C` | Exit |
-| `Ctrl+O` | Copy last response |
-| `Ctrl+B` | Toggle sidebar |
-| `Ctrl+K` / `Ctrl+P` | Command palette |
-| `Ctrl+N` | New session (via palette) |
-| `Ctrl+L` | Clear chat (via palette) |
+Config hot-reloads while you type.
+
+## Providers
+
+Anthropic · OpenAI · Google Gemini · DeepSeek · OpenRouter · Groq · Fireworks · Together · MiniMax · Moonshot AI · xAI · Mistral · Ollama
+
+If you have credits there, Runie helps you use them.
+
+## Modes
+
+| Mode | Command |
+|---|---|
+| TUI | `./target/release/runie-tui` |
+| Print | `./target/release/runie print "..."` |
+| Inspect | `./target/release/runie inspect` |
+| Login | `./target/release/runie login` |
+| JSON | `./target/release/runie json` |
+| Server | `./target/release/runie server` |
+| MCP | `./target/release/runie mcp list\|add\|remove` |
 
 ## Development
 
 ```bash
-# Run with dev config
-./dev.sh
-
-# Run tests
-cargo test --workspace
-
-# Clippy
-cargo clippy --workspace
-
-# Format
-cargo fmt
+./dev.sh                 # mock provider
+just test                # four-layer test suite
+just lint                # run clippy
+just fmt                 # format code
+just verify-tests        # CI-equivalent test verification
+just --list              # see all available recipes
 ```
 
-Build enforces:
-- Max 500 lines per file
-- Max 40 lines per function
-- Max complexity 10 per function
+See `AGENTS.md` for conventions.
 
-Set `RUNIE_SKIP_BUILD_CHECKS=1` to bypass.
+## Roadmap
 
-## Dependencies
-
-Key dependencies (from `Cargo.lock`):
-- `ratatui` — TUI rendering
-- `tokio` — async runtime
-- `reqwest` — HTTP client
-- `serde` — serialization
-- `chrono` — timestamps
-- `uuid` — session IDs
-- `genai` / `rig-core` — AI provider integrations
+- **R3** — Unify types, flatten events, finish state refactor, consolidate TUI crates. See `tasks/`.
+- **R4** — Team mode: orchestrated multi-agent workflows. See `docs/Architecture.md#execution-modes`.
 
 ## License
 
 MIT
+
+---
+
+<details>
+<summary><b>For robots and detail lovers</b></summary>
+
+Runie is a terminal-native harness for LLM-powered coding agents. It is not a chat website and not tied to one provider. It is a local control surface for models that can read, write, edit, search, and run shell commands inside your project.
+
+Most coding agents force you to leave your terminal: open a browser, paste context, watch a spinner, copy code back by hand. Every switch costs focus and context. Runie keeps you in the shell, next to your editor, with direct access to the codebase, shell, and git history.
+
+Key differentiators:
+
+- **Multi-model routing in one session** — pick the model that fits the task and the credits you want to spend.
+- **Permission-gated tool execution** — real power, real control.
+- **Scoped model cycling** — rotate a configured shortlist to compare answers in context.
+- **Persistent, forkable sessions** — conversations become reusable assets.
+- **Terminal-native workflow** — keyboard shortcuts, inline file references, fuzzy command palette.
+- **Team mode (R4)** — orchestrator designs workflows of specialized roles and routes them to the best models.
+- **Four layers of tests** — see [AGENTS.md §Testing Strategy](AGENTS.md#testing-strategy-4-layers) for the full taxonomy.
+
+Runie is built for developers who refuse to leave the terminal and want every model they pay for to pull its weight.
+</details>

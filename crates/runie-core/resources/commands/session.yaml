@@ -1,0 +1,11 @@
+name: session_info
+description: Show session info
+category: Session
+sub: false
+aliases:
+  - session
+triggers:
+  - /session_info
+  - /session
+type: handler
+handler: session_info

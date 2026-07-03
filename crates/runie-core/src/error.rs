@@ -1,23 +1,20 @@
-use serde::{Deserialize, Serialize};
+//! Shared error types for runie-core and the runie workspace.
+//!
+//! This module re-exports typed errors from domain-specific sub-modules.
+//!
+//! ## Error hierarchy
+//!
+//! - [`ModelError`] — model/provider errors from `provider_event`
+//! - [`ProviderError`] — provider construction/operation errors
+//! - [`SanitizeError`] — message sanitization errors
+//! - [`ToolParseError`] — tool-call parse errors
 
-#[derive(thiserror::Error, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum RunieError {
-    #[error("{0}")]
-    Provider(String),
-    #[error("{0}")]
-    Agent(String),
-    #[error("{0}")]
-    Tool(String),
-    #[error("IO: {0}")]
-    Io(String),
-    #[error("Config: {0}")]
-    Config(String),
-    #[error("Permission denied: {0}")]
-    Permission(String),
-}
+pub use crate::proto::message::SanitizeError;
+pub use crate::provider::ProviderError;
+pub use crate::provider_event::ModelError;
+pub use crate::tool::types::ToolParseError;
 
-impl From<std::io::Error> for RunieError {
-    fn from(e: std::io::Error) -> Self {
-        RunieError::Io(e.to_string())
-    }
-}
+// NOTE: `RunieError` and `RunieErrorKind` were deleted because they wrapped
+// `anyhow::Error` without adding typed structure and were completely unused
+// in the codebase. Typed errors (ModelError, ProviderError, etc.) are used
+// instead. See tasks/restructure-runieerror-with-typed-variants.md.

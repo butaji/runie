@@ -1,0 +1,115 @@
+//! Shared headless runtime for non-interactive binaries.
+//!
+//! `HeadlessRuntime` owns a small actor system (RactorConfigActor + RactorProviderActor) so
+//! CLI/server processes never call `Config::load` or build providers directly.
+//!
+//! ```ignore
+//! let rt = HeadlessRuntime::spawn(EventBus::new(10), Arc::new(factory)).await?;
+//! let provider = rt.provider(Some("openai"), Some("gpt-4o")).await?;
+//! run_headless_turn(messages, provider.as_ref(), options).await;
+//! ```
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use tokio::time::timeout;
+
+use crate::actors::provider::RactorProviderHandle;
+use crate::actors::provider::{BuiltProvider, ProviderFactory, RactorProviderActor};
+use crate::actors::RactorConfigActor;
+use crate::actors::RactorConfigHandle;
+use crate::bus::EventBus;
+use crate::config::Config;
+use crate::event::Event;
+use crate::provider::ProviderError;
+
+/// Non-interactive runtime backed by the same actors as the TUI.
+pub struct HeadlessRuntime {
+    config_handle: RactorConfigHandle,
+    provider_handle: RactorProviderHandle,
+    config_actor: ractor::ActorCell,
+    provider_actor: ractor::ActorCell,
+    config_join: tokio::task::JoinHandle<()>,
+    provider_join: tokio::task::JoinHandle<()>,
+}
+
+impl HeadlessRuntime {
+    /// Spawn the runtime and wait for the initial config load.
+    pub async fn spawn(
+        bus: EventBus<Event>,
+        factory: Arc<dyn ProviderFactory>,
+    ) -> anyhow::Result<Self> {
+        let mut sub = bus.subscribe();
+        let (config_handle, config_actor, config_join) =
+            RactorConfigActor::spawn_default(bus.clone()).await?;
+        let (provider_handle, provider_actor, provider_join) =
+            RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await?;
+
+        // Wait until the config actor has loaded (or failed to load) so callers
+        // can resolve provider/model defaults immediately.
+        timeout(Duration::from_secs(2), async {
+            loop {
+                match sub.recv().await {
+                    Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => {
+                        return Ok::<(), anyhow::Error>(())
+                    }
+                    Err(_) => return Ok::<(), anyhow::Error>(()),
+                    // intentionally ignored: other events loop back
+                    _ => {}
+                }
+            }
+        })
+        .await
+        .map_err(|_| anyhow::anyhow!("timed out waiting for config to load"))??;
+
+        Ok(Self {
+            config_handle,
+            provider_handle,
+            config_actor,
+            provider_actor,
+            config_join,
+            provider_join,
+        })
+    }
+
+    /// Gracefully shutdown all actors with a timeout.
+    pub async fn shutdown(self) {
+        self.config_actor.stop(None);
+        self.provider_actor.stop(None);
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let _ = self.config_join.await;
+            let _ = self.provider_join.await;
+        })
+        .await;
+    }
+
+    /// Current config, if loaded.
+    pub async fn config(&self) -> Option<Config> {
+        self.config_handle.get_config().await
+    }
+
+    /// Resolve provider/model from explicit args or config defaults and build it.
+    pub async fn provider(
+        &self,
+        provider: Option<&str>,
+        model: Option<&str>,
+    ) -> Result<BuiltProvider, ProviderError> {
+        let config = self.config().await.ok_or(ProviderError::ConfigNotLoaded)?;
+        let provider_name = provider
+            .map(String::from)
+            .or(config.provider.clone())
+            .unwrap_or_else(|| "mock".to_owned());
+        let model_name = model
+            .map(String::from)
+            .or_else(|| config.default_model().map(String::from))
+            .unwrap_or_else(|| "echo".to_owned());
+        self.provider_handle.build(provider_name, model_name).await
+    }
+
+    /// Validate an API key for a provider.
+    pub async fn validate_key(&self, provider: &str, api_key: &str) -> anyhow::Result<Vec<String>> {
+        self.provider_handle
+            .validate_key(provider.into(), api_key.into())
+            .await
+    }
+}

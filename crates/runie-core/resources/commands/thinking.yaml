@@ -1,0 +1,9 @@
+# Thinking level command
+name: thinking
+description: Set thinking level (off|low|medium|high)
+category: Model
+sub: true
+triggers:
+  - /thinking
+type: handler
+handler: thinking

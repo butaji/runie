@@ -1,0 +1,14 @@
+# Session commands
+name: save
+description: Save current session
+category: Session
+sub: true
+triggers:
+  - /save
+type: form_with_handler
+handler: save
+title: "Save Session"
+fields:
+  - label: Name
+    placeholder: session-name
+    key: name

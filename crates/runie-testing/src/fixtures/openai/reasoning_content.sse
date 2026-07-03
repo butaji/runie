@@ -1,0 +1,7 @@
+data: {"id":"chatcmpl-openai-reason-001","choices":[{"index":0,"delta":{"reasoning_content":"Let me think about this problem step by step."},"usage":null}],"model":"o4-mini","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-openai-reason-001","choices":[{"index":0,"delta":{"reasoning_content":" First, I need to understand what the user is asking for."},"usage":null}],"model":"o4-mini","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-openai-reason-001","choices":[{"index":0,"delta":{"content":"The answer is 42."},"usage":null}],"model":"o4-mini","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-openai-reason-001","choices":[{"finish_reason":"stop","index":0,"delta":{},"usage":{"prompt_tokens":20,"completion_tokens":15}}],"model":"o4-mini","object":"chat.completion.chunk"}

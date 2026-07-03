@@ -1,0 +1,301 @@
+{
+  "_metadata": {
+    "note": "This file is the canonical source for event taxonomy generation.",
+    "generates": [
+      "generated/event_enum.rs — Event enum definition",
+      "generated/kind.rs — EventKind match table + EVENT_NAMES",
+      "generated/category.rs — EventCategory match table",
+      "generated/facts.rs — is_fact_variant() predicate",
+      "generated/intent_impl.rs — Event into_intent() impl"
+    ]
+  },
+  "intent_renames": {
+    "_note": "Events whose Intent counterpart has a different name.",
+    "Start": "LoginStart",
+    "SwitchTheme": "SetTheme",
+    "Up": "ScrollUp",
+    "Down": "ScrollDown",
+    "TrustProject": "TrustProject",
+    "UntrustProject": "UntrustProject",
+    "ReloadAll": "ReloadConfig",
+    "TransientMessage": "Notify",
+    "TransientError": "Notify"
+  },
+  "intent_skips": {
+    "_note": "Events that have no Intent counterpart (remain as Facts).",
+    "_list": [
+      "SetPrompt",
+      "MessageReplayed",
+      "TurnStarted",
+      "TurnAborted",
+      "TurnCompleted",
+      "TurnErrored",
+      "TurnConstraintError",
+      "TokenStatsUpdated",
+      "CompactionTriggered",
+      "StreamStarted",
+      "UserMessageSubmitted",
+      "QueueAborted",
+      "QueuesCleared",
+      "SteeringDelivered",
+      "FollowUpDelivered",
+      "MessageDequeued",
+      "IdGenerated",
+      "AssistantMessageReady",
+      "KeybindingsReloaded",
+      "PermissionRequest",
+      "PermissionRequestDismissed"
+    ]
+  },
+  "fields": {
+    "_note": "Field definitions for Event variants. Null means unit variant.",
+    "Input": "char",
+    "Paste": "String",
+    "MouseClick": "{ row: u16, col: u16, button: String }",
+    "MouseRelease": "{ row: u16, col: u16, button: String }",
+    "MouseDrag": "{ row: u16, col: u16, button: String }",
+    "MouseMove": "{ row: u16, col: u16 }",
+    "TerminalSize": "{ width: u16, height: u16 }",
+    "Thinking": "{ id: String }",
+    "ThoughtDone": "{ id: String }",
+    "ToolStart": "{ id: String, name: String, input: serde_json::Value }",
+    "ToolInputDelta": "{ id: String, content: String }",
+    "ToolEnd": "{ id: String, duration_secs: f64, output: String }",
+    "ToolConstraintError": "{ id: String, tool: String, violations: Vec<crate::tool::ConstraintViolation> }",
+    "ResponseDelta": "{ id: String, content: String }",
+    "ThinkingDelta": "{ id: String, content: String }",
+    "TextStart": "{ id: String }",
+    "TextEnd": "{ id: String }",
+    "ThinkingStart": "{ id: String }",
+    "ThinkingEnd": "{ id: String }",
+    "Response": "{ id: String, content: String }",
+    "TurnComplete": "{ id: String, duration_secs: f64 }",
+    "Done": "{ id: String }",
+    "Error": "{ id: String, message: String }",
+    "TurnStarted": "{ id: String, request_id: String, content: String }",
+    "TurnErrored": "{ id: String, message: String }",
+    "TurnConstraintError": "{ id: String, tool: String, message: String }",
+    "TokenStatsUpdated": "{ tokens_in: usize, tokens_out: usize, speed_tps: f64 }",
+    "CompactionTriggered": "{ ratio: f64, tokens_in: usize, context_window: usize }",
+    "StreamStarted": "{ id: String }",
+    "UserMessageSubmitted": "{ id: String, content: String }",
+    "QueueAborted": "{ content: String }",
+    "SteeringDelivered": "{ content: String, id: String }",
+    "FollowUpDelivered": "{ content: String, id: String }",
+    "MessageDequeued": "{ content: String }",
+    "IdGenerated": "crate::actors::turn::NextIdResponse",
+    "PermissionRequest": "{ request_id: String, tool: String, input: serde_json::Value }",
+    "PermissionResponse": "{ request_id: String, action: crate::permissions::PermissionAction }",
+    "AssistantMessageReady": "{ message: crate::message::ChatMessage }",
+    "MessageReplayed": "{ id: String, role: String, content: String, timestamp: f64, provider: String }",
+    "ExternalEditorDone": "{ content: String }",
+    "SelectSession": "{ id: String }",
+    "StarSession": "{ id: String }",
+    "RenameSession": "{ id: String, name: String }",
+    "DeleteSession": "{ id: String }",
+    "SwitchModel": "{ provider: String, model: String, explicit: bool }",
+    "SwitchTheme": "{ name: String }",
+    "ScopedModelToggle": "{ provider: String, name: String }",
+    "ScopedModelToggleProvider": "{ provider: String }",
+    "SettingsSwitchCategory": "{ category: SettingsCategory }",
+    "SetThinkingLevel": "ThinkingLevel",
+    "PaletteFilter": "char",
+    "ModelSelectorFilter": "char",
+    "CommandFormInput": "char",
+    "ProvidersSelectModel": "{ provider: String, model: String }",
+    "ProvidersDisconnect": "{ provider: String }",
+    "ProvidersEditModels": "{ provider: String }",
+    "CopyToClipboard": "String",
+    "InsertAtRef": "String",
+    "PendingEdit": "{ path: String, original: String, proposed: String }",
+    "SystemMessage": "{ content: String }",
+    "TransientMessage": "{ content: String, level: TransientLevel }",
+    "TransientError": "{ content: String }",
+    "ConfigLoaded": "{ config: Box<crate::config::Config> }",
+    "InputChanged": "{ state: Box<crate::model::InputState> }",
+    "ViewChanged": "{ state: Box<crate::model::ViewState> }|skip",
+    "CompletionChanged": "{ state: Box<crate::model::CompletionState> }",
+    "TrustLoaded": "{ decisions: std::collections::HashMap<camino::Utf8PathBuf, crate::trust::TrustDecision> }",
+    "TrustChanged": "{ path: camino::Utf8PathBuf, decision: crate::trust::TrustDecision }",
+    "TrustSet": "{ path: camino::Utf8PathBuf, decision: crate::trust::TrustDecision }",
+    "ReadOnlyChanged": "{ enabled: bool }",
+    "HistoryLoaded": "{ entries: Vec<String> }",
+    "HistoryAppend": "{ entry: String }",
+    "GistShared": "{ result: Result<String, String> }",
+    "ExternalEditorClosed": "{ result: Result<String, String> }",
+    "ClipboardWritten": "{ success: bool }",
+    "ClipboardRead": "{ result: Result<String, String> }",
+    "SessionLoaded": "{ name: String, events: Box<Vec<crate::event::DurableCoreEvent>>, metadata: Option<Box<crate::session::index::SessionMetadata>> }",
+    "SessionSaved": "{ name: String }",
+    "SessionDeleted": "{ name: String }",
+    "SessionImported": "{ session: Box<crate::session::Session> }",
+    "SessionExported": "{ path: String }",
+    "SessionList": "{ sessions: Box<Vec<String>> }",
+    "SessionOperationFailed": "{ operation: String, error: String }",
+    "SessionChanged": "{ state: Box<crate::model::SessionState> }",
+    "BashOutput": "{ command: String, output: String }",
+    "FilesWritten": "{ count: usize, errors: Vec<String> }",
+    "EnvDetected": "{ git_info: Option<crate::snapshot::GitInfo>, cwd_name: String }",
+    "FffSearchResult": "{ request_id: u64, entries: Vec<crate::model::FffFileEntry>, query: String, indexed: bool }",
+    "ForkSession": "{ message_index: usize }",
+    "SessionTreeSelect": "{ id: String }",
+    "SetPrompt": "{ name: String }",
+    "RunLoadCommand": "{ name: String }",
+    "RunSaveCommand": "{ name: String }",
+    "RunDeleteCommand": "{ name: String }",
+    "RunImportCommand": "{ path: String }",
+    "RunExportCommand": "{ path: String }",
+    "RunSkillCommand": "{ name: String }",
+    "RunLoginCommand": "{ provider: String, token: String }",
+    "RunLogoutCommand": "{ provider: String }",
+    "RunNameCommand": "{ name: String }",
+    "RunForkCommand": "{ message_index: String }",
+    "RunCompactCommand": "{ keep: String, focus: String }",
+    "RunPromptCommand": "{ name: String }",
+    "RunThinkingCommand": "{ level: ThinkingLevel }",
+    "RunPaletteCommand": "{ name: String, args: String }",
+    "SelectProvider": "{ provider: String }",
+    "SubmitKey": "{ provider: String, key: String }",
+    "ValidationFailed": "{ provider: String, key: String, error: String }",
+    "ModelsFetched": "{ provider: String, key: String, models: Vec<String> }",
+    "ToggleModel": "{ model: String }"
+  },
+  "categories": {
+    "Input": {
+      "kind": "Intent",
+      "variants": [
+        "Input", "Backspace", "Newline", "Submit", "Escape", "CursorLeft", "CursorRight",
+        "CursorStart", "CursorEnd", "DeleteWord", "DeleteToEnd", "DeleteToStart",
+        "KillChar", "HistoryPrev", "HistoryNext", "Undo", "Redo", "CursorWordLeft",
+        "CursorWordRight", "PageUp", "PageDown", "GoToTop", "GoToBottom",
+        "Paste", "PasteImage", "MouseClick", "MouseRelease", "MouseDrag",
+        "MouseMove", "MouseScrollUp", "MouseScrollDown", "FocusGained", "FocusLost",
+        "TerminalSize"
+      ]
+    },
+    "Agent": {
+      "kind": "Fact",
+      "variants": [
+        "Thinking", "ThoughtDone", "ToolStart", "ToolInputDelta", "ToolEnd",
+        "ToolConstraintError", "ToolRequestsRecorded", "ResponseDeltaStarted",
+        "ResponseDelta", "ThinkingDelta", "TextStart", "TextEnd", "ThinkingStart",
+        "ThinkingEnd", "Response", "TurnComplete", "Done", "Error", "TurnStarted",
+        "TurnAborted", "TurnCompleted", "TurnErrored", "TurnConstraintError",
+        "TokenStatsUpdated", "CompactionTriggered", "StreamStarted",
+        "UserMessageSubmitted", "QueueAborted", "QueuesCleared", "QueueFollowUpAdded",
+        "QueueSteeringAdded", "SteeringDelivered", "FollowUpDelivered", "MessageDequeued",
+        "IdGenerated", "AssistantMessageReady"
+      ]
+    },
+    "Scroll": {
+      "kind": "Intent",
+      "variants": ["Up", "Down"]
+    },
+    "Control": {
+      "kind": "Control",
+      "variants": [
+        "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp",
+        "ToggleExpand", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
+        "ShareSession", "Suspend", "ToggleVimMode", "CopyLastResponse",
+        "OpenSessionList", "NewSession", "ResumeSession", "SelectSession",
+        "StarSession", "RenameSession", "DeleteSession"
+      ]
+    },
+    "PlanMode": {
+      "kind": "Intent",
+      "intent_variants": ["PlanModeEnabled", "PlanModeDisabled"]
+    },
+    "ModelConfig": {
+      "kind": "Intent",
+      "intent_variants": [
+        "SwitchModel", "SwitchTheme", "CycleModelNext", "CycleModelPrev",
+        "ToggleScopedModelsDialog", "ScopedModelToggle", "ScopedModelEnableAll",
+        "ScopedModelDisableAll", "ScopedModelToggleProvider", "ToggleSettingsDialog",
+        "SettingsUp", "SettingsDown", "SettingsLeft", "SettingsRight",
+        "SettingsSelect", "SettingsClose", "SettingsSwitchCategory",
+        "CycleThinkingLevel", "SetThinkingLevel", "ToggleReadOnly",
+        "TrustProject", "UntrustProject", "ReloadAll"
+      ],
+      "fact_variants": ["KeybindingsReloaded"]
+    },
+    "Dialog": {
+      "kind": "Intent",
+      "variants": [
+        "ToggleWelcome", "ToggleCommandPalette", "PaletteFilter", "PaletteBackspace",
+        "PaletteUp", "PaletteDown", "PaletteSelect", "PaletteClose",
+        "ToggleModelSelector", "ModelSelectorFilter", "ModelSelectorBackspace",
+        "ModelSelectorUp", "ModelSelectorDown", "ModelSelectorSelect", "ModelSelectorClose",
+        "TogglePathCompletion", "PathCompletionUp", "PathCompletionDown",
+        "PathCompletionSelect", "PathCompletionClose", "CommandFormInput",
+        "CommandFormBackspace", "CommandFormUp", "CommandFormDown",
+        "CommandFormSubmit", "CommandFormClose", "DialogBack", "ProvidersDialog",
+        "ProvidersSelectModel", "ProvidersDisconnect", "ProvidersAdd",
+        "ProvidersEditModels", "CopyToClipboard", "CopySelectedBlock",
+        "CopyBlockMetadata", "AtFilePicker", "InsertAtRef"
+      ]
+    },
+    "Edit": {
+      "kind": "Intent",
+      "variants": ["PendingEdit", "ApproveEdit", "RejectEdit"]
+    },
+    "System": {
+      "kind": "Fact",
+      "intent_variants": ["TransientMessage", "TransientError", "ClearTransient", "ShowDiagnostics"],
+      "fact_variants": ["SystemMessage", "ConfigLoaded"]
+    },
+    "Persistence": {
+      "kind": "Fact",
+      "variants": [
+        "InputChanged", "ViewChanged", "CompletionChanged", "TrustLoaded",
+        "TrustChanged", "TrustSet", "ReadOnlyChanged", "HistoryLoaded", "HistoryAppend"
+      ]
+    },
+    "IO": {
+      "kind": "Fact",
+      "variants": [
+        "GistShared", "ExternalEditorClosed", "ClipboardWritten", "ClipboardRead",
+        "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult",
+        "SkillsLoaded", "AuthLoaded"
+      ]
+    },
+    "Session": {
+      "kind": "Intent",
+      "intent_variants": [
+        "ForkSession", "CloneSession", "ToggleSessionTree",
+        "SessionTreeFilterCycle", "SessionTreeSelect"
+      ],
+      "fact_variants": [
+        "SessionLoaded", "SessionSaved", "SessionDeleted", "SessionImported",
+        "SessionExported", "SessionList", "SessionOperationFailed",
+        "SessionMessageAdded", "SessionMessageUpdated", "SessionMetadataUpdated",
+        "SessionChanged", "SessionTreeSnapshot"
+      ]
+    },
+    "Command": {
+      "kind": "Intent",
+      "variants": [
+        "SetPrompt", "RunLoadCommand", "RunSaveCommand", "RunDeleteCommand",
+        "RunImportCommand", "RunExportCommand", "RunSkillCommand",
+        "RunLoginCommand", "RunLogoutCommand", "RunNameCommand",
+        "RunForkCommand", "RunCompactCommand", "RunPromptCommand",
+        "RunThinkingCommand", "RunPaletteCommand"
+      ]
+    },
+    "LoginFlow": {
+      "kind": "Intent",
+      "intent_variants": [
+        "Start", "SelectProvider", "SubmitKey", "ToggleModel", "Save", "Cancel"
+      ],
+      "fact_variants": ["ValidationFailed", "ModelsFetched"]
+    },
+    "Permission": {
+      "kind": "Intent",
+      "intent_variants": ["PermissionResponse"],
+      "fact_variants": ["PermissionRequest", "PermissionRequestDismissed"]
+    },
+    "Other": {
+      "kind": "Fact",
+      "variants": ["MessageReplayed"]
+    }
+  }
+}

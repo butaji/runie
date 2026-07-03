@@ -1,0 +1,12 @@
+# Keyboard shortcuts command
+name: hotkeys
+description: Show keyboard shortcuts
+aliases:
+  - keys
+  - shortcuts
+category: System
+sub: true
+triggers:
+  - /hotkeys
+type: handler
+handler: hotkeys

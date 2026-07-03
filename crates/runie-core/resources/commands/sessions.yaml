@@ -1,0 +1,8 @@
+name: sessions
+description: List saved sessions
+category: Session
+sub: false
+triggers:
+  - /sessions
+type: handler
+handler: sessions

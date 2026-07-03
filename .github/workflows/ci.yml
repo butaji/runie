@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Run tests
+        run: |
+          echo "=== Running all tests ==="
+          cargo nextest run --workspace --profile ci
+          echo "=== Running doctests ==="
+          cargo test --workspace --doc
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Check formatting
+        run: just fmt
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Run Clippy
+        run: just lint
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Build TUI binary
+        run: cargo build -p runie-tui --bin runie
+
+      - name: Run TUI e2e-style tests
+        run: cargo test -p runie-tui toggle_e2e
+
+  schema:
+    name: Config Schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Check config schema is up to date
+        run: |
+          # Generate the schema to a temp file
+          cargo run -p runie-core --example write_config_schema -- config.schema.gen.json
+          # Compare with the checked-in schema
+          if ! diff -q config.schema.json config.schema.gen.json; then
+            echo "ERROR: config.schema.json is out of date with Config type."
+            echo "Run 'cargo run -p runie-core --example write_config_schema' to regenerate."
+            diff config.schema.json config.schema.gen.json
+            exit 1
+          fi
+          echo "config.schema.json is up to date."
+
+  deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Install cargo-deny
+        uses: cargo-bins/cargo-deny-action@v3
+        with:
+          version: 0.17
+
+      - name: Run cargo-deny
+        run: cargo deny check
+
+  machete:
+    name: Unused Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust
+        uses: ./.github/actions/rust-setup
+
+      - name: Install cargo-machete
+        run: cargo install cargo-machete --version 0.7
+
+      - name: Run cargo machete
+        run: cargo machete
+
+  file-limits:
+    name: File Line Limits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check file line limits
+        run: ./scripts/check-file-limits.sh

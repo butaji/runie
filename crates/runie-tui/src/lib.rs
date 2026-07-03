@@ -1,45 +1,47 @@
-#![forbid(unsafe_code)]
-#![deny(clippy::unwrap_used)]
+#![warn(clippy::all)]
 
+//! Runie TUI — Terminal UI Rendering
+//!
+//! Contains terminal setup (`terminal_setup`, `terminal/`), input handling
+//! (`keymap`), side-effect handlers (`effects/`), and all rendering widgets.
+
+pub mod diff;
+pub mod markdown_render;
+pub mod message;
+pub mod pace;
+pub mod popups;
+pub mod quantize;
+pub mod semantic_tokens;
+pub mod status_bar;
+pub mod syntax;
 pub mod theme;
-pub mod messages;
-pub mod glyphs;
-pub mod components;
-pub mod tui;
-pub mod pipe;
-pub mod actors;
-pub mod layout;
+pub mod ui;
 
-pub use theme::{ThemeWrapper, ColorPalette, OpalineColor};
-pub use tui::{Tui, TuiConfig, TuiMode, Msg, Cmd, update, event_to_msg, Onboarding, AppState};
+// ── Terminal setup (moved from runie-term) ────────────────────────────────────
 
-pub use components::{
-    MessageList,
-    MessageItem,
-    StatusBar,
-    Overlay,
-    CodeBlock,
-    CodeLine,
-    LineStatus,
-    Collapsible,
-    AgentList,
-    AgentItem,
-    AgentStatus,
-    PermissionModal,
-    PermissionAction,
-    CommandPalette,
-    PaletteCommand,
-    ContextPanel,
-    GitChange,
-    GitStatus,
-    SessionTreeNavigator,
-    SessionTreeEntry,
+pub mod app_init;
+pub mod bootstrap;
+pub mod channels;
+pub mod dry_run_cmd;
+pub mod effects;
+pub mod input_mapping;
+pub mod keymap;
+pub mod terminal;
+pub mod terminal_setup;
+pub mod ui_actor;
+pub mod ui_actor_agent_handles;
+
+#[cfg(test)]
+mod tests;
+
+/// Re-export [`Stylize`] from ratatui for backward compatibility.
+pub use ratatui::style::Stylize;
+pub use runie_core::{AppState, ChatMessage};
+
+// Re-export dialog types from runie_core for convenience
+pub use runie_core::dialog::builders::{
+    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
+    settings, theme_picker, SessionRow,
 };
-
-// Re-export ratatui types we use
-pub use ratatui::{
-    layout::{Rect, Constraint, Layout, Direction},
-    style::{Style, Color, Modifier},
-    buffer::Buffer,
-    text::{Line, Span, Text},
-};
+pub use runie_core::dialog::dsl::{form, get_field, panel, FormPanel};
+pub use runie_core::dialog::{EventLabel, ItemAction, Panel, PanelId, PanelItem, PanelStack};
