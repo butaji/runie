@@ -9,7 +9,17 @@ use crate::model::AppState;
 
 /// Build the root providers dialog panel.
 pub fn build_providers_dialog(state: &AppState) -> PanelStack {
-    let configured = state.configured_providers();
+    let mut configured = state.configured_providers();
+    // Include mock provider when enabled (dev-only).
+    if crate::provider::is_mock_enabled()
+        && !configured.iter().any(|(p, _, _)| p == "mock")
+    {
+        configured.push((
+            "mock".to_owned(),
+            "http://localhost/mock".to_owned(),
+            vec!["echo".to_owned()],
+        ));
+    }
     let current_provider = &state.config().current_provider;
     let current_model = &state.config().current_model;
     let has_providers = !configured.is_empty();

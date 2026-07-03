@@ -6,6 +6,9 @@ use crate::config::{Config, ModelProvider};
 use crate::model::AppState;
 use crate::update::dialog::process_command_result;
 
+// Re-export for Layer 1 test below.
+use crate::provider::is_mock_enabled;
+
 /// Build a Config with the given provider/models.
 fn make_config(providers: &[(String, Vec<String>)]) -> Config {
     let mut cfg = Config::default();
@@ -221,4 +224,90 @@ fn model_selector_includes_unknown_configured_models() {
         "selector should contain every configured model, got: {:?}",
         labels
     );
+}
+
+// ── Layer 1: State/Logic tests ──────────────────────────────────────────────
+
+/// Test that the mock provider is accessible via `is_mock_enabled()`.
+/// The mock is not stored in TOML config but is activated via RUNIE_MOCK env var.
+#[test]
+fn mock_provider_is_accessible_when_enabled() {
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    crate::provider::set_mock_enabled(false);
+    assert!(!is_mock_enabled(), "mock should be disabled by default");
+
+    crate::provider::set_mock_enabled(true);
+    assert!(is_mock_enabled(), "mock should be enabled after set_mock_enabled(true)");
+
+    crate::provider::set_mock_enabled(false);
+    assert!(!is_mock_enabled(), "mock should be disabled after set_mock_enabled(false)");
+}
+
+/// Test that the model selector includes mock/echo when mock is enabled.
+/// This is the Layer 2 event-handling test.
+#[test]
+fn model_mock_enabled_opens_selector_with_echo_model() {
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    crate::provider::set_mock_enabled(true);
+    reset_config();
+    let mut state = AppState::default();
+
+    // Open the model selector
+    crate::update::dialog::open_model_selector(&mut state);
+
+    // Verify the selector is open
+    let dialog = state.open_dialog();
+    assert!(
+        matches!(
+            dialog,
+            Some(crate::commands::DialogState::Active {
+                kind: DialogKind::ModelSelector,
+                panels: _,
+            })
+        ),
+        "expected ModelSelector dialog, got {:?}",
+        dialog
+    );
+
+    // Verify the mock/echo model is present in the selector items
+    if let Some(crate::commands::DialogState::Active {
+        kind: DialogKind::ModelSelector,
+        panels: stack,
+    }) = &state.open_dialog()
+    {
+        let items = stack.current().map(|p| p.items.clone()).unwrap_or_default();
+        let labels: Vec<_> = items.iter().filter_map(|i| i.label()).collect();
+        assert!(
+            labels.iter().any(|l| l.contains("mock/echo")),
+            "selector should contain mock/echo, got: {:?}",
+            labels
+        );
+    }
+
+    crate::provider::set_mock_enabled(false);
+}
+
+/// Test that the providers dialog includes mock when enabled.
+#[test]
+fn provider_dialog_includes_mock_when_enabled() {
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    crate::provider::set_mock_enabled(true);
+    reset_config();
+    let state = AppState::default();
+
+    let panels = crate::provider::dialog::build_providers_dialog(&state);
+    let panel = panels.current().expect("should have a panel");
+    let items: Vec<_> = panel.items.iter().filter_map(|i| i.label()).collect();
+
+    // Should show the mock provider
+    assert!(
+        items.iter().any(|l| l.contains("mock") || l.contains("Mock")),
+        "providers dialog should include mock, got: {:?}",
+        items
+    );
+
+    crate::provider::set_mock_enabled(false);
 }

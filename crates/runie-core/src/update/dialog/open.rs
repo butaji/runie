@@ -66,7 +66,12 @@ pub fn open_model_selector(state: &mut AppState) {
         String::new()
     };
     let configured = state.configured_providers();
-    let models = crate::model_catalog::configured_models_catalog(&configured);
+    let mut models = crate::model_catalog::configured_models_catalog(&configured);
+    // Include mock provider in the selector when enabled (dev-only).
+    // This mirrors the behavior in `has_any_available_provider`.
+    if crate::provider::is_mock_enabled() && !models.iter().any(|m| m.provider == "mock") {
+        models.push(crate::model_catalog::ModelInfo::new("mock", "echo"));
+    }
     let items = crate::model_catalog::build_model_selector_items(
         &models,
         state.config().recent_models.as_slice(),
