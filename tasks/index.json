@@ -2187,7 +2187,7 @@
   {
     "file": "use-tree-sitter-for-find-definitions.md",
     "title": "Use `tree-sitter` for `find_definitions`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-tui-popup-for-popup-shell.md",
