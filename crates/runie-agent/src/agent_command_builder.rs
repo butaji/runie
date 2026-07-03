@@ -146,7 +146,7 @@ mod tests {
         assert_eq!(cmd.id, "req.0");
         assert_eq!(cmd.provider, "mock");
         assert_eq!(cmd.model, "echo");
-        assert_eq!(cmd.read_only, false);
+        assert!(!cmd.read_only);
     }
 
     #[test]

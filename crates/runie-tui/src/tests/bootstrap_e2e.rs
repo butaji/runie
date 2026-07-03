@@ -15,7 +15,7 @@ fn keystroke_dsl_produces_expected_events() {
     let bindings = std::collections::HashMap::new();
 
     // Type "Hi" followed by Ctrl+C (quit)
-    let keystrokes = vec![
+    let keystrokes = [
         Keystroke::Char('H'),
         Keystroke::Char('i'),
         Keystroke::CtrlC,

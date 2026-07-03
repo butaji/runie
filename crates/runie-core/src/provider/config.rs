@@ -334,8 +334,8 @@ api_key = "sk-openai"
         // After migration, api_key is removed from config (stored in keyring)
         let loaded = crate::config::Config::load(Some(&path));
         // api_key is no longer stored in config - it's in keyring
-        assert!(loaded.model_providers.get("minimax").is_some());
-        assert!(loaded.model_providers.get("openai").is_some());
+        assert!(loaded.model_providers.contains_key("minimax"));
+        assert!(loaded.model_providers.contains_key("openai"));
     }
 
     #[test]

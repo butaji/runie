@@ -245,7 +245,6 @@ fn convert_file_result(_req: &FffSearchRequest, result: FileSearchResult) -> Fff
 }
 
 /// Format a git2 Status as a human-readable string (returns `"clean"` for clean state).
-
 #[cfg(test)]
 mod tests {
     use super::*;

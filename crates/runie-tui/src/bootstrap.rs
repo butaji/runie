@@ -771,7 +771,7 @@ mod tests {
     #[test]
     fn keystroke_sequence() {
         let bindings = HashMap::new();
-        let keystrokes = vec![
+        let keystrokes = [
             Keystroke::Char('H'),
             Keystroke::Char('i'),
             Keystroke::Enter,

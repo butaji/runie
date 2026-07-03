@@ -312,7 +312,7 @@ mod tests {
         ];
         let result = search_history(&entries, "cat");
         // Both entries should match (substring + fuzzy)
-        assert!(result.len() >= 1);
+        assert!(!result.is_empty());
         // Exact substring must come first
         assert_eq!(result[0], "the cat sat on mat");
     }

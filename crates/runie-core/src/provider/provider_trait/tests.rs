@@ -101,7 +101,7 @@ fn retryable_is_false_for_fatal_errors() {
     ];
     for err in fatal {
         assert!(
-            err.is_retryable() == false,
+            !err.is_retryable(),
             "expected {err:?} to NOT be retryable"
         );
         assert!(

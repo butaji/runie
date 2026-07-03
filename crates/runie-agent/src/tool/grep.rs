@@ -349,7 +349,7 @@ mod tests {
         // Create many files with matches
         for i in 0..10 {
             let file = temp_dir.path().join(format!("test{}.txt", i));
-            std::fs::write(&file, format!("match line\n")).unwrap();
+            std::fs::write(&file, "match line\n").unwrap();
         }
 
         let result = run_grep_impl(

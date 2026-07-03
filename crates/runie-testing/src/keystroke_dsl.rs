@@ -469,7 +469,7 @@ mod tests {
     fn test_tmux_style() {
         assert!(matches!(parse_tmux_style("C-c"), Some(CoreEvent::Quit)));
         assert!(matches!(parse_tmux_style("M-RET"), Some(CoreEvent::FollowUp)));
-        assert!(matches!(parse_tmux_style("C-M-c"), None)); // Not supported
+        assert!(parse_tmux_style("C-M-c").is_none()); // Not supported
     }
 
     #[test]
