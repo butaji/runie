@@ -14,29 +14,29 @@ The `dev` branch currently fails the CI pipeline defined in `.github/workflows/c
 
 ## Acceptance Criteria
 
-- [ ] `cargo fmt --all -- --check` passes with no diffs.
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings` passes.
-- [ ] `cargo deny check` passes (bans + advisories).
-- [ ] `./scripts/check-file-limits.sh` is either green or its failures are explicitly accepted and documented.
-- [ ] `cargo test --workspace` passes after the changes.
-- [ ] `cargo check --workspace` passes with no new warnings.
+- [x] `cargo fmt --all -- --check` passes with no diffs.
+- [x] `cargo clippy --workspace --all-targets -- -D warnings` passes.
+- [x] `cargo deny check` passes (bans + advisories).
+- [x] `./scripts/check-file-limits.sh` is either green or its failures are explicitly accepted and documented.
+- [x] `cargo test --workspace` passes after the changes.
+- [x] `cargo check --workspace` passes with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] N/A — CI/tooling concern.
+- [x] N/A — CI/tooling concern.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — CI/tooling concern.
+- [x] N/A — CI/tooling concern.
 
 ### Layer 3 — Rendering
-- [ ] N/A — CI/tooling concern.
+- [x] N/A — CI/tooling concern.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] N/A — CI/tooling concern.
+- [x] N/A — CI/tooling concern.
 
 ### Live Tmux Testing Session
-- [ ] Run a headless `runie print` or TUI smoke run after fixes to confirm the CLI still starts and exits cleanly.
+- [x] Run a headless `runie print` or TUI smoke run after fixes to confirm the CLI still starts and exits cleanly.
 
 ## Files touched
 

@@ -14,29 +14,29 @@ DSL command handlers in `crates/runie-core/src/commands/dsl/` are defined as `fn
 
 ## Acceptance Criteria
 
-- [ ] Change the handler signature from `fn(&mut AppState, &str)` to a form that returns events/intents.
-- [ ] Refactor every handler in `commands/dsl/handlers/` to emit `CommandResult::Events(...)` or send an actor message instead of mutating `AppState`.
-- [ ] Update `UiActor::apply_event` (or equivalent) to apply the resulting events.
-- [ ] `cargo test --workspace` passes.
-- [ ] `cargo check --workspace` passes with no new warnings.
+- [x] Change the handler signature from `fn(&mut AppState, &str)` to a form that returns events/intents.
+- [x] Refactor every handler in `commands/dsl/handlers/` to emit `CommandResult::Events(...)` or send an actor message instead of mutating `AppState`.
+- [x] Update `UiActor::apply_event` (or equivalent) to apply the resulting events.
+- [x] `cargo test --workspace` passes.
+- [x] `cargo check --workspace` passes with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `dsl_handler_returns_events_not_mutation` — handlers produce `Vec<Event>` for a given input.
-- [ ] `command_registry_rejects_mutating_handlers` — registry no longer accepts `fn(&mut AppState, _)`.
+- [x] `dsl_handler_returns_events_not_mutation` — handlers produce `Vec<Event>` for a given input.
+- [x] `command_registry_rejects_mutating_handlers` — registry no longer accepts `fn(&mut AppState, _)`.
 
 ### Layer 2 — Event Handling
-- [ ] `ui_actor_applies_dsl_events` — `UiActor` applies handler-emitted events to `AppState` the same way actor facts are applied.
+- [x] `ui_actor_applies_dsl_events` — `UiActor` applies handler-emitted events to `AppState` the same way actor facts are applied.
 
 ### Layer 3 — Rendering
-- [ ] N/A — no rendering change.
+- [x] N/A — no rendering change.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `slash_commands_emit_expected_events` — replay tests verify `/new`, `/save`, `/model`, etc. emit the expected event sequence.
+- [x] `slash_commands_emit_expected_events` — replay tests verify `/new`, `/save`, `/model`, etc. emit the expected event sequence.
 
 ### Live Tmux Testing Session
-- [ ] Run `/new`, `/save`, `/model`, and `/session` in the TUI and verify they behave identically to before.
+- [x] Run `/new`, `/save`, `/model`, and `/session` in the TUI and verify they behave identically to before.
 
 ## Files touched
 

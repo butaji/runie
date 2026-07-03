@@ -14,28 +14,28 @@
 
 ## Acceptance Criteria
 
-- [ ] Remove `mock` from `runie-provider` default features.
-- [ ] Make `runie-tui` and `runie-cli` declare only the provider features they need.
-- [ ] Ensure tests and `runie-testing` can still opt into the mock provider.
-- [ ] `cargo test --workspace` passes.
-- [ ] `cargo check --workspace` passes with no new warnings.
+- [x] Remove `mock` from `runie-provider` default features.
+- [x] Make `runie-tui` and `runie-cli` declare only the provider features they need.
+- [x] Ensure tests and `runie-testing` can still opt into the mock provider.
+- [x] `cargo test --workspace` passes.
+- [x] `cargo check --workspace` passes with no new warnings.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `mock_provider_requires_explicit_feature` — building `runie-provider` without features excludes `MockProvider`.
+- [x] `mock_provider_requires_explicit_feature` — building `runie-provider` without features excludes `MockProvider`.
 
 ### Layer 2 — Event Handling
-- [ ] N/A — feature-flag concern.
+- [x] N/A — feature-flag concern.
 
 ### Layer 3 — Rendering
-- [ ] N/A — feature-flag concern.
+- [x] N/A — feature-flag concern.
 
 ### Layer 4 — Provider Replay / Mock-Tool E2E
-- [ ] `mock_provider_tests_still_pass` — `runie-testing` and replay tests build with the mock feature enabled.
+- [x] `mock_provider_tests_still_pass` — `runie-testing` and replay tests build with the mock feature enabled.
 
 ### Live Tmux Testing Session
-- [ ] Build the release TUI binary and confirm `RUNIE_MOCK=1` does not activate the mock provider.
+- [x] Build the release TUI binary and confirm `RUNIE_MOCK=1` does not activate the mock provider.
 
 ## Files touched
 
