@@ -280,9 +280,9 @@ impl AppState {
         self.turn_state_mut().tokens_out = tokens_out;
         self.turn_state_mut().turn_tokens_out = tokens_out;
         // Compute speed from the ring buffer (populated by handle_update_speed -> record).
-        self.turn_state_mut().speed_tps = self.turn_state.speed_window.speed();
+        self.turn_state_mut().speed_tps = self.turn_state().speed_window.speed();
         // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        *self.agent_state_mut() = AgentState::from(self.turn_state());
     }
 
     /// Project UserMessageSubmitted fact into AppState.

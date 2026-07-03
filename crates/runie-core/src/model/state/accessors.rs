@@ -211,6 +211,13 @@ impl AppState {
         &mut self.actor_handles
     }
 
+    /// Immutable access to the authoritative turn state.
+    /// Production code should read turn state through this accessor, not via
+    /// direct field access (e.g., `self.turn_state.something` → `self.turn_state().something`).
+    pub fn turn_state(&self) -> &crate::actors::turn::TurnState {
+        &self.turn_state
+    }
+
     /// Mutable access to the authoritative turn state.
     /// Used by fact handlers to sync `AgentState` from `TurnState`.
     pub fn turn_state_mut(&mut self) -> &mut crate::actors::turn::TurnState {

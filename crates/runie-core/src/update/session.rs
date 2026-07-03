@@ -186,7 +186,7 @@ impl AppState {
     }
 
     pub(crate) fn deliver_queued(&mut self) {
-        if self.turn_state.message_queue.is_empty() {
+        if self.turn_state().message_queue.is_empty() {
             return;
         }
         let steering_mode = self.config().steering_mode;

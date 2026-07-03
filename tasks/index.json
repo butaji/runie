@@ -250,6 +250,11 @@
     "status": "done"
   },
   {
+    "file": "capture-orphan-spawns-across-workspace.md",
+    "title": "Capture orphan `tokio::spawn` calls across the workspace",
+    "status": "todo"
+  },
+  {
     "file": "centralize-actor-channel-capacities-and-timeouts.md",
     "title": "Centralize actor channel capacities and timeouts",
     "status": "done"
@@ -347,6 +352,11 @@
   {
     "file": "clear-inflight-turn-state-on-success.md",
     "title": "Clear in-flight turn state on success",
+    "status": "done"
+  },
+  {
+    "file": "close-turnstate-field-access-guardrail-gap.md",
+    "title": "Close `turn_state` field-access guardrail gap",
     "status": "done"
   },
   {
@@ -493,6 +503,11 @@
     "file": "create-unified-architecture-backlog-execution-task.md",
     "title": "Create unified architecture backlog execution task",
     "status": "done"
+  },
+  {
+    "file": "decompose-runie-core-and-event-enum.md",
+    "title": "Decompose `runie-core` god crate and flatten `Event` enum",
+    "status": "todo"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
@@ -680,6 +695,11 @@
     "status": "done"
   },
   {
+    "file": "enforce-agentstate-projection-no-direct-mutation.md",
+    "title": "Enforce `AgentState` as pure projection with no direct mutation",
+    "status": "todo"
+  },
+  {
     "file": "enforce-observed-async-work-in-all-actors.md",
     "title": "Enforce observed async work in all actors",
     "status": "done"
@@ -805,9 +825,24 @@
     "status": "done"
   },
   {
+    "file": "fix-bash-sandbox-direct-mode.md",
+    "title": "Fix bash sandboxing for direct (non-shell) mode",
+    "status": "todo"
+  },
+  {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
     "title": "Fix broken `schema` feature usage in CI and justfile",
     "status": "done"
+  },
+  {
+    "file": "fix-build-rs-lint-scope-and-tests.md",
+    "title": "Fix `build.rs` lint scope and tests",
+    "status": "done"
+  },
+  {
+    "file": "fix-ci-gates-on-dev.md",
+    "title": "Fix CI gates on `dev`",
+    "status": "todo"
   },
   {
     "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
@@ -880,6 +915,11 @@
     "status": "done"
   },
   {
+    "file": "fix-provider-feature-flags-leak-mock.md",
+    "title": "Fix provider feature flags so mock provider does not leak into production binaries",
+    "status": "todo"
+  },
+  {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
     "title": "Fix `RactorPermissionActor` reply lifecycle",
     "status": "done"
@@ -901,7 +941,7 @@
   },
   {
     "file": "fix-tui-at-file-picker-shows-no-files.md",
-    "title": "Fix TUI @ file picker shows \"No files found\"",
+    "title": "Fix TUI @ file picker shows \\\"No files found\\\"",
     "status": "done"
   },
   {
@@ -916,7 +956,7 @@
   },
   {
     "file": "fix-tui-history-shows-no-history-after-message.md",
-    "title": "Fix TUI /history shows \"No history\" after a message is sent",
+    "title": "Fix TUI /history shows \\\"No history\\\" after a message is sent",
     "status": "done"
   },
   {
@@ -1250,6 +1290,11 @@
     "status": "done"
   },
   {
+    "file": "purge-shell-and-sleep-from-tests.md",
+    "title": "Purge shell tests, `sleep()` calls, and tmux smoke script from automatic tests",
+    "status": "todo"
+  },
+  {
     "file": "reconnect-tui-agent-actor-channel.md",
     "title": "Reconnect or remove TUI `AgentActor` channel",
     "status": "done"
@@ -1318,6 +1363,11 @@
     "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
     "title": "Remove direct `AppState` mutation from core update handlers",
     "status": "done"
+  },
+  {
+    "file": "remove-direct-appstate-mutation-from-dsl-handlers.md",
+    "title": "Remove direct `AppState` mutation from DSL command handlers",
+    "status": "todo"
   },
   {
     "file": "remove-direct-appstate-mutation-from-tui-handlers.md",
@@ -1403,6 +1453,11 @@
     "file": "remove-timeout-polling-from-uiactor-and-actors.md",
     "title": "Remove timeout polling from `UiActor` and actors",
     "status": "done"
+  },
+  {
+    "file": "remove-turnstate-from-appstate.md",
+    "title": "Remove `TurnState` from `AppState`",
+    "status": "todo"
   },
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",

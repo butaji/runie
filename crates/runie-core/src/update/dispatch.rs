@@ -164,9 +164,9 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
         Event::StreamStarted { id: _ } => {
             // StreamStarted is informational; streaming state is managed by other handlers.
             // Just set the streaming flag if not already.
-            if !state.turn_state.streaming {
+            if !state.turn_state().streaming {
                 state.turn_state_mut().streaming = true;
-                *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
+                *state.agent_state_mut() = crate::model::AgentState::from(state.turn_state());
             }
             true
         }

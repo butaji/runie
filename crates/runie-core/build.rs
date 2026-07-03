@@ -56,6 +56,9 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.actor_handles ", "state.actor_handles_mut()"),
     ("state.registry ", "state.registry_mut()"),
     ("state.registry.", "state.registry_mut()"),
+    // turn_state patterns (authoritative turn lifecycle state)
+    ("state.turn_state.", "state.turn_state()"),
+    ("self.turn_state.", "self.turn_state()"),
     // self.xxx patterns (same replacement, different prefix)
     ("self.session.", "self.session()"),
     ("self.input.", "self.input()"),
@@ -136,11 +139,17 @@ fn needs_appstate_lint(rel_path: &str) -> bool {
         "actors/leader/actor.rs",
         "actors/leader/handle.rs",
         "update/input/text.rs",
-        "update/input/submit.rs",
         "commands/dsl/handlers/session/mod.rs",
         "retry.rs",
         "login_flow/validation.rs",
         "model/state/input.rs",
+        // Test helper files that use direct turn_state access for test setup
+        "update/input/tests.rs",
+        "tests/flow.rs",
+        "tests/queue.rs",
+        "tests/vim_mode.rs",
+        // TurnActor handlers access TurnActorState.turn_state (different from AppState.turn_state)
+        "actors/turn/handlers.rs",
     ];
     !is_test_file(rel_path)
         && !rel_path.contains("/benches/")
@@ -341,24 +350,34 @@ fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>)
 /// - Properly managed through other means (channel-based, etc.)
 /// - Test-only patterns
 const SPAWN_EXEMPTIONS: &[&str] = &[
-    // Actor files - spawns are part of actor lifecycle and observed via actor shutdown
-    "src/actors/config/handlers.rs",
-    "src/actors/config/ractor_config.rs",
-    "src/actors/fff_indexer/ractor_fff_indexer.rs",
-    "src/actors/io/ractor_io.rs",
-    "src/actors/leader/actor.rs",
-    "src/actors/leader/test_helpers.rs",
-    "src/actors/permission/ractor_permission.rs",
-    "src/actors/session/ractor_session_actor.rs",
-    "src/actors/session/session_handlers.rs",
-    // Other actor files with intentional fire-and-forget spawns
-    "src/config/config_impl.rs",         // Config watching - background service
-    "src/session/store.rs",              // Session persistence - background service
-    "src/tool/format.rs",                // Tool formatting - background service
-    "src/update/system.rs",              // Abort signal routing - fire-and-forget by design
-    "src/shell.rs",                      // Process execution - observed via channel
-    "src/tool/cache.rs",                  // Background TTL eviction - runs to process exit
-    "src/bus.rs",                        // Test bus implementation
+    // runie-core actor files - spawns are part of actor lifecycle and observed via actor shutdown
+    "crates/runie-core/src/actors/config/handlers.rs",
+    "crates/runie-core/src/actors/config/ractor_config.rs",
+    "crates/runie-core/src/actors/fff_indexer/ractor_fff_indexer.rs",
+    "crates/runie-core/src/actors/io/ractor_io.rs",
+    "crates/runie-core/src/actors/leader/actor.rs",
+    "crates/runie-core/src/actors/leader/test_helpers.rs",
+    "crates/runie-core/src/actors/permission/ractor_permission.rs",
+    "crates/runie-core/src/actors/session/ractor_session_actor.rs",
+    "crates/runie-core/src/actors/session/session_handlers.rs",
+    // runie-core other files with intentional fire-and-forget spawns
+    "crates/runie-core/src/config/config_impl.rs",         // Config watching - background service
+    "crates/runie-core/src/session/store.rs",              // Session persistence - background service
+    "crates/runie-core/src/tool/format.rs",                // Tool formatting - background service
+    "crates/runie-core/src/update/system.rs",              // Abort signal routing - fire-and-forget by design
+    "crates/runie-core/src/shell.rs",                      // Process execution - observed via channel
+    "crates/runie-core/src/tool/cache.rs",                 // Background TTL eviction - runs to process exit
+    "crates/runie-core/src/bus.rs",                        // Test bus implementation
+    // runie-tui spawns - managed by application lifecycle and shutdown signals
+    "crates/runie-tui/src/bootstrap.rs",                    // Bootstrap spawns - managed by app lifecycle
+    "crates/runie-tui/src/ui_actor/mod.rs",                 // Event forwarder - fire-and-forget by design
+    "crates/runie-tui/src/ui_actor/effects.rs",             // Effect spawns - fire-and-forget via channels
+    "crates/runie-tui/src/keymap.rs",                       // Debug logging - fire-and-forget by design
+    // runie-cli spawns - managed by server lifecycle
+    "crates/runie-cli/src/server.rs",                       // Connection handler spawns - managed by listener
+    // runie-agent spawns - managed by actor lifecycle
+    "crates/runie-agent/src/subagent.rs",                   // Response accumulation - fire-and-forget via channel
+    "crates/runie-agent/src/actor/mod.rs",                   // Agent turn spawn - managed by actor lifecycle
 ];
 
 fn needs_spawn_lint(rel_path: &str) -> bool {
@@ -375,13 +394,15 @@ fn needs_spawn_lint(rel_path: &str) -> bool {
 /// - The JoinHandle is not passed as an argument to a function
 /// - The JoinHandle is not stored in a struct field
 ///
-/// The check is conservative: it looks for patterns that indicate the JoinHandle
-/// is captured:
-/// - `let _ = tokio::spawn(...)` - OK (explicitly ignored)
-/// - `let x = tokio::spawn(...)` - OK (captured)
+/// Valid capture patterns:
+/// - `let handle = tokio::spawn(...)` - OK (named capture)
+/// - `let _handle = tokio::spawn(...)` - OK (underscore-prefixed capture)
 /// - `spawn_unchecked(async { ... })` - OK if JoinHandle captured
 /// - Comments like `// fire-and-forget` - OK
 /// - `#[allow(unused_mut)]` on containing function - OK
+///
+/// INVALID (will be flagged):
+/// - `let _ = tokio::spawn(...)` - explicit discard is NOT a valid capture
 fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) {
     /// Number of lines to look back when searching for `#[allow(...)]` above a spawn.
     const SPAWN_ALLOW_LOOKBACK: usize = 10;
@@ -425,12 +446,23 @@ fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) 
         // 5. Array element: `[tokio::spawn(...)]`
 
         // Check for capture patterns.
-        let has_capture = line.contains("let ")
+        // NOTE: `let _ = tokio::spawn(...)` is NOT allowed - explicit discard still
+        // represents an unobserved spawn that could leak on panic/crash.
+        // Valid capture patterns:
+        // - `let handle = tokio::spawn(...)` - named capture
+        // - `let _handle = tokio::spawn(...)` - underscore-prefixed capture
+        // - Spawn as function argument, struct field, array element, Some(), vec![]
+        let has_let_spawn = (line.contains("let ") || line.contains("let_"))
             && (line.contains("= tokio::spawn")
                 || line.contains("= ::tokio::spawn")
                 || line.contains("= spawn_blocking")
-                || line.contains("= spawn_unchecked"))
-            || line.contains(", tokio::spawn")
+                || line.contains("= spawn_unchecked"));
+        let is_explicit_discard = line.contains("let _ = tokio::spawn")
+            || line.contains("let _ = ::tokio::spawn")
+            || line.contains("let _ = spawn_blocking")
+            || line.contains("let _ = spawn_unchecked");
+        let has_valid_capture = has_let_spawn && !is_explicit_discard;
+        let has_other_capture = line.contains(", tokio::spawn")
             || line.contains("tokio::spawn,")
             || line.contains("field: tokio::spawn")
             || line.contains("field: spawn_blocking")
@@ -438,6 +470,7 @@ fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) 
             || line.contains("Some(spawn_blocking")
             || line.contains("vec![tokio::spawn")
             || line.contains("vec![spawn_blocking");
+        let has_capture = has_valid_capture || has_other_capture;
 
         if has_capture {
             continue;
@@ -499,11 +532,27 @@ fn main() {
     // Check AppState field access patterns and magic numbers.
     let mut errors = Vec::new();
 
-    // Only check runie-core, not all crates.
-    let runie_core_path = manifest_dir.join("src");
+    // Scan all crates in the workspace for violations.
+    // Build script is in crates/runie-core/, so we need to find the workspace root.
+    let workspace_root = manifest_dir
+        .parent() // crates/runie-core
+        .and_then(|p| p.parent()) // crates
+        .and_then(|p| p.parent()) // workspace root
+        .unwrap_or(&manifest_dir);
 
-    for path in find_rust_files(&runie_core_path) {
-        lint_file(&path, &manifest_dir, &mut errors);
+    // Find all Cargo.toml files to identify workspace crates.
+    let crates_path = workspace_root.join("crates");
+    for entry in fs::read_dir(&crates_path).unwrap_or_else(|_| fs::read_dir(".").unwrap()) {
+        let entry = entry.unwrap();
+        let crate_path = entry.path();
+        if crate_path.is_dir() {
+            let src_path = crate_path.join("src");
+            if src_path.exists() {
+                for path in find_rust_files(&src_path) {
+                    lint_file(&path, &workspace_root, &mut errors);
+                }
+            }
+        }
     }
 
     if !errors.is_empty() {
@@ -643,7 +692,19 @@ mod tests {
     }
 
     #[test]
-    fn test_spawn_lint_allows_explicit_discard() {
+    fn test_spawn_lint_allows_underscore_prefixed_capture() {
+        let content = r#"
+            pub async fn foo() {
+                let _handle = tokio::spawn(async { });
+            }
+        "#;
+        let mut errors = Vec::new();
+        check_orphan_spawns("src/foo.rs", content, &mut errors);
+        assert!(errors.is_empty(), "Should allow underscore-prefixed capture");
+    }
+
+    #[test]
+    fn test_spawn_lint_rejects_explicit_discard() {
         let content = r#"
             pub async fn foo() {
                 let _ = tokio::spawn(async { });
@@ -651,7 +712,8 @@ mod tests {
         "#;
         let mut errors = Vec::new();
         check_orphan_spawns("src/foo.rs", content, &mut errors);
-        assert!(errors.is_empty(), "Should allow explicit discard");
+        assert!(!errors.is_empty(), "Explicit discard `let _ = tokio::spawn(...)` should be flagged");
+        assert!(errors[0].contains("orphan"));
     }
 
     #[test]
@@ -706,22 +768,23 @@ mod tests {
     #[test]
     fn test_spawn_lint_allows_test_files() {
         // Test files should be exempt from spawn lint.
-        assert!(needs_spawn_lint("tests/foo.rs"));
-        assert!(needs_spawn_lint("src/foo_tests.rs"));
+        assert!(!needs_spawn_lint("tests/foo.rs"), "test files should be exempt");
+        assert!(!needs_spawn_lint("src/foo_tests.rs"), "_tests.rs files should be exempt");
+        assert!(!needs_spawn_lint("src/foo_test.rs"), "_test.rs files should be exempt");
     }
 
     #[test]
     fn test_spawn_lint_allows_exempted_files() {
         // Exempted files should be skipped.
-        assert!(needs_spawn_lint("src/update/system.rs"));
-        assert!(needs_spawn_lint("src/shell.rs"));
-        assert!(needs_spawn_lint("src/tool/cache.rs"));
+        assert!(!needs_spawn_lint("src/update/system.rs"), "system.rs is exempted");
+        assert!(!needs_spawn_lint("src/shell.rs"), "shell.rs is exempted");
+        assert!(!needs_spawn_lint("src/tool/cache.rs"), "cache.rs is exempted");
     }
 
     #[test]
     fn test_spawn_lint_requires_lint_on_regular_files() {
         // Non-exempt production files should be linted.
-        assert!(!needs_spawn_lint("src/foo.rs"));
-        assert!(!needs_spawn_lint("src/bar/mod.rs"));
+        assert!(needs_spawn_lint("src/foo.rs"), "regular files should be linted");
+        assert!(needs_spawn_lint("src/bar/mod.rs"), "regular mod files should be linted");
     }
 }

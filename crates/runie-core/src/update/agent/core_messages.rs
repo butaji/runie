@@ -33,7 +33,7 @@ impl AppState {
     }
 
     pub(crate) fn on_assistant_message_ready(&mut self, message: ChatMessage) {
-        if let Some(idx) = self.turn_state.last_assistant_index {
+        if let Some(idx) = self.turn_state().last_assistant_index {
             if idx < self.session_mut().messages.len()
                 && self.session_mut().messages[idx].role == Role::Assistant
             {
@@ -103,8 +103,8 @@ impl AppState {
 
     pub(crate) fn finish_turn(&mut self, id: String) {
         // Read from TurnState (authoritative source), not derived agent.
-        let assistant_idx = self.turn_state.last_assistant_index;
-        let remaining_tail = self.turn_state.streaming_buffer.force_flush().join("");
+        let assistant_idx = self.turn_state().last_assistant_index;
+        let remaining_tail = self.turn_state_mut().streaming_buffer.force_flush().join("");
         if !remaining_tail.is_empty() {
             if let Some(idx) = assistant_idx {
                 self.append_to_message(idx, &remaining_tail);
@@ -175,7 +175,7 @@ impl AppState {
         // Mutate authoritative TurnState only — do NOT sync here.
         // Fields managed by other functions (like last_assistant_index, streaming)
         // are synced by those functions. Clearing them here would overwrite changes.
-        if self.turn_state.current_request_id.as_deref() == Some(id) {
+        if self.turn_state().current_request_id.as_deref() == Some(id) {
             self.turn_state_mut().current_request_id = None;
         }
         self.turn_state_mut().current_tool_name = None;
@@ -184,7 +184,7 @@ impl AppState {
         self.turn_state_mut().thought_seq = 0;
         self.turn_state_mut().turn_active = false;
         self.turn_state_mut().turn_started_at = None;
-        self.turn_state_mut().inflight = self.turn_state.inflight.saturating_sub(1);
+        self.turn_state_mut().inflight = self.turn_state().inflight.saturating_sub(1);
         // Reset per-turn speed tracking (but keep speed_window for continuity)
         self.turn_state_mut().turn_tokens_out = 0;
         self.turn_state_mut().speed_tps = 0.0;
@@ -194,9 +194,9 @@ impl AppState {
 
     fn maybe_end_streaming(&mut self) {
         // Read from TurnState, mutate through turn_state_mut, sync to AgentState.
-        if self.turn_state.inflight == 0 && self.turn_state.request_queue.is_empty() {
+        if self.turn_state().inflight == 0 && self.turn_state().request_queue.is_empty() {
             self.turn_state_mut().streaming = false;
-            if self.turn_state.current_request_id.is_none() {
+            if self.turn_state().current_request_id.is_none() {
                 self.turn_state_mut().thinking_started_at = None;
             }
             *self.agent_state_mut() = AgentState::from(&self.turn_state);
@@ -220,7 +220,7 @@ impl AppState {
                 agent.timestamp = now();
                 self.session_mut().messages.insert(t_idx, agent);
                 // Update last_assistant_index if it was affected.
-                if self.turn_state.last_assistant_index == Some(a_idx) {
+                if self.turn_state().last_assistant_index == Some(a_idx) {
                     self.turn_state_mut().last_assistant_index = Some(t_idx);
                     *self.agent_state_mut() = AgentState::from(&self.turn_state);
                 }
@@ -239,7 +239,7 @@ impl AppState {
             turn_complete.timestamp = now();
             self.session_mut().messages.push(turn_complete);
             // Update last_assistant_index if it was affected.
-            if let Some(last_idx) = self.turn_state.last_assistant_index {
+            if let Some(last_idx) = self.turn_state().last_assistant_index {
                 if last_idx >= idx {
                     self.turn_state_mut().last_assistant_index = Some(last_idx.saturating_sub(1));
                     *self.agent_state_mut() = AgentState::from(&self.turn_state);

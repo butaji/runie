@@ -73,7 +73,7 @@ impl AppState {
     }
 
     fn estimate_and_add_tokens(&mut self, content: &str) {
-        let tokens = self.turn_state.token_tracker.estimate_input(content);
+        let tokens = self.turn_state().token_tracker.estimate_input(content);
         self.turn_state_mut().tokens_in += tokens;
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }

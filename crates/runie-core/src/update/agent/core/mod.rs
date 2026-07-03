@@ -8,7 +8,7 @@ use crate::update::agent::thought::{plan_thought, ThoughtPlan};
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
         // Idempotent: skip if already streaming with the same request_id.
-        if self.turn_state.streaming && self.turn_state.current_request_id.as_deref() == Some(&id) {
+        if self.turn_state().streaming && self.turn_state().current_request_id.as_deref() == Some(&id) {
             return;
         }
         // Mutate authoritative TurnState, then sync to AgentState projection.
@@ -25,10 +25,10 @@ impl AppState {
         // Init speed tracking for this turn
         self.turn_state_mut().turn_tokens_out = 0;
         self.turn_state_mut().last_speed_update = Some(std::time::Instant::now());
-        self.turn_state_mut().tokens_at_last_speed = self.turn_state.tokens_out;
+        self.turn_state_mut().tokens_at_last_speed = self.turn_state().tokens_out;
         self.turn_state_mut().speed_tps = 0.0;
         // Keep existing rolling window - it auto-evicts to 1000 tokens
-        let tokens = self.turn_state.tokens_out;
+        let tokens = self.turn_state().tokens_out;
         self.turn_state_mut().speed_window.record(tokens);
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.messages_changed();
@@ -40,7 +40,7 @@ impl AppState {
         // We check if a thought already exists at the current thought_seq to avoid duplicates
         // when the same event is processed twice (e.g., once via handle_agent_event,
         // once via handle_turn_events when TurnActor emits).
-        let current_seq = self.turn_state.thought_seq;
+        let current_seq = self.turn_state().thought_seq;
         let thought_id = format!("{}#thought.{}", id, current_seq);
         let already_processed = self
             .session
@@ -79,7 +79,7 @@ impl AppState {
         };
 
         // Increment thought_seq via turn_state (authoritative) and sync.
-        let thought_id = format!("{}#thought.{}", id, self.turn_state.thought_seq);
+        let thought_id = format!("{}#thought.{}", id, self.turn_state().thought_seq);
         self.turn_state_mut().thought_seq += 1;
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
 
@@ -97,7 +97,7 @@ impl AppState {
         );
 
         // Update last_assistant_index if affected.
-        if !plan.remove_assistant && self.turn_state.last_assistant_index == Some(insert_idx) {
+        if !plan.remove_assistant && self.turn_state().last_assistant_index == Some(insert_idx) {
             self.turn_state_mut().last_assistant_index = Some(insert_idx + 1);
             *self.agent_state_mut() = AgentState::from(&self.turn_state);
         }
@@ -106,7 +106,7 @@ impl AppState {
 
     pub(crate) fn start_tool(&mut self, id: String, name: String) {
         // Idempotent: skip if already running this tool.
-        if self.turn_state.current_tool_name.as_deref() == Some(&name) {
+        if self.turn_state().current_tool_name.as_deref() == Some(&name) {
             return;
         }
         // Update authoritative TurnState for all tool-related fields.
@@ -120,10 +120,10 @@ impl AppState {
         let tool_id = format!(
             "tool.{}.{}",
             id,
-            self.turn_state.intermediate_step_count
+            self.turn_state().intermediate_step_count
         );
 
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        *self.agent_state_mut() = AgentState::from(self.turn_state());
 
         self.session_mut().messages.push(ChatMessage {
             role: Role::Tool,
@@ -194,7 +194,7 @@ impl AppState {
         self.turn_state_mut().streaming_buffer.push_delta(&content);
 
         // Find existing assistant message and append stable content, or create new one.
-        let stable_lines = self.turn_state.streaming_buffer.flush();
+        let stable_lines = self.turn_state_mut().streaming_buffer.flush();
         if !stable_lines.is_empty() {
             let stable = stable_lines.join("");
             if let Some(idx) = self.find_cached_assistant_index(&id) {
@@ -224,7 +224,7 @@ impl AppState {
     }
 
     pub(crate) fn find_cached_assistant_index(&mut self, id: &str) -> Option<usize> {
-        let idx = self.turn_state.last_assistant_index?;
+        let idx = self.turn_state().last_assistant_index?;
         let msg = self.session_mut().messages.get(idx)?;
         if msg.role == Role::Assistant && msg.id == id {
             Some(idx)
@@ -330,7 +330,7 @@ impl AppState {
             return;
         }
         self.turn_state_mut().streaming_buffer.push_delta(&content);
-        let stable = self.turn_state.streaming_buffer.flush().join("");
+        let stable = self.turn_state_mut().streaming_buffer.flush().join("");
         if !stable.is_empty() {
             if let Some(idx) = self.find_cached_assistant_index(&id) {
                 self.append_to_message(idx, &stable);
