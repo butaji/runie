@@ -86,9 +86,8 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
         Event::TokenStatsUpdated {
             tokens_in,
             tokens_out,
-            speed_tps,
         } => {
-            state.apply_token_stats(*tokens_in, *tokens_out, *speed_tps);
+            state.apply_token_stats(*tokens_in, *tokens_out);
             // Check if compaction should be triggered based on token ratio.
             if let Some(ctx) = state.current_model_context_window() {
                 use crate::session::store::COMPACT_TOKEN_RATIO;
@@ -176,6 +175,14 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             // are synced via the turn_state authoritative state.
             // Just sync from turn_state to agent_state.
             *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
+            true
+        }
+        Event::QueueFollowUpAdded { id, content } => {
+            state.apply_queue_follow_up_added(id.clone(), content.clone());
+            true
+        }
+        Event::QueueSteeringAdded { id, content } => {
+            state.apply_queue_steering_added(id.clone(), content.clone());
             true
         }
         _ => false,

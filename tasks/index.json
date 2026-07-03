@@ -107,7 +107,7 @@
   {
     "file": "add-missing-queue-fact-events.md",
     "title": "Add missing queue fact events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-openai-provider-fixtures.md",
@@ -1097,7 +1097,7 @@
   {
     "file": "make-turnactor-sole-owner-of-turn-state.md",
     "title": "Make `TurnActor` the sole owner of turn state",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "merge-agentstate-into-turnstate-projection.md",
@@ -1157,7 +1157,7 @@
   {
     "file": "move-derived-values-out-of-events.md",
     "title": "Move derived values out of events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "move-grep-find-tests-to-tests-directory.md",
@@ -1307,7 +1307,7 @@
   {
     "file": "remove-derived-values-from-durable-events.md",
     "title": "Remove derived values from durable events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
@@ -1327,7 +1327,7 @@
   {
     "file": "remove-direct-turn-lifecycle-mutations-outside-turnactor.md",
     "title": "Remove direct turn lifecycle mutations outside `TurnActor`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-dual-agent-event-application-in-dispatch.md",
@@ -1682,7 +1682,7 @@
   {
     "file": "replace-wholestate-sessionchanged-with-fine-grained-events.md",
     "title": "Replace whole-state `SessionChanged` with fine-grained events",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "replace-xor-auth-with-keyring.md",
@@ -1777,7 +1777,7 @@
   {
     "file": "serialize-projection-update-after-actor-commit.md",
     "title": "Serialize projection update after actor commit",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "share-configured-reqwest-client-for-provider.md",
@@ -1932,7 +1932,7 @@
   {
     "file": "treat-agentstate-as-pure-turnstate-projection.md",
     "title": "Treat `AgentState` as pure `TurnState` projection",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",

@@ -56,10 +56,12 @@ mod tests {
     #[test]
     fn apply_token_stats_updates_stats() {
         let mut state = AppState::default();
-        state.apply_token_stats(100, 200, 50.0);
+        // speed_tps is computed from the ring buffer, not passed in.
+        // With empty ring buffer, speed is 0.0.
+        state.apply_token_stats(100, 200);
         assert_eq!(state.agent_state().tokens_in, 100);
         assert_eq!(state.agent_state().tokens_out, 200);
-        assert_eq!(state.agent_state().speed_tps, 50.0);
+        assert_eq!(state.agent_state().speed_tps, 0.0); // empty window → 0.0
         assert_eq!(state.agent_state().turn_tokens_out, 200);
     }
 
@@ -204,6 +206,40 @@ mod tests {
         assert_eq!(state.agent_state().message_queue.len(), 1);
         assert_eq!(state.agent_state().message_queue[0].content, "world");
     }
+
+    #[test]
+    fn apply_queue_follow_up_added() {
+        let mut state = AppState::default();
+        assert!(state.agent_state().message_queue.is_empty());
+
+        state.apply_queue_follow_up_added("q.0".into(), "follow up content".into());
+
+        assert_eq!(state.agent_state().message_queue.len(), 1);
+        assert_eq!(state.agent_state().message_queue[0].content, "follow up content");
+        assert!(matches!(state.agent_state().message_queue[0].kind, FollowUp));
+    }
+
+    #[test]
+    fn apply_queue_steering_added() {
+        let mut state = AppState::default();
+        assert!(state.agent_state().message_queue.is_empty());
+
+        state.apply_queue_steering_added("q.0".into(), "steering content".into());
+
+        assert_eq!(state.agent_state().message_queue.len(), 1);
+        assert_eq!(state.agent_state().message_queue[0].content, "steering content");
+        assert!(matches!(state.agent_state().message_queue[0].kind, Steering));
+    }
+
+    #[test]
+    fn apply_queue_follow_up_added_multiple() {
+        let mut state = AppState::default();
+        state.apply_queue_follow_up_added("q.0".into(), "first".into());
+        state.apply_queue_follow_up_added("q.1".into(), "second".into());
+        assert_eq!(state.agent_state().message_queue.len(), 2);
+        assert_eq!(state.agent_state().message_queue[0].content, "first");
+        assert_eq!(state.agent_state().message_queue[1].content, "second");
+    }
 }
 
 impl AppState {
@@ -238,16 +274,13 @@ impl AppState {
     }
 
     /// Project TokenStatsUpdated fact into AppState.
-    pub(crate) fn apply_token_stats(
-        &mut self,
-        tokens_in: usize,
-        tokens_out: usize,
-        speed_tps: f64,
-    ) {
+    /// `speed_tps` is computed from the speed window rather than carried in the event.
+    pub(crate) fn apply_token_stats(&mut self, tokens_in: usize, tokens_out: usize) {
         self.turn_state_mut().tokens_in = tokens_in;
         self.turn_state_mut().tokens_out = tokens_out;
-        self.turn_state_mut().speed_tps = speed_tps;
         self.turn_state_mut().turn_tokens_out = tokens_out;
+        // Compute speed from the ring buffer (populated by handle_update_speed -> record).
+        self.turn_state_mut().speed_tps = self.turn_state.speed_window.speed();
         // Sync all fields from TurnState to AgentState using the From impl.
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
@@ -321,6 +354,32 @@ impl AppState {
         // Update input with dequeued content
         self.input_mut().input = content;
         self.input_mut().cursor_pos = self.input().input.len();
+        self.view_mut().dirty = true;
+    }
+
+    /// Project QueueFollowUpAdded fact into AppState.
+    /// Adds the follow-up to the message queue and syncs projection.
+    pub(crate) fn apply_queue_follow_up_added(&mut self, _id: String, content: String) {
+        use crate::model::QueuedMessageKind;
+        self.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
+            content,
+            kind: QueuedMessageKind::FollowUp,
+        });
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.view_mut().scroll = 0;
+        self.view_mut().dirty = true;
+    }
+
+    /// Project QueueSteeringAdded fact into AppState.
+    /// Adds the steering to the message queue and syncs projection.
+    pub(crate) fn apply_queue_steering_added(&mut self, _id: String, content: String) {
+        use crate::model::QueuedMessageKind;
+        self.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
+            content,
+            kind: QueuedMessageKind::Steering,
+        });
+        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
 }

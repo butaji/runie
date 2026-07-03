@@ -40,8 +40,9 @@ fn durable_conversion_tool_result_preserves_id() {
         input: None,
     };
     let durable = evt.to_durable();
+    // duration_secs is NOT stored in the durable form.
     assert!(
-        matches!(durable, Some(DurableCoreEvent::ToolResult { id, output, success, duration_secs: 1.0 }) if id == "t1" && output == "done" && success)
+        matches!(durable, Some(DurableCoreEvent::ToolResult { id, output, success }) if id == "t1" && output == "done" && success)
     );
 }
 

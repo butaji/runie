@@ -217,12 +217,14 @@ impl AppState {
         &mut self.turn_state
     }
 
-    /// Set streaming state on authoritative TurnState and sync to AgentState.
-    /// This is the canonical way to set streaming state; do not set `agent.streaming` directly.
+    /// Set streaming state. For test setup only.
+    /// Production code should use events and projection handlers.
+    #[allow(dead_code)]
     pub fn set_streaming(&mut self, streaming: bool) {
         self.turn_state.streaming = streaming;
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
+
 
     /// Return the context window size for the currently selected model.
     /// Returns `None` if no model is selected or the model is not in the catalog.

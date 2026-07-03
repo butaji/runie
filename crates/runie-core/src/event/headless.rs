@@ -219,7 +219,6 @@ mod tests {
         let event = crate::Event::TokenStatsUpdated {
             tokens_in: 100,
             tokens_out: 50,
-            speed_tps: 12.5,
         };
         let result = HeadlessEvent::try_from_event(&event);
         assert!(result.is_some());

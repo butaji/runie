@@ -4,7 +4,7 @@
 //! They are kept in a separate file to keep the source files under 500 lines.
 
 use super::ranking;
-use super::{AgentState, AppState, CommandUsage, ModelSource};
+use super::{AppState, CommandUsage, ModelSource};
 use crate::actors::{ConfigMsg, LeaderHandle};
 use crate::event::TransientLevel;
 
@@ -74,11 +74,14 @@ impl AppState {
     }
 
     // ── ID generation ───────────────────────────────────────────────────────
-
+    /// Generate next request ID using AppState's own counter.
+    ///
+    /// This counter is separate from TurnActor's `next_id` to avoid double-increment.
+    /// AppState generates IDs for session messages; TurnActor generates IDs for
+    /// request queue messages. These are independent.
     pub fn next_id(&mut self) -> String {
-        let id = format!("req.{}", self.turn_state.next_id);
-        self.turn_state_mut().next_id += 1;
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        let id = format!("req.{}", self.session_msg_id);
+        self.session_msg_id += 1;
         id
     }
 
@@ -104,13 +107,6 @@ impl AppState {
     /// Returns whether a turn is currently active.
     pub fn turn_active(&self) -> bool {
         self.agent_state().turn_active
-    }
-
-    /// Start a new agent turn.
-    pub fn start_turn(&mut self) {
-        self.agent_state_mut().turn_active = true;
-        self.agent_state_mut().inflight += 1;
-        self.agent_state_mut().streaming = true;
     }
 
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {

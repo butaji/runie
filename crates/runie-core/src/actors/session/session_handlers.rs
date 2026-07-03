@@ -68,8 +68,8 @@ impl RactorSessionActor {
         state.session_state.messages.push(ChatMessage {
             role: Role::User,
             timestamp: now(),
-            id,
-            parts: vec![Part::Text { content }],
+            id: id.clone(),
+            parts: vec![Part::Text { content: content.clone() }],
             metadata: MessageMetadata {
                 origin: MessageOrigin::User,
                 ..Default::default()
@@ -77,6 +77,12 @@ impl RactorSessionActor {
             ..Default::default()
         });
         bump_time(&mut state.session_state);
+        // Emit fine-grained event instead of whole-state SessionChanged.
+        state.emit(Event::SessionMessageAdded {
+            id,
+            role: "user".into(),
+            content,
+        });
         state.emit_changed();
     }
 
@@ -107,8 +113,8 @@ impl RactorSessionActor {
         state.session_state.messages.push(ChatMessage {
             role: Role::Tool,
             timestamp: now(),
-            id,
-            parts: vec![Part::Text { content }],
+            id: id.clone(),
+            parts: vec![Part::Text { content: content.clone() }],
             tool_call_id: Some(name),
             metadata: MessageMetadata {
                 origin: MessageOrigin::Tool,
@@ -117,6 +123,12 @@ impl RactorSessionActor {
             ..Default::default()
         });
         bump_time(&mut state.session_state);
+        // Emit fine-grained event.
+        state.emit(Event::SessionMessageAdded {
+            id,
+            role: "tool".into(),
+            content,
+        });
         state.emit_changed();
     }
 

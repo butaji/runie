@@ -211,6 +211,9 @@ fn dispatcher_handles_all_variants() {
             | Event::SessionList { .. }
             | Event::SessionOperationFailed { .. }
             | Event::SessionChanged { .. }
+            | Event::SessionMessageAdded { .. }
+            | Event::SessionMessageUpdated { .. }
+            | Event::SessionMetadataUpdated { .. }
             | Event::SessionTreeSnapshot { .. }
             | Event::BashOutput { .. }
             | Event::FilesWritten { .. }
@@ -288,7 +291,6 @@ fn dispatcher_handles_all_variants() {
             Event::TokenStatsUpdated { .. } => Event::TokenStatsUpdated {
                 tokens_in: 0,
                 tokens_out: 0,
-                speed_tps: 0.0,
             },
             Event::CompactionTriggered { .. } => Event::CompactionTriggered {
                 ratio: 0.7,
@@ -304,6 +306,14 @@ fn dispatcher_handles_all_variants() {
                 content: String::new(),
             },
             Event::QueuesCleared => Event::QueuesCleared,
+            Event::QueueFollowUpAdded { .. } => Event::QueueFollowUpAdded {
+                id: String::new(),
+                content: String::new(),
+            },
+            Event::QueueSteeringAdded { .. } => Event::QueueSteeringAdded {
+                id: String::new(),
+                content: String::new(),
+            },
             Event::SteeringDelivered { .. } => Event::SteeringDelivered {
                 content: String::new(),
                 id: String::new(),

@@ -78,18 +78,22 @@ pub(super) fn handle_submit_user_message(
 
 /// Handle `TurnMsg::QueueSteering` — add steering content to the queue.
 pub(super) fn handle_queue_steering(state: &mut TurnActorState, content: String) {
+    let id = format!("q.steering.{}", state.turn_state.message_queue.len());
     state.turn_state.message_queue.push(QueuedMessage {
-        content,
+        content: content.clone(),
         kind: QueuedMessageKind::Steering,
     });
+    emit(state, Event::QueueSteeringAdded { id, content });
 }
 
 /// Handle `TurnMsg::QueueFollowUp` — add follow-up content to the queue.
 pub(super) fn handle_queue_follow_up(state: &mut TurnActorState, content: String) {
+    let id = format!("q.followup.{}", state.turn_state.message_queue.len());
     state.turn_state.message_queue.push(QueuedMessage {
-        content,
+        content: content.clone(),
         kind: QueuedMessageKind::FollowUp,
     });
+    emit(state, Event::QueueFollowUpAdded { id, content });
 }
 
 /// Handle `TurnMsg::AbortQueue` — drain and abort all queued messages.
@@ -108,7 +112,11 @@ pub(super) fn handle_abort_queue(state: &mut TurnActorState) {
 /// Handle `TurnMsg::ClearQueues` — clear both request and message queues.
 pub(super) fn handle_clear_queues(state: &mut TurnActorState) {
     state.turn_state.request_queue.clear();
-    state.turn_state.message_queue.clear();
+    // Collect messages first to avoid borrow conflict.
+    let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
+    for msg in messages {
+        emit(state, Event::QueueAborted { content: msg.content });
+    }
     emit(state, Event::QueuesCleared);
 }
 
@@ -248,17 +256,12 @@ pub(super) fn handle_update_speed(state: &mut TurnActorState, tokens_out: usize)
     state.turn_state.tokens_out = tokens_out;
     state.turn_state.turn_tokens_out = tokens_out;
     state.turn_state.speed_window.record(tokens_out);
-    state.turn_state.speed_tps = state.turn_state.speed_window.speed();
-    state.turn_state.last_speed_update = Some(std::time::Instant::now());
-    state.turn_state.tokens_at_last_speed = tokens_out;
-    let tokens_in = state.turn_state.tokens_in;
-    let speed_tps = state.turn_state.speed_tps;
+    // speed_tps is computed in the projection layer via speed_window.speed().
     emit(
         state,
         Event::TokenStatsUpdated {
-            tokens_in,
+            tokens_in: state.turn_state.tokens_in,
             tokens_out,
-            speed_tps,
         },
     );
 }

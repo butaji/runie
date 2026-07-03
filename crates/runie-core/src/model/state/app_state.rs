@@ -56,16 +56,13 @@ pub struct AppState {
     /// Authoritative turn state — kept in sync with `TurnActor` via facts.
     /// `AgentState` is derived from this via `From<&TurnState>`.
     pub turn_state: TurnState,
+    /// Separate counter for session message IDs, independent of TurnActor's `next_id`.
+    /// AppState generates IDs for session messages; TurnActor generates IDs for
+    /// request queue messages. These are kept separate to avoid double-increment.
+    pub(crate) session_msg_id: u64,
 }
 
 impl AppState {
-    /// Set turn_active and sync to AgentState projection.
-    /// For test setup: use this instead of setting `turn_state.turn_active` directly.
-    pub fn set_turn_active(&mut self, active: bool) {
-        self.turn_state.turn_active = active;
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
-    }
-
     /// Sync AgentState projection from TurnState.
     /// Call after directly modifying `turn_state` fields.
     pub fn sync_agent_state(&mut self) {

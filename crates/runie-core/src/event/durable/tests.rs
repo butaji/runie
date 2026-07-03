@@ -50,9 +50,10 @@ fn durable_from_tool_end() {
     let durable = DurableCoreEvent::try_from_event(&event);
     assert!(durable.is_some());
     let durable = durable.unwrap();
+    // duration_secs is NOT stored in the durable form.
     assert!(matches!(
         durable,
-        DurableCoreEvent::ToolResult { id, output, success: true, duration_secs: 1.5 }
+        DurableCoreEvent::ToolResult { id, output, success: true }
         if id == "t1" && output == "done"
     ));
 }
@@ -143,7 +144,7 @@ fn transient_events_return_none() {
         Event::ThinkingEnd { id: "".into() },
         Event::Thinking { id: "".into() },
         Event::ThoughtDone { id: "".into() },
-        Event::TokenStatsUpdated { tokens_in: 0, tokens_out: 0, speed_tps: 0.0 },
+        Event::TokenStatsUpdated { tokens_in: 0, tokens_out: 0 },
         Event::Quit,
         Event::Input('x'),
     ];
@@ -200,7 +201,6 @@ fn event_from_tool_result() {
         id: "t1".into(),
         output: "result".into(),
         success: true,
-        duration_secs: 0.0,
     };
     let event: Result<Event, _> = Event::try_from(&durable);
     assert!(event.is_ok());
@@ -301,7 +301,8 @@ fn tree_snapshot_roundtrip() {
 
 #[test]
 fn tool_result_roundtrip() {
-    // Event::ToolEnd → DurableCoreEvent::ToolResult → Event::ToolEnd (preserves duration_secs)
+    // Event::ToolEnd → DurableCoreEvent::ToolResult → Event::ToolEnd.
+    // duration_secs is NOT preserved through the durable layer (timing data lost in storage).
     let original = Event::ToolEnd {
         id: "t1".into(),
         input: None,
@@ -310,13 +311,12 @@ fn tool_result_roundtrip() {
     };
     let durable = DurableCoreEvent::try_from_event(&original).unwrap();
     let recovered: Event = Event::try_from(&durable).unwrap();
-    match (original, recovered) {
-        (
-            Event::ToolEnd { duration_secs: d1, .. },
-            Event::ToolEnd { duration_secs: d2, .. },
-        ) => assert_eq!(d1, d2),
-        _ => panic!("round-trip mismatch"),
-    }
+    // Recovered duration_secs is 0.0 (not available during replay).
+    assert!(matches!(
+        recovered,
+        Event::ToolEnd { id, output, duration_secs: 0.0, .. }
+        if id == "t1" && output == "result"
+    ));
 }
 
 // ── Serde roundtrip for DurableCoreEvent ─────────────────────────────────
@@ -361,31 +361,18 @@ fn durable_preserves_existing_jsonl_format() {
 }
 
 #[test]
-fn durable_tool_result_preserves_duration() {
+fn durable_tool_result_roundtrips_through_json() {
     let durable = DurableCoreEvent::ToolResult {
         id: "t1".into(),
         output: "done".into(),
         success: true,
-        duration_secs: 2.5,
     };
     let json = serde_json::to_string(&durable).unwrap();
     let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
-    match parsed {
-        DurableCoreEvent::ToolResult { duration_secs, .. } => {
-            assert_eq!(duration_secs, 2.5);
-        }
-        _ => panic!("Expected ToolResult"),
-    }
-}
-
-#[test]
-fn durable_tool_result_backward_compatible() {
-    // Old JSON without duration_secs should default to 0.0
-    let json = r#"{"event":"toolResult","id":"t1","output":"done","success":true}"#;
-    let durable: DurableCoreEvent = serde_json::from_str(json).unwrap();
     assert!(matches!(
-        durable,
-        DurableCoreEvent::ToolResult { duration_secs, .. } if duration_secs == 0.0
+        parsed,
+        DurableCoreEvent::ToolResult { id, output, success: true }
+        if id == "t1" && output == "done"
     ));
 }
 

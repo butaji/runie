@@ -105,16 +105,10 @@ impl AppState {
         // Route through TurnActor to maintain authoritative queue state.
         // Fallback applies synchronously in tests without actor handles.
         if let Some(h) = self.actor_handles() {
-            let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content });
+            let _ = h.turn.try_send(TurnMsg::QueueSteering { content });
         } else {
-            // Mutate authoritative TurnState, then sync to AgentState projection.
-            self.turn_state_mut()
-                .message_queue
-                .push(crate::model::QueuedMessage {
-                    content,
-                    kind: crate::model::QueuedMessageKind::Steering,
-                });
-            *self.agent_state_mut() = AgentState::from(&self.turn_state);
+            // Test mode: use projection method.
+            self.apply_queue_steering_added(String::new(), content);
         }
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;

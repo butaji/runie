@@ -95,12 +95,14 @@ pub enum Event {
     TurnCompleted,
     TurnErrored { id: String, message: String },
     TurnConstraintError { id: String, tool: String, message: String },
-    TokenStatsUpdated { tokens_in: usize, tokens_out: usize, speed_tps: f64 },
+    TokenStatsUpdated { tokens_in: usize, tokens_out: usize },
     CompactionTriggered { ratio: f64, tokens_in: usize, context_window: usize },
     StreamStarted { id: String },
     UserMessageSubmitted { id: String, content: String },
     QueueAborted { content: String },
     QueuesCleared,
+    QueueFollowUpAdded { id: String, content: String },
+    QueueSteeringAdded { id: String, content: String },
     SteeringDelivered { content: String, id: String },
     FollowUpDelivered { content: String, id: String },
     MessageDequeued { content: String },
@@ -329,6 +331,11 @@ pub enum Event {
     SessionExported { path: String },
     SessionList { sessions: Box<Vec<String>> },
     SessionOperationFailed { operation: String, error: String },
+    /// Fine-grained session change events (replacing whole-state SessionChanged).
+    SessionMessageAdded { id: String, role: String, content: String },
+    SessionMessageUpdated { id: String, content: String },
+    SessionMetadataUpdated { name: Option<String> },
+    /// Legacy whole-state event (deprecated in favor of fine-grained events).
     SessionChanged { state: Box<crate::model::SessionState> },
     /// Session tree snapshot (branching history) for durable persistence.
     SessionTreeSnapshot { snapshot: crate::session::tree::SessionTreeSnapshot },
@@ -546,6 +553,8 @@ impl Event {
             Event::UserMessageSubmitted { .. } => EventKind::Fact,
             Event::QueueAborted { .. } => EventKind::Fact,
             Event::QueuesCleared => EventKind::Fact,
+            Event::QueueFollowUpAdded { .. } => EventKind::Fact,
+            Event::QueueSteeringAdded { .. } => EventKind::Fact,
             Event::SteeringDelivered { .. } => EventKind::Fact,
             Event::FollowUpDelivered { .. } => EventKind::Fact,
             Event::MessageDequeued { .. } => EventKind::Fact,
@@ -584,6 +593,9 @@ impl Event {
             Event::SessionExported { .. } => EventKind::Fact,
             Event::SessionList { .. } => EventKind::Fact,
             Event::SessionOperationFailed { .. } => EventKind::Fact,
+            Event::SessionMessageAdded { .. } => EventKind::Fact,
+            Event::SessionMessageUpdated { .. } => EventKind::Fact,
+            Event::SessionMetadataUpdated { .. } => EventKind::Fact,
             Event::SessionChanged { .. } => EventKind::Fact,
             Event::SessionTreeSnapshot { .. } => EventKind::Fact,
             Event::SystemMessage { .. } => EventKind::Fact,
@@ -647,6 +659,8 @@ impl Event {
             Event::UserMessageSubmitted { .. } => EventCategory::Agent,
             Event::QueueAborted { .. } => EventCategory::Agent,
             Event::QueuesCleared => EventCategory::Agent,
+            Event::QueueFollowUpAdded { .. } => EventCategory::Agent,
+            Event::QueueSteeringAdded { .. } => EventCategory::Agent,
             Event::SteeringDelivered { .. } => EventCategory::Agent,
             Event::FollowUpDelivered { .. } => EventCategory::Agent,
             Event::MessageDequeued { .. } => EventCategory::Agent,
@@ -832,6 +846,9 @@ impl Event {
             Event::SessionExported { .. } => EventCategory::Session,
             Event::SessionList { .. } => EventCategory::Session,
             Event::SessionOperationFailed { .. } => EventCategory::Session,
+            Event::SessionMessageAdded { .. } => EventCategory::Session,
+            Event::SessionMessageUpdated { .. } => EventCategory::Session,
+            Event::SessionMetadataUpdated { .. } => EventCategory::Session,
             Event::SessionChanged { .. } => EventCategory::Session,
             Event::SessionTreeSnapshot { .. } => EventCategory::Session,
             Event::TransientMessage { .. } => EventCategory::System,
@@ -1044,6 +1061,8 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::UserMessageSubmitted { .. }
             | Event::QueueAborted { .. }
             | Event::QueuesCleared
+            | Event::QueueFollowUpAdded { .. }
+            | Event::QueueSteeringAdded { .. }
             | Event::SteeringDelivered { .. }
             | Event::FollowUpDelivered { .. }
             | Event::MessageDequeued { .. }
@@ -1074,6 +1093,10 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::ShowDiagnostics
             | Event::SystemMessage { .. }
             | Event::ConfigLoaded { .. }
+            // Fine-grained session events (transient, not persisted)
+            | Event::SessionMessageAdded { .. }
+            | Event::SessionMessageUpdated { .. }
+            | Event::SessionMetadataUpdated { .. }
     )
 }
 

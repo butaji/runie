@@ -42,6 +42,8 @@ impl DurableCoreEvent {
             | Event::UserMessageSubmitted { .. }
             | Event::QueueAborted { .. }
             | Event::QueuesCleared
+            | Event::QueueFollowUpAdded { .. }
+            | Event::QueueSteeringAdded { .. }
             | Event::SteeringDelivered { .. }
             | Event::FollowUpDelivered { .. }
             | Event::MessageDequeued { .. }
@@ -84,12 +86,11 @@ impl DurableCoreEvent {
                 name: name.clone(),
                 input: input.clone(),
             }),
-            // Durable: tool result
-            Event::ToolEnd { id, output, duration_secs, .. } => Some(D::ToolResult {
+            // Durable: tool result — duration_secs omitted (computed from timing data at runtime, not available during replay)
+            Event::ToolEnd { id, output, .. } => Some(D::ToolResult {
                 id: id.clone(),
                 output: output.clone(),
                 success: true,
-                duration_secs: *duration_secs,
             }),
             // Durable: model switch
             Event::SwitchModel { provider, model, .. } => Some(D::ModelSwitched {
@@ -161,6 +162,9 @@ impl DurableCoreEvent {
             | Event::SessionList { .. }
             | Event::SessionOperationFailed { .. }
             | Event::SessionChanged { .. }
+            | Event::SessionMessageAdded { .. }
+            | Event::SessionMessageUpdated { .. }
+            | Event::SessionMetadataUpdated { .. }
             | Event::TransientMessage { .. }
             | Event::TransientError { .. }
             | Event::ClearTransient
@@ -337,10 +341,11 @@ impl TryFrom<&DurableCoreEvent> for Event {
                 name: name.clone(),
                 input: input.clone(),
             }),
-            D::ToolResult { id, output, success: _, duration_secs } => Ok(Event::ToolEnd {
+            D::ToolResult { id, output, .. } => Ok(Event::ToolEnd {
                 id: id.clone(),
                 input: None,
-                duration_secs: *duration_secs,
+                // duration_secs not available during replay (timing data lost); set to 0.0.
+                duration_secs: 0.0,
                 output: output.clone(),
             }),
             D::ModelSwitched { provider, model } => Ok(Event::SwitchModel {
@@ -386,8 +391,7 @@ pub enum DurableCoreEvent {
         id: String,
         output: String,
         success: bool,
-        #[serde(default)]
-        duration_secs: f64,
+        // duration_secs omitted — computed from timing data at runtime, not persisted
     },
     /// The user switched the active model or provider.
     ModelSwitched { provider: String, model: String },

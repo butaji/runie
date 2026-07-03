@@ -18,7 +18,23 @@ Recent closure: add-grok-provider-event-translator-and-headless-replay (added Gr
 
 Recent closure: finish-replacing-remaining-custom-helpers-with-crates (deleted `display_width.rs` and `path.rs`; all callers updated to use `unicode_width::UnicodeWidthStr` and `shellexpand`/`path_absolutize` directly; workspace tests pass).
 
-Recent sync: Regenerated `tasks/index.json` from task files. Marked 4 remaining Grok Build comparison tasks as `wontfix` (Grok Build unavailable). Total: 420 done, 18 wontfix, 2 partial, 8 blocked, 0 todo.
+Recent sync: Regenerated `tasks/index.json` from task files. Marked 4 remaining Grok Build comparison tasks as `wontfix` (Grok Build unavailable). Recent sync: Regenerated `tasks/index.json` from task files. Total: 427 done, 26 wontfix, 1 partial, 0 blocked, 10 todo (464 total). Recent closure: add-missing-queue-fact-events (added Event::QueueFollowUpAdded and Event::QueueSteeringAdded; 2026+ workspace tests pass).
+
+Recent closure: move-tunable-values-from-constants-to-config (added HttpSection, RetrySection, FffSection, and UiSection extensions to Config; 11 unit tests; defaults match previous constants; schema regenerated).
+
+Recent closure: add-missing-queue-fact-events (added Event::QueueFollowUpAdded and Event::QueueSteeringAdded; TurnActor handlers emit these events; dispatch and projection handlers added; fixed handle_clear_queues to emit QueueAborted for each message; fixed queue_steering_message to use QueueSteering not QueueFollowUp; 2026+ workspace tests pass).
+
+Recent closure: move-derived-values-out-of-events (removed speed_tps from TokenStatsUpdated; computed from speed_window.speed() in apply_token_stats projection; workspace tests pass).
+
+Recent closure: remove-derived-values-from-durable-events (removed duration_secs from DurableCoreEvent::ToolResult in JSONL; reconstructed as 0.0 during replay; workspace tests pass).
+
+Recent closure: replace-wholestate-sessionchanged-with-fine-grained-events (added SessionMessageAdded, SessionMessageUpdated, SessionMetadataUpdated fine-grained events; SessionActor handlers emit them alongside legacy SessionChanged; workspace tests pass).
+
+Recent closure: serialize-projection-update-after-actor-commit (idempotency guards prevent double application when events applied via agent_event and handle_turn_events; apply_and_order ensures turn complete stays last; workspace tests pass).
+
+Recent closure: treat-agentstate-as-pure-turnstate-projection (AgentState fully derived from TurnState via From impl; all fields mirrored; workspace tests pass).
+
+Recent closure: remove-direct-turn-lifecycle-mutations-outside-turnactor (removed dead start_turn/set_turn_active; fixed next_id double-increment with separate session_msg_id counter; workspace tests pass).
 
 Recent closure: move-tunable-values-from-constants-to-config (added HttpSection, RetrySection, FffSection, and UiSection extensions to Config; 11 unit tests; defaults match previous constants; schema regenerated).
 
