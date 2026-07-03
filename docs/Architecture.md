@@ -45,7 +45,7 @@ Rules:
 | `runie-cli` | CLI entry, headless/print/server modes |
 | `runie-testing` | Test fixtures, mock providers, and harness helpers |
 
-> **Current gap:** `runie-core` has grown into a large catch-all crate (~60k production lines, ~40 public modules) and the `Event` enum is 1,253 lines. Decomposition into smaller, single-responsibility crates is tracked in `tasks/decompose-runie-core-and-event-enum.md`.
+> **Current gap:** `runie-core` has grown into a large catch-all crate (~60k production lines, ~40 public modules). The `Event` enum taxonomy methods are now generated from `taxonomy.json`. Full crate decomposition is tracked in `tasks/decompose-runie-core-and-event-enum.md` (the taxonomy generation step is complete; full crate splitting is deferred).
 
 ## Runtime
 

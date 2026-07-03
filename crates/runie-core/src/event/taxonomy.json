@@ -177,12 +177,14 @@
       "kind": "Fact",
       "variants": [
         "Thinking", "ThoughtDone", "ToolStart", "ToolInputDelta", "ToolEnd",
-        "ToolConstraintError", "ResponseDelta", "ThinkingDelta", "TextStart",
-        "TextEnd", "ThinkingStart", "ThinkingEnd", "Response", "TurnComplete",
-        "Done", "Error", "TurnStarted", "TurnAborted", "TurnCompleted",
-        "TurnErrored", "TurnConstraintError", "TokenStatsUpdated", "StreamStarted",
-        "UserMessageSubmitted", "QueueAborted", "QueuesCleared", "SteeringDelivered",
-        "FollowUpDelivered", "MessageDequeued", "IdGenerated", "AssistantMessageReady"
+        "ToolConstraintError", "ToolRequestsRecorded", "ResponseDeltaStarted",
+        "ResponseDelta", "ThinkingDelta", "TextStart", "TextEnd", "ThinkingStart",
+        "ThinkingEnd", "Response", "TurnComplete", "Done", "Error", "TurnStarted",
+        "TurnAborted", "TurnCompleted", "TurnErrored", "TurnConstraintError",
+        "TokenStatsUpdated", "CompactionTriggered", "StreamStarted",
+        "UserMessageSubmitted", "QueueAborted", "QueuesCleared", "QueueFollowUpAdded",
+        "QueueSteeringAdded", "SteeringDelivered", "FollowUpDelivered", "MessageDequeued",
+        "IdGenerated", "AssistantMessageReady"
       ]
     },
     "Scroll": {
@@ -252,7 +254,8 @@
       "kind": "Fact",
       "variants": [
         "GistShared", "ExternalEditorClosed", "ClipboardWritten", "ClipboardRead",
-        "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult"
+        "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult",
+        "SkillsLoaded", "AuthLoaded"
       ]
     },
     "Session": {
@@ -263,7 +266,9 @@
       ],
       "fact_variants": [
         "SessionLoaded", "SessionSaved", "SessionDeleted", "SessionImported",
-        "SessionExported", "SessionList", "SessionOperationFailed", "SessionChanged"
+        "SessionExported", "SessionList", "SessionOperationFailed",
+        "SessionMessageAdded", "SessionMessageUpdated", "SessionMetadataUpdated",
+        "SessionChanged", "SessionTreeSnapshot"
       ]
     },
     "Command": {

@@ -507,7 +507,7 @@
   {
     "file": "decompose-runie-core-and-event-enum.md",
     "title": "Decompose `runie-core` god crate and flatten `Event` enum",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "dedupe-turn-queue-delivery-logic.md",
