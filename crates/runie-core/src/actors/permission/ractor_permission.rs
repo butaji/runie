@@ -31,7 +31,7 @@ impl RactorPermissionHandle {
 
     /// Query the current pending request ID, if any.
     pub async fn current_request_id(&self) -> Option<String> {
-        match self.inner.call(PermissionMsg::GetCurrentRequest, None).await {
+        match self.inner.call(|tx| PermissionMsg::GetCurrentRequest(Some(tx)), None).await {
             Ok(ractor::rpc::CallResult::Success(v)) => v,
             _ => None,
         }
@@ -49,7 +49,7 @@ impl RactorPermissionHandle {
             request_id,
             tool,
             input,
-            reply: tx,
+            reply: Some(tx),
         };
         let _ = self.inner.send_message(msg);
         rx
@@ -103,7 +103,7 @@ impl RactorPermissionHandle {
 
     /// Query the current permission rule set.
     pub async fn get_rules(&self) -> PermissionSet {
-        match self.inner.call(PermissionMsg::GetRules, None).await {
+        match self.inner.call(|tx| PermissionMsg::GetRules(Some(tx)), None).await {
             Ok(ractor::rpc::CallResult::Success(rules)) => rules,
             _ => PermissionSet::default(),
         }
@@ -161,9 +161,11 @@ pub struct PermissionActorArgs {
 impl RactorPermissionActor {
     fn handle_get_current_request(
         state: &PermissionActorState,
-        reply: ractor::RpcReplyPort<Option<String>>,
+        reply: Option<ractor::RpcReplyPort<Option<String>>>,
     ) {
-        let _ = reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
+        if let Some(reply) = reply {
+            let _ = reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
+        }
     }
 
     fn handle_ask_permission(
@@ -171,10 +173,12 @@ impl RactorPermissionActor {
         request_id: String,
         tool: String,
         input: serde_json::Value,
-        reply: tokio::sync::oneshot::Sender<PermissionAction>,
+        reply: Option<tokio::sync::oneshot::Sender<PermissionAction>>,
     ) {
         // Store the reply channel so ResolvePermission can send the user's choice.
-        state.pending.insert(request_id.clone(), reply);
+        if let Some(reply) = reply {
+            state.pending.insert(request_id.clone(), reply);
+        }
 
         state.current_request = Some(PermissionRequestState {
             request_id: request_id.clone(),
@@ -230,8 +234,10 @@ impl RactorPermissionActor {
         state.emit(Event::PermissionRequestDismissed);
     }
 
-    fn handle_get_rules(state: &PermissionActorState, reply: ractor::RpcReplyPort<PermissionSet>) {
-        let _ = reply.send(state.rules.clone());
+    fn handle_get_rules(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<PermissionSet>>) {
+        if let Some(reply) = reply {
+            let _ = reply.send(state.rules.clone());
+        }
     }
 
     fn handle_load_rules(_state: &mut PermissionActorState) {

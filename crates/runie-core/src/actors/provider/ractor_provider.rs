@@ -48,7 +48,7 @@ impl RactorProviderHandle {
                 |tx| ProviderMsg::Build {
                     provider,
                     model,
-                    reply: tx,
+                    reply: Some(tx),
                 },
                 None,
             )
@@ -70,7 +70,7 @@ impl RactorProviderHandle {
                 |tx| ProviderMsg::ValidateKey {
                     provider,
                     api_key,
-                    reply: tx,
+                    reply: Some(tx),
                 },
                 None,
             )
@@ -87,7 +87,7 @@ impl RactorProviderHandle {
             .call(
                 |tx| ProviderMsg::ListModels {
                     provider,
-                    reply: tx,
+                    reply: Some(tx),
                 },
                 None,
             )
@@ -251,7 +251,9 @@ impl Actor for RactorProviderActor {
                 reply,
             } => {
                 let result = self.build_provider(&provider, &model).await;
-                let _ = reply.send(result);
+                if let Some(reply) = reply {
+                    let _ = reply.send(result);
+                }
             }
             // Network calls are awaited directly — ractor actors are async so the
             // mailbox is only blocked while waiting for a message, not while awaiting
@@ -264,12 +266,16 @@ impl Actor for RactorProviderActor {
                 let config = self.config().await;
                 let result =
                     Self::call_validate_key(&provider, &api_key, config, &*self.factory).await;
-                let _ = reply.send(result);
+                if let Some(reply) = reply {
+                    let _ = reply.send(result);
+                }
             }
             ProviderMsg::ListModels { provider, reply } => {
                 let config = self.config().await;
                 let result = Self::call_list_models(&provider, config, &*self.factory).await;
-                let _ = reply.send(result);
+                if let Some(reply) = reply {
+                    let _ = reply.send(result);
+                }
             }
         }
         Ok(())

@@ -144,7 +144,7 @@ impl RactorConfigHandle {
                     scope,
                     name,
                     server,
-                    reply: tx,
+                    reply: Some(tx),
                 },
                 None,
             )
@@ -161,7 +161,7 @@ impl RactorConfigHandle {
                 |tx| ConfigMsg::RemoveMcpServer {
                     scope,
                     name,
-                    reply: tx,
+                    reply: Some(tx),
                 },
                 None,
             )
@@ -170,7 +170,7 @@ impl RactorConfigHandle {
 
     /// List MCP servers in the specified scope.
     pub async fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
-        match self.inner.call(|tx| ConfigMsg::ListMcpServers { scope, reply: tx }, None).await {
+        match self.inner.call(|tx| ConfigMsg::ListMcpServers { scope, reply: Some(tx) }, None).await {
             Ok(ractor::rpc::CallResult::Success(v)) => v,
             _ => Vec::new(),
         }

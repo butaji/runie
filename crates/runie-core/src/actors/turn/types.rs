@@ -58,7 +58,7 @@ impl RactorTurnHandle {
         use ractor::rpc::CallResult;
         match self.inner
             .call(
-                |tx| TurnMsg::DeliverQueued { steering_mode, follow_up_mode, reply: tx },
+                |tx| TurnMsg::DeliverQueued { steering_mode, follow_up_mode, reply: Some(tx) },
                 None,
             )
             .await

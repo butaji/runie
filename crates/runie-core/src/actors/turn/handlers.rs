@@ -117,18 +117,22 @@ pub(super) fn handle_deliver_queued(
     state: &mut TurnActorState,
     steering_mode: DeliveryMode,
     follow_up_mode: DeliveryMode,
-    reply: ractor::RpcReplyPort<Option<DeliverQueuedResponse>>,
+    reply: Option<ractor::RpcReplyPort<Option<DeliverQueuedResponse>>>,
 ) {
     let steering_result = try_deliver_steering(state, steering_mode);
     if steering_result.is_some() {
         if follow_up_mode == DeliveryMode::All {
             try_deliver_follow_up(state, follow_up_mode);
         }
-        let _ = reply.send(steering_result.map(|(content, id)| DeliverQueuedResponse::Steering { content, id }));
+        if let Some(reply) = reply {
+            let _ = reply.send(steering_result.map(|(content, id)| DeliverQueuedResponse::Steering { content, id }));
+        }
         return;
     }
     let follow_up_result = try_deliver_follow_up(state, follow_up_mode);
-    let _ = reply.send(follow_up_result.map(|(content, id)| DeliverQueuedResponse::FollowUp { content, id }));
+    if let Some(reply) = reply {
+        let _ = reply.send(follow_up_result.map(|(content, id)| DeliverQueuedResponse::FollowUp { content, id }));
+    }
 }
 
 /// Try to deliver the next steering message from the queue.

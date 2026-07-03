@@ -207,8 +207,7 @@ impl AppState {
             let _ = h.turn.try_send(TurnMsg::DeliverQueued {
                 steering_mode,
                 follow_up_mode,
-                // SAFETY: RpcReplyPort is Send+Sync; zeroed port is safe for fire-and-forget.
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget; TurnActor emits events so AppState updates via bus.
             });
             self.view_mut().scroll = 0;
         } else {

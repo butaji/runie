@@ -144,7 +144,7 @@ mod tests {
                 |tx| TurnMsg::DeliverQueued {
                     steering_mode: DeliveryMode::OneAtATime,
                     follow_up_mode: DeliveryMode::All,
-                    reply: tx,
+                    reply: Some(tx),
                 },
                 Some(std::time::Duration::from_secs(2)),
             )

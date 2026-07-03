@@ -13,18 +13,21 @@ pub enum ProviderMsg {
     Build {
         provider: String,
         model: String,
-        reply: RpcReplyPort<Result<BuiltProvider, ProviderError>>,
+        /// Optional reply channel. `Some(port)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<RpcReplyPort<Result<BuiltProvider, ProviderError>>>,
     },
     /// Validate an API key for a provider, resolving the base URL from config.
     ValidateKey {
         provider: String,
         api_key: String,
-        reply: RpcReplyPort<anyhow::Result<Vec<String>>>,
+        /// Optional reply channel. `Some(port)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<RpcReplyPort<anyhow::Result<Vec<String>>>>,
     },
     /// List models for a configured provider, resolving credentials from config.
     ListModels {
         provider: String,
-        reply: RpcReplyPort<anyhow::Result<Vec<String>>>,
+        /// Optional reply channel. `Some(port)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<RpcReplyPort<anyhow::Result<Vec<String>>>>,
     },
 }
 
@@ -38,7 +41,7 @@ impl Clone for ProviderMsg {
             } => ProviderMsg::Build {
                 provider: provider.clone(),
                 model: model.clone(),
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget; original reply not usable after move.
             },
             ProviderMsg::ValidateKey {
                 provider,
@@ -47,11 +50,11 @@ impl Clone for ProviderMsg {
             } => ProviderMsg::ValidateKey {
                 provider: provider.clone(),
                 api_key: api_key.clone(),
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget.
             },
             ProviderMsg::ListModels { provider, reply: _ } => ProviderMsg::ListModels {
                 provider: provider.clone(),
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget.
             },
         }
     }

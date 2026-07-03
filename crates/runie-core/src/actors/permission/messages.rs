@@ -13,7 +13,8 @@ pub enum PermissionMsg {
         request_id: String,
         tool: String,
         input: serde_json::Value,
-        reply: oneshot::Sender<PermissionAction>,
+        /// Optional reply channel. `Some(sender)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<oneshot::Sender<PermissionAction>>,
     },
     /// User resolves a pending permission request.
     ResolvePermission {
@@ -25,11 +26,11 @@ pub enum PermissionMsg {
     /// Dismiss the permission request UI without resolving.
     DismissRequest,
     /// Query the current pending request ID (returns Option<String>).
-    GetCurrentRequest(RpcReplyPort<Option<String>>),
+    GetCurrentRequest(Option<RpcReplyPort<Option<String>>>),
     /// Load permission rules from the config actor.
     LoadRules,
     /// Query the current permission rule set.
-    GetRules(RpcReplyPort<PermissionSet>),
+    GetRules(Option<RpcReplyPort<PermissionSet>>),
     /// Mark the current project as trusted.
     TrustProject,
     /// Mark the current project as untrusted.
@@ -53,7 +54,7 @@ impl Clone for PermissionMsg {
                 request_id: request_id.clone(),
                 tool: tool.clone(),
                 input: input.clone(),
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget; the original sender is not usable after move.
             },
             PermissionMsg::ResolvePermission { request_id, action } => {
                 PermissionMsg::ResolvePermission {
@@ -66,10 +67,10 @@ impl Clone for PermissionMsg {
             },
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
             PermissionMsg::GetCurrentRequest(_reply) => {
-                PermissionMsg::GetCurrentRequest(unsafe { std::mem::zeroed() })
+                PermissionMsg::GetCurrentRequest(None) // Fire-and-forget.
             }
             PermissionMsg::LoadRules => PermissionMsg::LoadRules,
-            PermissionMsg::GetRules(_reply) => PermissionMsg::GetRules(unsafe { std::mem::zeroed() }),
+            PermissionMsg::GetRules(_reply) => PermissionMsg::GetRules(None), // Fire-and-forget.
             PermissionMsg::TrustProject => PermissionMsg::TrustProject,
             PermissionMsg::UntrustProject => PermissionMsg::UntrustProject,
             PermissionMsg::UpsertRule { tool, action } => PermissionMsg::UpsertRule {

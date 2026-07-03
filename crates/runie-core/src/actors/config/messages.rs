@@ -49,18 +49,21 @@ pub enum ConfigMsg {
         scope: ConfigScope,
         name: String,
         server: McpServer,
-        reply: RpcReplyPort<()>,
+        /// Optional reply channel. `Some(port)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<RpcReplyPort<()>>,
     },
     /// Remove an MCP server from the specified scope.
     RemoveMcpServer {
         scope: ConfigScope,
         name: String,
-        reply: RpcReplyPort<()>,
+        /// Optional reply channel. `Some(port)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<RpcReplyPort<()>>,
     },
     /// List MCP servers in the specified scope.
     ListMcpServers {
         scope: ConfigScope,
-        reply: RpcReplyPort<Vec<(String, McpServer)>>,
+        /// Optional reply channel. `Some(port)` for RPC callers; `None` for fire-and-forget.
+        reply: Option<RpcReplyPort<Vec<(String, McpServer)>>>,
     },
 }
 
@@ -103,26 +106,24 @@ impl Clone for ConfigMsg {
             ConfigMsg::GetConfig(_) => ConfigMsg::Load,
             ConfigMsg::GetConfiguredProviders(_) => ConfigMsg::Reload,
             ConfigMsg::LoadLayers(_) => ConfigMsg::Load,
-            // SAFETY: RpcReplyPort is Send+Sync with no Drop; zeroing is safe
-            // because cloned messages are used for internal routing only.
             ConfigMsg::AddMcpServer { scope, name, server, .. } => {
                 ConfigMsg::AddMcpServer {
                     scope: *scope,
                     name: name.clone(),
                     server: server.clone(),
-                    reply: unsafe { std::mem::zeroed() },
+                    reply: None, // Fire-and-forget; original reply not usable after move.
                 }
             }
             ConfigMsg::RemoveMcpServer { scope, name, .. } => {
                 ConfigMsg::RemoveMcpServer {
                     scope: *scope,
                     name: name.clone(),
-                    reply: unsafe { std::mem::zeroed() },
+                    reply: None, // Fire-and-forget.
                 }
             }
             ConfigMsg::ListMcpServers { scope, .. } => ConfigMsg::ListMcpServers {
                 scope: *scope,
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget.
             },
         }
     }

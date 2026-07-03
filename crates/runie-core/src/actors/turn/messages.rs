@@ -44,9 +44,9 @@ pub enum TurnMsg {
     DeliverQueued {
         steering_mode: crate::model::DeliveryMode,
         follow_up_mode: crate::model::DeliveryMode,
-        /// RPC reply port — actor sends reply after emitting events so the caller
-        /// can wait atomically instead of polling the bus for late-arriving events.
-        reply: RpcReplyPort<Option<DeliverQueuedResponse>>,
+        /// Optional RPC reply port — `Some(port)` for RPC callers that wait for a reply;
+        /// `None` for fire-and-forget callers. The actor sends a reply only when `Some`.
+        reply: Option<RpcReplyPort<Option<DeliverQueuedResponse>>>,
     },
     /// Dequeue the last message back to input.
     Dequeue,
@@ -76,10 +76,6 @@ pub enum TurnMsg {
     NextId,
 }
 
-// SAFETY: RpcReplyPort is Send+Sync with no Drop; zeroing is safe because
-// TurnActor processes exactly one DeliverQueued message per call and the
-// cloned port is used for internal routing only (reply is sent once).
-#[allow(unsafe_code)]
 impl Clone for TurnMsg {
     fn clone(&self) -> Self {
         match self {
@@ -97,8 +93,7 @@ impl Clone for TurnMsg {
             TurnMsg::DeliverQueued { steering_mode, follow_up_mode, .. } => TurnMsg::DeliverQueued {
                 steering_mode: *steering_mode,
                 follow_up_mode: *follow_up_mode,
-                // SAFETY: same rationale as above — zeroed RpcReplyPort is safe for routing.
-                reply: unsafe { std::mem::zeroed() },
+                reply: None, // Fire-and-forget; the original reply is not cloned.
             },
             TurnMsg::Dequeue => TurnMsg::Dequeue,
             TurnMsg::Thinking { id } => TurnMsg::Thinking { id: id.clone() },

@@ -84,7 +84,9 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         }
         ConfigMsg::ListMcpServers { scope, reply } => {
             let servers = list_mcp_servers_from_state(state, scope);
-            let _ = reply.send(servers);
+            if let Some(reply) = reply {
+                let _ = reply.send(servers);
+            }
         }
     }
 }
@@ -290,7 +292,7 @@ pub(super) async fn add_mcp_server(
     scope: ConfigScope,
     name: &str,
     server: McpServer,
-    reply: RpcReplyPort<()>,
+    reply: Option<RpcReplyPort<()>>,
 ) {
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let name = name.to_owned();
@@ -301,7 +303,9 @@ pub(super) async fn add_mcp_server(
     .await;
     match result {
         Ok(Ok(())) => {
-            let _ = reply.send(());
+            if let Some(reply) = reply {
+                let _ = reply.send(());
+            }
             load_and_emit(state).await;
         }
         Ok(Err(e)) => {
@@ -310,11 +314,15 @@ pub(super) async fn add_mcp_server(
                 id: "config".to_owned(),
                 message: format!("Failed to add MCP server: {e}"),
             });
-            let _ = reply.send(());
+            if let Some(reply) = reply {
+                let _ = reply.send(());
+            }
         }
         Err(thread_id) => {
             tracing::error!("add mcp server task panicked: {:?}", thread_id);
-            let _ = reply.send(());
+            if let Some(reply) = reply {
+                let _ = reply.send(());
+            }
         }
     }
 }
@@ -324,7 +332,7 @@ pub(super) async fn remove_mcp_server(
     state: &mut ConfigActorState,
     scope: ConfigScope,
     name: &str,
-    reply: RpcReplyPort<()>,
+    reply: Option<RpcReplyPort<()>>,
 ) {
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let name = name.to_owned();
@@ -334,7 +342,9 @@ pub(super) async fn remove_mcp_server(
     .await;
     match result {
         Ok(Ok(())) => {
-            let _ = reply.send(());
+            if let Some(reply) = reply {
+                let _ = reply.send(());
+            }
             load_and_emit(state).await;
         }
         Ok(Err(e)) => {
@@ -343,11 +353,15 @@ pub(super) async fn remove_mcp_server(
                 id: "config".to_owned(),
                 message: format!("Failed to remove MCP server: {e}"),
             });
-            let _ = reply.send(());
+            if let Some(reply) = reply {
+                let _ = reply.send(());
+            }
         }
         Err(thread_id) => {
             tracing::error!("remove mcp server task panicked: {:?}", thread_id);
-            let _ = reply.send(());
+            if let Some(reply) = reply {
+                let _ = reply.send(());
+            }
         }
     }
 }
