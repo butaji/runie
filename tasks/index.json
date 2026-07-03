@@ -2238,5 +2238,85 @@
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
     "status": "wontfix"
+  },
+  {
+    "file": "make-turnactor-sole-owner-of-turn-state.md",
+    "title": "Make `TurnActor` the sole owner of turn state",
+    "status": "todo"
+  },
+  {
+    "file": "remove-dual-agent-event-application-in-dispatch.md",
+    "title": "Remove dual agent event application in dispatch",
+    "status": "todo"
+  },
+  {
+    "file": "remove-direct-turn-lifecycle-mutations-outside-turnactor.md",
+    "title": "Remove direct turn lifecycle mutations outside `TurnActor`",
+    "status": "todo"
+  },
+  {
+    "file": "treat-agentstate-as-pure-turnstate-projection.md",
+    "title": "Treat `AgentState` as pure `TurnState` projection",
+    "status": "todo"
+  },
+  {
+    "file": "add-idempotency-keys-to-turn-events.md",
+    "title": "Add idempotency keys to turn events",
+    "status": "todo"
+  },
+  {
+    "file": "make-projection-handlers-idempotent.md",
+    "title": "Make projection handlers idempotent",
+    "status": "todo"
+  },
+  {
+    "file": "move-derived-values-out-of-events.md",
+    "title": "Move derived values out of events",
+    "status": "todo"
+  },
+  {
+    "file": "add-missing-queue-fact-events.md",
+    "title": "Add missing queue fact events",
+    "status": "todo"
+  },
+  {
+    "file": "remove-unsafe-zeroed-reply-port-in-deliverqueued.md",
+    "title": "Remove unsafe zeroed reply port in `DeliverQueued`",
+    "status": "todo"
+  },
+  {
+    "file": "remove-clone-impl-for-messages-with-reply-ports.md",
+    "title": "Remove `Clone` impl for messages with reply ports",
+    "status": "todo"
+  },
+  {
+    "file": "serialize-projection-update-after-actor-commit.md",
+    "title": "Serialize projection update after actor commit",
+    "status": "todo"
+  },
+  {
+    "file": "add-turn-journal-phases-for-crash-recovery.md",
+    "title": "Add turn journal phases for crash recovery",
+    "status": "todo"
+  },
+  {
+    "file": "remove-derived-values-from-durable-events.md",
+    "title": "Remove derived values from durable events",
+    "status": "todo"
+  },
+  {
+    "file": "replace-wholestate-sessionchanged-with-fine-grained-events.md",
+    "title": "Replace whole-state `SessionChanged` with fine-grained events",
+    "status": "todo"
+  },
+  {
+    "file": "add-contract-tests-for-turnactor-and-sessionstore.md",
+    "title": "Add contract tests for `TurnActor` and `SessionStore`",
+    "status": "todo"
+  },
+  {
+    "file": "execute-fifth-pass-ssot-event-protocol-roadmap.md",
+    "title": "Execute fifth-pass SSOT event protocol roadmap",
+    "status": "todo"
   }
 ]
