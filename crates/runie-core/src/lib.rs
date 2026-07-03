@@ -33,8 +33,7 @@ pub mod declarative;
 pub mod dialog;
 pub mod diff;
 pub mod resource_loader;
-/// Display-cell width helpers for terminal layout.
-pub mod display_width;
+
 pub mod dry_run;
 pub mod dsl;
 pub mod edit_preview;
@@ -67,7 +66,6 @@ pub mod harness_skills;
 pub mod model;
 pub mod model_catalog;
 pub mod notification;
-pub mod path;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;

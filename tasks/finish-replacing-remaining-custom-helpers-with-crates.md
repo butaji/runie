@@ -2,7 +2,7 @@
 
 ## Status
 
-`partial` — Most helpers already replaced; remaining modules are thin wrappers around crates.
+`done` — Both `display_width.rs` and `path.rs` deleted; all callers updated to use crates directly.
 
 ## Context
 
@@ -55,10 +55,10 @@ Used in: `runie-agent` tool modules (7 import sites).
 
 ## Acceptance criteria
 
-- [ ] Delete `display_width.rs` and update callers.
-- [ ] Delete `path.rs` and update callers.
-- [ ] Unit tests pass for affected modules.
-- [ ] E2E tests pass.
+- [x] Delete `display_width.rs` and update callers.
+- [x] Delete `path.rs` and update callers.
+- [x] Unit tests pass for affected modules.
+- [x] E2E tests pass.
 - [ ] Live tmux verification of palette, file picker, and slash commands.
 
 ## Tests

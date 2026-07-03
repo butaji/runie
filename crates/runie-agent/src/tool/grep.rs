@@ -7,7 +7,7 @@ use crate::tool::constants::GREP_DEFAULT_LIMIT;
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use ignore::WalkBuilder;
 use regex::{Regex, RegexBuilder};
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use runie_core::tool::{tool_error, ToolDef};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -50,7 +50,7 @@ impl ToolDef for GrepTool {
 
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let full_path = resolve_path_in(&input.path, &ctx.working_dir);
+        let full_path = resolve_path(&input.path, &ctx.working_dir);
         run_grep_impl(
             &input.pattern,
             &full_path,

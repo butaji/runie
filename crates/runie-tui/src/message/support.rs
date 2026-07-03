@@ -10,7 +10,12 @@ use crate::theme::{
     GLYPH_BULLET, GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_ERROR,
 };
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
-use runie_core::display_width;
+use unicode_width::UnicodeWidthStr;
+
+/// Display-cell width for any `AsRef<str>` type.
+fn str_width(s: impl AsRef<str>) -> usize {
+    UnicodeWidthStr::width(s.as_ref())
+}
 
 use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap};
 
@@ -175,7 +180,7 @@ pub fn render_blockquote_from_spans(text: &str, base_color: Color) -> Vec<Line<'
     let spans = apply_color_to_inlines(text, base_color);
     let mut lines = Vec::new();
     let prefix = format!("{}│ ", GLYPH_INDENT);
-    let prefix_width = display_width::width(&prefix);
+    let prefix_width = str_width(&prefix) as u16;
     let content_width = 200u16; // Will be clamped by actual terminal width
     let rest_width = content_width.saturating_sub(prefix_width);
 
@@ -205,7 +210,7 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
     // For simple single-span content, use textwrap directly.
     if spans.len() == 1 {
         let span = &spans[0];
-        if display_width::width(&span.content) <= max_width {
+        if str_width(&span.content) as u16 <= max_width {
             return vec![vec![span.clone()]];
         }
         // Break long single span using textwrap, keeping the style.
@@ -225,7 +230,7 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
     let mut current_width = 0usize;
 
     for span in spans.iter().cloned() {
-        let span_width = display_width::width(&span.content) as usize;
+        let span_width = str_width(&span.content);
 
         // If adding this span exceeds max_width, start a new row.
         if current_width + span_width > max_w && !current_row.is_empty() {
@@ -242,7 +247,7 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
                     result.push(std::mem::take(&mut current_row));
                 }
                 current_row.push(MdSpan { content: line_owned, style: span.style });
-                current_width = display_width::width(&current_row[0].content) as usize;
+                current_width = str_width(&current_row[0].content);
             }
         } else {
             current_row.push(span);

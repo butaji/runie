@@ -36,8 +36,21 @@ pub use format::{
     compact_json_args, format_bytes, format_duration, format_tool_label, tool_error,
     tool_status_line, truncate_output, which_tool, which_tool_async,
 };
-// Re-export path utilities from canonical location
-pub use crate::path::resolve_path_in as resolve_path;
+// Path resolution utilities — expand ~ and absolutize.
+use path_absolutize::Absolutize;
+
+/// Resolve a raw path string to an absolute, normalized path relative to the
+/// given working directory.
+pub fn resolve_path(raw: &str, working_dir: impl AsRef<std::path::Path>) -> std::path::PathBuf {
+    let working_dir = working_dir.as_ref();
+    let expanded = shellexpand::tilde(raw).into_owned();
+    let path = std::path::Path::new(&expanded);
+    if path.is_absolute() {
+        path.absolutize().unwrap_or_else(|_| path.to_path_buf())
+    } else {
+        working_dir.join(path).absolutize().unwrap_or_else(|_| working_dir.join(path))
+    }
+}
 pub use parse::{
     assign_tool_call_ids, build_assistant_message, has_tool_calls, parse_tool_calls,
     parse_tool_calls_fallible, tool_parse_error_message,

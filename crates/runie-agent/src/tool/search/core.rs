@@ -5,7 +5,7 @@ use crate::tool::search::modes::{search_content, search_files, search_glob};
 use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
 use crate::tool::{ToolContext, ToolOutput, ToolDef, ToolStatus};
 use runie_core::actors::FffSearchState;
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -50,7 +50,7 @@ impl ToolDef for SearchTool {
             .unwrap_or_default();
         let path = input.path.as_deref().unwrap_or(".");
         let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
-        let full_path = resolve_path_in(path, &ctx.working_dir);
+        let full_path = resolve_path(path, &ctx.working_dir);
         search_impl(&input.query, mode, &full_path, limit, start)
     }
 }

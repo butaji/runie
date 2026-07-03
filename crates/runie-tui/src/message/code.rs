@@ -6,7 +6,7 @@ use crate::syntax::highlight_code;
 use crate::theme::{
     code_header_label, style_code_header, style_timestamp, GLYPH_AGENT, GLYPH_INDENT,
 };
-use runie_core::display_width;
+use unicode_width::UnicodeWidthStr;
 
 pub(super) fn render_code_header(
     lang: &str,
@@ -18,8 +18,8 @@ pub(super) fn render_code_header(
     let label = code_header_label(prefix, lang);
     let mut spans = vec![Span::styled(label.clone(), style_code_header())];
     if is_first && content_width > 0 {
-        let text_len = display_width::width(&label);
-        let ts_width = display_width::width(ts_str) + 1;
+        let text_len = UnicodeWidthStr::width(label.as_str()) as u16;
+        let ts_width = UnicodeWidthStr::width(ts_str) as u16 + 1;
         let padding = content_width
             .saturating_sub(text_len)
             .saturating_sub(ts_width);

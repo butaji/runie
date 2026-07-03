@@ -72,7 +72,7 @@ const ARGS_TRUNCATE_WIDTH: usize = 40;
 /// Truncate args to a maximum display width, appending '…' if truncated.
 /// Uses `textwrap` for display-width-aware truncation.
 pub(crate) fn truncate_args(args: &str) -> String {
-    if (crate::display_width::width(args) as usize) <= ARGS_TRUNCATE_WIDTH {
+    if unicode_width::UnicodeWidthStr::width(args) <= ARGS_TRUNCATE_WIDTH {
         return args.to_owned();
     }
     // textwrap::wrap returns lines; take the first line and append '…'.

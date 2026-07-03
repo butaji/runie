@@ -1,7 +1,7 @@
 //! WriteFile tool — writes content to a file.
 
 use crate::tool::{ToolContext, ToolOutput};
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -29,7 +29,7 @@ impl ToolDef for WriteFileTool {
     const REQUIRES_APPROVAL: bool = true;
 
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
-        let full_path = resolve_path_in(&input.path, &ctx.working_dir);
+        let full_path = resolve_path(&input.path, &ctx.working_dir);
         let tool_args = serde_json::json!({ "path": input.path, "content": "<redacted>" });
 
         if let Err(e) = ensure_parent_dirs(&full_path).await {

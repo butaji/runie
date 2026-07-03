@@ -4,7 +4,7 @@
 
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use diffy::create_patch;
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use runie_core::tool::{tool_error, ToolDef};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ impl ToolDef for EditFileTool {
 
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
-        let full_path = resolve_path_in(&input.path, &ctx.working_dir);
+        let full_path = resolve_path(&input.path, &ctx.working_dir);
         edit_file_impl(&full_path, &input.search, &input.replace, start).await
     }
 }

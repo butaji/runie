@@ -1,7 +1,7 @@
 //! ListDir tool — lists directory contents.
 
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -47,7 +47,7 @@ impl ToolDef for ListDirTool {
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
         let path_str = input.path.as_deref().unwrap_or(".");
-        let full_path = resolve_path_in(path_str, &ctx.working_dir);
+        let full_path = resolve_path(path_str, &ctx.working_dir);
         let tool_args = serde_json::json!({ "path": path_str });
 
         let dir = match tokio::fs::read_dir(&full_path).await {

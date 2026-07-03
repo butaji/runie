@@ -8,7 +8,12 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use runie_core::display_width;
+use unicode_width::UnicodeWidthStr;
+
+/// Display-cell width for any `AsRef<str>` type.
+fn str_width(s: impl AsRef<str>) -> u16 {
+    UnicodeWidthStr::width(s.as_ref()) as u16
+}
 use runie_core::labels::format_timestamp;
 use runie_core::markdown::{extract_code_blocks, inlines_to_text, CodeBlock};
 
@@ -44,7 +49,7 @@ fn add_lr_margins_to_lines(lines: Vec<Line<'static>>) -> Vec<Line<'static>> {
 }
 
 fn span_width(spans: &[Span<'_>]) -> u16 {
-    spans.iter().map(|s| display_width::width(&s.content)).sum()
+    spans.iter().map(|s| str_width(&s.content)).sum()
 }
 
 fn margin_line(width: u16, style: Style) -> Line<'static> {
@@ -60,9 +65,9 @@ pub fn render_user_message(
     let base_style = style_user();
     let bg_style = Style::default().bg(color_accent_bg());
     let inner_width = content_width.saturating_sub(2);
-    let prefix_width = display_width::width(GLYPH_USER);
-    let indent_width = display_width::width(GLYPH_INDENT);
-    let ts_width = display_width::width(&ts_str) + 1;
+    let prefix_width = str_width(GLYPH_USER);
+    let indent_width = str_width(GLYPH_INDENT);
+    let ts_width = str_width(&ts_str) + 1;
 
     let mut lines = Vec::new();
     lines.push(margin_line(content_width, bg_style));
@@ -122,7 +127,7 @@ fn build_user_line_from_spans(
     with_ts: bool,
     params: &UserLineParams,
 ) -> Line<'static> {
-    let p_width = display_width::width(prefix);
+    let p_width = str_width(prefix);
     let mut line_spans = vec![
         Span::styled(" ", params.bg_style),
         Span::styled(prefix, params.base_style),
@@ -221,9 +226,9 @@ fn render_agent_text_block(
     // Convert MdInline[] to plain text, then style with tui_markdown.
     let text = inlines_to_text(inlines);
     let spans = apply_color_to_inlines(&text, color_fg());
-    let prefix_width = display_width::width(GLYPH_AGENT);
-    let indent_width = display_width::width(GLYPH_INDENT);
-    let ts_width = display_width::width(ts_str) + 1;
+    let prefix_width = str_width(GLYPH_AGENT);
+    let indent_width = str_width(GLYPH_INDENT);
+    let ts_width = str_width(ts_str) + 1;
     let first_w = inner_width
         .saturating_sub(prefix_width)
         .saturating_sub(ts_width);
@@ -306,9 +311,9 @@ fn render_agent_list_block(
         // Convert MdInline[] to plain text, then style with tui_markdown.
         let item_text = inlines_to_text(item);
         let spans = apply_color_to_inlines(&item_text, color_fg());
-        let prefix_width = display_width::width(GLYPH_AGENT);
-        let indent_width = display_width::width(GLYPH_INDENT);
-        let ts_width = display_width::width(ts_str) + 1;
+        let prefix_width = str_width(GLYPH_AGENT);
+        let indent_width = str_width(GLYPH_INDENT);
+        let ts_width = str_width(ts_str) + 1;
         let first_w = inner_width
             .saturating_sub(prefix_width)
             .saturating_sub(ts_width);
@@ -337,9 +342,9 @@ fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
     let prefix = GLYPH_AGENT;
     let mut spans = vec![Span::styled(prefix, style_agent())];
     if content_width > 0 {
-        let ts_width = display_width::width(ts_str) + 1;
+        let ts_width = str_width(ts_str) + 1;
         let padding = content_width
-            .saturating_sub(display_width::width(prefix))
+            .saturating_sub(str_width(prefix))
             .saturating_sub(ts_width);
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));

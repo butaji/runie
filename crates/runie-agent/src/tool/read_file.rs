@@ -1,7 +1,7 @@
 //! ReadFile tool — reads file contents with optional offset/limit.
 
 use crate::tool::{ToolContext, ToolOutput};
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -87,7 +87,7 @@ impl ToolDef for ReadFileTool {
             );
         }
 
-        let full_path = resolve_path_in(&input.path, &ctx.working_dir);
+        let full_path = resolve_path(&input.path, &ctx.working_dir);
         let content = match Self::read_file(&full_path).await {
             Ok(c) => {
                 record_file_access(&full_path);

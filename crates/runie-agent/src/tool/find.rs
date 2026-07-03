@@ -6,7 +6,7 @@ use crate::tool::constants::FIND_DEFAULT_LIMIT;
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use ignore::WalkBuilder;
 use regex::RegexBuilder;
-use runie_core::path::resolve_path_in;
+use runie_core::tool::resolve_path;
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -41,7 +41,7 @@ impl ToolDef for FindTool {
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
         let path_str = input.path.as_deref().unwrap_or(".");
-        let full_path = resolve_path_in(path_str, &ctx.working_dir);
+        let full_path = resolve_path(path_str, &ctx.working_dir);
         let limit = input.limit.unwrap_or(FIND_DEFAULT_LIMIT);
 
         let content = run_find(&input.pattern, &full_path, limit);

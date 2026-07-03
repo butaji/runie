@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 use runie_core::dialog::{Panel, PanelItem};
-use unicode_width::UnicodeWidthChar;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme::{
     color_accent, style_hint, style_placeholder, style_thinking, BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT,
@@ -355,8 +355,8 @@ fn input_display_spans(
     let cursor_pos = cursor_pos.min(value.len());
     let before = &value[..cursor_pos];
     let after = &value[cursor_pos..];
-    let before_w = runie_core::display_width::width(before) as usize;
-    let after_w = runie_core::display_width::width(after) as usize;
+    let before_w = UnicodeWidthStr::width(before);
+    let after_w = UnicodeWidthStr::width(after);
     let scroll = compute_field_scroll(before_w, after_w, avail);
 
     build_field_spans(

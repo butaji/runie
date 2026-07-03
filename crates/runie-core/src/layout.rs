@@ -4,7 +4,7 @@
 //! use them for scroll math while the TUI uses the same logic to produce
 //! actual rendered lines.
 
-use crate::display_width;
+use unicode_width::UnicodeWidthStr;
 use crate::markdown::{extract_code_blocks, CodeBlock};
 use crate::view::elements::Element;
 use textwrap::wrap;
@@ -219,7 +219,7 @@ fn tool_done_line_count(output: &str) -> usize {
 }
 
 fn glyph_width(s: &str) -> u16 {
-    display_width::width(s)
+    UnicodeWidthStr::width(s) as u16
 }
 
 /// Word-wrap `text` into lines using display-cell width so wide characters
@@ -250,7 +250,7 @@ pub fn word_wrap(text: &str, first_width: u16, rest_width: u16) -> Vec<String> {
                 result.push(wl.into_owned());
             } else {
                 // Subsequent segments may exceed rest_w; re-wrap only if needed.
-                if display_width::width(&wl) as usize > rest_w {
+                if UnicodeWidthStr::width(wl.as_ref()) > rest_w {
                     result.extend(wrap(&wl, rest_w).into_iter().map(|s| s.into_owned()));
                 } else {
                     result.push(wl.into_owned());
@@ -296,7 +296,7 @@ mod tests {
         // "ab longwordxyz cd" → wrap to 15 → ["ab longwordxyz", "cd"]
         // "ab longwordxyz" (15) > rest_w (5), re-wrap → ["ab lo", "ngwor", "dxyz"]
         let lines2_str = lines2.join("|");
-        assert!(lines2.iter().all(|l| display_width::width(l) as usize <= 15));
+        assert!(lines2.iter().all(|l| UnicodeWidthStr::width(l.as_str()) <= 15));
         assert!(lines2_str.contains("ab lo"), "expected re-wrap: {lines2_str}");
     }
 
@@ -313,7 +313,7 @@ mod tests {
         // Verify the logic works: all lines should be within their respective widths
         // (approximately - textwrap may not perfectly fill every line)
         for line in &lines {
-            let w = display_width::width(line.as_str()) as u16;
+            let w = UnicodeWidthStr::width(line.as_str()) as u16;
             assert!(w <= 8, "line '{line}' width {w} exceeds max expected 8");
         }
 
@@ -334,7 +334,7 @@ mod tests {
         let lines = word_wrap(cjk, 4, 4);
         // Each line should have at most 4 display cells
         for line in &lines {
-            let w = display_width::width(line.as_str()) as u16;
+            let w = UnicodeWidthStr::width(line.as_str()) as u16;
             assert!(w <= 4, "CJK line '{line}' width {w} > 4");
         }
 
@@ -342,7 +342,7 @@ mod tests {
         let emoji = "👍👎🤖"; // thumbs up, down, robot
         let lines_emoji = word_wrap(emoji, 4, 4);
         for line in &lines_emoji {
-            let w = display_width::width(line.as_str()) as u16;
+            let w = UnicodeWidthStr::width(line.as_str()) as u16;
             assert!(w <= 4, "emoji line '{line}' width {w} > 4");
         }
 
@@ -350,7 +350,7 @@ mod tests {
         let mixed = "hello日本語world";
         let lines_mixed = word_wrap(mixed, 10, 10);
         for line in &lines_mixed {
-            let w = display_width::width(line.as_str()) as u16;
+            let w = UnicodeWidthStr::width(line.as_str()) as u16;
             assert!(w <= 10, "mixed line '{line}' width {w} > 10");
         }
     }
@@ -414,7 +414,7 @@ mod tests {
                 // The exception is CJK characters whose display width exceeds the
                 // requested width — they cannot be split.
                 for line in &lines {
-                    let line_width = display_width::width(line.as_str()) as u16;
+                    let line_width = UnicodeWidthStr::width(line.as_str()) as u16;
                     assert!(
                         line_width <= width,
                         "word_wrap({text:?}, {width}) produced line '{line}' ({line_width} cells) > {width}"
@@ -427,7 +427,7 @@ mod tests {
             let lines = word_wrap("日本語テキスト", width, width);
             assert!(!lines.is_empty());
             for line in &lines {
-                let line_width = display_width::width(line.as_str()) as u16;
+                let line_width = UnicodeWidthStr::width(line.as_str()) as u16;
                 assert!(
                     line_width <= width,
                     "CJK word_wrap({width}) produced line '{line}' ({line_width} cells) > {width}"

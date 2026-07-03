@@ -9,7 +9,7 @@ use throbber_widgets_tui::{symbols::throbber::BRAILLE_SIX, Throbber, ThrobberSta
 
 use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};
-use runie_core::display_width::width;
+use unicode_width::UnicodeWidthStr;
 use runie_core::Snapshot;
 
 /// Render the status bar. The spinner is rendered as a throbber widget overlay
@@ -19,7 +19,7 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect, throbber: &mut Throbbe
         return;
     }
     let right_text = format!("{} ", build_right_status(snap));
-    let right_width = width(&right_text) as u16;
+    let right_width = UnicodeWidthStr::width(right_text.as_str()) as u16;
 
     let h = hstack(area, &[Constraint::Min(0), Constraint::Length(right_width)]);
 

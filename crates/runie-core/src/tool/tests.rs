@@ -1,7 +1,7 @@
 #![allow(clippy::all)]
 use std::time::Duration;
 
-use crate::path::resolve_path_in as resolve_path;
+use crate::tool::resolve_path;
 use crate::tool::{
     format_bytes, format_duration, format_tool_label, tool_error, tool_status_line, ToolContext,
     ToolDef, ToolOutput, ToolStatus,
