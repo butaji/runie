@@ -27,7 +27,7 @@
 //!   from `~/.runie/agents/`.  User types override built-ins of the same name.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 use tinytemplate::TinyTemplate;
 
@@ -176,8 +176,10 @@ impl SubagentRegistry {
             if path.extension().and_then(|s| s.to_str()) != Some("md") {
                 continue;
             }
-            if let Some(st) = parse_subagent_file(&path) {
-                self.types.insert(st.name.clone(), st);
+            if let Ok(path_utf8) = Utf8PathBuf::from_path_buf(path) {
+                if let Some(st) = parse_subagent_file(&path_utf8) {
+                    self.types.insert(st.name.clone(), st);
+                }
             }
         }
     }
@@ -204,9 +206,10 @@ impl SubagentRegistry {
 }
 
 /// Parse a subagent markdown file from disk, returning `None` on error.
-pub fn parse_subagent_file(path: &PathBuf) -> Option<SubagentType> {
-    let content = std::fs::read_to_string(path).ok()?;
-    parse_subagent_content(path.file_stem()?.to_str()?, &content)
+pub fn parse_subagent_file(path: &Utf8PathBuf) -> Option<SubagentType> {
+    let content = std::fs::read_to_string(path.as_std_path()).ok()?;
+    let stem = path.file_stem().map(String::from)?;
+    parse_subagent_content(&stem, &content)
 }
 
 /// Extract a field from the frontmatter map, or return the default.

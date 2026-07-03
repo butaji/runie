@@ -1,13 +1,13 @@
 //! Custom prompt templates — user-defined system prompt overrides.
 
-use std::path::PathBuf;
-
 /// Source of a prompt template.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PromptSource {
     BuiltIn,
-    UserFile(PathBuf),
-    ProjectFile(PathBuf),
+    /// User-configured prompt file path (stored as string for UTF-8 safety).
+    UserFile(String),
+    /// Project-configured prompt file path (stored as string for UTF-8 safety).
+    ProjectFile(String),
 }
 
 /// A loaded prompt template.
@@ -19,7 +19,7 @@ pub struct PromptTemplate {
 }
 
 impl PromptTemplate {
-    /// Build a summary string for listing.
+    /// Build a one-line summary for listing.
     pub fn summary(&self) -> String {
         let src = match self.source {
             PromptSource::BuiltIn => "built-in",
@@ -49,15 +49,13 @@ pub fn load_prompts(default: Option<&str>, custom_path: Option<&str>) -> Vec<Pro
     });
 
     if let Some(path) = custom_path {
-        let path_string = path.to_owned();
-        let path_buf = PathBuf::from(path);
         if let Ok(content) =
-            tokio::task::block_in_place(move || std::fs::read_to_string(&path_string))
+            tokio::task::block_in_place(move || std::fs::read_to_string(path))
         {
             prompts.push(PromptTemplate {
                 name: "custom".into(),
                 content: content.trim().into(),
-                source: PromptSource::UserFile(path_buf),
+                source: PromptSource::UserFile(path.to_owned()),
             });
         }
     }

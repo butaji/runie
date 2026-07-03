@@ -19,7 +19,7 @@ pub fn update(state: &mut AppState, event: Event) {
                 .session
                 .pending_edits
                 .push(crate::edit_preview::EditPreview::new(
-                    std::path::PathBuf::from(path),
+                    camino::Utf8PathBuf::from(path),
                     original,
                     proposed,
                 ));
@@ -40,11 +40,14 @@ impl AppState {
         // Clone handles first so we can borrow `self` mutably for drain.
         let handles = self.actor_handles().cloned();
         if let Some(h) = handles {
-            let edits: Vec<_> = self
+            let edits: Vec<(std::path::PathBuf, String)> = self
                 .session_mut()
                 .pending_edits
                 .drain(..)
-                .map(|p| (p.path, p.proposed))
+                .map(|p| {
+                    let path: std::path::PathBuf = std::path::PathBuf::from(&p.path);
+                    (path, p.proposed)
+                })
                 .collect();
             let _ = h.io.try_send(crate::actors::IoMsg::WriteFiles { edits });
             return true;
@@ -67,7 +70,7 @@ impl AppState {
             let content = preview.proposed.clone();
             match tokio::task::block_in_place(|| std::fs::write(&path, content)) {
                 Ok(()) => applied += 1,
-                Err(e) => errors.push(format!("{}: {}", preview.path.display(), e)),
+                Err(e) => errors.push(format!("{}: {}", path.as_str(), e)),
             }
         }
         let mut msg = format!("Applied {} edit(s).", applied);

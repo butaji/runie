@@ -3,6 +3,7 @@
 //! Supports both flat layout (`name.md`) and nested layout (`name/SKILL.md`).
 //! YAML frontmatter is optional and takes precedence over markdown sections.
 
+use camino::Utf8PathBuf;
 use std::path::PathBuf;
 
 mod load;
@@ -18,7 +19,7 @@ pub struct Skill {
     pub description: String,
     pub context: String,
     pub user_invocable: bool,
-    pub file_path: PathBuf,
+    pub file_path: Utf8PathBuf,
 }
 
 impl Skill {

@@ -279,7 +279,7 @@ impl InspectReport {
                 name: s.name,
                 description: s.description,
                 invocable: s.user_invocable,
-                path: s.file_path.to_string_lossy().to_string(),
+                path: s.file_path.to_string(),
             })
             .collect()
     }

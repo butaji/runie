@@ -3,9 +3,10 @@
 //! Provides directory scanning, YAML frontmatter extraction, and name resolution
 //! for skills and other markdown-based resources.
 
+use camino::Utf8PathBuf;
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use pulldown_cmark_frontmatter::FrontmatterExtractor;
 use serde::Deserialize;
@@ -18,7 +19,7 @@ pub struct ResourceRecord {
     /// Raw markdown content (without frontmatter).
     pub content: String,
     /// Path to the source file.
-    pub file_path: PathBuf,
+    pub file_path: Utf8PathBuf,
 }
 
 /// Load all markdown resources from a directory.
@@ -93,7 +94,9 @@ fn load_flat_resources(
 pub fn parse_resource_md(path: &Path) -> Option<ResourceRecord> {
     let content = fs::read_to_string(path).ok()?;
     let frontmatter = extract_frontmatter(&content);
-    let file_path = path.to_owned();
+    let file_path = Utf8PathBuf::from_path_buf(path.to_path_buf())
+        .map_err(drop)
+        .ok()?;
     Some(ResourceRecord {
         frontmatter,
         content,
@@ -344,5 +347,19 @@ Third paragraph.
             extract_body(content),
             "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
         );
+    }
+
+    #[test]
+    fn resource_record_path_is_utf8() {
+        let record = ResourceRecord {
+            frontmatter: HashMap::new(),
+            content: "# Body".into(),
+            file_path: Utf8PathBuf::from("/skills/test-skill/SKILL.md"),
+        };
+        // Utf8PathBuf is always valid UTF-8
+        let path_str: &str = record.file_path.as_str();
+        assert!(path_str.contains("test-skill"));
+        // No lossy conversion needed
+        assert_eq!(record.file_path.to_string(), path_str);
     }
 }

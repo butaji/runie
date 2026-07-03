@@ -22,7 +22,7 @@ pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
 
 /// Convert a ResourceRecord to a Skill, with markdown fallback for missing fields.
 fn record_to_skill(record: crate::resource_loader::ResourceRecord) -> Option<Skill> {
-    let name = resolve_name(&record.file_path, &record.frontmatter);
+    let name = resolve_name(record.file_path.as_ref(), &record.frontmatter);
 
     // Use frontmatter with markdown section fallback
     let description = record

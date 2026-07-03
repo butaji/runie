@@ -184,7 +184,7 @@ fn session_access_patterns(state: &mut AppState) {
         .session
         .pending_edits
         .push(crate::edit_preview::EditPreview::new(
-            std::path::PathBuf::from("test.rs"),
+            camino::Utf8PathBuf::from("test.rs"),
             "old".to_string(),
             "new".to_string(),
         ));

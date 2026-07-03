@@ -55,7 +55,7 @@ fn skill_injects_context() {
         description: "Rust best practices".into(),
         context: "Use clippy.".into(),
         user_invocable: false,
-        file_path: PathBuf::from("rust.md"),
+        file_path: Utf8PathBuf::from("rust.md"),
     }];
     let ctx = build_skills_context(&skills);
     assert!(ctx.contains("Use clippy."));
@@ -69,7 +69,7 @@ fn empty_context_returns_empty_string() {
         description: "Nothing".into(),
         context: "".into(),
         user_invocable: false,
-        file_path: PathBuf::from("empty.md"),
+        file_path: Utf8PathBuf::from("empty.md"),
     }];
     let ctx = build_skills_context(&skills);
     assert!(ctx.is_empty());
@@ -82,7 +82,7 @@ fn user_invocable_shown_in_summary() {
         description: "A test skill".into(),
         context: "".into(),
         user_invocable: true,
-        file_path: PathBuf::from("test.md"),
+        file_path: Utf8PathBuf::from("test.md"),
     };
     assert!(skill.summary().contains("(invocable)"));
 }

@@ -152,7 +152,7 @@
   {
     "file": "adopt-camino-utf8pathbuf-for-internal-paths.md",
     "title": "Adopt camino Utf8PathBuf for internal paths",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-metrics-facade-for-telemetry.md",
@@ -1412,7 +1412,7 @@
   {
     "file": "replace-custom-form-rendering-with-tui-textarea.md",
     "title": "Replace custom form rendering with `tui-textarea`/`tui-input`",
-    "status": "done"
+    "status": "superseded"
   },
   {
     "file": "replace-custom-git-detection-with-git2.md",

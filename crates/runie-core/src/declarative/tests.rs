@@ -197,7 +197,7 @@ Content
             description: "A test skill".to_owned(),
             context: Some("Context content".to_owned()),
             triggers: vec![Trigger::Command("/test".to_owned())],
-            file_path: Path::new("/test/skill.md").to_path_buf(),
+            file_path: camino::Utf8PathBuf::from("/test/skill.md"),
             user_invocable: true,
         };
         assert_eq!(skill.name, "test-skill");
@@ -217,7 +217,7 @@ Content
             shortcut: Some("Ctrl+b".to_owned()),
             aliases: vec![],
             has_subcommands: false,
-            file_path: Path::new("/commands/bookmark.yaml").to_path_buf(),
+            file_path: camino::Utf8PathBuf::from("/commands/bookmark.yaml"),
             yaml_kind: CommandKind::Msg {
                 message: "bookmarked".to_owned(),
             },

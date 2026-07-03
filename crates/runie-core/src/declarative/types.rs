@@ -1,6 +1,6 @@
 //! Types for declarative configuration.
 
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
 
 use serde::de::{self, Error as SerdeError, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -169,7 +169,7 @@ pub struct SkillDef {
     pub description: String,
     pub context: Option<String>,
     pub triggers: Vec<Trigger>,
-    pub file_path: PathBuf,
+    pub file_path: Utf8PathBuf,
     pub user_invocable: bool,
 }
 
@@ -185,7 +185,7 @@ pub struct CommandDef {
     pub shortcut: Option<String>,
     pub aliases: Vec<String>,
     pub has_subcommands: bool,
-    pub file_path: PathBuf,
+    pub file_path: Utf8PathBuf,
     pub yaml_kind: CommandKind,
 }
 

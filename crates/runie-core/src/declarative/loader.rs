@@ -82,7 +82,7 @@ fn record_to_skill_def(record: crate::resource_loader::ResourceRecord) -> Option
     let name = frontmatter
         .get("name")
         .cloned()
-        .or_else(|| derive_name_from_path(&record.file_path))?;
+        .or_else(|| derive_name_from_path(record.file_path.as_ref()))?;
 
     let invocation = frontmatter.get("invocation").cloned().unwrap_or_default();
 

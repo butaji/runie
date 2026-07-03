@@ -100,7 +100,7 @@ fn slash_approve_applies_pending_edits() {
         .session
         .pending_edits
         .push(crate::edit_preview::EditPreview::new(
-            file.clone(),
+            camino::Utf8PathBuf::from_path_buf(file.clone()).unwrap(),
             "old".into(),
             "new content".into(),
         ));
@@ -125,7 +125,7 @@ fn slash_reject_clears_pending_edits() {
         .session
         .pending_edits
         .push(crate::edit_preview::EditPreview::new(
-            file.clone(),
+            camino::Utf8PathBuf::from_path_buf(file.clone()).unwrap(),
             "old".into(),
             "new content".into(),
         ));

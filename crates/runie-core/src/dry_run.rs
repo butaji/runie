@@ -95,6 +95,7 @@ fn core_tool_names() -> &'static [&'static str] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use camino::Utf8PathBuf;
 
     fn temp_config_with_provider(provider: &str, model: &str) -> Config {
         Config {
@@ -128,7 +129,7 @@ mod tests {
             description: "Rust skill.".to_string(),
             context: String::new(),
             user_invocable: false,
-            file_path: std::path::PathBuf::from("rust/SKILL.md"),
+            file_path: Utf8PathBuf::from("rust/SKILL.md"),
         };
 
         let config = temp_config_with_provider("openai", "gpt-4o");

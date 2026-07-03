@@ -10,7 +10,7 @@ fn rust_skill(user_invocable: bool) -> Skill {
         description: "Rust best practices".into(),
         context: "Use clippy".into(),
         user_invocable,
-        file_path: std::path::PathBuf::from("rust.md"),
+        file_path: camino::Utf8PathBuf::from("rust.md"),
     }
 }
 
