@@ -40,13 +40,13 @@ async fn test_agent_loop_single_word_echo_completes_once() {
         .collect();
     let done_count = count_events(&events, |e| matches!(e, Event::Done { .. }));
 
-    // Mock provider: "hello" splits to ["hello "] → exactly 1 delta.
+    // Mock provider echoes "hello" back as a single delta.
     assert_eq!(
         deltas.len(),
         1,
         "single-word 'hello' should produce exactly 1 ResponseDelta, got {deltas:?}"
     );
-    assert_eq!(deltas[0].as_str(), "hello ");
+    assert_eq!(deltas[0].as_str(), "hello");
     // Turn must complete exactly once.
     assert_eq!(done_count, 1, "exactly one Done event expected");
 }
@@ -67,7 +67,7 @@ async fn test_agent_loop_simple_response() {
     let responses = count_events(&events, |e| matches!(e, Event::Response { .. }));
 
     assert_eq!(thinking, 1);
-    assert_eq!(deltas, 2); // streaming deltas
+    assert_eq!(deltas, 1); // mock echo returns the input as a single delta
     assert_eq!(responses, 0); // full-text Response is not emitted; deltas already streamed it
     assert_eq!(done, 1);
 }

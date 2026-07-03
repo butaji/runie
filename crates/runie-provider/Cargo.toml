@@ -39,3 +39,4 @@ insta.workspace = true
 tempfile.workspace = true
 runie-testing = { workspace = true, features = ["provider"] }
 wiremock.workspace = true
+proptest.workspace = true

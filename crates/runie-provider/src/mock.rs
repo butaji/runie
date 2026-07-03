@@ -160,12 +160,13 @@ mod fixtures {
         }
     }
 
-    /// Simple echo fixture that echoes back the user's words.
+    /// Simple echo fixture that echoes back the user's input exactly.
     pub fn echo(input: &str) -> Vec<String> {
-        input
-            .split_whitespace()
-            .map(|w| format!("{} ", w))
-            .collect()
+        if input.is_empty() {
+            Vec::new()
+        } else {
+            vec![input.to_owned()]
+        }
     }
 
     /// Completion response after tool result.
@@ -646,9 +647,14 @@ mod tests {
     }
 
     #[test]
-    fn echo_returns_word_chunks() {
-        let chunks = fixtures::echo("Hello World");
-        assert_eq!(chunks, vec!["Hello ".to_owned(), "World ".to_owned()]);
+    fn echo_preserves_exact_input() {
+        assert_eq!(fixtures::echo("Hello World"), vec!["Hello World".to_owned()]);
+        assert_eq!(fixtures::echo("  spaced  "), vec!["  spaced  ".to_owned()]);
+        assert_eq!(
+            fixtures::echo("multi\nline\ttext"),
+            vec!["multi\nline\ttext".to_owned()]
+        );
+        assert!(fixtures::echo("").is_empty());
     }
 
     #[test]

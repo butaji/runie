@@ -1,6 +1,8 @@
 #![allow(clippy::all)]
 //! Tests for runie-provider
 
+use proptest::prelude::*;
+
 use crate::{
     build_provider_with_config, BuiltProviderFactory, MockProvider, MockProviderBuilder,
     MockStreamingProvider, Provider, ProviderError,
@@ -45,14 +47,12 @@ async fn collect_text(
 // ============================================================================
 
 #[tokio::test]
-async fn test_mock_provider_generates_chunks() {
+async fn test_mock_provider_echoes_input() {
     let provider = MockProvider::default();
     let messages = vec![ChatMessage::user("Hello World".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(texts.len() >= 2);
-    assert_eq!(texts[0], "Hello ");
-    assert_eq!(texts[1], "World ");
+    assert_eq!(texts.concat(), "Hello World");
 }
 
 #[tokio::test]
@@ -69,8 +69,7 @@ async fn test_mock_provider_single_word() {
     let messages = vec![ChatMessage::user("Hello".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(!texts.is_empty());
-    assert_eq!(texts[0], "Hello ");
+    assert_eq!(texts.concat(), "Hello");
 }
 
 #[tokio::test]
@@ -120,13 +119,12 @@ async fn test_mock_provider_triggers_bash() {
 #[tokio::test]
 async fn test_mock_provider_triggers_done() {
     // "Done" response is triggered after a ToolResult, not from simple "hello" input.
-    // Verify the simple input returns word chunks.
+    // Verify the simple input is echoed back exactly.
     let provider = MockProvider::default();
     let messages = vec![ChatMessage::user("hello".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert!(!texts.is_empty());
-    assert!(texts[0].contains("hello "));
+    assert_eq!(texts.concat(), "hello");
 }
 
 #[tokio::test]
@@ -150,6 +148,54 @@ async fn mock_provider_default_no_delay() {
     let texts = collect_text(p.generate(vec![ChatMessage::user("test".to_string())])).await;
     assert!(start.elapsed() < std::time::Duration::from_millis(50));
     assert!(!texts.is_empty());
+}
+
+fn run_mock_echo_sync(input: &str) -> String {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .unwrap();
+    rt.block_on(async {
+        let provider = MockProviderBuilder::new().build();
+        let messages = vec![ChatMessage::user(input.to_string())];
+        collect_text(provider.generate(messages)).await.concat()
+    })
+}
+
+fn echo_safe_string() -> impl Strategy<Value = String> {
+    // Alphabet chosen so generated strings never contain fixture keywords
+    // ("read", "write", "edit", "list", "files", "run", "cmd", etc.).
+    let chars = prop_oneof![
+        Just('a'),
+        Just('b'),
+        Just('A'),
+        Just('B'),
+        Just('0'),
+        Just('1'),
+        Just('9'),
+        Just(' '),
+        Just('\n'),
+        Just('\t'),
+        Just('!'),
+        Just('?'),
+        Just(','),
+        Just('.'),
+        Just('-'),
+        Just('+'),
+        Just('é'),
+        Just('中'),
+    ];
+    prop::collection::vec(chars, 0..200).prop_map(|v| v.into_iter().collect())
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(256))]
+
+    #[test]
+    fn mock_provider_echoes_arbitrary_safe_input(input in echo_safe_string()) {
+        let output = run_mock_echo_sync(&input);
+        prop_assert_eq!(output, input);
+    }
 }
 
 #[test]

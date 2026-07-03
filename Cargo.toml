@@ -124,6 +124,7 @@ reqwest-eventsource = "0.6"
 
 # Dev-only dependencies
 wiremock = "0.6"
+proptest = "1.6"
 
 
 
