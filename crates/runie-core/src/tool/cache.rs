@@ -379,8 +379,10 @@ mod tests {
     #[tokio::test]
     async fn spawn_sweep_runs_and_evicts() {
         // Note: This test uses real wall-clock time because tokio::time::interval
-        // behavior with paused time is complex (first tick is immediate).
-        // The sleep here is testing actual cache sweep timing behavior.
+        // behavior with paused time is complex (first tick is immediate, subsequent
+        // ticks depend on virtual time). The cache uses system time for expiration
+        // checks (current_unix_secs), so paused tokio time doesn't affect eviction.
+        // We use a short real sleep here since the sweep interval is 1 second minimum.
         let cache = ToolResultCache::new(1);
 
         // Add stale entries BEFORE spawning sweep

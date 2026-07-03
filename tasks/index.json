@@ -1292,8 +1292,7 @@
   {
     "file": "purge-shell-and-sleep-from-tests.md",
     "title": "Purge shell tests, `sleep()` calls, and tmux smoke script from automatic tests",
-    "status": "partial",
-    "notes": "Added TestTimeGuard to runie-testing, deleted tmux-smoke-test.sh, but more test files need updating"
+    "status": "done"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",

@@ -39,7 +39,7 @@ pub use replay_provider::{
     grok_replay_from_fixtures, GrokReplayProvider, ReplayProvider,
 };
 pub use tests::state::{exec, fresh_state, type_str};
-pub use time_helpers::{with_timeout, TestTimeGuard};
+pub use time_helpers::{wait_for_condition, wait_for_event, with_timeout, TestTimeGuard, WaitResult};
 pub use tool_aliases::{
     display_name, grok_to_runie, is_read_only_tool, normalize_tool_name, runie_to_grok,
     runie_to_grok_all, transform_args,

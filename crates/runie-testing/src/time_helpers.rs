@@ -58,6 +58,85 @@ pub async fn with_timeout<T>(
     tokio::time::timeout(timeout, future).await
 }
 
+/// Result of [`wait_for_condition`].
+pub enum WaitResult {
+    /// The condition was met within the timeout.
+    Met,
+    /// The timeout expired before the condition was met.
+    TimedOut,
+}
+
+/// Advance time and poll until a condition is met or timeout expires.
+///
+/// Uses virtual time when tokio time is paused, so tests run fast.
+///
+/// # Example
+/// ```ignore
+/// let _guard = TestTimeGuard::new();
+/// let result = wait_for_condition(
+///     Duration::from_secs(5),
+///     Duration::from_millis(10),
+///     || async { state.is_ready() },
+/// ).await;
+/// assert_eq!(result, WaitResult::Met);
+/// ```
+pub async fn wait_for_condition<Fut>(
+    timeout: Duration,
+    step: Duration,
+    condition: impl Fn() -> Fut,
+) -> WaitResult
+where
+    Fut: std::future::Future<Output = bool>,
+{
+    let deadline = tokio::time::Instant::now() + timeout;
+    while tokio::time::Instant::now() < deadline {
+        if condition().await {
+            return WaitResult::Met;
+        }
+        tokio::time::advance(step).await;
+        tokio::task::yield_now().await;
+    }
+    WaitResult::TimedOut
+}
+
+/// Wait for a channel receiver to receive an event matching a predicate.
+///
+/// Uses virtual time when tokio time is paused, so tests run fast.
+///
+/// # Example
+/// ```ignore
+/// let _guard = TestTimeGuard::new();
+/// let result = wait_for_event(
+///     &mut sub,
+///     Duration::from_secs(5),
+///     |e| matches!(e, Event::TurnStarted { .. }),
+/// ).await;
+/// assert!(result.is_some());
+/// ```
+pub async fn wait_for_event<E, F>(
+    sub: &mut tokio::sync::broadcast::Receiver<E>,
+    timeout: Duration,
+    predicate: F,
+) -> Option<E>
+where
+    E: Clone,
+    F: Fn(&E) -> bool,
+{
+    let deadline = tokio::time::Instant::now() + timeout;
+    while tokio::time::Instant::now() < deadline {
+        if let Ok(evt) = sub.recv().await {
+            if predicate(&evt) {
+                return Some(evt);
+            }
+        } else {
+            // Channel closed or would block
+            tokio::time::advance(Duration::from_millis(1)).await;
+            tokio::task::yield_now().await;
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

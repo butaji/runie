@@ -119,8 +119,10 @@ async fn agent_actor_accepts_second_turn_after_first_completes() {
     .await
     .unwrap();
 
-    // Give TurnComplete message time to be processed by the actor.
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // Advance virtual time to let TurnComplete message be processed.
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+    runie_testing::TestTimeGuard::advance(Duration::from_millis(50)).await;
 
     // --- Second turn ---
     let cmd2 = crate::AgentCommand {

@@ -69,8 +69,10 @@ async fn input_event_routes_to_input_actor() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // Give the actor a moment to start.
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // Advance virtual time to let actor start.
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
 
     // Send Input('h') through the submit channel.
     submit_tx
@@ -145,7 +147,10 @@ async fn input_accumulates_via_input_actor() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // Advance virtual time to let actor start.
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
 
     // Type "hi" character by character.
     submit_tx

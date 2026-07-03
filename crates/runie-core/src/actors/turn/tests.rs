@@ -232,7 +232,11 @@ async fn contract_idempotent_message_submit() {
     // RunIfQueued should start first turn
     handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
 
-    // Use timeout-based polling instead of sleep
+    // Use paused time to avoid real wall-clock delays
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+
+    // Use deterministic polling with virtual time
     let mut turn_started_count = 0;
     let deadline = std::time::Duration::from_secs(2);
     let start = std::time::Instant::now();
@@ -246,7 +250,8 @@ async fn contract_idempotent_message_submit() {
                 }
             }
             _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
-                // Check for turn started
+                // Advance virtual time for the polling loop
+                runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(10)).await;
             }
         }
         if turn_started_count >= 1 {
@@ -290,8 +295,10 @@ async fn contract_ordered_events() {
         .await;
     handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
 
-    // Wait for events with timeout - yield to let actor process
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // Advance virtual time to let actor process
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(100)).await;
 
     // Events should be emitted in order (check that UserMessageSubmitted comes before TurnStarted)
     let count = order.load(Ordering::SeqCst);

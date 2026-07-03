@@ -480,7 +480,7 @@ impl TuiRuntime {
             }
         }
 
-        // Small delay to let rendering settle
+        // Yield to let rendering settle
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Signal shutdown

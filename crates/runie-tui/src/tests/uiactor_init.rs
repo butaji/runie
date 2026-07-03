@@ -83,8 +83,10 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // Give UiActor time to drain buffered events and enter the select! loop.
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // Advance virtual time to let UiActor drain and enter select! loop.
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(100)).await;
 
     // Publish a subsequent event that WILL be re-emitted so we know the actor
     // is alive and processing events from the select! loop.
@@ -163,8 +165,10 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // UiActor should enter the select! loop within 50ms even with empty buffer.
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // Advance virtual time for UiActor to enter select! loop.
+    let _guard = runie_testing::TestTimeGuard::new()
+        .expect("should support time pausing");
+    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
 
     // Publish an event — UiActor should process it.
     bus.publish(Event::Input('x'));
