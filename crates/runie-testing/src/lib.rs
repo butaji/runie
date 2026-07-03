@@ -4,7 +4,9 @@ pub mod conditional;
 pub mod env_lock;
 pub mod event_helpers;
 pub mod events;
+pub mod keystroke_dsl;
 pub mod mock_tool_skill;
+pub mod tool_aliases;
 
 pub mod tests;
 
@@ -16,6 +18,13 @@ pub mod fixtures;
 pub mod replay_provider;
 
 pub use env_lock::{env_lock, with_env, EnvGuard, EnvRestore, ENV_LOCK};
+pub use keystroke_dsl::{
+    key_event_to_dsl, parse_keystroke, parse_sequence, parse_tmux_style,
+};
+pub use tool_aliases::{
+    display_name, grok_to_runie, is_read_only_tool, normalize_tool_name, runie_to_grok,
+    runie_to_grok_all, transform_args,
+};
 pub use events::{
     ev_completed, ev_error, ev_output_text_delta, ev_response_created, llm_finish, llm_text_delta,
 };

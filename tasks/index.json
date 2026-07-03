@@ -62,7 +62,7 @@
   {
     "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
     "title": "Add Grok TUI keystroke replay and tool mapping",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-in-memory-backends-for-unit-tests.md",

@@ -4100,6 +4100,7 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "async-trait",
+ "crossterm",
  "futures",
  "include_dir",
  "parking_lot",

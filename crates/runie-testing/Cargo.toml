@@ -29,4 +29,6 @@ regex.workspace = true
 runie-provider = { workspace = true, optional = true }
 runie-agent = { workspace = true, optional = true }
 
+crossterm.workspace = true
+
 [dev-dependencies]
