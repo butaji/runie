@@ -128,7 +128,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let plans_dir = tmp.path().join("plans");
         let plan_id = save_plan(&plans_dir, "session-1", "delete me").unwrap().unwrap();
-        delete_plan(&plans_dir, &plan_id);
+        delete_plan(&plans_dir, &plan_id).unwrap();
         assert!(load_plan_content(&plans_dir, &plan_id).is_none());
     }
 
