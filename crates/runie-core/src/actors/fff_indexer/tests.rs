@@ -6,23 +6,46 @@ use crate::event::Event;
 use crate::model::FffFileEntry;
 
 // Serialize FFF indexer tests to prevent cross-test state interference.
-// Each test acquires this lock and holds it until completion.
+// Each test acquires this lock during synchronous setup only.
+// The lock is dropped before any async work to avoid holding std::sync::Mutex across awaits.
 static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-#[tokio::test(flavor = "current_thread")]
-async fn indexer_initializes_in_temp_dir() {
-    let _lock = TEST_MUTEX.lock().unwrap();
-    FffSearchState::reset_for_test();
-    let tmp = tempfile::tempdir().unwrap();
-    let root = tmp.path().to_path_buf();
-    let data_dir = tmp.path().to_path_buf();
-
-    // Create a few files
+fn setup_test_files(root: &std::path::Path) {
     std::fs::create_dir_all(root.join("src")).ok();
     std::fs::create_dir_all(root.join("tests")).ok();
     std::fs::write(root.join("src/lib.rs"), "// lib").ok();
     std::fs::write(root.join("src/main.rs"), "// main").ok();
     std::fs::write(root.join("tests/example.rs"), "// test").ok();
+}
+
+fn setup_cli_files(root: &std::path::Path) {
+    std::fs::create_dir_all(root.join("src/cli")).ok();
+    std::fs::create_dir_all(root.join("src/server")).ok();
+    std::fs::write(root.join("src/cli/main.rs"), "fn main() {}").unwrap();
+    std::fs::write(root.join("src/server/api.rs"), "pub fn api() {}").unwrap();
+}
+
+/// Acquires the test lock, resets global state, creates a temp directory with test files,
+/// and returns the guard and paths. The guard (TempDir) must be kept alive until the test ends.
+fn setup_test_env<F>(setup_files: F) -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf)
+where
+    F: FnOnce(&std::path::Path),
+{
+    let _lock = TEST_MUTEX.lock().unwrap();
+    FffSearchState::reset_for_test();
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().to_path_buf();
+    let data_dir = tmp.path().to_path_buf();
+    setup_files(&root);
+    (tmp, root, data_dir)
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn indexer_initializes_in_temp_dir() {
+    // Lock is held only during synchronous setup to serialize tests.
+    // Drop before async work to avoid holding std::sync::Mutex across awaits.
+    // Keep temp dir alive by binding it to a variable.
+    let (_tmp_dir, root, data_dir) = setup_test_env(setup_test_files);
 
     let bus = EventBus::new(16);
 
@@ -74,17 +97,9 @@ async fn indexer_initializes_in_temp_dir() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn indexer_answers_file_search() {
-    let _lock = TEST_MUTEX.lock().unwrap();
-    FffSearchState::reset_for_test();
-    let tmp = tempfile::tempdir().unwrap();
-    let root = tmp.path().to_path_buf();
-    let data_dir = tmp.path().to_path_buf();
-
-    // Create structured test files
-    std::fs::create_dir_all(root.join("src/cli")).ok();
-    std::fs::create_dir_all(root.join("src/server")).ok();
-    std::fs::write(root.join("src/cli/main.rs"), "fn main() {}").unwrap();
-    std::fs::write(root.join("src/server/api.rs"), "pub fn api() {}").unwrap();
+    // Lock is held only during synchronous setup to serialize tests.
+    // Drop before async work to avoid holding std::sync::Mutex across awaits.
+    let (_tmp_dir, root, data_dir) = setup_test_env(setup_cli_files);
 
     let bus = EventBus::new(16);
 
@@ -137,15 +152,20 @@ async fn indexer_answers_file_search() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn search_request_event_returns_results() {
-    let _lock = TEST_MUTEX.lock().unwrap();
-    FffSearchState::reset_for_test();
-    // Integration test: search request → search result event
-    let tmp = tempfile::tempdir().unwrap();
-    let root = tmp.path().to_path_buf();
-    let data_dir = tmp.path().to_path_buf();
+    // Lock is held only during synchronous setup to serialize tests.
+    // Drop before async work to avoid holding std::sync::Mutex across awaits.
+    let (_tmp_dir, root, data_dir) = {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        FffSearchState::reset_for_test();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let data_dir = tmp.path().to_path_buf();
 
-    std::fs::write(root.join("readme.md"), "# Hello World").unwrap();
-    std::fs::write(root.join("todo.txt"), "buy milk").unwrap();
+        std::fs::write(root.join("readme.md"), "# Hello World").unwrap();
+        std::fs::write(root.join("todo.txt"), "buy milk").unwrap();
+
+        (tmp, root, data_dir)
+    };
 
     let bus = EventBus::new(16);
 

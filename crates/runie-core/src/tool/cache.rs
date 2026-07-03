@@ -156,6 +156,12 @@ impl ToolResultCache {
         self.cache.read().len()
     }
 
+    /// Returns true if the cache has no entries.
+    #[cfg(test)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     #[inline]
     fn is_expired(&self, entry: &CacheEntry) -> bool {
         current_unix_secs().saturating_sub(entry.cached_at) >= self.ttl_secs

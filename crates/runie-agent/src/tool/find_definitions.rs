@@ -446,12 +446,15 @@ mod tests {
 
     #[test]
     fn find_definitions_tool_is_read_only() {
-        assert!(FindDefinitionsTool::READ_ONLY);
+        const _: () = assert!(FindDefinitionsTool::READ_ONLY, "find_definitions must be read-only");
     }
 
     #[test]
     fn find_definitions_tool_no_approval() {
-        assert!(!FindDefinitionsTool::REQUIRES_APPROVAL);
+        const _: () = assert!(
+            !FindDefinitionsTool::REQUIRES_APPROVAL,
+            "find_definitions must not require approval"
+        );
     }
 
     #[test]

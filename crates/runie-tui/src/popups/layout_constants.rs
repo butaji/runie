@@ -31,25 +31,37 @@ mod tests {
 
     #[test]
     fn popup_dimensions_are_reasonable() {
-        assert!(POPUP_WIDTH >= POPUP_MIN_WIDTH);
-        assert!(POPUP_HEIGHT >= POPUP_MIN_HEIGHT);
-        assert!(POPUP_WIDTH > 0);
-        assert!(POPUP_HEIGHT > 0);
+        const _: () = assert!(
+            POPUP_WIDTH >= POPUP_MIN_WIDTH,
+            "popup width must be at least min width"
+        );
+        const _: () = assert!(
+            POPUP_HEIGHT >= POPUP_MIN_HEIGHT,
+            "popup height must be at least min height"
+        );
+        const _: () = assert!(POPUP_WIDTH > 0, "popup width must be positive");
+        const _: () = assert!(POPUP_HEIGHT > 0, "popup height must be positive");
     }
 
     #[test]
     fn path_display_count_is_positive() {
-        assert!(PATH_DISPLAY_COUNT > 0);
+        const _: () = assert!(PATH_DISPLAY_COUNT > 0, "path display count must be positive");
     }
 
     #[test]
     fn hotkey_area_height_is_positive() {
-        assert!(HOTKEY_AREA_HEIGHT > 0);
+        const _: () = assert!(
+            HOTKEY_AREA_HEIGHT > 0,
+            "hotkey area height must be positive"
+        );
     }
 
     #[test]
     fn constants_are_consistent() {
         // Border should be at least 2 (top + bottom)
-        assert!(PATH_POPUP_BORDER >= 2);
+        const _: () = assert!(
+            PATH_POPUP_BORDER >= 2,
+            "border must be at least 2 for top + bottom"
+        );
     }
 }

@@ -326,6 +326,7 @@ impl AppState {
 }
 
 #[cfg(test)]
+#[allow(clippy::assertions_on_constants)]
 mod compaction_ratio_tests {
     use super::AppState;
     use crate::session::store::COMPACT_TOKEN_RATIO;
@@ -346,8 +347,8 @@ mod compaction_ratio_tests {
         // Threshold for gpt-4o (128_000 context): 128_000 * 0.7 = 89_600
         // 89_599 <= 89_600 → no trigger
         // 89_601 > 89_600 → trigger
-        assert!(89_599 <= 89_600);
-        assert!(89_601 > 89_600);
+        const _: () = assert!(89_599 <= 89_600, "documentation: below threshold");
+        const _: () = assert!(89_601 > 89_600, "documentation: above threshold");
     }
 
     /// Verify COMPACT_TOKEN_RATIO is 0.7.

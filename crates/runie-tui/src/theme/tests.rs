@@ -247,7 +247,7 @@ fn glyph_spinner_is_braille() {
     // Verify it's in the braille range (U+2800 to U+28FF)
     let c = GLYPH_SPINNER;
     assert!(
-        c >= '\u{2800}' && c <= '\u{28FF}',
+        ('\u{2800}'..='\u{28FF}').contains(&c),
         "GLYPH_SPINNER should be a braille character, got: {c}"
     );
 }

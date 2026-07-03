@@ -10,19 +10,14 @@ pub const DEFAULT_PERMISSION_TIMEOUT_SECS: u64 = 60;
 /// Conservative limit for CLI and TUI use.
 pub const DEFAULT_MAX_TOOL_ROUNDS: usize = 5;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn permission_timeout_is_reasonable() {
-        assert!(DEFAULT_PERMISSION_TIMEOUT_SECS > 0);
-        assert!(DEFAULT_PERMISSION_TIMEOUT_SECS <= 600); // Max 10 minutes
-    }
-
-    #[test]
-    fn max_tool_rounds_is_reasonable() {
-        assert!(DEFAULT_MAX_TOOL_ROUNDS > 0);
-        assert!(DEFAULT_MAX_TOOL_ROUNDS <= 100);
-    }
-}
+// Compile-time assertions for invariants
+const _: () = assert!(DEFAULT_PERMISSION_TIMEOUT_SECS > 0, "timeout must be positive");
+const _: () = assert!(
+    DEFAULT_PERMISSION_TIMEOUT_SECS <= 600,
+    "max timeout is 10 minutes"
+);
+const _: () = assert!(DEFAULT_MAX_TOOL_ROUNDS > 0, "tool rounds must be positive");
+const _: () = assert!(
+    DEFAULT_MAX_TOOL_ROUNDS <= 100,
+    "max tool rounds is 100"
+);

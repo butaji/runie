@@ -13,7 +13,13 @@ mod tests {
 
     #[test]
     fn effect_forwarder_capacity_is_reasonable() {
-        assert!(EFFECT_FORWARDER_CHANNEL_CAPACITY > 0);
-        assert!(EFFECT_FORWARDER_CHANNEL_CAPACITY <= 1024);
+        const _: () = assert!(
+            EFFECT_FORWARDER_CHANNEL_CAPACITY > 0,
+            "channel capacity must be positive"
+        );
+        const _: () = assert!(
+            EFFECT_FORWARDER_CHANNEL_CAPACITY <= 1024,
+            "channel capacity must be reasonable"
+        );
     }
 }

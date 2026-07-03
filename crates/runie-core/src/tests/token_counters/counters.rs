@@ -15,7 +15,7 @@ fn estimate_tokens_chars_divided_by_four_ceil() {
     // "hello" + " world" = 2 tokens (separate encoding), but "hello world" = 2 or 3
     // depending on how tiktoken splits it. Use >= assertions for flexibility.
     let hw_count = crate::tokens::estimate_tokens("hello world");
-    assert!(hw_count >= 2 && hw_count <= 3, 
+    assert!((2..=3).contains(&hw_count),
         "hello world should be 2-3 tokens, got {}", hw_count);
     assert_eq!(crate::tokens::estimate_tokens(""), 0); // 0 chars = 0 tokens
     // Emoji tokens vary by tiktoken version

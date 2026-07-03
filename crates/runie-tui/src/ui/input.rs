@@ -302,6 +302,7 @@ pub fn count_input_lines(input: &str) -> usize {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 

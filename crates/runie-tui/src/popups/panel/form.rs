@@ -470,8 +470,8 @@ mod tests {
     #[test]
     fn input_value_style_empty() {
         let style = input_value_style("", true);
-        // Should return placeholder style (doesn't panic)
-        assert!(style != Style::default() || true); // Placeholder check
+        // Should return a valid style (function shouldn't panic on empty input)
+        let _ = style;
     }
 
     #[test]

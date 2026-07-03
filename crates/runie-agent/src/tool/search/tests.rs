@@ -23,12 +23,15 @@ fn search_tool_name() {
 
 #[test]
 fn search_tool_is_read_only() {
-    assert!(SearchTool::READ_ONLY);
+    const _: () = assert!(SearchTool::READ_ONLY, "search must be read-only");
 }
 
 #[test]
 fn search_tool_no_approval_required() {
-    assert!(!SearchTool::REQUIRES_APPROVAL);
+    const _: () = assert!(
+        !SearchTool::REQUIRES_APPROVAL,
+        "search must not require approval"
+    );
 }
 
 #[test]

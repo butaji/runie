@@ -540,7 +540,10 @@ mod tests {
         // Target: keep last 100 events after compaction
         assert_eq!(COMPACT_TARGET_EVENTS, 100);
         // Thresholds should be ordered correctly
-        assert!(COMPACT_TARGET_EVENTS < COMPACT_EVENT_COUNT);
+        const _: () = assert!(
+            COMPACT_TARGET_EVENTS < COMPACT_EVENT_COUNT,
+            "target events must be less than event count"
+        );
     }
 
     #[test]

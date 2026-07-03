@@ -84,19 +84,9 @@ mod tests {
                 panic!("HeadlessEvent failed to round-trip as JSONL: {e}, line: {line}")
             });
             // Variants must match after round-trip.
-            let same_variant = match (&evt, &parsed) {
-                (HeadlessEvent::Text { .. }, HeadlessEvent::Text { .. }) => true,
-                (HeadlessEvent::Thinking { .. }, HeadlessEvent::Thinking { .. }) => true,
-                (HeadlessEvent::ToolCallStart { .. }, HeadlessEvent::ToolCallStart { .. }) => true,
-                (HeadlessEvent::ToolCallInputDelta { .. }, HeadlessEvent::ToolCallInputDelta { .. }) => true,
-                (HeadlessEvent::ToolCallEnd { .. }, HeadlessEvent::ToolCallEnd { .. }) => true,
-                (HeadlessEvent::PermissionRequest { .. }, HeadlessEvent::PermissionRequest { .. }) => true,
-                (HeadlessEvent::ToolResult { .. }, HeadlessEvent::ToolResult { .. }) => true,
-                (HeadlessEvent::Usage { .. }, HeadlessEvent::Usage { .. }) => true,
-                (HeadlessEvent::Error { .. }, HeadlessEvent::Error { .. }) => true,
-                (HeadlessEvent::End { .. }, HeadlessEvent::End { .. }) => true,
-                _ => false,
-            };
+            let evt_ref = evt;
+            let same_variant =
+                std::mem::discriminant(evt_ref) == std::mem::discriminant(&parsed);
             assert!(same_variant, "JSONL round-trip variant mismatch for {evt:?}, line: {line}");
         }
     }

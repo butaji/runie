@@ -178,7 +178,7 @@ mod tests {
             "expected file-not-found error message, got: {msg}");
         // Verify that ? propagation works (errors can be converted through ModelError)
         fn propagate_error() -> Result<(), ModelError> {
-            let inner = std::io::Error::new(std::io::ErrorKind::Other, "propagated");
+            let inner = std::io::Error::other("propagated");
             Err(anyhow::Error::from(inner))?;
             Ok(())
         }
