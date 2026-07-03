@@ -3,6 +3,7 @@
 //! runtime save/load use `crate::session::store::SessionStore`.
 
 pub mod persistence;
+pub mod plan_store;
 pub mod replay;
 pub mod store;
 #[cfg(test)]

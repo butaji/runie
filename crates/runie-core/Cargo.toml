@@ -27,7 +27,7 @@ git       = ["dep:git2"]                  # git-status checks in fff indexer + g
 watch     = ["dep:notify", "dep:notify-debouncer-mini"]  # file-system watcher in ConfigActor
 keyring   = ["dep:keyring"]               # OS keyring credential storage
 clipboard = ["dep:arboard"]               # OS clipboard read/write
-mcp       = ["dep:rmcp", "dep:chrono"]   # MCP client + timestamp cache (rmcp pulls chrono)
+mcp       = ["dep:rmcp"]   # MCP client + timestamp cache (rmcp pulls chrono)
 tiktoken  = ["dep:tiktoken"]             # accurate token counting via tiktoken
 
 [dependencies]
@@ -77,6 +77,7 @@ hex = { workspace = true }
 dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
+chrono.workspace = true
 indexmap.workspace = true
 arboard = { workspace = true, optional = true }
 which.workspace = true
@@ -99,7 +100,6 @@ camino.workspace = true
 tinytemplate.workspace = true
 # serde_with.workspace = true  # unused - cargo machete
 validator.workspace = true
-chrono = { workspace = true, optional = true }
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true

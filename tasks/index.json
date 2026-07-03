@@ -112,7 +112,7 @@
   {
     "file": "add-plan-file-artifact-and-plan-mode-rpc.md",
     "title": "Add plan file artifact and plan mode RPC",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "add-project-config-denylist-for-sensitive-keys.md",
