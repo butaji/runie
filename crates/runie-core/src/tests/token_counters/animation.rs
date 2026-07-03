@@ -196,11 +196,11 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
     for i in 1..=100 {
         state.agent.speed_window.record(i * 10);
     }
-    
+
     let after_streaming = state.agent.speed_window.len();
     assert!(after_streaming > initial_len);
     state.agent.current_request_id = Some("r1".to_string());
-    
+
     state.update(crate::Event::Done {
         id: "r1".to_string(),
     });
@@ -217,7 +217,6 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
     for i in 1001..=1100 {
         state.agent.speed_window.record(i * 10);
     }
-    
 }
 
 #[test]

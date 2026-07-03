@@ -1,7 +1,7 @@
 //! Turn fact projections — event handlers for TurnActor facts.
 //!
 //! These methods project TurnActor facts into AppState's AgentState.
-//! 
+//!
 //! NOTE: AppState no longer owns TurnState. TurnState is owned by TurnActor.
 //! These projection methods update AgentState directly based on events from TurnActor.
 
@@ -322,7 +322,9 @@ impl AppState {
             }],
             ..Default::default()
         });
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
         self.messages_changed();
     }
 
@@ -342,7 +344,9 @@ impl AppState {
             .build();
         self.session_mut().messages.push(msg);
         // Add to request_queue (for agent to pick up)
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
         self.messages_changed();
     }
 
@@ -362,7 +366,9 @@ impl AppState {
             .build();
         self.session_mut().messages.push(msg);
         // Add to request_queue (for agent to pick up)
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
         self.messages_changed();
     }
 

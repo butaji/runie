@@ -1,6 +1,6 @@
 # Fix CI gates on `dev`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Testing
 **Priority**: P0

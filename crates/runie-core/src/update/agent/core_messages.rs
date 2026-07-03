@@ -4,7 +4,11 @@ use crate::update::strip_tool_markers;
 
 impl AppState {
     pub(crate) fn flush_buffered_response(&mut self, id: &str) {
-        let buffered = self.agent_state_mut().streaming_buffer.force_flush().join("");
+        let buffered = self
+            .agent_state_mut()
+            .streaming_buffer
+            .force_flush()
+            .join("");
         if buffered.is_empty() {
             return;
         }

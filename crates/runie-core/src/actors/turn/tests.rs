@@ -233,8 +233,7 @@ async fn contract_idempotent_message_submit() {
     handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
 
     // Use paused time to avoid real wall-clock delays
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
 
     // Use deterministic polling with virtual time
     let mut turn_started_count = 0;
@@ -296,8 +295,7 @@ async fn contract_ordered_events() {
     handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
 
     // Advance virtual time to let actor process
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
     runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(100)).await;
 
     // Events should be emitted in order (check that UserMessageSubmitted comes before TurnStarted)

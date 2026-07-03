@@ -494,7 +494,9 @@ impl TuiRuntime {
         let throbber = std::sync::Arc::new(parking_lot::Mutex::new(
             throbber_widgets_tui::ThrobberState::default(),
         ));
-        handles.spawn(tokio::spawn(test_render_loop(terminal, render_rx, throbber)));
+        handles.spawn(tokio::spawn(test_render_loop(
+            terminal, render_rx, throbber,
+        )));
 
         // Feed keystrokes - convert to runie_core events and send to input forwarder
         let user_bindings = state_for_keys.config().keybindings().clone();

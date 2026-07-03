@@ -84,8 +84,7 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
     });
 
     // Advance virtual time to let UiActor drain and enter select! loop.
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
     runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(100)).await;
 
     // Publish a subsequent event that WILL be re-emitted so we know the actor
@@ -166,8 +165,7 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
     });
 
     // Advance virtual time for UiActor to enter select! loop.
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
     runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
 
     // Publish an event — UiActor should process it.

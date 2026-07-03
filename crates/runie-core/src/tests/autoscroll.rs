@@ -37,7 +37,7 @@ fn submit_resets_scroll_to_bottom() {
 fn submit_when_turn_active_resets_scroll() {
     let mut state = fresh_state();
     state.agent.turn_active = true;
-    
+
     state.view.scroll = 5;
 
     state.update(crate::Event::Input('s'));
@@ -80,7 +80,7 @@ fn steering_delivery_resets_scroll() {
             content: "steer".to_string(),
             kind: crate::model::QueuedMessageKind::Steering,
         });
-    
+
     state.view.scroll = 5;
 
     state.deliver_queued();
@@ -102,7 +102,7 @@ fn follow_up_delivery_resets_scroll() {
             content: "follow".to_string(),
             kind: crate::model::QueuedMessageKind::FollowUp,
         });
-    
+
     state.view.scroll = 5;
 
     state.deliver_queued();

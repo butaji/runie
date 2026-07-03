@@ -23,7 +23,10 @@ fn handler_model_switches() {
     // Handler now emits Event::SwitchModel instead of mutating state directly.
     // Apply the result so the state mutation happens.
     let result = exec_handler(&mut state, "model", "gpt-4o");
-    assert!(matches!(result, CommandResult::Event(crate::Event::SwitchModel { .. })));
+    assert!(matches!(
+        result,
+        CommandResult::Event(crate::Event::SwitchModel { .. })
+    ));
     state.apply_command_result(result);
     assert_eq!(state.config.current_model, "gpt-4o");
 }

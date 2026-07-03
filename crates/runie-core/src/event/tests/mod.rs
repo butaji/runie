@@ -126,45 +126,291 @@ fn lifecycle_events_classified_as_fact() {
 /// This test ensures no variant is missing from kind(), category(), or into_intent().
 #[test]
 fn all_variants_have_kind_and_category() {
+    // Split by category to keep each sub-test below cognitive-complexity threshold.
+    check_agent_category();
+    check_command_category();
+    check_control_category();
+    check_dialog_category();
+    check_edit_category();
+    check_io_category();
+    check_input_category();
+    check_login_flow_category();
+    check_model_config_category();
+    check_other_category();
+    check_permission_category();
+    check_persistence_category();
+    check_plan_mode_category();
+    check_scroll_category();
+    check_session_category();
+    check_system_category();
+}
+
+fn check_agent_category() {
     use crate::event::EventKind;
+    assert_eq!(
+        Event::Thinking { id: "x".into() }.kind(),
+        EventKind::Fact,
+        "kind mismatch"
+    );
+    assert_eq!(
+        Event::Thinking { id: "x".into() }.category(),
+        crate::event::EventCategory::Agent,
+        "category mismatch"
+    );
+}
 
-    // Sample each category to verify kind/category are consistent
-    macro_rules! check {
-        ($event:expr, $expected_kind:expr, $expected_cat:expr) => {
-            assert_eq!($event.kind(), $expected_kind, "kind mismatch for {:?}", $event);
-            assert_eq!($event.category(), $expected_cat, "category mismatch for {:?}", $event);
-        };
-    }
+fn check_command_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::RunCompactCommand {
+            keep: "x".into(),
+            focus: "y".into()
+        }
+        .kind(),
+        EventKind::Intent,
+    );
+    assert_eq!(
+        Event::RunCompactCommand {
+            keep: "x".into(),
+            focus: "y".into()
+        }
+        .category(),
+        crate::event::EventCategory::Command,
+    );
+}
 
-    check!(Event::Thinking { id: "x".into() }, EventKind::Fact, crate::event::EventCategory::Agent);
-    check!(Event::RunCompactCommand { keep: "x".into(), focus: "y".into() }, EventKind::Intent, crate::event::EventCategory::Command);
-    check!(Event::Quit, EventKind::Control, crate::event::EventCategory::Control);
-    check!(Event::ToggleCommandPalette, EventKind::Intent, crate::event::EventCategory::Dialog);
-    check!(Event::PendingEdit { path: "x".into(), original: "y".into(), proposed: "z".into() }, EventKind::Intent, crate::event::EventCategory::Edit);
-    check!(Event::BashOutput { command: "x".into(), output: "y".into() }, EventKind::Fact, crate::event::EventCategory::IO);
-    check!(Event::Input('x'), EventKind::Intent, crate::event::EventCategory::Input);
-    check!(Event::Save, EventKind::Intent, crate::event::EventCategory::LoginFlow);
-    check!(Event::SwitchTheme { name: "x".into() }, EventKind::Intent, crate::event::EventCategory::ModelConfig);
-    check!(Event::MessageReplayed { id: "x".into(), role: "y".into(), content: "z".into(), timestamp: 0.0, provider: "p".into() }, EventKind::Fact, crate::event::EventCategory::Other);
-    check!(Event::PermissionResponse { request_id: "x".into(), action: PermissionAction::Allow }, EventKind::Intent, crate::event::EventCategory::Permission);
-    check!(Event::InputChanged { state: Box::new(crate::model::InputState::default()) }, EventKind::Fact, crate::event::EventCategory::Persistence);
-    check!(Event::PlanModeEnabled { content: "x".into() }, EventKind::Intent, crate::event::EventCategory::PlanMode);
-    check!(Event::Up, EventKind::Intent, crate::event::EventCategory::Scroll);
-    check!(Event::SessionSaved { name: "x".into() }, EventKind::Fact, crate::event::EventCategory::Session);
-    check!(Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) }, EventKind::Fact, crate::event::EventCategory::System);
+fn check_control_category() {
+    use crate::event::EventKind;
+    assert_eq!(Event::Quit.kind(), EventKind::Control);
+    assert_eq!(Event::Quit.category(), crate::event::EventCategory::Control);
+}
+
+fn check_dialog_category() {
+    use crate::event::EventKind;
+    assert_eq!(Event::ToggleCommandPalette.kind(), EventKind::Intent);
+    assert_eq!(
+        Event::ToggleCommandPalette.category(),
+        crate::event::EventCategory::Dialog
+    );
+}
+
+fn check_edit_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::PendingEdit {
+            path: "x".into(),
+            original: "y".into(),
+            proposed: "z".into()
+        }
+        .kind(),
+        EventKind::Intent,
+    );
+    assert_eq!(
+        Event::PendingEdit {
+            path: "x".into(),
+            original: "y".into(),
+            proposed: "z".into()
+        }
+        .category(),
+        crate::event::EventCategory::Edit,
+    );
+}
+
+fn check_io_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::BashOutput {
+            command: "x".into(),
+            output: "y".into()
+        }
+        .kind(),
+        EventKind::Fact,
+    );
+    assert_eq!(
+        Event::BashOutput {
+            command: "x".into(),
+            output: "y".into()
+        }
+        .category(),
+        crate::event::EventCategory::IO,
+    );
+}
+
+fn check_input_category() {
+    use crate::event::EventKind;
+    assert_eq!(Event::Input('x').kind(), EventKind::Intent);
+    assert_eq!(
+        Event::Input('x').category(),
+        crate::event::EventCategory::Input
+    );
+}
+
+fn check_login_flow_category() {
+    use crate::event::EventKind;
+    assert_eq!(Event::Save.kind(), EventKind::Intent);
+    assert_eq!(
+        Event::Save.category(),
+        crate::event::EventCategory::LoginFlow
+    );
+}
+
+fn check_model_config_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::SwitchTheme { name: "x".into() }.kind(),
+        EventKind::Intent
+    );
+    assert_eq!(
+        Event::SwitchTheme { name: "x".into() }.category(),
+        crate::event::EventCategory::ModelConfig,
+    );
+}
+
+fn check_other_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::MessageReplayed {
+            id: "x".into(),
+            role: "y".into(),
+            content: "z".into(),
+            timestamp: 0.0,
+            provider: "p".into()
+        }
+        .kind(),
+        EventKind::Fact,
+    );
+    assert_eq!(
+        Event::MessageReplayed {
+            id: "x".into(),
+            role: "y".into(),
+            content: "z".into(),
+            timestamp: 0.0,
+            provider: "p".into()
+        }
+        .category(),
+        crate::event::EventCategory::Other,
+    );
+}
+
+fn check_permission_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::PermissionResponse {
+            request_id: "x".into(),
+            action: PermissionAction::Allow
+        }
+        .kind(),
+        EventKind::Intent,
+    );
+    assert_eq!(
+        Event::PermissionResponse {
+            request_id: "x".into(),
+            action: PermissionAction::Allow
+        }
+        .category(),
+        crate::event::EventCategory::Permission,
+    );
+}
+
+fn check_persistence_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::InputChanged {
+            state: Box::new(crate::model::InputState::default())
+        }
+        .kind(),
+        EventKind::Fact,
+    );
+    assert_eq!(
+        Event::InputChanged {
+            state: Box::new(crate::model::InputState::default())
+        }
+        .category(),
+        crate::event::EventCategory::Persistence,
+    );
+}
+
+fn check_plan_mode_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::PlanModeEnabled {
+            content: "x".into()
+        }
+        .kind(),
+        EventKind::Intent
+    );
+    assert_eq!(
+        Event::PlanModeEnabled {
+            content: "x".into()
+        }
+        .category(),
+        crate::event::EventCategory::PlanMode,
+    );
+}
+
+fn check_scroll_category() {
+    use crate::event::EventKind;
+    assert_eq!(Event::Up.kind(), EventKind::Intent);
+    assert_eq!(Event::Up.category(), crate::event::EventCategory::Scroll);
+}
+
+fn check_session_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::SessionSaved { name: "x".into() }.kind(),
+        EventKind::Fact
+    );
+    assert_eq!(
+        Event::SessionSaved { name: "x".into() }.category(),
+        crate::event::EventCategory::Session,
+    );
+}
+
+fn check_system_category() {
+    use crate::event::EventKind;
+    assert_eq!(
+        Event::ConfigLoaded {
+            config: Box::new(crate::config::Config::default())
+        }
+        .kind(),
+        EventKind::Fact,
+    );
+    assert_eq!(
+        Event::ConfigLoaded {
+            config: Box::new(crate::config::Config::default())
+        }
+        .category(),
+        crate::event::EventCategory::System,
+    );
 }
 
 #[test]
 fn is_fact_variant_matches_kind() {
-    use crate::event::EventKind;
     use crate::event::is_fact_variant;
+    use crate::event::EventKind;
     // Every fact event should return true from is_fact_variant
     let fact_samples: Vec<Event> = vec![
         Event::Thinking { id: "x".into() },
-        Event::ToolEnd { id: "x".into(), duration_secs: 1.0, output: "y".into(), input: None },
-        Event::Response { id: "x".into(), content: "y".into(), role: String::new(), timestamp: 0.0, provider: String::new() },
-        Event::BashOutput { command: "x".into(), output: "y".into() },
-        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
+        Event::ToolEnd {
+            id: "x".into(),
+            duration_secs: 1.0,
+            output: "y".into(),
+            input: None,
+        },
+        Event::Response {
+            id: "x".into(),
+            content: "y".into(),
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        },
+        Event::BashOutput {
+            command: "x".into(),
+            output: "y".into(),
+        },
+        Event::ConfigLoaded {
+            config: Box::new(crate::config::Config::default()),
+        },
     ];
     for e in &fact_samples {
         assert!(is_fact_variant(e), "{:?} must be fact", e);
@@ -176,7 +422,10 @@ fn is_fact_variant_matches_kind() {
         Event::Quit,
         Event::Submit,
         Event::Input('x'),
-        Event::RunCompactCommand { keep: "x".into(), focus: "y".into() },
+        Event::RunCompactCommand {
+            keep: "x".into(),
+            focus: "y".into(),
+        },
     ];
     for e in &non_fact_samples {
         assert!(!is_fact_variant(e), "{:?} must not be fact", e);

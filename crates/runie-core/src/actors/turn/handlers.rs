@@ -343,6 +343,5 @@ pub(super) fn handle_configure_token_tracker(
     provider: String,
     model: String,
 ) {
-    state.turn_state.token_tracker =
-        crate::tokens::token_tracker_for(&provider, &model);
+    state.turn_state.token_tracker = crate::tokens::token_tracker_for(&provider, &model);
 }

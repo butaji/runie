@@ -1,6 +1,6 @@
 # Fix bash sandboxing for direct (non-shell) mode
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Security
 **Priority**: P1

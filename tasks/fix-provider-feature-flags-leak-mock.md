@@ -1,6 +1,6 @@
 # Fix provider feature flags so mock provider does not leak into production binaries
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Security
 **Priority**: P1

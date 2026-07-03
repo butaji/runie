@@ -23,7 +23,7 @@ fn test_complete_agent_flow() {
     state.pop_queue();
     // Set streaming on AgentState.
     state.agent_state_mut().streaming = true;
-    
+
     state.update(crate::Event::Thinking {
         id: "req.0".to_string(),
     });
@@ -71,7 +71,6 @@ fn test_second_submit_while_turn_active_queues_message() {
 
     // Simulate what spawn_if_queued should do: set turn_active
     state.agent.turn_active = true;
-    
 
     // Second message while turn is active
     state.update(crate::Event::Input('B'));
@@ -98,7 +97,6 @@ fn test_queued_message_appears_after_turn_completes() {
     state.update(crate::Event::Input('A'));
     state.update(Event::submit());
     state.agent.turn_active = true;
-    
 
     // Submit second message while agent is working
     state.update(crate::Event::Input('B'));
@@ -135,7 +133,6 @@ fn test_three_messages_one_at_a_time() {
     let mut state = fresh_state();
     submit_queued_message(&mut state, '1');
     state.agent.turn_active = true;
-    
 
     submit_queued_message(&mut state, '2');
     submit_queued_message(&mut state, '3');

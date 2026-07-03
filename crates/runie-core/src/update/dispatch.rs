@@ -373,10 +373,10 @@ fn apply_session_loaded(
 
 fn apply_session_imported(state: &mut AppState, session: &crate::session::Session) {
     state.restore_session(session);
-    state.notify(
-        format!("Session imported from '{}'.", session.name),
-        crate::event::TransientLevel::Info,
-    );
+    // Add system confirmation message to the session (matches UX of /save, /load, etc.).
+    state.add_system_msg(crate::ui_strings::session::session_imported(
+        session.display_name.as_deref().unwrap_or(&session.name),
+    ));
 }
 
 fn apply_session_list(state: &mut AppState, sessions: &[String]) {

@@ -193,7 +193,7 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
         return CommandResult::Message(s::IMPORT_USAGE.into());
     }
     let path_buf = std::path::PathBuf::from(path);
-    // Route through SessionActor in production; fall back to direct import in tests.
+    // Route through SessionActor in production; emit SessionImported event in tests.
     if let Some(h) = state.actor_handles() {
         let _ = h.session.try_send(SessionMsg::Import { path: path_buf });
         return CommandResult::Message(s::importing_session(path));
@@ -204,8 +204,12 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
     };
     match serde_json::from_str::<crate::session::Session>(&json) {
         Ok(session) => {
-            state.restore_session(&session);
-            CommandResult::Message(s::session_imported(path))
+            // Emit SessionImported event; dispatch.rs::apply_session_imported handles
+            // state.restore_session() and adds a confirmation message, keeping the
+            // event-driven pattern consistent.
+            CommandResult::Event(crate::Event::SessionImported {
+                session: Box::new(session),
+            })
         }
         Err(_) => CommandResult::Message(s::import_error(path)),
     }

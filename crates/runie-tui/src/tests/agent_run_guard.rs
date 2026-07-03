@@ -314,8 +314,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     turn_handle.send(TurnMsg::RunIfQueued).await;
 
     // Advance virtual time to let actor process TurnStarted.
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
     runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
 
     // Drain the bus until we see TurnStarted or timeout

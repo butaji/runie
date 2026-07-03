@@ -262,7 +262,6 @@ fn submit_queues_when_turn_active_without_actor_handles() {
 
     // Simulate an active turn
     state.agent.turn_active = true;
-    
 
     // Submit a message
     state.input_mut().input = "queued message".to_string();
@@ -287,7 +286,6 @@ fn submit_while_turn_active_queues_message() {
 
     // Simulate an active turn
     state.agent.turn_active = true;
-    
 
     // Simulate submit while turn is active
     state.input_mut().input = "queued message".to_string();
@@ -312,7 +310,6 @@ fn multiple_submits_while_turn_active_queue_all() {
 
     // Simulate an active turn
     state.agent.turn_active = true;
-    
 
     // First submission
     state.input_mut().input = "first".to_string();

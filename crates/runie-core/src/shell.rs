@@ -85,18 +85,10 @@ async fn run_bash_internal(
     let sandbox_status = sandbox_available();
     let use_sandbox = use_sandbox && matches!(sandbox_status, SandboxStatus::Available);
 
-    if use_sandbox && !shell {
-        // Document that sandboxing requires shell mode
-        tracing::warn!(
-            "Sandboxing requested but shell=false; sandboxing is only supported in shell mode. \
-             Command will run without sandbox restrictions. Set shell=true to enable sandboxing."
-        );
-    }
-
     if shell {
         run_bash_shell_internal(command, working_dir, env, timeout, use_sandbox).await
     } else {
-        run_bash_direct(command, working_dir, env, timeout).await
+        run_bash_direct(command, working_dir, env, timeout, use_sandbox).await
     }
 }
 
@@ -125,11 +117,15 @@ async fn run_bash_shell_internal(
 }
 
 /// Direct mode: parse with shell-words and execute without shell wrapper.
+///
+/// When `use_sandbox` is true, runs the command under `sandbox-exec` on macOS,
+/// or falls back to non-sandboxed execution on other platforms.
 async fn run_bash_direct(
     command: &str,
     working_dir: &Path,
     env: &HashMap<String, String>,
     timeout: Duration,
+    use_sandbox: bool,
 ) -> ShellResult {
     let args = match shell_words::split(command) {
         Ok(args) if !args.is_empty() => args,
@@ -137,15 +133,93 @@ async fn run_bash_direct(
         Err(e) => return ShellResult::error(format!("Error parsing command: {}", e)),
     };
 
-    let (program, args) = (&args[0], &args[1..]);
+    let (program, program_args) = (&args[0], args[1..].to_vec());
+
+    // For sandboxed execution, use sandbox-exec wrapper on macOS.
+    if use_sandbox {
+        return run_sandboxed_direct(program, &program_args, working_dir, env, timeout).await;
+    }
+
     let mut cmd = Command::new(program);
-    cmd.args(args)
+    cmd.args(&program_args)
         .current_dir(working_dir)
         .envs(env)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
     run_command(cmd, timeout).await
+}
+
+/// Run a sandboxed direct (non-shell) command with timeout support.
+///
+/// Uses a collector task to capture stdout/stderr while racing against the timeout,
+/// similar to `run_command`.
+async fn run_sandboxed_direct(
+    program: &str,
+    args: &[String],
+    working_dir: &Path,
+    env: &HashMap<String, String>,
+    timeout: Duration,
+) -> ShellResult {
+    use crate::sandbox;
+
+    let env_pairs: Vec<(String, String)> =
+        env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+
+    let child = match sandbox::run_sandboxed_direct_async(program, args, working_dir, &env_pairs)
+        .await
+    {
+        Ok(c) => c,
+        Err(e) => return ShellResult::error(format!("Failed to spawn sandboxed direct: {}", e)),
+    };
+
+    // Shared flag: set to true when timeout fires.
+    let killed = Arc::new(AtomicBool::new(false));
+    let killed_out = killed.clone();
+
+    // Channel to send the result back from the collector task.
+    let (tx, rx) = oneshot::channel();
+
+    // Spawn collector task — owns the child, collects output, checks killed flag.
+    tokio::spawn(async move {
+        let out = child.wait_with_output().await;
+
+        // Only send result if not killed (timeout hasn't fired).
+        if !killed_out.load(Ordering::SeqCst) {
+            let _ = tx.send(out);
+        }
+    });
+
+    // Race between output collection and timeout.
+    tokio::select! {
+        result = rx => {
+            match result {
+                Ok(Ok(out)) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                    let combined = combine_output(&stdout, &stderr);
+                    let bytes = out.stdout.len() as u64 + out.stderr.len() as u64;
+                    ShellResult {
+                        output: combined,
+                        bytes_transferred: Some(bytes),
+                        status: if out.status.success() {
+                            ShellStatus::Success
+                        } else {
+                            ShellStatus::Error
+                        },
+                    }
+                }
+                Ok(Err(e)) => ShellResult::error(format!("IO error reading output: {}", e)),
+                Err(_) => ShellResult::error("Output collection cancelled".to_owned()),
+            }
+        }
+        _ = tokio::time::sleep(timeout) => {
+            killed.store(true, Ordering::SeqCst);
+            // The collector task will drop the child when killed flag is set,
+            // which implicitly kills the process group via command-group's drop impl.
+            ShellResult::timed_out(timeout)
+        }
+    }
 }
 
 /// Run a sandboxed shell command with timeout support.
@@ -537,5 +611,28 @@ mod tests {
         let env = HashMap::new();
         let result = run_bash_sync("exit 1", Path::new("."), &env, true);
         assert_eq!(result.status, ShellStatus::Error);
+    }
+
+    #[tokio::test]
+    async fn async_bash_direct_mode_sandboxed() {
+        // Test that sandboxed direct mode (shell=false) runs with sandbox restrictions.
+        let env = HashMap::new();
+        let result = run_bash_sandboxed(
+            "echo hello",
+            Path::new("."),
+            &env,
+            Duration::from_secs(5),
+            false, // shell=false, direct mode
+        )
+        .await;
+        // On macOS with sandbox-exec, this should succeed.
+        // On other platforms, it falls back to non-sandboxed execution.
+        assert_eq!(
+            result.status,
+            ShellStatus::Success,
+            "output: {}",
+            result.output
+        );
+        assert!(result.output.contains("hello"));
     }
 }

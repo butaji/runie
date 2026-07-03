@@ -150,8 +150,7 @@ async fn approval_cancelled_during_ask_returns_deny_quickly() {
     });
 
     // Advance virtual time to let ask() register the request.
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
     runie_testing::TestTimeGuard::advance(Duration::from_millis(10)).await;
 
     // Cancel while ask() is waiting.

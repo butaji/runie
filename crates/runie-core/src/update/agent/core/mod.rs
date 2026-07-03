@@ -19,7 +19,9 @@ impl AppState {
         agent.thinking_started_at = Some(std::time::Instant::now());
         agent.turn_active = true;
         agent.current_action = Some("Thinking".to_owned());
-        agent.turn_started_at.get_or_insert_with(std::time::Instant::now);
+        agent
+            .turn_started_at
+            .get_or_insert_with(std::time::Instant::now);
         // Reset streaming buffer for new turn
         agent.streaming_buffer.reset();
         // Init speed tracking for this turn

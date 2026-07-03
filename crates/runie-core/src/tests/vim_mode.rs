@@ -225,7 +225,7 @@ fn esc_with_vim_mode_off_does_not_enter_nav_mode() {
 fn esc_during_active_turn_stops_first_then_enters_nav() {
     let mut state = state_with_vim();
     state.agent.turn_active = true;
-    
+
     state.update(crate::Event::Escape);
     // First Esc stops the turn; user is NOT yet in nav mode.
     assert!(!state.agent.turn_active, "first Esc should stop the turn");

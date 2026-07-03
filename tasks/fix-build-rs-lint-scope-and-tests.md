@@ -1,6 +1,6 @@
 # Fix `build.rs` lint scope and tests
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P0

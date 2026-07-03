@@ -37,8 +37,7 @@ fn format_combined_output() {
 
 #[tokio::test]
 async fn ractor_io_actor_spawns() {
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
     let bus = EventBus::<Event>::new(16);
     let result = RactorIoActor::spawn(bus).await;
     assert!(result.is_ok());
@@ -46,8 +45,7 @@ async fn ractor_io_actor_spawns() {
 
 #[tokio::test]
 async fn ractor_io_load_skills_emits_skills_loaded() {
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
 
     let bus = EventBus::<Event>::new(16);
     let mut sub = bus.subscribe();
@@ -56,19 +54,16 @@ async fn ractor_io_load_skills_emits_skills_loaded() {
     handle.load_skills().await;
 
     // Advance virtual time and wait for SkillsLoaded event
-    let found = runie_testing::wait_for_event(
-        &mut sub,
-        std::time::Duration::from_secs(5),
-        |evt| matches!(evt, Event::SkillsLoaded { .. }),
-    )
+    let found = runie_testing::wait_for_event(&mut sub, std::time::Duration::from_secs(5), |evt| {
+        matches!(evt, Event::SkillsLoaded { .. })
+    })
     .await;
     assert!(found.is_some(), "Expected SkillsLoaded event");
 }
 
 #[tokio::test]
 async fn ractor_io_load_auth_emits_auth_loaded() {
-    let _guard = runie_testing::TestTimeGuard::new()
-        .expect("should support time pausing");
+    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
 
     let bus = EventBus::<Event>::new(16);
     let mut sub = bus.subscribe();
@@ -77,11 +72,9 @@ async fn ractor_io_load_auth_emits_auth_loaded() {
     handle.load_auth().await;
 
     // Advance virtual time and wait for AuthLoaded event
-    let found = runie_testing::wait_for_event(
-        &mut sub,
-        std::time::Duration::from_secs(5),
-        |evt| matches!(evt, Event::AuthLoaded { .. }),
-    )
+    let found = runie_testing::wait_for_event(&mut sub, std::time::Duration::from_secs(5), |evt| {
+        matches!(evt, Event::AuthLoaded { .. })
+    })
     .await;
     assert!(found.is_some(), "Expected AuthLoaded event");
 }
@@ -148,7 +141,13 @@ fn detect_git_in_tmp_git_repo() {
 
     // Configure git
     let _ = Command::new("git")
-        .args(["-C", &tmp.to_string_lossy(), "config", "user.email", "test@test.com"])
+        .args([
+            "-C",
+            &tmp.to_string_lossy(),
+            "config",
+            "user.email",
+            "test@test.com",
+        ])
         .output();
     let _ = Command::new("git")
         .args(["-C", &tmp.to_string_lossy(), "config", "user.name", "Test"])
@@ -207,7 +206,13 @@ fn detect_git_detached_head() {
 
     // Configure and commit
     let _ = Command::new("git")
-        .args(["-C", &tmp.to_string_lossy(), "config", "user.email", "test@test.com"])
+        .args([
+            "-C",
+            &tmp.to_string_lossy(),
+            "config",
+            "user.email",
+            "test@test.com",
+        ])
         .output();
     let _ = Command::new("git")
         .args(["-C", &tmp.to_string_lossy(), "config", "user.name", "Test"])
@@ -229,7 +234,14 @@ fn detect_git_detached_head() {
 
     // Detach HEAD
     let _ = Command::new("git")
-        .args(["-C", &tmp.to_string_lossy(), "checkout", "--detach", "HEAD", "--quiet"])
+        .args([
+            "-C",
+            &tmp.to_string_lossy(),
+            "checkout",
+            "--detach",
+            "HEAD",
+            "--quiet",
+        ])
         .output();
 
     let info = detect_git_info_sync(&tmp);

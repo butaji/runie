@@ -154,7 +154,9 @@ impl AppState {
             ..Default::default()
         });
         // Update AgentState projection directly.
-        self.agent_state_mut().request_queue.push_back((content, id));
+        self.agent_state_mut()
+            .request_queue
+            .push_back((content, id));
     }
 
     pub fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
@@ -197,7 +199,9 @@ impl AppState {
         // Add confirmation system message for command-specific events.
         // Transient notifications (via notify) are added by the update handler.
         match &evt {
-            crate::Event::SwitchModel { provider, model, .. } => {
+            crate::Event::SwitchModel {
+                provider, model, ..
+            } => {
                 self.add_system_msg(format!("Switched to {}/{}", provider, model));
             }
             crate::Event::SetThinkingLevel(level) => {

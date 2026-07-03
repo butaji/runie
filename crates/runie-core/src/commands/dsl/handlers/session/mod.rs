@@ -133,27 +133,27 @@ pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     // Send actor messages first (synchronously) to abort turns before events are processed.
     // handle_new_session (via Event::NewSession) will configure the token tracker via
     // TurnMsg::ConfigureTokenTracker and reset the session state.
+    //
+    // In test mode (no actor handles), emit PermissionRequestDismissed event instead
+    // of mutating state directly. This keeps the event-driven pattern consistent.
     if let Some(handles) = state.actor_handles() {
         let _ = handles.permission.try_send(PermissionMsg::DismissRequest);
         let _ = handles.turn.try_send(crate::actors::TurnMsg::AbortTurn);
-    } else {
-        *state.permission_request_mut() = None;
     }
     // Emit events that handle_new_session processes for full state reset.
     // UiActor::clear_turn_state(is_abort=true) sends TurnMsg::ClearQueues after
     // processing Event::Abort, ensuring queues are cleared atomically.
-    CommandResult::Events(vec![
-        crate::Event::NewSession,
-        crate::Event::Abort,
-    ])
+    let mut events = vec![crate::Event::NewSession, crate::Event::Abort];
+    if state.actor_handles().is_none() {
+        // Test mode: emit PermissionRequestDismissed event instead of direct mutation.
+        events.insert(0, crate::Event::PermissionRequestDismissed);
+    }
+    CommandResult::Events(events)
 }
 
 pub fn handle_reset(_state: &mut AppState, _: &str) -> CommandResult {
     // Emit Event::Reset so the update handler applies state reset consistently.
-    CommandResult::Events(vec![
-        crate::Event::Reset,
-        crate::Event::Abort,
-    ])
+    CommandResult::Events(vec![crate::Event::Reset, crate::Event::Abort])
 }
 
 pub fn handle_history(state: &mut AppState, _: &str) -> CommandResult {

@@ -273,7 +273,7 @@ fn handle_new_session(state: &mut AppState) {
     // Configure token tracker for the current model.
     // Updates TurnState.token_tracker so AgentState.token_tracker derives correctly.
     if let Some(handles) = state.actor_handles() {
-        let _ = (&handles.turn).try_send(TurnMsg::ConfigureTokenTracker {
+        let _ = handles.turn.try_send(TurnMsg::ConfigureTokenTracker {
             provider: state.config().current_provider.clone(),
             model: state.config().current_model.clone(),
         });

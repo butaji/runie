@@ -1,6 +1,6 @@
 # Close `turn_state` field-access guardrail gap
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Core / State
 **Priority**: P1

@@ -170,7 +170,9 @@ fn close_command_palette_if_open(state: &mut AppState) {
 /// produce consistent UX (system messages for model/thinking/reset commands).
 fn apply_command_event_for_dialog(state: &mut AppState, evt: crate::Event) {
     match &evt {
-        crate::Event::SwitchModel { provider, model, .. } => {
+        crate::Event::SwitchModel {
+            provider, model, ..
+        } => {
             state.add_system_msg(format!("Switched to {}/{}", provider, model));
         }
         crate::Event::SetThinkingLevel(level) => {

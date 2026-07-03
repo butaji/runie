@@ -148,12 +148,10 @@ impl Clone for TurnMsg {
                 tokens_out: *tokens_out,
             },
             TurnMsg::NextId => TurnMsg::NextId,
-            TurnMsg::ConfigureTokenTracker { provider, model } => {
-                TurnMsg::ConfigureTokenTracker {
-                    provider: provider.clone(),
-                    model: model.clone(),
-                }
-            }
+            TurnMsg::ConfigureTokenTracker { provider, model } => TurnMsg::ConfigureTokenTracker {
+                provider: provider.clone(),
+                model: model.clone(),
+            },
         }
     }
 }

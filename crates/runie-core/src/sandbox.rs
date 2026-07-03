@@ -390,6 +390,60 @@ pub async fn run_sandboxed_shell_async(
         .map_err(|e| format!("Failed to spawn shell command: {}", e))
 }
 
+/// Spawn a direct (non-shell) command with sandboxing, returning an async Child handle.
+///
+/// Takes a parsed program name and arguments, wrapping them with `sandbox-exec -p <profile>`
+/// on macOS. Falls back to non-sandboxed execution on non-macOS platforms.
+#[cfg(target_os = "macos")]
+pub async fn run_sandboxed_direct_async(
+    program: &str,
+    args: &[String],
+    working_dir: &Path,
+    env: &[(String, String)],
+) -> Result<tokio::process::Child, String> {
+    let cwd = working_dir
+        .to_str()
+        .ok_or_else(|| "Invalid working directory".to_owned())?;
+    let profile = build_mac_sandbox_profile(cwd);
+
+    let mut cmd = AsyncCommand::new("sandbox-exec");
+    cmd.arg("-p").arg(&profile).arg(program);
+    for arg in args {
+        cmd.arg(arg);
+    }
+    cmd.current_dir(working_dir)
+        .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+
+    cmd.spawn()
+        .map_err(|e| format!("Failed to spawn sandboxed direct command: {}", e))
+}
+
+/// Spawn a direct (non-shell) command with sandboxing on non-macOS.
+///
+/// Non-macOS platforms fall back to non-sandboxed execution since `sandbox-exec`
+/// is not available. This is the same as running without sandboxing.
+#[cfg(not(target_os = "macos"))]
+pub async fn run_sandboxed_direct_async(
+    program: &str,
+    args: &[String],
+    working_dir: &Path,
+    env: &[(String, String)],
+) -> Result<tokio::process::Child, String> {
+    let mut cmd = AsyncCommand::new(program);
+    cmd.args(args);
+    cmd.current_dir(working_dir)
+        .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+
+    cmd.spawn()
+        .map_err(|e| format!("Failed to spawn direct command: {}", e))
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
