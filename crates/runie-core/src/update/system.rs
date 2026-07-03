@@ -272,8 +272,8 @@ fn handle_new_session(state: &mut AppState) {
     state.add_system_msg(crate::ui_strings::session::NEW_SESSION_STARTED.into());
     // Configure token tracker for the current model.
     // Updates TurnState.token_tracker so AgentState.token_tracker derives correctly.
-    if let Some(ref handles) = state.actor_handles() {
-        let _ = handles.turn.try_send(TurnMsg::ConfigureTokenTracker {
+    if let Some(handles) = state.actor_handles() {
+        let _ = (&handles.turn).try_send(TurnMsg::ConfigureTokenTracker {
             provider: state.config().current_provider.clone(),
             model: state.config().current_model.clone(),
         });

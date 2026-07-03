@@ -11,8 +11,36 @@ import json
 import sys
 from pathlib import Path
 
+# Unit variants (no fields) — pattern is Event::{v}, not Event::{v} {{ .. }}
+UNIT_VARIANTS = {
+    "Abort", "ApproveEdit", "AtFilePicker", "Backspace", "Cancel", "ClearQueues",
+    "ClearTransient", "CloneSession", "CommandFormBackspace", "CommandFormClose",
+    "CommandFormDown", "CommandFormSubmit", "CommandFormUp", "CopyBlockMetadata",
+    "CopyLastResponse", "CopySelectedBlock", "CursorEnd", "CursorLeft", "CursorRight",
+    "CursorStart", "CursorWordLeft", "CursorWordRight", "CycleModelNext", "CycleModelPrev",
+    "CycleThinkingLevel", "Dequeue", "DeleteToEnd", "DeleteToStart", "DeleteWord", "DialogBack",
+    "Down", "FollowUp", "ForceQuit",
+    "Escape", "FocusGained", "FocusLost", "GoToBottom", "GoToTop", "HistoryNext",
+    "HistoryPrev", "KeybindingsReloaded", "KillChar", "ModelSelectorBackspace",
+    "ModelSelectorClose", "ModelSelectorDown", "ModelSelectorSelect", "ModelSelectorUp",
+    "MouseScrollDown", "MouseScrollUp", "NewSession", "Newline", "OpenExternalEditor",
+    "OpenSessionList", "PageDown", "PageUp", "PaletteBackspace", "PaletteClose",
+    "PaletteDown", "PaletteSelect", "PaletteUp", "PasteImage", "PathCompletionClose",
+    "PathCompletionDown", "PathCompletionSelect", "PathCompletionUp",
+    "PermissionRequestDismissed", "PlanModeDisabled", "ProcessResumed", "ProvidersAdd",
+    "ProvidersDialog", "QueuesCleared", "Quit", "Redo", "RejectEdit", "ReloadAll", "Reset",
+    "ResumeSession", "Save", "ScopedModelDisableAll", "ScopedModelEnableAll",
+    "SessionTreeFilterCycle", "SettingsClose", "SettingsDown", "SettingsLeft",
+    "SettingsRight", "SettingsSelect", "SettingsUp", "ShareSession", "ShowDiagnostics",
+    "Start", "Submit", "Suspend", "ToggleCommandPalette", "ToggleExpand",
+    "ToggleModelSelector", "TogglePathCompletion", "ToggleReadOnly",
+    "ToggleScopedModelsDialog", "ToggleSessionTree", "ToggleSettingsDialog", "ToggleVimMode",
+    "ToggleWelcome", "TrustProject", "TurnAborted", "TurnCompleted", "Undo", "UntrustProject",
+    "Up",
+}
+
 # Variants with fields (non-unit variants) — for into_intent() return type
-# Any variant with (char) or {..} pattern needs to use self.clone()
+# Any variant with (char) or {{..}} pattern needs to use self.clone()
 VARIANTS_WITH_FIELDS = {
     "SetPrompt", "RunLoadCommand", "RunSaveCommand", "RunDeleteCommand",
     "RunImportCommand", "RunExportCommand", "RunSkillCommand", "RunLoginCommand",
@@ -104,22 +132,26 @@ def main():
     intent_variants = sorted(set(intent_variants), key=lambda v: (variant_category.get(v, ""), v))
     fact_variants = sorted(set(fact_variants), key=lambda v: (variant_category.get(v, ""), v))
 
+    def pattern(v: str) -> str:
+        """Return match pattern: unit variant vs struct variant."""
+        return f"Event::{v}" if v in UNIT_VARIANTS else f"Event::{v} {{ .. }}"
+
     # Generate kind() match arms
     kind_lines = []
     for v in sorted(variant_kind.keys()):
         kind = variant_kind[v]
         if kind == "Control":
-            kind_lines.append(f"            Event::{v} {{ .. }} => EventKind::Control,")
+            kind_lines.append(f"            {pattern(v)} => EventKind::Control,")
         elif kind == "Intent":
-            kind_lines.append(f"            Event::{v} {{ .. }} => EventKind::Intent,")
+            kind_lines.append(f"            {pattern(v)} => EventKind::Intent,")
         else:
-            kind_lines.append(f"            Event::{v} {{ .. }} => EventKind::Fact,")
+            kind_lines.append(f"            {pattern(v)} => EventKind::Fact,")
 
     # Generate category() match arms
     category_lines = []
     for v in sorted(variant_category.keys()):
         cat = variant_category[v]
-        category_lines.append(f"            Event::{v} {{ .. }} => EventCategory::{cat},")
+        category_lines.append(f"            {pattern(v)} => EventCategory::{cat},")
 
     # Generate into_intent() match arms
     intent_lines = []
@@ -133,9 +165,9 @@ def main():
     fact_lines = []
     for i, v in enumerate(fact_variants):
         if i == 0:
-            fact_lines.append(f"            | Event::{v} {{ .. }}")
+            fact_lines.append(f"            | {pattern(v)}")
         else:
-            fact_lines.append(f"            | Event::{v} {{ .. }}")
+            fact_lines.append(f"            | {pattern(v)}")
 
     # Write generated file
     with open(output_path, "w") as f:
