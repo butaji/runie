@@ -182,7 +182,9 @@ impl AppState {
             prompts_section.custom.as_deref(),
         );
         self.apply_scoped_models(config);
-        if !self.has_models() && !crate::provider::is_mock_enabled() {
+        if (!self.has_models() && !crate::provider::is_mock_enabled())
+            || crate::provider::is_mock_onboarding()
+        {
             self.update(crate::Event::Start);
         }
     }

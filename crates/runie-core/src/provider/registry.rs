@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 static MOCK_ENABLED: AtomicBool = AtomicBool::new(false);
+static MOCK_ONBOARDING: AtomicBool = AtomicBool::new(false);
 thread_local! {
     /// Per-thread override for `is_mock_enabled` in tests. Allows tests to
     /// set deterministic mock state without interfering with parallel tests.
@@ -27,12 +28,16 @@ static PROVIDER_CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
 ///
 /// `dev.sh` sets `RUNIE_MOCK=1`. `RUNIE_MOCK_DELAY=1` is also accepted as
 /// a back-compat alias (it both enables the mock and adds streaming delays).
+///
+/// `--mock-onboarding` also counts as enabled so the mock provider appears in
+/// the onboarding picker.
 pub fn is_mock_enabled() -> bool {
     // Thread-local override takes precedence (set by `set_mock_enabled` in tests).
     if let Some(v) = TEST_MOCK.with(|cell| *cell.borrow()) {
         return v;
     }
     MOCK_ENABLED.load(Ordering::Relaxed)
+        || is_mock_onboarding()
         || std::env::var_os("RUNIE_MOCK").is_some()
         || std::env::var_os("RUNIE_MOCK_DELAY").is_some()
 }
@@ -45,6 +50,19 @@ pub fn is_mock_enabled() -> bool {
 pub fn set_mock_enabled(enabled: bool) {
     TEST_MOCK.with(|cell| *cell.borrow_mut() = Some(enabled));
     MOCK_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
+/// Returns true when `--mock-onboarding` was requested.
+///
+/// In this mode the mock provider is visible in the onboarding picker, but the
+/// dialog itself stays open until the user selects the mock provider and model.
+pub fn is_mock_onboarding() -> bool {
+    MOCK_ONBOARDING.load(Ordering::Relaxed)
+}
+
+/// Enable or disable the mock-onboarding mode.
+pub fn set_mock_onboarding(enabled: bool) {
+    MOCK_ONBOARDING.store(enabled, Ordering::Relaxed);
 }
 
 /// Returns the mock model name selected by the user.

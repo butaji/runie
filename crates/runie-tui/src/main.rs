@@ -31,8 +31,11 @@ struct Cli {
     /// Enable the mock provider (no API key required).
     #[arg(long)]
     mock: bool,
-    /// Mock model/fixture to use with --mock (e.g. echo, list_dir, read_file).
-    #[arg(long, requires = "mock")]
+    /// Show the onboarding flow with the mock provider available.
+    #[arg(long)]
+    mock_onboarding: bool,
+    /// Mock model/fixture to use with --mock or --mock-onboarding (e.g. echo, list_dir, read_file).
+    #[arg(long)]
     mock_model: Option<String>,
 }
 
@@ -62,7 +65,7 @@ async fn main() -> io::Result<()> {
     tracing_init::init_tui();
 
     let cli = Cli::parse();
-    enable_mock_if_requested(cli.mock, cli.mock_model.as_deref());
+    enable_mock_if_requested(cli.mock, cli.mock_onboarding, cli.mock_model.as_deref());
     if cli.dry_run || cli.preview {
         let report = runie_core::run_dry_run(&runie_core::Config::load(None));
         println!("{report}");
