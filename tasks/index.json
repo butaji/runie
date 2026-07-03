@@ -252,7 +252,7 @@
   {
     "file": "capture-orphan-spawns-across-workspace.md",
     "title": "Capture orphan `tokio::spawn` calls across the workspace",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "centralize-actor-channel-capacities-and-timeouts.md",

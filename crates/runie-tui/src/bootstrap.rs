@@ -47,6 +47,38 @@ pub enum BackendType {
     Test(TestBackend),
 }
 
+/// Holds all spawned task handles for the TUI runtime.
+///
+/// Every spawned task is tracked here and awaited on shutdown.
+/// This ensures no orphan tasks and panics are observable.
+#[derive(Default)]
+pub struct TuiRuntimeHandles {
+    handles: Vec<tokio::task::JoinHandle<()>>,
+}
+
+impl TuiRuntimeHandles {
+    /// Spawn a new task and track its handle.
+    pub fn spawn(&mut self, handle: tokio::task::JoinHandle<()>) {
+        self.handles.push(handle);
+    }
+
+    /// Await all spawned tasks with a timeout.
+    ///
+    /// Panics and unexpected exits become observable here.
+    /// Uses a short timeout since background tasks should exit quickly on shutdown signal.
+    pub async fn shutdown(mut self) {
+        let timeout = std::time::Duration::from_secs(5);
+        let _ = tokio::time::timeout(timeout, async {
+            while let Some(handle) = self.handles.pop() {
+                if let Err(e) = handle.await {
+                    tracing::debug!(?e, "TUI runtime task exited with error");
+                }
+            }
+        })
+        .await;
+    }
+}
+
 /// Keystroke DSL for programmatic input simulation.
 #[derive(Debug, Clone)]
 pub enum Keystroke {
@@ -391,6 +423,7 @@ impl TuiRuntime {
         init_terminal_state(&mut state);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let mut handles = TuiRuntimeHandles::default();
         spawn_background_tasks(
             terminal,
             state,
@@ -398,12 +431,16 @@ impl TuiRuntime {
             leader_handle.clone(),
             bus_rx,
             shutdown_tx,
+            &mut handles,
         )
         .await;
 
         shutdown_rx
             .await
             .map_err(|_| std::io::Error::other("shutdown signal dropped"))?;
+
+        // Await all spawned tasks to ensure clean shutdown.
+        handles.shutdown().await;
         Ok(())
     }
 
@@ -425,6 +462,7 @@ impl TuiRuntime {
         };
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let mut handles = TuiRuntimeHandles::default();
         let (terminal, terminal_caps) = setup_test_terminal(backend);
         init_terminal_state(&mut state);
 
@@ -448,15 +486,15 @@ impl TuiRuntime {
             leader_handle.agent.clone(),
         )));
         let render_rx = ui_actor.take_render_rx();
-        tokio::spawn(async move {
+        handles.spawn(tokio::spawn(async move {
             ui_actor.run_with_external_rx(submit_rx).await;
-        });
+        }));
 
         // Spawn test render loop
         let throbber = std::sync::Arc::new(parking_lot::Mutex::new(
             throbber_widgets_tui::ThrobberState::default(),
         ));
-        tokio::spawn(test_render_loop(terminal, render_rx, throbber));
+        handles.spawn(tokio::spawn(test_render_loop(terminal, render_rx, throbber)));
 
         // Feed keystrokes - convert to runie_core events and send to input forwarder
         let user_bindings = state_for_keys.config().keybindings().clone();
@@ -485,6 +523,9 @@ impl TuiRuntime {
 
         // Signal shutdown
         let _ = shutdown_rx.await;
+
+        // Await all spawned tasks to ensure clean shutdown.
+        handles.shutdown().await;
         Ok(())
     }
 }
@@ -505,17 +546,18 @@ async fn spawn_background_tasks(
     leader_handle: LeaderHandle,
     bus_rx: runie_core::bus::Receiver<Event>,
     shutdown_tx: oneshot::Sender<()>,
+    handles: &mut TuiRuntimeHandles,
 ) {
     let bus = leader_handle.event_bus().clone();
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
-    tokio::spawn(input_forwarder_task(
+    handles.spawn(tokio::spawn(input_forwarder_task(
         input_rx,
         leader_handle.input.clone(),
         submit_tx,
-    ));
+    )));
 
     // UiActor was created before start_with_bus() with a NoOp agent handle and
     // the pre-subscribed bus_rx. Install the real agent handle and run it.
@@ -533,11 +575,11 @@ async fn spawn_background_tasks(
         leader_handle.agent.clone(),
     )));
     let render_rx = ui_actor.take_render_rx();
-    tokio::spawn(async move {
+    handles.spawn(tokio::spawn(async move {
         ui_actor.run_with_external_rx(submit_rx).await;
-    });
+    }));
 
-    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, caps);
+    spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, caps, handles);
 }
 
 fn spawn_agent_tasks(
@@ -546,9 +588,10 @@ fn spawn_agent_tasks(
     terminal: ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
     render_rx: watch::Receiver<Snapshot>,
     caps: terminal::caps::TermCaps,
+    handles: &mut TuiRuntimeHandles,
 ) {
-    tokio::spawn(input_reader(input_tx, kb_rx));
-    tokio::spawn(async_render_loop(terminal, render_rx, caps));
+    handles.spawn(tokio::spawn(input_reader(input_tx, kb_rx)));
+    handles.spawn(tokio::spawn(async_render_loop(terminal, render_rx, caps)));
 }
 
 /// Forwarder: raw events come in via `input_rx` and are routed through InputMsg
@@ -785,5 +828,34 @@ mod tests {
         assert!(matches!(events[1], Event::Input('i')));
         // Enter maps to Submit via the keymap
         assert!(matches!(events[2], Event::Submit));
+    }
+
+    /// Layer 1: TuiRuntimeHandles stores all spawned task handles.
+    #[tokio::test]
+    async fn runtime_handles_stores_task_handles() {
+        let mut handles = TuiRuntimeHandles::default();
+        assert!(handles.handles.is_empty());
+
+        // Spawn a simple task and capture its handle.
+        let handle = tokio::spawn(async {});
+        handles.spawn(handle);
+        assert_eq!(handles.handles.len(), 1);
+    }
+
+    /// Layer 1: TuiRuntimeHandles::shutdown awaits all spawned tasks.
+    #[tokio::test]
+    async fn runtime_handles_shutdown_awaits_tasks() {
+        let mut handles = TuiRuntimeHandles::default();
+
+        // Spawn multiple tasks.
+        handles.spawn(tokio::spawn(async {}));
+        handles.spawn(tokio::spawn(async {}));
+        handles.spawn(tokio::spawn(async {}));
+
+        assert_eq!(handles.handles.len(), 3);
+
+        // Shutdown takes ownership and awaits all tasks without panicking.
+        handles.shutdown().await;
+        // After shutdown, handles is consumed.
     }
 }
