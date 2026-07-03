@@ -138,7 +138,7 @@ The build script at `crates/runie-core/build.rs` enforces, across all workspace 
 | Magic numbers (>= 1000) | all `crates/*/src` production code | Yes |
 | Orphan `tokio::spawn` calls | all `crates/*/src` production code | Yes |
 
-`scripts/check-file-limits.sh` (run in CI) enforces the structural limits on all workspace production `.rs` files:
+`python3 scripts/check_structure.py` (run in CI) enforces the structural limits on all workspace production `.rs` files:
 
 | Metric | Limit |
 |--------|-------|

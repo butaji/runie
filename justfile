@@ -50,17 +50,6 @@ build-release:
 tui *args:
     cargo run -p runie-tui --bin runie-tui -- {{args}}
 
-# Run a manual live TUI smoke test in a real tmux session.
-# This is not an automatic test; it validates TUI behavior interactively.
-# Examples:
-#   just live-tui-tmux mock
-#   just live-tui-tmux mock "list files"
-#   RUNIE_MOCK_MODEL=list_dir just live-tui-tmux mock "list files"
-#   just live-tui-tmux mock "list files" 30 list_dir
-#   MINIMAX_API_KEY=... just live-tui-tmux minimax
-live-tui-tmux mode="mock" prompt="hello" timeout="30" mock_model="":
-    ./scripts/live-tui-tmux.sh {{mode}} {{prompt}} {{timeout}} {{mock_model}}
-
 # Run the schema generator example to regenerate config.schema.json
 write-config-schema:
     cargo run -p runie-core --example write_config_schema -- config.schema.json
@@ -77,13 +66,13 @@ clean:
 check:
     cargo check --workspace
 
-# Run dev mode (mock provider)
-dev:
-    ./dev.sh
-
 # Run all tests (same as CI)
 verify-tests:
     cargo nextest run --workspace && cargo test --workspace --doc
+
+# Run structural linter (file/function/complexity limits)
+check-structure:
+    python3 scripts/check_structure.py
 
 # Watch mode for TUI crate only
 watch-tui:

@@ -383,7 +383,7 @@ Rules:
 
 `crates/runie-core/build.rs` enforces AppState access, magic-number, and orphan-spawn guardrails on all workspace production code.
 
-`scripts/check-file-limits.sh` (run in CI) enforces structural limits on production `.rs` files:
+`python3 scripts/check_structure.py` (run in CI) enforces structural limits on production `.rs` files:
 
 | Metric | Limit |
 |--------|-------|
