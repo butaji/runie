@@ -2,7 +2,7 @@
 
 ## Status
 
-**Superseded** — This is a subset of `finish-replacing-custom-tui-widgets.md`. The canonical task is now `finish-replacing-custom-tui-widgets.md` which covers all custom TUI widgets including forms.
+**done** — Superseded by `finish-replacing-custom-tui-widgets.md` which covers all custom TUI widgets including forms. Form inputs were replaced with `tui-input`.
 
 ## Original Description
 
