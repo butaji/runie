@@ -12,6 +12,9 @@ use std::path::Path;
 use std::process::Command;
 use tracing::{info, warn};
 
+#[cfg(target_os = "macos")]
+use tokio::process::Command as AsyncCommand;
+
 /// Result of sandbox initialization or availability check.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SandboxStatus {
@@ -327,6 +330,59 @@ pub fn run_sandboxed_shell(
     env: &[(String, String)],
 ) -> Result<std::process::ExitStatus, String> {
     run_sandboxed("sh", &["-c", command], working_dir, env)
+}
+
+/// Spawn a shell command with sandboxing, returning an async Child handle.
+///
+/// Unlike `run_sandboxed_shell`, this returns a tokio Child so the caller can
+/// manage timeouts and kill the process group on timeout.
+#[cfg(target_os = "macos")]
+pub async fn run_sandboxed_shell_async(
+    command: &str,
+    working_dir: &Path,
+    env: &[(String, String)],
+) -> Result<tokio::process::Child, String> {
+    let cwd = working_dir
+        .to_str()
+        .ok_or_else(|| "Invalid working directory".to_owned())?;
+    let profile = build_mac_sandbox_profile(cwd);
+
+    let mut cmd = AsyncCommand::new("sandbox-exec");
+    cmd.arg("-p")
+        .arg(&profile)
+        .arg("sh")
+        .arg("-c")
+        .arg(command)
+        .current_dir(working_dir)
+        .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+
+    cmd.spawn()
+        .map_err(|e| format!("Failed to spawn sandboxed command: {}", e))
+}
+
+/// Run a sandboxed shell command with async process management.
+///
+/// Uses `tokio::process::Command` so the child can be killed on timeout.
+#[cfg(not(target_os = "macos"))]
+pub async fn run_sandboxed_shell_async(
+    command: &str,
+    working_dir: &Path,
+    env: &[(String, String)],
+) -> Result<tokio::process::Child, String> {
+    let mut cmd = AsyncCommand::new("sh");
+    cmd.arg("-c")
+        .arg(command)
+        .current_dir(working_dir)
+        .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+
+    cmd.spawn()
+        .map_err(|e| format!("Failed to spawn shell command: {}", e))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

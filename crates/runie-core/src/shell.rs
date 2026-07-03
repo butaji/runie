@@ -137,6 +137,8 @@ async fn run_bash_direct(
 }
 
 /// Run a sandboxed shell command with timeout support.
+///
+/// Uses tokio::process::Command so the child can be killed when the timeout fires.
 async fn run_sandboxed_shell(
     command: &str,
     working_dir: &Path,
@@ -145,30 +147,34 @@ async fn run_sandboxed_shell(
 ) -> ShellResult {
     use crate::sandbox;
 
-    // Convert env to the format expected by sandbox module
     let env_pairs: Vec<(String, String)> = env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
 
-    // Run the sandboxed command with timeout
-    let result = tokio::time::timeout(timeout, async {
-        sandbox::run_sandboxed_shell(command, working_dir, &env_pairs)
-    }).await;
+    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_pairs).await {
+        Ok(c) => c,
+        Err(e) => return ShellResult::error(format!("Failed to spawn sandboxed shell: {}", e)),
+    };
 
-    match result {
-        Ok(Ok(exit_status)) => {
-            let status = if exit_status.success() {
-                ShellStatus::Success
-            } else {
-                ShellStatus::Error
-            };
-            ShellResult {
-                output: format!("Sandboxed command exited with: {}", exit_status),
-                bytes_transferred: None,
-                status,
+    tokio::select! {
+        status = child.wait() => {
+            match status {
+                Ok(exit_status) => {
+                    let shell_status = if exit_status.success() {
+                        ShellStatus::Success
+                    } else {
+                        ShellStatus::Error
+                    };
+                    ShellResult {
+                        output: format!("Sandboxed command exited with: {}", exit_status),
+                        bytes_transferred: None,
+                        status: shell_status,
+                    }
+                }
+                Err(e) => ShellResult::error(format!("IO error waiting for sandboxed command: {}", e)),
             }
         }
-        Ok(Err(e)) => ShellResult::error(format!("Sandbox execution failed: {}", e)),
-        Err(_) => {
-            // Timeout
+        _ = tokio::time::sleep(timeout) => {
+            // Kill the child process group when timeout fires.
+            child.start_kill().ok();
             ShellResult::timed_out(timeout)
         }
     }
