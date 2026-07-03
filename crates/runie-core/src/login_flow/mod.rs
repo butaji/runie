@@ -19,6 +19,7 @@ pub use state::{LoginFlowState, LoginStep};
 
 // Re-exports from handlers module.
 pub use handlers::{login_flow_cancel, login_flow_event, login_flow_start};
+pub(crate) use panel_ops::rebuild_login_dialog;
 
 pub(crate) mod handlers;
 pub(crate) mod panel_ops;

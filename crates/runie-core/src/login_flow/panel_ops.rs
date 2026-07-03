@@ -184,7 +184,7 @@ fn build_login_stack_for_flow(flow: &LoginFlowState) -> PanelStack {
 
 /// Open the login dialog with the root panel (provider picker).
 /// If another dialog is open, push it onto the global back stack.
-pub(super) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
+pub(crate) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
     if state.login_flow().is_some() {
         if let Some(current) = state.open_dialog_mut().take() {
             state.dialog_back_stack_mut().push(current);

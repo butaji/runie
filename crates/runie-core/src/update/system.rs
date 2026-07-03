@@ -335,6 +335,11 @@ fn handle_abort(state: &mut AppState) {
     }
     if state.login_flow().is_some() {
         crate::login_flow::login_flow_cancel(state);
+        // Safety net: keep onboarding open if the cancel path incorrectly closed it.
+        if state.login_flow().is_some() && state.open_dialog().is_none() {
+            tracing::warn!("onboarding dialog was incorrectly closed by Abort; reopening");
+            crate::login_flow::rebuild_login_dialog(state);
+        }
         return;
     }
     if state.open_dialog().is_some() && crate::update::dialog::root_closable(state) {

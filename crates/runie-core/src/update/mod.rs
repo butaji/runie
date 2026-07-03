@@ -156,6 +156,13 @@ impl AppState {
         }
         if self.login_flow().is_some() && matches!(event, Event::DialogBack) {
             crate::login_flow::login_flow_cancel(self);
+            // Safety net: the onboarding dialog must never be closed by Esc/DialogBack
+            // while the login flow is still active. If a stale flag or bug somehow
+            // closed it, reopen the dialog immediately.
+            if self.login_flow().is_some() && self.open_dialog().is_none() {
+                tracing::warn!("onboarding dialog was incorrectly closed by Esc/DialogBack; reopening");
+                crate::login_flow::rebuild_login_dialog(self);
+            }
             return;
         }
         if self.try_handle_dialog_event_dialog(event) {

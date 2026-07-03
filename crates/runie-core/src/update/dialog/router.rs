@@ -49,6 +49,11 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, crate::Event::Abort) {
+        // Abort must never close the onboarding/login flow.
+        if state.login_flow().is_some() {
+            crate::login_flow::login_flow_cancel(state);
+            return true;
+        }
         if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
             state.input_mut().input = input;
             state.input_mut().cursor_pos = state.input().input.len();
