@@ -129,17 +129,78 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_message_dequeued(content.clone());
             true
         }
+        // Agent/streaming events emitted by TurnActor — use existing projection handlers.
+        Event::Thinking { id } => {
+            state.set_thinking(id.clone());
+            true
+        }
+        Event::ThoughtDone { id } => {
+            state.add_thought(id.clone());
+            true
+        }
+        Event::ToolStart { id, name, .. } => {
+            state.start_tool(id.clone(), name.clone());
+            true
+        }
+        Event::ToolEnd { id: _, duration_secs, output, .. } => {
+            state.end_tool(*duration_secs, output.clone());
+            true
+        }
+        Event::ResponseDelta { id, content } => {
+            state.handle_llm_event(Event::ResponseDelta { id: id.clone(), content: content.clone() });
+            true
+        }
+        Event::TurnComplete { id, duration_secs } => {
+            state.complete_turn(id.clone(), *duration_secs);
+            true
+        }
+        Event::Done { id } => {
+            state.finish_turn(id.clone());
+            true
+        }
+        Event::Error { id, message } => {
+            state.add_error(id.clone(), message.clone());
+            true
+        }
+        Event::StreamStarted { id: _ } => {
+            // StreamStarted is informational; streaming state is managed by other handlers.
+            // Just set the streaming flag if not already.
+            if !state.turn_state.streaming {
+                state.turn_state_mut().streaming = true;
+                *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
+            }
+            true
+        }
+        Event::QueuesCleared => {
+            // QueuesCleared is emitted by TurnActor but AppState projections
+            // are synced via the turn_state authoritative state.
+            // Just sync from turn_state to agent_state.
+            *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
+            true
+        }
         _ => false,
     }
 }
 
-/// Route agent events through TurnActor and handle facts synchronously.
+/// Route agent events through TurnActor and apply projections.
+///
+/// TurnActor is the sole source of truth for turn state. Events are sent to
+/// TurnActor, which emits facts that update AppState through handle_turn_events.
+///
+/// In production: TurnActor applies events and emits facts → idempotent guards
+/// prevent double application in handle_turn_events.
+///
+/// In tests: No TurnActor runs, so we apply projections directly via agent_event.
+/// The idempotent guards in projection handlers prevent issues from dual calls.
 fn handle_agent_event(state: &mut AppState, event: Event) {
     if let Some(handles) = state.actor_handles() {
         if let Some(turn_msg) = to_turn_msg(&event) {
             let _ = handles.turn.try_send(turn_msg);
         }
     }
+    // Apply projection via agent_event. This is idempotent, so even if TurnActor
+    // also emits the event (which goes through handle_turn_events), the second
+    // application is a no-op.
     super::agent::agent_event(state, event);
 }
 

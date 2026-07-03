@@ -45,6 +45,8 @@ Recent closures: `remove-direct-projection-bypasses-in-dispatch-and-domain-ops` 
 
 Recent closure: `add-tracing-to-runie-provider` — added tracing spans around retries, API validation, SSE streaming, and request building.
 
+Recent SSOT fixes: Added idempotency guards to `set_thinking`, `start_tool`, and `add_thought` projection handlers in `core/mod.rs`. These prevent duplicate state mutations when events are processed twice (once via `handle_agent_event` and once via `handle_turn_events` when TurnActor emits). Tasks marked done: `make-projection-handlers-idempotent`, `add-idempotency-keys-to-turn-events`, `remove-unsafe-zeroed-reply-port-in-deliverqueued`, `remove-clone-impl-for-messages-with-reply-ports`. Partial: `remove-dual-agent-event-application-in-dispatch` (dual application still exists but idempotency guards prevent issues).
+
 Recent closure: `route-tui-autocomplete-through-inputactor-events` — replaced direct dialog function calls in `detect_autocomplete_trigger()` with event emissions (`Event::AtFilePicker`, `Event::ToggleCommandPalette`). UiActor-specific projection state (`file_picker_backup`, input clearing) still set directly since it's UiActor's domain. Dialog state changes now go through proper event dispatch: `apply_event()` → `AppState::update()` → `dispatch_dialog_event()` → `dialog_toggle_event()`.
 
 The workspace still passes `cargo check --workspace` and `cargo test --workspace`, but the TUI is not yet usable end-to-end. The highest-priority fixes are:

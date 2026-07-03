@@ -7,6 +7,10 @@ use crate::update::agent::thought::{plan_thought, ThoughtPlan};
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
+        // Idempotent: skip if already streaming with the same request_id.
+        if self.turn_state.streaming && self.turn_state.current_request_id.as_deref() == Some(&id) {
+            return;
+        }
         // Mutate authoritative TurnState, then sync to AgentState projection.
         self.turn_state_mut().streaming = true;
         self.turn_state_mut().current_request_id = Some(id);
@@ -31,6 +35,26 @@ impl AppState {
     }
 
     pub(crate) fn add_thought(&mut self, id: String) {
+        // Idempotent: skip if we've already created a thought for this (request_id, thought_seq) combination.
+        // The thought_id format is "{request_id}#thought.{thought_seq}".
+        // We check if a thought already exists at the current thought_seq to avoid duplicates
+        // when the same event is processed twice (e.g., once via handle_agent_event,
+        // once via handle_turn_events when TurnActor emits).
+        let current_seq = self.turn_state.thought_seq;
+        let thought_id = format!("{}#thought.{}", id, current_seq);
+        let already_processed = self
+            .session
+            .messages
+            .iter()
+            .any(|m| m.role == Role::Thought && m.id == thought_id);
+        if already_processed {
+            // Already created a thought at this seq; just clear thinking state.
+            self.turn_state_mut().current_action = None;
+            self.turn_state_mut().thinking_started_at = None;
+            *self.agent_state_mut() = AgentState::from(&self.turn_state);
+            return;
+        }
+
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
         // Clear thinking state on authoritative TurnState and sync.
         self.turn_state_mut().current_action = None;
@@ -81,6 +105,10 @@ impl AppState {
     }
 
     pub(crate) fn start_tool(&mut self, id: String, name: String) {
+        // Idempotent: skip if already running this tool.
+        if self.turn_state.current_tool_name.as_deref() == Some(&name) {
+            return;
+        }
         // Update authoritative TurnState for all tool-related fields.
         self.turn_state_mut().current_request_id = Some(id.clone());
         self.turn_state_mut().current_tool_name = Some(name.clone());

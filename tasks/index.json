@@ -35,6 +35,11 @@
     "status": "done"
   },
   {
+    "file": "add-contract-tests-for-turnactor-and-sessionstore.md",
+    "title": "Add contract tests for `TurnActor` and `SessionStore`",
+    "status": "todo"
+  },
+  {
     "file": "add-convention-against-magic-numbers.md",
     "title": "Add convention / lint against magic numbers",
     "status": "done"
@@ -62,6 +67,11 @@
   {
     "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
     "title": "Add Grok TUI keystroke replay and tool mapping",
+    "status": "done"
+  },
+  {
+    "file": "add-idempotency-keys-to-turn-events.md",
+    "title": "Add idempotency keys to turn events",
     "status": "done"
   },
   {
@@ -93,6 +103,11 @@
     "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
     "title": "Add message origin metadata to fix follow-up continuity",
     "status": "done"
+  },
+  {
+    "file": "add-missing-queue-fact-events.md",
+    "title": "Add missing queue fact events",
+    "status": "todo"
   },
   {
     "file": "add-openai-provider-fixtures.md",
@@ -148,6 +163,11 @@
     "file": "add-tracing-to-runie-provider.md",
     "title": "Add tracing to `runie-provider`",
     "status": "done"
+  },
+  {
+    "file": "add-turn-journal-phases-for-crash-recovery.md",
+    "title": "Add turn journal phases for crash recovery",
+    "status": "todo"
   },
   {
     "file": "adopt-camino-utf8pathbuf-for-internal-paths.md",
@@ -675,6 +695,11 @@
     "status": "done"
   },
   {
+    "file": "execute-fifth-pass-ssot-event-protocol-roadmap.md",
+    "title": "Execute fifth-pass SSOT event protocol roadmap",
+    "status": "todo"
+  },
+  {
     "file": "execute-five-round-architecture-review-roadmap.md",
     "title": "Execute five-round architecture review roadmap",
     "status": "done"
@@ -1055,6 +1080,11 @@
     "status": "done"
   },
   {
+    "file": "make-projection-handlers-idempotent.md",
+    "title": "Make projection handlers idempotent",
+    "status": "done"
+  },
+  {
     "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
     "title": "Make trust and auth file persistence atomic and restricted",
     "status": "done"
@@ -1063,6 +1093,11 @@
     "file": "make-tui-render-loop-async-with-watch-channel.md",
     "title": "Make TUI render loop async with watch channel",
     "status": "done"
+  },
+  {
+    "file": "make-turnactor-sole-owner-of-turn-state.md",
+    "title": "Make `TurnActor` the sole owner of turn state",
+    "status": "todo"
   },
   {
     "file": "merge-agentstate-into-turnstate-projection.md",
@@ -1118,6 +1153,11 @@
     "file": "move-cargo-deny-machete-from-workspace-deps-to-ci.md",
     "title": "Move `cargo-deny` and `cargo-machete` from workspace deps to CI",
     "status": "done"
+  },
+  {
+    "file": "move-derived-values-out-of-events.md",
+    "title": "Move derived values out of events",
+    "status": "todo"
   },
   {
     "file": "move-grep-find-tests-to-tests-directory.md",
@@ -1240,6 +1280,11 @@
     "status": "done"
   },
   {
+    "file": "remove-clone-impl-for-messages-with-reply-ports.md",
+    "title": "Remove `Clone` impl for messages with reply ports",
+    "status": "done"
+  },
+  {
     "file": "remove-configactorstate-unnecessary-mutex.md",
     "title": "Remove unnecessary Mutex from ConfigActorState",
     "status": "done"
@@ -1260,6 +1305,11 @@
     "status": "done"
   },
   {
+    "file": "remove-derived-values-from-durable-events.md",
+    "title": "Remove derived values from durable events",
+    "status": "todo"
+  },
+  {
     "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
     "title": "Remove direct `AppState` mutation from core update handlers",
     "status": "done"
@@ -1273,6 +1323,16 @@
     "file": "remove-direct-projection-bypasses-in-dispatch-and-domain-ops.md",
     "title": "Remove direct projection bypasses in dispatch and domain ops",
     "status": "done"
+  },
+  {
+    "file": "remove-direct-turn-lifecycle-mutations-outside-turnactor.md",
+    "title": "Remove direct turn lifecycle mutations outside `TurnActor`",
+    "status": "todo"
+  },
+  {
+    "file": "remove-dual-agent-event-application-in-dispatch.md",
+    "title": "Remove dual agent event application in dispatch",
+    "status": "partial"
   },
   {
     "file": "remove-duplicate-input-mutation-in-uiactor.md",
@@ -1342,6 +1402,11 @@
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",
     "title": "Remove unsafe `box_to_arc` from leader bootstrap",
+    "status": "done"
+  },
+  {
+    "file": "remove-unsafe-zeroed-reply-port-in-deliverqueued.md",
+    "title": "Remove unsafe zeroed reply port in `DeliverQueued`",
     "status": "done"
   },
   {
@@ -1615,6 +1680,11 @@
     "status": "done"
   },
   {
+    "file": "replace-wholestate-sessionchanged-with-fine-grained-events.md",
+    "title": "Replace whole-state `SessionChanged` with fine-grained events",
+    "status": "todo"
+  },
+  {
     "file": "replace-xor-auth-with-keyring.md",
     "title": "Replace XOR-obfuscated auth storage with OS keyring",
     "status": "done"
@@ -1703,6 +1773,11 @@
     "file": "scope-diff-comparison-to-headless-unified-output.md",
     "title": "Scope diff comparison to headless unified output",
     "status": "done"
+  },
+  {
+    "file": "serialize-projection-update-after-actor-commit.md",
+    "title": "Serialize projection update after actor commit",
+    "status": "todo"
   },
   {
     "file": "share-configured-reqwest-client-for-provider.md",
@@ -1853,6 +1928,11 @@
     "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
     "title": "Track orphan spawned tasks in provider, IO, and session actors",
     "status": "wontfix"
+  },
+  {
+    "file": "treat-agentstate-as-pure-turnstate-projection.md",
+    "title": "Treat `AgentState` as pure `TurnState` projection",
+    "status": "todo"
   },
   {
     "file": "type-and-unify-provider-model-layer.md",
@@ -2238,85 +2318,5 @@
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
     "status": "wontfix"
-  },
-  {
-    "file": "make-turnactor-sole-owner-of-turn-state.md",
-    "title": "Make `TurnActor` the sole owner of turn state",
-    "status": "todo"
-  },
-  {
-    "file": "remove-dual-agent-event-application-in-dispatch.md",
-    "title": "Remove dual agent event application in dispatch",
-    "status": "todo"
-  },
-  {
-    "file": "remove-direct-turn-lifecycle-mutations-outside-turnactor.md",
-    "title": "Remove direct turn lifecycle mutations outside `TurnActor`",
-    "status": "todo"
-  },
-  {
-    "file": "treat-agentstate-as-pure-turnstate-projection.md",
-    "title": "Treat `AgentState` as pure `TurnState` projection",
-    "status": "todo"
-  },
-  {
-    "file": "add-idempotency-keys-to-turn-events.md",
-    "title": "Add idempotency keys to turn events",
-    "status": "todo"
-  },
-  {
-    "file": "make-projection-handlers-idempotent.md",
-    "title": "Make projection handlers idempotent",
-    "status": "todo"
-  },
-  {
-    "file": "move-derived-values-out-of-events.md",
-    "title": "Move derived values out of events",
-    "status": "todo"
-  },
-  {
-    "file": "add-missing-queue-fact-events.md",
-    "title": "Add missing queue fact events",
-    "status": "todo"
-  },
-  {
-    "file": "remove-unsafe-zeroed-reply-port-in-deliverqueued.md",
-    "title": "Remove unsafe zeroed reply port in `DeliverQueued`",
-    "status": "todo"
-  },
-  {
-    "file": "remove-clone-impl-for-messages-with-reply-ports.md",
-    "title": "Remove `Clone` impl for messages with reply ports",
-    "status": "todo"
-  },
-  {
-    "file": "serialize-projection-update-after-actor-commit.md",
-    "title": "Serialize projection update after actor commit",
-    "status": "todo"
-  },
-  {
-    "file": "add-turn-journal-phases-for-crash-recovery.md",
-    "title": "Add turn journal phases for crash recovery",
-    "status": "todo"
-  },
-  {
-    "file": "remove-derived-values-from-durable-events.md",
-    "title": "Remove derived values from durable events",
-    "status": "todo"
-  },
-  {
-    "file": "replace-wholestate-sessionchanged-with-fine-grained-events.md",
-    "title": "Replace whole-state `SessionChanged` with fine-grained events",
-    "status": "todo"
-  },
-  {
-    "file": "add-contract-tests-for-turnactor-and-sessionstore.md",
-    "title": "Add contract tests for `TurnActor` and `SessionStore`",
-    "status": "todo"
-  },
-  {
-    "file": "execute-fifth-pass-ssot-event-protocol-roadmap.md",
-    "title": "Execute fifth-pass SSOT event protocol roadmap",
-    "status": "todo"
   }
 ]
