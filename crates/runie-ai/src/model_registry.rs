@@ -37,6 +37,20 @@ impl ModelRegistry {
         self.register_openai_models();
         self.register_anthropic_models();
         self.register_google_models();
+        self.register_mock_models();
+    }
+
+    fn register_mock_models(&mut self) {
+        self.register(ModelInfo {
+            id: "mock-gpt-4".to_string(),
+            name: "Mock GPT-4".to_string(),
+            provider: "mock".to_string(),
+            context_window: 128_000,
+            input_price_per_1k: 0.0,
+            output_price_per_1k: 0.0,
+            supports_tools: true,
+            supports_vision: true,
+        });
     }
 
     fn register_openai_models(&mut self) {
@@ -166,6 +180,21 @@ mod tests {
         assert!(providers.contains(&&"openai".to_string()));
         assert!(providers.contains(&&"anthropic".to_string()));
         assert!(providers.contains(&&"google".to_string()));
+    }
+
+    #[test]
+    fn test_registry_contains_mock_model() {
+        let registry = ModelRegistry::new();
+        let mock = registry.get("mock-gpt-4").expect("mock-gpt-4 should be registered");
+        assert_eq!(mock.provider, "mock");
+        assert_eq!(mock.context_window, 128_000);
+    }
+
+    #[test]
+    fn test_mock_provider_in_providers_list() {
+        let registry = ModelRegistry::new();
+        let providers = registry.providers();
+        assert!(providers.contains(&&"mock".to_string()));
     }
 
     #[test]

@@ -80,7 +80,7 @@ fn handle_select_toggle_details(state: &mut AppState) -> Vec<crate::tui::update:
 }
 
 fn handle_switch_model(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
-    let picker = ModelPicker::with_default_models();
+    let picker = ModelPicker::with_default_models_and_mock(state.mock_mode);
     state.model_picker = Some(picker);
     state.mode = crate::tui::state::TuiMode::Overlay;
     vec![]

@@ -52,8 +52,16 @@ impl ModelPicker {
     }
 
     pub fn with_default_models() -> Self {
+        Self::with_default_models_and_mock(false)
+    }
+
+    pub fn with_default_models_and_mock(mock_mode: bool) -> Self {
+        let mut providers = default_providers();
+        if mock_mode {
+            providers.push(mock_provider());
+        }
         Self {
-            providers: default_providers(),
+            providers,
             selected: (0, 0),
             filter: String::new(),
             show_details: false,
@@ -184,6 +192,22 @@ fn default_providers() -> Vec<ProviderGroup> {
     ]
 }
 
+fn mock_provider() -> ProviderGroup {
+    ProviderGroup {
+        provider_id: "mock".to_string(),
+        provider_name: "Mock".to_string(),
+        is_configured: true,
+        models: vec![
+            ModelInfo {
+                id: "mock-gpt-4".to_string(),
+                name: "Mock GPT-4".to_string(),
+                description: "Local mock provider for testing without API calls".to_string(),
+                is_recommended: false,
+            },
+        ],
+    }
+}
+
 fn anthropic_provider() -> ProviderGroup {
     ProviderGroup {
         provider_id: "anthropic".to_string(),
@@ -219,5 +243,34 @@ fn google_provider() -> ProviderGroup {
             ModelInfo { id: "gemini-1.5-pro".to_string(), name: "Gemini 1.5 Pro".to_string(), description: "Balanced multimodal model".to_string(), is_recommended: false },
             ModelInfo { id: "gemini-1.5-flash".to_string(), name: "Gemini 1.5 Flash".to_string(), description: "Fast, efficient for high-volume tasks".to_string(), is_recommended: false },
         ],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_picker_has_three_providers() {
+        let picker = ModelPicker::with_default_models();
+        assert_eq!(picker.providers.len(), 3);
+    }
+
+    #[test]
+    fn mock_picker_includes_mock_provider() {
+        let picker = ModelPicker::with_default_models_and_mock(true);
+        let mock = picker
+            .providers
+            .iter()
+            .find(|p| p.provider_id == "mock")
+            .expect("mock provider should be present");
+        assert_eq!(mock.provider_name, "Mock");
+        assert!(mock.models.iter().any(|m| m.id == "mock-gpt-4"));
+    }
+
+    #[test]
+    fn mock_picker_without_flag_has_no_mock_provider() {
+        let picker = ModelPicker::with_default_models_and_mock(false);
+        assert!(picker.providers.iter().all(|p| p.provider_id != "mock"));
     }
 }

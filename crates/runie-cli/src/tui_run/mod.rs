@@ -218,10 +218,12 @@ async fn initialize_tui(
         format!(" · {} context file(s) loaded", loaded_paths.len())
     };
 
+    // Propagate mock mode to the TUI so model pickers and onboarding can show the mock provider.
+    tui.update(Msg::SetMockMode(mock));
+
     // Check if onboarding is needed
     let needs_setup = force_setup || (!mock && needs_onboarding(settings));
     if needs_setup {
-        tui.update(Msg::SetMockMode(mock));
         tui.update(Msg::EnterOnboarding);
         tui.update(Msg::AgentEvent(AgentEvent::Message {
             role: "system".to_string(),

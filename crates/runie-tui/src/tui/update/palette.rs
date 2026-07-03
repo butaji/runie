@@ -45,7 +45,7 @@ pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette)
 }
 
 pub fn handle_switch_model(state: &mut AppState) -> Vec<UiCmd> {
-    let picker = ModelPicker::with_default_models();
+    let picker = ModelPicker::with_default_models_and_mock(state.mock_mode);
     state.model_picker = Some(picker);
     state.mode = TuiMode::Overlay;
     vec![]

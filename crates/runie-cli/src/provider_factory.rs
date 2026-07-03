@@ -28,7 +28,7 @@ pub(crate) fn validate_api_key(key: &str, provider: &str) -> Result<String, Runi
 }
 
 pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
-    if mock {
+    if mock || settings.provider == "mock" {
         return Ok(Box::new(MockProvider::new()));
     }
 
@@ -67,4 +67,29 @@ fn get_api_key(settings: &Settings, provider: &str, env_var: &str) -> Result<Str
             env_var
         )))?;
     validate_api_key(&api_key, provider)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_provider_returns_mock_for_mock_provider() {
+        let settings = Settings {
+            provider: "mock".to_string(),
+            model: "mock-gpt-4".to_string(),
+            ..Default::default()
+        };
+        let provider = create_provider(false, &settings);
+        assert!(provider.is_ok());
+        assert_eq!(provider.unwrap().name(), "mock");
+    }
+
+    #[test]
+    fn create_provider_returns_mock_when_flag_is_true() {
+        let settings = Settings::default();
+        let provider = create_provider(true, &settings);
+        assert!(provider.is_ok());
+        assert_eq!(provider.unwrap().name(), "mock");
+    }
 }
