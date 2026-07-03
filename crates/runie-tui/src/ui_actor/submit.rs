@@ -7,10 +7,16 @@ use crate::ui_actor::UiActor;
 /// This function handles the full submit flow:
 /// 1. If a form dialog is open and chat input is empty, submit the form
 /// 2. Close any open dialog (e.g., command palette)
-/// 3. Handle slash commands
-/// 4. Route steering/follow-up during active turns through TurnActor
-/// 5. Normal user message submission
+/// 3. Handle quit commands ("quit", "exit", ":q")
+/// 4. Handle slash commands
+/// 5. Route steering/follow-up during active turns through TurnActor
+/// 6. Normal user message submission
 pub(crate) async fn dispatch(ui: &mut UiActor, content: String) {
+    if runie_core::update::input::is_quit_command(&content) {
+        *ui.state.should_quit_mut() = true;
+        return;
+    }
+
     // If a form dialog is open and chat input is empty, this is a form submission
     // (the form field content lives in the panel, not the chat input).
     // Route through handle_form_dialog so Enter on the submit button works.

@@ -97,7 +97,7 @@ pub(crate) mod command;
 pub mod dialog;
 pub(crate) mod dialog_input;
 mod dispatch;
-pub(crate) mod input;
+pub mod input;
 
 mod permission;
 mod session;
