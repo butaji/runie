@@ -274,6 +274,11 @@ impl MockProviderBuilder {
         self.with_fixture(fixtures::malformed_tool())
     }
 
+    /// Configure for markup-formatted tool fixture.
+    pub fn markup(self) -> Self {
+        self.with_fixture(fixtures::markup_tool())
+    }
+
     pub fn build(self) -> MockProvider {
         MockProvider {
             delay_ms: self.delay_ms,

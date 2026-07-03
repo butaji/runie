@@ -247,7 +247,7 @@ impl AppState {
     /// Mirrors `Config::resolve_default_model` so there is a single source of truth.
     pub fn resolve_default_model(&self) -> (String, String) {
         if crate::provider::is_mock_enabled() {
-            return ("mock".into(), "echo".into());
+            return ("mock".into(), crate::provider::mock_model());
         }
         let cfg = self.config();
         if let Some(provider) = cfg.provider.as_ref().filter(|p| !p.is_empty()) {

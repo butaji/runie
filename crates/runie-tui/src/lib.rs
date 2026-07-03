@@ -26,6 +26,7 @@ pub mod dry_run_cmd;
 pub mod effects;
 pub mod input_mapping;
 pub mod keymap;
+pub mod mock_cmd;
 pub mod terminal;
 pub mod terminal_setup;
 pub mod ui_actor;

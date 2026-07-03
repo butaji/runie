@@ -143,7 +143,7 @@ impl Default for ConfigState {
         let (provider, model) = ("mock".to_string(), "echo".to_string());
         #[cfg(not(test))]
         let (provider, model) = if crate::provider::is_mock_enabled() {
-            ("mock".to_owned(), "echo".to_owned())
+            ("mock".to_owned(), crate::provider::mock_model())
         } else {
             (String::new(), String::new())
         };

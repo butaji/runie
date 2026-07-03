@@ -154,14 +154,24 @@ pub fn build_provider(
 
 #[cfg(feature = "mock")]
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
-    let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
-        // Use small delay (5-10ms) for fast deterministic tests
-        Box::new(MockProvider::with_delay(
-            MOCK_DELAY_MIN_MS,
-            MOCK_DELAY_MAX_MS,
-        ))
+    use crate::mock::MockProviderBuilder;
+
+    let base = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
+        MockProviderBuilder::new().with_delay(MOCK_DELAY_MIN_MS, MOCK_DELAY_MAX_MS)
     } else {
-        Box::new(MockProvider::default())
+        MockProviderBuilder::new()
+    };
+    let provider: Box<dyn Provider> = match model {
+        "list_dir" => Box::new(base.list_dir().build()),
+        "read_file" => Box::new(base.read_file().build()),
+        "write_file" => Box::new(base.write_file().build()),
+        "edit_file" => Box::new(base.edit_file().build()),
+        "bash" => Box::new(base.bash().build()),
+        "grep" => Box::new(base.grep().build()),
+        "find" => Box::new(base.find().build()),
+        "malformed" => Box::new(base.malformed().build()),
+        "markup" => Box::new(base.markup().build()),
+        _ => Box::new(base.build()),
     };
     BuiltProvider::new(provider, key.to_owned(), model.to_owned())
 }

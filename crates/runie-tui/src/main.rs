@@ -13,6 +13,7 @@
 
 use clap::Parser;
 use runie_core::tracing_init;
+use runie_tui::mock_cmd::enable_mock_if_requested;
 use std::io;
 
 use runie_tui::bootstrap::{BackendType, TuiRuntime};
@@ -27,6 +28,12 @@ struct Cli {
     /// Alias for --dry-run (preview mode).
     #[arg(long, hide = true)]
     preview: bool,
+    /// Enable the mock provider (no API key required).
+    #[arg(long)]
+    mock: bool,
+    /// Mock model/fixture to use with --mock (e.g. echo, list_dir, read_file).
+    #[arg(long, requires = "mock")]
+    mock_model: Option<String>,
 }
 
 struct Cleanup;
@@ -55,6 +62,7 @@ async fn main() -> io::Result<()> {
     tracing_init::init_tui();
 
     let cli = Cli::parse();
+    enable_mock_if_requested(cli.mock, cli.mock_model.as_deref());
     if cli.dry_run || cli.preview {
         let report = runie_core::run_dry_run(&runie_core::Config::load(None));
         println!("{report}");

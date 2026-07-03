@@ -64,19 +64,14 @@ fn dry_run_report_with_skills(config: &Config, skills: &[crate::skills::Skill]) 
 }
 
 fn resolve_provider_model(config: &Config) -> Result<(String, String), String> {
-    let provider = config
-        .provider
-        .clone()
-        .ok_or_else(|| "no provider configured".to_owned())?;
+    let (provider, model) = config.resolve_default_model();
+    if provider.is_empty() {
+        return Err("no provider configured".to_owned());
+    }
 
     if !crate::provider::is_known_provider(&provider) {
         return Err(format!("unknown provider '{}'", provider));
     }
-
-    let model = config
-        .default_model()
-        .map(|s| s.to_owned())
-        .ok_or_else(|| "no model configured".to_owned())?;
 
     let known = crate::model_catalog::model_catalog()
         .iter()
@@ -107,48 +102,96 @@ mod tests {
 
     #[test]
     fn dry_run_validates_config() {
-        let config = Config::default();
-        let report = run_dry_run(&config);
-        // Default config has no provider, so status is blocked.
-        assert_eq!(report.status, DryRunStatus::Blocked);
-        assert!(report.lines.iter().any(|l| l.contains("Provider")));
+        runie_testing::with_env(|env| {
+            env.remove("RUNIE_MOCK");
+            env.remove("RUNIE_MOCK_MODEL");
+            crate::provider::set_mock_enabled(false);
+            let config = Config::default();
+            let report = run_dry_run(&config);
+            // Default config has no provider, so status is blocked.
+            assert_eq!(report.status, DryRunStatus::Blocked);
+            assert!(report.lines.iter().any(|l| l.contains("Provider")));
+        });
     }
 
     #[test]
     fn dry_run_resolves_provider() {
-        let config = temp_config_with_provider("openai", "gpt-4o");
-        let report = run_dry_run(&config);
-        assert_eq!(report.status, DryRunStatus::Ready);
-        assert!(report.lines.iter().any(|l| l.contains("openai/gpt-4o")));
+        runie_testing::with_env(|env| {
+            env.remove("RUNIE_MOCK");
+            env.remove("RUNIE_MOCK_MODEL");
+            crate::provider::set_mock_enabled(false);
+            let config = temp_config_with_provider("openai", "gpt-4o");
+            let report = run_dry_run(&config);
+            assert_eq!(report.status, DryRunStatus::Ready);
+            assert!(report.lines.iter().any(|l| l.contains("openai/gpt-4o")));
+        });
     }
 
     #[test]
     fn dry_run_loads_skills() {
-        let skill = crate::skills::Skill {
-            name: "rust".to_string(),
-            description: "Rust skill.".to_string(),
-            context: String::new(),
-            user_invocable: false,
-            file_path: Utf8PathBuf::from("rust/SKILL.md"),
-        };
+        runie_testing::with_env(|env| {
+            env.remove("RUNIE_MOCK");
+            env.remove("RUNIE_MOCK_MODEL");
+            crate::provider::set_mock_enabled(false);
+            let skill = crate::skills::Skill {
+                name: "rust".to_string(),
+                description: "Rust skill.".to_string(),
+                context: String::new(),
+                user_invocable: false,
+                file_path: Utf8PathBuf::from("rust/SKILL.md"),
+            };
 
-        let config = temp_config_with_provider("openai", "gpt-4o");
-        let report = dry_run_report_with_skills(&config, &[skill]);
-        assert!(report.lines.iter().any(|l| l.contains("Skills: 1 loaded")));
+            let config = temp_config_with_provider("openai", "gpt-4o");
+            let report = dry_run_report_with_skills(&config, &[skill]);
+            assert!(report.lines.iter().any(|l| l.contains("Skills: 1 loaded")));
+        });
     }
 
     #[test]
     fn dry_run_no_llm_calls() {
-        let config = temp_config_with_provider("openai", "gpt-4o");
-        let report = run_dry_run(&config);
-        assert!(report
-            .lines
-            .iter()
-            .any(|l| l.contains("No model calls made")));
+        runie_testing::with_env(|env| {
+            env.remove("RUNIE_MOCK");
+            env.remove("RUNIE_MOCK_MODEL");
+            crate::provider::set_mock_enabled(false);
+            let config = temp_config_with_provider("openai", "gpt-4o");
+            let report = run_dry_run(&config);
+            assert!(report
+                .lines
+                .iter()
+                .any(|l| l.contains("No model calls made")));
+        });
     }
 
     #[test]
     fn dry_run_tool_names_match_canonical() {
         assert_eq!(core_tool_names(), crate::tool::BUILTIN_TOOL_NAMES);
+    }
+
+    #[test]
+    fn dry_run_resolves_mock_provider_when_enabled() {
+        runie_testing::with_env(|env| {
+            env.set("RUNIE_MOCK", "1");
+            env.remove("RUNIE_MOCK_MODEL");
+            crate::provider::set_mock_enabled(true);
+            let config = Config::default();
+            let report = run_dry_run(&config);
+            assert_eq!(report.status, DryRunStatus::Ready);
+            assert!(report.lines.iter().any(|l| l.contains("mock/echo")));
+            crate::provider::set_mock_enabled(false);
+        });
+    }
+
+    #[test]
+    fn dry_run_resolves_mock_model_from_env() {
+        runie_testing::with_env(|env| {
+            env.set("RUNIE_MOCK", "1");
+            env.set("RUNIE_MOCK_MODEL", "list_dir");
+            crate::provider::set_mock_enabled(true);
+            let config = Config::default();
+            let report = run_dry_run(&config);
+            assert_eq!(report.status, DryRunStatus::Ready);
+            assert!(report.lines.iter().any(|l| l.contains("mock/list_dir")));
+            crate::provider::set_mock_enabled(false);
+        });
     }
 }

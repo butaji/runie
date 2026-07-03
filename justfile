@@ -42,9 +42,13 @@ build:
 build-release:
     cargo build --release -p runie-tui
 
-# Run the TUI (development)
-tui:
-    cargo run -p runie-tui --bin runie-tui
+# Run the TUI (development).
+# Pass `--mock` to enable the mock provider without an API key:
+#   just tui --mock
+#   just tui --mock --mock-model list_dir
+#   just tui --mock --mock-model read_file --dry-run
+tui *args:
+    cargo run -p runie-tui --bin runie-tui -- {{args}}
 
 # Run a manual live TUI smoke test in a real tmux session.
 # This is not an automatic test; it validates TUI behavior interactively.

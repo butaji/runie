@@ -75,26 +75,38 @@ pub fn provider_yaml_files() -> Vec<(&'static str, &'static str)> {
 
 /// Mock provider YAML (dev-only).
 pub fn mock_provider_yaml() -> ProviderYaml {
+    let model = |name: &str| ModelYaml {
+        name: name.to_string(),
+        cost_prompt: None,
+        cost_completion: None,
+        supports_thinking: false,
+        supports_vision: false,
+        tokenizer: None,
+        context_window: None,
+        streaming: true,
+        supports_tools: true,
+        supports_reasoning: false,
+        supports_system: true,
+        max_output_tokens: 0,
+        cache_control: false,
+    };
     ProviderYaml {
         key: "mock".to_string(),
         display_name: "Mock (dev only)".to_string(),
         base_url: "http://localhost/mock".to_string(),
         env_var: String::new(),
-        models: vec![ModelYaml {
-            name: "echo".to_string(),
-            cost_prompt: None,
-            cost_completion: None,
-            supports_thinking: false,
-            supports_vision: false,
-            tokenizer: None,
-            context_window: None,
-            streaming: true,
-            supports_tools: true,
-            supports_reasoning: false,
-            supports_system: true,
-            max_output_tokens: 0,
-            cache_control: false,
-        }],
+        models: vec![
+            model("echo"),
+            model("list_dir"),
+            model("read_file"),
+            model("write_file"),
+            model("edit_file"),
+            model("bash"),
+            model("grep"),
+            model("find"),
+            model("malformed"),
+            model("markup"),
+        ],
     }
 }
 

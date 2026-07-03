@@ -47,6 +47,17 @@ pub fn set_mock_enabled(enabled: bool) {
     MOCK_ENABLED.store(enabled, Ordering::Relaxed);
 }
 
+/// Returns the mock model name selected by the user.
+///
+/// Defaults to `"echo"`. Override with `RUNIE_MOCK_MODEL` (used by
+/// `just tui --mock --mock-model <model>`).
+pub fn mock_model() -> String {
+    std::env::var("RUNIE_MOCK_MODEL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "echo".to_owned())
+}
+
 /// Metadata for a model supported by a provider.
 #[derive(Debug, Clone, PartialEq, Builder)]
 #[builder(setter(strip_option))]
@@ -283,6 +294,22 @@ mod tests {
     #[test]
     fn provider_registry_display_name_unknown_fallback() {
         assert_eq!(display_name("custom"), "custom");
+    }
+
+    #[test]
+    fn mock_model_defaults_to_echo() {
+        runie_testing::with_env(|env| {
+            env.remove("RUNIE_MOCK_MODEL");
+            assert_eq!(mock_model(), "echo");
+        });
+    }
+
+    #[test]
+    fn mock_model_reads_env_var() {
+        runie_testing::with_env(|env| {
+            env.set("RUNIE_MOCK_MODEL", "list_dir");
+            assert_eq!(mock_model(), "list_dir");
+        });
     }
 
     #[test]

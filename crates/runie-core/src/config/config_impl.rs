@@ -564,7 +564,7 @@ impl crate::config::Config {
     /// provider's first model, and finally empty strings when nothing is set.
     pub fn resolve_default_model(&self) -> (String, String) {
         if crate::provider::is_mock_enabled() {
-            return ("mock".into(), "echo".into());
+            return ("mock".into(), crate::provider::mock_model());
         }
         if let Some(provider) = self.provider.as_deref().filter(|p| !p.is_empty()) {
             let model = self

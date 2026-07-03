@@ -22,4 +22,4 @@ pub use registry::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
     known_providers, ModelMeta, ProviderMeta,
 };
-pub use registry::{is_mock_enabled, set_mock_enabled};
+pub use registry::{is_mock_enabled, mock_model, set_mock_enabled};

@@ -145,7 +145,9 @@ If you have credits there, Runie helps you use them.
 ## Development
 
 ```bash
-./dev.sh                 # mock provider
+./dev.sh                              # mock provider (hot-reload)
+just tui --mock                       # run TUI with mock provider
+just tui --mock --mock-model list_dir # run TUI with a deterministic mock fixture
 just test                # four-layer test suite
 just lint                # run clippy
 just fmt                 # format code

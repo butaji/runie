@@ -44,6 +44,10 @@ pub fn rank_commands_with_query(
 }
 
 pub fn has_provider_credentials(_config: &crate::config::Config, provider: &str) -> bool {
+    // The mock provider does not require credentials.
+    if provider == "mock" && crate::provider::is_mock_enabled() {
+        return true;
+    }
     // Check env var first (takes priority in the credential resolution chain)
     let env_key = format!("{}_API_KEY", provider.to_uppercase());
     if let Ok(val) = std::env::var(&env_key) {
@@ -72,5 +76,20 @@ mod ranking_tests {
         // Without keyring, should return false
         let has = has_provider_credentials(&config, "nonexistent");
         assert!(!has, "should not find credentials without keyring");
+    }
+
+    #[test]
+    fn test_has_provider_credentials_mock_requires_no_key() {
+        let config = crate::config::Config::default();
+        crate::provider::set_mock_enabled(true);
+        assert!(
+            has_provider_credentials(&config, "mock"),
+            "mock provider should not require credentials when mock is enabled"
+        );
+        crate::provider::set_mock_enabled(false);
+        assert!(
+            !has_provider_credentials(&config, "mock"),
+            "mock provider should require credentials when mock is disabled"
+        );
     }
 }

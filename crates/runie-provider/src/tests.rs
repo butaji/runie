@@ -453,6 +453,33 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 }
 
 #[tokio::test]
+async fn provider_actor_builds_mock_provider_with_fixture_model() {
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
+    std::env::set_var("RUNIE_MOCK", "1");
+
+    let bus = EventBus::<Event>::new(1);
+    let (config_handle, _config_actor, _join) =
+        ConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
+        bus,
+        config_handle,
+        std::sync::Arc::new(BuiltProviderFactory::new()),
+    )
+    .await
+    .unwrap();
+
+    let built = provider_handle
+        .build("mock".into(), "list_dir".into())
+        .await
+        .expect("mock provider should build with fixture model");
+
+    assert_eq!(built.key, "mock");
+    assert_eq!(built.model, "list_dir");
+
+    std::env::remove_var("RUNIE_MOCK");
+}
+
+#[tokio::test]
 async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _join) =
