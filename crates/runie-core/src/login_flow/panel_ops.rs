@@ -113,7 +113,7 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
             panels: stack,
         });
         state.view_mut().dirty = true;
-    } else if stack.root().map(|p| p.closable).unwrap_or(true) {
+    } else if login_root_closable(state) {
         // At the root: close the login flow and restore the previous
         // dialog from the back stack.
         *state.login_flow_mut() = None;
@@ -127,6 +127,7 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
         }
     } else {
         // The root panel is marked non-closable: keep it open.
+        tracing::debug!("blocking Esc/Cancel/Abort at login root: no connected model");
         *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
             kind: DialogKind::Generic,
             panels: stack,
@@ -142,12 +143,17 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
 /// while a dialog event is being processed), this reconstructs the full
 /// stack from the current `LoginFlowState` so that nested updates such as
 /// toggling a model or pressing Cancel still operate on the correct panels.
+/// The root panel's `closable` flag is always refreshed from current state
+/// so onboarding stays locked until a real model is connected.
 fn take_or_create_login_stack(state: &mut crate::model::AppState) -> PanelStack {
     if let Some(crate::commands::DialogState::Active {
         kind: DialogKind::Generic,
-        panels: stack,
+        panels: mut stack,
     }) = state.open_dialog_mut().take()
     {
+        if let Some(root) = stack.panels.first_mut() {
+            root.closable = login_root_closable(state);
+        }
         return stack;
     }
     if let Some(flow) = state.login_flow().as_ref() {
