@@ -99,6 +99,7 @@ fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
     body
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_body_item<'a>(
     body: &mut Vec<Line<'a>>,
     item: &'a PanelItem,
@@ -136,6 +137,7 @@ fn push_body_item<'a>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_form_field_body<'a>(
     body: &mut Vec<Line<'a>>,
     raw_i: usize,
@@ -284,6 +286,7 @@ fn field_indices(panel: &Panel) -> Vec<usize> {
 }
 
 /// Render a form field with label and input box using tui-input.
+#[allow(clippy::too_many_arguments)]
 fn push_field<'a>(
     lines: &mut Vec<Line<'a>>,
     field_num: usize,
@@ -426,8 +429,7 @@ fn compute_scroll(text: &str, cursor: usize, avail: usize) -> usize {
 
     // Show cursor near the end of visible area
     let visible_end = (cursor + avail / 2).min(text_len);
-    let start = visible_end.saturating_sub(avail - 1);
-    start.max(0)
+    visible_end.saturating_sub(avail - 1)
 }
 
 /// Extract a visible substring from text starting at offset.

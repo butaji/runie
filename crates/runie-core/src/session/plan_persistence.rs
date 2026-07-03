@@ -8,13 +8,13 @@
 //! Plans are stored separately from sessions under `<sessions_dir>/plans/`.
 
 use crate::session::plan_store::{Plan, PlanId, PlanStore};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Plans directory relative to sessions directory.
 const PLANS_SUBDIR: &str = "plans";
 
 /// Plans directory from a sessions directory.
-pub fn plans_dir(sessions_dir: &PathBuf) -> PathBuf {
+pub fn plans_dir(sessions_dir: &Path) -> PathBuf {
     sessions_dir.join(PLANS_SUBDIR)
 }
 
@@ -26,11 +26,11 @@ pub fn default_plans_dir() -> Option<PathBuf> {
 
 /// Save a plan to the plan store and return its ID.
 pub fn save_plan(
-    plans_dir: &PathBuf,
+    plans_dir: &Path,
     session_id: &str,
     content: &str,
 ) -> std::io::Result<Option<String>> {
-    let store = PlanStore::new(plans_dir.clone());
+    let store = PlanStore::new(plans_dir.to_path_buf());
     let id = PlanId::new();
     let plan = Plan {
         id: id.clone(),
@@ -43,8 +43,8 @@ pub fn save_plan(
 }
 
 /// Load a plan by ID.
-pub fn load_plan(plans_dir: &PathBuf, plan_id: &str) -> std::io::Result<Option<Plan>> {
-    let store = PlanStore::new(plans_dir.clone());
+pub fn load_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<Option<Plan>> {
+    let store = PlanStore::new(plans_dir.to_path_buf());
     let id = PlanId::from_uuid_str(plan_id).ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID")
     })?;
@@ -52,8 +52,8 @@ pub fn load_plan(plans_dir: &PathBuf, plan_id: &str) -> std::io::Result<Option<P
 }
 
 /// Fork a plan by ID and return the new plan ID.
-pub fn fork_plan(plans_dir: &PathBuf, plan_id: &str) -> std::io::Result<Option<String>> {
-    let store = PlanStore::new(plans_dir.clone());
+pub fn fork_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<Option<String>> {
+    let store = PlanStore::new(plans_dir.to_path_buf());
     let id = PlanId::from_uuid_str(plan_id).ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID")
     })?;
@@ -62,8 +62,8 @@ pub fn fork_plan(plans_dir: &PathBuf, plan_id: &str) -> std::io::Result<Option<S
 }
 
 /// Delete a plan by ID.
-pub fn delete_plan(plans_dir: &PathBuf, plan_id: &str) -> std::io::Result<()> {
-    let store = PlanStore::new(plans_dir.clone());
+pub fn delete_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<()> {
+    let store = PlanStore::new(plans_dir.to_path_buf());
     let id = PlanId::from_uuid_str(plan_id).ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID")
     })?;
@@ -71,17 +71,17 @@ pub fn delete_plan(plans_dir: &PathBuf, plan_id: &str) -> std::io::Result<()> {
 }
 
 /// Check if the plans directory exists and create it if needed.
-pub fn ensure_plans_dir(plans_dir: &PathBuf) -> std::io::Result<()> {
+pub fn ensure_plans_dir(plans_dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(plans_dir)
 }
 
 /// Plans directory path for a given sessions directory.
-pub fn resolve_plans_dir(sessions_dir: Option<&PathBuf>) -> Option<PathBuf> {
+pub fn resolve_plans_dir(sessions_dir: Option<&Path>) -> Option<PathBuf> {
     sessions_dir.map(plans_dir)
 }
 
 /// Load plan content from a plan ID.
-pub fn load_plan_content(plans_dir: &PathBuf, plan_id: &str) -> Option<String> {
+pub fn load_plan_content(plans_dir: &Path, plan_id: &str) -> Option<String> {
     load_plan(plans_dir, plan_id)
         .ok()
         .flatten()
