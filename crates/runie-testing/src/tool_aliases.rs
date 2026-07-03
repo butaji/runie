@@ -27,9 +27,7 @@ use std::sync::LazyLock;
 
 /// Map a Grok tool name to the equivalent Runie tool name.
 pub fn grok_to_runie(grok_tool: &str) -> Option<&'static str> {
-    GROK_TO_RUNIE
-        .get(grok_tool)
-        .map(|s| *s)
+    GROK_TO_RUNIE.get(grok_tool).copied()
 }
 
 /// Map a Runie tool name to the equivalent Grok tool name.

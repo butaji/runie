@@ -343,12 +343,11 @@ pub fn parse_sequence(dsl: &str) -> Vec<CoreEvent> {
 /// tmux notation: `C-` = Ctrl, `M-` = Alt, `-` = separator
 pub fn parse_tmux_style(dsl: &str) -> Option<CoreEvent> {
     let dsl = dsl.trim();
-    if dsl.starts_with("C-") {
+    if let Some(rest) = dsl.strip_prefix("C-") {
         // Handle "C-" (tmux Ctrl) style
-        let rest = &dsl[2..];
         parse_ctrl_combo(rest)
-    } else if dsl.starts_with("M-") {
-        let rest = &dsl[2..];
+    } else if let Some(rest) = dsl.strip_prefix("M-") {
+        // "M-" prefix already stripped by strip_prefix
         // Handle tmux key names: RET, Enter, etc.
         let rest_lower = rest.to_lowercase();
         match rest_lower.as_str() {
