@@ -2,7 +2,7 @@
 
 ## Status
 
-`partial` — `proto/message/mod.rs`, `provider/provider_trait.rs`, `event/durable.rs`, `actors/io/ractor_io.rs`, and `actors/permission/ractor_permission.rs` split into focused modules + tests. Remaining: `actors/fff_indexer/mod.rs` (669).
+`done` ✅ — All production files now under the 500-line limit.
 
 ## Description
 
@@ -57,7 +57,20 @@ Split `crates/runie-core/src/actors/permission/ractor_permission.rs` (686 lines)
 | `actors/permission/ractor_permission.rs` | 405 | Main actor, message handling |
 | `actors/permission/ractor_permission/tests.rs` | 283 | Unit tests |
 
-Public API preserved. All tests pass via `cargo test --workspace`.
+### fff_indexer/mod.rs split
+Split `crates/runie-core/src/actors/fff_indexer/mod.rs` (669 lines) into focused modules:
+
+| File | Lines | Contains |
+|------|-------|----------|
+| `actors/fff_indexer/mod.rs` | 194 | Types, constants, re-exports |
+| `actors/fff_indexer/search_index.rs` | 318 | `SearchIndex` + search methods |
+| `actors/fff_indexer/frecency.rs` | 92 | `FrecencyStore` + tests |
+| `actors/fff_indexer/git_status.rs` | 141 | Git status helpers + tests |
+| `actors/fff_indexer/content_search.rs` | 63 | Content search helpers |
+| `actors/fff_indexer/ractor_fff_indexer.rs` | 255 | Ractor actor implementation |
+| `actors/fff_indexer/tests.rs` | 232 | Integration tests |
+
+Public API preserved. All 21 fff_indexer tests pass via `cargo test --workspace`.
 
 ## Acceptance criteria
 
@@ -77,9 +90,9 @@ Public API preserved. All tests pass via `cargo test --workspace`.
 - Start tmux and exercise message display, file search, permission prompts, and bash tools.
 
 ### SSOT/Event Compliance
-- [ ] **Actor/SSOT:** N/A (refactoring; actors and state ownership unchanged).
-- [ ] **Trigger events:** N/A (refactoring; no new state transitions).
-- [ ] **Observer events:** N/A (refactoring; no new observers).
+- [x] **Actor/SSOT:** N/A (refactoring; actors and state ownership unchanged).
+- [x] **Trigger events:** N/A (refactoring; no new state transitions).
+- [x] **Observer events:** N/A (refactoring; no new observers).
 - [x] **No direct mutations:** Split modules must not introduce direct state mutations; all changes go through existing actors. ✓
 - [x] **No new mirrors:** Each split module must not create authoritative copies of actor-owned state. ✓
 - [x] **Async work observed:** Any new async work spawned during split must be awaited or have a JoinHandle owner. ✓
