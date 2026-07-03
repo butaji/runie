@@ -38,6 +38,9 @@ enum Command {
     Print {
         /// The prompt to send to the LLM
         prompt: String,
+        /// Enable OS-level sandboxing for bash tool execution
+        #[arg(long)]
+        sandbox: bool,
     },
     /// Show runtime configuration discovered for current directory
     Inspect {
@@ -118,7 +121,7 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Command::Print { prompt } => run_print(&prompt).await,
+        Command::Print { prompt, sandbox } => run_print(&prompt, sandbox).await,
         Command::Inspect { json } => run_inspect(json).await,
         Command::Login { provider, api_key } => run_login(provider, api_key).await,
         Command::Json => run_json().await,
@@ -144,8 +147,8 @@ async fn run_login(provider: Option<String>, api_key: Option<String>) -> Result<
     login::run(provider, api_key).await
 }
 
-async fn run_print(prompt: &str) -> Result<()> {
-    print::run(prompt).await
+async fn run_print(prompt: &str, sandbox: bool) -> Result<()> {
+    print::run(prompt, sandbox).await
 }
 
 async fn run_json() -> Result<()> {
@@ -177,7 +180,19 @@ mod tests {
     #[test]
     fn cli_parses_print() {
         let cli = Cli::try_parse_from(["runie", "print", "hello world"]).unwrap();
-        assert!(matches!(cli.command, Command::Print { .. }));
+        assert!(matches!(cli.command, Command::Print { prompt: _, sandbox: false }));
+    }
+
+    #[test]
+    fn cli_parses_print_with_sandbox() {
+        let cli = Cli::try_parse_from(["runie", "print", "--sandbox", "hello world"]).unwrap();
+        match cli.command {
+            Command::Print { prompt, sandbox } => {
+                assert_eq!(prompt, "hello world");
+                assert!(sandbox);
+            }
+            _ => panic!("Expected Print command"),
+        }
     }
 
     #[test]

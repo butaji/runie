@@ -99,6 +99,13 @@
         "multiplier": 2.0
       }
     },
+    "sandbox": {
+      "description": "OS-level sandbox settings for bash tool execution.",
+      "$ref": "#/$defs/SandboxSection",
+      "default": {
+        "enabled": false
+      }
+    },
     "telemetry": {
       "description": "Telemetry settings.",
       "$ref": "#/$defs/TelemetrySection",
@@ -512,6 +519,17 @@
           "type": "number",
           "format": "double",
           "default": 2.0
+        }
+      }
+    },
+    "SandboxSection": {
+      "description": "Sandbox configuration for OS-level command sandboxing.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Enable OS-level sandboxing for bash tool execution.\nWhen enabled, bash commands are wrapped in platform-specific sandbox.\nDefaults to false.",
+          "type": "boolean",
+          "default": false
         }
       }
     },

@@ -73,6 +73,7 @@ pub mod sanitize;
 pub mod scoped_model;
 pub mod session;
 pub mod settings;
+pub mod sandbox;
 pub mod shell;
 pub mod skills;
 pub mod snapshot;

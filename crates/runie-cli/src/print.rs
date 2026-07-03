@@ -9,7 +9,12 @@ use runie_agent::headless_helper::{build_messages, build_options, build_sink};
 use runie_core::event::headless::HeadlessEvent;
 
 /// Run a single-turn LLM prompt and emit structured JSONL events to stdout.
-pub async fn run(prompt: &str) -> Result<()> {
+pub async fn run(prompt: &str, sandbox: bool) -> Result<()> {
+    // Set sandbox environment variable if enabled
+    if sandbox {
+        std::env::set_var("RUNIE_SANDBOX", "1");
+    }
+
     let messages = build_messages(prompt);
     let sink = build_sink(false);
     let opts = build_options(
@@ -95,6 +100,6 @@ mod tests {
     #[tokio::test]
     async fn print_mode_run_smoke() {
         // We cannot easily capture stdout in a test, so just verify `run` doesn't panic.
-        let _ = run("hello").await;
+        let _ = run("hello", false).await;
     }
 }

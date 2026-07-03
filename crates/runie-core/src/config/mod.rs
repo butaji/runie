@@ -262,6 +262,27 @@ impl Default for FffSection {
 }
 
 // ============================================================================
+// Sandbox Section
+// ============================================================================
+
+/// Sandbox configuration for OS-level command sandboxing.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[derive(JsonSchema)]
+pub struct SandboxSection {
+    /// Enable OS-level sandboxing for bash tool execution.
+    /// When enabled, bash commands are wrapped in platform-specific sandbox.
+    /// Defaults to false.
+    pub enabled: bool,
+}
+
+impl Default for SandboxSection {
+    fn default() -> Self {
+        Self { enabled: false }
+    }
+}
+
+// ============================================================================
 // Hooks Section
 // ============================================================================
 
@@ -362,6 +383,9 @@ pub struct Config {
     /// FFF full-text search settings.
     #[serde(default)]
     pub fff: FffSection,
+    /// OS-level sandbox settings for bash tool execution.
+    #[serde(default)]
+    pub sandbox: SandboxSection,
 }
 
 #[cfg(test)]

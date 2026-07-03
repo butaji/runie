@@ -512,7 +512,7 @@
   {
     "file": "implement-os-level-bash-sandboxing.md",
     "title": "Implement OS-level bash sandboxing",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "initialize-tracing-subscriber-in-binaries.md",

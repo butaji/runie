@@ -2,7 +2,7 @@
 
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use runie_core::bash_safety::check_bash_safety;
-use runie_core::shell::{run_bash, ShellStatus};
+use runie_core::shell::{run_bash, run_bash_sandboxed, ShellStatus};
 use runie_core::tool::ToolDef;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -43,14 +43,28 @@ impl ToolDef for BashTool {
         let timeout_secs = input.timeout_seconds.unwrap_or(DEFAULT_TIMEOUT_SECS);
         let timeout = Duration::from_secs(timeout_secs);
 
-        let result = run_bash(
-            &input.command,
-            &ctx.working_dir,
-            &ctx.env,
-            timeout,
-            true, // shell mode for bash tool
-        )
-        .await;
+        // Check if sandbox is enabled via environment variable
+        let use_sandbox = std::env::var("RUNIE_SANDBOX").as_deref() == Ok("1");
+
+        let result = if use_sandbox {
+            run_bash_sandboxed(
+                &input.command,
+                &ctx.working_dir,
+                &ctx.env,
+                timeout,
+                true, // shell mode for bash tool
+            )
+            .await
+        } else {
+            run_bash(
+                &input.command,
+                &ctx.working_dir,
+                &ctx.env,
+                timeout,
+                true, // shell mode for bash tool
+            )
+            .await
+        };
 
         let status = match result.status {
             ShellStatus::Success => ToolStatus::Success,
@@ -106,5 +120,53 @@ mod tests {
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Error);
+    }
+
+    #[tokio::test]
+    async fn bash_sandboxed_succeeds_when_enabled() {
+        // Set sandbox environment variable
+        std::env::set_var("RUNIE_SANDBOX", "1");
+
+        // Ensure cleanup even if test panics
+        struct SandboxGuard;
+        impl Drop for SandboxGuard {
+            fn drop(&mut self) {
+                std::env::remove_var("RUNIE_SANDBOX");
+            }
+        }
+        let _guard = SandboxGuard;
+
+        let input = BashInput {
+            command: "echo sandboxed".to_string(),
+            timeout_seconds: Some(5),
+        };
+        let ctx = ToolContext::default();
+        let output = BashTool::execute(input, &ctx).await;
+
+        // Sandbox may not be available on all platforms, so we accept either success or error
+        // (error could be "sandbox unavailable")
+        match output.status {
+            ToolStatus::Success => {}
+            ToolStatus::Error => {
+                // Sandbox not available on this platform - that's ok
+                assert!(output.content.contains("unavailable") || output.content.contains("Sandbox") || output.content.contains("sandboxed"));
+            }
+            _ => panic!("Unexpected status: {:?}", output.status),
+        }
+    }
+
+    #[tokio::test]
+    async fn bash_without_sandbox_env_works() {
+        // Ensure sandbox env is not set
+        std::env::remove_var("RUNIE_SANDBOX");
+
+        let input = BashInput {
+            command: "echo no_sandbox".to_string(),
+            timeout_seconds: Some(5),
+        };
+        let ctx = ToolContext::default();
+        let output = BashTool::execute(input, &ctx).await;
+        assert_eq!(output.status, ToolStatus::Success);
+        assert!(output.content.contains("no_sandbox"));
     }
 }

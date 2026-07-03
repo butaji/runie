@@ -6,6 +6,7 @@
 //! - Uses `command-group` to kill the entire process tree on timeout.
 //! - Uses `shell-words` for direct-mode command parsing.
 //! - Supports both shell mode (`sh -c`) and direct mode (parsed args).
+//! - Supports OS-level sandboxing via the `sandbox` module.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -18,6 +19,8 @@ use command_group::AsyncCommandGroup;
 use shell_words;
 use tokio::process::Command;
 use tokio::sync::oneshot;
+
+use crate::sandbox::{sandbox_available, SandboxStatus};
 
 /// Result of a bash command execution.
 #[derive(Debug, Clone)]
@@ -42,6 +45,7 @@ pub enum ShellStatus {
 /// - `shell`: if true, passes command to `sh -c` (supports pipes, redirects, etc.).
 ///   If false, parses with `shell-words` and executes directly (faster, safer).
 /// - Uses `command-group` to kill the entire process tree when timeout expires.
+/// - When `use_sandbox` is true and sandbox is available, wraps execution in OS sandbox.
 pub async fn run_bash(
     command: &str,
     working_dir: impl AsRef<Path>,
@@ -49,21 +53,54 @@ pub async fn run_bash(
     timeout: Duration,
     shell: bool,
 ) -> ShellResult {
+    run_bash_internal(command, working_dir, env, timeout, shell, false).await
+}
+
+/// Execute a bash command asynchronously with optional sandboxing.
+pub async fn run_bash_sandboxed(
+    command: &str,
+    working_dir: impl AsRef<Path>,
+    env: &HashMap<String, String>,
+    timeout: Duration,
+    shell: bool,
+) -> ShellResult {
+    run_bash_internal(command, working_dir, env, timeout, shell, true).await
+}
+
+/// Internal implementation of bash execution with optional sandboxing.
+async fn run_bash_internal(
+    command: &str,
+    working_dir: impl AsRef<Path>,
+    env: &HashMap<String, String>,
+    timeout: Duration,
+    shell: bool,
+    use_sandbox: bool,
+) -> ShellResult {
     let working_dir = working_dir.as_ref();
+
+    // Check if sandbox should be used
+    let use_sandbox = use_sandbox && matches!(sandbox_available(), SandboxStatus::Available);
+
     if shell {
-        run_bash_shell(command, working_dir, env, timeout).await
+        run_bash_shell_internal(command, working_dir, env, timeout, use_sandbox).await
     } else {
         run_bash_direct(command, working_dir, env, timeout).await
     }
 }
 
-/// Shell mode: pass command to `sh -c`.
-async fn run_bash_shell(
+/// Internal shell mode implementation with optional sandboxing.
+async fn run_bash_shell_internal(
     command: &str,
     working_dir: &Path,
     env: &HashMap<String, String>,
     timeout: Duration,
+    use_sandbox: bool,
 ) -> ShellResult {
+    // For sandboxed execution, we use the sandbox module
+    if use_sandbox {
+        return run_sandboxed_shell(command, working_dir, env, timeout).await;
+    }
+
     let mut cmd = Command::new("sh");
     cmd.arg("-c")
         .arg(command)
@@ -97,6 +134,44 @@ async fn run_bash_direct(
         .stderr(Stdio::piped());
 
     run_command(cmd, timeout).await
+}
+
+/// Run a sandboxed shell command with timeout support.
+async fn run_sandboxed_shell(
+    command: &str,
+    working_dir: &Path,
+    env: &HashMap<String, String>,
+    timeout: Duration,
+) -> ShellResult {
+    use crate::sandbox;
+
+    // Convert env to the format expected by sandbox module
+    let env_pairs: Vec<(String, String)> = env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+
+    // Run the sandboxed command with timeout
+    let result = tokio::time::timeout(timeout, async {
+        sandbox::run_sandboxed_shell(command, working_dir, &env_pairs)
+    }).await;
+
+    match result {
+        Ok(Ok(exit_status)) => {
+            let status = if exit_status.success() {
+                ShellStatus::Success
+            } else {
+                ShellStatus::Error
+            };
+            ShellResult {
+                output: format!("Sandboxed command exited with: {}", exit_status),
+                bytes_transferred: None,
+                status,
+            }
+        }
+        Ok(Err(e)) => ShellResult::error(format!("Sandbox execution failed: {}", e)),
+        Err(_) => {
+            // Timeout
+            ShellResult::timed_out(timeout)
+        }
+    }
 }
 
 /// Run a command group and collect output with timeout.

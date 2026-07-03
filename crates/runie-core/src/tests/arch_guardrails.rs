@@ -70,6 +70,8 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "update/dialog/open.rs",
     // Shell module — owns bash execution; sync variant for IO actor
     "shell.rs",
+    // Sandbox module — OS-level sandboxing via subprocess execution
+    "sandbox.rs",
     // Input submit — fallback bash execution when no actor handles available
     "update/input/submit.rs",
     // Login flow handlers with file IO
