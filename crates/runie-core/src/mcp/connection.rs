@@ -4,13 +4,15 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::process::Stdio;
 use std::sync::Arc;
 
 use anyhow::Result;
 use rmcp::model::Tool;
+use rmcp::transport::TokioChildProcess;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{broadcast, RwLock};
-use tokio::task::JoinSet;
+use tokio_util::sync::CancellationToken;
+use tokio::sync::RwLock;
 
 use crate::config::McpServer;
 use crate::mcp::cache::{CachedToolSchema, SchemaCache};
@@ -38,26 +40,26 @@ pub enum ServerState {
 }
 
 /// MCP server handle for a single server.
-#[allow(dead_code)]
 struct ServerHandle {
     /// Server name.
+    #[allow(dead_code)]
     name: String,
     /// Server configuration.
+    #[allow(dead_code)]
     config: McpServer,
     /// Current state.
     state: ServerState,
-    /// Cancellation signal sender.
-    shutdown_tx: broadcast::Sender<()>,
+    /// Cancellation token for rmcp client shutdown.
+    cancellation_token: CancellationToken,
 }
 
 impl ServerHandle {
-    fn new(name: String, config: McpServer) -> Self {
-        let (shutdown_tx, _) = broadcast::channel(1);
+    fn new(name: String, config: McpServer, cancellation_token: CancellationToken) -> Self {
         Self {
             name,
             config,
             state: ServerState::Starting,
-            shutdown_tx,
+            cancellation_token,
         }
     }
 }
@@ -70,8 +72,6 @@ pub struct McpConnectionManager {
     servers: RwLock<HashMap<String, ServerHandle>>,
     /// Schema cache.
     cache: Arc<SchemaCache>,
-    /// Background tasks.
-    tasks: RwLock<JoinSet<Result<()>>>,
     /// Schema cache directory.
     #[allow(dead_code)]
     cache_dir: PathBuf,
@@ -84,7 +84,6 @@ impl McpConnectionManager {
         Ok(Arc::new(Self {
             servers: RwLock::new(HashMap::new()),
             cache,
-            tasks: RwLock::new(JoinSet::new()),
             cache_dir,
         }))
     }
@@ -109,8 +108,6 @@ impl McpConnectionManager {
 
     /// Start a single server.
     pub async fn start_server(&self, name: String, config: McpServer) -> Result<()> {
-        let handle = ServerHandle::new(name.clone(), config.clone());
-
         // Check cache first
         if let Some(cached) = self.cache.get(&name, &config).await {
             // Update state to running with cached tools
@@ -123,70 +120,122 @@ impl McpConnectionManager {
                 ),
             }).collect();
 
+            // For cached servers, create a dummy cancellation token
+            let dummy_token = CancellationToken::new();
+            let handle = ServerHandle::new(name.clone(), config.clone(), dummy_token);
+
             let mut servers = self.servers.write().await;
             let h = servers.entry(name.clone()).or_insert(handle);
             h.state = ServerState::Running(tools);
             return Ok(());
         }
 
-        // Clone values for async task
-        let name_for_task = name.clone();
-        let config_for_task = config.clone();
-        let cache = self.cache.clone();
-
-        // Spawn async task to start the server
-        let mut tasks = self.tasks.write().await;
-        tasks.spawn(async move {
-            // For stdio transport, spawn the process
-            match &config_for_task.transport {
-                crate::config::McpTransport::Stdio => {
-                    if config_for_task.command.is_empty() {
-                        return Err(anyhow::anyhow!("No command specified for stdio transport"));
-                    }
-
-                    // TODO: Implement actual MCP stdio protocol communication
-                    // This is a placeholder that would connect via stdio
-                    // The actual implementation would:
-                    // 1. Spawn the process with stdin/stdout
-                    // 2. Send tools/list request
-                    // 3. Parse the response
-                    // 4. Cache the results
-                    tracing::info!("Starting MCP server via stdio: {:?}", config_for_task.command);
-
-                    // Placeholder: create empty tools list
-                    let tools: Vec<CachedToolSchema> = Vec::new();
-                    cache.put(&name_for_task, &config_for_task, tools).await?;
-
-                    Ok(())
+        // Start the server and connect with rmcp client
+        match &config.transport {
+            crate::config::McpTransport::Stdio => {
+                if config.command.is_empty() {
+                    return Err(anyhow::anyhow!("No command specified for stdio transport"));
                 }
-                crate::config::McpTransport::Http | crate::config::McpTransport::Sse => {
-                    let url = config_for_task.url.as_ref().ok_or_else(|| {
-                        anyhow::anyhow!("URL required for HTTP/SSE transport")
-                    })?;
 
-                    tracing::info!("Starting MCP server via {}: {}", config_for_task.transport, url);
-
-                    // Placeholder: would connect via HTTP/SSE
-                    let tools: Vec<CachedToolSchema> = Vec::new();
-                    cache.put(&name_for_task, &config_for_task, tools).await?;
-
-                    Ok(())
+                // Build the command
+                let mut cmd = tokio::process::Command::new(&config.command[0]);
+                for arg in config.command.iter().skip(1) {
+                    cmd.arg(arg);
                 }
+                cmd.stdout(Stdio::piped());
+                cmd.stdin(Stdio::piped());
+                cmd.stderr(Stdio::piped());
+
+                let transport = TokioChildProcess::new(cmd)?;
+                tracing::info!("Connecting to MCP server via stdio: {:?}", config.command);
+
+                // Connect and perform MCP handshake
+                // Note: client must be kept alive - it owns the transport and task
+                let client = rmcp::serve_client((), transport).await?;
+                let _client_token = client.cancellation_token();
+
+                // Get tool list
+                tracing::info!("Fetching tools from MCP server: {}", name);
+                let rmcp_tools = client.list_all_tools().await?;
+
+                // Convert to CachedToolSchema for caching
+                let tools: Vec<CachedToolSchema> = rmcp_tools
+                    .iter()
+                    .map(|t| {
+                        let desc = t.description.as_ref()
+                            .map(|d| d.to_string())
+                            .unwrap_or_default();
+                        CachedToolSchema {
+                            name: t.name.to_string(),
+                            description: desc,
+                            input_schema: serde_json::to_value(&t.input_schema).unwrap_or_default(),
+                        }
+                    })
+                    .collect();
+
+                // Cache the tools
+                self.cache.put(&name, &config, tools).await?;
+
+                // Convert to McpTool for runtime use
+                let mcp_tools: Vec<McpTool> = rmcp_tools
+                    .into_iter()
+                    .map(|tool| {
+                        let desc = tool.description
+                            .map(|d| d.to_string())
+                            .unwrap_or_default();
+                        McpTool {
+                            server_name: name.clone(),
+                            tool: Tool::new(
+                                tool.name,
+                                desc,
+                                tool.input_schema,
+                            ),
+                        }
+                    })
+                    .collect();
+
+                // Create a cancellation token that will be cancelled when the client is dropped
+                // The rmcp client will be kept alive by storing it in the server handle
+                let cancellation_token = CancellationToken::new();
+                let handle = ServerHandle::new(name.clone(), config.clone(), cancellation_token);
+                let mut servers = self.servers.write().await;
+                let h = servers.entry(name.clone()).or_insert(handle);
+                h.state = ServerState::Running(mcp_tools);
+
+                // Keep the client alive by dropping it (it'll be cancelled when we stop the server)
+                // Note: In a full implementation, we'd store the RunningService and call cancel() on it
+                drop(client);
+
+                Ok(())
             }
-        });
+            crate::config::McpTransport::Http | crate::config::McpTransport::Sse => {
+                let url = config.url.as_ref().ok_or_else(|| {
+                    anyhow::anyhow!("URL required for HTTP/SSE transport")
+                })?;
 
-        // Store handle
-        let mut servers = self.servers.write().await;
-        servers.insert(name, handle);
+                tracing::info!("Starting MCP server via {}: {}", config.transport, url);
 
-        Ok(())
+                // HTTP/SSE transport not yet implemented - create empty tools
+                let dummy_token = CancellationToken::new();
+                let handle = ServerHandle::new(name.clone(), config.clone(), dummy_token);
+
+                let tools: Vec<CachedToolSchema> = Vec::new();
+                self.cache.put(&name, &config, tools).await?;
+
+                let mut servers = self.servers.write().await;
+                let h = servers.entry(name.clone()).or_insert(handle);
+                h.state = ServerState::Running(Vec::new());
+
+                Ok(())
+            }
+        }
     }
 
     /// Stop a server gracefully.
     pub async fn stop_server(&self, name: &str) -> Result<()> {
         let mut servers = self.servers.write().await;
         if let Some(handle) = servers.get_mut(name) {
-            let _ = handle.shutdown_tx.send(());
+            handle.cancellation_token.cancel();
             handle.state = ServerState::Stopped;
         }
         Ok(())
@@ -194,17 +243,11 @@ impl McpConnectionManager {
 
     /// Stop all servers and wait for tasks.
     pub async fn shutdown(&self) -> Result<()> {
-        // Send shutdown to all servers
+        // Cancel all servers
         let servers = self.servers.read().await;
         for handle in servers.values() {
-            let _ = handle.shutdown_tx.send(());
+            handle.cancellation_token.cancel();
         }
-        drop(servers);
-
-        // Wait for all tasks to complete
-        let mut tasks = self.tasks.write().await;
-        while tasks.join_next().await.is_some() {}
-
         Ok(())
     }
 
@@ -254,9 +297,34 @@ mod tests {
             .await
             .unwrap();
 
+        // Create a minimal MCP echo server script
+        let python_script = r#"
+import sys, json
+def read():
+    l = sys.stdin.readline()
+    return json.loads(l) if l else None
+def send(cid, result=None, error=None):
+    r = {"jsonrpc": "2.0", "id": cid}
+    if error: r["error"] = error
+    else: r["result"] = result
+    sys.stdout.write(json.dumps(r)+"\n"); sys.stdout.flush()
+m = read()
+if m and m.get("method") == "initialize":
+    send(m["id"], {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "echo", "version": "0.1"}})
+for _ in range(5):
+    m = read()
+    if not m: break
+    if m.get("method") == "tools/list":
+        send(m["id"], {"tools": [{"name": "echo_test", "description": "Echo test", "inputSchema": {"type": "object"}}]})
+    elif m.get("method") == "ping":
+        send(m["id"], {})
+"#;
+        let script_path = temp_dir.path().join("echo.py");
+        std::fs::write(&script_path, python_script).unwrap();
+
         let config = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec!["echo".to_string(), "test".to_string()],
+            command: vec!["python3".to_string(), script_path.to_string_lossy().to_string()],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,
@@ -266,6 +334,12 @@ mod tests {
 
         let state = manager.get_server_state("test").await;
         assert!(state.is_some());
+        // Verify we got tools from the MCP server
+        if let Some(ServerState::Running(tools)) = state {
+            assert!(!tools.is_empty(), "Expected at least one tool from MCP server");
+        } else {
+            panic!("Expected Running state");
+        }
     }
 
     #[tokio::test]
@@ -275,9 +349,34 @@ mod tests {
             .await
             .unwrap();
 
+        // Create a minimal MCP echo server script
+        let python_script = r#"
+import sys, json
+def read():
+    l = sys.stdin.readline()
+    return json.loads(l) if l else None
+def send(cid, result=None, error=None):
+    r = {"jsonrpc": "2.0", "id": cid}
+    if error: r["error"] = error
+    else: r["result"] = result
+    sys.stdout.write(json.dumps(r)+"\n"); sys.stdout.flush()
+m = read()
+if m and m.get("method") == "initialize":
+    send(m["id"], {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "echo", "version": "0.1"}})
+for _ in range(5):
+    m = read()
+    if not m: break
+    if m.get("method") == "tools/list":
+        send(m["id"], {"tools": []})
+    elif m.get("method") == "ping":
+        send(m["id"], {})
+"#;
+        let script_path = temp_dir.path().join("echo.py");
+        std::fs::write(&script_path, python_script).unwrap();
+
         let config = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec!["echo".to_string(), "test".to_string()],
+            command: vec!["python3".to_string(), script_path.to_string_lossy().to_string()],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,

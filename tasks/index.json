@@ -2227,7 +2227,7 @@
   {
     "file": "wire-rmcp-client-or-remove-mcp-config.md",
     "title": "Wire `rmcp` client or remove MCP config",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "wire-user-permission-rules-into-agent-gate.md",

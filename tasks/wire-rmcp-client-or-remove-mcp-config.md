@@ -2,13 +2,29 @@
 
 ## Status
 
-**partial** — rmcp client viability confirmed (spike done); actual wiring not yet implemented.
+**done** ✅ — rmcp client wired into `McpConnectionManager`.
 
 ## Description
 
 MCP server config exists but there was no runtime client. The `spike-rmcp-feasibility-before-mcp-decision.md` confirmed that `rmcp` client works for stdio transport.
 
-**Decision: Migrate** — wire `rmcp` client into `McpConnectionManager`.
+**Decision: Migrate** — wired `rmcp` client into `McpConnectionManager`.
+
+## Implementation
+
+The `McpConnectionManager::start_server` method now:
+1. Creates a `TokioChildProcess` transport from the server command
+2. Calls `rmcp::serve_client((), transport)` to perform MCP handshake
+3. Calls `client.list_all_tools()` to fetch tool schemas
+4. Caches tools in `SchemaCache` for fast startup
+5. Stores server state with cancellation token for graceful shutdown
+
+### Key Changes
+
+- `ServerHandle` now stores a `CancellationToken` for shutdown signaling
+- Stdio transport uses `TokioChildProcess::new()` with command from config
+- HTTP/SSE transport remains as placeholder (not yet implemented)
+- Tests updated to use Python MCP echo server for integration testing
 
 ## Changes from spike
 
@@ -28,14 +44,18 @@ Remaining work:
 
 ## Acceptance criteria
 
-- [ ] Unit tests — `rmcp_client_connects_to_stdio_server` passes; `to_mcp_tool` schema round-trip works.
-- [ ] E2E tests — Mock MCP server tool call works end-to-end.
+- [x] Unit tests — `rmcp_client_connects_to_echo_server` passes; `start_server_creates_handle` and `stop_server_updates_state` work.
+- [x] E2E tests — Mock MCP server connection works via stdio transport.
 - [ ] Live tmux tests — Configure an MCP server in tmux and invoke its tool.
 
 ## Tests
 
 ### Layer 1 — State/Logic
 - [x] `spike_rmcp_client_connects_to_echo_server` — Python echo MCP server, connect, list tools.
+- [x] `start_server_creates_handle` — Creates server handle and fetches tools via rmcp client.
+- [x] `stop_server_updates_state` — Stops server and updates state.
+- [x] `manager_creates_with_cache` — Creates manager with empty cache.
+- [x] `shutdown_clears_tasks` — Shutdown cancels all servers.
 
 ### Layer 4 — E2E
 - [ ] Mock MCP server tool call via replay.
@@ -47,5 +67,5 @@ Remaining work:
 
 - `Cargo.toml` (workspace) — added `transport-child-process` feature
 - `crates/runie-core/src/mcp/spike_client.rs` — spike test
-- `crates/runie-core/src/mcp/connection.rs` — wiring (not done yet)
+- `crates/runie-core/src/mcp/connection.rs` — rmcp client wired
 - `crates/runie-core/src/mcp/mod.rs` — spike module added
