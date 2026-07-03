@@ -383,16 +383,6 @@ Rules:
 
 `crates/runie-core/build.rs` enforces AppState access, magic-number, and orphan-spawn guardrails on all workspace production code.
 
-`python3 scripts/check_structure.py` (run in CI) enforces structural limits on production `.rs` files:
-
-| Metric | Limit |
-|--------|-------|
-| File lines | 500 |
-| Function lines | 40 |
-| Approximate complexity | 10 |
-
-Tests and `build.rs` files are exempt from function-length and complexity checks so they can stay comprehensive.
-
 ## Testing philosophy
 
 See [AGENTS.md §Testing Strategy](../AGENTS.md#testing-strategy-4-layers) for the full 4-layer test taxonomy.

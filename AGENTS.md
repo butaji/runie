@@ -138,20 +138,6 @@ The build script at `crates/runie-core/build.rs` enforces, across all workspace 
 | Magic numbers (>= 1000) | all `crates/*/src` production code | Yes |
 | Orphan `tokio::spawn` calls | all `crates/*/src` production code | Yes |
 
-`python3 scripts/check_structure.py` (run in CI) enforces the structural limits on all workspace production `.rs` files:
-
-| Metric | Limit |
-|--------|-------|
-| File lines | ≤ 500 |
-| Function lines | ≤ 40 |
-| Approximate complexity | ≤ 10 |
-
-Complexity is an approximate heuristic that counts `if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`, `return`, `&&`, `||`, and `?` tokens. It does not parse Rust syntax and may miss nested closures, match guards, and similar constructs.
-
-**Known gaps / exemptions:**
-- A number of legacy files and functions are temporarily exempt from the structural limits while they are refactored. The exemption list is in `scripts/check_structure.py`. New code should not be added to this list.
-- Test code and `build.rs` files are exempt from structural limits so tests can stay comprehensive.
-
 **AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
 
 **Magic number guardrail** prevents raw numeric literals (>= 1000) in production code. Numbers below 1000, underscore-separated numbers, hex literals, HTTP status codes, JSON-RPC error codes, and numbers in test code are exempt. Use named constants for buffer sizes, timeouts, and thresholds.

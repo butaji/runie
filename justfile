@@ -70,10 +70,6 @@ check:
 verify-tests:
     cargo nextest run --workspace && cargo test --workspace --doc
 
-# Run structural linter (file/function/complexity limits)
-check-structure:
-    python3 scripts/check_structure.py
-
 # Watch mode for TUI crate only
 watch-tui:
     cargo watch -x 'check -p runie-tui' -w crates/runie-tui/src

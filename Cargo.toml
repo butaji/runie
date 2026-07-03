@@ -11,13 +11,12 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 # Clippy lints applied across the workspace.
-# File length (500 lines) is enforced by python3 scripts/check_structure.py in CI.
 # Note: `cognitive_complexity` threshold uses clippy's default (10) rather than
 # a custom heuristic; `too_many_lines` uses clippy's default (100 lines/file).
 # Note: `too_many_lines` is prefixed with `clippy::` as it was renamed from the
 # bare lint name in clippy 0.1.96.
 [workspace.lints.clippy]
-#too_many_lines = "warn"  # disabled: too aggressive at 100-line default; CI script handles 500-line limit
+#too_many_lines = "warn"  # disabled: too aggressive at 100-line default
 cognitive_complexity = "warn"
 
 [workspace.dependencies]
