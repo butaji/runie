@@ -14,12 +14,8 @@ pub(crate) use helpers::{
 };
 
 pub(crate) fn clean_config() {
-    let dir = std::env::temp_dir().join(format!(
-        "runie_login_test_{:?}",
-        std::thread::current().id()
-    ));
-    let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join("config.toml");
+    let path =
+        crate::provider::config::generate_test_config_path("runie_login_test");
     let _ = std::fs::remove_file(&path);
     crate::provider::config::set_test_config_path(path);
 }

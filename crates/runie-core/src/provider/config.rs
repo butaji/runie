@@ -9,6 +9,7 @@ use secrecy::ExposeSecret;
 
 use std::fs::OpenOptions;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::actors::config::file_helpers;
 use crate::proto::provider::ProviderConfig;
@@ -17,6 +18,16 @@ thread_local! {
     static TEST_CONFIG_PATH: std::cell::RefCell<Option<PathBuf>> = const {
         std::cell::RefCell::new(None)
     };
+}
+
+static TEST_CONFIG_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Generate a unique test config path using an atomic counter.
+/// This avoids thread-local conflicts when tests run in parallel on worker threads.
+pub fn generate_test_config_path(prefix: &str) -> PathBuf {
+    let n = TEST_CONFIG_COUNTER.fetch_add(1, Ordering::SeqCst);
+    std::env::temp_dir()
+        .join(format!("{}_{}_{}.toml", prefix, std::process::id(), n))
 }
 
 /// Override the config file path for the current thread (tests only).

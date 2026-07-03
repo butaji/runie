@@ -4,10 +4,8 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::AppState;
 
 fn clean_config() -> std::path::PathBuf {
-    let dir =
-        std::env::temp_dir().join(format!("runie_no_model_{:?}", std::thread::current().id()));
-    let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join("config.toml");
+    let path =
+        runie_core::provider::config::generate_test_config_path("runie_no_model");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path.clone());
     path

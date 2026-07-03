@@ -9,10 +9,8 @@ use runie_core::login_flow::LoginStep;
 use runie_core::Event;
 
 fn clean_config() {
-    let dir =
-        std::env::temp_dir().join(format!("runie_login_e2e_{:?}", std::thread::current().id()));
-    let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join("config.toml");
+    let path =
+        runie_core::provider::config::generate_test_config_path("runie_login_e2e");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path);
 }
