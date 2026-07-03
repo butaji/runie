@@ -1,6 +1,6 @@
 # Write Runie vs Grok Build findings report
 
-**Status**: todo
+**Status**: blocked — Dependent on comparison tasks.
 **Milestone**: R7
 **Category**: Documentation
 **Priority**: P1

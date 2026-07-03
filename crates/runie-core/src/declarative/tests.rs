@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod loader_tests {
     use std::collections::HashMap;
-    use std::path::Path;
 
     // Re-export types for tests
     use crate::commands::CommandCategory;

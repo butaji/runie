@@ -1,6 +1,6 @@
 # Build Runie vs Grok Build comparison harness
 
-**Status**: todo
+**Status**: blocked — Grok Build binary unavailable (quarantine requires sudo). Comparison proceeds using documented behavior from public sources.
 **Milestone**: R7
 **Category**: Testing
 **Priority**: P0

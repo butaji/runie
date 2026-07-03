@@ -1,6 +1,6 @@
 # Prepare Grok Build reference for comparison
 
-**Status**: todo
+**Status**: wontfix — Requires sudo access to remove macOS quarantine attribute from `/opt/homebrew/Caskroom/grok-build/0.2.81/grok-0.2.81-macos-aarch64`. Without admin privileges, the binary is killed with code 137 (Killed: 9).
 **Milestone**: R7
 **Category**: Testing
 **Priority**: P0
