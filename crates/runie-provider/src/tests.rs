@@ -617,3 +617,30 @@ api_key = "sk-test"
 
     assert_eq!(models, vec!["model-a", "model-b"]);
 }
+
+#[test]
+fn sanitize_provider_error_extracts_json_message() {
+    use crate::sanitize_provider_error;
+    let body = r#"{"type":"error","error":{"type":"authentication_error","message":"Invalid bearer token"}}"#;
+    assert_eq!(
+        sanitize_provider_error(reqwest::StatusCode::UNAUTHORIZED, body),
+        "Invalid bearer token"
+    );
+}
+
+#[test]
+fn sanitize_provider_error_falls_back_to_status_message() {
+    use crate::sanitize_provider_error;
+    assert_eq!(
+        sanitize_provider_error(reqwest::StatusCode::UNAUTHORIZED, "not json"),
+        "Invalid API key (unauthorized)."
+    );
+    assert_eq!(
+        sanitize_provider_error(reqwest::StatusCode::TOO_MANY_REQUESTS, "not json"),
+        "Rate limited. Please wait a moment and try again."
+    );
+    assert_eq!(
+        sanitize_provider_error(reqwest::StatusCode::SERVICE_UNAVAILABLE, "not json"),
+        "Provider server error. Please try again later."
+    );
+}

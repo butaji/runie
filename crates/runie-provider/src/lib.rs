@@ -310,7 +310,8 @@ async fn fetch_models(
         if !status.is_success() {
             let text = resp.text().await.unwrap_or_default();
             tracing::warn!(status = %status, "API request failed");
-            anyhow::bail!("API validation failed: {}", text);
+            let summary = sanitize_provider_error(status, &text);
+            anyhow::bail!("API validation failed: {}", summary);
         }
         let json: serde_json::Value = resp.json().await?;
         Ok(json
@@ -325,6 +326,34 @@ async fn fetch_models(
     }
     .instrument(span)
     .await
+}
+
+/// Extract a short, user-readable error summary from a provider error response.
+/// Avoids dumping raw JSON into the TUI transient message area.
+fn sanitize_provider_error(status: reqwest::StatusCode, body: &str) -> String {
+    // Try common provider JSON shapes first.
+    if let Ok(json) = serde_json::from_str::<serde_json::Value>(body) {
+        // Anthropic / OpenAI style: { "error": { "message": "..." } }
+        if let Some(msg) = json
+            .get("error")
+            .and_then(|e| e.get("message"))
+            .and_then(|m| m.as_str())
+        {
+            return msg.to_owned();
+        }
+        // Some providers return { "message": "..." }
+        if let Some(msg) = json.get("message").and_then(|m| m.as_str()) {
+            return msg.to_owned();
+        }
+    }
+    // Fall back to a concise status-based message.
+    match status.as_u16() {
+        401 => "Invalid API key (unauthorized).".to_owned(),
+        403 => "API key does not have permission for this request.".to_owned(),
+        429 => "Rate limited. Please wait a moment and try again.".to_owned(),
+        500..=599 => "Provider server error. Please try again later.".to_owned(),
+        _ => format!("HTTP {}", status),
+    }
 }
 
 // ---------------------------------------------------------------------------

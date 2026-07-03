@@ -75,6 +75,8 @@ fn init_with_mode(mode: InitMode) {
         }
         InitMode::File => {
             // Set up file appender for structured JSON logs.
+            // We intentionally do NOT write to the console in TUI mode: any stdout/stderr
+            // output while the terminal is in raw mode corrupts the UI.
             let log_dir = default_log_dir();
 
             // Create the log directory if it doesn't exist.
@@ -103,14 +105,8 @@ fn init_with_mode(mode: InitMode) {
                 .json()
                 .with_writer(non_blocking);
 
-            // Compact console layer for errors/warnings only (avoids corrupting terminal).
-            let console_layer = fmt::layer().with_target(true).with_filter(
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
-            );
-
             Registry::default()
                 .with(file_layer)
-                .with(console_layer)
                 .with(filter)
                 .init();
         }

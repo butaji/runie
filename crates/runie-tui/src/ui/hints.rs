@@ -29,6 +29,18 @@ fn render_transient(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect, msg:
     let margin_style = Style::default().fg(dark_text).bg(margin_bg);
     let msg_style = Style::default().fg(dark_text).bg(bg);
     let badge_style = Style::default().fg(dark_text).bg(badge_bg).bold();
+
+    // Sanitize and truncate so a long/provider error cannot overflow or corrupt the bar.
+    let msg = sanitize_transient_text(msg);
+    let max_msg_width = (area.width as usize).saturating_sub(label.len() + 5);
+    let msg = if msg.chars().count() > max_msg_width && max_msg_width > 3 {
+        let trunc_len = max_msg_width - 3;
+        let truncated: String = msg.chars().take(trunc_len).collect();
+        format!("{}...", truncated)
+    } else {
+        msg
+    };
+
     let content_len = label.len() + 2 + msg.len();
     let fill_len = (area.width as usize).saturating_sub(content_len + 1);
     let fill = " ".repeat(fill_len.max(1));
@@ -41,6 +53,17 @@ fn render_transient(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect, msg:
     ];
     let block = Block::default().borders(Borders::NONE).style(margin_style);
     f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
+}
+
+/// Replace control characters and newlines with spaces so a provider error body
+/// cannot break the single-line transient hint bar.
+fn sanitize_transient_text(msg: &str) -> String {
+    msg.chars()
+        .map(|c| if c.is_control() || c == '\n' || c == '\r' || c == '\t' { ' ' } else { c })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn transient_style(snap: &runie_core::Snapshot) -> (&'static str, ratatui::style::Color) {
