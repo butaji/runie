@@ -1,8 +1,8 @@
 # Configuration
 
-Runie is configured via `~/.runie/config.toml`. Config hot-reloads while you type.
+Runie reads `~/.runie/config.toml`. Config hot-reloads while you type.
 
-## Canonical Config Example
+## Canonical example
 
 ```toml
 provider = "anthropic"
@@ -19,9 +19,9 @@ max_bytes = 51200
 enabled = false
 ```
 
-## Provider Configuration
+## Providers
 
-Each provider requires an API key. Configure multiple providers:
+Each provider needs an API key:
 
 ```toml
 [model_providers.anthropic]
@@ -40,13 +40,12 @@ base_url = "https://api.deepseek.com/v1"
 api_key = "sk-..."
 ```
 
-## Model Selection
+## Model selection
 
-The `scoped` list controls which models appear in the model selector:
+The `scoped` list controls which models appear in the selector:
 
 ```toml
 [models]
-# Default model (overridden by --model flag)
 scoped = [
   "anthropic/claude-sonnet-4-6",
   "gpt-4o",
@@ -56,7 +55,7 @@ scoped = [
 
 ## Permissions
 
-Control which tools require approval. Rules are checked top-to-bottom; the first match wins.
+Rules are checked top-to-bottom; the first match wins.
 
 ```toml
 [[permissions]]
@@ -74,55 +73,32 @@ tool = "rm"
 pattern = "rm -rf /"
 ```
 
-## Environment & Secrets
+## Environment & secrets
 
-Provider API keys can be set via environment variables or stored in the OS keyring:
+API keys can be set via environment variables or the OS keyring. Use `$VAR` in the config to pull from the environment:
 
 ```toml
 [model_providers.anthropic]
-type = "anthropic"
-# Key from ANTHROPIC_API_KEY env var, or OS keyring
 api_key = "$ANTHROPIC_API_KEY"
 ```
 
-Supported environment variables per provider:
-- `ANTHROPIC_API_KEY` — Anthropic
-- `OPENAI_API_KEY` — OpenAI
-- `DEEPSEEK_API_KEY` — DeepSeek
-- `OPENAI_API_KEY` — any OpenAI-compatible provider
+Supported env vars: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`. Any OpenAI-compatible provider also reads `OPENAI_API_KEY`.
 
 Runie looks up the keyring entry keyed by `"runie"` when the value is empty or starts with `$`.
 
-## Truncation Policy
-
-Control how Runie truncates conversation history:
+## Truncation
 
 ```toml
 [truncation]
-# Maximum lines to keep in context
 max_lines = 2000
-# Maximum bytes per message
 max_bytes = 51200
 ```
 
 ## Telemetry
 
-Anonymous usage telemetry (disabled by default):
-
 ```toml
 [telemetry]
 enabled = false
-```
-
-## Keybindings
-
-Keybindings can be customized in config:
-
-```toml
-[keybindings]
-# Custom keybinding examples (using crossterm syntax)
-# Ctrl+P = open command palette
-# Ctrl+G = toggle session tree
 ```
 
 ## Related
