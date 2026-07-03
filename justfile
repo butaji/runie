@@ -46,6 +46,15 @@ build-release:
 tui:
     cargo run -p runie-tui --bin runie-tui
 
+# Run a manual live TUI smoke test in a real tmux session.
+# This is not an automatic test; it validates TUI behavior interactively.
+# Examples:
+#   just live-tui-tmux mock
+#   just live-tui-tmux mock "list files"
+#   MINIMAX_API_KEY=... just live-tui-tmux minimax
+live-tui-tmux mode="mock" prompt="hello" timeout="30":
+    ./scripts/live-tui-tmux.sh {{mode}} {{prompt}} {{timeout}}
+
 # Run the schema generator example to regenerate config.schema.json
 write-config-schema:
     cargo run -p runie-core --example write_config_schema -- config.schema.json

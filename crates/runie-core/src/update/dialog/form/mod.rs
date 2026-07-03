@@ -396,6 +396,16 @@ pub fn apply_form_action(state: &mut AppState, action: FormAction) {
         FormAction::Submit(evt) => {
             close_dialog(state);
             if let Some(e) = evt {
+                // `SubmitKey` must be observed by the actor layer so the async
+                // API-key validation effect is dispatched. Publish it on the event
+                // bus when one is installed; otherwise fall back to direct update
+                // (test mode without UiActor).
+                if let crate::Event::SubmitKey { .. } = &e {
+                    if let Some(bus) = state.event_bus() {
+                        bus.publish(e);
+                        return;
+                    }
+                }
                 state.update(e);
             }
         }

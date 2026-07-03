@@ -26,7 +26,14 @@ fn setup_cli_files(root: &std::path::Path) {
 
 /// Acquires the test lock, resets global state, creates a temp directory with test files,
 /// and returns the guard and paths. The guard (TempDir) must be kept alive until the test ends.
-fn setup_test_env<F>(setup_files: F) -> (std::sync::MutexGuard<'static, ()>, tempfile::TempDir, std::path::PathBuf, std::path::PathBuf)
+fn setup_test_env<F>(
+    setup_files: F,
+) -> (
+    std::sync::MutexGuard<'static, ()>,
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+)
 where
     F: FnOnce(&std::path::Path),
 {

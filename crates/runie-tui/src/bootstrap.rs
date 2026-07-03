@@ -507,7 +507,7 @@ impl TuiRuntime {
             };
 
             if let Some(evt) = evt {
-                let is_quit = matches!(evt, Event::Quit | Event::Reset);
+                let is_quit = is_input_stop_event(&evt);
                 // Route to InputActor via the canonical router
                 if input_mapping::route_to_input_actor(&leader_handle.input, &evt).await {
                     continue;
@@ -555,11 +555,7 @@ async fn spawn_background_tasks(
     let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
-    handles.spawn(tokio::spawn(input_forwarder_task(
-        input_rx,
-        leader_handle.input.clone(),
-        submit_tx,
-    )));
+    handles.spawn(tokio::spawn(input_forwarder_task(input_rx, submit_tx)));
 
     // UiActor was created before start_with_bus() with a NoOp agent handle and
     // the pre-subscribed bus_rx. Install the real agent handle and run it.
@@ -596,20 +592,14 @@ fn spawn_agent_tasks(
     handles.spawn(tokio::spawn(async_render_loop(terminal, render_rx, caps)));
 }
 
-/// Forwarder: raw events come in via `input_rx` and are routed through InputMsg
-/// to the leader's InputActor via the canonical `route_to_input_actor` helper.
-async fn input_forwarder_task(
-    mut input_rx: mpsc::Receiver<Event>,
-    input_handle: runie_core::actors::RactorInputHandle,
-    submit_tx: mpsc::Sender<Event>,
-) {
+/// Forwarder: bridge raw terminal events to the UiActor submit channel.
+///
+/// All terminal input is routed through UiActor so it can decide whether the
+/// event belongs to a modal dialog/form (onboarding, palettes, settings) or to
+/// the main chat input box. Sending everything to InputActor directly bypassed
+/// dialog forms and broke onboarding typing/arrows.
+async fn input_forwarder_task(mut input_rx: mpsc::Receiver<Event>, submit_tx: mpsc::Sender<Event>) {
     while let Some(evt) = input_rx.recv().await {
-        // Use the canonical router — one place to maintain the event → InputMsg mapping.
-        if input_mapping::route_to_input_actor(&input_handle, &evt).await {
-            continue;
-        }
-        // Events not routed to InputActor are forwarded to UiActor via the
-        // submit channel (Submit, Quit, ForceQuit, Abort).
         let _ = submit_tx.send(evt).await;
     }
 }
@@ -743,7 +733,7 @@ async fn input_reader(
     while let Some(Ok(event)) = reader.next().await {
         let bindings = kb_rx.borrow_and_update().clone();
         if let Some(evt) = keymap::convert_event(&event, &bindings) {
-            let is_quit = matches!(evt, Event::Quit | Event::Reset);
+            let is_quit = is_input_stop_event(&evt);
             if input_tx.send(evt).await.is_err() {
                 break;
             }
@@ -752,6 +742,13 @@ async fn input_reader(
             }
         }
     }
+}
+
+/// Returns true for events that should stop the input reader after dispatching.
+/// ForceQuit must be included so the input task exits immediately and the app
+/// shuts down without waiting for the shutdown timeout.
+fn is_input_stop_event(evt: &Event) -> bool {
+    matches!(evt, Event::Quit | Event::Reset | Event::ForceQuit)
 }
 
 #[cfg(test)]
@@ -830,6 +827,31 @@ mod tests {
         assert!(matches!(events[1], Event::Input('i')));
         // Enter maps to Submit via the keymap
         assert!(matches!(events[2], Event::Submit));
+    }
+
+    #[test]
+    fn input_stop_event_includes_quit() {
+        assert!(is_input_stop_event(&Event::Quit));
+    }
+
+    #[test]
+    fn input_stop_event_includes_reset() {
+        assert!(is_input_stop_event(&Event::Reset));
+    }
+
+    #[test]
+    fn input_stop_event_includes_force_quit() {
+        assert!(
+            is_input_stop_event(&Event::ForceQuit),
+            "ForceQuit must stop the input reader so shutdown is immediate"
+        );
+    }
+
+    #[test]
+    fn input_stop_event_rejects_other_events() {
+        assert!(!is_input_stop_event(&Event::Submit));
+        assert!(!is_input_stop_event(&Event::Input('q')));
+        assert!(!is_input_stop_event(&Event::DialogBack));
     }
 
     /// Layer 1: TuiRuntimeHandles stores all spawned task handles.

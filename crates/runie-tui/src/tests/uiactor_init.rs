@@ -45,8 +45,12 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
+    // Lock in a connected model so ConfigLoaded does not auto-open the onboarding
+    // login dialog, which would intercept the liveness Input event used below.
+    state.config_mut().current_provider = "mock".to_string();
+    state.config_mut().current_model = "echo".to_string();
+    state.config_mut().model_source = runie_core::model::ModelSource::UserOverride;
 
-    // Subscribe BEFORE UiActor starts — UiActor will drain this receiver's buffer.
     let bus_rx = bus.subscribe();
     let (submit_tx, submit_rx) = tokio::sync::mpsc::channel(16);
 

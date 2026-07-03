@@ -347,6 +347,64 @@ fn registry_validation_accepts_full_model_format() {
 }
 
 #[test]
+fn registry_validation_accepts_minimax_prefixed_model() {
+    // Regression: "minimax/MiniMax-M3" was rejected because find_model only
+    // matched bare model names or coincidental openrouter prefixed names.
+    let config = Config {
+        provider: Some("minimax".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("minimax/MiniMax-M3".to_string()),
+            scoped: Some(vec!["minimax/MiniMax-M3".to_string()]),
+        },
+        ..Config::default()
+    };
+    let errors = validate_registry(&config);
+    assert!(
+        errors.is_empty(),
+        "minimax prefixed model should pass: {:?}",
+        errors
+    );
+}
+
+#[test]
+fn registry_validation_accepts_mock_prefixed_model_when_mock_enabled() {
+    crate::provider::registry::set_mock_enabled(true);
+    let config = Config {
+        provider: Some("mock".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("mock/echo".to_string()),
+            scoped: Some(vec!["mock/echo".to_string()]),
+        },
+        ..Config::default()
+    };
+    let errors = validate_registry(&config);
+    crate::provider::registry::set_mock_enabled(false);
+    assert!(
+        errors.is_empty(),
+        "mock prefixed model should pass when mock enabled: {:?}",
+        errors
+    );
+}
+
+#[test]
+fn registry_validation_rejects_unknown_prefixed_model() {
+    let config = Config {
+        provider: Some("minimax".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("minimax/not-a-real-model".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate_registry(&config);
+    assert!(
+        errors.iter().any(|e| e.contains("not-a-real-model")),
+        "unknown prefixed model should fail: {:?}",
+        errors
+    );
+}
+
+#[test]
 fn config_validate_registry_method() {
     let config = Config {
         provider: Some("openai".to_string()),

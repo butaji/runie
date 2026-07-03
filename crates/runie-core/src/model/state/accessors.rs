@@ -105,6 +105,17 @@ impl AppState {
         self.actor_handles.as_ref()
     }
 
+    /// Optional event bus bridge used by core state handlers to publish events
+    /// that require actor-layer side effects.
+    pub fn event_bus(&self) -> Option<&crate::bus::EventBus<crate::Event>> {
+        self.event_bus.as_ref()
+    }
+
+    /// Install the event bus bridge. Called by UiActor during construction.
+    pub fn set_event_bus(&mut self, bus: crate::bus::EventBus<crate::Event>) {
+        self.event_bus = Some(bus);
+    }
+
     // ── Mutable accessors (crate-internal) ────────────────────────────────────
 
     /// Mutable access to session state.

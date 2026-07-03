@@ -145,12 +145,14 @@ impl AppState {
         let prev = self.take();
         let config = prev.config;
         let actor_handles = prev.actor_handles;
+        let event_bus = prev.event_bus;
         let git_info = prev.git_info;
         let cwd_name = prev.cwd_name;
         let trust_decisions = prev.trust_decisions;
         // prev is dropped; all its fields are returned to the pool
         self.config = config;
         *self.actor_handles_mut() = actor_handles;
+        self.event_bus = event_bus;
         self.git_info = git_info;
         self.cwd_name = cwd_name;
         *self.trust_decisions_mut() = trust_decisions;

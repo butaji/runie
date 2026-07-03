@@ -26,9 +26,9 @@ use crate::retry::{is_retryable, with_retry};
 
 // Provider trait and registry (moved to runie-core for cross-crate access).
 pub use runie_core::provider::registry::{
-    display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    is_mock_enabled, known_providers, ModelMeta, ModelMetaBuilder, ProviderMeta,
-    ProviderMetaBuilder,
+    display_name, find_model, find_model_for_provider, find_provider, find_provider_by_env_var,
+    is_known_provider, is_mock_enabled, known_providers, strip_provider_prefix, ModelMeta,
+    ModelMetaBuilder, ProviderMeta, ProviderMetaBuilder,
 };
 pub use runie_core::provider::ProviderError;
 pub use runie_core::provider::{Provider, ProviderMetadata, ResponseChunk, RetryConfig};
@@ -131,9 +131,14 @@ pub fn build_provider(
         return Err(ProviderError::MissingApiKey(meta.env_var.to_owned().into()));
     }
 
+    // Model names in config may be provider-prefixed ("openai/gpt-4o"). Strip the
+    // prefix when it matches the provider key so the API receives the bare model
+    // name it expects, while still looking up metadata from the right provider.
+    let bare_model = strip_provider_prefix(key, model);
+
     #[cfg(feature = "openai")]
     {
-        let provider = build_openai_provider(api_key, model, &base_url);
+        let provider = build_openai_provider(api_key, bare_model, &base_url, key, model);
         Ok(BuiltProvider::new(
             provider,
             key.to_owned(),
@@ -166,13 +171,18 @@ fn build_openai_provider(
     api_key: secrecy::SecretString,
     model: &str,
     base_url: &str,
+    provider_key: &str,
+    original_model: &str,
 ) -> Box<dyn Provider> {
     // Use the cached HTTP client so TCP connections are reused across turns.
     let client = BuiltProvider::cached_http_client("openai", base_url);
     // Convert SecretString to String for OpenAiProvider (normalization happens inside)
     let api_key_str = api_key.expose_secret().to_string();
     let p = OpenAiProvider::from_http_client(client, api_key_str, model).with_base_url(base_url);
-    let p = if let Some(meta) = find_model(model) {
+    // Look up model metadata from the intended provider. The original model name
+    // may be provider-prefixed ("openai/gpt-4o"); find_model_for_provider strips
+    // the prefix when it matches the provider key.
+    let p = if let Some(meta) = find_model_for_provider(provider_key, original_model) {
         p.with_model_meta(meta)
     } else {
         p

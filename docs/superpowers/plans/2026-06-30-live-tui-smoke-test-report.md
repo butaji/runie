@@ -20,14 +20,18 @@ After these fixes the TUI launches, accepts input, starts a turn, and renders pr
 
 ## Test script
 
-`scripts/tmux-smoke-test.sh [mock|minimax]`
+`scripts/live-tui-tmux.sh [mock|minimax] [prompt] [timeout_sec]`
 
 ```bash
 # Run mock scenarios
-scripts/tmux-smoke-test.sh mock
+scripts/live-tui-tmux.sh mock
+scripts/live-tui-tmux.sh mock "list files"
 
 # Run a real MiniMax scenario (requires key)
-MINIMAX_API_KEY=... scripts/tmux-smoke-test.sh minimax
+MINIMAX_API_KEY=... scripts/live-tui-tmux.sh minimax
+
+# Or use the just recipe
+just live-tui-tmux mock "hello"
 ```
 
 The script creates an isolated `$HOME` with a minimal `~/.runie/config.toml`, starts the TUI in an 80×24 tmux pane, types a prompt, waits for the expected screen content, and then quits.
@@ -57,7 +61,7 @@ cargo test --workspace
 cargo build --release -p runie-tui
 
 # Mock tmux smoke tests
-scripts/tmux-smoke-test.sh mock
+scripts/live-tui-tmux.sh mock
 ```
 
 All workspace tests pass. The mock tmux smoke tests pass.

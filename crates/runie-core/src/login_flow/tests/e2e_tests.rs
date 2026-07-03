@@ -357,6 +357,76 @@ fn login_flow_panel_changes_mark_dirty() {
 }
 
 #[test]
+fn login_flow_no_duplicate_panels_when_dialog_closed_before_event() {
+    clean_config();
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(crate::Event::Start);
+
+    // `apply_form_action` closes the dialog before publishing the event.
+    // Reconstructing the stack from a target `LoginStep` would duplicate panels.
+    state.open_dialog = None;
+    state.update(crate::Event::SelectProvider {
+        provider: "minimax".into(),
+    });
+
+    let stack = state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .expect("key input panel should be open");
+    let ids: Vec<_> = stack.panels.iter().map(|p| p.id.clone()).collect();
+    assert_eq!(
+        ids,
+        vec!["login-provider", "login-key"],
+        "selecting a provider should not duplicate the key input panel"
+    );
+
+    state.open_dialog = None;
+    state.update(crate::Event::SubmitKey {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+    });
+
+    let stack = state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .expect("validating panel should be open");
+    let ids: Vec<_> = stack.panels.iter().map(|p| p.id.clone()).collect();
+    assert_eq!(
+        ids,
+        vec!["login-provider", "login-key", "login-validating"],
+        "submitting a key should not duplicate the validating panel"
+    );
+
+    state.update(crate::Event::ValidationFailed {
+        provider: "minimax".into(),
+        key: "sk-test".into(),
+        error: "bad key".into(),
+    });
+
+    let stack = state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .expect("key input panel should be shown after validation failure");
+    let ids: Vec<_> = stack.panels.iter().map(|p| p.id.clone()).collect();
+    assert_eq!(
+        ids,
+        vec!["login-provider", "login-key"],
+        "validation failure should pop back to the key input panel"
+    );
+    assert_eq!(
+        state.login_flow.as_ref().unwrap().step,
+        crate::login_flow::LoginStep::KeyInput,
+        "flow should return to KeyInput after validation failure"
+    );
+}
+
+#[test]
 fn login_flow_save_updates_config_cache_for_immediate_model_switch() {
     // Regression test: after saving a provider, model switching should work
     // immediately without waiting for ConfigActor to publish ConfigLoaded.

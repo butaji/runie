@@ -308,9 +308,8 @@ fn handle_quit_event(state: &mut AppState, event: Event) {
         *state.should_quit_mut() = true;
         return;
     }
-    if !crate::update::dialog::root_closable(state) {
-        return;
-    }
+    // Quit/exit/:q must always close the app, even when a non-closable
+    // onboarding dialog is open.
     if !state.input_mut().input.is_empty() {
         state.input_mut().input.clear();
         state.input_mut().cursor_pos = 0;

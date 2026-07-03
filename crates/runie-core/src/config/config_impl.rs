@@ -37,19 +37,19 @@ fn check_unknown_fields(value: &Value, errors: &mut Vec<String>) {
 
 /// Validate that provider/model references exist in the registry.
 pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
-    use crate::provider::registry::{find_model, find_provider};
+    use crate::provider::registry::{find_model_for_provider, find_provider};
 
     let mut errors = Vec::new();
     errors.append(&mut validate_default_provider_model(
         config,
         find_provider,
-        find_model,
+        find_model_for_provider,
     ));
     errors.append(&mut validate_configured_providers(config, find_provider));
     errors.append(&mut validate_scoped_models(
         config,
         find_provider,
-        find_model,
+        find_model_for_provider,
     ));
     errors
 }
@@ -57,7 +57,7 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
 fn validate_default_provider_model(
     config: &crate::config::Config,
     find_provider: impl Fn(&str) -> Option<crate::provider::ProviderMeta>,
-    find_model: impl Fn(&str) -> Option<crate::provider::ModelMeta>,
+    find_model_for_provider: impl Fn(&str, &str) -> Option<crate::provider::ModelMeta>,
 ) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(provider) = &config.provider else {
@@ -78,27 +78,18 @@ fn validate_default_provider_model(
     if model.is_empty() {
         return errors;
     }
-    if let Some((provider_prefix, model_name)) = model.split_once('/') {
+    if let Some((provider_prefix, _model_name)) = model.split_once('/') {
         if provider_prefix != *provider {
             errors.push(format!(
                 "model '{model}': provider mismatch (expected '{provider}')"
             ));
+            return errors;
         }
-        if let Some(meta) = find_model(model) {
-            if meta.name != model_name && !model.contains('/') {
-                errors.push(format!(
-                    "model '{model}': not found for provider '{provider}'"
-                ));
-            }
-        } else if find_model(model).is_none() {
-            errors.push(format!("model '{model}': not found in registry"));
-        }
-    } else if let Some(p) = find_provider(provider) {
-        if !p.models.iter().any(|m| m.name == model) {
-            errors.push(format!(
-                "model '{model}': not found for provider '{provider}' "
-            ));
-        }
+    }
+    if find_model_for_provider(provider, model).is_none() {
+        errors.push(format!(
+            "model '{model}': not found for provider '{provider}'"
+        ));
     }
     errors
 }
@@ -135,7 +126,7 @@ fn validate_configured_providers(
 fn validate_scoped_models(
     config: &crate::config::Config,
     _find_provider: impl Fn(&str) -> Option<crate::provider::ProviderMeta>,
-    _find_model: impl Fn(&str) -> Option<crate::provider::ModelMeta>,
+    find_model_for_provider: impl Fn(&str, &str) -> Option<crate::provider::ModelMeta>,
 ) -> Vec<String> {
     use crate::provider::registry::find_provider;
     let mut errors = Vec::new();
@@ -144,22 +135,21 @@ fn validate_scoped_models(
     };
     let default_provider = config.provider.as_deref();
     for model in scoped {
-        if let Some((provider, model_name)) = model.split_once('/') {
-            if let Some(p) = find_provider(provider) {
-                if !p.models.iter().any(|m| m.name == model_name) {
-                    errors.push(format!(
-                        "[models.scoped]: model '{model}' not found for provider '{provider}'"
-                    ));
-                }
-            }
-        } else if let Some(default) = default_provider {
-            if let Some(p) = find_provider(default) {
-                if !p.models.iter().any(|m| &m.name == model) {
-                    errors.push(format!(
-                        "[models.scoped]: model '{model}' not found for default provider '{default}'"
-                    ));
-                }
-            }
+        let provider = model
+            .split_once('/')
+            .map(|(prefix, _)| prefix)
+            .or(default_provider)
+            .unwrap_or("");
+        if find_provider(provider).is_none() {
+            errors.push(format!(
+                "[models.scoped]: model '{model}' references unknown provider '{provider}'"
+            ));
+            continue;
+        }
+        if find_model_for_provider(provider, model).is_none() {
+            errors.push(format!(
+                "[models.scoped]: model '{model}' not found for provider '{provider}'"
+            ));
         }
     }
     errors

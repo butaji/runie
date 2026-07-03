@@ -119,7 +119,8 @@ impl UiActor {
         let (render_tx, render_rx) = tokio::sync::watch::channel(state.snapshot());
         let prev_input = state.input().input.clone();
         let prev_cursor_pos = state.input().cursor_pos;
-        Self {
+        let state_bus = bus.clone();
+        let mut this = Self {
             state,
             render_tx,
             render_rx: Some(render_rx),
@@ -138,7 +139,9 @@ impl UiActor {
             input_handle: Some(input_handle),
             // Store the pre-created receiver for run_with_external_rx
             _bus_rx: Some(bus_rx),
-        }
+        };
+        this.state.set_event_bus(state_bus);
+        this
     }
 
     /// Create a new `UiActor` with a generic agent handle.
@@ -158,7 +161,8 @@ impl UiActor {
         let (render_tx, render_rx) = tokio::sync::watch::channel(state.snapshot());
         let prev_input = state.input().input.clone();
         let prev_cursor_pos = state.input().cursor_pos;
-        Self {
+        let state_bus = bus.clone();
+        let mut this = Self {
             state,
             render_tx,
             render_rx: Some(render_rx),
@@ -176,7 +180,9 @@ impl UiActor {
             turn_handle,
             input_handle,
             _bus_rx: None,
-        }
+        };
+        this.state.set_event_bus(state_bus);
+        this
     }
 
     /// Replace the agent handle after construction.
@@ -420,6 +426,15 @@ impl UiActor {
             return;
         }
 
+        // Dialog input guard: when a dialog is open, apply typing/navigation/submit
+        // events directly to state so the dialog form/palette receives them. The
+        // canonical router would otherwise send these to InputActor, which only
+        // mutates the chat input box and ignores modal forms (e.g. onboarding login flow).
+        if self.state.open_dialog().is_some() && helpers::is_dialog_input_event(evt) {
+            self.apply_event(evt.clone());
+            return;
+        }
+
         // Canonical routing via the shared helper (one place to maintain the mapping).
         if let Some(ref handle) = self.input_handle {
             if crate::input_mapping::route_to_input_actor(handle, evt).await {
@@ -469,15 +484,11 @@ impl UiActor {
         }
     }
 
-    /// Handle the Submit event by capturing content and sending to InputActor.
-    /// If a form dialog is open, route to the form handler instead.
+    /// Handle the Submit event when no modal dialog is open.
+    ///
+    /// Dialog forms and palettes receive Enter via `is_dialog_input_event`, so
+    /// this path only submits the chat input box.
     async fn handle_submit_event(&mut self) {
-        // If a form dialog is open, route Enter to the form instead of the input box.
-        // This is the path that makes /save, /load, /compact etc. submittable.
-        if helpers::is_form_dialog_open(&self.state) {
-            handle_form_dialog(&mut self.state, Event::CommandFormSubmit);
-            return;
-        }
         let content = self.state.input().input().trim().to_owned();
         self.pending_submit = if content.is_empty() {
             None

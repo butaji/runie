@@ -13,23 +13,37 @@ use super::state::LoginFlowState;
 use crate::commands::DialogKind;
 use crate::dialog::{Panel, PanelStack};
 
+/// Whether the login flow root panel should be dismissible.
+///
+/// The onboarding dialog must stay open until a real provider/model is
+/// connected. The mock fallback (RUNIE_MOCK=1) does not count as a real
+/// connection for this purpose.
+fn login_root_closable(state: &crate::model::AppState) -> bool {
+    state.has_models() && !crate::provider::is_mock_enabled()
+}
+
 /// Push a panel onto the login stack (and set the step on the state).
 pub(super) fn push_login_panel(state: &mut crate::model::AppState, panel: Panel) {
-    if let Some(flow) = state.login_flow_mut().as_mut() {
-        flow.step = match panel.id.as_str() {
-            "login-provider" => super::state::LoginStep::ProviderPicker,
-            "login-key" => super::state::LoginStep::KeyInput,
-            "login-validating" => super::state::LoginStep::Validating,
-            "login-models" => super::state::LoginStep::ModelSelect,
-            _ => flow.step.clone(),
-        };
-    }
     let mut stack = take_or_create_login_stack(state);
+    let new_step = match panel.id.as_str() {
+        "login-provider" => super::state::LoginStep::ProviderPicker,
+        "login-key" => super::state::LoginStep::KeyInput,
+        "login-validating" => super::state::LoginStep::Validating,
+        "login-models" => super::state::LoginStep::ModelSelect,
+        _ => state
+            .login_flow()
+            .as_ref()
+            .map(|f| f.step.clone())
+            .unwrap_or(super::state::LoginStep::ProviderPicker),
+    };
     stack.push(panel);
     *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
         kind: DialogKind::Generic,
         panels: stack,
     });
+    if let Some(flow) = state.login_flow_mut().as_mut() {
+        flow.step = new_step;
+    }
     state.view_mut().dirty = true;
 }
 
@@ -137,7 +151,11 @@ fn take_or_create_login_stack(state: &mut crate::model::AppState) -> PanelStack 
         return stack;
     }
     if let Some(flow) = state.login_flow().as_ref() {
-        return build_login_stack_for_flow(flow);
+        let mut stack = build_login_stack_for_flow(flow);
+        if let Some(root) = stack.panels.first_mut() {
+            root.closable = login_root_closable(state);
+        }
+        return stack;
     }
     build_login_root()
 }
@@ -166,7 +184,7 @@ pub(super) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
             state.dialog_back_stack_mut().push(current);
         }
         let mut root = build_provider_picker();
-        root.closable = state.has_models();
+        root.closable = login_root_closable(state);
         let stack = PanelStack::new(root);
         *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
             kind: DialogKind::Generic,

@@ -35,21 +35,9 @@ pub fn login_flow_start(state: &mut crate::model::AppState) {
 }
 
 fn login_flow_select_provider(state: &mut crate::model::AppState, provider: String) {
-    let current_key = state
-        .login_flow
-        .as_ref()
-        .map(|f| f.key.clone())
-        .unwrap_or_default();
-
     if let Some(flow) = state.login_flow_mut() {
-        *flow = LoginFlowState {
-            step: LoginStep::KeyInput,
-            provider,
-            key: current_key,
-            available_models: std::mem::take(&mut flow.available_models),
-            selected_models: std::mem::take(&mut flow.selected_models),
-            validated: false,
-        };
+        flow.provider = provider;
+        flow.validated = false;
         state.view_mut().dirty = true;
     }
     let panel = build_key_input(state.login_flow().as_ref().unwrap());
@@ -86,23 +74,9 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
         provider
     };
 
-    let available_models = state
-        .login_flow
-        .as_mut()
-        .map(|f| std::mem::take(&mut f.available_models))
-        .unwrap_or_default();
-    let selected_models = state
-        .login_flow
-        .as_mut()
-        .map(|f| std::mem::take(&mut f.selected_models))
-        .unwrap_or_default();
-
     if let Some(flow) = state.login_flow_mut() {
         flow.provider = final_provider.clone();
         flow.key = key.clone();
-        flow.step = LoginStep::Validating;
-        flow.available_models = available_models;
-        flow.selected_models = selected_models;
         flow.validated = false;
     }
     push_login_panel(state, build_validating_panel(&final_provider));

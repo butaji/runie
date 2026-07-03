@@ -176,6 +176,47 @@ pub fn find_model(model: &str) -> Option<ModelMeta> {
         })
 }
 
+/// Find a model belonging to a specific provider.
+///
+/// The model string may be bare ("gpt-4o") or provider-prefixed ("openai/gpt-4o").
+/// When a prefix is present and matches `provider`, it is stripped before looking
+/// up the model in that provider's registry. This prevents a config like
+/// `provider = "minimax"` / `model = "minimax/MiniMax-M3"` from failing because
+/// the global `find_model` only knows bare names.
+pub fn find_model_for_provider(provider: &str, model: &str) -> Option<ModelMeta> {
+    let model_name = strip_provider_prefix(provider, model);
+    find_provider(provider)?
+        .models
+        .into_iter()
+        .chain(model_provider_mock_models(provider))
+        .find(|m| m.name == model_name)
+}
+
+/// Return the mock provider's models only when mock is enabled and the requested
+/// provider is "mock".
+fn model_provider_mock_models(provider: &str) -> Vec<ModelMeta> {
+    if provider == "mock" && is_mock_enabled() {
+        mock_provider().models
+    } else {
+        Vec::new()
+    }
+}
+
+/// Strip the provider prefix from a model name when the prefix matches the provider.
+///
+/// Examples:
+///   - `strip_provider_prefix("openai", "openai/gpt-4o")` -> `"gpt-4o"`
+///   - `strip_provider_prefix("openai", "gpt-4o")` -> `"gpt-4o"`
+///   - `strip_provider_prefix("openai", "anthropic/claude-3")` -> `"anthropic/claude-3"`
+pub fn strip_provider_prefix<'a>(provider: &str, model: &'a str) -> &'a str {
+    if let Some((prefix, name)) = model.split_once('/') {
+        if prefix == provider {
+            return name;
+        }
+    }
+    model
+}
+
 /// Check if a provider key is known.
 pub fn is_known_provider(key: &str) -> bool {
     find_provider(key).is_some()
@@ -342,5 +383,58 @@ mod tests {
         set_mock_enabled(false);
         let providers = known_providers();
         assert!(!providers.iter().any(|p| p.key == "mock"));
+    }
+
+    #[test]
+    fn strip_provider_prefix_strips_matching_prefix() {
+        assert_eq!(strip_provider_prefix("openai", "openai/gpt-4o"), "gpt-4o");
+        assert_eq!(strip_provider_prefix("openai", "gpt-4o"), "gpt-4o");
+    }
+
+    #[test]
+    fn strip_provider_prefix_leaves_mismatched_prefix() {
+        assert_eq!(
+            strip_provider_prefix("openai", "anthropic/claude-3"),
+            "anthropic/claude-3"
+        );
+    }
+
+    #[test]
+    fn find_model_for_provider_handles_prefixed_name() {
+        let meta = find_model_for_provider("minimax", "minimax/MiniMax-M3");
+        assert!(meta.is_some());
+        assert_eq!(meta.unwrap().name, "MiniMax-M3");
+    }
+
+    #[test]
+    fn find_model_for_provider_handles_bare_name() {
+        let meta = find_model_for_provider("openai", "gpt-4o");
+        assert!(meta.is_some());
+        assert_eq!(meta.unwrap().name, "gpt-4o");
+    }
+
+    #[test]
+    fn find_model_for_provider_returns_none_for_unknown_model() {
+        assert!(find_model_for_provider("minimax", "minimax/not-real").is_none());
+    }
+
+    #[test]
+    fn find_model_for_provider_uses_intended_provider_not_openrouter_alias() {
+        // openrouter also has a model named "openai/gpt-4o", but lookup for
+        // provider "openai" must return OpenAI's metadata, not OpenRouter's.
+        let meta = find_model_for_provider("openai", "openai/gpt-4o");
+        assert!(meta.is_some());
+        let openai = find_provider("openai").unwrap();
+        assert_eq!(meta.unwrap().name, "gpt-4o");
+        assert!(openai.models.iter().any(|m| m.name == "gpt-4o"));
+    }
+
+    #[test]
+    fn find_model_for_provider_finds_mock_model_when_enabled() {
+        set_mock_enabled(true);
+        let meta = find_model_for_provider("mock", "mock/echo");
+        set_mock_enabled(false);
+        assert!(meta.is_some());
+        assert_eq!(meta.unwrap().name, "echo");
     }
 }

@@ -239,6 +239,32 @@ fn test_built_provider_key_and_model_accessors() {
 }
 
 #[test]
+fn test_built_provider_accepts_prefixed_model_name() {
+    // Regression: configs that use provider-prefixed model names ("openai/gpt-4o")
+    // must build successfully. The original (prefixed) model name is preserved on
+    // BuiltProvider so status displays and recent-model history remain consistent.
+    with_env_lock("OPENAI_API_KEY", "sk-test", || {
+        let provider = build_provider_with_config("openai", "openai/gpt-4o", &Config::default())
+            .expect("should build with prefixed model");
+        assert_eq!(provider.key(), "openai");
+        assert_eq!(provider.model(), "openai/gpt-4o");
+    });
+}
+
+#[test]
+fn test_built_provider_accepts_minimax_prefixed_model_name() {
+    // Regression: "minimax/MiniMax-M3" previously failed because validation and
+    // provider construction did not strip the provider prefix before registry lookup.
+    with_env_lock("MINIMAX_API_KEY", "sk-minimax-test", || {
+        let provider =
+            build_provider_with_config("minimax", "minimax/MiniMax-M3", &Config::default())
+                .expect("should build with minimax prefix");
+        assert_eq!(provider.key(), "minimax");
+        assert_eq!(provider.model(), "minimax/MiniMax-M3");
+    });
+}
+
+#[test]
 fn test_provider_trait_is_dyn_compatible() {
     let _: Box<dyn Provider> = Box::new(MockProvider::default());
     with_env_lock("OPENAI_API_KEY", "sk-dyn-test", || {
@@ -445,6 +471,73 @@ async fn provider_actor_rejects_unknown_provider_real_factory() {
         .unwrap_err();
 
     assert!(matches!(err, ProviderError::UnknownProvider(ref k) if k == "ghost-provider"));
+}
+
+#[tokio::test]
+async fn prefixed_model_name_is_stripped_in_api_request() {
+    use futures::StreamExt;
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
+    std::env::set_var("MINIMAX_API_KEY", "sk-minimax-test");
+
+    let mock_server = MockServer::start().await;
+
+    // Wiremock will record the request so we can inspect the model field.
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .and(header("authorization", "Bearer sk-minimax-test"))
+        .and(header("content-type", "application/json"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(
+            "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n\
+             data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n\
+             data: [DONE]\n\n",
+        ))
+        .mount(&mock_server)
+        .await;
+
+    let mut config = Config::default();
+    config.provider = Some("minimax".to_string());
+    config.models.default = Some("minimax/MiniMax-M3".to_string());
+    config.model_providers.insert(
+        "minimax".to_string(),
+        runie_core::config::ModelProvider {
+            provider_type: Some("openai-compatible".to_string()),
+            base_url: format!("{}/v1", mock_server.uri()),
+            models: vec!["MiniMax-M3".to_string()],
+        },
+    );
+
+    let provider = build_provider_with_config("minimax", "minimax/MiniMax-M3", &config)
+        .expect("should build with prefixed model");
+
+    // Drive the stream to ensure the HTTP request is made. We don't assert on
+    // events here; the goal is to verify the outgoing request body.
+    let _events: Vec<_> = provider
+        .generate(vec![ChatMessage::user("hello".to_string())])
+        .collect()
+        .await;
+
+    let requests = mock_server
+        .received_requests()
+        .await
+        .expect("mock server should have received requests");
+    assert_eq!(
+        requests.len(),
+        1,
+        "exactly one chat/completions request should be made"
+    );
+    let body_bytes: &[u8] = &requests[0].body;
+    let body: serde_json::Value = serde_json::from_slice(body_bytes).expect("body is valid JSON");
+    assert_eq!(
+        body.get("model").and_then(|v| v.as_str()),
+        Some("MiniMax-M3"),
+        "API request must use bare model name, got model field: {:?}",
+        body.get("model")
+    );
+
+    std::env::remove_var("MINIMAX_API_KEY");
 }
 
 #[tokio::test]
