@@ -17,4 +17,4 @@ pub use crate::tool::types::ToolParseError;
 // NOTE: `RunieError` and `RunieErrorKind` were deleted because they wrapped
 // `anyhow::Error` without adding typed structure and were completely unused
 // in the codebase. Typed errors (ModelError, ProviderError, etc.) are used
-// instead. See tasks/restructure-runieerror-with-typed-variants.md.
+// instead.

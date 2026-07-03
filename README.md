@@ -157,7 +157,7 @@ See `AGENTS.md` for conventions.
 
 ## Roadmap
 
-- **R3** — Unify types, flatten events, finish state refactor, consolidate TUI crates. See `tasks/`.
+- **R3** — Unify types, flatten events, finish state refactor, consolidate TUI crates. See `AGENTS.md` and `docs/Architecture.md`.
 - **R4** — Team mode: orchestrated multi-agent workflows. See `docs/Architecture.md#execution-modes`.
 
 ## License

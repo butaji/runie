@@ -465,9 +465,9 @@ async fn load_async_reads_file() {
 
 #[test]
 fn mcp_feature_state_consistent() {
-    // Verify the mcp module is always compiled (feature flag removed — see
-    // tasks/delete-or-fix-dead-mcp-feature-flag.md). The `mcp = []` feature
-    // in Cargo.toml was empty/dead, so McpSection is unconditionally available.
+    // Verify the mcp module is always compiled (feature flag removed).
+    // The `mcp = []` feature in Cargo.toml was empty/dead, so McpSection is
+    // unconditionally available.
     let section = McpSection::default();
     assert!(section.is_empty());
 

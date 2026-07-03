@@ -1,7 +1,5 @@
 # Agent Guidelines
 
-Track tasks in tasks/index.json, details per each in tasks/xxx.md
-
 All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: unit and e2e.
 No artificial delays in automatic tests!
 
@@ -117,8 +115,6 @@ Everything must be **events-based with SSOT actors**.
 - **No mirrored state:** If a second location holds the same data, it must be a read-only projection or snapshot rebuilt from events, never independently mutable.
 - **Observed async work:** Every spawned task has an owner (`JoinHandle`, `JoinSet`, or completion event). No unbounded fire-and-forget `tokio::spawn`.
 
-See `docs/superpowers/plans/2026-07-01-events-based-ssot-actors.md` for the full ADR and task compliance checklist.
-
 ## File Structure
 
 ```
@@ -129,34 +125,6 @@ src/
 ```
 
 **Rule**: Your App should compile without ratatui if you strip rendering.
-
-## Task Authoring Rules
-
-Every task in `tasks/<id>.md` must include a `## Tests` section with acceptance
-criteria that reference the 4 testing layers. A task is **not done** until all
-listed tests pass.
-
-Additionally, **every task must include a live tmux testing session** (or a live
-CLI/headless scenario for non-TUI tasks) that exercises the changed behavior in a
-real terminal after unit and E2E tests pass. The task is not complete until the
-live session succeeds.
-
-**Template:** See `tasks/TEMPLATE.md`.
-
-**Required test coverage per category:**
-
-| Category | Required Layers |
-|----------|-----------------|
-| Core / State | Layer 1 + Layer 2 |
-| Tools | Layer 1 |
-| TUI / Rendering | Layer 1 + Layer 2 + Layer 3 |
-| Input / Commands | Layer 1 + Layer 2 |
-| Sessions | Layer 1 + Layer 2 |
-| Configuration | Layer 1 + Layer 2 |
-| Architecture / Actors | Layer 1 + Layer 2 |
-
-**Anti-pattern:** Tasks with only functional ACs ("Implement X", "Support Y")
-and no test ACs. Every feature must be verifiable by `cargo test`.
 
 ## Linter Rules
 
@@ -169,12 +137,10 @@ The build script at `crates/runie-core/build.rs` enforces:
 | AppState field access patterns | `crates/runie-core/src` only | Yes |
 | Magic numbers (>= 1000) | `crates/runie-core/src` only | Yes |
 
-**Known gaps (see tasks to be done):**
+**Known gaps:**
 - The guardrails currently scan only `crates/runie-core/src`, not the full workspace.
 - The orphan-spawn linter unit tests have reversed assertions and treat `let _ = tokio::spawn(...)` as acceptable, which contradicts the SSOT ADR rule against unbounded fire-and-forget spawns.
 - `turn_state` field access on `AppState` is not caught.
-
-Tracked in `tasks/fix-build-rs-lint-scope-and-tests.md` and `tasks/close-turnstate-field-access-guardrail-gap.md`.
 
 **AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
 
@@ -194,4 +160,4 @@ Complexity is an approximate heuristic that counts `if`, `else if`, `match`, `wh
 
 **Best practice:** Keep files small, functions focused, and complexity low. When a function grows beyond ~60 lines, consider extracting helper functions. When a file exceeds ~400 lines, consider splitting or extracting modules.
 
-**Current state:** Sixteen production files exceed the 500-line target, including `event/mod.rs` (1,253 lines), `bootstrap.rs` (789 lines), `config_impl.rs` (772 lines), `ui_actor/mod.rs` (615 lines), `mock.rs` (662 lines), and `openai/protocol.rs` (669 lines). Several functions also exceed the 100-line clippy default, including `InputMsg::apply_to` (204 lines), `DurableCoreEvent::try_from_event` (281 lines), `Event::kind` (231 lines), and `Event::category` (230 lines). Enforcement is tracked in `tasks/enforce-advertised-file-function-complexity-limits.md`.
+**Current state:** Sixteen production files exceed the 500-line target, including `event/mod.rs` (1,253 lines), `bootstrap.rs` (789 lines), `config_impl.rs` (772 lines), `ui_actor/mod.rs` (615 lines), `mock.rs` (662 lines), and `openai/protocol.rs` (669 lines). Several functions also exceed the 100-line clippy default, including `InputMsg::apply_to` (204 lines), `DurableCoreEvent::try_from_event` (281 lines), `Event::kind` (231 lines), and `Event::category` (230 lines).
