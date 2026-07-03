@@ -55,9 +55,11 @@ tui *args:
 # Examples:
 #   just live-tui-tmux mock
 #   just live-tui-tmux mock "list files"
+#   RUNIE_MOCK_MODEL=list_dir just live-tui-tmux mock "list files"
+#   just live-tui-tmux mock "list files" 30 list_dir
 #   MINIMAX_API_KEY=... just live-tui-tmux minimax
-live-tui-tmux mode="mock" prompt="hello" timeout="30":
-    ./scripts/live-tui-tmux.sh {{mode}} {{prompt}} {{timeout}}
+live-tui-tmux mode="mock" prompt="hello" timeout="30" mock_model="":
+    ./scripts/live-tui-tmux.sh {{mode}} {{prompt}} {{timeout}} {{mock_model}}
 
 # Run the schema generator example to regenerate config.schema.json
 write-config-schema:

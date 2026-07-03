@@ -1,5 +1,6 @@
 #!/bin/bash
 mode="${1:-run}"
+mock_model="${RUNIE_MOCK_MODEL:-${2:-}}"
 
 # Default to the stable toolchain. Override via RUNIE_TOOLCHAIN env var.
 TOOLCHAIN="${RUNIE_TOOLCHAIN:-stable}"
@@ -41,6 +42,10 @@ case "$mode" in
     ;;
 esac
 
+if [ -n "$mock_model" ]; then
+    export RUNIE_MOCK_MODEL="$mock_model"
+fi
+
 case "$mode" in
   run|run-delay)
     echo "[dev] Hot reload (release, RUNIE_MOCK=1). Ctrl+C to stop."
@@ -54,7 +59,7 @@ case "$mode" in
     just test
     ;;
   *)
-    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test]"
+    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test] [mock_model]"
     echo ""
     echo "Modes:"
     echo "  run        - release build, mock enabled, no streaming delays"
@@ -62,6 +67,12 @@ case "$mode" in
     echo "  fast       - debug build, mock enabled, no streaming delays"
     echo "  fast-delay - debug build, mock enabled, 0.5s-3s delays between chunks"
     echo "  test       - run all tests"
+    echo ""
+    echo "Mock model selection:"
+    echo "  Pass a second argument or set RUNIE_MOCK_MODEL to choose a fixture."
+    echo "  Examples:"
+    echo "    ./dev.sh fast list_dir"
+    echo "    RUNIE_MOCK_MODEL=read_file ./dev.sh run"
     echo ""
     echo "Without dev.sh: production mode. No mock provider. The app requires"
     echo "a real provider configured or auto-opens the login dialog on startup."

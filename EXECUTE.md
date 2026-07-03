@@ -26,7 +26,7 @@ Rules:
 Current crate state:
 - `runie-protocol` has been folded into `runie-core/src/proto/`.
 - `runie-macros` has been deleted.
-- `runie-util` was considered but resolved to keep helpers in `runie-core` (see `resolve-runie-util-micro-crate-vs-core-re-exports.md`).
+- `runie-util` was considered but resolved to keep helpers in `runie-core`.
 - The TUI bootstraps through `Leader::start`; the CLI still does not.
 - Session persistence uses a single headered JSONL file with `fs2` advisory locks; SQLite is deferred.
 

@@ -7,11 +7,13 @@
 # session and capture the result for review.
 #
 # Usage:
-#   scripts/live-tui-tmux.sh [mock|minimax] [prompt] [timeout_sec]
+#   scripts/live-tui-tmux.sh [mock|minimax] [prompt] [timeout_sec] [mock_model]
 #
 # Examples:
 #   scripts/live-tui-tmux.sh mock
 #   scripts/live-tui-tmux.sh mock "list files"
+#   RUNIE_MOCK_MODEL=list_dir scripts/live-tui-tmux.sh mock
+#   scripts/live-tui-tmux.sh mock "list files" 30 list_dir
 #   MINIMAX_API_KEY=... scripts/live-tui-tmux.sh minimax "hello"
 
 set -euo pipefail
@@ -19,9 +21,10 @@ set -euo pipefail
 MODE="${1:-mock}"
 PROMPT="${2:-hello}"
 TIMEOUT_SEC="${3:-30}"
+MOCK_MODEL="${RUNIE_MOCK_MODEL:-${4:-echo}}"
 
 if [[ "$MODE" != "mock" && "$MODE" != "minimax" ]]; then
-    echo "Usage: $0 [mock|minimax] [prompt] [timeout_sec]" >&2
+    echo "Usage: $0 [mock|minimax] [prompt] [timeout_sec] [mock_model]" >&2
     exit 1
 fi
 
@@ -74,29 +77,32 @@ api_key = "$MINIMAX_API_KEY"
 default = "MiniMax-M3"
 scoped = ["MiniMax-M3"]
 EOF
+    ARGS=""
 else
+    # Mock mode uses CLI flags so the model can be varied without rewriting config.
     cat > "$TMP_HOME/.runie/config.toml" <<EOF
 provider = "mock"
-model = "echo"
+model = "$MOCK_MODEL"
 
 [models]
-default = "echo"
-scoped = ["echo"]
+default = "$MOCK_MODEL"
+scoped = ["$MOCK_MODEL"]
 EOF
+    ARGS="--mock --mock-model $MOCK_MODEL"
 fi
 
 SESSION="runie-live-$(date +%s)"
 TMUX_ENV="HOME=$TMP_HOME"
 if [[ "$MODE" == "mock" ]]; then
-    TMUX_ENV="$TMUX_ENV RUNIE_MOCK=1"
+    TMUX_ENV="$TMUX_ENV RUNIE_MOCK=1 RUNIE_MOCK_MODEL=$MOCK_MODEL"
 fi
 
 echo "Starting live tmux session: $SESSION"
-echo "Mode: $MODE, prompt: '$PROMPT', isolated home: $TMP_HOME"
+echo "Mode: $MODE, mock model: $MOCK_MODEL, prompt: '$PROMPT', isolated home: $TMP_HOME"
 
 # Create an 80x24 pane so snapshots are stable and run the TUI binary directly.
 tmux new-session -d -s "$SESSION" -x 80 -y 24 \
-    "cd '$PROJECT_ROOT' && export $TMUX_ENV && exec $BIN"
+    "cd '$PROJECT_ROOT' && export $TMUX_ENV && exec $BIN $ARGS"
 
 capture_pane() {
     tmux capture-pane -t "$SESSION" -p

@@ -375,7 +375,7 @@ Rules:
 - `ConfigActor` performs atomic load → mutate → save under a write lock on a blocking thread, then publishes `ConfigLoaded`.
 - `AppState` updates its config projection only in response to `ConfigLoaded` facts.
 - No handler, command, dialog, or login flow writes the config file directly.
-- `login_config.rs` is being removed; its helpers are replaced by `ConfigActor` messages and a `ConfigStore` trait for tests.
+- `ConfigStore` trait abstracts config persistence so tests can inject in-memory stores.
 - Do not nest `block_in_place` calls: a function that already runs on a blocking thread must not call `block_in_place_if_runtime` again.
 - Prefer atomic updates over fire-and-forget background writes for durable state.
 
