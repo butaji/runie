@@ -167,10 +167,12 @@ impl AppState {
             crate::commands::CommandResult::Warning(msg) => {
                 self.notify(msg, crate::event::TransientLevel::Warning)
             }
-            crate::commands::CommandResult::Event(evt) => self.update(evt),
+            crate::commands::CommandResult::Event(evt) => {
+                self.apply_command_event(evt);
+            }
             crate::commands::CommandResult::Events(evts) => {
                 for evt in evts {
-                    self.update(evt);
+                    self.apply_command_event(evt);
                 }
             }
             crate::commands::CommandResult::OpenDialog(d) => match d {
@@ -189,6 +191,28 @@ impl AppState {
             }
             crate::commands::CommandResult::None => {}
         }
+    }
+
+    /// Process a command-result event: apply state change AND add confirmation message.
+    /// This bridges the old "return Message" pattern with the new "return Event" pattern
+    /// while maintaining backward-compatible UX for command confirmations.
+    fn apply_command_event(&mut self, evt: crate::Event) {
+        // Add confirmation system message for command-specific events.
+        // Transient notifications (via notify) are added by the update handler.
+        match &evt {
+            crate::Event::SwitchModel { provider, model, .. } => {
+                self.add_system_msg(format!("Switched to {}/{}", provider, model));
+            }
+            crate::Event::SetThinkingLevel(level) => {
+                use crate::ui_strings::model as m;
+                self.add_system_msg(m::thinking_level(level.as_str()));
+            }
+            crate::Event::NewSession => {
+                self.add_system_msg(crate::ui_strings::session::NEW_SESSION_STARTED.into());
+            }
+            _ => {}
+        }
+        self.update(evt);
     }
 
     fn run_bash_command(&mut self, command: &str) {

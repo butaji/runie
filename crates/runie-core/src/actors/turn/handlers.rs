@@ -336,3 +336,13 @@ pub(super) fn handle_next_id(state: &mut TurnActorState) {
     let id = next_id_internal(&mut state.turn_state);
     emit(state, Event::IdGenerated(NextIdResponse { id }));
 }
+
+/// Handle `TurnMsg::ConfigureTokenTracker` — update TurnState token tracker.
+pub(super) fn handle_configure_token_tracker(
+    state: &mut TurnActorState,
+    provider: String,
+    model: String,
+) {
+    state.turn_state.token_tracker =
+        crate::tokens::token_tracker_for(&provider, &model);
+}

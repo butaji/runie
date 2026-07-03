@@ -29,6 +29,7 @@ fn reset_clears_messages_and_input() {
         .iter()
         .filter(|m| m.role == Role::System)
         .collect();
+    // Handler emits Events([Reset, Abort]); handle_reset adds "State cleared" message.
     assert_eq!(sys_msgs.len(), 1, "reset adds confirmation");
     assert!(
         sys_msgs[0].content().contains("State cleared"),

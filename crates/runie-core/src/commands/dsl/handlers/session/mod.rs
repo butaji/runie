@@ -130,34 +130,30 @@ pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
-    state.session_mut().messages.clear();
-    state.input_mut().input.clear();
-    state.input_mut().cursor_pos = 0;
-    state.configure_token_tracker();
-    state.session_mut().session_display_name = None;
-    *state.open_dialog_mut() = None;
-    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
-    state.dialog_back_stack_mut().clear();
-    *state.login_flow_mut() = None;
+    // Send actor messages first (synchronously) to abort turns before events are processed.
+    // handle_new_session (via Event::NewSession) will configure the token tracker via
+    // TurnMsg::ConfigureTokenTracker and reset the session state.
     if let Some(handles) = state.actor_handles() {
         let _ = handles.permission.try_send(PermissionMsg::DismissRequest);
-        // Abort any in-flight turn so the agent stops streaming and agent_running is cleared.
         let _ = handles.turn.try_send(crate::actors::TurnMsg::AbortTurn);
     } else {
         *state.permission_request_mut() = None;
     }
-    let now = crate::update::now();
-    state.session_mut().session_created_at = now;
-    state.session_mut().session_updated_at = now;
-    state.messages_changed();
-    state.add_system_msg(crate::ui_strings::session::NEW_SESSION_STARTED.into());
-    // Emit Abort so UiActor clears agent_running; ClearQueues clears the queue.
-    CommandResult::Events(vec![crate::Event::Abort, crate::Event::ClearQueues])
+    // Emit events that handle_new_session processes for full state reset.
+    // UiActor::clear_turn_state(is_abort=true) sends TurnMsg::ClearQueues after
+    // processing Event::Abort, ensuring queues are cleared atomically.
+    CommandResult::Events(vec![
+        crate::Event::NewSession,
+        crate::Event::Abort,
+    ])
 }
 
-pub fn handle_reset(state: &mut AppState, _: &str) -> CommandResult {
-    state.reset_session();
-    CommandResult::Message(crate::ui_strings::session::STATE_CLEARED.into())
+pub fn handle_reset(_state: &mut AppState, _: &str) -> CommandResult {
+    // Emit Event::Reset so the update handler applies state reset consistently.
+    CommandResult::Events(vec![
+        crate::Event::Reset,
+        crate::Event::Abort,
+    ])
 }
 
 pub fn handle_history(state: &mut AppState, _: &str) -> CommandResult {

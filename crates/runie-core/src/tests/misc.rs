@@ -28,7 +28,11 @@ fn test_reset_clears_state() {
     state.update(crate::Event::Reset);
     assert_eq!(state.input.input, "");
     assert!(!state.agent.streaming);
-    assert_eq!(state.session.messages.len(), 0);
+    // handle_reset now adds "State cleared" system message after reset.
+    assert_eq!(state.session.messages.len(), 1);
+    assert!(state.session.messages[0]
+        .content()
+        .contains("State cleared"));
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert!(

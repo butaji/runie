@@ -386,9 +386,11 @@ fn login_flow_save_updates_config_cache_for_immediate_model_switch() {
 
     // Try to switch to a different model using the /model command
     let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "MiniMax-M3");
+    // Handler now emits Event::SwitchModel instead of returning a message directly.
     assert!(
-        matches!(result, crate::commands::CommandResult::Message(ref msg) if msg.contains("Switched")),
-        "model switch should succeed immediately after save, got {:?}",
+        matches!(result, crate::commands::CommandResult::Event(crate::Event::SwitchModel { ref provider, ref model, .. })
+            if provider == "minimax" && model == "MiniMax-M3"),
+        "model switch should emit Event::SwitchModel, got {:?}",
         result
     );
 }

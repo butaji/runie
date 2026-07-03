@@ -20,9 +20,12 @@ fn handler_model_switches() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     seed_provider(&mut state, "openai", vec!["gpt-4o".into()]);
+    // Handler now emits Event::SwitchModel instead of mutating state directly.
+    // Apply the result so the state mutation happens.
     let result = exec_handler(&mut state, "model", "gpt-4o");
+    assert!(matches!(result, CommandResult::Event(crate::Event::SwitchModel { .. })));
+    state.apply_command_result(result);
     assert_eq!(state.config.current_model, "gpt-4o");
-    assert!(matches!(result, CommandResult::Message(_)));
 }
 
 #[test]

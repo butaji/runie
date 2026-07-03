@@ -74,6 +74,9 @@ impl Actor for RactorTurnActor {
             TurnMsg::Error { id, message } => handlers::handle_error(state, id, message),
             TurnMsg::UpdateSpeed { tokens_out } => handlers::handle_update_speed(state, tokens_out),
             TurnMsg::NextId => handlers::handle_next_id(state),
+            TurnMsg::ConfigureTokenTracker { provider, model } => {
+                handlers::handle_configure_token_tracker(state, provider, model)
+            }
         }
         Ok(())
     }

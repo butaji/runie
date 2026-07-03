@@ -1368,7 +1368,7 @@
   {
     "file": "remove-direct-appstate-mutation-from-dsl-handlers.md",
     "title": "Remove direct `AppState` mutation from DSL command handlers",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-direct-appstate-mutation-from-tui-handlers.md",

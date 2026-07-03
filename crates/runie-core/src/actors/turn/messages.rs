@@ -78,6 +78,10 @@ pub enum TurnMsg {
     UpdateSpeed { tokens_out: usize },
     /// Generate next message ID.
     NextId,
+    /// Configure the token tracker for a provider/model pair.
+    /// Sent by UI commands (/new) to keep TurnActor's token_tracker in sync
+    /// with the current model configuration.
+    ConfigureTokenTracker { provider: String, model: String },
 }
 
 impl Clone for TurnMsg {
@@ -144,6 +148,12 @@ impl Clone for TurnMsg {
                 tokens_out: *tokens_out,
             },
             TurnMsg::NextId => TurnMsg::NextId,
+            TurnMsg::ConfigureTokenTracker { provider, model } => {
+                TurnMsg::ConfigureTokenTracker {
+                    provider: provider.clone(),
+                    model: model.clone(),
+                }
+            }
         }
     }
 }

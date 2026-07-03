@@ -48,8 +48,12 @@ fn switch_to_model(state: &mut AppState, provider: &str, model: &str) -> Command
     if !is_model_configured(state, provider, model) {
         return CommandResult::Warning(m::model_unavailable(provider, model));
     }
-    state.switch_model(provider.to_owned(), model.to_owned(), true);
-    CommandResult::Message(m::model_switched(provider, model))
+    // Emit Event::SwitchModel so the model config update handler applies the change.
+    CommandResult::Event(crate::Event::SwitchModel {
+        provider: provider.to_owned(),
+        model: model.to_owned(),
+        explicit: true,
+    })
 }
 
 fn is_model_configured(state: &AppState, provider: &str, model: &str) -> bool {
@@ -67,8 +71,8 @@ pub fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     }
     match rest.parse::<ThinkingLevel>() {
         Ok(level) => {
-            state.config_mut().thinking_level = level;
-            CommandResult::Message(m::thinking_level(state.config().thinking_level.as_str()))
+            // Emit Event::SetThinkingLevel so the model config update handler applies the change.
+            CommandResult::Event(crate::Event::SetThinkingLevel(level))
         }
         Err(e) => CommandResult::Message(m::thinking_error(&e.to_string())),
     }
@@ -102,8 +106,7 @@ pub fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenDialog(DialogType::ScopedModels)
 }
 
-pub fn run_thinking(state: &mut AppState, level: ThinkingLevel) {
-    use crate::ui_strings::model as m;
-    state.config_mut().thinking_level = level;
-    state.add_system_msg(m::thinking_level(state.config().thinking_level.as_str()));
+pub fn run_thinking(_state: &mut AppState, level: ThinkingLevel) -> CommandResult {
+    // Emit Event::SetThinkingLevel so the model config update handler applies the change.
+    CommandResult::Event(crate::Event::SetThinkingLevel(level))
 }

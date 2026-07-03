@@ -45,7 +45,8 @@ pub(super) fn handle_command_event(state: &mut AppState, event: crate::Event) {
         crate::Event::RunSkillCommand { name } => run_skill_command(state, name),
         // System
         crate::Event::RunThinkingCommand { level } => {
-            crate::commands::dsl::handlers::model::run_thinking(state, *level)
+            let result = crate::commands::dsl::handlers::model::run_thinking(state, *level);
+            dispatch_result(state, result);
         }
         // Registry dispatch (from command palette)
         crate::Event::RunPaletteCommand { name, args } => run_palette_command(state, name, args),

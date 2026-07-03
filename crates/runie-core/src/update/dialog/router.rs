@@ -116,12 +116,12 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
             // Close command palette before processing the event
             // (the event may open a new dialog)
             close_command_palette_if_open(state);
-            state.update(evt);
+            apply_command_event_for_dialog(state, evt);
         }
         CR::Events(evts) => {
             close_command_palette_if_open(state);
             for evt in evts {
-                state.update(evt);
+                apply_command_event_for_dialog(state, evt);
             }
         }
         CR::OpenDialog(d) => {
@@ -163,4 +163,24 @@ fn close_command_palette_if_open(state: &mut AppState) {
             state.view_mut().dirty = true;
         }
     }
+}
+
+/// Apply a command-result event: add confirmation message AND process state change.
+/// Mirrors `submit::apply_command_event` so both the dialog and submit paths
+/// produce consistent UX (system messages for model/thinking/reset commands).
+fn apply_command_event_for_dialog(state: &mut AppState, evt: crate::Event) {
+    match &evt {
+        crate::Event::SwitchModel { provider, model, .. } => {
+            state.add_system_msg(format!("Switched to {}/{}", provider, model));
+        }
+        crate::Event::SetThinkingLevel(level) => {
+            use crate::ui_strings::model as m;
+            state.add_system_msg(m::thinking_level(level.as_str()));
+        }
+        crate::Event::NewSession => {
+            state.add_system_msg(crate::ui_strings::session::NEW_SESSION_STARTED.into());
+        }
+        _ => {}
+    }
+    state.update(evt);
 }

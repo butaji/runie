@@ -103,12 +103,16 @@ fn model_known_model_switches() {
     );
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
+    // Handler now emits Event::SwitchModel instead of mutating state directly.
     let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "gpt-4o-mini");
     assert!(
-        matches!(result, CommandResult::Message(ref msg) if msg.contains("Switched")),
-        "expected switch message, got {:?}",
+        matches!(result, CommandResult::Event(crate::Event::SwitchModel { ref provider, ref model, .. })
+            if provider == "openai" && model == "gpt-4o-mini"),
+        "expected Event::SwitchModel, got {:?}",
         result
     );
+    // Apply the result so the state mutation happens.
+    state.apply_command_result(result);
     assert_eq!(state.config.current_model, "gpt-4o-mini");
 }
 

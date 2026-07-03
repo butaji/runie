@@ -209,6 +209,7 @@ impl AppState {
 
 // ── Control Event Handler (merged from control.rs) ────────────────────────────
 
+use crate::actors::PermissionMsg;
 use crate::Event;
 
 pub fn control_event(state: &mut AppState, event: Event) {
@@ -249,6 +250,38 @@ fn handle_toggle_vim_mode(state: &mut AppState) {
 }
 
 fn handle_new_session(state: &mut AppState) {
+    // Abort in-flight turns via TurnActor (sends TurnMsg::AbortTurn).
+    // This clears turn_active and the request/message queues in TurnActor.
+    // UiActor's clear_turn_state(is_abort=true) runs after this and also
+    // sends TurnMsg::ClearQueues for a clean queue reset.
+    if let Some(h) = state.actor_handles() {
+        let _ = h.turn.try_send(TurnMsg::AbortTurn);
+        let _ = h.permission.try_send(PermissionMsg::DismissRequest);
+    } else {
+        // Fallback for tests without actor handles.
+        state.agent_state_mut().turn_active = false;
+        state.agent_state_mut().request_queue.clear();
+        state.agent_state_mut().message_queue.clear();
+    }
+    // Reset session (messages, input, display name, dialogs, login flow).
+    // Preserves config, actor_handles, git_info, cwd_name, trust_decisions.
+    state.reset_session();
+    // Restore timestamps and add system message.
+    let now = crate::update::now();
+    state.session_mut().session_created_at = now;
+    state.session_mut().session_updated_at = now;
+    state.messages_changed();
+    state.add_system_msg(crate::ui_strings::session::NEW_SESSION_STARTED.into());
+    // Configure token tracker for the current model.
+    // Updates TurnState.token_tracker so AgentState.token_tracker derives correctly.
+    if let Some(ref handles) = state.actor_handles() {
+        let _ = handles.turn.try_send(TurnMsg::ConfigureTokenTracker {
+            provider: state.config().current_provider.clone(),
+            model: state.config().current_model.clone(),
+        });
+    } else {
+        state.configure_token_tracker();
+    }
     // Close welcome screen if open
     if matches!(
         state.open_dialog(),
@@ -294,6 +327,8 @@ fn handle_quit_event(state: &mut AppState, event: Event) {
 
 fn handle_reset(state: &mut AppState) {
     state.reset_session();
+    // Add confirmation message AFTER reset so it isn't cleared.
+    state.add_system_msg(crate::ui_strings::session::STATE_CLEARED.into());
 }
 
 fn handle_abort(state: &mut AppState) {
