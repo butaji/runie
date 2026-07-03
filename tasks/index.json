@@ -1182,7 +1182,7 @@
   {
     "file": "finish-replacing-remaining-custom-helpers-with-crates.md",
     "title": "Finish replacing remaining custom helpers with crates",
-    "status": "todo"
+    "status": "partial"
   },
   {
     "file": "fix-tui-form-submit-key-not-working.md",
