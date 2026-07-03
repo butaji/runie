@@ -176,17 +176,16 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
         Event::StreamStarted { id: _ } => {
             // StreamStarted is informational; streaming state is managed by other handlers.
             // Just set the streaming flag if not already.
-            if !state.turn_state().streaming {
-                state.turn_state_mut().streaming = true;
-                *state.agent_state_mut() = crate::model::AgentState::from(state.turn_state());
+            if !state.agent_state().streaming {
+                state.agent_state_mut().streaming = true;
             }
             true
         }
         Event::QueuesCleared => {
-            // QueuesCleared is emitted by TurnActor but AppState projections
-            // are synced via the turn_state authoritative state.
-            // Just sync from turn_state to agent_state.
-            *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
+            // QueuesCleared clears the message_queue and request_queue.
+            // These are projections in AgentState.
+            state.agent_state_mut().message_queue.clear();
+            state.agent_state_mut().request_queue.clear();
             true
         }
         Event::QueueFollowUpAdded { id, content } => {

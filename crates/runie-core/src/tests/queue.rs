@@ -11,8 +11,8 @@ fn queue_empty_by_default() {
 #[test]
 fn submit_during_turn_queues_steering() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('i'));
     state.update(Event::submit());
@@ -28,8 +28,8 @@ fn submit_during_turn_queues_steering() {
 #[test]
 fn submit_when_idle_sends_immediately() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = false;
-    state.sync_agent_state();
+    state.agent.turn_active = false;
+    
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('i'));
     state.update(Event::submit());
@@ -42,8 +42,8 @@ fn submit_when_idle_sends_immediately() {
 #[test]
 fn follow_up_queues_for_later() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('b'));
     state.update(crate::Event::Input('y'));
     state.update(crate::Event::FollowUp);
@@ -57,8 +57,8 @@ fn follow_up_queues_for_later() {
 #[test]
 fn deliver_queue_at_turn_end() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('i'));
     state.update(Event::submit());
@@ -75,8 +75,8 @@ fn deliver_queue_at_turn_end() {
 #[test]
 fn queue_multiple_messages() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('a'));
     state.update(Event::submit());
     state.update(crate::Event::Input('b'));
@@ -95,8 +95,8 @@ fn queue_multiple_messages() {
 #[test]
 fn escape_clears_queue_and_restores() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('i'));
     state.update(Event::submit());
@@ -110,8 +110,8 @@ fn escape_clears_queue_and_restores() {
 #[test]
 fn steering_delivered_before_follow_up() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('s'));
     state.update(Event::submit());
     state.update(crate::Event::Input('f'));
@@ -161,8 +161,8 @@ fn delivery_mode_defaults_to_one_at_a_time() {
 fn steering_mode_all_batches_messages() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.config.steering_mode = DeliveryMode::All;
 
     // Queue three steering messages
@@ -191,8 +191,8 @@ fn steering_mode_all_batches_messages() {
 fn follow_up_mode_all_batches_messages() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.config.follow_up_mode = DeliveryMode::All;
     // Queue three follow-up messages
     state.update(crate::Event::Input('x'));
@@ -229,8 +229,8 @@ fn follow_up_mode_all_batches_messages() {
 fn one_at_a_time_delivers_separately() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.config.steering_mode = DeliveryMode::OneAtATime;
 
     // Queue three steering messages
@@ -264,8 +264,8 @@ fn one_at_a_time_delivers_separately() {
 fn steering_and_follow_up_modes_independent() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.config.steering_mode = DeliveryMode::All;
     state.config.follow_up_mode = DeliveryMode::OneAtATime;
 
@@ -301,8 +301,8 @@ fn steering_and_follow_up_modes_independent() {
 #[test]
 fn dequeue_restores_last() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('i'));
     state.update(Event::submit());
@@ -316,8 +316,8 @@ fn dequeue_restores_last() {
 #[test]
 fn dequeue_sets_cursor_end() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('a'));
     state.update(crate::Event::Input('b'));
     state.update(Event::submit());
@@ -329,8 +329,8 @@ fn dequeue_sets_cursor_end() {
 #[test]
 fn dequeue_replaces_input() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('o'));
     state.update(crate::Event::Input('l'));
     state.update(crate::Event::Input('d'));
@@ -358,8 +358,8 @@ fn dequeue_empty_flashes() {
 #[test]
 fn dequeue_lifo() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Input('a'));
     state.update(Event::submit());
     state.update(crate::Event::Input('b'));
@@ -378,8 +378,8 @@ fn dequeue_lifo() {
 #[test]
 fn alt_enter_queues_follow_up_while_thinking() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     for c in "follow up".chars() {
         state.update(crate::Event::Input(c));
     }
@@ -397,8 +397,8 @@ fn alt_enter_queues_follow_up_while_thinking() {
 #[test]
 fn alt_enter_queues_input_as_follow_up_when_idle() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = false;
-    state.sync_agent_state();
+    state.agent.turn_active = false;
+    
     for c in "hello".chars() {
         state.update(crate::Event::Input(c));
     }
@@ -416,8 +416,8 @@ fn alt_enter_queues_input_as_follow_up_when_idle() {
 #[test]
 fn alt_up_restores_last_queued_message() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     for c in "queued".chars() {
         state.update(crate::Event::Input(c));
     }
@@ -433,8 +433,8 @@ fn alt_up_restores_last_queued_message() {
 #[test]
 fn alt_up_replaces_current_input_with_queued() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     for c in "old".chars() {
         state.update(crate::Event::Input(c));
     }
@@ -463,15 +463,15 @@ fn alt_up_empty_queue_flashes_input() {
 fn abort_during_streaming_clears_turn_and_allows_new_submit() {
     let mut state = AppState::default();
     state.config.vim_mode = true;
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.set_streaming(true);
     state.input.input = "hi".into();
     state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
 
     state.update(crate::Event::Escape);
-    assert!(!state.turn_state.turn_active);
+    assert!(!state.agent.turn_active);
     assert!(!state.agent.streaming);
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.input.input, "hi");
@@ -492,13 +492,12 @@ fn abort_during_streaming_clears_turn_and_allows_new_submit() {
 fn abort_during_streaming_resets_timers() {
     let mut state = AppState::default();
     state.config.vim_mode = true;
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.set_streaming(true);
-    state.turn_state.turn_started_at = Some(std::time::Instant::now());
-    state.turn_state.thinking_started_at = Some(std::time::Instant::now());
-    state.turn_state.tool_started_at = Some(std::time::Instant::now());
-    *state.agent_state_mut() = AgentState::from(&state.turn_state);
+    state.agent.turn_started_at = Some(std::time::Instant::now());
+    state.agent.thinking_started_at = Some(std::time::Instant::now());
+    state.agent.tool_started_at = Some(std::time::Instant::now());
 
     state.update(crate::Event::Escape);
 
@@ -512,8 +511,8 @@ fn abort_during_streaming_resets_timers() {
 #[test]
 fn steering_message_has_steering_origin() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
 
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('i'));
@@ -547,8 +546,8 @@ fn steering_message_has_steering_origin() {
 #[test]
 fn follow_up_message_has_follow_up_origin() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
 
     state.update(crate::Event::Input('f'));
     state.update(crate::Event::Input('o'));
@@ -584,8 +583,8 @@ fn follow_up_message_has_follow_up_origin() {
 #[test]
 fn idle_submit_has_user_origin() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = false;
-    state.sync_agent_state();
+    state.agent.turn_active = false;
+    
 
     state.update(crate::Event::Input('h'));
     state.update(crate::Event::Input('e'));

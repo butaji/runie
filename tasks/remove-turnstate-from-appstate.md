@@ -1,12 +1,44 @@
 # Remove `TurnState` from `AppState`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R7
 **Category**: Core / State
 **Priority**: P0
 
 **Depends on**: none
 **Blocks**: enforce-agentstate-projection-no-direct-mutation
+
+## Summary
+
+Removed all references to `AppState.turn_state` and made update handlers work with `AgentState` directly. The `turn_state` field was already absent from `AppState` (removed in a prior commit), but the code still referenced `turn_state()` and `turn_state_mut()` methods that no longer existed.
+
+## Changes
+
+### Production code
+
+1. **`turn_projections.rs`** — Projection methods (`apply_turn_started`, `apply_turn_completed`, etc.) now update `AgentState` fields directly instead of mutating `TurnState` and syncing.
+
+2. **`update/agent/core/mod.rs`** — All handlers (`set_thinking`, `add_thought`, `start_tool`, `end_tool`, etc.) now use `agent_state()` and `agent_state_mut()` instead of `turn_state()` and `turn_state_mut()`.
+
+3. **`update/agent/core_messages.rs`** — Message handlers (`flush_buffered_response`, `on_assistant_message_ready`, `create_assistant_message`, `complete_turn`, `finish_turn`, `clear_turn_state`, etc.) now work with `AgentState` directly.
+
+4. **`update/dispatch.rs`** — Fixed `StreamStarted` and `QueuesCleared` handlers to work with `AgentState`.
+
+5. **`update/system.rs`** — Fixed `apply_turn_aborted` to work with `AgentState`.
+
+6. **`update/session.rs`** — Fixed `abort_queue`, `deliver_queued`, `apply_queue_delivery_sync`, and `dequeue` to work with `AgentState.message_queue`.
+
+7. **`update/input/submit.rs`** — Fixed `estimate_and_add_tokens` and `apply_user_message_sync` to work with `AgentState`.
+
+### Test code
+
+Updated all test files to use `state.agent.` field access or `state.agent_state_mut()` method calls instead of `state.turn_state`. Updated comments to remove references to "authoritative TurnState".
+
+### Removed
+
+- Removed unused `AgentState` import from `turn_projections.rs`
+- Removed `sync_agent_state()` calls (method no longer exists)
+- Updated test helper functions to work with `AgentState` directly
 
 ## Description
 

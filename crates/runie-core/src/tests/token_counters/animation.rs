@@ -192,15 +192,15 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
     });
     let initial_len = state.agent.speed_window.len();
     assert!(initial_len >= 1, "Window should have initial event");
-    // Record to turn_state (authoritative), then sync to agent.
+    // Record to agent state speed window.
     for i in 1..=100 {
-        state.turn_state.speed_window.record(i * 10);
+        state.agent.speed_window.record(i * 10);
     }
-    state.sync_agent_state();
+    
     let after_streaming = state.agent.speed_window.len();
     assert!(after_streaming > initial_len);
-    state.turn_state.current_request_id = Some("r1".to_string());
-    state.sync_agent_state();
+    state.agent.current_request_id = Some("r1".to_string());
+    
     state.update(crate::Event::Done {
         id: "r1".to_string(),
     });
@@ -215,9 +215,9 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
         "Window should not reset on new turn"
     );
     for i in 1001..=1100 {
-        state.turn_state.speed_window.record(i * 10);
+        state.agent.speed_window.record(i * 10);
     }
-    state.sync_agent_state();
+    
 }
 
 #[test]

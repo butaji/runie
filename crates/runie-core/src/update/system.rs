@@ -2,7 +2,6 @@
 
 use crate::actors::{ConfigMsg, TurnMsg};
 use crate::event::TransientLevel;
-use crate::model::state::AgentState;
 use crate::model::{AppState, ChatMessage, Role};
 
 mod model;
@@ -181,17 +180,16 @@ impl AppState {
 
     /// Handle TurnAborted fact — clear turn flags in AppState projection.
     pub(crate) fn apply_turn_aborted(&mut self) {
-        self.turn_state_mut().turn_active = false;
-        self.turn_state_mut().streaming = false;
-        self.turn_state_mut().inflight = 0;
-        self.turn_state_mut().current_request_id = None;
-        self.turn_state_mut().current_tool_name = None;
-        self.turn_state_mut().current_action = None;
-        self.turn_state_mut().turn_started_at = None;
-        self.turn_state_mut().thinking_started_at = None;
-        self.turn_state_mut().tool_started_at = None;
-        // Sync authoritative fields to AgentState using From<&TurnState>.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        let agent = self.agent_state_mut();
+        agent.turn_active = false;
+        agent.streaming = false;
+        agent.inflight = 0;
+        agent.current_request_id = None;
+        agent.current_tool_name = None;
+        agent.current_action = None;
+        agent.turn_started_at = None;
+        agent.thinking_started_at = None;
+        agent.tool_started_at = None;
         self.view_mut().dirty = true;
     }
 

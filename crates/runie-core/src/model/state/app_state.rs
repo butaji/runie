@@ -10,7 +10,6 @@
 use super::{
     AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
-use crate::actors::turn::TurnState;
 
 /// Application state — a read-only UI projection of actor-owned state.
 ///
@@ -53,9 +52,6 @@ pub struct AppState {
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
     pub actor_handles: Option<crate::actors::LeaderHandle>,
-    /// Authoritative turn state — kept in sync with `TurnActor` via facts.
-    /// `AgentState` is derived from this via `From<&TurnState>`.
-    pub turn_state: TurnState,
     /// Separate counter for session message IDs, independent of TurnActor's `next_id`.
     /// AppState generates IDs for session messages; TurnActor generates IDs for
     /// request queue messages. These are kept separate to avoid double-increment.
@@ -63,12 +59,6 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// Sync AgentState projection from TurnState.
-    /// Call after directly modifying `turn_state` fields.
-    pub fn sync_agent_state(&mut self) {
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
-    }
-
     /// Create a test AppState with specific transient message.
     #[doc(hidden)]
     pub fn __with_transient_test(
@@ -111,14 +101,13 @@ impl AppState {
                 content: content.clone(),
             });
         } else {
-            // Mutate authoritative TurnState, then sync to AgentState projection.
-            self.turn_state_mut()
+            // Test mode: update AgentState directly (no TurnActor in tests).
+            self.agent_state_mut()
                 .message_queue
                 .push(crate::model::QueuedMessage {
                     content: content.clone(),
                     kind: crate::model::QueuedMessageKind::Steering,
                 });
-            *self.agent_state_mut() = AgentState::from(&self.turn_state);
         }
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;

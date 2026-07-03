@@ -1,8 +1,11 @@
 //! Turn fact projections — event handlers for TurnActor facts.
 //!
-//! These methods project TurnActor facts into AppState.
+//! These methods project TurnActor facts into AppState's AgentState.
+//! 
+//! NOTE: AppState no longer owns TurnState. TurnState is owned by TurnActor.
+//! These projection methods update AgentState directly based on events from TurnActor.
 
-use super::{AgentState, AppState};
+use super::AppState;
 
 #[cfg(test)]
 mod tests {
@@ -22,11 +25,11 @@ mod tests {
     #[test]
     fn apply_turn_completed_clears_flags() {
         let mut state = AppState::default();
-        // Set up TurnState (the authoritative source) directly instead of AgentState.
-        state.turn_state_mut().turn_active = true;
-        state.turn_state_mut().inflight = 1;
-        state.turn_state_mut().streaming = true;
-        state.turn_state_mut().current_tool_name = Some("bash".to_owned());
+        // Set up AgentState directly (the projection target).
+        state.agent_state_mut().turn_active = true;
+        state.agent_state_mut().inflight = 1;
+        state.agent_state_mut().streaming = true;
+        state.agent_state_mut().current_tool_name = Some("bash".to_owned());
 
         state.apply_turn_completed();
 
@@ -40,10 +43,10 @@ mod tests {
     #[test]
     fn apply_turn_errored_resets_inflight() {
         let mut state = AppState::default();
-        // Set up TurnState (the authoritative source) directly instead of AgentState.
-        state.turn_state_mut().turn_active = true;
-        state.turn_state_mut().inflight = 2;
-        state.turn_state_mut().streaming = true;
+        // Set up AgentState directly.
+        state.agent_state_mut().turn_active = true;
+        state.agent_state_mut().inflight = 2;
+        state.agent_state_mut().streaming = true;
 
         state.apply_turn_errored();
 
@@ -86,32 +89,26 @@ mod tests {
 
     // ── Steering/FollowUp projection tests ───────────────────────────────────
 
-    /// Push a steering message to turn_state.message_queue (authoritative source).
-    /// The projection to agent_state.message_queue happens via the apply methods.
+    /// Push a steering message to agent_state.message_queue directly.
     fn push_steering(state: &mut AppState, content: &str) {
         state
-            .turn_state_mut()
+            .agent_state_mut()
             .message_queue
             .push(crate::model::QueuedMessage {
                 content: content.into(),
                 kind: Steering,
             });
-        // Sync to agent_state via the projection pattern.
-        *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
     }
 
-    /// Push a follow-up message to turn_state.message_queue (authoritative source).
-    /// The projection to agent_state.message_queue happens via the apply methods.
+    /// Push a follow-up message to agent_state.message_queue directly.
     fn push_follow_up(state: &mut AppState, content: &str) {
         state
-            .turn_state_mut()
+            .agent_state_mut()
             .message_queue
             .push(crate::model::QueuedMessage {
                 content: content.into(),
                 kind: FollowUp,
             });
-        // Sync to agent_state via the projection pattern.
-        *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
     }
 
     #[test]
@@ -275,46 +272,41 @@ mod tests {
 }
 
 impl AppState {
-    /// Project TurnStarted fact into AppState.
+    /// Project TurnStarted fact into AppState's AgentState.
     pub(crate) fn apply_turn_started(&mut self) {
-        // Update authoritative TurnState
-        self.turn_state_mut().turn_active = true;
-        self.turn_state_mut().inflight += 1;
-        self.turn_state_mut().streaming = true;
-        self.turn_state_mut().turn_started_at = Some(std::time::Instant::now());
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        let agent = self.agent_state_mut();
+        agent.turn_active = true;
+        agent.inflight += 1;
+        agent.streaming = true;
+        agent.turn_started_at = Some(std::time::Instant::now());
     }
 
-    /// Project TurnCompleted fact into AppState.
+    /// Project TurnCompleted fact into AppState's AgentState.
     pub(crate) fn apply_turn_completed(&mut self) {
-        self.turn_state_mut().streaming = false;
-        self.turn_state_mut().turn_active = false;
-        self.turn_state_mut().inflight = self.turn_state_mut().inflight.saturating_sub(1);
-        self.turn_state_mut().current_tool_name = None;
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        let agent = self.agent_state_mut();
+        agent.streaming = false;
+        agent.turn_active = false;
+        agent.inflight = agent.inflight.saturating_sub(1);
+        agent.current_tool_name = None;
     }
 
-    /// Project TurnErrored fact into AppState.
+    /// Project TurnErrored fact into AppState's AgentState.
     pub(crate) fn apply_turn_errored(&mut self) {
-        self.turn_state_mut().streaming = false;
-        self.turn_state_mut().turn_active = false;
-        self.turn_state_mut().inflight = 0;
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        let agent = self.agent_state_mut();
+        agent.streaming = false;
+        agent.turn_active = false;
+        agent.inflight = 0;
     }
 
-    /// Project TokenStatsUpdated fact into AppState.
+    /// Project TokenStatsUpdated fact into AppState's AgentState.
     /// `speed_tps` is computed from the speed window rather than carried in the event.
     pub(crate) fn apply_token_stats(&mut self, tokens_in: usize, tokens_out: usize) {
-        self.turn_state_mut().tokens_in = tokens_in;
-        self.turn_state_mut().tokens_out = tokens_out;
-        self.turn_state_mut().turn_tokens_out = tokens_out;
-        // Compute speed from the ring buffer (populated by handle_update_speed -> record).
-        self.turn_state_mut().speed_tps = self.turn_state().speed_window.speed();
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(self.turn_state());
+        let agent = self.agent_state_mut();
+        agent.tokens_in = tokens_in;
+        agent.tokens_out = tokens_out;
+        agent.turn_tokens_out = tokens_out;
+        // Compute speed from the ring buffer.
+        agent.speed_tps = agent.speed_window.speed();
     }
 
     /// Project UserMessageSubmitted fact into AppState.
@@ -330,9 +322,7 @@ impl AppState {
             }],
             ..Default::default()
         });
-        self.turn_state_mut().request_queue.push_back((content, id));
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().request_queue.push_back((content, id));
         self.messages_changed();
     }
 
@@ -341,7 +331,7 @@ impl AppState {
     pub(crate) fn apply_steering_delivered(&mut self, content: String, id: String) {
         use crate::proto::message::{ChatMessageBuilder, MessageOrigin};
         // Remove the delivered steering message from the queue.
-        self.turn_state_mut().message_queue.retain(|m| {
+        self.agent_state_mut().message_queue.retain(|m| {
             !(m.kind == crate::model::QueuedMessageKind::Steering && m.content == content)
         });
         // Add to session
@@ -352,9 +342,7 @@ impl AppState {
             .build();
         self.session_mut().messages.push(msg);
         // Add to request_queue (for agent to pick up)
-        self.turn_state_mut().request_queue.push_back((content, id));
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().request_queue.push_back((content, id));
         self.messages_changed();
     }
 
@@ -363,7 +351,7 @@ impl AppState {
     pub(crate) fn apply_follow_up_delivered(&mut self, content: String, id: String) {
         use crate::proto::message::{ChatMessageBuilder, MessageOrigin};
         // Remove the delivered follow-up message from the queue.
-        self.turn_state_mut().message_queue.retain(|m| {
+        self.agent_state_mut().message_queue.retain(|m| {
             !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content == content)
         });
         // Add to session
@@ -374,9 +362,7 @@ impl AppState {
             .build();
         self.session_mut().messages.push(msg);
         // Add to request_queue (for agent to pick up)
-        self.turn_state_mut().request_queue.push_back((content, id));
-        // Sync all fields from TurnState to AgentState using the From impl.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().request_queue.push_back((content, id));
         self.messages_changed();
     }
 
@@ -390,31 +376,29 @@ impl AppState {
     }
 
     /// Project QueueFollowUpAdded fact into AppState.
-    /// Adds the follow-up to the message queue and syncs projection.
+    /// Adds the follow-up to the message queue.
     pub(crate) fn apply_queue_follow_up_added(&mut self, _id: String, content: String) {
         use crate::model::QueuedMessageKind;
-        self.turn_state_mut()
+        self.agent_state_mut()
             .message_queue
             .push(crate::model::QueuedMessage {
                 content,
                 kind: QueuedMessageKind::FollowUp,
             });
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
 
     /// Project QueueSteeringAdded fact into AppState.
-    /// Adds the steering to the message queue and syncs projection.
+    /// Adds the steering to the message queue.
     pub(crate) fn apply_queue_steering_added(&mut self, _id: String, content: String) {
         use crate::model::QueuedMessageKind;
-        self.turn_state_mut()
+        self.agent_state_mut()
             .message_queue
             .push(crate::model::QueuedMessage {
                 content,
                 kind: QueuedMessageKind::Steering,
             });
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }

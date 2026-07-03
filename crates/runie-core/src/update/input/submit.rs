@@ -8,7 +8,6 @@
 use crate::actors::turn::messages::MessageSource;
 use crate::actors::{IoMsg, SessionMsg, TurnMsg};
 use crate::message::{now, ChatMessage, Role};
-use crate::model::state::AgentState;
 use crate::model::AppState;
 
 impl AppState {
@@ -73,9 +72,8 @@ impl AppState {
     }
 
     fn estimate_and_add_tokens(&mut self, content: &str) {
-        let tokens = self.turn_state().token_tracker.estimate_input(content);
-        self.turn_state_mut().tokens_in += tokens;
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        let tokens = self.agent_state().token_tracker.estimate_input(content);
+        self.agent_state_mut().tokens_in += tokens;
     }
 
     fn try_handle_bang_command(&mut self, content: &str) -> Option<()> {
@@ -155,9 +153,8 @@ impl AppState {
             }],
             ..Default::default()
         });
-        // Mutate authoritative TurnState, then sync to AgentState projection.
-        self.turn_state_mut().request_queue.push_back((content, id));
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        // Update AgentState projection directly.
+        self.agent_state_mut().request_queue.push_back((content, id));
     }
 
     pub fn apply_command_result(&mut self, result: crate::commands::CommandResult) {

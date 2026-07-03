@@ -1,19 +1,17 @@
 use crate::message::{now, Part};
-use crate::model::state::AgentState;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::update::strip_tool_markers;
 
 impl AppState {
     pub(crate) fn flush_buffered_response(&mut self, id: &str) {
-        let buffered = self.turn_state.streaming_buffer.force_flush().join("");
+        let buffered = self.agent_state_mut().streaming_buffer.force_flush().join("");
         if buffered.is_empty() {
             return;
         }
         if let Some(idx) = self.find_cached_assistant_index(id) {
             self.append_to_message(idx, &buffered);
         } else if let Some(idx) = self.find_assistant_by_id(id) {
-            self.turn_state_mut().last_assistant_index = Some(idx);
-            *self.agent_state_mut() = AgentState::from(&self.turn_state);
+            self.agent_state_mut().last_assistant_index = Some(idx);
             self.append_to_message(idx, &buffered);
         } else {
             self.create_assistant_message(id.to_owned(), buffered);
@@ -29,7 +27,7 @@ impl AppState {
     }
 
     pub(crate) fn on_assistant_message_ready(&mut self, message: ChatMessage) {
-        if let Some(idx) = self.turn_state().last_assistant_index {
+        if let Some(idx) = self.agent_state().last_assistant_index {
             if idx < self.session_mut().messages.len()
                 && self.session_mut().messages[idx].role == Role::Assistant
             {
@@ -39,8 +37,7 @@ impl AppState {
             }
         }
         self.session_mut().messages.push(message);
-        self.turn_state_mut().last_assistant_index = Some(self.session_mut().messages.len() - 1);
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().last_assistant_index = Some(self.session_mut().messages.len() - 1);
         self.messages_changed();
     }
 
@@ -66,9 +63,8 @@ impl AppState {
             parts: vec![Part::Text { content }],
             ..Default::default()
         });
-        self.turn_state_mut().current_request_id = Some(id);
-        self.turn_state_mut().last_assistant_index = Some(idx);
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().current_request_id = Some(id);
+        self.agent_state_mut().last_assistant_index = Some(idx);
         self.messages_changed();
     }
 
@@ -93,15 +89,14 @@ impl AppState {
             });
         }
         self.messages_changed();
-        self.turn_state_mut().turn_started_at = None;
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().turn_started_at = None;
     }
 
     pub(crate) fn finish_turn(&mut self, id: String) {
-        // Read from TurnState (authoritative source), not derived agent.
-        let assistant_idx = self.turn_state().last_assistant_index;
+        // Read from AgentState (the projection target).
+        let assistant_idx = self.agent_state().last_assistant_index;
         let remaining_tail = self
-            .turn_state_mut()
+            .agent_state_mut()
             .streaming_buffer
             .force_flush()
             .join("");
@@ -110,14 +105,13 @@ impl AppState {
                 self.append_to_message(idx, &remaining_tail);
             }
         }
-        self.turn_state_mut().streaming_buffer.reset();
+        self.agent_state_mut().streaming_buffer.reset();
         self.close_open_parts(assistant_idx, &remaining_tail);
         self.strip_tools_from_assistant();
         self.remove_empty_assistant();
         self.clear_turn_state(&id);
-        // Set on turn_state, then sync to agent.
-        self.turn_state_mut().last_assistant_index = None;
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        // Clear last_assistant_index.
+        self.agent_state_mut().last_assistant_index = None;
         self.deliver_queued();
         // NOTE: Do NOT clear message_queue here. In production mode, TurnActor
         // emits SteeringDelivered/FollowUpDelivered which sync the queue. In test
@@ -172,34 +166,31 @@ impl AppState {
     }
 
     fn clear_turn_state(&mut self, id: &str) {
-        // Mutate authoritative TurnState only — do NOT sync here.
-        // Fields managed by other functions (like last_assistant_index, streaming)
-        // are synced by those functions. Clearing them here would overwrite changes.
-        if self.turn_state().current_request_id.as_deref() == Some(id) {
-            self.turn_state_mut().current_request_id = None;
+        // Clear turn state fields on AgentState.
+        if self.agent_state().current_request_id.as_deref() == Some(id) {
+            self.agent_state_mut().current_request_id = None;
         }
-        self.turn_state_mut().current_tool_name = None;
-        self.turn_state_mut().current_action = None;
-        self.turn_state_mut().intermediate_step_count = 0;
-        self.turn_state_mut().thought_seq = 0;
-        self.turn_state_mut().turn_active = false;
-        self.turn_state_mut().turn_started_at = None;
-        self.turn_state_mut().inflight = self.turn_state().inflight.saturating_sub(1);
+        self.agent_state_mut().current_tool_name = None;
+        self.agent_state_mut().current_action = None;
+        self.agent_state_mut().intermediate_step_count = 0;
+        self.agent_state_mut().thought_seq = 0;
+        self.agent_state_mut().turn_active = false;
+        self.agent_state_mut().turn_started_at = None;
+        self.agent_state_mut().inflight = self.agent_state().inflight.saturating_sub(1);
         // Reset per-turn speed tracking (but keep speed_window for continuity)
-        self.turn_state_mut().turn_tokens_out = 0;
-        self.turn_state_mut().speed_tps = 0.0;
-        self.turn_state_mut().last_speed_update = None;
+        self.agent_state_mut().turn_tokens_out = 0;
+        self.agent_state_mut().speed_tps = 0.0;
+        self.agent_state_mut().last_speed_update = None;
         self.view_mut().vim_nav_pending = false;
     }
 
     fn maybe_end_streaming(&mut self) {
-        // Read from TurnState, mutate through turn_state_mut, sync to AgentState.
-        if self.turn_state().inflight == 0 && self.turn_state().request_queue.is_empty() {
-            self.turn_state_mut().streaming = false;
-            if self.turn_state().current_request_id.is_none() {
-                self.turn_state_mut().thinking_started_at = None;
+        // Update streaming state on AgentState.
+        if self.agent_state().inflight == 0 && self.agent_state().request_queue.is_empty() {
+            self.agent_state_mut().streaming = false;
+            if self.agent_state().current_request_id.is_none() {
+                self.agent_state_mut().thinking_started_at = None;
             }
-            *self.agent_state_mut() = AgentState::from(&self.turn_state);
         }
     }
 
@@ -220,9 +211,8 @@ impl AppState {
                 agent.timestamp = now();
                 self.session_mut().messages.insert(t_idx, agent);
                 // Update last_assistant_index if it was affected.
-                if self.turn_state().last_assistant_index == Some(a_idx) {
-                    self.turn_state_mut().last_assistant_index = Some(t_idx);
-                    *self.agent_state_mut() = AgentState::from(&self.turn_state);
+                if self.agent_state().last_assistant_index == Some(a_idx) {
+                    self.agent_state_mut().last_assistant_index = Some(t_idx);
                 }
             }
         }
@@ -239,10 +229,9 @@ impl AppState {
             turn_complete.timestamp = now();
             self.session_mut().messages.push(turn_complete);
             // Update last_assistant_index if it was affected.
-            if let Some(last_idx) = self.turn_state().last_assistant_index {
+            if let Some(last_idx) = self.agent_state().last_assistant_index {
                 if last_idx >= idx {
-                    self.turn_state_mut().last_assistant_index = Some(last_idx.saturating_sub(1));
-                    *self.agent_state_mut() = AgentState::from(&self.turn_state);
+                    self.agent_state_mut().last_assistant_index = Some(last_idx.saturating_sub(1));
                 }
             }
         }
@@ -278,23 +267,22 @@ impl AppState {
     }
 
     fn reset_agent_state(&mut self) {
-        // Mutate authoritative TurnState, then sync to AgentState projection.
-        self.turn_state_mut().streaming = false;
-        self.turn_state_mut().turn_active = false;
-        self.turn_state_mut().current_request_id = None;
-        self.turn_state_mut().inflight = 0;
-        self.turn_state_mut().turn_started_at = None;
-        self.turn_state_mut().thinking_started_at = None;
-        self.turn_state_mut().tool_started_at = None;
-        self.turn_state_mut().current_tool_name = None;
-        self.turn_state_mut().current_action = None;
-        self.turn_state_mut().turn_tokens_out = 0;
-        self.turn_state_mut().intermediate_step_count = 0;
-        self.turn_state_mut().thought_seq = 0;
-        self.turn_state_mut().last_assistant_index = None;
-        self.turn_state_mut().streaming_buffer.reset();
-        // Sync authoritative fields to AgentState projection.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        // Reset AgentState fields directly.
+        let agent = self.agent_state_mut();
+        agent.streaming = false;
+        agent.turn_active = false;
+        agent.current_request_id = None;
+        agent.inflight = 0;
+        agent.turn_started_at = None;
+        agent.thinking_started_at = None;
+        agent.tool_started_at = None;
+        agent.current_tool_name = None;
+        agent.current_action = None;
+        agent.turn_tokens_out = 0;
+        agent.intermediate_step_count = 0;
+        agent.thought_seq = 0;
+        agent.last_assistant_index = None;
+        agent.streaming_buffer.reset();
         self.view_mut().vim_nav_pending = false;
     }
 }

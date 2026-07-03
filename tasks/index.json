@@ -697,7 +697,7 @@
   {
     "file": "enforce-agentstate-projection-no-direct-mutation.md",
     "title": "Enforce `AgentState` as pure projection with no direct mutation",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "enforce-observed-async-work-in-all-actors.md",
@@ -1458,7 +1458,7 @@
   {
     "file": "remove-turnstate-from-appstate.md",
     "title": "Remove `TurnState` from `AppState`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "remove-unsafe-box_to_arc-from-leader-bootstrap.md",

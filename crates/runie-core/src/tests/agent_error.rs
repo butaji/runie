@@ -6,8 +6,8 @@ use crate::model::{AppState, QueuedMessage, QueuedMessageKind};
 #[test]
 fn agent_error_clears_turn_active() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.streaming = true;
     state.agent.inflight = 1;
 
@@ -24,8 +24,8 @@ fn agent_error_clears_turn_active() {
 #[test]
 fn agent_error_resets_timers() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.turn_started_at = Some(std::time::Instant::now());
     state.agent.thinking_started_at = Some(std::time::Instant::now());
     state.agent.tool_started_at = Some(std::time::Instant::now());
@@ -43,8 +43,8 @@ fn agent_error_resets_timers() {
 #[test]
 fn agent_error_inserts_error_message() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
 
     state.update(crate::Event::Error {
         id: "req.0".to_string(),
@@ -62,8 +62,8 @@ fn agent_error_inserts_error_message() {
 #[test]
 fn agent_error_clears_current_request_id() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.current_request_id = Some("req.0".to_string());
 
     state.update(crate::Event::Error {
@@ -77,8 +77,8 @@ fn agent_error_clears_current_request_id() {
 #[test]
 fn agent_error_clears_streaming_and_thought_state() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.turn_tokens_out = 42;
     state.agent.intermediate_step_count = 3;
     state.agent.thought_seq = 7;
@@ -100,8 +100,8 @@ fn agent_error_clears_streaming_and_thought_state() {
 #[test]
 fn agent_error_resets_streaming_buffer() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     // An unclosed code fence leaves pending content in the buffer tail.
     state.agent.streaming_buffer.push_delta("```rust\npartial");
     assert!(state.agent.streaming_buffer.has_pending_content());
@@ -117,14 +117,14 @@ fn agent_error_resets_streaming_buffer() {
 #[test]
 fn agent_error_delivers_queued_messages() {
     let mut state = AppState::default();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
-    // Push to authoritative turn_state queue, not agent queue.
-    state.turn_state_mut().message_queue.push(QueuedMessage {
+    state.agent.turn_active = true;
+    
+    // Push to agent state message queue.
+    state.agent_state_mut().message_queue.push(QueuedMessage {
         content: "follow up".to_string(),
         kind: QueuedMessageKind::FollowUp,
     });
-    state.sync_agent_state();
+    
 
     state.update(crate::Event::Error {
         id: "req.0".to_string(),

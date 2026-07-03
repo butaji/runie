@@ -211,25 +211,11 @@ impl AppState {
         &mut self.actor_handles
     }
 
-    /// Immutable access to the authoritative turn state.
-    /// Production code should read turn state through this accessor, not via
-    /// direct field access (e.g., `self.turn_state.something` → `self.turn_state().something`).
-    pub fn turn_state(&self) -> &crate::actors::turn::TurnState {
-        &self.turn_state
-    }
-
-    /// Mutable access to the authoritative turn state.
-    /// Used by fact handlers to sync `AgentState` from `TurnState`.
-    pub fn turn_state_mut(&mut self) -> &mut crate::actors::turn::TurnState {
-        &mut self.turn_state
-    }
-
     /// Set streaming state. For test setup only.
     /// Production code should use events and projection handlers.
     #[allow(dead_code)]
     pub fn set_streaming(&mut self, streaming: bool) {
-        self.turn_state.streaming = streaming;
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        self.agent_state_mut().streaming = streaming;
     }
 
     /// Return the context window size for the currently selected model.

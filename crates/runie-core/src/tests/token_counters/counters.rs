@@ -58,8 +58,8 @@ fn submit_increments_tokens_in() {
 #[test]
 fn agent_response_increments_tokens_out() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
@@ -83,8 +83,8 @@ fn agent_response_increments_tokens_out() {
 #[test]
 fn multiple_responses_accumulate_tokens_out() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.update(crate::Event::Response {
         id: "r1".to_string(),
         content: "hello".to_string(),
@@ -111,8 +111,8 @@ fn multiple_responses_accumulate_tokens_out() {
 #[test]
 fn finish_turn_resets_turn_tokens() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.current_request_id = Some("r1".to_string());
     state.update(crate::Event::Response {
         id: "r1".to_string(),
@@ -146,8 +146,8 @@ fn finish_turn_resets_turn_tokens() {
 #[test]
 fn speed_zero_when_no_tokens_streamed() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.turn_started_at = Some(std::time::Instant::now());
     state.tick_animation();
     assert_eq!(
@@ -159,8 +159,8 @@ fn speed_zero_when_no_tokens_streamed() {
 #[test]
 fn speed_updates_on_tick_with_new_tokens() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.turn_started_at = Some(std::time::Instant::now());
 
     // Initialize rolling window with start event
@@ -194,8 +194,8 @@ fn speed_updates_on_tick_with_new_tokens() {
 #[test]
 fn speed_decays_when_no_new_tokens() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.speed_tps = 100.0;
     state.agent.tokens_at_last_speed = state.agent.tokens_out;
     // Set to 2 seconds ago to ensure elapsed > 1.0
@@ -215,8 +215,8 @@ fn speed_decays_when_no_new_tokens() {
 #[test]
 fn speed_clamps_to_zero_after_long_idle() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.agent.speed_tps = 50.0;
     state.agent.tokens_at_last_speed = state.agent.tokens_out;
     state.agent.last_speed_update =
@@ -254,16 +254,16 @@ fn turn_start_initializes_speed_tracking() {
 #[test]
 fn new_turn_resets_speed() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     // Set authoritative TurnState fields (not agent) for proper sync.
-    state.turn_state_mut().speed_tps = 42.0;
-    state.turn_state_mut().tokens_out = 100;
-    state.turn_state_mut().turn_tokens_out = 50;
-    state.sync_agent_state();
+    state.agent_state_mut().speed_tps = 42.0;
+    state.agent_state_mut().tokens_out = 100;
+    state.agent_state_mut().turn_tokens_out = 50;
+    
 
     // Finish turn
-    state.turn_state_mut().current_request_id = Some("r1".to_string());
+    state.agent_state_mut().current_request_id = Some("r1".to_string());
     state.update(crate::Event::Done {
         id: "r1".to_string(),
     });

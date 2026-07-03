@@ -36,8 +36,8 @@ fn submit_resets_scroll_to_bottom() {
 #[test]
 fn submit_when_turn_active_resets_scroll() {
     let mut state = fresh_state();
-    state.turn_state.turn_active = true;
-    state.sync_agent_state();
+    state.agent.turn_active = true;
+    
     state.view.scroll = 5;
 
     state.update(crate::Event::Input('s'));
@@ -72,15 +72,15 @@ fn follow_up_resets_scroll_to_bottom() {
 #[test]
 fn steering_delivery_resets_scroll() {
     let mut state = fresh_state();
-    // Push to authoritative turn_state queue, not agent queue.
+    // Push to agent state message queue.
     state
-        .turn_state_mut()
+        .agent_state_mut()
         .message_queue
         .push(crate::model::QueuedMessage {
             content: "steer".to_string(),
             kind: crate::model::QueuedMessageKind::Steering,
         });
-    state.sync_agent_state();
+    
     state.view.scroll = 5;
 
     state.deliver_queued();
@@ -94,15 +94,15 @@ fn steering_delivery_resets_scroll() {
 #[test]
 fn follow_up_delivery_resets_scroll() {
     let mut state = fresh_state();
-    // Push to authoritative turn_state queue, not agent queue.
+    // Push to agent state message queue.
     state
-        .turn_state_mut()
+        .agent_state_mut()
         .message_queue
         .push(crate::model::QueuedMessage {
             content: "follow".to_string(),
             kind: crate::model::QueuedMessageKind::FollowUp,
         });
-    state.sync_agent_state();
+    
     state.view.scroll = 5;
 
     state.deliver_queued();

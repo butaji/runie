@@ -1,7 +1,6 @@
 use super::dialog::open_session_tree_dialog;
 use crate::actors::TurnMsg;
 use crate::commands::DialogKind;
-use crate::model::state::AgentState;
 use crate::model::AppState;
 use crate::session::turn_queue::TurnQueue;
 
@@ -173,20 +172,19 @@ impl AppState {
             self.view_mut().dirty = true;
             return;
         }
-        // Mutate authoritative TurnState, then sync to AgentState projection.
-        let msgs: Vec<_> = TurnQueue::new(self.turn_state_mut().message_queue.drain(..).collect())
+        // Drain the message queue from AgentState projection.
+        let msgs: Vec<_> = TurnQueue::new(self.agent_state_mut().message_queue.drain(..).collect())
             .drain()
             .into_iter()
             .rev()
             .collect();
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         for msg in msgs {
             self.apply_queue_aborted(msg.content);
         }
     }
 
     pub(crate) fn deliver_queued(&mut self) {
-        if self.turn_state().message_queue.is_empty() {
+        if self.agent_state().message_queue.is_empty() {
             return;
         }
         let steering_mode = self.config().steering_mode;
@@ -223,12 +221,12 @@ impl AppState {
     ) {
         use crate::proto::message::{ChatMessageBuilder, MessageOrigin, Role};
 
-        // Mutate authoritative TurnState, then sync to AgentState projection.
-        let mut queue = TurnQueue::new(std::mem::take(&mut self.turn_state_mut().message_queue));
+        // Work with AgentState projection directly.
+        let mut queue = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
 
         if let Some(r) = queue.pop_steering(steering_mode) {
-            // Steering was delivered — sync to TurnState
-            self.turn_state_mut().message_queue = queue.into_inner();
+            // Steering was delivered — update AgentState
+            self.agent_state_mut().message_queue = queue.into_inner();
             let id = self.next_id();
             let msg = ChatMessageBuilder::new(Role::User)
                 .id(id.clone())
@@ -236,7 +234,7 @@ impl AppState {
                 .text(r.content.clone())
                 .build();
             self.session_mut().messages.push(msg);
-            self.turn_state_mut()
+            self.agent_state_mut()
                 .request_queue
                 .push_back((r.content, id));
             self.messages_changed();
@@ -244,9 +242,9 @@ impl AppState {
             // Only deliver follow-ups in All mode (matching RactorTurnActor)
             if follow_up_mode == DeliveryMode::All {
                 let mut q =
-                    TurnQueue::new(std::mem::take(&mut self.turn_state_mut().message_queue));
+                    TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
                 if let Some(r) = q.pop_all_follow_ups() {
-                    self.turn_state_mut().message_queue = q.into_inner();
+                    self.agent_state_mut().message_queue = q.into_inner();
                     let id = self.next_id();
                     let msg = ChatMessageBuilder::new(Role::User)
                         .id(id.clone())
@@ -254,17 +252,17 @@ impl AppState {
                         .text(r.content.clone())
                         .build();
                     self.session_mut().messages.push(msg);
-                    self.turn_state_mut()
+                    self.agent_state_mut()
                         .request_queue
                         .push_back((r.content, id));
                     self.messages_changed();
                 } else {
-                    self.turn_state_mut().message_queue = q.into_inner();
+                    self.agent_state_mut().message_queue = q.into_inner();
                 }
             }
         } else if let Some(r) = queue.pop_follow_up(follow_up_mode) {
             // Follow-up was delivered
-            self.turn_state_mut().message_queue = queue.into_inner();
+            self.agent_state_mut().message_queue = queue.into_inner();
             let id = self.next_id();
             let msg = ChatMessageBuilder::new(Role::User)
                 .id(id.clone())
@@ -272,23 +270,20 @@ impl AppState {
                 .text(r.content.clone())
                 .build();
             self.session_mut().messages.push(msg);
-            self.turn_state_mut()
+            self.agent_state_mut()
                 .request_queue
                 .push_back((r.content, id));
             self.messages_changed();
         } else {
-            self.turn_state_mut().message_queue = queue.into_inner();
+            self.agent_state_mut().message_queue = queue.into_inner();
         }
 
-        // Sync authoritative fields to AgentState projection.
-        *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.view_mut().scroll = 0;
     }
 
     pub(crate) fn dequeue(&mut self) {
-        // Pop from TurnState, sync to AgentState projection.
-        if let Some(msg) = self.turn_state_mut().message_queue.pop() {
-            *self.agent_state_mut() = AgentState::from(&self.turn_state);
+        // Pop from AgentState projection.
+        if let Some(msg) = self.agent_state_mut().message_queue.pop() {
             self.input_mut().input = msg.content;
             self.input_mut().cursor_pos = self.input_mut().input.len();
             self.view_mut().dirty = true;
