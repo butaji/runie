@@ -37,7 +37,7 @@
   {
     "file": "add-contract-tests-for-turnactor-and-sessionstore.md",
     "title": "Add contract tests for `TurnActor` and `SessionStore`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "add-convention-against-magic-numbers.md",

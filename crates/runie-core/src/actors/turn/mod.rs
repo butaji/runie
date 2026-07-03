@@ -1,5 +1,8 @@
 //! TurnActor module — owns agent turn lifecycle and queues.
 
+#[cfg(test)]
+mod tests;
+
 pub mod messages;
 mod speed_window;
 mod state;

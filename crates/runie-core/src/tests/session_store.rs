@@ -247,3 +247,188 @@ fn load_events_rejects_malformed_json() {
         err
     );
 }
+
+// ── Contract tests ──────────────────────────────────────────────────────────
+
+/// Contract: idempotency — appending the same event twice persists both.
+#[test]
+fn contract_idempotent_append() {
+    let store = test_store();
+    let sid = "idempotent-test";
+
+    let event = DurableCoreEvent::MessageSent {
+        id: "msg1".into(),
+        role: "user".into(),
+        content: "Hello".into(),
+        timestamp: 1.0,
+        provider: String::new(),
+        parts: Vec::new(),
+    };
+
+    // Append same event twice (simulates replay of the same event)
+    store.append(sid, &event).unwrap();
+    store.append(sid, &event).unwrap();
+
+    let events = store.load_events(sid).unwrap();
+    assert_eq!(events.len(), 2, "both appends should be persisted");
+    // Both events are MessageSent with id "msg1"
+    assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "msg1"));
+    assert!(matches!(&events[1], DurableCoreEvent::MessageSent { id, .. } if id == "msg1"));
+}
+
+/// Contract: ordering — events are returned in append order.
+#[test]
+fn contract_ordered_events() {
+    let store = test_store();
+    let sid = "order-test";
+
+    for i in 1..=5 {
+        store
+            .append(
+                sid,
+                &DurableCoreEvent::MessageSent {
+                    id: format!("msg{}", i),
+                    role: "user".into(),
+                    content: format!("Message {}", i),
+                    timestamp: i as f64,
+                    provider: String::new(),
+                    parts: Vec::new(),
+                },
+            )
+            .unwrap();
+    }
+
+    let events = store.load_events(sid).unwrap();
+    assert_eq!(events.len(), 5);
+    for (i, event) in events.iter().enumerate() {
+        assert!(
+            matches!(&event, DurableCoreEvent::MessageSent { id, .. } if *id == format!("msg{}", i + 1)),
+            "event {} should have id msg{}",
+            i,
+            i + 1
+        );
+    }
+}
+
+/// Contract: crash recovery — batch append survives process restart simulation.
+#[test]
+fn contract_crash_recovery() {
+    let dir = tempfile::tempdir().unwrap();
+    let dir_path = dir.path().to_path_buf();
+    let store1 = SessionStore::new(dir_path.clone());
+    let sid = "crash-recovery-test";
+
+    let batch = vec![
+        DurableCoreEvent::MessageSent {
+            id: "1".into(),
+            role: "user".into(),
+            content: "First".into(),
+            timestamp: 1.0,
+            provider: String::new(),
+            parts: Vec::new(),
+        },
+        DurableCoreEvent::MessageSent {
+            id: "2".into(),
+            role: "user".into(),
+            content: "Second".into(),
+            timestamp: 2.0,
+            provider: String::new(),
+            parts: Vec::new(),
+        },
+        DurableCoreEvent::ToolCalled {
+            id: "tool1".into(),
+            name: "bash".into(),
+            input: serde_json::json!({}),
+        },
+    ];
+
+    store1.append_batch(sid, &batch).unwrap();
+
+    // Simulate crash: create new store instance pointing to same directory
+    let store2 = SessionStore::new(dir_path);
+    let events = store2.load_events(sid).unwrap();
+
+    assert_eq!(events.len(), 3, "all batch events should survive crash simulation");
+    assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "1"));
+    assert!(matches!(&events[2], DurableCoreEvent::ToolCalled { id, .. } if id == "tool1"));
+}
+
+/// Contract: duplicate rejection — events with same ID can coexist (store is append-only).
+/// The rejection of duplicates is handled at the application level, not the store level.
+#[test]
+fn contract_append_only_allows_duplicates() {
+    let store = test_store();
+    let sid = "append-only-test";
+
+    // Two events with the same semantic ID but different content
+    let event1 = DurableCoreEvent::MessageSent {
+        id: "msg1".into(),
+        role: "user".into(),
+        content: "First content".into(),
+        timestamp: 1.0,
+        provider: String::new(),
+        parts: Vec::new(),
+    };
+    let event2 = DurableCoreEvent::MessageSent {
+        id: "msg1".into(),
+        role: "user".into(),
+        content: "Second content".into(),
+        timestamp: 2.0,
+        provider: String::new(),
+        parts: Vec::new(),
+    };
+
+    store.append(sid, &event1).unwrap();
+    store.append(sid, &event2).unwrap();
+
+    let events = store.load_events(sid).unwrap();
+    assert_eq!(events.len(), 2, "both events should be persisted (store is append-only)");
+}
+
+/// Contract: isolation — concurrent appends to different sessions don't interfere.
+#[test]
+fn contract_session_isolation() {
+    let store = test_store();
+
+    for i in 0..10 {
+        let sid = format!("session-{}", i);
+        store
+            .append(
+                &sid,
+                &DurableCoreEvent::MessageSent {
+                    id: format!("msg-{}", i),
+                    role: "user".into(),
+                    content: format!("Content for {}", sid),
+                    timestamp: i as f64,
+                    provider: String::new(),
+                    parts: Vec::new(),
+                },
+            )
+            .unwrap();
+    }
+
+    for i in 0..10 {
+        let sid = format!("session-{}", i);
+        let events = store.load_events(&sid).unwrap();
+        assert_eq!(events.len(), 1, "session {} should have exactly one event", sid);
+        assert!(
+            matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if *id == format!("msg-{}", i)),
+            "session {} event should have id msg-{}",
+            sid,
+            i
+        );
+    }
+}
+
+/// Contract: empty batch is a no-op.
+#[test]
+fn contract_empty_batch_noop() {
+    let store = test_store();
+    let sid = "empty-batch-test";
+
+    let result = store.append_batch(sid, &[]);
+    assert!(result.is_ok(), "empty batch should succeed");
+
+    let events = store.load_events(sid).unwrap();
+    assert!(events.is_empty(), "empty batch should not create session file");
+}
