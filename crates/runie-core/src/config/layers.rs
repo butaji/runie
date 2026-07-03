@@ -147,12 +147,10 @@ pub fn load_layers_from_paths(global: PathBuf, local: PathBuf) -> Config {
     }
 
     // Extract config from Figment
-    let config: Config = figment
-        .extract()
-        .unwrap_or_else(|e| {
-            tracing::warn!("failed to extract config from figment: {}", e);
-            Config::default()
-        });
+    let config: Config = figment.extract().unwrap_or_else(|e| {
+        tracing::warn!("failed to extract config from figment: {}", e);
+        Config::default()
+    });
 
     config
 }
@@ -172,31 +170,52 @@ mod tests {
     #[test]
     fn denylist_detects_top_level_api_key() {
         let (dir, path) = tmp_file("api_key = \"secret\"\nmodel = \"foo\"\n");
-        let denied = collect_denied_keys(&toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(), "");
-        assert!(denied.contains(&"api_key".to_string()), "should detect api_key: {denied:?}");
+        let denied = collect_denied_keys(
+            &toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(),
+            "",
+        );
+        assert!(
+            denied.contains(&"api_key".to_string()),
+            "should detect api_key: {denied:?}"
+        );
         drop(dir);
     }
 
     #[test]
     fn denylist_detects_nested_base_url() {
         let (dir, path) = tmp_file("[providers.foo]\nbase_url = \"http://localhost\"\n");
-        let denied = collect_denied_keys(&toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(), "");
-        assert!(denied.iter().any(|k| k.contains("base_url")), "should detect base_url: {denied:?}");
+        let denied = collect_denied_keys(
+            &toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(),
+            "",
+        );
+        assert!(
+            denied.iter().any(|k| k.contains("base_url")),
+            "should detect base_url: {denied:?}"
+        );
         drop(dir);
     }
 
     #[test]
     fn denylist_detects_nested_api_key_in_array() {
         let (dir, path) = tmp_file("[[providers]]\napi_key = \"x\"\nname = \"test\"\n");
-        let denied = collect_denied_keys(&toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(), "");
-        assert!(denied.iter().any(|k| k.contains("api_key")), "should detect api_key in array: {denied:?}");
+        let denied = collect_denied_keys(
+            &toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(),
+            "",
+        );
+        assert!(
+            denied.iter().any(|k| k.contains("api_key")),
+            "should detect api_key in array: {denied:?}"
+        );
         drop(dir);
     }
 
     #[test]
     fn denylist_allows_safe_keys() {
         let (dir, path) = tmp_file("model = \"foo\"\ntheme = \"dark\"\nprovider = \"minimax\"\n");
-        let denied = collect_denied_keys(&toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(), "");
+        let denied = collect_denied_keys(
+            &toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap(),
+            "",
+        );
         assert!(denied.is_empty(), "should have no denied keys: {denied:?}");
         drop(dir);
     }
@@ -212,32 +231,43 @@ mod tests {
     #[test]
     fn figment_env_overrides_take_precedence() {
         // Verify RUNIE_PROVIDER/MODEL/THEME override config file values via Figment
-        let (dir, path) = tmp_file("provider = \"file-provider\"\nmodel = \"file-model\"\ntheme = \"file-theme\"\n");
-        
+        let (dir, path) = tmp_file(
+            "provider = \"file-provider\"\nmodel = \"file-model\"\ntheme = \"file-theme\"\n",
+        );
+
         // Set env vars that should override file values
         std::env::set_var("RUNIE_PROVIDER", "env-provider");
         std::env::set_var("RUNIE_MODEL", "env-model");
         std::env::set_var("RUNIE_THEME", "env-theme");
-        
-        let config = load_layers_from_paths(
-            std::env::temp_dir().join("nonexistent.toml"),
-            path,
-        );
-        
+
+        let config = load_layers_from_paths(std::env::temp_dir().join("nonexistent.toml"), path);
+
         // Clean up env vars
         std::env::remove_var("RUNIE_PROVIDER");
         std::env::remove_var("RUNIE_MODEL");
         std::env::remove_var("RUNIE_THEME");
-        
+
         // Figment's Env::prefixed("RUNIE_") maps RUNIE_PROVIDER → provider,
         // RUNIE_MODEL → model, RUNIE_THEME → theme (case-insensitive key match)
-        assert_eq!(config.provider.as_deref(), Some("env-provider"),
-            "RUNIE_PROVIDER env var should override file value, got {:?}", config.provider);
-        assert_eq!(config.model.as_deref(), Some("env-model"),
-            "RUNIE_MODEL env var should override file value, got {:?}", config.model);
-        assert_eq!(config.theme.as_deref(), Some("env-theme"),
-            "RUNIE_THEME env var should override file value, got {:?}", config.theme);
-        
+        assert_eq!(
+            config.provider.as_deref(),
+            Some("env-provider"),
+            "RUNIE_PROVIDER env var should override file value, got {:?}",
+            config.provider
+        );
+        assert_eq!(
+            config.model.as_deref(),
+            Some("env-model"),
+            "RUNIE_MODEL env var should override file value, got {:?}",
+            config.model
+        );
+        assert_eq!(
+            config.theme.as_deref(),
+            Some("env-theme"),
+            "RUNIE_THEME env var should override file value, got {:?}",
+            config.theme
+        );
+
         drop(dir);
     }
 }

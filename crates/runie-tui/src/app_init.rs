@@ -62,7 +62,10 @@ mod tests {
                 Ok(Err(_)) | Err(_) => break,
             }
         }
-        assert_eq!(found, 3, "Expected SkillsLoaded, AuthLoaded, and EnvDetected events");
+        assert_eq!(
+            found, 3,
+            "Expected SkillsLoaded, AuthLoaded, and EnvDetected events"
+        );
 
         handle.shutdown().await;
     }

@@ -3,7 +3,7 @@
 Track tasks in tasks/index.json, details per each in tasks/xxx.md
 
 All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast: unit and e2e.
-No artificail delays in automatic tests!
+No artificial delays in automatic tests!
 
 Each implementation must be live tested in a real terminal tmux session (or a live CLI/headless run for non-TUI tasks) to make sure everything is working as expected.
 
@@ -166,8 +166,15 @@ The build script at `crates/runie-core/build.rs` enforces:
 
 | Check | Scope | Fail-on-violation |
 |-------|-------|-------------------|
-| AppState field access patterns | Production code only | Yes |
-| Magic numbers (>= 1000) | Production code only | Yes |
+| AppState field access patterns | `crates/runie-core/src` only | Yes |
+| Magic numbers (>= 1000) | `crates/runie-core/src` only | Yes |
+
+**Known gaps (see tasks to be done):**
+- The guardrails currently scan only `crates/runie-core/src`, not the full workspace.
+- The orphan-spawn linter unit tests have reversed assertions and treat `let _ = tokio::spawn(...)` as acceptable, which contradicts the SSOT ADR rule against unbounded fire-and-forget spawns.
+- `turn_state` field access on `AppState` is not caught.
+
+Tracked in `tasks/fix-build-rs-lint-scope-and-tests.md` and `tasks/close-turnstate-field-access-guardrail-gap.md`.
 
 **AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
 
@@ -187,4 +194,4 @@ Complexity is an approximate heuristic that counts `if`, `else if`, `match`, `wh
 
 **Best practice:** Keep files small, functions focused, and complexity low. When a function grows beyond ~60 lines, consider extracting helper functions. When a file exceeds ~400 lines, consider splitting or extracting modules.
 
-**Current state:** Several production files exceed these targets (e.g., `apply_to` at 208 lines, `render_thought_marker` at 264 lines, `parse` at 281 lines). Enforcement is tracked in `tasks/enforce-advertised-file-function-complexity-limits.md`.
+**Current state:** Sixteen production files exceed the 500-line target, including `event/mod.rs` (1,253 lines), `bootstrap.rs` (789 lines), `config_impl.rs` (772 lines), `ui_actor/mod.rs` (615 lines), `mock.rs` (662 lines), and `openai/protocol.rs` (669 lines). Several functions also exceed the 100-line clippy default, including `InputMsg::apply_to` (204 lines), `DurableCoreEvent::try_from_event` (281 lines), `Event::kind` (231 lines), and `Event::category` (230 lines). Enforcement is tracked in `tasks/enforce-advertised-file-function-complexity-limits.md`.

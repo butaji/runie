@@ -302,7 +302,10 @@ impl AppState {
             _ => {
                 // Cache stale or absent — rebuild.
                 self.ensure_fresh();
-                self.view().cached_feed.clone().expect("cached_feed must be set after ensure_fresh")
+                self.view()
+                    .cached_feed
+                    .clone()
+                    .expect("cached_feed must be set after ensure_fresh")
             }
         };
         let (mouse_target, hovered_element) = snapshot_mouse_impl(

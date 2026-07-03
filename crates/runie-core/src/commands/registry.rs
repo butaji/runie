@@ -301,7 +301,6 @@ impl AppState {
 
 #[cfg(test)]
 mod slash_parsing_tests {
-    
 
     #[test]
     fn simple_command_with_single_arg() {

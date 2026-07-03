@@ -68,17 +68,19 @@ mod tests {
         state.update(crate::Event::Response {
             id: "req.0".to_string(),
             content: "Hello ".to_string(),
-        
-        role: String::new(),
-        timestamp: 0.0,
-        provider: String::new(),});
+
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        });
         state.update(crate::Event::Response {
             id: "req.0".to_string(),
             content: "World".to_string(),
-        
-        role: String::new(),
-        timestamp: 0.0,
-        provider: String::new(),});
+
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        });
 
         let feed = LazyCache::feed(&state);
         let agent_msgs: Vec<_> = feed

@@ -3,13 +3,11 @@
 use crate::tests::ensure_mock_provider;
 use crate::{agent_command_builder::agent_cmd, run_agent_turn};
 use runie_core::event::Event;
-use runie_core::permissions::{
-    AutoAllowSink, FileAccessAsk, PermissionManager,
-};
 #[cfg(feature = "mcp")]
 use runie_core::permissions::DefaultToolApprove;
 #[cfg(feature = "git")]
 use runie_core::permissions::GitTrackedWriteApprove;
+use runie_core::permissions::{AutoAllowSink, FileAccessAsk, PermissionManager};
 use runie_testing::event_helpers::count_events;
 use runie_testing::{capture_events, mock_provider};
 use std::sync::Arc;
@@ -20,12 +18,11 @@ use std::sync::Arc;
 async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("list files").build();
+    let cmd = agent_cmd("list files").build();
 
     let (events, emit) = capture_events();
-    let mut policies: Vec<Box<dyn runie_core::permissions::PermissionPolicy>> = vec![
-        Box::new(FileAccessAsk::new()),
-    ];
+    let mut policies: Vec<Box<dyn runie_core::permissions::PermissionPolicy>> =
+        vec![Box::new(FileAccessAsk::new())];
     #[cfg(feature = "mcp")]
     policies.push(Box::new(DefaultToolApprove::new()));
     #[cfg(feature = "git")]

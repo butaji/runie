@@ -242,8 +242,7 @@ fn serde_roundtrip_preserves_tree() {
     let json = serde_json::to_string(&tree).expect("should serialize");
 
     // Deserialize from JSON
-    let restored: SessionTree =
-        serde_json::from_str(&json).expect("should deserialize");
+    let restored: SessionTree = serde_json::from_str(&json).expect("should deserialize");
 
     // Verify structure is preserved
     assert_eq!(restored.node_count(), tree.node_count());

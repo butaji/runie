@@ -5,8 +5,8 @@ pub mod run;
 pub use run::{run_compact, run_fork, run_name, run_plan};
 
 use crate::actors::{PermissionMsg, SessionMsg};
-use crate::commands::CommandResult;
 use crate::commands::dsl::handlers::NamedHandler;
+use crate::commands::CommandResult;
 use crate::model::AppState;
 
 // ── Form field defaults ──────────────────────────────────────────────────────
@@ -26,49 +26,73 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
 fn register_session_form_handlers(
     registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry,
 ) {
-    registry.register("save", NamedHandler::FormWithHandler {
-        title: "Save Session",
-        fields: &[("Name", "session-name", "name")],
-        handler: run::run_save,
-    });
-    registry.register("load", NamedHandler::FormWithHandler {
-        title: "Load Session",
-        fields: &[("Name", "session-name", "name")],
-        handler: run::run_load,
-    });
-    registry.register("delete", NamedHandler::FormWithHandler {
-        title: "Delete Session",
-        fields: &[("Name", "session-name", "name")],
-        handler: run::run_delete,
-    });
-    registry.register("export", NamedHandler::FormWithHandler {
-        title: "Export Session",
-        fields: &[("Path", "session.json", "path")],
-        handler: run::run_export,
-    });
-    registry.register("import", NamedHandler::FormWithHandler {
-        title: "Import Session",
-        fields: &[("Path", "session.json", "path")],
-        handler: run::run_import,
-    });
-    registry.register("compact", NamedHandler::FormWithHandler {
-        title: "Compact Context",
-        fields: &[
-            ("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"),
-            ("Focus", "optional focus keyword", "focus"),
-        ],
-        handler: run::run_compact,
-    });
-    registry.register("fork", NamedHandler::FormWithHandler {
-        title: "Fork Session",
-        fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")],
-        handler: run::run_fork,
-    });
-    registry.register("name", NamedHandler::FormWithHandler {
-        title: "Set Session Name",
-        fields: &[("Name", "session-name", "name")],
-        handler: run::run_name,
-    });
+    registry.register(
+        "save",
+        NamedHandler::FormWithHandler {
+            title: "Save Session",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_save,
+        },
+    );
+    registry.register(
+        "load",
+        NamedHandler::FormWithHandler {
+            title: "Load Session",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_load,
+        },
+    );
+    registry.register(
+        "delete",
+        NamedHandler::FormWithHandler {
+            title: "Delete Session",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_delete,
+        },
+    );
+    registry.register(
+        "export",
+        NamedHandler::FormWithHandler {
+            title: "Export Session",
+            fields: &[("Path", "session.json", "path")],
+            handler: run::run_export,
+        },
+    );
+    registry.register(
+        "import",
+        NamedHandler::FormWithHandler {
+            title: "Import Session",
+            fields: &[("Path", "session.json", "path")],
+            handler: run::run_import,
+        },
+    );
+    registry.register(
+        "compact",
+        NamedHandler::FormWithHandler {
+            title: "Compact Context",
+            fields: &[
+                ("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"),
+                ("Focus", "optional focus keyword", "focus"),
+            ],
+            handler: run::run_compact,
+        },
+    );
+    registry.register(
+        "fork",
+        NamedHandler::FormWithHandler {
+            title: "Fork Session",
+            fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")],
+            handler: run::run_fork,
+        },
+    );
+    registry.register(
+        "name",
+        NamedHandler::FormWithHandler {
+            title: "Set Session Name",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_name,
+        },
+    );
 }
 
 /// Register simple session commands.
@@ -96,8 +120,12 @@ pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
         Ok(sessions) if sessions.is_empty() => {
             CommandResult::Message(crate::ui_strings::session::NO_SAVED_SESSIONS.into())
         }
-        Ok(sessions) => CommandResult::Message(crate::ui_strings::session::saved_sessions(&sessions)),
-        Err(e) => CommandResult::Message(crate::ui_strings::session::session_list_error(&e.to_string())),
+        Ok(sessions) => {
+            CommandResult::Message(crate::ui_strings::session::saved_sessions(&sessions))
+        }
+        Err(e) => CommandResult::Message(crate::ui_strings::session::session_list_error(
+            &e.to_string(),
+        )),
     }
 }
 
@@ -246,7 +274,8 @@ fn build_session_info(
 
 fn project_trust_status(state: &AppState) -> &'static str {
     let cwd = std::env::current_dir().unwrap_or_default();
-    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    let cwd_utf8 =
+        camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
     // Read from the AppState projection populated via Event::TrustLoaded.
     // In test mode (no actor handles), trust_decisions may be empty;
     // fall back to the default trust status.
@@ -285,9 +314,7 @@ pub fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     }
 }
 
-fn find_most_recent_from_store(
-    store: &crate::session::store::SessionStore,
-) -> Option<String> {
+fn find_most_recent_from_store(store: &crate::session::store::SessionStore) -> Option<String> {
     let names = store.list().ok()?;
     let mut most_recent = None;
     let mut most_recent_time = 0.0f64;

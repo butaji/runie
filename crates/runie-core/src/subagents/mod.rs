@@ -26,8 +26,8 @@
 //! - `SubagentRegistry::load_user_overrides()` extends the registry with types
 //!   from `~/.runie/agents/`.  User types override built-ins of the same name.
 
-use std::collections::HashMap;
 use camino::Utf8PathBuf;
+use std::collections::HashMap;
 
 use tinytemplate::TinyTemplate;
 
@@ -232,7 +232,8 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
         "compact" => PromptMode::Compact,
         _ => PromptMode::Full,
     };
-    let permission_mode = crate::permissions::parse_permission_mode(&fm_str(&fm, "permission_mode"));
+    let permission_mode =
+        crate::permissions::parse_permission_mode(&fm_str(&fm, "permission_mode"));
     let agents_md = fm_str(&fm, "agents_md").parse::<bool>().unwrap_or(false);
     let model = fm_str(&fm, "model");
     let model = if model.is_empty() {
@@ -471,14 +472,23 @@ Third paragraph.
     fn convert_braces_converts_template_syntax() {
         assert_eq!(convert_braces("{{var}}"), "{var}");
         assert_eq!(convert_braces("{{task}} is done"), "{task} is done");
-        assert_eq!(convert_braces("task: {{task}}, user: {{user}}"), "task: {task}, user: {user}");
+        assert_eq!(
+            convert_braces("task: {{task}}, user: {{user}}"),
+            "task: {task}, user: {user}"
+        );
     }
 
     #[test]
     fn convert_braces_preserves_single_braces() {
         assert_eq!(convert_braces("{single}"), "{single}");
-        assert_eq!(convert_braces("{{double}} and {single}"), "{double} and {single}");
-        assert_eq!(convert_braces("text with {brace} inside"), "text with {brace} inside");
+        assert_eq!(
+            convert_braces("{{double}} and {single}"),
+            "{double} and {single}"
+        );
+        assert_eq!(
+            convert_braces("text with {brace} inside"),
+            "text with {brace} inside"
+        );
     }
 
     #[test]

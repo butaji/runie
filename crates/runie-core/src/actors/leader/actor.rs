@@ -12,10 +12,10 @@ use tokio::sync::mpsc;
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
-    InputActor, LEADER_CMD_CHANNEL_CAPACITY, RactorConfigActor, RactorConfigHandle,
-    RactorFffIndexerActor, RactorFffIndexerHandle, RactorInputHandle, RactorIoActor,
-    RactorIoHandle, RactorPermissionActor, RactorPermissionHandle, RactorProviderActor,
-    RactorProviderHandle, RactorSessionActor, RactorSessionHandle,
+    InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor,
+    RactorFffIndexerHandle, RactorInputHandle, RactorIoActor, RactorIoHandle,
+    RactorPermissionActor, RactorPermissionHandle, RactorProviderActor, RactorProviderHandle,
+    RactorSessionActor, RactorSessionHandle, LEADER_CMD_CHANNEL_CAPACITY,
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
@@ -98,7 +98,8 @@ impl Leader {
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<LeaderHandle> {
         let bus = EventBus::<CoreEvent>::new(1000);
-        self.start_with_bus(provider_factory, agent_factory, bus).await
+        self.start_with_bus(provider_factory, agent_factory, bus)
+            .await
     }
 
     /// Start with a pre-created event bus.
@@ -130,12 +131,20 @@ impl Leader {
         let tcp_join = if let Some(ref addr) = self.config.tcp_addr {
             let bus_clone = bus.clone();
             let addr = addr.clone();
-            Some(tokio::spawn(async move { Self::listen_tcp(&addr, bus_clone).await }))
+            Some(tokio::spawn(async move {
+                Self::listen_tcp(&addr, bus_clone).await
+            }))
         } else {
             None
         };
 
-        Ok(LeaderHandle::new(cmd_tx, bus, handles, Some(coordinator_join), tcp_join))
+        Ok(LeaderHandle::new(
+            cmd_tx,
+            bus,
+            handles,
+            Some(coordinator_join),
+            tcp_join,
+        ))
     }
 
     /// Spawn all child actors and capture all cells and join handles for graceful shutdown.
@@ -150,7 +159,8 @@ impl Leader {
         let (provider_h, provider_cell, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
         let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await?;
-        let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone()).await?;
+        let (session_h, session_cell, session_join) =
+            RactorSessionActor::spawn(bus.clone()).await?;
         let (permission_h, permission_cell, permission_join) =
             RactorPermissionActor::spawn(bus.clone(), config_h.clone()).await?;
         let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await?;
@@ -162,7 +172,10 @@ impl Leader {
         )
         .await
         .map_err(|e| anyhow::anyhow!("FffIndexerActor spawn failed: {}", e))?;
-        let SpawnedAgent { handle: agent_handle, join: agent_join } = agent_factory
+        let SpawnedAgent {
+            handle: agent_handle,
+            join: agent_join,
+        } = agent_factory
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
         let all_joins = vec![
@@ -403,7 +416,10 @@ mod tests {
 
         // No events should be published
         let timeout = tokio::time::timeout(std::time::Duration::from_millis(50), sub.recv());
-        assert!(timeout.await.is_err(), "Expected no events for empty/unknown lines");
+        assert!(
+            timeout.await.is_err(),
+            "Expected no events for empty/unknown lines"
+        );
     }
 
     /// Layer 1: BufReader::read_line handles multi-byte UTF-8 split across reads.
@@ -417,8 +433,6 @@ mod tests {
     /// UTF-8 characters within a single line read.
     #[tokio::test]
     async fn bufreader_preserves_split_utf8() {
-        
-
         // "hello \xe4\xb8\x96\xe7\x95\x8c\n" = "hello 世界\n"
         // "世" = [0xE4, 0xB8, 0x96] (3 bytes), "界" = [0xE7, 0x95, 0x8C] (3 bytes)
         let full = b"hello \xe4\xb8\x96\xe7\x95\x8c\n";

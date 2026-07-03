@@ -243,7 +243,8 @@ impl AppState {
 
             // Only deliver follow-ups in All mode (matching RactorTurnActor)
             if follow_up_mode == DeliveryMode::All {
-                let mut q = TurnQueue::new(std::mem::take(&mut self.turn_state_mut().message_queue));
+                let mut q =
+                    TurnQueue::new(std::mem::take(&mut self.turn_state_mut().message_queue));
                 if let Some(r) = q.pop_all_follow_ups() {
                     self.turn_state_mut().message_queue = q.into_inner();
                     let id = self.next_id();

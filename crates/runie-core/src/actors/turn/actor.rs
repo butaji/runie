@@ -7,12 +7,12 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
-use tracing::instrument;
 use crate::Event;
+use tracing::instrument;
 
+use super::handlers;
 use super::messages::TurnMsg;
 use super::types::TurnActorState;
-use super::handlers;
 
 /// TurnActor using ractor State pattern.
 pub struct RactorTurnActor;
@@ -41,24 +41,32 @@ impl Actor for RactorTurnActor {
         match msg {
             TurnMsg::RunIfQueued => handlers::handle_run_if_queued(state),
             TurnMsg::AbortTurn => handlers::handle_abort_turn(state),
-            TurnMsg::SubmitUserMessage { content, id, source } => {
-                handlers::handle_submit_user_message(state, content, id, source)
-            }
+            TurnMsg::SubmitUserMessage {
+                content,
+                id,
+                source,
+            } => handlers::handle_submit_user_message(state, content, id, source),
             TurnMsg::QueueSteering { content } => handlers::handle_queue_steering(state, content),
             TurnMsg::QueueFollowUp { content } => handlers::handle_queue_follow_up(state, content),
             TurnMsg::AbortQueue => handlers::handle_abort_queue(state),
             TurnMsg::ClearQueues => handlers::handle_clear_queues(state),
-            TurnMsg::DeliverQueued { steering_mode, follow_up_mode, reply } => {
-                handlers::handle_deliver_queued(state, steering_mode, follow_up_mode, reply)
-            }
+            TurnMsg::DeliverQueued {
+                steering_mode,
+                follow_up_mode,
+                reply,
+            } => handlers::handle_deliver_queued(state, steering_mode, follow_up_mode, reply),
             TurnMsg::Dequeue => handlers::handle_dequeue(state),
             TurnMsg::Thinking { id } => handlers::handle_thinking(state, id),
             TurnMsg::ThoughtDone { id: _ } => handlers::handle_thought_done(state),
             TurnMsg::ToolStart { id, name } => handlers::handle_tool_start(state, id, name),
-            TurnMsg::ToolEnd { id, duration_secs, output } => {
-                handlers::handle_tool_end(state, id, duration_secs, output)
+            TurnMsg::ToolEnd {
+                id,
+                duration_secs,
+                output,
+            } => handlers::handle_tool_end(state, id, duration_secs, output),
+            TurnMsg::ResponseDelta { id, content } => {
+                handlers::handle_response_delta(state, id, content)
             }
-            TurnMsg::ResponseDelta { id, content } => handlers::handle_response_delta(state, id, content),
             TurnMsg::TurnComplete { id, duration_secs } => {
                 handlers::handle_turn_complete(state, id, duration_secs)
             }

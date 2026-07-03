@@ -59,8 +59,14 @@ mod tests {
 
     #[test]
     fn config_scope_serialization() {
-        assert_eq!(serde_json::to_string(&ConfigScope::Global).unwrap(), "\"global\"");
-        assert_eq!(serde_json::to_string(&ConfigScope::Project).unwrap(), "\"project\"");
+        assert_eq!(
+            serde_json::to_string(&ConfigScope::Global).unwrap(),
+            "\"global\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ConfigScope::Project).unwrap(),
+            "\"project\""
+        );
     }
 
     #[test]
@@ -87,8 +93,14 @@ mod tests {
     #[test]
     fn config_scope_from_str() {
         use std::str::FromStr;
-        assert_eq!(ConfigScope::from_str("global").unwrap(), ConfigScope::Global);
-        assert_eq!(ConfigScope::from_str("project").unwrap(), ConfigScope::Project);
+        assert_eq!(
+            ConfigScope::from_str("global").unwrap(),
+            ConfigScope::Global
+        );
+        assert_eq!(
+            ConfigScope::from_str("project").unwrap(),
+            ConfigScope::Project
+        );
         assert!(ConfigScope::from_str("invalid").is_err());
     }
 

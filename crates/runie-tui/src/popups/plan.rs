@@ -2,13 +2,7 @@
 //!
 //! Displays the current plan markdown and indicates that write tools are blocked.
 
-use ratatui::{
-    layout::Rect,
-    prelude::Text,
-    style::Style,
-    text::Line,
-    Frame,
-};
+use ratatui::{layout::Rect, prelude::Text, style::Style, text::Line, Frame};
 use runie_core::Snapshot;
 use tui_popup::Popup;
 

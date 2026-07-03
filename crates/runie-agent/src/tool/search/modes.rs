@@ -32,13 +32,7 @@ pub(crate) fn search_files(
 
     let items: Vec<SearchItem> = results
         .into_iter()
-        .map(|r| {
-            build_search_item(
-                r.relative_path.clone(),
-                r.git_status,
-                r.score,
-            )
-        })
+        .map(|r| build_search_item(r.relative_path.clone(), r.git_status, r.score))
         .collect();
 
     build_search_output(query, None, items.len(), items, indexed, start)
@@ -79,13 +73,7 @@ pub(crate) fn search_glob(
 
     let items: Vec<SearchItem> = results
         .into_iter()
-        .map(|r| {
-            build_search_item(
-                r.relative_path.clone(),
-                r.git_status,
-                r.score,
-            )
-        })
+        .map(|r| build_search_item(r.relative_path.clone(), r.git_status, r.score))
         .collect();
 
     build_search_output(pattern, Some("glob"), items.len(), items, indexed, start)

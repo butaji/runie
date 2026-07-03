@@ -149,7 +149,11 @@ mod tests {
             ToolStatus::Success => {}
             ToolStatus::Error => {
                 // Sandbox not available on this platform - that's ok
-                assert!(output.content.contains("unavailable") || output.content.contains("Sandbox") || output.content.contains("sandboxed"));
+                assert!(
+                    output.content.contains("unavailable")
+                        || output.content.contains("Sandbox")
+                        || output.content.contains("sandboxed")
+                );
             }
             _ => panic!("Unexpected status: {:?}", output.status),
         }

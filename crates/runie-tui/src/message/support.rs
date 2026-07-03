@@ -6,8 +6,8 @@ use ratatui::text::{Line, Span};
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
-    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete,
-    GLYPH_BULLET, GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_ERROR,
+    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_BULLET,
+    GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_ERROR,
 };
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 use unicode_width::UnicodeWidthStr;
@@ -55,7 +55,8 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
     let label = format_tool_label(name, args);
     let lines = vec![
-        Line::from(format!("{} {} {:.1}s", GLYPH_SPINNER, label, duration_secs)).style(style_tool_running()),
+        Line::from(format!("{} {} {:.1}s", GLYPH_SPINNER, label, duration_secs))
+            .style(style_tool_running()),
     ];
     add_lr_margins_to_lines(lines)
 }
@@ -217,7 +218,12 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
         let wrapped = textwrap::wrap(&span.content, max_w);
         return wrapped
             .into_iter()
-            .map(|line| vec![MdSpan { content: line.into_owned(), style: span.style }])
+            .map(|line| {
+                vec![MdSpan {
+                    content: line.into_owned(),
+                    style: span.style,
+                }]
+            })
             .collect();
     }
 
@@ -246,7 +252,10 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
                 if !current_row.is_empty() {
                     result.push(std::mem::take(&mut current_row));
                 }
-                current_row.push(MdSpan { content: line_owned, style: span.style });
+                current_row.push(MdSpan {
+                    content: line_owned,
+                    style: span.style,
+                });
                 current_width = str_width(&current_row[0].content);
             }
         } else {

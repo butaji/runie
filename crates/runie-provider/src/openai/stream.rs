@@ -2,7 +2,6 @@
 //!
 //! Uses the `ProviderProtocol` trait to handle SSE frames.
 
-
 use super::protocol::{OpenAiFrame, OpenAiProtocol, OpenAiState};
 use super::request::build_request_body;
 use super::types::ErrorBodyJson;
@@ -20,7 +19,9 @@ pub use super::protocol::ToolAccum;
 
 /// Parse one SSE data-line into either a protocol frame or an error.
 /// Handles regular SSE frames ("data: {...}") and fixture error lines ("error: {...}").
-fn parse_sse_line(line: &str) -> Option<Result<OpenAiFrame, runie_core::provider_event::ModelError>> {
+fn parse_sse_line(
+    line: &str,
+) -> Option<Result<OpenAiFrame, runie_core::provider_event::ModelError>> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return None;
@@ -38,8 +39,6 @@ fn parse_sse_line(line: &str) -> Option<Result<OpenAiFrame, runie_core::provider
     }
     frame.map(Ok)
 }
-
-
 
 pub fn openai_stream(
     provider: OpenAiProvider,
@@ -195,7 +194,10 @@ fn parse_sse_result(
     match result {
         Ok(reqwest_eventsource::Event::Open) => None,
         Ok(reqwest_eventsource::Event::Message(msg)) => Some(Ok(msg.data)),
-        Err(e) => Some(Err(anyhow::anyhow!("{:?}", crate::retry::from_sse_error(&e)))),
+        Err(e) => Some(Err(anyhow::anyhow!(
+            "{:?}",
+            crate::retry::from_sse_error(&e)
+        ))),
     }
 }
 
@@ -250,12 +252,12 @@ fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::Mod
         };
     }
     if code.contains("context_length") || code.contains("token_limit") {
-        return ModelError::ContextLength {
-            limit: 0,
-            used: 0,
-        };
+        return ModelError::ContextLength { limit: 0, used: 0 };
     }
-    if code.contains("content_filter") || code.contains("refusal") || type_.contains("content_filter") {
+    if code.contains("content_filter")
+        || code.contains("refusal")
+        || type_.contains("content_filter")
+    {
         return ModelError::Refusal(msg.to_string());
     }
     ModelError::Other(msg.to_string())

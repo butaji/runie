@@ -8,7 +8,9 @@ use crate::update::agent::thought::{plan_thought, ThoughtPlan};
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
         // Idempotent: skip if already streaming with the same request_id.
-        if self.turn_state().streaming && self.turn_state().current_request_id.as_deref() == Some(&id) {
+        if self.turn_state().streaming
+            && self.turn_state().current_request_id.as_deref() == Some(&id)
+        {
             return;
         }
         // Mutate authoritative TurnState, then sync to AgentState projection.
@@ -117,11 +119,7 @@ impl AppState {
         self.turn_state_mut().intermediate_step_count += 1;
         self.turn_state_mut().current_action = Some(format!("Running {}", name));
 
-        let tool_id = format!(
-            "tool.{}.{}",
-            id,
-            self.turn_state().intermediate_step_count
-        );
+        let tool_id = format!("tool.{}.{}", id, self.turn_state().intermediate_step_count);
 
         *self.agent_state_mut() = AgentState::from(self.turn_state());
 
@@ -213,10 +211,7 @@ impl AppState {
         if content.is_empty() {
             return;
         }
-        let n = self
-            .turn_state_mut()
-            .token_tracker
-            .estimate_output(content);
+        let n = self.turn_state_mut().token_tracker.estimate_output(content);
         // Update authoritative TurnState and sync only the token fields to AgentState.
         self.turn_state_mut().tokens_out += n;
         self.turn_state_mut().turn_tokens_out += n;

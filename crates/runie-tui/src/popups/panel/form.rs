@@ -188,7 +188,11 @@ fn push_toggle_body<'a>(
 /// Render a toggle (checkbox) line in the form body. Toggle items are
 /// the universal checkbox in the DSL — no separate Checkbox variant.
 fn push_toggle_item<'a>(body: &mut Vec<Line<'a>>, label: &'a str, checked: bool, is_active: bool) {
-    let mark = if checked { GLYPH_CHECKED } else { GLYPH_UNCHECKED };
+    let mark = if checked {
+        GLYPH_CHECKED
+    } else {
+        GLYPH_UNCHECKED
+    };
     let text = format!("  {} {}", mark, label);
     let style = if is_active {
         Style::default()
@@ -357,7 +361,10 @@ fn build_input_box<'a>(
     let inner_w = box_w.saturating_sub(4);
     let spans = render_tui_input(&input, placeholder, is_active, inner_w);
 
-    let mut all_spans = vec![Span::styled("  ".to_string() + &BOX_VERTICAL.to_string(), style_border())];
+    let mut all_spans = vec![Span::styled(
+        "  ".to_string() + &BOX_VERTICAL.to_string(),
+        style_border(),
+    )];
     all_spans.extend(spans);
     all_spans.push(Span::styled(BOX_VERTICAL.to_string(), style_border()));
     (top, all_spans, bot)
@@ -379,7 +386,10 @@ fn render_tui_input<'a>(
         } else {
             placeholder.to_owned()
         };
-        return vec![Span::styled(pad_to_width(&text, avail), style_placeholder())];
+        return vec![Span::styled(
+            pad_to_width(&text, avail),
+            style_placeholder(),
+        )];
     }
 
     let cursor_pos = cursor.min(value.len());
@@ -387,15 +397,27 @@ fn render_tui_input<'a>(
     let after = &value[cursor_pos..];
 
     let val_style = input_value_style(value, is_active);
-    let cursor_style = if is_active { val_style } else { style_placeholder() };
+    let cursor_style = if is_active {
+        val_style
+    } else {
+        style_placeholder()
+    };
 
     // Compute scroll offset for long text
     let scroll = compute_scroll(value, cursor_pos, avail);
 
     // Build visible segments
     let visible_before = visible_substring(before, scroll, avail.saturating_sub(1));
-    let cursor_char = if is_active { "▏".to_string() } else { " ".to_string() };
-    let visible_after = visible_substring(after, 0, avail.saturating_sub(visible_before.chars().count() + 1));
+    let cursor_char = if is_active {
+        "▏".to_string()
+    } else {
+        " ".to_string()
+    };
+    let visible_after = visible_substring(
+        after,
+        0,
+        avail.saturating_sub(visible_before.chars().count() + 1),
+    );
 
     let mut spans = Vec::new();
 
@@ -434,10 +456,7 @@ fn compute_scroll(text: &str, cursor: usize, avail: usize) -> usize {
 
 /// Extract a visible substring from text starting at offset.
 fn visible_substring(text: &str, start: usize, max_len: usize) -> String {
-    text.chars()
-        .skip(start)
-        .take(max_len)
-        .collect()
+    text.chars().skip(start).take(max_len).collect()
 }
 
 #[cfg(test)]

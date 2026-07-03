@@ -84,3 +84,9 @@ Before marking this task complete, confirm all three validation gates:
 - [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found additional `tokio::time::sleep` calls in automatic tests in `tool/cache.rs`, `actors/turn/tests.rs`, `runie-agent/src/actor/tests.rs`, `runie-agent/src/tests/permissions.rs`, `runie-tui/src/bootstrap.rs`, and several TUI test files. The `scripts/tmux-smoke-test.sh` script also still exists.
+
+See `tasks/purge-shell-and-sleep-from-tests.md` for the remaining work.

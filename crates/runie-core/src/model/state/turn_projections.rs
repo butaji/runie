@@ -89,10 +89,13 @@ mod tests {
     /// Push a steering message to turn_state.message_queue (authoritative source).
     /// The projection to agent_state.message_queue happens via the apply methods.
     fn push_steering(state: &mut AppState, content: &str) {
-        state.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
-            content: content.into(),
-            kind: Steering,
-        });
+        state
+            .turn_state_mut()
+            .message_queue
+            .push(crate::model::QueuedMessage {
+                content: content.into(),
+                kind: Steering,
+            });
         // Sync to agent_state via the projection pattern.
         *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
     }
@@ -100,10 +103,13 @@ mod tests {
     /// Push a follow-up message to turn_state.message_queue (authoritative source).
     /// The projection to agent_state.message_queue happens via the apply methods.
     fn push_follow_up(state: &mut AppState, content: &str) {
-        state.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
-            content: content.into(),
-            kind: FollowUp,
-        });
+        state
+            .turn_state_mut()
+            .message_queue
+            .push(crate::model::QueuedMessage {
+                content: content.into(),
+                kind: FollowUp,
+            });
         // Sync to agent_state via the projection pattern.
         *state.agent_state_mut() = crate::model::AgentState::from(&state.turn_state);
     }
@@ -120,7 +126,10 @@ mod tests {
         // Steering "guide" removed; follow-up "extra" kept
         assert_eq!(state.agent_state().message_queue.len(), 1);
         assert_eq!(state.agent_state().message_queue[0].content, "extra");
-        assert!(matches!(state.agent_state().message_queue[0].kind, FollowUp));
+        assert!(matches!(
+            state.agent_state().message_queue[0].kind,
+            FollowUp
+        ));
         // Delivered message added to session and request queue
         assert_eq!(state.session().messages.len(), 1);
         assert_eq!(state.session().messages[0].content(), "guide");
@@ -147,7 +156,11 @@ mod tests {
 
         // Only "guide a" removed; "guide b" and "extra" kept
         assert_eq!(state.agent_state().message_queue.len(), 2);
-        assert!(state.agent_state().message_queue.iter().all(|m| m.content != "guide a"));
+        assert!(state
+            .agent_state()
+            .message_queue
+            .iter()
+            .all(|m| m.content != "guide a"));
     }
 
     #[test]
@@ -162,7 +175,10 @@ mod tests {
         // Follow-up "extra" removed; steering "guide" kept
         assert_eq!(state.agent_state().message_queue.len(), 1);
         assert_eq!(state.agent_state().message_queue[0].content, "guide");
-        assert!(matches!(state.agent_state().message_queue[0].kind, Steering));
+        assert!(matches!(
+            state.agent_state().message_queue[0].kind,
+            Steering
+        ));
         assert_eq!(state.session().messages.len(), 1);
         assert_eq!(state.agent_state().request_queue.len(), 1);
     }
@@ -187,7 +203,11 @@ mod tests {
 
         // Only "a" removed; "b" and "guide" kept
         assert_eq!(state.agent_state().message_queue.len(), 2);
-        assert!(state.agent_state().message_queue.iter().all(|m| m.content != "a"));
+        assert!(state
+            .agent_state()
+            .message_queue
+            .iter()
+            .all(|m| m.content != "a"));
     }
 
     #[test]
@@ -215,8 +235,14 @@ mod tests {
         state.apply_queue_follow_up_added("q.0".into(), "follow up content".into());
 
         assert_eq!(state.agent_state().message_queue.len(), 1);
-        assert_eq!(state.agent_state().message_queue[0].content, "follow up content");
-        assert!(matches!(state.agent_state().message_queue[0].kind, FollowUp));
+        assert_eq!(
+            state.agent_state().message_queue[0].content,
+            "follow up content"
+        );
+        assert!(matches!(
+            state.agent_state().message_queue[0].kind,
+            FollowUp
+        ));
     }
 
     #[test]
@@ -227,8 +253,14 @@ mod tests {
         state.apply_queue_steering_added("q.0".into(), "steering content".into());
 
         assert_eq!(state.agent_state().message_queue.len(), 1);
-        assert_eq!(state.agent_state().message_queue[0].content, "steering content");
-        assert!(matches!(state.agent_state().message_queue[0].kind, Steering));
+        assert_eq!(
+            state.agent_state().message_queue[0].content,
+            "steering content"
+        );
+        assert!(matches!(
+            state.agent_state().message_queue[0].kind,
+            Steering
+        ));
     }
 
     #[test]
@@ -361,10 +393,12 @@ impl AppState {
     /// Adds the follow-up to the message queue and syncs projection.
     pub(crate) fn apply_queue_follow_up_added(&mut self, _id: String, content: String) {
         use crate::model::QueuedMessageKind;
-        self.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
-            content,
-            kind: QueuedMessageKind::FollowUp,
-        });
+        self.turn_state_mut()
+            .message_queue
+            .push(crate::model::QueuedMessage {
+                content,
+                kind: QueuedMessageKind::FollowUp,
+            });
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
@@ -374,10 +408,12 @@ impl AppState {
     /// Adds the steering to the message queue and syncs projection.
     pub(crate) fn apply_queue_steering_added(&mut self, _id: String, content: String) {
         use crate::model::QueuedMessageKind;
-        self.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
-            content,
-            kind: QueuedMessageKind::Steering,
-        });
+        self.turn_state_mut()
+            .message_queue
+            .push(crate::model::QueuedMessage {
+                content,
+                kind: QueuedMessageKind::Steering,
+            });
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;

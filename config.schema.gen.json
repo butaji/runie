@@ -1,0 +1,613 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Config",
+  "description": "Canonical config type for `~/.runie/config.toml`.",
+  "type": "object",
+  "properties": {
+    "fff": {
+      "description": "FFF full-text search settings.",
+      "$ref": "#/$defs/FffSection",
+      "default": {
+        "default_limit": 50,
+        "max_file_size_bytes": 2097152,
+        "scan_timeout_secs": 30
+      }
+    },
+    "hooks": {
+      "description": "Hook commands registered by event name.",
+      "$ref": "#/$defs/HooksConfig",
+      "default": {
+        "commands": {}
+      }
+    },
+    "http": {
+      "description": "HTTP timeouts for provider network calls.",
+      "$ref": "#/$defs/HttpSection",
+      "default": {
+        "connect_timeout_secs": 10,
+        "request_timeout_secs": 120
+      }
+    },
+    "keybindings": {
+      "description": "User-defined keybindings that override defaults.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "mcp": {
+      "description": "MCP server configurations.",
+      "$ref": "#/$defs/McpSection",
+      "default": {
+        "servers": {}
+      }
+    },
+    "model": {
+      "description": "Legacy model field (use `[models].default` instead).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model_providers": {
+      "description": "Provider configurations.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ModelProvider"
+      },
+      "default": {}
+    },
+    "models": {
+      "description": "Model configurations.",
+      "$ref": "#/$defs/ModelsSection",
+      "default": {
+        "default": null,
+        "scoped": null
+      }
+    },
+    "permissions": {
+      "description": "Permission settings.",
+      "$ref": "#/$defs/PermissionsSection",
+      "default": {
+        "mode": "default",
+        "rules": []
+      }
+    },
+    "prompts": {
+      "description": "Prompt templates.",
+      "$ref": "#/$defs/PromptsSection",
+      "default": {
+        "custom": null,
+        "default": null
+      }
+    },
+    "provider": {
+      "description": "Default provider name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "retry": {
+      "description": "Retry policy for transient provider errors.",
+      "$ref": "#/$defs/RetrySection",
+      "default": {
+        "initial_delay_ms": 100,
+        "max_attempts": 5,
+        "max_delay_ms": 30000,
+        "multiplier": 2.0
+      }
+    },
+    "sandbox": {
+      "description": "OS-level sandbox settings for bash tool execution.",
+      "$ref": "#/$defs/SandboxSection",
+      "default": {
+        "enabled": false
+      }
+    },
+    "telemetry": {
+      "description": "Telemetry settings.",
+      "$ref": "#/$defs/TelemetrySection",
+      "default": {
+        "enabled": true
+      }
+    },
+    "theme": {
+      "description": "Theme name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "thinking_level": {
+      "description": "Thinking level for reasoning-intensive tasks.",
+      "$ref": "#/$defs/ThinkingLevel",
+      "default": "Off"
+    },
+    "tool_cache": {
+      "description": "Tool result cache settings.",
+      "$ref": "#/$defs/ToolCacheSection",
+      "default": {
+        "ttl_secs": 300
+      }
+    },
+    "truncation": {
+      "description": "Truncation settings.",
+      "$ref": "#/$defs/TruncationSection",
+      "default": {
+        "max_bytes": 51200,
+        "max_lines": 2000
+      }
+    },
+    "ui": {
+      "description": "UI settings.",
+      "$ref": "#/$defs/UiSection",
+      "default": {
+        "history_max_entries": 1000,
+        "page_size": 5,
+        "vim_mode": true
+      }
+    }
+  },
+  "$defs": {
+    "ConfigScope": {
+      "description": "Config scope for operations that can target global or project config.",
+      "oneOf": [
+        {
+          "description": "Global config (~/.runie/config.toml)",
+          "type": "string",
+          "const": "global"
+        },
+        {
+          "description": "Project config (.runie/config.toml)",
+          "type": "string",
+          "const": "project"
+        }
+      ]
+    },
+    "FffSection": {
+      "description": "FFF full-text search configuration.",
+      "type": "object",
+      "properties": {
+        "default_limit": {
+          "description": "Default maximum number of results to return (default: 50).",
+          "type": "integer",
+          "format": "uint",
+          "default": 50,
+          "minimum": 0
+        },
+        "max_file_size_bytes": {
+          "description": "Maximum file size in bytes to index (default: 2 MiB).",
+          "type": "integer",
+          "format": "uint",
+          "default": 2097152,
+          "minimum": 0
+        },
+        "scan_timeout_secs": {
+          "description": "Scan timeout in seconds (default: 30).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 30,
+          "minimum": 0
+        }
+      }
+    },
+    "HooksConfig": {
+      "description": "Hook configuration.",
+      "type": "object",
+      "properties": {
+        "commands": {
+          "description": "Map of hook event name to list of shell commands to run.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {}
+        }
+      }
+    },
+    "HttpSection": {
+      "description": "HTTP and retry configuration for provider network calls.",
+      "type": "object",
+      "properties": {
+        "connect_timeout_secs": {
+          "description": "Connection timeout in seconds (default: 10).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 10,
+          "minimum": 0
+        },
+        "request_timeout_secs": {
+          "description": "Request timeout in seconds (default: 120).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 120,
+          "minimum": 0
+        }
+      }
+    },
+    "McpSection": {
+      "description": "MCP server configuration section.",
+      "type": "object",
+      "properties": {
+        "servers": {
+          "description": "Named MCP server configurations.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/McpServer"
+          },
+          "default": {}
+        }
+      }
+    },
+    "McpServer": {
+      "description": "An MCP server configuration entry.",
+      "type": "object",
+      "properties": {
+        "command": {
+          "description": "Command and arguments for stdio transport.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "headers": {
+          "description": "HTTP headers for http/sse transports.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "scope": {
+          "description": "Scope: global or project.",
+          "$ref": "#/$defs/ConfigScope",
+          "default": "global"
+        },
+        "transport": {
+          "description": "Transport type: stdio, http, or sse.",
+          "$ref": "#/$defs/McpTransport",
+          "default": "stdio"
+        },
+        "url": {
+          "description": "URL for http/sse transports.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "McpTransport": {
+      "description": "Transport type for MCP server communication.",
+      "oneOf": [
+        {
+          "description": "Stdio-based MCP server (default).",
+          "type": "string",
+          "const": "stdio"
+        },
+        {
+          "description": "HTTP-based MCP server.",
+          "type": "string",
+          "const": "http"
+        },
+        {
+          "description": "Server-Sent Events transport.",
+          "type": "string",
+          "const": "sse"
+        }
+      ]
+    },
+    "ModelProvider": {
+      "description": "A provider's configuration entry.\nAPI keys are resolved from environment variables or OS keyring, not stored here.",
+      "type": "object",
+      "properties": {
+        "base_url": {
+          "type": "string"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "base_url"
+      ]
+    },
+    "ModelsSection": {
+      "description": "Models configuration section.",
+      "type": "object",
+      "properties": {
+        "default": {
+          "description": "The default model to use when no model is specified.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scoped": {
+          "description": "Scoped models list (for model selector UI).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "default": null,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PermissionAction": {
+      "description": "Permission action result.\n\nThis is the canonical enum for permission decisions throughout the codebase.\nThe protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type\nat the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.",
+      "type": "string",
+      "enum": [
+        "allow",
+        "ask",
+        "deny"
+      ]
+    },
+    "PermissionMode": {
+      "description": "Global permission mode.",
+      "oneOf": [
+        {
+          "description": "Apply rules; ask when no rule matches.",
+          "type": "string",
+          "const": "default"
+        },
+        {
+          "description": "Auto-accept file edits; ask for shell commands.",
+          "type": "string",
+          "const": "accept_edits"
+        },
+        {
+          "description": "Auto-approve safe operations; ask for risky ones.",
+          "type": "string",
+          "const": "auto"
+        },
+        {
+          "description": "Approve unless a deny rule matches.",
+          "type": "string",
+          "const": "dont_ask"
+        },
+        {
+          "description": "Approve everything (dangerous).",
+          "type": "string",
+          "const": "bypass_permissions"
+        },
+        {
+          "description": "Block write tools until a plan is approved.",
+          "type": "string",
+          "const": "plan"
+        }
+      ]
+    },
+    "PermissionRule": {
+      "description": "A single permission rule with glob patterns and scope.",
+      "type": "object",
+      "properties": {
+        "action": {
+          "description": "Action when rule matches: \"allow\", \"ask\", or \"deny\".",
+          "$ref": "#/$defs/PermissionAction"
+        },
+        "path": {
+          "description": "Optional glob pattern for file paths.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pattern": {
+          "description": "Optional glob pattern for shell command arguments.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "description": "Scope of this rule: user, project, or session.\nHigher scopes override lower scopes (session > project > user).",
+          "$ref": "#/$defs/PermissionScope",
+          "default": "user"
+        },
+        "tool": {
+          "description": "Glob pattern for tool name, e.g. \"bash\", \"read_*\", \"*\".",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "tool"
+      ]
+    },
+    "PermissionScope": {
+      "description": "Scope of a permission rule.",
+      "oneOf": [
+        {
+          "description": "User-level rules from ~/.runie/config.toml",
+          "type": "string",
+          "const": "user"
+        },
+        {
+          "description": "Project-level rules from .runie/config.toml or AGENTS.md",
+          "type": "string",
+          "const": "project"
+        },
+        {
+          "description": "Session-level rules from CLI flags",
+          "type": "string",
+          "const": "session"
+        }
+      ]
+    },
+    "PermissionsSection": {
+      "description": "Permissions configuration section.",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "Permission mode: default, acceptEdits, auto, dontAsk, bypassPermissions, plan.",
+          "$ref": "#/$defs/PermissionMode",
+          "default": "default"
+        },
+        "rules": {
+          "description": "Explicit permission rules.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PermissionRule"
+          }
+        }
+      }
+    },
+    "PromptsSection": {
+      "description": "Prompts configuration section.",
+      "type": "object",
+      "properties": {
+        "custom": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    },
+    "RetrySection": {
+      "description": "Retry configuration for transient provider errors.",
+      "type": "object",
+      "properties": {
+        "initial_delay_ms": {
+          "description": "Initial delay in milliseconds (default: 100).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 100,
+          "minimum": 0
+        },
+        "max_attempts": {
+          "description": "Maximum number of retry attempts (default: 5).",
+          "type": "integer",
+          "format": "uint32",
+          "default": 5,
+          "minimum": 0
+        },
+        "max_delay_ms": {
+          "description": "Maximum delay in milliseconds (default: 30000).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 30000,
+          "minimum": 0
+        },
+        "multiplier": {
+          "description": "Exponential backoff multiplier (default: 2.0).",
+          "type": "number",
+          "format": "double",
+          "default": 2.0
+        }
+      }
+    },
+    "SandboxSection": {
+      "description": "Sandbox configuration for OS-level command sandboxing.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Enable OS-level sandboxing for bash tool execution.\nWhen enabled, bash commands are wrapped in platform-specific sandbox.\nDefaults to false.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "TelemetrySection": {
+      "description": "Telemetry configuration section.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "ThinkingLevel": {
+      "description": "Thinking level for reasoning-intensive tasks.",
+      "type": "string",
+      "enum": [
+        "Off",
+        "Low",
+        "Medium",
+        "High"
+      ]
+    },
+    "ToolCacheSection": {
+      "description": "Tool result cache configuration.",
+      "type": "object",
+      "properties": {
+        "ttl_secs": {
+          "description": "TTL in seconds for cached tool results. Zero disables the cache.",
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        }
+      }
+    },
+    "TruncationSection": {
+      "description": "Truncation limits for tool output.",
+      "type": "object",
+      "properties": {
+        "max_bytes": {
+          "type": "integer",
+          "format": "uint",
+          "default": 51200,
+          "minimum": 0
+        },
+        "max_lines": {
+          "type": "integer",
+          "format": "uint",
+          "default": 2000,
+          "minimum": 0
+        }
+      }
+    },
+    "UiSection": {
+      "description": "UI configuration section.",
+      "type": "object",
+      "properties": {
+        "history_max_entries": {
+          "description": "Maximum number of input history entries to retain.",
+          "type": "integer",
+          "format": "uint",
+          "default": 1000,
+          "minimum": 0
+        },
+        "page_size": {
+          "description": "Number of items per page in list dialogs.",
+          "type": "integer",
+          "format": "uint",
+          "default": 5,
+          "minimum": 0
+        },
+        "vim_mode": {
+          "description": "Enable vim-style navigation mode.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  }
+}

@@ -175,7 +175,10 @@ impl HarnessSkill for MockToolSkill {
 /// Build a `SkillRegistry` with canned outputs for `list_dir` and `bash`.
 pub fn mock_tool_skill() -> SkillRegistry {
     let outputs = HashMap::from([
-        ("list_dir".to_string(), "Cargo.toml\nREADME.md\n".to_string()),
+        (
+            "list_dir".to_string(),
+            "Cargo.toml\nREADME.md\n".to_string(),
+        ),
         ("bash".to_string(), "hello\n".to_string()),
     ]);
     let mut registry = SkillRegistry::new();

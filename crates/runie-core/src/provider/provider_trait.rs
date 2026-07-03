@@ -1,10 +1,10 @@
 //! Provider trait and types
 
 use crate::message::ChatMessage;
-use derive_builder::Builder;
 use crate::model_catalog::{ModelCapabilities, ModelInfo};
 use crate::provider_event::ProviderEvent;
 use anyhow::Result;
+use derive_builder::Builder;
 use futures::Stream;
 use std::pin::Pin;
 use std::time::Duration;
@@ -84,7 +84,9 @@ impl Clone for ProviderError {
             UnknownProvider(s) => UnknownProvider(s.clone()),
             MissingApiKey(e) => MissingApiKey((*e).clone()),
             ConfigNotLoaded => ConfigNotLoaded,
-            RateLimit { retry_after_secs } => RateLimit { retry_after_secs: *retry_after_secs },
+            RateLimit { retry_after_secs } => RateLimit {
+                retry_after_secs: *retry_after_secs,
+            },
             Network(s) => Network(s.clone()),
             Timeout => Timeout,
             Server(code, msg) => Server(*code, msg.clone()),
@@ -103,7 +105,9 @@ impl ProviderError {
         if code == 401 || code == 403 {
             Some(ProviderError::Auth(code))
         } else if code == 429 {
-            Some(ProviderError::RateLimit { retry_after_secs: None })
+            Some(ProviderError::RateLimit {
+                retry_after_secs: None,
+            })
         } else if code >= 500 {
             Some(ProviderError::Server(code, Default::default()))
         } else {
@@ -155,7 +159,6 @@ impl ProviderError {
         // Fallback: wrap the error
         ProviderError::Source(anyhow::anyhow!("{}", err))
     }
-
 }
 
 /// Helper error for displaying missing API key errors.
@@ -276,7 +279,12 @@ impl Default for RetryConfig {
 
 impl RetryConfig {
     /// Create a new retry config with custom settings.
-    pub fn new(max_attempts: u32, initial_delay: Duration, max_delay: Duration, multiplier: f64) -> Self {
+    pub fn new(
+        max_attempts: u32,
+        initial_delay: Duration,
+        max_delay: Duration,
+        multiplier: f64,
+    ) -> Self {
         Self {
             max_attempts,
             initial_delay,
@@ -344,4 +352,3 @@ pub trait Provider: Send + Sync {
 
 #[cfg(test)]
 mod tests;
-

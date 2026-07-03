@@ -192,13 +192,19 @@ impl RactorAgentActor {
         command.cancellation_token = cancel_token.clone();
         let cancel_token_gate = cancel_token.clone();
 
-        let gate = Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
+        let gate =
+            Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
 
         // Store token and gate in state so Abort handler can cancel them.
         state.current_turn_token = Some(Arc::new(cancel_token));
         state.current_gate = Some(gate.clone());
 
-        Ok(TurnSetupInfo { built, emit, gate, bus: state.bus.clone() })
+        Ok(TurnSetupInfo {
+            built,
+            emit,
+            gate,
+            bus: state.bus.clone(),
+        })
     }
 
     /// Spawns the turn as a background task; sends TurnComplete to the actor on finish.
@@ -213,13 +219,23 @@ impl RactorAgentActor {
         let myself_for_task = myself.clone();
 
         tokio::spawn(async move {
-            let turn = run_agent_turn(&info.built, &command, emit_for_task, DEFAULT_MAX_TOOL_ROUNDS, info.gate.clone());
+            let turn = run_agent_turn(
+                &info.built,
+                &command,
+                emit_for_task,
+                DEFAULT_MAX_TOOL_ROUNDS,
+                info.gate.clone(),
+            );
             tokio::pin!(turn);
 
             let result = turn.await;
 
             if let Err(e) = result {
-                Self::publish_error_and_done(&bus_for_task, &command_id, format!("Agent error: {e}"));
+                Self::publish_error_and_done(
+                    &bus_for_task,
+                    &command_id,
+                    format!("Agent error: {e}"),
+                );
             }
 
             // Notify actor to clear current_turn_* state.
@@ -254,7 +270,9 @@ impl RactorAgentActor {
             id: id.to_owned(),
             message,
         });
-        state.bus.publish(runie_core::Event::Done { id: id.to_owned() });
+        state
+            .bus
+            .publish(runie_core::Event::Done { id: id.to_owned() });
     }
 }
 

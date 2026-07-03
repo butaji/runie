@@ -1,7 +1,7 @@
 //! Safety and permission commands.
 
-use crate::commands::CommandResult;
 use crate::commands::dsl::handlers::NamedHandler;
+use crate::commands::CommandResult;
 use crate::model::AppState;
 
 /// Register all tool handlers with the handler registry (for YAML-based commands).

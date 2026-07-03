@@ -88,8 +88,28 @@ pub(crate) fn strip_inline_fenced_tools(content: &str) -> String {
 }
 
 const FENCE_LANGS: &[&str] = &[
-    "bash", "diff", "html", "javascript", "js", "json", "markdown", "md", "plaintext", "py",
-    "python", "rust", "sh", "shell", "sql", "text", "toml", "ts", "typescript", "xml", "yaml", "yml",
+    "bash",
+    "diff",
+    "html",
+    "javascript",
+    "js",
+    "json",
+    "markdown",
+    "md",
+    "plaintext",
+    "py",
+    "python",
+    "rust",
+    "sh",
+    "shell",
+    "sql",
+    "text",
+    "toml",
+    "ts",
+    "typescript",
+    "xml",
+    "yaml",
+    "yml",
 ];
 
 fn strip_language_prefix(rest: &str) -> &str {

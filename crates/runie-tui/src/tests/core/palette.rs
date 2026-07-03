@@ -387,8 +387,7 @@ async fn ui_actor_dispatch_submit_closes_palette() {
     );
 
     // Open the command palette (e.g., user typed '/')
-    ui.state
-        .update(runie_core::Event::ToggleCommandPalette);
+    ui.state.update(runie_core::Event::ToggleCommandPalette);
     assert!(
         ui.state.open_dialog.is_some(),
         "palette should be open before dispatch"

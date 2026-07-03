@@ -56,7 +56,7 @@ impl Provider for MinimaxLikeProvider {
 #[tokio::test]
 async fn minimax_inline_think_renders_visible_response() {
     let provider = MinimaxLikeProvider;
-        let cmd = agent_cmd("say hi")
+    let cmd = agent_cmd("say hi")
         .provider("minimax")
         .model("MiniMax-M3")
         .build();

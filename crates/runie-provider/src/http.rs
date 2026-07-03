@@ -64,13 +64,22 @@ mod tests {
 
     #[test]
     fn normalize_base_url_strips_trailing_slash() {
-        assert_eq!(normalize_base_url("https://api.openai.com/v1/"), "https://api.openai.com/v1");
-        assert_eq!(normalize_base_url("https://api.openai.com/v1"), "https://api.openai.com/v1");
+        assert_eq!(
+            normalize_base_url("https://api.openai.com/v1/"),
+            "https://api.openai.com/v1"
+        );
+        assert_eq!(
+            normalize_base_url("https://api.openai.com/v1"),
+            "https://api.openai.com/v1"
+        );
     }
 
     #[test]
     fn normalize_base_url_handles_multiple_trailing_slashes() {
-        assert_eq!(normalize_base_url("https://api.openai.com/v1///"), "https://api.openai.com/v1");
+        assert_eq!(
+            normalize_base_url("https://api.openai.com/v1///"),
+            "https://api.openai.com/v1"
+        );
     }
 
     #[test]

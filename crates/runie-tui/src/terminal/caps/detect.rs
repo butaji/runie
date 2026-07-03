@@ -3,8 +3,8 @@
 //! Relies on `supports-color` and `supports-hyperlinks` crates for capability detection.
 //! No custom brand/multiplexer lookup tables are maintained.
 
-use std::collections::HashMap;
 use parking_lot::Mutex;
+use std::collections::HashMap;
 
 use super::ColorDepth;
 
@@ -85,8 +85,9 @@ fn is_modern_terminal(env: &HashMap<String, String>) -> bool {
     // Check for known terminal programs
     if let Some(program) = env.get("TERM_PROGRAM") {
         match program.as_str() {
-            "iTerm.app" | "vscode" | "WezTerm" | "Apple_Terminal" | "WarpTerminal"
-            | "ghostty" => return true,
+            "iTerm.app" | "vscode" | "WezTerm" | "Apple_Terminal" | "WarpTerminal" | "ghostty" => {
+                return true
+            }
             _ => {}
         }
     }

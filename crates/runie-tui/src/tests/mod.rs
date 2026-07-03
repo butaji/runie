@@ -35,6 +35,12 @@ mod sticky_bottom;
 mod terminal_setup;
 
 #[cfg(test)]
+mod agent_run_guard;
+#[cfg(test)]
+mod bootstrap_e2e;
+#[cfg(test)]
+mod input_actor_routing;
+#[cfg(test)]
 mod login_flow_e2e;
 #[cfg(test)]
 mod login_flow_form;
@@ -47,25 +53,19 @@ mod onboarding_input;
 #[cfg(test)]
 mod onboarding_render;
 #[cfg(test)]
+mod permission_dialog;
+#[cfg(test)]
 mod provider_config_e2e;
 #[cfg(test)]
 mod providers_e2e;
-#[cfg(test)]
-mod permission_dialog;
-#[cfg(test)]
-mod agent_run_guard;
 #[cfg(test)]
 mod quit_shortcut;
 #[cfg(test)]
 mod toggle_e2e;
 #[cfg(test)]
-mod vim_mode;
-#[cfg(test)]
-mod input_actor_routing;
-#[cfg(test)]
 mod uiactor_init;
 #[cfg(test)]
-mod bootstrap_e2e;
+mod vim_mode;
 
 /// Helper: give a default state a connected model so input/status render.
 pub fn connect_model(state: &mut AppState) {

@@ -22,5 +22,5 @@ pub use category::CommandCategory;
 pub use command::{cmd, Action, Command, FormHandler};
 pub use flow::{CommandFlow, CommandResult, DialogType};
 // Keep re-exports for backward compatibility
-pub use spec::{CommandDef, CommandKind};
 pub use spec::{build_cmd, register_commands, CommandSpec, FormHandler as SpecFormHandler};
+pub use spec::{CommandDef, CommandKind};

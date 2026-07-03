@@ -69,7 +69,15 @@ pub fn delete_keyring(provider: &str) -> anyhow::Result<()> {
 /// Load all known provider tokens from the keyring.
 pub fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
     let mut tokens = HashMap::new();
-    let common_providers = ["openai", "anthropic", "google", "groq", "mistral", "cohere", "xai"];
+    let common_providers = [
+        "openai",
+        "anthropic",
+        "google",
+        "groq",
+        "mistral",
+        "cohere",
+        "xai",
+    ];
     for provider in common_providers {
         if let Some(token) = OsKeyringStore::new().get(provider)? {
             tokens.insert(

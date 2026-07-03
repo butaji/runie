@@ -45,7 +45,10 @@ mod tests {
 
     #[test]
     fn path_display_count_is_positive() {
-        const _: () = assert!(PATH_DISPLAY_COUNT > 0, "path display count must be positive");
+        const _: () = assert!(
+            PATH_DISPLAY_COUNT > 0,
+            "path display count must be positive"
+        );
     }
 
     #[test]

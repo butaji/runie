@@ -85,7 +85,9 @@ pub fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, ke
     // Persist to config.toml via ConfigActor (fire-and-forget).
     // In tests without handles, mutation is already applied above.
     if let Some(h) = state.actor_handles() {
-        let _ = h.config.try_send(ConfigMsg::SetTruncation { limits: truncation });
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetTruncation { limits: truncation });
     }
     state.view_mut().cached_settings_valid = false;
 }
@@ -116,7 +118,9 @@ fn toggle_vim_mode(state: &mut AppState) {
     // Persist to config.toml via ConfigActor (fire-and-forget).
     // In tests without handles, mutation is already applied above.
     if let Some(h) = state.actor_handles() {
-        let _ = h.config.try_send(ConfigMsg::SetVimMode { enabled: new_value });
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetVimMode { enabled: new_value });
     }
     state.view_mut().cached_settings_valid = false;
 }
@@ -128,7 +132,9 @@ fn toggle_telemetry(state: &mut AppState) {
     // Persist to config.toml via ConfigActor (fire-and-forget).
     // In tests without handles, mutation is already applied above.
     if let Some(h) = state.actor_handles() {
-        let _ = h.config.try_send(ConfigMsg::SetTelemetry { enabled: new_enabled });
+        let _ = h.config.try_send(ConfigMsg::SetTelemetry {
+            enabled: new_enabled,
+        });
     }
     state.view_mut().cached_settings_valid = false;
 }

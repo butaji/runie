@@ -45,8 +45,7 @@ pub enum SearchMode {
 impl SearchMode {
     /// Parse a search mode string, defaulting to `Files` on unknown input.
     pub(crate) fn from_str(s: &str) -> Self {
-        <SearchMode as std::str::FromStr>::from_str(s)
-            .unwrap_or(Self::Files)
+        <SearchMode as std::str::FromStr>::from_str(s).unwrap_or(Self::Files)
     }
 }
 

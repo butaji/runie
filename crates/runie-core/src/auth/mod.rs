@@ -15,8 +15,8 @@ pub use keyring::{
     set_and_verify_keyring, set_keyring, set_keyring_value,
 };
 pub use storage::{AuthStorage, AuthToken};
-pub use store_trait::{KeyringStore, MockKeyringStore};
 #[cfg(feature = "keyring")]
 pub use store_trait::OsKeyringStore;
+pub use store_trait::{KeyringStore, MockKeyringStore};
 
 mod credential;

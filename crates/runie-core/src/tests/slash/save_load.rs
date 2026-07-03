@@ -59,7 +59,10 @@ fn system_messages(state: &crate::model::AppState) -> Vec<&ChatMessage> {
 fn load_restores_conversation() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         save_snapshot("restore_me", &restored_session()).unwrap();
 
@@ -82,7 +85,10 @@ fn load_restores_conversation() {
 fn load_missing_session_shows_error() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         exec(&mut state, "/load nope"); // Opens form with pre-filled name
@@ -131,7 +137,10 @@ fn load_no_args_opens_form() {
 fn sessions_lists_saved_sessions() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         save_snapshot("alpha", &minimal_session("alpha")).unwrap();
         save_snapshot("beta", &minimal_session("beta")).unwrap();
@@ -163,7 +172,10 @@ fn sessions_lists_saved_sessions() {
 fn sessions_empty_shows_no_sessions() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         palette_select(&mut state, "sessions");
@@ -187,29 +199,31 @@ fn sessions_empty_shows_no_sessions() {
 fn delete_removes_session_file() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
-    save_snapshot("gone", &minimal_session("gone")).unwrap();
+        save_snapshot("gone", &minimal_session("gone")).unwrap();
 
-    let mut state = fresh_state();
-    exec(&mut state, "/delete gone");
-    state.update(Event::submit());
+        let mut state = fresh_state();
+        exec(&mut state, "/delete gone");
+        state.update(Event::submit());
 
-    assert!(!store.path("gone").exists(), "session file removed");
+        assert!(!store.path("gone").exists(), "session file removed");
 
-    let sys_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::System)
-        .collect();
-    let last = sys_msgs.last().expect("system msg");
-    assert!(
-        last.content().contains("deleted"),
-        "confirmation shown: {}",
-        last.content()
-    );
-
+        let sys_msgs: Vec<_> = state
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.role == Role::System)
+            .collect();
+        let last = sys_msgs.last().expect("system msg");
+        assert!(
+            last.content().contains("deleted"),
+            "confirmation shown: {}",
+            last.content()
+        );
     });
 }
 
@@ -217,7 +231,10 @@ fn delete_removes_session_file() {
 fn delete_missing_session_shows_error() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         exec(&mut state, "/delete missing"); // Opens form with pre-filled name

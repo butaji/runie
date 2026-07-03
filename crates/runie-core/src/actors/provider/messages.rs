@@ -2,8 +2,8 @@
 
 use std::fmt;
 
-use ractor::RpcReplyPort;
 use crate::provider::ProviderError;
+use ractor::RpcReplyPort;
 
 use super::factory::BuiltProvider;
 

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use crate::model::view_cache::ViewCache;
 use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
-use crate::model::view_cache::ViewCache;
 
 /// View state — scroll, animation, and UI dimensions.
 ///

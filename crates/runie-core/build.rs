@@ -243,14 +243,10 @@ fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>)
     let re = regex::Regex::new(r"\b(\d{4,}(?:_\d+)*)\b").unwrap();
 
     // Known standard HTTP status codes (used in match arms).
-    let http_status_codes = [
-        "401", "403", "429", "500", "502", "503", "504",
-    ];
+    let http_status_codes = ["401", "403", "429", "500", "502", "503", "504"];
 
     // Known JSON-RPC error codes.
-    let json_rpc_codes = [
-        "32700", "32600", "32601", "32602", "32603",
-    ];
+    let json_rpc_codes = ["32700", "32600", "32601", "32602", "32603"];
 
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
@@ -292,7 +288,11 @@ fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>)
             }
 
             // Check if the number is in a string literal.
-            let before = if cap.start() > 0 { &line[..cap.start()] } else { "" };
+            let before = if cap.start() > 0 {
+                &line[..cap.start()]
+            } else {
+                ""
+            };
             if before.ends_with('"') || before.ends_with('\'') {
                 continue;
             }
@@ -361,30 +361,29 @@ const SPAWN_EXEMPTIONS: &[&str] = &[
     "crates/runie-core/src/actors/session/ractor_session_actor.rs",
     "crates/runie-core/src/actors/session/session_handlers.rs",
     // runie-core other files with intentional fire-and-forget spawns
-    "crates/runie-core/src/config/config_impl.rs",         // Config watching - background service
-    "crates/runie-core/src/session/store.rs",              // Session persistence - background service
-    "crates/runie-core/src/tool/format.rs",                // Tool formatting - background service
-    "crates/runie-core/src/update/system.rs",              // Abort signal routing - fire-and-forget by design
-    "crates/runie-core/src/shell.rs",                      // Process execution - observed via channel
-    "crates/runie-core/src/tool/cache.rs",                 // Background TTL eviction - runs to process exit
-    "crates/runie-core/src/bus.rs",                        // Test bus implementation
+    "crates/runie-core/src/config/config_impl.rs", // Config watching - background service
+    "crates/runie-core/src/session/store.rs",      // Session persistence - background service
+    "crates/runie-core/src/tool/format.rs",        // Tool formatting - background service
+    "crates/runie-core/src/update/system.rs", // Abort signal routing - fire-and-forget by design
+    "crates/runie-core/src/shell.rs",         // Process execution - observed via channel
+    "crates/runie-core/src/tool/cache.rs",    // Background TTL eviction - runs to process exit
+    "crates/runie-core/src/bus.rs",           // Test bus implementation
     // runie-tui spawns - managed by application lifecycle and shutdown signals
-    "crates/runie-tui/src/bootstrap.rs",                    // Bootstrap spawns - managed by app lifecycle
-    "crates/runie-tui/src/ui_actor/mod.rs",                 // Event forwarder - fire-and-forget by design
-    "crates/runie-tui/src/ui_actor/effects.rs",             // Effect spawns - fire-and-forget via channels
-    "crates/runie-tui/src/keymap.rs",                       // Debug logging - fire-and-forget by design
+    "crates/runie-tui/src/bootstrap.rs", // Bootstrap spawns - managed by app lifecycle
+    "crates/runie-tui/src/ui_actor/mod.rs", // Event forwarder - fire-and-forget by design
+    "crates/runie-tui/src/ui_actor/effects.rs", // Effect spawns - fire-and-forget via channels
+    "crates/runie-tui/src/keymap.rs",    // Debug logging - fire-and-forget by design
     // runie-cli spawns - managed by server lifecycle
-    "crates/runie-cli/src/server.rs",                       // Connection handler spawns - managed by listener
+    "crates/runie-cli/src/server.rs", // Connection handler spawns - managed by listener
     // runie-agent spawns - managed by actor lifecycle
-    "crates/runie-agent/src/subagent.rs",                   // Response accumulation - fire-and-forget via channel
-    "crates/runie-agent/src/actor/mod.rs",                   // Agent turn spawn - managed by actor lifecycle
+    "crates/runie-agent/src/subagent.rs", // Response accumulation - fire-and-forget via channel
+    "crates/runie-agent/src/actor/mod.rs", // Agent turn spawn - managed by actor lifecycle
 ];
 
 fn needs_spawn_lint(rel_path: &str) -> bool {
     // Skip test files (already covered by other lints) and exempted files.
     // Return true if we SHOULD lint (i.e., skip test files and exemptions).
-    !is_test_file(rel_path)
-        && !SPAWN_EXEMPTIONS.iter().any(|e| rel_path.ends_with(e))
+    !is_test_file(rel_path) && !SPAWN_EXEMPTIONS.iter().any(|e| rel_path.ends_with(e))
 }
 
 /// Check for orphan tokio::spawn calls that don't capture the JoinHandle.
@@ -525,7 +524,7 @@ fn lint_file(path: &Path, workspace_root: &Path, errors: &mut Vec<String>) {
 
 fn main() {
     // Bump MSRV if needed when adding new dependencies.
-    println!("cargo:rustc-check=+"/* See MSRV in Cargo.toml */);
+    println!("cargo:rustc-check=+" /* See MSRV in Cargo.toml */);
 
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
 
@@ -549,7 +548,7 @@ fn main() {
             let src_path = crate_path.join("src");
             if src_path.exists() {
                 for path in find_rust_files(&src_path) {
-                    lint_file(&path, &workspace_root, &mut errors);
+                    lint_file(&path, workspace_root, &mut errors);
                 }
             }
         }
@@ -593,7 +592,10 @@ mod tests {
         let lines = vec!["pub fn foo() { let x = 1_000_000; }"];
         let mut errors = Vec::new();
         check_magic_numbers("test.rs", &lines, &mut errors);
-        assert!(errors.is_empty(), "Should allow underscore-separated numbers");
+        assert!(
+            errors.is_empty(),
+            "Should allow underscore-separated numbers"
+        );
     }
 
     #[test]
@@ -700,7 +702,10 @@ mod tests {
         "#;
         let mut errors = Vec::new();
         check_orphan_spawns("src/foo.rs", content, &mut errors);
-        assert!(errors.is_empty(), "Should allow underscore-prefixed capture");
+        assert!(
+            errors.is_empty(),
+            "Should allow underscore-prefixed capture"
+        );
     }
 
     #[test]
@@ -712,7 +717,10 @@ mod tests {
         "#;
         let mut errors = Vec::new();
         check_orphan_spawns("src/foo.rs", content, &mut errors);
-        assert!(!errors.is_empty(), "Explicit discard `let _ = tokio::spawn(...)` should be flagged");
+        assert!(
+            !errors.is_empty(),
+            "Explicit discard `let _ = tokio::spawn(...)` should be flagged"
+        );
         assert!(errors[0].contains("orphan"));
     }
 
@@ -738,7 +746,10 @@ mod tests {
         "#;
         let mut errors = Vec::new();
         check_orphan_spawns("src/foo.rs", content, &mut errors);
-        assert!(errors.is_empty(), "Should allow spawn_blocking with capture");
+        assert!(
+            errors.is_empty(),
+            "Should allow spawn_blocking with capture"
+        );
     }
 
     #[test]
@@ -768,23 +779,44 @@ mod tests {
     #[test]
     fn test_spawn_lint_allows_test_files() {
         // Test files should be exempt from spawn lint.
-        assert!(!needs_spawn_lint("tests/foo.rs"), "test files should be exempt");
-        assert!(!needs_spawn_lint("src/foo_tests.rs"), "_tests.rs files should be exempt");
-        assert!(!needs_spawn_lint("src/foo_test.rs"), "_test.rs files should be exempt");
+        assert!(
+            !needs_spawn_lint("tests/foo.rs"),
+            "test files should be exempt"
+        );
+        assert!(
+            !needs_spawn_lint("src/foo_tests.rs"),
+            "_tests.rs files should be exempt"
+        );
+        assert!(
+            !needs_spawn_lint("src/foo_test.rs"),
+            "_test.rs files should be exempt"
+        );
     }
 
     #[test]
     fn test_spawn_lint_allows_exempted_files() {
         // Exempted files should be skipped.
-        assert!(!needs_spawn_lint("src/update/system.rs"), "system.rs is exempted");
+        assert!(
+            !needs_spawn_lint("src/update/system.rs"),
+            "system.rs is exempted"
+        );
         assert!(!needs_spawn_lint("src/shell.rs"), "shell.rs is exempted");
-        assert!(!needs_spawn_lint("src/tool/cache.rs"), "cache.rs is exempted");
+        assert!(
+            !needs_spawn_lint("src/tool/cache.rs"),
+            "cache.rs is exempted"
+        );
     }
 
     #[test]
     fn test_spawn_lint_requires_lint_on_regular_files() {
         // Non-exempt production files should be linted.
-        assert!(needs_spawn_lint("src/foo.rs"), "regular files should be linted");
-        assert!(needs_spawn_lint("src/bar/mod.rs"), "regular mod files should be linted");
+        assert!(
+            needs_spawn_lint("src/foo.rs"),
+            "regular files should be linted"
+        );
+        assert!(
+            needs_spawn_lint("src/bar/mod.rs"),
+            "regular mod files should be linted"
+        );
     }
 }

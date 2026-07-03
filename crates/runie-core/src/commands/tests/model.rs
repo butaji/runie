@@ -238,10 +238,16 @@ fn mock_provider_is_accessible_when_enabled() {
     assert!(!is_mock_enabled(), "mock should be disabled by default");
 
     crate::provider::set_mock_enabled(true);
-    assert!(is_mock_enabled(), "mock should be enabled after set_mock_enabled(true)");
+    assert!(
+        is_mock_enabled(),
+        "mock should be enabled after set_mock_enabled(true)"
+    );
 
     crate::provider::set_mock_enabled(false);
-    assert!(!is_mock_enabled(), "mock should be disabled after set_mock_enabled(false)");
+    assert!(
+        !is_mock_enabled(),
+        "mock should be disabled after set_mock_enabled(false)"
+    );
 }
 
 /// Test that the model selector includes mock/echo when mock is enabled.
@@ -304,7 +310,9 @@ fn provider_dialog_includes_mock_when_enabled() {
 
     // Should show the mock provider
     assert!(
-        items.iter().any(|l| l.contains("mock") || l.contains("Mock")),
+        items
+            .iter()
+            .any(|l| l.contains("mock") || l.contains("Mock")),
         "providers dialog should include mock, got: {:?}",
         items
     );

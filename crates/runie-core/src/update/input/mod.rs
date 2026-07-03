@@ -167,30 +167,30 @@ fn permission_input_event(state: &mut AppState, event: crate::Event) {
         // Navigation / editing keys — consumed silently
         crate::Event::Escape
             | crate::Event::Backspace
-        | crate::Event::Newline
-        | crate::Event::DeleteWord
-        | crate::Event::DeleteToEnd
-        | crate::Event::DeleteToStart
-        | crate::Event::KillChar
-        | crate::Event::Undo
-        | crate::Event::Redo
-        | crate::Event::CursorLeft
-        | crate::Event::CursorRight
-        | crate::Event::CursorStart
-        | crate::Event::CursorEnd
-        | crate::Event::CursorWordLeft
-        | crate::Event::CursorWordRight
-        | crate::Event::HistoryPrev
-        | crate::Event::HistoryNext
-        | crate::Event::PageUp
-        | crate::Event::PageDown
-        | crate::Event::GoToTop
-        | crate::Event::GoToBottom
-        | crate::Event::MouseScrollUp
-        | crate::Event::MouseScrollDown
-        | crate::Event::MouseClick { .. }
-        | crate::Event::MouseMove { .. }
-        | crate::Event::TerminalSize { .. }
+            | crate::Event::Newline
+            | crate::Event::DeleteWord
+            | crate::Event::DeleteToEnd
+            | crate::Event::DeleteToStart
+            | crate::Event::KillChar
+            | crate::Event::Undo
+            | crate::Event::Redo
+            | crate::Event::CursorLeft
+            | crate::Event::CursorRight
+            | crate::Event::CursorStart
+            | crate::Event::CursorEnd
+            | crate::Event::CursorWordLeft
+            | crate::Event::CursorWordRight
+            | crate::Event::HistoryPrev
+            | crate::Event::HistoryNext
+            | crate::Event::PageUp
+            | crate::Event::PageDown
+            | crate::Event::GoToTop
+            | crate::Event::GoToBottom
+            | crate::Event::MouseScrollUp
+            | crate::Event::MouseScrollDown
+            | crate::Event::MouseClick { .. }
+            | crate::Event::MouseMove { .. }
+            | crate::Event::TerminalSize { .. }
     );
     if consumed {
         return;

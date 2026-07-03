@@ -12,11 +12,14 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
     registry.register("reload", NamedHandler::Handler(handle_reload));
     registry.register("diagnostics", NamedHandler::Handler(handle_diagnostics));
     registry.register("skills", NamedHandler::Handler(handle_skills));
-    registry.register("skill", NamedHandler::FormWithHandler {
-        title: "Show Skill",
-        fields: &[("Name", "skill-name", "name")],
-        handler: run_skill,
-    });
+    registry.register(
+        "skill",
+        NamedHandler::FormWithHandler {
+            title: "Show Skill",
+            fields: &[("Name", "skill-name", "name")],
+            handler: run_skill,
+        },
+    );
     registry.register("prompt", NamedHandler::Handler(handle_prompt));
     registry.register("hotkeys", NamedHandler::Handler(handle_hotkeys));
     registry.register("theme", NamedHandler::Handler(handle_theme));
@@ -58,7 +61,12 @@ pub fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
         return CommandResult::Warning(s::NO_SKILLS.into());
     }
     let lines: Vec<_> = std::iter::once(s::LOADED_SKILLS.into())
-        .chain(state.skills().iter().map(|sk| format!("  {}", sk.summary())))
+        .chain(
+            state
+                .skills()
+                .iter()
+                .map(|sk| format!("  {}", sk.summary())),
+        )
         .collect();
     CommandResult::Message(lines.join("\n"))
 }
@@ -68,13 +76,11 @@ pub fn run_skill(state: &mut AppState, args: &str) -> CommandResult {
     use crate::ui_strings::system as s;
     let name = args.trim();
     match state.skills().iter().find(|sk| sk.name == name) {
-        Some(skill) => {
-            CommandResult::Message(s::skill_info(
-                &skill.name,
-                Some(&skill.description),
-                Some(&skill.context),
-            ))
-        }
+        Some(skill) => CommandResult::Message(s::skill_info(
+            &skill.name,
+            Some(&skill.description),
+            Some(&skill.context),
+        )),
         None => CommandResult::Message(s::skill_not_found(name)),
     }
 }

@@ -96,7 +96,9 @@ impl ToolResultCache {
         });
         let canonical = serde_json::to_string(&payload).unwrap_or_default();
         let hash = Sha256::digest(canonical.as_bytes());
-        u64::from_le_bytes([hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7]])
+        u64::from_le_bytes([
+            hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7],
+        ])
     }
 
     /// Check if the cache is enabled (TTL > 0).
@@ -204,7 +206,10 @@ mod tests {
         let args = serde_json::json!({"path": "."});
         let key1 = ToolResultCache::compute_key("read_file", &args);
         let key2 = ToolResultCache::compute_key("list_dir", &args);
-        assert_ne!(key1, key2, "different tool names must produce different keys");
+        assert_ne!(
+            key1, key2,
+            "different tool names must produce different keys"
+        );
     }
 
     #[test]
@@ -222,7 +227,8 @@ mod tests {
     #[tokio::test]
     async fn cache_hit_returns_stored_output() {
         let cache = ToolResultCache::new(300);
-        let key = ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
+        let key =
+            ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
         let entry = CacheEntry {
             tool_name: "read_file".to_string(),
             output: "version = \"0.1\"".to_string(),
@@ -270,19 +276,25 @@ mod tests {
         let key2 = ToolResultCache::compute_key("list_dir", &serde_json::json!({"path": "b"}));
 
         // Fresh entry
-        cache.put(key1, CacheEntry {
-            tool_name: "list_dir".to_string(),
-            output: "a".to_string(),
-            bytes_transferred: None,
-            cached_at: current_unix_secs(),
-        });
+        cache.put(
+            key1,
+            CacheEntry {
+                tool_name: "list_dir".to_string(),
+                output: "a".to_string(),
+                bytes_transferred: None,
+                cached_at: current_unix_secs(),
+            },
+        );
         // Stale entry
-        cache.put(key2, CacheEntry {
-            tool_name: "list_dir".to_string(),
-            output: "b".to_string(),
-            bytes_transferred: None,
-            cached_at: current_unix_secs() - 10,
-        });
+        cache.put(
+            key2,
+            CacheEntry {
+                tool_name: "list_dir".to_string(),
+                output: "b".to_string(),
+                bytes_transferred: None,
+                cached_at: current_unix_secs() - 10,
+            },
+        );
 
         assert_eq!(cache.len(), 2);
         let removed = cache.evict_expired();
@@ -303,12 +315,15 @@ mod tests {
             } else {
                 current_unix_secs() // fresh
             };
-            cache.put(key, CacheEntry {
-                tool_name: "grep".to_string(),
-                output: format!("line{}", i),
-                bytes_transferred: None,
-                cached_at,
-            });
+            cache.put(
+                key,
+                CacheEntry {
+                    tool_name: "grep".to_string(),
+                    output: format!("line{}", i),
+                    bytes_transferred: None,
+                    cached_at,
+                },
+            );
         }
 
         assert_eq!(cache.len(), 5);
@@ -322,7 +337,8 @@ mod tests {
     #[tokio::test]
     async fn cache_disabled_when_ttl_zero() {
         let cache = ToolResultCache::new(0);
-        let key = ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
+        let key =
+            ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
         let entry = CacheEntry {
             tool_name: "read_file".to_string(),
             output: "version".to_string(),
@@ -362,23 +378,35 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_sweep_runs_and_evicts() {
+        // Note: This test uses real wall-clock time because tokio::time::interval
+        // behavior with paused time is complex (first tick is immediate).
+        // The sleep here is testing actual cache sweep timing behavior.
         let cache = ToolResultCache::new(1);
-        let handle = cache.spawn_sweep();
 
-        // Add stale entries
+        // Add stale entries BEFORE spawning sweep
         for i in 0..3u8 {
             let key = ToolResultCache::compute_key("grep", &serde_json::json!({"i": i}));
-            cache.put(key, CacheEntry {
-                tool_name: "grep".to_string(),
-                output: format!("line{}", i),
-                bytes_transferred: None,
-                cached_at: current_unix_secs() - 10,
-            });
+            cache.put(
+                key,
+                CacheEntry {
+                    tool_name: "grep".to_string(),
+                    output: format!("line{}", i),
+                    bytes_transferred: None,
+                    cached_at: current_unix_secs() - 10,
+                },
+            );
         }
 
+        // Spawn sweep AFTER adding entries
+        let handle = cache.spawn_sweep();
+
         // Wait for sweep interval (max(1, 1/2) = 1s) + tolerance
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        assert_eq!(cache.len(), 0, "sweep should have removed all stale entries");
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        assert_eq!(
+            cache.len(),
+            0,
+            "sweep should have removed all stale entries"
+        );
 
         handle.abort();
     }

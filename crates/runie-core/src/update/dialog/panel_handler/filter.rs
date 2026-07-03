@@ -1,9 +1,9 @@
 //! Panel filtering handling.
 
+use super::super::rebuild_file_picker;
 use crate::dialog::PanelStack;
 use crate::model::AppState;
 use crate::Event;
-use super::super::rebuild_file_picker;
 
 /// Handle panel filter events (typing in the input box).
 pub fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelStack) {
@@ -19,9 +19,7 @@ pub fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut Pane
                 rebuild_file_picker(state);
             }
         }
-        Event::PaletteBackspace
-        | Event::ModelSelectorBackspace
-        | Event::Backspace => {
+        Event::PaletteBackspace | Event::ModelSelectorBackspace | Event::Backspace => {
             let is_file_picker = stack.current().is_some_and(|p| p.id == "at-files");
             stack.pop_filter();
             if is_file_picker {

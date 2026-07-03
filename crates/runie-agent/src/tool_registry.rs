@@ -15,8 +15,8 @@
 use serde_json::Value;
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool,
-    ListDirTool, ReadFileTool, SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool,
+    ReadFileTool, SearchTool, WriteFileTool,
 };
 use runie_core::tool::to_openai_function;
 
@@ -81,11 +81,7 @@ pub(crate) async fn dispatch_tool_impl(
         "search" => crate::tool::run_tool::<SearchTool>(name, args, ctx).await,
         "find_definitions" => crate::tool::run_tool::<FindDefinitionsTool>(name, args, ctx).await,
         // Unknown
-        _ => crate::tool::ToolOutput::error(
-            name,
-            args.clone(),
-            format!("unknown tool '{}'", name),
-        ),
+        _ => crate::tool::ToolOutput::error(name, args.clone(), format!("unknown tool '{}'", name)),
     }
 }
 
@@ -204,11 +200,7 @@ mod tests {
         // The test also verifies at runtime that all tools in BUILTIN_TOOL_NAMES
         // are covered.
         for name in runie_core::tool::BUILTIN_TOOL_NAMES {
-            assert!(
-                TOOL_NAMES.contains(name),
-                "dispatch must cover '{}'",
-                name
-            );
+            assert!(TOOL_NAMES.contains(name), "dispatch must cover '{}'", name);
         }
     }
 }

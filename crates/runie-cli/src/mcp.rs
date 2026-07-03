@@ -6,9 +6,9 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
+use runie_core::bus::EventBus;
 use runie_core::config::{ConfigScope, McpServer, McpTransport};
 use runie_core::event::Event;
-use runie_core::bus::EventBus;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -19,7 +19,9 @@ type McpHandle = runie_core::actors::RactorConfigHandle;
 /// Spawn ConfigActor and return the handle after ConfigLoaded.
 async fn spawn_config_actor() -> Result<McpHandle> {
     let bus = EventBus::<Event>::new(16);
-    let (handle, _cell, _join) = runie_core::actors::RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = runie_core::actors::RactorConfigActor::spawn_default(bus.clone())
+        .await
+        .unwrap();
 
     // Wait for ConfigLoaded
     let mut sub = bus.subscribe();
@@ -83,11 +85,7 @@ pub async fn list() -> Result<()> {
 }
 
 /// Run the `mcp add` subcommand.
-pub async fn add(
-    name: String,
-    command: Vec<String>,
-    scope: ConfigScope,
-) -> Result<()> {
+pub async fn add(name: String, command: Vec<String>, scope: ConfigScope) -> Result<()> {
     let handle = spawn_config_actor().await?;
 
     let server = McpServer {

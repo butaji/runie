@@ -99,10 +99,7 @@ impl StreamingBuffer {
 
     /// True when there is pending content (stable or unstable).
     pub fn has_pending_content(&self) -> bool {
-        !self.stable.is_empty()
-            || !self.tail.is_empty()
-            || self.in_open_fence
-            || self.in_open_table
+        !self.stable.is_empty() || !self.tail.is_empty() || self.in_open_fence || self.in_open_table
     }
 
     #[cfg(test)]
@@ -256,11 +253,7 @@ fn is_markdown_table_start(line: &str) -> bool {
 /// A fence closes on exactly "```" (possibly with trailing whitespace).
 /// "```rust" inside an open fence is treated as content.
 /// Tables close on blank lines.
-fn try_close_construct(
-    fence_open: &mut bool,
-    table_open: &mut bool,
-    trimmed: &str,
-) -> bool {
+fn try_close_construct(fence_open: &mut bool, table_open: &mut bool, trimmed: &str) -> bool {
     // Fence close - must be exactly "```" (possibly with trailing whitespace).
     // Empty lines inside fences do NOT close them.
     if *fence_open && trimmed.starts_with("```") {

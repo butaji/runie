@@ -232,7 +232,6 @@ impl AppState {
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
 
-
     /// Return the context window size for the currently selected model.
     /// Returns `None` if no model is selected or the model is not in the catalog.
     pub fn current_model_context_window(&self) -> Option<usize> {

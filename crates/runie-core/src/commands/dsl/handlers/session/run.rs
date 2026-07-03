@@ -7,8 +7,8 @@
 //! These handlers emit intent events. The actual state mutation logic lives
 //! in `handle_command_event` to avoid circular event loops.
 
-use crate::actors::SessionMsg;
 use super::COMPACT_DEFAULT_KEEP_TOKENS;
+use crate::actors::SessionMsg;
 use crate::commands::CommandResult;
 use crate::model::AppState;
 
@@ -63,7 +63,10 @@ pub fn run_fork(state: &mut AppState, index_raw: &str) -> CommandResult {
 /// Returns `CommandResult` for registry use.  Accepts args as "keep focus".
 pub fn run_compact(_state: &mut AppState, args: &str) -> CommandResult {
     let parts: Vec<&str> = args.split_whitespace().collect();
-    let keep = parts.first().unwrap_or(&COMPACT_DEFAULT_KEEP_TOKENS).to_string();
+    let keep = parts
+        .first()
+        .unwrap_or(&COMPACT_DEFAULT_KEEP_TOKENS)
+        .to_string();
     let focus = parts.get(1).unwrap_or(&"").to_string();
     // Emit intent event; owning actor handles the mutation
     CommandResult::Event(crate::Event::RunCompactCommand { keep, focus })

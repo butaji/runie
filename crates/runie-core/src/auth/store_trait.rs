@@ -83,7 +83,9 @@ pub struct MockKeyringStore {
 
 impl MockKeyringStore {
     pub fn new() -> Self {
-        Self { entries: RwLock::new(HashMap::new()) }
+        Self {
+            entries: RwLock::new(HashMap::new()),
+        }
     }
 }
 
@@ -95,12 +97,18 @@ impl Default for MockKeyringStore {
 
 impl KeyringStore for MockKeyringStore {
     fn set(&self, provider: &str, token: &str) -> anyhow::Result<()> {
-        self.entries.write().insert(provider.to_owned(), token.to_owned());
+        self.entries
+            .write()
+            .insert(provider.to_owned(), token.to_owned());
         Ok(())
     }
 
     fn get(&self, provider: &str) -> anyhow::Result<Option<SecretString>> {
-        Ok(self.entries.read().get(provider).map(|s| SecretString::from(s.clone())))
+        Ok(self
+            .entries
+            .read()
+            .get(provider)
+            .map(|s| SecretString::from(s.clone())))
     }
 
     fn delete(&self, provider: &str) -> anyhow::Result<()> {
@@ -114,9 +122,9 @@ impl KeyringStore for MockKeyringStore {
 #[cfg(feature = "keyring")]
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use secrecy::ExposeSecret;
     use super::*;
+    use secrecy::ExposeSecret;
+    use std::sync::Arc;
 
     // OS keyring tests interact with the real macOS/Linux keychain.
     // Run with: cargo test --ignored -- os_keyring
@@ -129,7 +137,10 @@ mod tests {
         let provider = format!("test_os_{}", std::process::id());
         store.set(&provider, "secret-token").unwrap();
         let result = store.get(&provider).unwrap();
-        assert_eq!(result.as_ref().map(|s| s.expose_secret().as_str()), Some("secret-token"));
+        assert_eq!(
+            result.as_ref().map(|s| s.expose_secret().as_str()),
+            Some("secret-token")
+        );
         store.delete(&provider).unwrap();
     }
 
@@ -153,7 +164,14 @@ mod tests {
     fn mock_keyring_set_and_get() {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-test").unwrap();
-        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-test"));
+        assert_eq!(
+            store
+                .get("openai")
+                .unwrap()
+                .as_ref()
+                .map(|s| s.expose_secret().as_str()),
+            Some("sk-test")
+        );
         assert!(store.get("anthropic").unwrap().is_none());
     }
 
@@ -162,7 +180,14 @@ mod tests {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-old").unwrap();
         store.set("openai", "sk-new").unwrap();
-        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-new"));
+        assert_eq!(
+            store
+                .get("openai")
+                .unwrap()
+                .as_ref()
+                .map(|s| s.expose_secret().as_str()),
+            Some("sk-new")
+        );
     }
 
     #[test]
@@ -190,22 +215,36 @@ mod tests {
         store.set("openai", "sk-thread").unwrap();
 
         // Verify the shared store has the value
-        assert_eq!(store_clone.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-thread"));
+        assert_eq!(
+            store_clone
+                .get("openai")
+                .unwrap()
+                .as_ref()
+                .map(|s| s.expose_secret().as_str()),
+            Some("sk-thread")
+        );
     }
 }
 
 #[cfg(not(feature = "keyring"))]
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use secrecy::ExposeSecret;
     use super::*;
+    use secrecy::ExposeSecret;
+    use std::sync::Arc;
 
     #[test]
     fn mock_keyring_set_and_get() {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-test").unwrap();
-        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-test"));
+        assert_eq!(
+            store
+                .get("openai")
+                .unwrap()
+                .as_ref()
+                .map(|s| s.expose_secret().as_str()),
+            Some("sk-test")
+        );
         assert!(store.get("anthropic").unwrap().is_none());
     }
 
@@ -214,7 +253,14 @@ mod tests {
         let store = MockKeyringStore::new();
         store.set("openai", "sk-old").unwrap();
         store.set("openai", "sk-new").unwrap();
-        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-new"));
+        assert_eq!(
+            store
+                .get("openai")
+                .unwrap()
+                .as_ref()
+                .map(|s| s.expose_secret().as_str()),
+            Some("sk-new")
+        );
     }
 
     #[test]
@@ -241,6 +287,13 @@ mod tests {
         store.set("openai", "sk-thread").unwrap();
 
         // Verify the shared store has the value
-        assert_eq!(store_clone.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-thread"));
+        assert_eq!(
+            store_clone
+                .get("openai")
+                .unwrap()
+                .as_ref()
+                .map(|s| s.expose_secret().as_str()),
+            Some("sk-thread")
+        );
     }
 }

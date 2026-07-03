@@ -9,9 +9,7 @@ use strum::{Display, EnumString, IntoStaticStr};
 /// Mirrors the OpenAI/Anthropic role taxonomy:
 /// `user` (human input), `assistant` (model output), `tool` (tool result),
 /// `thought` (model reasoning), `system` (configuration), `turn_complete` (marker).
-#[derive(
-    Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, Display, EnumString,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum Role {
     #[default]
@@ -45,8 +43,7 @@ impl Role {
 
 /// Origin of a message, used to distinguish user messages from injected content.
 #[derive(
-    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, Display,
-    EnumString, IntoStaticStr,
+    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, Display, EnumString, IntoStaticStr,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum MessageOrigin {

@@ -76,13 +76,10 @@ impl HeadlessRuntime {
     pub async fn shutdown(self) {
         self.config_actor.stop(None);
         self.provider_actor.stop(None);
-        let _ = tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            async {
-                let _ = self.config_join.await;
-                let _ = self.provider_join.await;
-            },
-        )
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let _ = self.config_join.await;
+            let _ = self.provider_join.await;
+        })
         .await;
     }
 

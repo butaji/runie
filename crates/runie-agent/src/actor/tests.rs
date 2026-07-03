@@ -7,6 +7,7 @@ use std::time::Duration;
 use futures::Stream;
 use tokio::time::timeout;
 
+use crate::truncate::TruncationPolicy;
 use runie_core::actors::permission::RactorPermissionActor;
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
 use runie_core::bus::EventBus;
@@ -16,7 +17,6 @@ use runie_core::message::ChatMessage;
 use runie_core::model::ThinkingLevel;
 use runie_core::provider::{Provider, ProviderError};
 use runie_core::provider_event::{ProviderEvent, StopReason};
-use crate::truncate::TruncationPolicy;
 
 use super::{spawn_ractor_agent, AgentMsg};
 
@@ -30,8 +30,13 @@ impl Provider for SimpleTextProvider {
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let stream = futures::stream::iter([
             Ok(ProviderEvent::TextDelta("hello".into())),
-            Ok(ProviderEvent::Usage { input_tokens: 1, output_tokens: 1 }),
-            Ok(ProviderEvent::Finish { reason: StopReason::Stop }),
+            Ok(ProviderEvent::Usage {
+                input_tokens: 1,
+                output_tokens: 1,
+            }),
+            Ok(ProviderEvent::Finish {
+                reason: StopReason::Stop,
+            }),
         ]);
         Box::pin(stream)
     }
@@ -67,26 +72,24 @@ impl ProviderFactory for TestFactory {
 async fn agent_actor_accepts_second_turn_after_first_completes() {
     let bus = EventBus::<Event>::new(10);
 
-    let (config_handle, _, _) =
-        runie_core::actors::RactorConfigActor::spawn_default(bus.clone())
-            .await
-            .unwrap();
-    let (provider_handle, _, _) =
-        runie_core::actors::provider::RactorProviderActor::spawn(
-            bus.clone(),
-            config_handle,
-            Arc::new(TestFactory),
-        )
+    let (config_handle, _, _) = runie_core::actors::RactorConfigActor::spawn_default(bus.clone())
+        .await
+        .unwrap();
+    let (provider_handle, _, _) = runie_core::actors::provider::RactorProviderActor::spawn(
+        bus.clone(),
+        config_handle,
+        Arc::new(TestFactory),
+    )
+    .await
+    .unwrap();
+
+    let (permission_handle, _, _) = RactorPermissionActor::spawn_for_testing(bus.clone())
         .await
         .unwrap();
 
-    let (permission_handle, _, _) =
-        RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
-
-    let (agent_handle, _, _) =
-        spawn_ractor_agent(bus.clone(), provider_handle, permission_handle)
-            .await
-            .unwrap();
+    let (agent_handle, _, _) = spawn_ractor_agent(bus.clone(), provider_handle, permission_handle)
+        .await
+        .unwrap();
 
     let mut sub = bus.subscribe();
 
@@ -156,8 +159,5 @@ async fn agent_actor_accepts_second_turn_after_first_completes() {
         turn2_done,
         "second turn must complete; got error={turn2_error}"
     );
-    assert!(
-        !turn2_error,
-        "second turn must not emit an Error event"
-    );
+    assert!(!turn2_error, "second turn must not emit an Error event");
 }

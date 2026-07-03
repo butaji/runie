@@ -289,7 +289,7 @@ pub fn parse_sequence(dsl: &str) -> Vec<CoreEvent> {
         if ch.is_ascii_alphabetic() {
             // Check if the next character is also alphabetic (word continuation)
             let has_more_alpha = i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic();
-            
+
             if has_more_alpha {
                 // Multi-letter word - emit each character separately
                 // This handles strings like "hello" as individual keystrokes
@@ -429,46 +429,97 @@ mod tests {
     fn test_named_keys() {
         assert!(matches!(parse_keystroke("enter"), Some(CoreEvent::Newline)));
         assert!(matches!(parse_keystroke("ESCAPE"), Some(CoreEvent::Escape)));
-        assert!(matches!(parse_keystroke("Backspace"), Some(CoreEvent::Backspace)));
+        assert!(matches!(
+            parse_keystroke("Backspace"),
+            Some(CoreEvent::Backspace)
+        ));
         assert!(matches!(parse_keystroke("up"), Some(CoreEvent::Up)));
         assert!(matches!(parse_keystroke("DOWN"), Some(CoreEvent::Down)));
-        assert!(matches!(parse_keystroke("left"), Some(CoreEvent::CursorLeft)));
-        assert!(matches!(parse_keystroke("right"), Some(CoreEvent::CursorRight)));
+        assert!(matches!(
+            parse_keystroke("left"),
+            Some(CoreEvent::CursorLeft)
+        ));
+        assert!(matches!(
+            parse_keystroke("right"),
+            Some(CoreEvent::CursorRight)
+        ));
         assert!(matches!(parse_keystroke("pageup"), Some(CoreEvent::PageUp)));
-        assert!(matches!(parse_keystroke("pagedown"), Some(CoreEvent::PageDown)));
+        assert!(matches!(
+            parse_keystroke("pagedown"),
+            Some(CoreEvent::PageDown)
+        ));
         assert!(matches!(parse_keystroke("home"), Some(CoreEvent::GoToTop)));
-        assert!(matches!(parse_keystroke("end"), Some(CoreEvent::GoToBottom)));
+        assert!(matches!(
+            parse_keystroke("end"),
+            Some(CoreEvent::GoToBottom)
+        ));
     }
 
     #[test]
     fn test_ctrl_combos() {
         assert!(matches!(parse_keystroke("ctrl+c"), Some(CoreEvent::Quit)));
         assert!(matches!(parse_keystroke("ctrl+C"), Some(CoreEvent::Quit)));
-        assert!(matches!(parse_keystroke("control+c"), Some(CoreEvent::Quit)));
-        assert!(matches!(parse_keystroke("ctrl+o"), Some(CoreEvent::ToggleExpand)));
-        assert!(matches!(parse_keystroke("ctrl+l"), Some(CoreEvent::ClearTransient)));
-        assert!(matches!(parse_keystroke("ctrl+p"), Some(CoreEvent::HistoryPrev)));
-        assert!(matches!(parse_keystroke("ctrl+n"), Some(CoreEvent::HistoryNext)));
-        assert!(matches!(parse_keystroke("ctrl+a"), Some(CoreEvent::CursorStart)));
-        assert!(matches!(parse_keystroke("ctrl+e"), Some(CoreEvent::CursorEnd)));
+        assert!(matches!(
+            parse_keystroke("control+c"),
+            Some(CoreEvent::Quit)
+        ));
+        assert!(matches!(
+            parse_keystroke("ctrl+o"),
+            Some(CoreEvent::ToggleExpand)
+        ));
+        assert!(matches!(
+            parse_keystroke("ctrl+l"),
+            Some(CoreEvent::ClearTransient)
+        ));
+        assert!(matches!(
+            parse_keystroke("ctrl+p"),
+            Some(CoreEvent::HistoryPrev)
+        ));
+        assert!(matches!(
+            parse_keystroke("ctrl+n"),
+            Some(CoreEvent::HistoryNext)
+        ));
+        assert!(matches!(
+            parse_keystroke("ctrl+a"),
+            Some(CoreEvent::CursorStart)
+        ));
+        assert!(matches!(
+            parse_keystroke("ctrl+e"),
+            Some(CoreEvent::CursorEnd)
+        ));
     }
 
     #[test]
     fn test_alt_combos() {
-        assert!(matches!(parse_keystroke("alt+enter"), Some(CoreEvent::FollowUp)));
-        assert!(matches!(parse_keystroke("meta+enter"), Some(CoreEvent::FollowUp)));
+        assert!(matches!(
+            parse_keystroke("alt+enter"),
+            Some(CoreEvent::FollowUp)
+        ));
+        assert!(matches!(
+            parse_keystroke("meta+enter"),
+            Some(CoreEvent::FollowUp)
+        ));
     }
 
     #[test]
     fn test_shift_combo() {
-        assert!(matches!(parse_keystroke("shift+tab"), Some(CoreEvent::PaletteUp)));
-        assert!(matches!(parse_keystroke("shift+enter"), Some(CoreEvent::Newline)));
+        assert!(matches!(
+            parse_keystroke("shift+tab"),
+            Some(CoreEvent::PaletteUp)
+        ));
+        assert!(matches!(
+            parse_keystroke("shift+enter"),
+            Some(CoreEvent::Newline)
+        ));
     }
 
     #[test]
     fn test_tmux_style() {
         assert!(matches!(parse_tmux_style("C-c"), Some(CoreEvent::Quit)));
-        assert!(matches!(parse_tmux_style("M-RET"), Some(CoreEvent::FollowUp)));
+        assert!(matches!(
+            parse_tmux_style("M-RET"),
+            Some(CoreEvent::FollowUp)
+        ));
         assert!(parse_tmux_style("C-M-c").is_none()); // Not supported
     }
 
@@ -503,9 +554,13 @@ mod tests {
         ];
         assert_eq!(events.len(), expected.len());
         for (got, want) in events.iter().zip(expected.iter()) {
-            assert!(matches!((got, want), (CoreEvent::Input(g), CoreEvent::Input(w)) if g == w)
-                || std::mem::discriminant(got) == std::mem::discriminant(want),
-                "mismatch: {:?} vs {:?}", got, want);
+            assert!(
+                matches!((got, want), (CoreEvent::Input(g), CoreEvent::Input(w)) if g == w)
+                    || std::mem::discriminant(got) == std::mem::discriminant(want),
+                "mismatch: {:?} vs {:?}",
+                got,
+                want
+            );
         }
     }
 

@@ -43,7 +43,9 @@ fn test_cached_feed_reuse_on_gen_match() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text { content: "hello".into() }],
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -65,7 +67,9 @@ fn test_cached_feed_reuse_on_gen_match() {
         role: Role::User,
         timestamp: 2.0,
         id: "u2".into(),
-        parts: vec![Part::Text { content: "world".into() }],
+        parts: vec![Part::Text {
+            content: "world".into(),
+        }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -104,10 +108,11 @@ fn test_event_triggers_snapshot_update() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello back".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.ensure_fresh();
 
     let snap2 = state.snapshot();

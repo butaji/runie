@@ -1,9 +1,9 @@
 //! Panel activation and action handling.
 
+use super::settings::apply_panel_setting;
 use crate::dialog::{ItemAction, PanelItem, PanelStack};
 use crate::model::{AppState, InputReceiver};
 use crate::Event;
-use super::settings::apply_panel_setting;
 
 /// Result of handling panel activation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

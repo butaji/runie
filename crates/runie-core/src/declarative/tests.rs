@@ -7,7 +7,9 @@ mod loader_tests {
     // Re-export types for tests
     use crate::commands::CommandCategory;
     use crate::declarative::loader::{parse_command_yaml, parse_triggers};
-    use crate::declarative::types::{CommandDef, CommandKind, DeclarativeCommandYaml, SkillDef, Trigger};
+    use crate::declarative::types::{
+        CommandDef, CommandKind, DeclarativeCommandYaml, SkillDef, Trigger,
+    };
     use crate::resource_loader::extract_frontmatter;
 
     // ── Frontmatter parsing tests ───────────────────────────────────────────────
@@ -356,7 +358,9 @@ handler: trig
     #[test]
     fn command_kind_handler_name_returns_name() {
         use crate::declarative::types::CommandKind;
-        let kind = CommandKind::Handler { handler: "save".to_owned() };
+        let kind = CommandKind::Handler {
+            handler: "save".to_owned(),
+        };
         assert_eq!(kind.handler_name(), Some("save"));
         assert_eq!(kind.message(), None);
     }
@@ -376,7 +380,9 @@ handler: trig
     #[test]
     fn command_kind_msg_returns_message() {
         use crate::declarative::types::CommandKind;
-        let kind = CommandKind::Msg { message: "Done!".to_owned() };
+        let kind = CommandKind::Msg {
+            message: "Done!".to_owned(),
+        };
         assert_eq!(kind.handler_name(), None);
         assert_eq!(kind.message(), Some("Done!"));
     }

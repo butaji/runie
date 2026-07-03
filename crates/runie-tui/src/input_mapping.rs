@@ -15,10 +15,7 @@ use runie_core::actors::{InputMsg, RactorInputHandle};
 ///
 /// This is the single source of truth for the event → `InputMsg` mapping.
 /// Both the forwarder and `UiActor` must use this function.
-pub async fn route_to_input_actor(
-    handle: &RactorInputHandle,
-    evt: &runie_core::Event,
-) -> bool {
+pub async fn route_to_input_actor(handle: &RactorInputHandle, evt: &runie_core::Event) -> bool {
     use runie_core::Event as E;
     match evt {
         E::Input(c) => {
@@ -143,15 +140,14 @@ mod tests {
         }
 
         // Verify that non-routable events return false.
-        let not_routed = [
-            Event::Submit,
-            Event::Quit,
-            Event::ForceQuit,
-            Event::Abort,
-        ];
+        let not_routed = [Event::Submit, Event::Quit, Event::ForceQuit, Event::Abort];
         for evt in &not_routed {
             let result = route_to_input_actor(&leader.input, evt).await;
-            assert!(!result, "Event {:?} should NOT be routed to InputActor", evt);
+            assert!(
+                !result,
+                "Event {:?} should NOT be routed to InputActor",
+                evt
+            );
         }
 
         leader.shutdown().await;

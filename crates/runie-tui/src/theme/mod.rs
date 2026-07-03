@@ -5,8 +5,8 @@
 
 pub use crate::semantic_tokens::SemanticTokens;
 
-use std::sync::Arc;
 use parking_lot::{Mutex, RwLock};
+use std::sync::Arc;
 
 pub(crate) mod colors;
 pub(crate) mod glyph;

@@ -9,13 +9,13 @@ workspace = true
 
 [features]
 default = []
-provider = ["runie-provider"]
+provider = ["runie-provider/mock"]
 agent = ["runie-agent"]
 
 [dependencies]
 runie-core.workspace = true
 anyhow.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["rt", "test-util"] }
 tokio-util.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true

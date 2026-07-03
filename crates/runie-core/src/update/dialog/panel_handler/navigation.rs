@@ -5,11 +5,7 @@ use crate::model::AppState;
 use crate::Event;
 
 /// Handle panel close events (Escape, close button, back).
-pub fn handle_panel_close(
-    state: &mut AppState,
-    event: &Event,
-    stack: &mut PanelStack,
-) -> bool {
+pub fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
         Event::SettingsClose
         | Event::PaletteClose
@@ -35,10 +31,7 @@ pub fn handle_panel_navigation(
     stack: &mut PanelStack,
 ) -> bool {
     match event {
-        Event::HistoryPrev
-        | Event::SettingsUp
-        | Event::PaletteUp
-        | Event::ModelSelectorUp => {
+        Event::HistoryPrev | Event::SettingsUp | Event::PaletteUp | Event::ModelSelectorUp => {
             stack.select_up();
             return true;
         }

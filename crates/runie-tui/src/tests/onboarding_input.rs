@@ -9,8 +9,7 @@ use super::*;
 use runie_core::Event;
 
 fn clean_config() {
-    let path =
-        runie_core::provider::config::generate_test_config_path("runie_onboarding_input");
+    let path = runie_core::provider::config::generate_test_config_path("runie_onboarding_input");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path);
 }

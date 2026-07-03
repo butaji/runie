@@ -3,9 +3,9 @@
 //! Defines the [`Location`] enum and [`SearchQuery`] parser for the search index.
 //! Replaces `fff_search::Location` with a local implementation.
 
-use std::sync::LazyLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 /// Compiled regex for location suffix extraction.
 ///
@@ -18,10 +18,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// The regex uses greedy matching to correctly handle paths containing colons.
 static LOCATION_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"^(?<path>[^:]+):(?<a>\d+)(?::(?<b>\d+))?(?:-(?:(?<c>\d+)(?::(?<d>\d+))?))?$",
-    )
-    .expect("location regex is valid")
+    Regex::new(r"^(?<path>[^:]+):(?<a>\d+)(?::(?<b>\d+))?(?:-(?:(?<c>\d+)(?::(?<d>\d+))?))?$")
+        .expect("location regex is valid")
 });
 
 /// Location within a file (line, column, or range).
@@ -32,10 +30,7 @@ pub enum Location {
     /// Line and column (e.g., `file:42:5`).
     Position { line: i32, col: i32 },
     /// Line range (e.g., `file:10-20`).
-    Range {
-        start: (i32, i32),
-        end: (i32, i32),
-    },
+    Range { start: (i32, i32), end: (i32, i32) },
 }
 
 /// Search query constraint — parsed from the query string.
@@ -151,8 +146,9 @@ fn extract_location(input: &str) -> (&str, Option<Location>) {
         let path = caps.name("path").map(|m| m.as_str()).unwrap_or("");
 
         // Only accept as a path if it looks like a filename or contains a path separator.
-        let looks_like_path =
-            path.contains('/') || path.contains('\\') || (path.contains('.') && !path.ends_with('.'));
+        let looks_like_path = path.contains('/')
+            || path.contains('\\')
+            || (path.contains('.') && !path.ends_with('.'));
         if !looks_like_path {
             return (input, None);
         }
@@ -168,17 +164,20 @@ fn extract_location(input: &str) -> (&str, Option<Location>) {
             // `N:M` → Position
             (Some(line), Some(col), None, None) => Some(Location::Position { line, col }),
             // `N:M-P` → Range (column range: start line/col, same line, end col)
-            (Some(line), Some(col_s), Some(end_col), None) => {
-                Some(Location::Range { start: (line, col_s), end: (line, end_col) })
-            }
+            (Some(line), Some(col_s), Some(end_col), None) => Some(Location::Range {
+                start: (line, col_s),
+                end: (line, end_col),
+            }),
             // `N:M-P:Q` → Range (full range)
-            (Some(line), Some(col_s), Some(end_line), Some(end_col)) => {
-                Some(Location::Range { start: (line, col_s), end: (end_line, end_col) })
-            }
+            (Some(line), Some(col_s), Some(end_line), Some(end_col)) => Some(Location::Range {
+                start: (line, col_s),
+                end: (end_line, end_col),
+            }),
             // `N-P` → Range (line range: end_col=0)
-            (Some(start_line), None, Some(end_line), None) => {
-                Some(Location::Range { start: (start_line, 0), end: (end_line, 0) })
-            }
+            (Some(start_line), None, Some(end_line), None) => Some(Location::Range {
+                start: (start_line, 0),
+                end: (end_line, 0),
+            }),
             _ => None,
         };
 
@@ -317,7 +316,10 @@ mod tests {
     fn search_query_parse_location_with_column() {
         let q = parse_search_query("lib.rs:42:5");
         assert_eq!(q.text, "lib.rs");
-        assert!(matches!(q.location, Some(Location::Position { line: 42, col: 5 })));
+        assert!(matches!(
+            q.location,
+            Some(Location::Position { line: 42, col: 5 })
+        ));
     }
 
     #[test]

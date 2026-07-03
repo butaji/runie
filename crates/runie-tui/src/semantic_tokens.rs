@@ -77,5 +77,4 @@ impl SemanticTokens {
 // ============================================================================
 
 /// Default theme TOML loaded from a resource file.
-pub const DEFAULT_THEME_TOML: &str =
-    include_str!("../resources/themes/runie.toml");
+pub const DEFAULT_THEME_TOML: &str = include_str!("../resources/themes/runie.toml");

@@ -42,3 +42,12 @@ The `deny.toml` `[bans]` section has `multiple-versions = "deny"`. Known unavoid
 - [x] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
 - [x] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
 - [x] **Live tmux run tests** — N/A.
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that `cargo deny check` still fails:
+
+- Duplicate `darling` versions (`0.20.11`, `0.21.3`, `0.23.0`) are not skipped in `deny.toml`.
+- `quick-xml 0.37.5` is affected by RUSTSEC-2026-0194.
+
+See `tasks/fix-ci-gates-on-dev.md` for the remaining work.

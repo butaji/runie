@@ -24,7 +24,11 @@ pub mod session {
     pub const NO_HISTORY: &str = "No history.";
     /// Format for conversation history.
     pub fn history(total: usize, entries: &[String]) -> String {
-        format!("Conversation history ({} messages):\n{}", total, entries.join("\n"))
+        format!(
+            "Conversation history ({} messages):\n{}",
+            total,
+            entries.join("\n")
+        )
     }
     /// Format for session info.
     pub fn session_info(info: &str) -> String {
@@ -52,7 +56,10 @@ pub mod session {
     }
     /// Format for load not found.
     pub fn session_not_found(name: &str) -> String {
-        format!("Session '{}' not found. Use /sessions to list saved sessions.", name)
+        format!(
+            "Session '{}' not found. Use /sessions to list saved sessions.",
+            name
+        )
     }
     /// Format for delete usage error.
     pub const DELETE_USAGE: &str = "Usage: /delete name";

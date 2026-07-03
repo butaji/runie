@@ -31,7 +31,11 @@ impl RactorPermissionHandle {
 
     /// Query the current pending request ID, if any.
     pub async fn current_request_id(&self) -> Option<String> {
-        match self.inner.call(|tx| PermissionMsg::GetCurrentRequest(Some(tx)), None).await {
+        match self
+            .inner
+            .call(|tx| PermissionMsg::GetCurrentRequest(Some(tx)), None)
+            .await
+        {
             Ok(ractor::rpc::CallResult::Success(v)) => v,
             _ => None,
         }
@@ -103,7 +107,11 @@ impl RactorPermissionHandle {
 
     /// Query the current permission rule set.
     pub async fn get_rules(&self) -> PermissionSet {
-        match self.inner.call(|tx| PermissionMsg::GetRules(Some(tx)), None).await {
+        match self
+            .inner
+            .call(|tx| PermissionMsg::GetRules(Some(tx)), None)
+            .await
+        {
             Ok(ractor::rpc::CallResult::Success(rules)) => rules,
             _ => PermissionSet::default(),
         }
@@ -121,7 +129,9 @@ impl RactorPermissionHandle {
 
     /// Add or update a permission rule.
     pub async fn upsert_rule(&self, tool: String, action: PermissionAction) {
-        let _ = self.inner.send_message(PermissionMsg::UpsertRule { tool, action });
+        let _ = self
+            .inner
+            .send_message(PermissionMsg::UpsertRule { tool, action });
     }
 }
 
@@ -234,7 +244,10 @@ impl RactorPermissionActor {
         state.emit(Event::PermissionRequestDismissed);
     }
 
-    fn handle_get_rules(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<PermissionSet>>) {
+    fn handle_get_rules(
+        state: &PermissionActorState,
+        reply: Option<ractor::RpcReplyPort<PermissionSet>>,
+    ) {
         if let Some(reply) = reply {
             let _ = reply.send(state.rules.clone());
         }
@@ -244,7 +257,9 @@ impl RactorPermissionActor {
         // Rules are loaded from ConfigLoaded events; this is a no-op trigger
         // for the actor's own re-evaluation. The actual loading happens in
         // pre_start via ConfigActor, or explicitly after config changes.
-        tracing::debug!("LoadRules received (rules already initialized or updated via ConfigLoaded)");
+        tracing::debug!(
+            "LoadRules received (rules already initialized or updated via ConfigLoaded)"
+        );
     }
 
     async fn handle_trust_project(state: &mut PermissionActorState) {
@@ -291,7 +306,11 @@ impl RactorPermissionActor {
         }
     }
 
-    fn handle_upsert_rule(state: &mut PermissionActorState, tool: String, action: PermissionAction) {
+    fn handle_upsert_rule(
+        state: &mut PermissionActorState,
+        tool: String,
+        action: PermissionAction,
+    ) {
         let rule = crate::permissions::PermissionRule::new(action, tool);
         state.rules.add_rule(rule);
     }
@@ -382,12 +401,18 @@ impl RactorPermissionActor {
     pub async fn spawn(
         bus: EventBus<Event>,
         config_h: RactorConfigHandle,
-    ) -> anyhow::Result<(RactorPermissionHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
-        let args = PermissionActorArgs { bus: bus.clone(), config_h };
-        let (handle, join, cell) =
-            spawn_ractor(None, Self, args)
-                .await
-                .map_err(|e| anyhow::anyhow!("RactorPermissionActor spawn failed: {}", e))?;
+    ) -> anyhow::Result<(
+        RactorPermissionHandle,
+        ractor::ActorCell,
+        tokio::task::JoinHandle<()>,
+    )> {
+        let args = PermissionActorArgs {
+            bus: bus.clone(),
+            config_h,
+        };
+        let (handle, join, cell) = spawn_ractor(None, Self, args)
+            .await
+            .map_err(|e| anyhow::anyhow!("RactorPermissionActor spawn failed: {}", e))?;
         Ok((RactorPermissionHandle::new(handle), cell, join))
     }
 
@@ -398,7 +423,11 @@ impl RactorPermissionActor {
     /// Prefer [`spawn`](Self::spawn) in production code.
     pub async fn spawn_for_testing(
         bus: EventBus<Event>,
-    ) -> anyhow::Result<(RactorPermissionHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
+    ) -> anyhow::Result<(
+        RactorPermissionHandle,
+        ractor::ActorCell,
+        tokio::task::JoinHandle<()>,
+    )> {
         // Spawn a minimal ConfigActor just for the config handle.
         let (config_h, _cfg_cell, _cfg_join) =
             crate::actors::RactorConfigActor::spawn_default(bus.clone()).await?;
@@ -408,4 +437,3 @@ impl RactorPermissionActor {
 
 #[cfg(test)]
 mod tests;
-

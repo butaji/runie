@@ -137,7 +137,8 @@ impl CredentialResolver {
         api_key: Option<SecretString>,
         base_url: Option<String>,
     ) {
-        self.entries.insert(provider.to_lowercase(), (api_key, base_url));
+        self.entries
+            .insert(provider.to_lowercase(), (api_key, base_url));
     }
 
     /// Resolve the API key for a provider using the standard priority chain.
@@ -203,10 +204,10 @@ impl CredentialResolver {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use secrecy::{ExposeSecret, SecretString};
     use super::super::{KeyringStore, MockKeyringStore};
     use super::*;
+    use secrecy::{ExposeSecret, SecretString};
+    use std::sync::Arc;
 
     fn ss(s: &str) -> SecretString {
         SecretString::from(s.to_owned())
@@ -223,7 +224,9 @@ mod tests {
     #[test]
     fn resolver_priority_env_over_keyring() {
         let mut resolver = CredentialResolver::empty();
-        resolver.env.insert("TESTPROVIDER_API_KEY".to_owned(), ss("env-key"));
+        resolver
+            .env
+            .insert("TESTPROVIDER_API_KEY".to_owned(), ss("env-key"));
 
         let result = resolver.resolve_api_key("testprovider");
         assert_secret_eq(result.as_ref(), "env-key");
@@ -238,7 +241,10 @@ mod tests {
             Some("http://config".to_owned()),
         );
 
-        assert_secret_eq(resolver.resolve_api_key("testprovider").as_ref(), "config-key");
+        assert_secret_eq(
+            resolver.resolve_api_key("testprovider").as_ref(),
+            "config-key",
+        );
         assert_eq!(
             resolver.resolve_base_url("testprovider"),
             Some("http://config".to_owned())
@@ -248,8 +254,12 @@ mod tests {
     #[test]
     fn resolver_prefers_env_over_dotenv() {
         let mut resolver = CredentialResolver::empty();
-        resolver.env.insert("TEST_API_KEY".to_owned(), ss("env-key"));
-        resolver.dotenv.insert("TEST_API_KEY".to_owned(), ss("dotenv-key"));
+        resolver
+            .env
+            .insert("TEST_API_KEY".to_owned(), ss("env-key"));
+        resolver
+            .dotenv
+            .insert("TEST_API_KEY".to_owned(), ss("dotenv-key"));
 
         assert_secret_eq(resolver.resolve_api_key("test").as_ref(), "env-key");
     }
@@ -257,7 +267,9 @@ mod tests {
     #[test]
     fn resolver_prefers_dotenv_over_config() {
         let mut resolver = CredentialResolver::empty();
-        resolver.dotenv.insert("TEST_API_KEY".to_owned(), ss("dotenv-key"));
+        resolver
+            .dotenv
+            .insert("TEST_API_KEY".to_owned(), ss("dotenv-key"));
         resolver.set_config("test", Some(ss("config-key")), None);
 
         assert_secret_eq(resolver.resolve_api_key("test").as_ref(), "dotenv-key");
@@ -297,10 +309,15 @@ mod tests {
         mock.set("priority_test", "mock-token").unwrap();
 
         let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
-        resolver.env.insert("PRIORITY_TEST_API_KEY".to_owned(), ss("env-token"));
+        resolver
+            .env
+            .insert("PRIORITY_TEST_API_KEY".to_owned(), ss("env-token"));
 
         // Env should win over mock store
-        assert_secret_eq(resolver.resolve_api_key("priority_test").as_ref(), "env-token");
+        assert_secret_eq(
+            resolver.resolve_api_key("priority_test").as_ref(),
+            "env-token",
+        );
     }
 
     #[test]
@@ -309,10 +326,15 @@ mod tests {
         mock.set("dotenv_test", "mock-token").unwrap();
 
         let mut resolver = CredentialResolver::with_store(Arc::clone(&mock));
-        resolver.dotenv.insert("DOTENV_TEST_API_KEY".to_owned(), ss("dotenv-token"));
+        resolver
+            .dotenv
+            .insert("DOTENV_TEST_API_KEY".to_owned(), ss("dotenv-token"));
 
         // dotenv should win over mock store
-        assert_secret_eq(resolver.resolve_api_key("dotenv_test").as_ref(), "dotenv-token");
+        assert_secret_eq(
+            resolver.resolve_api_key("dotenv_test").as_ref(),
+            "dotenv-token",
+        );
     }
 
     #[test]
@@ -324,6 +346,9 @@ mod tests {
         resolver.set_config("config_test", Some(ss("config-token")), None);
 
         // mock store should win over config
-        assert_secret_eq(resolver.resolve_api_key("config_test").as_ref(), "mock-token");
+        assert_secret_eq(
+            resolver.resolve_api_key("config_test").as_ref(),
+            "mock-token",
+        );
     }
 }

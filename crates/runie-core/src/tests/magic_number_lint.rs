@@ -90,8 +90,10 @@ fn find_magic_numbers(line: &str) -> Vec<String> {
         }
 
         // Check if this looks like a named constant (preceded by =, :, ,, =>).
-        let looks_named =
-            before.ends_with('=') || before.ends_with(':') || before.ends_with(',') || before.ends_with("=>");
+        let looks_named = before.ends_with('=')
+            || before.ends_with(':')
+            || before.ends_with(',')
+            || before.ends_with("=>");
 
         if looks_named {
             continue;
@@ -106,10 +108,7 @@ fn find_magic_numbers(line: &str) -> Vec<String> {
         }
 
         // Skip if already has a clear name nearby.
-        if line.contains("const ")
-            || line.contains("static ")
-            || line.contains("pub const")
-        {
+        if line.contains("const ") || line.contains("static ") || line.contains("pub const") {
             continue;
         }
 

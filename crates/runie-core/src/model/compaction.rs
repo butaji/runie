@@ -10,12 +10,10 @@ use crate::model::Role;
 
 // Lazy-initialized regex patterns (compiled once at first use).
 // The patterns are hardcoded and syntactically valid — unwrap documents this invariant.
-static FENCE_PAT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap()
-});
-static DETAILS_PAT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)<details>\s*\n?([\s\S]*?)</details>").unwrap()
-});
+static FENCE_PAT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap());
+static DETAILS_PAT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)<details>\s*\n?([\s\S]*?)</details>").unwrap());
 
 impl AppState {
     /// Total tokens across all messages.
@@ -111,8 +109,7 @@ impl AppState {
             remove_count, keep_recent_tokens
         );
 
-        let new_messages =
-            Self::build_compacted_messages(pinned, kept_non_pinned, summary.clone());
+        let new_messages = Self::build_compacted_messages(pinned, kept_non_pinned, summary.clone());
 
         self.session_mut().messages = new_messages;
         self.messages_changed();
@@ -123,7 +120,11 @@ impl AppState {
     fn sum_tokens(&self, messages: &[&crate::message::ChatMessage]) -> usize {
         messages
             .iter()
-            .map(|m| self.agent_state().token_tracker.estimate_input(&m.content()))
+            .map(|m| {
+                self.agent_state()
+                    .token_tracker
+                    .estimate_input(&m.content())
+            })
             .sum()
     }
 
@@ -224,10 +225,7 @@ fn truncate_fenced_code_blocks(content: &mut String, keep: usize) -> (usize, boo
             result.push('\n');
             result.push_str(&first);
             result.push_str("\n\n[...] // ");
-            result.push_str(&format!(
-                "{} intermediate lines removed\n\n",
-                middle_lines
-            ));
+            result.push_str(&format!("{} intermediate lines removed\n\n", middle_lines));
             result.push_str(&last);
             result.push_str("\n```");
             removed += middle_lines;
@@ -271,10 +269,7 @@ fn truncate_details_blocks(content: &mut String, keep: usize) -> (usize, bool) {
             result.push_str("<details>\n");
             result.push_str(&first);
             result.push_str("\n\n[...] // ");
-            result.push_str(&format!(
-                "{} intermediate lines removed\n\n",
-                middle_lines
-            ));
+            result.push_str(&format!("{} intermediate lines removed\n\n", middle_lines));
             result.push_str(&last);
             result.push_str("\n</details>");
             removed += middle_lines;
@@ -324,8 +319,8 @@ mod tests {
 
     #[test]
     fn truncate_structural_details_long() {
-        let mut s = "<details>\nline1\nline2\nline3\nline4\nline5\nline6\nline7\n</details>"
-            .to_string();
+        let mut s =
+            "<details>\nline1\nline2\nline3\nline4\nline5\nline6\nline7\n</details>".to_string();
         let (removed, modified) = truncate_structural(&mut s, 1);
         assert!(modified);
         assert!(removed > 0);
@@ -353,14 +348,10 @@ mod tests {
 
     #[test]
     fn truncate_structural_no_fence_no_change() {
-        let mut s =
-            "This is plain text without any code blocks or details".to_string();
+        let mut s = "This is plain text without any code blocks or details".to_string();
         let (removed, modified) = truncate_structural(&mut s, 5);
         assert!(!modified);
         assert_eq!(removed, 0);
-        assert_eq!(
-            s,
-            "This is plain text without any code blocks or details"
-        );
+        assert_eq!(s, "This is plain text without any code blocks or details");
     }
 }

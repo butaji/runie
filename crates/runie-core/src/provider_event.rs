@@ -77,20 +77,14 @@ pub enum ModelError {
     JsonDecode(String),
     /// Token limit exceeded.
     #[error("Context length exceeded: used {used}, limit {limit}")]
-    ContextLength {
-        limit: usize,
-        used: usize,
-    },
+    ContextLength { limit: usize, used: usize },
     /// Model refused the request.
     #[error("Model refused: {0}")]
     Refusal(String),
     /// Rate limit hit (retry info available via struct fields).
     #[error("Rate limited")]
     RateLimit {
-        #[serde(
-            rename = "retryAfterSecs",
-            skip_serializing_if = "Option::is_none"
-        )]
+        #[serde(rename = "retryAfterSecs", skip_serializing_if = "Option::is_none")]
         retry_after_secs: Option<u32>,
     },
     /// An underlying error (network, parse, etc.).
@@ -155,7 +149,10 @@ mod tests {
         let err = ProviderError::MissingApiKey("openai".into());
         let model_err: ModelError = err.into();
         let msg = model_err.to_string();
-        assert!(msg.contains("openai"), "expected 'openai' in error message: {msg}");
+        assert!(
+            msg.contains("openai"),
+            "expected 'openai' in error message: {msg}"
+        );
     }
 
     #[test]
@@ -163,7 +160,10 @@ mod tests {
         let anyhow_err = anyhow::anyhow!("network timeout");
         let model_err: ModelError = anyhow_err.into();
         let msg = model_err.to_string();
-        assert!(msg.contains("network timeout"), "expected 'network timeout' in error message: {msg}");
+        assert!(
+            msg.contains("network timeout"),
+            "expected 'network timeout' in error message: {msg}"
+        );
     }
 
     #[test]
@@ -174,8 +174,10 @@ mod tests {
         let model_err: ModelError = anyhow::Error::from(inner).into();
         // The error message is preserved (what users see)
         let msg = model_err.to_string();
-        assert!(msg.contains("file not found") || msg.contains("NotFound"),
-            "expected file-not-found error message, got: {msg}");
+        assert!(
+            msg.contains("file not found") || msg.contains("NotFound"),
+            "expected file-not-found error message, got: {msg}"
+        );
         // Verify that ? propagation works (errors can be converted through ModelError)
         fn propagate_error() -> Result<(), ModelError> {
             let inner = std::io::Error::other("propagated");
@@ -200,14 +202,20 @@ mod tests {
         let err = ModelError::JsonDecode("unexpected token".into());
         let json = serde_json::to_string(&err).unwrap();
         // With #[serde(tag = "kind", content = "message")], tuple variants put content directly in message
-        assert_eq!(json, r#"{"kind":"jsonDecode","message":"unexpected token"}"#);
+        assert_eq!(
+            json,
+            r#"{"kind":"jsonDecode","message":"unexpected token"}"#
+        );
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
     }
 
     #[test]
     fn model_error_context_length_roundtrip() {
-        let err = ModelError::ContextLength { limit: 8192, used: 9000 };
+        let err = ModelError::ContextLength {
+            limit: 8192,
+            used: 9000,
+        };
         let json = serde_json::to_string(&err).unwrap();
         // Struct variants put the struct fields in message
         assert_eq!(
@@ -229,15 +237,22 @@ mod tests {
 
     #[test]
     fn model_error_rate_limit_roundtrip() {
-        let err = ModelError::RateLimit { retry_after_secs: Some(30) };
+        let err = ModelError::RateLimit {
+            retry_after_secs: Some(30),
+        };
         let json = serde_json::to_string(&err).unwrap();
         // The retry_after_secs field is renamed to retryAfterSecs in JSON
-        assert_eq!(json, r#"{"kind":"rateLimit","message":{"retryAfterSecs":30}}"#);
+        assert_eq!(
+            json,
+            r#"{"kind":"rateLimit","message":{"retryAfterSecs":30}}"#
+        );
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
 
         // Without retry info, the field is skipped entirely
-        let err2 = ModelError::RateLimit { retry_after_secs: None };
+        let err2 = ModelError::RateLimit {
+            retry_after_secs: None,
+        };
         let json2 = serde_json::to_string(&err2).unwrap();
         assert_eq!(json2, r#"{"kind":"rateLimit","message":{}}"#);
         let roundtrip2: ModelError = serde_json::from_str(&json2).unwrap();

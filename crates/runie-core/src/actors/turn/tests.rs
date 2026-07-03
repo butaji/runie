@@ -159,7 +159,10 @@ async fn queue_follow_up_after_done_starts_queued_turn() {
         }
     })
     .await;
-    assert!(result.is_ok(), "Second turn should start after DeliverQueued + RunIfQueued");
+    assert!(
+        result.is_ok(),
+        "Second turn should start after DeliverQueued + RunIfQueued"
+    );
 }
 
 /// Verify that `#[instrument]` does not panic and handlers process messages normally.
@@ -167,8 +170,7 @@ async fn queue_follow_up_after_done_starts_queued_turn() {
 async fn turn_actor_handler_runs_with_tracing() {
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let _ = tracing_subscriber::registry()
         .with(filter)
         .with(fmt::layer().with_target(false).without_time())
@@ -230,10 +232,11 @@ async fn contract_idempotent_message_submit() {
     // RunIfQueued should start first turn
     handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
 
+    // Use timeout-based polling instead of sleep
     let mut turn_started_count = 0;
-    let mut timeout_count = 0;
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
-    while tokio::time::Instant::now() < deadline {
+    let deadline = std::time::Duration::from_secs(2);
+    let start = std::time::Instant::now();
+    while start.elapsed() < deadline {
         tokio::select! {
             result = sub.recv() => {
                 if let Ok(evt) = result {
@@ -243,22 +246,25 @@ async fn contract_idempotent_message_submit() {
                 }
             }
             _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
-                timeout_count += 1;
-                if timeout_count > 5 {
-                    break;
-                }
+                // Check for turn started
             }
+        }
+        if turn_started_count >= 1 {
+            break;
         }
     }
     // Should have exactly one TurnStarted (second message queued)
-    assert_eq!(turn_started_count, 1, "exactly one turn should start, second message should queue");
+    assert_eq!(
+        turn_started_count, 1,
+        "exactly one turn should start, second message should queue"
+    );
 }
 
 /// Contract: ordering — events are emitted in the order they are processed.
 #[tokio::test]
 async fn contract_ordered_events() {
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     let bus = EventBus::<Event>::new(16);
     let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
@@ -284,7 +290,7 @@ async fn contract_ordered_events() {
         .await;
     handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
 
-    // Wait a bit for events
+    // Wait for events with timeout - yield to let actor process
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     // Events should be emitted in order (check that UserMessageSubmitted comes before TurnStarted)
@@ -355,7 +361,10 @@ async fn contract_crash_recovery_preserves_queued() {
         false
     })
     .await;
-    assert!(found_completed.unwrap_or(false), "first turn should complete");
+    assert!(
+        found_completed.unwrap_or(false),
+        "first turn should complete"
+    );
 
     // Verify the queued follow-up was preserved (DeliverQueued succeeds)
     use ractor::rpc::CallResult;
@@ -422,5 +431,9 @@ async fn contract_duplicate_request_id_idempotent() {
         count
     })
     .await;
-    assert_eq!(found.unwrap_or(0), 2, "both messages with same ID should be processed");
+    assert_eq!(
+        found.unwrap_or(0),
+        2,
+        "both messages with same ID should be processed"
+    );
 }

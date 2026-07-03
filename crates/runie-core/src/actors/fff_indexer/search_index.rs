@@ -169,7 +169,9 @@ impl SearchIndex {
                     if parsed.git_status_filters().next().is_some() {
                         let status = inner.git_status.get(*path);
                         let matches = parsed.git_status_filters().all(|filter| {
-                            status.map(|s| git_status_matches(*s, filter)).unwrap_or(false)
+                            status
+                                .map(|s| git_status_matches(*s, filter))
+                                .unwrap_or(false)
                         });
                         if !matches {
                             return false;
@@ -202,8 +204,10 @@ impl SearchIndex {
                 if score < 1.0 && text.len() > 2 {
                     // Try matching against full path as fallback.
                     let fuzzy_full = sublime_fuzzy::FuzzySearch::new(text, path);
-                    let full_score =
-                        fuzzy_full.best_match().map(|m| m.score() as f64).unwrap_or(0.0);
+                    let full_score = fuzzy_full
+                        .best_match()
+                        .map(|m| m.score() as f64)
+                        .unwrap_or(0.0);
                     if full_score < 1.0 {
                         return None;
                     }
@@ -232,7 +236,9 @@ impl SearchIndex {
             scored.sort_by(|a, b| {
                 let score_a = a.score + frecency.score(&a.relative_path);
                 let score_b = b.score + frecency.score(&b.relative_path);
-                score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                score_b
+                    .partial_cmp(&score_a)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
         }
 

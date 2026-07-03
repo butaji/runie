@@ -3,8 +3,8 @@
 //! These tests verify that `TuiRuntime::builder()` with `BackendType::Test`
 //! and keystroke sequences work correctly.
 
-use ratatui::backend::TestBackend;
 use crate::bootstrap::{BackendType, Keystroke, TuiRuntime};
+use ratatui::backend::TestBackend;
 use std::sync::Arc;
 
 // ─── Layer 2: Event Handling Tests ─────────────────────────────────────────
@@ -15,11 +15,7 @@ fn keystroke_dsl_produces_expected_events() {
     let bindings = std::collections::HashMap::new();
 
     // Type "Hi" followed by Ctrl+C (quit)
-    let keystrokes = [
-        Keystroke::Char('H'),
-        Keystroke::Char('i'),
-        Keystroke::CtrlC,
-    ];
+    let keystrokes = [Keystroke::Char('H'), Keystroke::Char('i'), Keystroke::CtrlC];
 
     let events: Vec<_> = keystrokes
         .iter()
@@ -68,9 +64,7 @@ fn keystroke_sequence_preserved_in_runtime() {
         Keystroke::Enter,
     ];
 
-    let runtime = TuiRuntime::builder()
-        .keystrokes(keystrokes.clone())
-        .build();
+    let runtime = TuiRuntime::builder().keystrokes(keystrokes.clone()).build();
 
     assert_eq!(runtime.keystrokes().len(), 5);
 }

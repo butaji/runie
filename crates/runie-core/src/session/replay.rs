@@ -5,12 +5,12 @@
 //! but runtime persistence goes exclusively through `SessionStore`.
 
 use crate::event::DurableCoreEvent;
-use std::convert::TryFrom as _;
 use crate::message::ChatMessage;
 use crate::model::{AppState, Role};
-use crate::session::SessionMetadata;
 use crate::session::store::SessionStore;
+use crate::session::SessionMetadata;
 use crate::Event;
+use std::convert::TryFrom as _;
 
 /// Convert a durable event to a canonical `Event` for replay.
 /// Returns `None` for events that are handled directly in `replay_event`
@@ -330,7 +330,9 @@ mod tests {
         assert_eq!(msgs[1].role, Role::Assistant);
         assert_eq!(msgs[1].parts.len(), 3);
         assert!(matches!(&msgs[1].parts[0], Part::Text { content } if content == "I'll help you"));
-        assert!(matches!(&msgs[1].parts[1], Part::Reasoning { content } if content == "thinking about this"));
+        assert!(
+            matches!(&msgs[1].parts[1], Part::Reasoning { content } if content == "thinking about this")
+        );
         assert!(matches!(&msgs[1].parts[2], Part::ToolCall { name, .. } if name == "bash"));
     }
 
@@ -433,7 +435,9 @@ mod tests {
 
         // Simulate `/save`: convert state to durable events and persist
         let events = state_to_durable_events(&state);
-        store.append_batch("mock_turn_test", &events).expect("save should succeed");
+        store
+            .append_batch("mock_turn_test", &events)
+            .expect("save should succeed");
 
         // Verify session file was created
         assert!(
@@ -445,7 +449,10 @@ mod tests {
         let loaded_events = store
             .load_events("mock_turn_test")
             .expect("should load events");
-        assert!(!loaded_events.is_empty(), "loaded events should not be empty");
+        assert!(
+            !loaded_events.is_empty(),
+            "loaded events should not be empty"
+        );
 
         // Verify user message was persisted
         assert!(loaded_events.iter().any(|e| matches!(
@@ -463,14 +470,18 @@ mod tests {
         // Build a tree manually with known-good data (avoids tree-construction bugs)
         let user_msg = ChatMessage {
             role: Role::User,
-            parts: vec![crate::message::Part::Text { content: "hello".into() }],
+            parts: vec![crate::message::Part::Text {
+                content: "hello".into(),
+            }],
             timestamp: 1.0,
             id: "msg1".into(),
             ..Default::default()
         };
         let assistant_msg = ChatMessage {
             role: Role::Assistant,
-            parts: vec![crate::message::Part::Text { content: "hi".into() }],
+            parts: vec![crate::message::Part::Text {
+                content: "hi".into(),
+            }],
             timestamp: 2.0,
             id: "msg2".into(),
             ..Default::default()
@@ -483,7 +494,9 @@ mod tests {
         assert_eq!(snapshot.root_id, "msg1");
 
         // Convert to durable event and back (both directions)
-        let durable = DurableCoreEvent::TreeSnapshot { snapshot: snapshot.clone() };
+        let durable = DurableCoreEvent::TreeSnapshot {
+            snapshot: snapshot.clone(),
+        };
         let event: Event = Event::try_from(&durable).unwrap();
         let back: DurableCoreEvent = DurableCoreEvent::try_from_event(&event).unwrap();
 
@@ -497,8 +510,8 @@ mod tests {
         assert_eq!(roundtripped.nodes.len(), snapshot.nodes.len());
 
         // Reconstruct tree from round-tripped snapshot and verify
-        let restored_tree = SessionTree::from_snapshot(&roundtripped)
-            .expect("snapshot should deserialize");
+        let restored_tree =
+            SessionTree::from_snapshot(&roundtripped).expect("snapshot should deserialize");
         let restored_snapshot = restored_tree.to_snapshot().unwrap();
         assert_eq!(restored_snapshot.root_id, snapshot.root_id);
         assert_eq!(restored_snapshot.nodes.len(), snapshot.nodes.len());
@@ -506,7 +519,10 @@ mod tests {
         // Verify replay via AppState update
         let mut loaded = AppState::default();
         loaded.update(event.clone());
-        let loaded_tree = loaded.session.session_tree.clone()
+        let loaded_tree = loaded
+            .session
+            .session_tree
+            .clone()
             .expect("tree should be restored via AppState update");
         let loaded_snapshot = loaded_tree.to_snapshot().unwrap();
         assert_eq!(loaded_snapshot.root_id, snapshot.root_id);

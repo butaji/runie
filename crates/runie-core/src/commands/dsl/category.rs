@@ -92,10 +92,22 @@ mod tests {
     #[test]
     fn test_category_aliases() {
         // Legacy aliases for backward compatibility.
-        assert_eq!(CommandCategory::parse_case_insensitive("tool"), Ok(CommandCategory::System));
-        assert_eq!(CommandCategory::parse_case_insensitive("help"), Ok(CommandCategory::System));
-        assert_eq!(CommandCategory::parse_case_insensitive("unknown"), Ok(CommandCategory::System));
-        assert_eq!(CommandCategory::parse_case_insensitive(""), Ok(CommandCategory::System));
+        assert_eq!(
+            CommandCategory::parse_case_insensitive("tool"),
+            Ok(CommandCategory::System)
+        );
+        assert_eq!(
+            CommandCategory::parse_case_insensitive("help"),
+            Ok(CommandCategory::System)
+        );
+        assert_eq!(
+            CommandCategory::parse_case_insensitive("unknown"),
+            Ok(CommandCategory::System)
+        );
+        assert_eq!(
+            CommandCategory::parse_case_insensitive(""),
+            Ok(CommandCategory::System)
+        );
         assert!(CommandCategory::parse_case_insensitive("nonexistent").is_err());
     }
 }

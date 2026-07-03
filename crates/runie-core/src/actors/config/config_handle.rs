@@ -47,7 +47,11 @@ impl RactorConfigHandle {
 
     /// Request the list of configured providers.
     pub async fn get_configured_providers(&self) -> Option<Vec<(String, String, Vec<String>)>> {
-        match self.inner.call(ConfigMsg::GetConfiguredProviders, None).await {
+        match self
+            .inner
+            .call(ConfigMsg::GetConfiguredProviders, None)
+            .await
+        {
             Ok(ractor::rpc::CallResult::Success(v)) => Some(v),
             _ => None,
         }
@@ -71,14 +75,12 @@ impl RactorConfigHandle {
         api_key: String,
         models: Vec<String>,
     ) {
-        let _ = self
-            .inner
-            .send_message(ConfigMsg::SaveProvider {
-                name,
-                base_url,
-                api_key,
-                models,
-            });
+        let _ = self.inner.send_message(ConfigMsg::SaveProvider {
+            name,
+            base_url,
+            api_key,
+            models,
+        });
     }
 
     /// Remove a provider configuration.
@@ -122,7 +124,9 @@ impl RactorConfigHandle {
 
     /// Set thinking level.
     pub async fn set_thinking_level(&self, level: ThinkingLevel) {
-        let _ = self.inner.send_message(ConfigMsg::SetThinkingLevel { level });
+        let _ = self
+            .inner
+            .send_message(ConfigMsg::SetThinkingLevel { level });
     }
 
     /// Load layered config (global + project) and return the effective config.
@@ -170,7 +174,17 @@ impl RactorConfigHandle {
 
     /// List MCP servers in the specified scope.
     pub async fn list_mcp_servers(&self, scope: ConfigScope) -> Vec<(String, McpServer)> {
-        match self.inner.call(|tx| ConfigMsg::ListMcpServers { scope, reply: Some(tx) }, None).await {
+        match self
+            .inner
+            .call(
+                |tx| ConfigMsg::ListMcpServers {
+                    scope,
+                    reply: Some(tx),
+                },
+                None,
+            )
+            .await
+        {
             Ok(ractor::rpc::CallResult::Success(v)) => v,
             _ => Vec::new(),
         }

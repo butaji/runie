@@ -46,10 +46,11 @@ fn single_thought_hides_turn_complete() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 0.5,
@@ -74,15 +75,17 @@ fn tool_plus_thought_shows_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.3,
         output: "file1".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Found it".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -99,10 +102,11 @@ fn tool_only_hides_turn_complete() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "start".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
@@ -112,15 +116,17 @@ fn tool_only_hides_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.3,
         output: "file1".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -141,10 +147,11 @@ fn two_thoughts_shows_turn_complete() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Answer".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
@@ -169,8 +176,9 @@ fn two_tools_shows_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.1,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::ToolStart {
         id: "req.0".into(),
         name: "cat".into(),
@@ -180,15 +188,17 @@ fn two_tools_shows_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.2,
         output: "b".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 3.0,
@@ -213,15 +223,17 @@ fn mixed_thought_tool_shows_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.5,
@@ -238,10 +250,11 @@ fn zero_actions_hides_turn_complete() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 0.1,
@@ -264,15 +277,17 @@ fn first_turn_events() -> Vec<Event> {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "a".into(),
-        
-        input: None,},
+
+            input: None,
+        },
         crate::Event::Response {
             id: "req.0".into(),
             content: "First".into(),
-        
-        role: String::new(),
-        timestamp: 0.0,
-        provider: String::new(),},
+
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        },
         crate::Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
@@ -293,15 +308,17 @@ fn second_turn_events() -> Vec<Event> {
             id: "".to_string(),
             duration_secs: 0.3,
             output: "b".into(),
-        
-        input: None,},
+
+            input: None,
+        },
         crate::Event::Response {
             id: "req.1".into(),
             content: "Second".into(),
-        
-        role: String::new(),
-        timestamp: 0.0,
-        provider: String::new(),},
+
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        },
         crate::Event::TurnComplete {
             id: "req.1".into(),
             duration_secs: 0.8,
@@ -341,17 +358,19 @@ fn three_mixed_actions_shows_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.1,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 2.0,
@@ -370,10 +389,11 @@ fn turn_complete_still_in_session_when_hidden() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 0.5,

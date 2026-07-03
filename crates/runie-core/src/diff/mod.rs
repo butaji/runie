@@ -268,5 +268,9 @@ fn fallback_parse_diff(text: &str) -> Diff {
         }
     }
 
-    Diff { old_path, new_path, hunks }
+    Diff {
+        old_path,
+        new_path,
+        hunks,
+    }
 }

@@ -324,12 +324,9 @@ fn parse_chunk(json: &serde_json::Value) -> Option<Chunk> {
             tool_calls,
         },
         finish_reason: choice.finish_reason,
-        usage: json_chunk.usage.and_then(|u| {
-            Some((
-                u.prompt_tokens? as usize,
-                u.completion_tokens? as usize,
-            ))
-        }),
+        usage: json_chunk
+            .usage
+            .and_then(|u| Some((u.prompt_tokens? as usize, u.completion_tokens? as usize))),
     })
 }
 

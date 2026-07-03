@@ -16,7 +16,9 @@ fn missing_api_key_display_names_provider_and_env_var() {
 
 #[test]
 fn typed_error_display_rate_limit() {
-    let err = ProviderError::RateLimit { retry_after_secs: Some(60) };
+    let err = ProviderError::RateLimit {
+        retry_after_secs: Some(60),
+    };
     let msg = err.to_string();
     assert!(msg.contains("Rate limited"), "{msg}");
     assert!(err.is_retryable());
@@ -75,17 +77,16 @@ fn typed_error_display_context_length() {
 #[test]
 fn retryable_is_true_for_transient_errors() {
     let transient = [
-        ProviderError::RateLimit { retry_after_secs: None },
+        ProviderError::RateLimit {
+            retry_after_secs: None,
+        },
         ProviderError::Network("connection refused".into()),
         ProviderError::Timeout,
         ProviderError::Server(500, Default::default()),
         ProviderError::Server(503, "Service Unavailable".into()),
     ];
     for err in transient {
-        assert!(
-            err.is_retryable(),
-            "expected {err:?} to be retryable"
-        );
+        assert!(err.is_retryable(), "expected {err:?} to be retryable");
     }
 }
 
@@ -100,14 +101,8 @@ fn retryable_is_false_for_fatal_errors() {
         ProviderError::ConfigNotLoaded,
     ];
     for err in fatal {
-        assert!(
-            !err.is_retryable(),
-            "expected {err:?} to NOT be retryable"
-        );
-        assert!(
-            err.is_fatal(),
-            "expected {err:?} to be fatal"
-        );
+        assert!(!err.is_retryable(), "expected {err:?} to NOT be retryable");
+        assert!(err.is_fatal(), "expected {err:?} to be fatal");
     }
 }
 
@@ -120,8 +115,15 @@ fn clone_preserves_variant_and_data() {
     let auth_err = ProviderError::Auth(401);
     assert!(matches!(auth_err.clone(), ProviderError::Auth(401)));
 
-    let rate_err = ProviderError::RateLimit { retry_after_secs: Some(30) };
-    assert!(matches!(rate_err.clone(), ProviderError::RateLimit { retry_after_secs: Some(30) }));
+    let rate_err = ProviderError::RateLimit {
+        retry_after_secs: Some(30),
+    };
+    assert!(matches!(
+        rate_err.clone(),
+        ProviderError::RateLimit {
+            retry_after_secs: Some(30)
+        }
+    ));
 }
 
 // ─── Layer 1: existing error display messages are preserved ────────────────
@@ -178,7 +180,10 @@ fn provider_metadata_default_values() {
     assert!(meta.model_info.is_none());
     assert!(!meta.streaming);
     assert!(!meta.supports_tools);
-    assert_eq!(meta.retry_config.max_attempts, DEFAULT_RETRY_CONFIG.max_attempts);
+    assert_eq!(
+        meta.retry_config.max_attempts,
+        DEFAULT_RETRY_CONFIG.max_attempts
+    );
 }
 
 #[test]

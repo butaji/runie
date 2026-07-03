@@ -8,14 +8,14 @@ use tracing::instrument;
 
 use crate::bus::EventBus;
 use crate::edit_preview::EditPreview;
-use crate::message::{now, Part, MessageOrigin};
-use crate::proto::message::MessageMetadata;
+use crate::message::{now, MessageOrigin, Part};
 use crate::model::{ChatMessage, Role};
-use crate::session::SessionMetadata;
+use crate::proto::message::MessageMetadata;
 use crate::session::replay::session_to_durable_events;
 use crate::session::store::SessionStore;
 use crate::session::tree::SessionTree;
 use crate::session::Session;
+use crate::session::SessionMetadata;
 use crate::trust::{TrustDecision, TrustManager};
 use crate::Event;
 
@@ -69,7 +69,9 @@ impl RactorSessionActor {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text { content: content.clone() }],
+            parts: vec![Part::Text {
+                content: content.clone(),
+            }],
             metadata: MessageMetadata {
                 origin: MessageOrigin::User,
                 ..Default::default()
@@ -114,7 +116,9 @@ impl RactorSessionActor {
             role: Role::Tool,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text { content: content.clone() }],
+            parts: vec![Part::Text {
+                content: content.clone(),
+            }],
             tool_call_id: Some(name),
             metadata: MessageMetadata {
                 origin: MessageOrigin::Tool,
@@ -133,7 +137,11 @@ impl RactorSessionActor {
     }
 
     /// Handle update tool message.
-    pub fn handle_update_tool_message(state: &mut SessionActorState, id_contains: &str, content: &str) {
+    pub fn handle_update_tool_message(
+        state: &mut SessionActorState,
+        id_contains: &str,
+        content: &str,
+    ) {
         if let Some(idx) = state
             .session_state
             .messages
@@ -403,7 +411,8 @@ impl RactorSessionActor {
                 }
             }
             most_recent
-        }).await;
+        })
+        .await;
 
         match res {
             Ok(Some(name)) => {

@@ -31,7 +31,9 @@ pub fn agent_event(state: &mut AppState, event: crate::Event) {
             ..
         } => apply_and_order(state, |s| s.end_tool(duration_secs, output)),
         E::ResponseDelta { .. } => state.handle_llm_event(event),
-        E::Response { id, content, .. } => apply_and_order(state, |s| s.append_response(id, content)),
+        E::Response { id, content, .. } => {
+            apply_and_order(state, |s| s.append_response(id, content))
+        }
         E::TurnComplete { id, duration_secs } => {
             apply_and_order(state, |s| s.complete_turn(id, duration_secs))
         }
@@ -102,10 +104,7 @@ mod tests {
                 input: Default::default(),
             },
         );
-        agent_event(
-            &mut state,
-            crate::Event::tool_end("t1", 0.5, "done"),
-        );
+        agent_event(&mut state, crate::Event::tool_end("t1", 0.5, "done"));
 
         state.ensure_turn_complete_last();
     }
@@ -123,10 +122,7 @@ mod tests {
                 duration_secs: 1.0,
             },
         );
-        agent_event(
-            &mut state,
-            crate::Event::response("2", "hello"),
-        );
+        agent_event(&mut state, crate::Event::response("2", "hello"));
 
         state.ensure_turn_complete_last();
     }

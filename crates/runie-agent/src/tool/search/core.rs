@@ -1,9 +1,11 @@
 //! Search tool — unified file/content search using the runie search index.
 
-use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_search_index};
+use crate::tool::search::fff_helpers::{
+    build_error_json, build_error_json_with_instant, with_search_index,
+};
 use crate::tool::search::modes::{search_content, search_files, search_glob};
 use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
-use crate::tool::{ToolContext, ToolOutput, ToolDef, ToolStatus};
+use crate::tool::{ToolContext, ToolDef, ToolOutput, ToolStatus};
 use runie_core::actors::FffSearchState;
 use runie_core::tool::resolve_path;
 use schemars::JsonSchema;
@@ -131,8 +133,6 @@ fn dispatch_search(
     match mode {
         SearchMode::Content => search_content(index, query, limit, indexed, start),
         SearchMode::Glob => search_glob(index, query, limit, indexed, start),
-        SearchMode::Files | SearchMode::Mixed => {
-            search_files(index, query, limit, indexed, start)
-        }
+        SearchMode::Files | SearchMode::Mixed => search_files(index, query, limit, indexed, start),
     }
 }

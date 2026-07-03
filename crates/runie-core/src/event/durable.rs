@@ -8,8 +8,8 @@
 //! delegates to `DurableCoreEvent::try_from`). Non-durable `Event` variants
 //! return `None`.
 
-use crate::Event;
 use crate::proto::message::Part;
+use crate::Event;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -348,7 +348,9 @@ impl DurableCoreEvent {
 impl TryFrom<&Event> for DurableCoreEvent {
     type Error = ();
 
-    fn try_from(event: &Event) -> Result<DurableCoreEvent, <DurableCoreEvent as TryFrom<&Event>>::Error> {
+    fn try_from(
+        event: &Event,
+    ) -> Result<DurableCoreEvent, <DurableCoreEvent as TryFrom<&Event>>::Error> {
         Self::try_from_event(event).ok_or(())
     }
 }
@@ -357,10 +359,19 @@ impl TryFrom<&Event> for DurableCoreEvent {
 impl TryFrom<&DurableCoreEvent> for Event {
     type Error = ();
 
-    fn try_from(event: &DurableCoreEvent) -> Result<Event, <Event as TryFrom<&DurableCoreEvent>>::Error> {
+    fn try_from(
+        event: &DurableCoreEvent,
+    ) -> Result<Event, <Event as TryFrom<&DurableCoreEvent>>::Error> {
         use DurableCoreEvent as D;
         match event {
-            D::MessageSent { id, role, content, timestamp, provider, parts } => {
+            D::MessageSent {
+                id,
+                role,
+                content,
+                timestamp,
+                provider,
+                parts,
+            } => {
                 Ok(Event::MessageReplayed {
                     id: id.clone(),
                     role: role.clone(),
@@ -368,7 +379,8 @@ impl TryFrom<&DurableCoreEvent> for Event {
                         content.clone()
                     } else {
                         // Reconstruct content from parts for backward compatibility.
-                        parts.iter()
+                        parts
+                            .iter()
                             .filter_map(|p| match p {
                                 Part::Text { content } => Some(content.as_str()),
                                 _ => None,
@@ -401,11 +413,12 @@ impl TryFrom<&DurableCoreEvent> for Event {
             D::ThinkingLevelSet { level } => Ok(Event::SetThinkingLevel(*level)),
             // SessionRenamed and ReadOnlySet are handled directly in replay_event
             D::SessionRenamed { .. } | D::ReadOnlySet { .. } => Err(()),
-            D::TreeSnapshot { snapshot } => Ok(Event::SessionTreeSnapshot { snapshot: snapshot.clone() }),
+            D::TreeSnapshot { snapshot } => Ok(Event::SessionTreeSnapshot {
+                snapshot: snapshot.clone(),
+            }),
             // TurnPhaseChanged is used for crash recovery but doesn't directly
             // translate to a canonical event (phase is reconstructed from other events).
             D::TurnPhaseChanged { .. } => Err(()),
-
         }
     }
 }
@@ -468,4 +481,3 @@ pub enum DurableCoreEvent {
 
 #[cfg(test)]
 mod tests;
-

@@ -1,9 +1,9 @@
 //! Abstract factory used by `ProviderActor` to build and validate providers.
 
 use async_trait::async_trait;
-use std::sync::{Arc, OnceLock};
-use std::collections::HashMap;
 use parking_lot::Mutex;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 
 use crate::config::Config;
 use crate::message::ChatMessage;
@@ -12,7 +12,7 @@ use crate::provider_event::ProviderEvent;
 
 // `Provider` and `ProviderError` are defined in `runie-provider` and re-exported here.
 use crate::provider::{
-    Provider, ProviderError, ProviderMetadata, RetryConfig, REQUEST_TIMEOUT, CONNECT_TIMEOUT,
+    Provider, ProviderError, ProviderMetadata, RetryConfig, CONNECT_TIMEOUT, REQUEST_TIMEOUT,
 };
 
 /// Process-global cache of HTTP clients keyed by `(provider_key, base_url)`.

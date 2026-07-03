@@ -118,7 +118,8 @@ mod tests {
             ..Default::default()
         };
         let _skill = VerificationLoopSkill::new(config);
-        let output = VerificationLoopSkill::run_verification("echo hello", Duration::from_secs(5)).await;
+        let output =
+            VerificationLoopSkill::run_verification("echo hello", Duration::from_secs(5)).await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
@@ -128,10 +129,9 @@ mod tests {
     #[tokio::test]
     async fn run_verification_quoted_args() {
         // Test that shell_words handles quoted arguments with spaces
-        let output = VerificationLoopSkill::run_verification(
-            "echo 'hello world'",
-            Duration::from_secs(5)
-        ).await;
+        let output =
+            VerificationLoopSkill::run_verification("echo 'hello world'", Duration::from_secs(5))
+                .await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
@@ -142,8 +142,9 @@ mod tests {
     async fn run_verification_double_quoted_args() {
         let output = VerificationLoopSkill::run_verification(
             r#"echo "hello world""#,
-            Duration::from_secs(5)
-        ).await;
+            Duration::from_secs(5),
+        )
+        .await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
@@ -161,11 +162,15 @@ mod tests {
         // Test with multiple quoted args
         let output = VerificationLoopSkill::run_verification(
             "echo hello 'world test'",
-            Duration::from_secs(5)
-        ).await;
+            Duration::from_secs(5),
+        )
+        .await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
-        assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "hello world test");
+        assert_eq!(
+            String::from_utf8_lossy(&out.stdout).trim(),
+            "hello world test"
+        );
     }
 }

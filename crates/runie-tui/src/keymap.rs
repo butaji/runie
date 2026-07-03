@@ -8,9 +8,9 @@ use crokey::KeyCombinationFormat;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
-use std::sync::LazyLock;
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 /// Lowercase `+`-separated combo formatter backed by `crokey::KeyCombinationFormat`.
 /// Output matches the legacy format: "ctrl+c", "alt+enter", "shift+tab".
@@ -69,7 +69,7 @@ fn convert_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) ->
     if key.code == KeyCode::F(3) {
         return Some(CoreEvent::Newline);
     }
-    
+
     map_key_event(key, user_bindings)
 }
 
@@ -124,26 +124,26 @@ fn map_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) -> Opt
     if combo.is_empty() {
         return map_plain_key(&key.code);
     }
-    
+
     // Special case: Ctrl+Shift+E is not a binding (it's paste special for image paste)
     // Check this before any binding lookup since it's not in the default map
-    if key.modifiers.contains(KeyModifiers::CONTROL) 
+    if key.modifiers.contains(KeyModifiers::CONTROL)
         && key.modifiers.contains(KeyModifiers::SHIFT)
-        && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E')) 
+        && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E'))
     {
         return None;
     }
-    
+
     // 1. Check user bindings first (they override defaults)
     if let Some(event_name) = user_bindings.get(&combo) {
         return keybindings::event_from_name(event_name);
     }
-    
+
     // 2. Check default map
     if let Some(event) = DEFAULT_MAP.get(&combo) {
         return Some(event.clone());
     }
-    
+
     // 3. Fall back to plain key handling for unhandled keys
     map_plain_key(&key.code)
 }
@@ -228,7 +228,10 @@ mod tests {
 
     #[test]
     fn test_ctrl_shift_e_is_ignored() {
-        let key = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let key = KeyEvent::new(
+            KeyCode::Char('E'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
         let user_bindings = HashMap::new();
         let result = convert_key_event(&key, &user_bindings);
         assert_eq!(result, None);

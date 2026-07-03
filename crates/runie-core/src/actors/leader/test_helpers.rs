@@ -1,10 +1,10 @@
 //! Test helpers for constructing a `LeaderHandle` with all actors spawned.
 
-use crate::bus::EventBus;
-use crate::Event as CoreEvent;
 use crate::actors::provider::{BuiltProvider, ProviderFactory};
+use crate::bus::EventBus;
 use crate::provider::{Provider, ProviderError};
 use crate::provider_event::ProviderEvent;
+use crate::Event as CoreEvent;
 use async_trait::async_trait;
 use std::future::Future;
 use std::pin::Pin;
@@ -19,13 +19,13 @@ use super::{LeaderAgentHandle, LeaderHandle, SpawnedHandles};
 /// a `LeaderHandle` with default bus/command channels.
 /// The caller takes ownership and must eventually call `shutdown()`.
 pub async fn test_leader_handle() -> LeaderHandle {
-    use crate::actors::{
-        RactorConfigActor, RactorFffIndexerActor, RactorIoActor,
-        RactorPermissionActor, RactorProviderActor, RactorSessionActor,
-    };
+    use super::LeaderAgentCmd;
     use crate::actors::turn::RactorTurnActor;
     use crate::actors::InputActor;
-    use super::LeaderAgentCmd;
+    use crate::actors::{
+        RactorConfigActor, RactorFffIndexerActor, RactorIoActor, RactorPermissionActor,
+        RactorProviderActor, RactorSessionActor,
+    };
 
     struct NoOpAgentHandle;
     impl LeaderAgentHandle for NoOpAgentHandle {
@@ -42,7 +42,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
         fn generate(
             &self,
             _: Vec<crate::message::ChatMessage>,
-        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
+        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
+        {
             Box::pin(futures::stream::empty())
         }
     }
@@ -84,7 +85,9 @@ pub async fn test_leader_handle() -> LeaderHandle {
         .await
         .expect("session spawn");
     let (permission_h, permission_cell, permission_join) =
-        RactorPermissionActor::spawn(bus.clone(), config_h.clone()).await.unwrap();
+        RactorPermissionActor::spawn(bus.clone(), config_h.clone())
+            .await
+            .unwrap();
     let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
     let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await.unwrap();
     let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
@@ -99,8 +102,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
     let agent: Arc<dyn LeaderAgentHandle> = Arc::new(NoOpAgentHandle);
     // Spawn a dummy task as the agent join handle (agent is not a real ractor actor
     // in tests; the NoOpAgentHandle::run returns pending which never completes).
-    let agent_join: tokio::task::JoinHandle<()> =
-        tokio::spawn(std::future::pending::<()>());
+    let agent_join: tokio::task::JoinHandle<()> = tokio::spawn(std::future::pending::<()>());
     let all_joins = vec![
         config_join,
         provider_join,

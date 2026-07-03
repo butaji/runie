@@ -360,7 +360,13 @@ mod tests {
     fn render_cursor_spans_clamps_to_char_boundary() {
         // "é" is two bytes. A cursor at byte 1 used to slice in the middle
         // of the character and panic.
-        let line = build_line_with_cursor_owned("café", "❯ ".to_string(), 4, style_agent(), style_input_cursor());
+        let line = build_line_with_cursor_owned(
+            "café",
+            "❯ ".to_string(),
+            4,
+            style_agent(),
+            style_input_cursor(),
+        );
         assert_eq!(line.spans.len(), 4);
     }
 
@@ -368,7 +374,13 @@ mod tests {
     fn render_cursor_spans_does_not_panic_in_mid_character() {
         // Byte 3 is inside the two-byte "é" (bytes 3-4). floor_char_boundary
         // snaps it back to byte 3, the start of "é".
-        let line = build_line_with_cursor_owned("café", "❯ ".to_string(), 3, style_agent(), style_input_cursor());
+        let line = build_line_with_cursor_owned(
+            "café",
+            "❯ ".to_string(),
+            3,
+            style_agent(),
+            style_input_cursor(),
+        );
         assert_eq!(line.spans.len(), 4);
     }
 }

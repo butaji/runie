@@ -130,13 +130,12 @@ impl InspectReport {
 
         // Check if provider is set but not configured
         if let Some(provider) = &config.provider {
-            if !provider.is_empty()
-                && !config.model_providers.contains_key(provider) {
-                    errors.push(format!(
-                        "provider '{}' set as default but not configured in model_providers",
-                        provider
-                    ));
-                }
+            if !provider.is_empty() && !config.model_providers.contains_key(provider) {
+                errors.push(format!(
+                    "provider '{}' set as default but not configured in model_providers",
+                    provider
+                ));
+            }
         }
 
         // Check if any configured providers have their API key
@@ -164,7 +163,8 @@ impl InspectReport {
                         let model_str: &str = model;
                         if !runie_core::model_catalog::model_catalog()
                             .iter()
-                            .any(|m| m.provider == *provider && m.name == model_str) {
+                            .any(|m| m.provider == *provider && m.name == model_str)
+                        {
                             errors.push(format!(
                                 "model '{}' not found in model catalog for provider '{}'",
                                 model, provider
@@ -184,7 +184,9 @@ impl InspectReport {
 
         // Check if no providers are configured
         if config.model_providers.is_empty() {
-            hints.push("No providers configured. Run `runie login` to set up a provider.".to_string());
+            hints.push(
+                "No providers configured. Run `runie login` to set up a provider.".to_string(),
+            );
             hints.push("Or set a provider in ~/.runie/config.toml:".to_string());
             hints.push("  provider = \"openai\"".to_string());
             hints.push("  [model_providers.openai]".to_string());

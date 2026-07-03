@@ -53,7 +53,8 @@ fn make_ui_with_test_agent() -> (crate::ui_actor::UiActor, TestAgentHandle) {
     use crate::ui_actor_agent_handles::AgentHandleBox;
 
     let agent = TestAgentHandle::new();
-    let handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
+    let handle =
+        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
 
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
@@ -114,7 +115,10 @@ async fn second_turn_started_blocked_by_guard() {
     .await;
 
     // Guard is set
-    assert!(ui.agent_running(), "guard should be active after TurnStarted");
+    assert!(
+        ui.agent_running(),
+        "guard should be active after TurnStarted"
+    );
 
     // Second TurnStarted (e.g., from queue delivery while first is still running)
     ui.handle_event(
@@ -162,7 +166,8 @@ async fn done_does_not_clear_guard() {
     );
 
     // TurnCompleted: finally clears guard
-    ui.handle_event(Event::TurnCompleted, effect_tx.clone()).await;
+    ui.handle_event(Event::TurnCompleted, effect_tx.clone())
+        .await;
     assert!(
         !ui.agent_running(),
         "agent_running should be false after TurnCompleted"
@@ -237,11 +242,9 @@ async fn done_then_queued_turn_started_blocked_by_guard() {
     );
 
     // TurnCompleted clears the guard
-    ui.handle_event(Event::TurnCompleted, effect_tx.clone()).await;
-    assert!(
-        !ui.agent_running(),
-        "guard cleared after TurnCompleted"
-    );
+    ui.handle_event(Event::TurnCompleted, effect_tx.clone())
+        .await;
+    assert!(!ui.agent_running(), "guard cleared after TurnCompleted");
 
     // Next real user message: agent runs again
     ui.handle_event(
@@ -264,8 +267,8 @@ async fn done_then_queued_turn_started_blocked_by_guard() {
 /// Leader bus, and UiActor receives it and spawns the agent exactly once.
 #[tokio::test]
 async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
-    use runie_core::bus::EventBus;
     use runie_core::actors::turn::RactorTurnActor;
+    use runie_core::bus::EventBus;
 
     // Shared bus = Leader's event bus
     let bus = EventBus::<Event>::new(16);
@@ -290,8 +293,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     );
 
     // Spawn TurnActor using the SAME shared bus
-    let (_turn_handle, _turn_cell, _turn_join) =
-        RactorTurnActor::spawn(bus.clone()).await.unwrap();
+    let (_turn_handle, _turn_cell, _turn_join) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
 
     // Subscribe UiActor to the shared bus
     let mut bus_rx = bus.subscribe();
@@ -299,8 +301,8 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
 
     // Send SubmitUserMessage to TurnActor via its handle
     // (TurnActor publishes TurnStarted to the shared bus)
-    use runie_core::actors::TurnMsg;
     use runie_core::actors::turn::messages::MessageSource;
+    use runie_core::actors::TurnMsg;
     let turn_handle = _turn_handle;
     turn_handle
         .send(TurnMsg::SubmitUserMessage {
@@ -392,10 +394,7 @@ async fn done_from_shared_bus_does_not_clear_guard() {
     )
     .await;
 
-    assert!(
-        ui.agent_running(),
-        "guard must be active after TurnStarted"
-    );
+    assert!(ui.agent_running(), "guard must be active after TurnStarted");
 
     // Simulate Done arriving via shared bus — guard stays true
     ui.handle_event(Event::Done { id: "req.0".into() }, effect_tx.clone())
@@ -407,7 +406,8 @@ async fn done_from_shared_bus_does_not_clear_guard() {
     );
 
     // TurnCompleted: clears guard
-    ui.handle_event(Event::TurnCompleted, effect_tx.clone()).await;
+    ui.handle_event(Event::TurnCompleted, effect_tx.clone())
+        .await;
     assert!(
         !ui.agent_running(),
         "guard must be cleared after TurnCompleted"
@@ -430,7 +430,10 @@ async fn turn_errored_clears_guard() {
     )
     .await;
 
-    assert!(ui.agent_running(), "guard should be active after TurnStarted");
+    assert!(
+        ui.agent_running(),
+        "guard should be active after TurnStarted"
+    );
 
     ui.handle_event(
         Event::TurnErrored {

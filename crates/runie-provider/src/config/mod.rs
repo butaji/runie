@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use secrecy::SecretString;
 use runie_core::proto::ProviderConfig;
+use secrecy::SecretString;
 
 /// Resolves provider configuration from multiple sources.
 ///
@@ -141,7 +141,10 @@ mod tests {
         let result = resolver.resolve_api_key("testprovider");
         std::env::remove_var("TESTPROVIDER_API_KEY");
 
-        assert_eq!(result.as_ref().map(|s| s.expose_secret().as_str()), Some("env-key"));
+        assert_eq!(
+            result.as_ref().map(|s| s.expose_secret().as_str()),
+            Some("env-key")
+        );
     }
 
     #[test]
@@ -156,7 +159,10 @@ mod tests {
         // Without env var, should use config
         let result = resolver.resolve_api_key("testprovider");
 
-        assert_eq!(result.as_ref().map(|s| s.expose_secret().as_str()), Some("config-key"));
+        assert_eq!(
+            result.as_ref().map(|s| s.expose_secret().as_str()),
+            Some("config-key")
+        );
     }
 
     #[test]

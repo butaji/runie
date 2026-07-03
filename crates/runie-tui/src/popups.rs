@@ -2,27 +2,20 @@
 //!
 //! Layout constants are centralized in `layout_constants.rs`.
 
-use ratatui::{
-    layout::Rect,
-    prelude::Text,
-    style::Style,
-    text::Line,
-    widgets::Clear,
-    Frame,
-};
+use ratatui::{layout::Rect, prelude::Text, style::Style, text::Line, widgets::Clear, Frame};
 use runie_core::Snapshot;
 use tui_popup::Popup;
 
 use crate::theme::{
-    color_bg_panel, style_hint, style_popup_selected, style_popup_unselected,
-    GLYPH_SELECTED, GLYPH_UNSELECTED,
+    color_bg_panel, style_hint, style_popup_selected, style_popup_unselected, GLYPH_SELECTED,
+    GLYPH_UNSELECTED,
 };
 
 pub mod layout_constants;
 pub mod panel;
 pub mod permission;
-pub mod welcome;
 pub mod plan;
+pub mod welcome;
 
 /// Clear the given rect with the panel background color.
 pub fn clear_panel_bg(f: &mut Frame, area: Rect) {
@@ -87,7 +80,10 @@ fn path_popup_area(area: Rect, item_count: usize) -> Rect {
     Rect {
         x: area.x + 1,
         y: area.y + area.height.saturating_sub(4 + max_height),
-        width: area.width.saturating_sub(2).max(layout_constants::POPUP_MIN_WIDTH),
+        width: area
+            .width
+            .saturating_sub(2)
+            .max(layout_constants::POPUP_MIN_WIDTH),
         height: max_height,
     }
 }

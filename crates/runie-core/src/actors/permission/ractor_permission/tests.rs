@@ -30,7 +30,9 @@ async fn permission_actor_awaits_resolution() {
     // Verify that AskPermission does NOT immediately resolve.
     // The receiver should still be pending until ResolvePermission is called.
     let bus = EventBus::<Event>::new(16);
-    let ( handle , _cell, _join ) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     let mut rx = handle
         .ask_permission("req-await-1".into(), "bash".into(), serde_json::json!({}))
@@ -50,7 +52,9 @@ async fn permission_actor_awaits_resolution() {
 #[tokio::test]
 async fn permission_actor_resolves_with_allow() {
     let bus = EventBus::<Event>::new(16);
-    let ( handle , _cell, _join ) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     let rx = handle
         .ask_permission("req-allow-1".into(), "bash".into(), serde_json::json!({}))
@@ -70,7 +74,9 @@ async fn permission_actor_resolves_with_allow() {
 #[tokio::test]
 async fn permission_actor_resolves_with_deny() {
     let bus = EventBus::<Event>::new(16);
-    let ( handle , _cell, _join ) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     let rx = handle
         .ask_permission("req-deny-1".into(), "bash".into(), serde_json::json!({}))
@@ -92,7 +98,9 @@ async fn permission_request_event_roundtrip() {
     // Layer 2: Event Handling - verify events flow correctly
     let bus = EventBus::<Event>::new(16);
     let mut sub = bus.subscribe();
-    let ( handle , _cell, _join ) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     // Ask permission
     let _rx = handle
@@ -104,7 +112,11 @@ async fn permission_request_event_roundtrip() {
         .await;
 
     // Wait for PermissionRequest event
-    let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequest { request_id, .. } if request_id == "req-event-1")).await;
+    let found = wait_for_event(
+        &mut sub,
+        |e| matches!(e, Event::PermissionRequest { request_id, .. } if request_id == "req-event-1"),
+    )
+    .await;
     assert!(found, "Expected PermissionRequest event");
 
     // Resolve permission
@@ -123,7 +135,9 @@ async fn permission_request_event_roundtrip() {
 async fn ask_permission_stores_request() {
     // Same as permission_actor_awaits_resolution
     let bus = EventBus::<Event>::new(16);
-    let ( handle , _cell, _join ) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
     let mut rx = handle
         .ask_permission("req-legacy-1".into(), "bash".into(), serde_json::json!({}))
         .await;
@@ -139,7 +153,9 @@ async fn ask_permission_stores_request() {
 async fn resolve_permission_clears_request() {
     // Same as permission_actor_resolves_with_allow
     let bus = EventBus::<Event>::new(16);
-    let ( handle , _cell, _join ) = RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
     let rx = handle
         .ask_permission("req-legacy-2".into(), "bash".into(), serde_json::json!({}))
         .await;
@@ -160,7 +176,9 @@ async fn resolve_permission_clears_request() {
 /// consulting the approval sink (no dialog).
 #[tokio::test]
 async fn agent_gate_uses_user_trust_rules() {
-    use crate::permissions::{PermissionSet, PermissionSetPolicy, PermissionContext, PermissionPolicy};
+    use crate::permissions::{
+        PermissionContext, PermissionPolicy, PermissionSet, PermissionSetPolicy,
+    };
 
     // Simulate user configured: [[permissions]] action = "allow", tool = "bash"
     let mut rules = PermissionSet::default_rules();
@@ -198,21 +216,32 @@ async fn trust_command_updates_permission_actor() {
     let bus = EventBus::<Event>::new(16);
     let _sub = bus.subscribe();
 
-    let (handle, _cell, _join) =
-        RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     // Before: bash should be Ask (from default rules)
     let rules_before = handle.get_rules().await;
     let bash_before = rules_before.effective_action("bash", None, None);
-    assert_eq!(bash_before, PermissionAction::Ask, "bash should be Ask by default");
+    assert_eq!(
+        bash_before,
+        PermissionAction::Ask,
+        "bash should be Ask by default"
+    );
 
     // UpsertRule: `/trust bash always` → add allow rule for bash
-    handle.upsert_rule("bash".into(), PermissionAction::Allow).await;
+    handle
+        .upsert_rule("bash".into(), PermissionAction::Allow)
+        .await;
 
     // After: bash should be Allow (from upserted rule)
     let rules_after = handle.get_rules().await;
     let bash_after = rules_after.effective_action("bash", None, None);
-    assert_eq!(bash_after, PermissionAction::Allow, "bash should be Allow after /trust bash always");
+    assert_eq!(
+        bash_after,
+        PermissionAction::Allow,
+        "bash should be Allow after /trust bash always"
+    );
 }
 
 // ── Layer 1: Pending map direct access tests ─────────────────────────────
@@ -222,8 +251,9 @@ async fn trust_command_updates_permission_actor() {
 #[tokio::test]
 async fn cancel_permission_sends_deny() {
     let bus = EventBus::<Event>::new(16);
-    let (handle, _cell, _join) =
-        RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     let rx = handle
         .ask_permission("req-cancel-1".into(), "bash".into(), serde_json::json!({}))
@@ -242,8 +272,9 @@ async fn cancel_permission_sends_deny() {
 #[tokio::test]
 async fn resolve_unknown_request_is_noop() {
     let bus = EventBus::<Event>::new(16);
-    let (handle, _cell, _join) =
-        RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     // Try to resolve a non-existent request - should not panic
     handle
@@ -258,12 +289,17 @@ async fn resolve_unknown_request_is_noop() {
 #[tokio::test]
 async fn multiple_concurrent_requests_are_independent() {
     let bus = EventBus::<Event>::new(16);
-    let (handle, _cell, _join) =
-        RactorPermissionActor::spawn_for_testing(bus.clone()).await.unwrap();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
 
     // Ask for two permissions concurrently
     let rx_a = handle
-        .ask_permission("req-multi-a".into(), "read_file".into(), serde_json::json!({}))
+        .ask_permission(
+            "req-multi-a".into(),
+            "read_file".into(),
+            serde_json::json!({}),
+        )
         .await;
     let rx_b = handle
         .ask_permission("req-multi-b".into(), "bash".into(), serde_json::json!({}))

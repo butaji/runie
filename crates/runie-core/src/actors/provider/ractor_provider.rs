@@ -43,7 +43,8 @@ impl RactorProviderHandle {
         provider: String,
         model: String,
     ) -> Result<BuiltProvider, ProviderError> {
-        match self.inner
+        match self
+            .inner
             .call(
                 |tx| ProviderMsg::Build {
                     provider,
@@ -65,7 +66,8 @@ impl RactorProviderHandle {
         provider: String,
         api_key: String,
     ) -> anyhow::Result<Vec<String>> {
-        match self.inner
+        match self
+            .inner
             .call(
                 |tx| ProviderMsg::ValidateKey {
                     provider,
@@ -83,7 +85,8 @@ impl RactorProviderHandle {
 
     /// List models for a configured provider.
     pub async fn list_models(&self, provider: String) -> anyhow::Result<Vec<String>> {
-        match self.inner
+        match self
+            .inner
             .call(
                 |tx| ProviderMsg::ListModels {
                     provider,
@@ -122,7 +125,14 @@ impl RactorProviderActor {
         bus: EventBus<Event>,
         config_handle: RactorConfigHandle,
         factory: Arc<dyn ProviderFactory>,
-    ) -> Result<(RactorProviderHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
+    ) -> Result<
+        (
+            RactorProviderHandle,
+            ractor::ActorCell,
+            tokio::task::JoinHandle<()>,
+        ),
+        ractor::SpawnErr,
+    > {
         let actor = Self::new(bus, config_handle, factory);
         let (handle, join, cell) = spawn_ractor(None, actor, ()).await?;
         Ok((RactorProviderHandle::new(handle), cell, join))
@@ -132,7 +142,11 @@ impl RactorProviderActor {
     #[cfg(test)]
     pub async fn minimal_spawn_for_test(
         bus: EventBus<Event>,
-    ) -> (RactorProviderHandle, ractor::ActorCell, tokio::task::JoinHandle<()>) {
+    ) -> (
+        RactorProviderHandle,
+        ractor::ActorCell,
+        tokio::task::JoinHandle<()>,
+    ) {
         use crate::provider::Provider;
         use anyhow::Result;
         use async_trait::async_trait;
@@ -293,7 +307,11 @@ impl RactorProviderActor {
         match config {
             Ok(cfg) => {
                 let (base_url, resolved_key) = factory.resolve_credentials(provider, &cfg);
-                let api_key = if api_key.is_empty() { &resolved_key } else { api_key };
+                let api_key = if api_key.is_empty() {
+                    &resolved_key
+                } else {
+                    api_key
+                };
                 if api_key.is_empty() {
                     Err(anyhow::anyhow!("API key is required"))
                 } else {
@@ -375,7 +393,8 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_actor_spawns() {
         let bus = EventBus::<Event>::new(16);
-        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) =
+            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
             .await
@@ -386,7 +405,8 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_build() {
         let bus = EventBus::<Event>::new(16);
-        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) =
+            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
 
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
@@ -402,7 +422,8 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_validate_key() {
         let bus = EventBus::<Event>::new(16);
-        let ( config_handle , _cell, _join ) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) =
+            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
 
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
@@ -451,10 +472,9 @@ mod tests {
         }
 
         let factory = Arc::new(SlowFactory);
-        let (handle, _cell, _) =
-            RactorProviderActor::spawn(bus.clone(), config_handle, factory)
-                .await
-                .unwrap();
+        let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
+            .await
+            .unwrap();
 
         // Send ListModels first (will be slow) and ValidateKey second.
         // If the mailbox were blocked, ValidateKey would wait for ListModels.

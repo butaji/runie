@@ -59,7 +59,6 @@ fn ctrl_q_defaults_to_force_quit() {
     );
 }
 
-
 #[test]
 fn load_keybindings_falls_back_to_defaults() {
     // No config → falls back to defaults

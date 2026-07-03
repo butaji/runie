@@ -11,9 +11,7 @@ use crate::model::AppState;
 pub fn build_providers_dialog(state: &AppState) -> PanelStack {
     let mut configured = state.configured_providers();
     // Include mock provider when enabled (dev-only).
-    if crate::provider::is_mock_enabled()
-        && !configured.iter().any(|(p, _, _)| p == "mock")
-    {
+    if crate::provider::is_mock_enabled() && !configured.iter().any(|(p, _, _)| p == "mock") {
         configured.push((
             "mock".to_owned(),
             "http://localhost/mock".to_owned(),

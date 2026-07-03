@@ -10,9 +10,7 @@ pub(super) fn git_status_matches(status: GitStatus, filter: &str) -> bool {
         "modified" => {
             status.contains(GitStatus::WT_MODIFIED) || status.contains(GitStatus::INDEX_MODIFIED)
         }
-        "untracked" => {
-            status.contains(GitStatus::WT_NEW) || status.contains(GitStatus::INDEX_NEW)
-        }
+        "untracked" => status.contains(GitStatus::WT_NEW) || status.contains(GitStatus::INDEX_NEW),
         "deleted" => {
             status.contains(GitStatus::WT_DELETED) || status.contains(GitStatus::INDEX_DELETED)
         }

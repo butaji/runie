@@ -206,8 +206,11 @@ mod tests {
         let estimate = estimate_tokens_for_model(text, "unknown_provider", "unknown");
         #[cfg(not(feature = "tiktoken"))]
         let estimate = chars4; // When tiktoken disabled, always uses chars/4
-        // For unknown provider, should fall back to chars/4
-        assert_eq!(estimate, chars4, "unknown provider should use chars/4 fallback");
+                               // For unknown provider, should fall back to chars/4
+        assert_eq!(
+            estimate, chars4,
+            "unknown provider should use chars/4 fallback"
+        );
     }
 
     #[test]
@@ -216,7 +219,10 @@ mod tests {
         let text = "hello world";
         let tiktoken_result = tiktoken_count(text).expect("tiktoken should work");
         let estimate = estimate_tokens_for_model(text, "openai", "gpt-4o");
-        assert_eq!(estimate, tiktoken_result, "openai provider should use tiktoken");
+        assert_eq!(
+            estimate, tiktoken_result,
+            "openai provider should use tiktoken"
+        );
     }
 
     #[test]
@@ -260,7 +266,11 @@ mod tests {
         tracker.add_output(500_000); // 500K output tokens
         let cost = tracker.session_cost();
         // 1M * 5.0 / 1M + 500K * 15.0 / 1M = 5.0 + 7.5 = 12.5
-        assert!((cost - 12.5).abs() < 0.001, "cost should be $12.50, got {}", cost);
+        assert!(
+            (cost - 12.5).abs() < 0.001,
+            "cost should be $12.50, got {}",
+            cost
+        );
     }
 
     #[test]

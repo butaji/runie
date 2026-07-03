@@ -266,13 +266,20 @@ impl BlockParser {
                     pulldown_cmark::CodeBlockKind::Fenced(lang) => lang.to_string(),
                     pulldown_cmark::CodeBlockKind::Indented => String::new(),
                 };
-                self.state = BlockState::Code { lang, content: String::new() };
+                self.state = BlockState::Code {
+                    lang,
+                    content: String::new(),
+                };
             }
             Tag::List(order) => {
                 self.flush_text();
                 self.content_buf.clear();
                 self.inline_buf.clear();
-                self.state = BlockState::List { ordered: order.is_some(), items: Vec::new(), current: Vec::new() };
+                self.state = BlockState::List {
+                    ordered: order.is_some(),
+                    items: Vec::new(),
+                    current: Vec::new(),
+                };
             }
             Tag::Item => {
                 if let BlockState::List { items, current, .. } = &mut self.state {
@@ -285,7 +292,9 @@ impl BlockParser {
                 if matches!(self.state, BlockState::Top) {
                     self.flush_text();
                 }
-                self.state = BlockState::Quote { inlines: Vec::new() };
+                self.state = BlockState::Quote {
+                    inlines: Vec::new(),
+                };
             }
             Tag::Strong => self.style_stack.push(BlStyle::Bold),
             Tag::Emphasis => self.style_stack.push(BlStyle::Italic),
@@ -369,7 +378,12 @@ impl BlockParser {
                 }
             }
             TagEnd::List(_) => {
-                if let BlockState::List { ordered, mut items, current } = std::mem::take(&mut self.state) {
+                if let BlockState::List {
+                    ordered,
+                    mut items,
+                    current,
+                } = std::mem::take(&mut self.state)
+                {
                     if !current.is_empty() {
                         items.push(current);
                     }
@@ -392,9 +406,15 @@ impl BlockParser {
                 self.content_buf.clear();
                 self.inline_buf.clear();
             }
-            TagEnd::Strong => { self.style_stack.pop(); }
-            TagEnd::Emphasis => { self.style_stack.pop(); }
-            TagEnd::Strikethrough => { self.style_stack.pop(); }
+            TagEnd::Strong => {
+                self.style_stack.pop();
+            }
+            TagEnd::Emphasis => {
+                self.style_stack.pop();
+            }
+            TagEnd::Strikethrough => {
+                self.style_stack.pop();
+            }
             _ => {}
         }
     }

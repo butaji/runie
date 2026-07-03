@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
 use crate::terminal::caps::detect::{
-    detect_clipboard, detect_color_depth, detect_focus_tracking,
-    detect_hyperlinks, detect_mouse, detect_unicode,
+    detect_clipboard, detect_color_depth, detect_focus_tracking, detect_hyperlinks, detect_mouse,
+    detect_unicode,
 };
-use crate::terminal::caps::{
-    detect_capabilities, ColorDepth, MouseCapability, TermCaps,
-};
+use crate::terminal::caps::{detect_capabilities, ColorDepth, MouseCapability, TermCaps};
 
 #[cfg(test)]
 fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -67,7 +65,10 @@ fn color_depth_fallback_ansi256_or_less() {
     let env = env(&[("TERM", "vt100")]);
     let depth = detect_color_depth(&env);
     // Fallback can be ANSI16, ANSI256, or Truecolor depending on supports-color detection
-    assert!(matches!(depth, ColorDepth::ANSI16 | ColorDepth::ANSI256 | ColorDepth::Truecolor));
+    assert!(matches!(
+        depth,
+        ColorDepth::ANSI16 | ColorDepth::ANSI256 | ColorDepth::Truecolor
+    ));
 }
 
 // ── Hyperlinks tests ─────────────────────────────────────────────────────────

@@ -444,8 +444,9 @@ impl AppState {
         // Restore plan mode if the session has an associated plan
         if let Some(ref plan_id) = meta.active_plan_id {
             if let Some(plans_dir) = crate::session::plan_persistence::default_plans_dir() {
-                if let Some(plan) =
-                    crate::session::plan_persistence::load_plan(&plans_dir, plan_id).ok().flatten()
+                if let Some(plan) = crate::session::plan_persistence::load_plan(&plans_dir, plan_id)
+                    .ok()
+                    .flatten()
                 {
                     self.view_mut().plan_mode = true;
                     self.view_mut().active_plan_id = Some(plan_id.clone());

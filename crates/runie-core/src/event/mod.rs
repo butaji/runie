@@ -53,10 +53,21 @@ use crate::settings::SettingsCategory;
 #[strum(serialize_all = "PascalCase")]
 pub enum Event {
     // ── Agent / Fact variants ───────────────────────────────────────────────
-    Thinking { id: String },
-    ThoughtDone { id: String },
-    ToolStart { id: String, name: String, input: serde_json::Value },
-    ToolInputDelta { id: String, content: String },
+    Thinking {
+        id: String,
+    },
+    ThoughtDone {
+        id: String,
+    },
+    ToolStart {
+        id: String,
+        name: String,
+        input: serde_json::Value,
+    },
+    ToolInputDelta {
+        id: String,
+        content: String,
+    },
     /// Tool end with optional input for replay reconstruction.
     ToolEnd {
         id: String,
@@ -72,16 +83,34 @@ pub enum Event {
     },
     /// Turn journal phase: tool requests have been recorded from the LLM.
     /// Used for crash recovery.
-    ToolRequestsRecorded { request_id: String },
+    ToolRequestsRecorded {
+        request_id: String,
+    },
     /// Turn journal phase: response streaming has started.
     /// Used for crash recovery.
-    ResponseDeltaStarted { request_id: String },
-    ResponseDelta { id: String, content: String },
-    ThinkingDelta { id: String, content: String },
-    TextStart { id: String },
-    TextEnd { id: String },
-    ThinkingStart { id: String },
-    ThinkingEnd { id: String },
+    ResponseDeltaStarted {
+        request_id: String,
+    },
+    ResponseDelta {
+        id: String,
+        content: String,
+    },
+    ThinkingDelta {
+        id: String,
+        content: String,
+    },
+    TextStart {
+        id: String,
+    },
+    TextEnd {
+        id: String,
+    },
+    ThinkingStart {
+        id: String,
+    },
+    ThinkingEnd {
+        id: String,
+    },
     /// Assistant response with optional durable metadata.
     Response {
         id: String,
@@ -93,44 +122,126 @@ pub enum Event {
         #[serde(skip)]
         provider: String,
     },
-    TurnComplete { id: String, duration_secs: f64 },
-    Done { id: String },
-    Error { id: String, message: String },
-    TurnStarted { id: String, request_id: String, content: String },
+    TurnComplete {
+        id: String,
+        duration_secs: f64,
+    },
+    Done {
+        id: String,
+    },
+    Error {
+        id: String,
+        message: String,
+    },
+    TurnStarted {
+        id: String,
+        request_id: String,
+        content: String,
+    },
     TurnAborted,
     TurnCompleted,
-    TurnErrored { id: String, message: String },
-    TurnConstraintError { id: String, tool: String, message: String },
-    TokenStatsUpdated { tokens_in: usize, tokens_out: usize },
-    CompactionTriggered { ratio: f64, tokens_in: usize, context_window: usize },
-    StreamStarted { id: String },
-    UserMessageSubmitted { id: String, content: String },
-    QueueAborted { content: String },
+    TurnErrored {
+        id: String,
+        message: String,
+    },
+    TurnConstraintError {
+        id: String,
+        tool: String,
+        message: String,
+    },
+    TokenStatsUpdated {
+        tokens_in: usize,
+        tokens_out: usize,
+    },
+    CompactionTriggered {
+        ratio: f64,
+        tokens_in: usize,
+        context_window: usize,
+    },
+    StreamStarted {
+        id: String,
+    },
+    UserMessageSubmitted {
+        id: String,
+        content: String,
+    },
+    QueueAborted {
+        content: String,
+    },
     QueuesCleared,
-    QueueFollowUpAdded { id: String, content: String },
-    QueueSteeringAdded { id: String, content: String },
-    SteeringDelivered { content: String, id: String },
-    FollowUpDelivered { content: String, id: String },
-    MessageDequeued { content: String },
+    QueueFollowUpAdded {
+        id: String,
+        content: String,
+    },
+    QueueSteeringAdded {
+        id: String,
+        content: String,
+    },
+    SteeringDelivered {
+        content: String,
+        id: String,
+    },
+    FollowUpDelivered {
+        content: String,
+        id: String,
+    },
+    MessageDequeued {
+        content: String,
+    },
     IdGenerated(crate::actors::turn::NextIdResponse),
-    AssistantMessageReady { message: crate::message::ChatMessage },
+    AssistantMessageReady {
+        message: crate::message::ChatMessage,
+    },
 
     // ── Command variants ─────────────────────────────────────────────────────
-    SetPrompt { name: String },
-    RunLoadCommand { name: String },
-    RunSaveCommand { name: String },
-    RunDeleteCommand { name: String },
-    RunImportCommand { path: String },
-    RunExportCommand { path: String },
-    RunSkillCommand { name: String },
-    RunLoginCommand { provider: String, token: String },
-    RunLogoutCommand { provider: String },
-    RunNameCommand { name: String },
-    RunForkCommand { message_index: String },
-    RunCompactCommand { keep: String, focus: String },
-    RunPromptCommand { name: String },
-    RunThinkingCommand { level: ThinkingLevel },
-    RunPaletteCommand { name: String, args: String },
+    SetPrompt {
+        name: String,
+    },
+    RunLoadCommand {
+        name: String,
+    },
+    RunSaveCommand {
+        name: String,
+    },
+    RunDeleteCommand {
+        name: String,
+    },
+    RunImportCommand {
+        path: String,
+    },
+    RunExportCommand {
+        path: String,
+    },
+    RunSkillCommand {
+        name: String,
+    },
+    RunLoginCommand {
+        provider: String,
+        token: String,
+    },
+    RunLogoutCommand {
+        provider: String,
+    },
+    RunNameCommand {
+        name: String,
+    },
+    RunForkCommand {
+        message_index: String,
+    },
+    RunCompactCommand {
+        keep: String,
+        focus: String,
+    },
+    RunPromptCommand {
+        name: String,
+    },
+    RunThinkingCommand {
+        level: ThinkingLevel,
+    },
+    RunPaletteCommand {
+        name: String,
+        args: String,
+    },
 
     // ── Control variants ─────────────────────────────────────────────────────
     Quit,
@@ -142,7 +253,9 @@ pub enum Event {
     ToggleExpand,
     Dequeue,
     OpenExternalEditor,
-    ExternalEditorDone { content: String },
+    ExternalEditorDone {
+        content: String,
+    },
     ShareSession,
     Suspend,
     ToggleVimMode,
@@ -150,14 +263,25 @@ pub enum Event {
     OpenSessionList,
     NewSession,
     ResumeSession,
-    SelectSession { id: String },
-    StarSession { id: String },
-    RenameSession { id: String, name: String },
-    DeleteSession { id: String },
+    SelectSession {
+        id: String,
+    },
+    StarSession {
+        id: String,
+    },
+    RenameSession {
+        id: String,
+        name: String,
+    },
+    DeleteSession {
+        id: String,
+    },
 
     // ── Plan mode variants ────────────────────────────────────────────────────
     /// Enable plan mode with optional initial content.
-    PlanModeEnabled { content: String },
+    PlanModeEnabled {
+        content: String,
+    },
     /// Disable plan mode.
     PlanModeDisabled,
 
@@ -190,10 +314,17 @@ pub enum Event {
     CommandFormClose,
     DialogBack,
     ProvidersDialog,
-    ProvidersSelectModel { provider: String, model: String },
-    ProvidersDisconnect { provider: String },
+    ProvidersSelectModel {
+        provider: String,
+        model: String,
+    },
+    ProvidersDisconnect {
+        provider: String,
+    },
     ProvidersAdd,
-    ProvidersEditModels { provider: String },
+    ProvidersEditModels {
+        provider: String,
+    },
     CopyToClipboard(String),
     CopySelectedBlock,
     CopyBlockMetadata,
@@ -201,19 +332,40 @@ pub enum Event {
     InsertAtRef(String),
 
     // ── Edit variants ────────────────────────────────────────────────────────
-    PendingEdit { path: String, original: String, proposed: String },
+    PendingEdit {
+        path: String,
+        original: String,
+        proposed: String,
+    },
     ApproveEdit,
     RejectEdit,
 
     // ── IO / Fact variants ───────────────────────────────────────────────────
-    GistShared { result: Result<String, String> },
-    ExternalEditorClosed { result: Result<String, String> },
-    ClipboardWritten { success: bool },
-    ClipboardRead { result: Result<String, String> },
+    GistShared {
+        result: Result<String, String>,
+    },
+    ExternalEditorClosed {
+        result: Result<String, String>,
+    },
+    ClipboardWritten {
+        success: bool,
+    },
+    ClipboardRead {
+        result: Result<String, String>,
+    },
     ProcessResumed,
-    BashOutput { command: String, output: String },
-    FilesWritten { count: usize, errors: Vec<String> },
-    EnvDetected { git_info: Option<crate::snapshot::GitInfo>, cwd_name: String },
+    BashOutput {
+        command: String,
+        output: String,
+    },
+    FilesWritten {
+        count: usize,
+        errors: Vec<String>,
+    },
+    EnvDetected {
+        git_info: Option<crate::snapshot::GitInfo>,
+        cwd_name: String,
+    },
     FffSearchResult {
         request_id: u64,
         entries: Vec<crate::model::FffFileEntry>,
@@ -224,7 +376,9 @@ pub enum Event {
         #[serde(skip)]
         skills: Vec<crate::skills::Skill>,
     },
-    AuthLoaded { providers: Vec<String> },
+    AuthLoaded {
+        providers: Vec<String>,
+    },
 
     // ── Input variants ───────────────────────────────────────────────────────
     Input(char),
@@ -252,36 +406,80 @@ pub enum Event {
     GoToBottom,
     Paste(String),
     PasteImage,
-    MouseClick { row: u16, col: u16, button: String },
-    MouseRelease { row: u16, col: u16, button: String },
-    MouseDrag { row: u16, col: u16, button: String },
-    MouseMove { row: u16, col: u16 },
+    MouseClick {
+        row: u16,
+        col: u16,
+        button: String,
+    },
+    MouseRelease {
+        row: u16,
+        col: u16,
+        button: String,
+    },
+    MouseDrag {
+        row: u16,
+        col: u16,
+        button: String,
+    },
+    MouseMove {
+        row: u16,
+        col: u16,
+    },
     MouseScrollUp,
     MouseScrollDown,
     FocusGained,
     FocusLost,
-    TerminalSize { width: u16, height: u16 },
+    TerminalSize {
+        width: u16,
+        height: u16,
+    },
 
     // ── LoginFlow variants ───────────────────────────────────────────────────
     Start,
-    SelectProvider { provider: String },
-    SubmitKey { provider: String, key: String },
-    ToggleModel { model: String },
+    SelectProvider {
+        provider: String,
+    },
+    SubmitKey {
+        provider: String,
+        key: String,
+    },
+    ToggleModel {
+        model: String,
+    },
     Save,
     Cancel,
-    ValidationFailed { provider: String, key: String, error: String },
-    ModelsFetched { provider: String, key: String, models: Vec<String> },
+    ValidationFailed {
+        provider: String,
+        key: String,
+        error: String,
+    },
+    ModelsFetched {
+        provider: String,
+        key: String,
+        models: Vec<String>,
+    },
 
     // ── ModelConfig variants ─────────────────────────────────────────────────
-    SwitchModel { provider: String, model: String, explicit: bool },
-    SwitchTheme { name: String },
+    SwitchModel {
+        provider: String,
+        model: String,
+        explicit: bool,
+    },
+    SwitchTheme {
+        name: String,
+    },
     CycleModelNext,
     CycleModelPrev,
     ToggleScopedModelsDialog,
-    ScopedModelToggle { provider: String, name: String },
+    ScopedModelToggle {
+        provider: String,
+        name: String,
+    },
     ScopedModelEnableAll,
     ScopedModelDisableAll,
-    ScopedModelToggleProvider { provider: String },
+    ScopedModelToggleProvider {
+        provider: String,
+    },
     ToggleSettingsDialog,
     SettingsUp,
     SettingsDown,
@@ -289,7 +487,9 @@ pub enum Event {
     SettingsRight,
     SettingsSelect,
     SettingsClose,
-    SettingsSwitchCategory { category: SettingsCategory },
+    SettingsSwitchCategory {
+        category: SettingsCategory,
+    },
     CycleThinkingLevel,
     SetThinkingLevel(ThinkingLevel),
     ToggleReadOnly,
@@ -299,60 +499,132 @@ pub enum Event {
     KeybindingsReloaded,
 
     // ── Other / Fact variants ────────────────────────────────────────────────
-    MessageReplayed { id: String, role: String, content: String, timestamp: f64, provider: String },
+    MessageReplayed {
+        id: String,
+        role: String,
+        content: String,
+        timestamp: f64,
+        provider: String,
+    },
 
     // ── Permission variants ────────────────────────────────────────────────────
-    PermissionResponse { request_id: String, action: crate::permissions::PermissionAction },
-    PermissionRequest { request_id: String, tool: String, input: serde_json::Value },
+    PermissionResponse {
+        request_id: String,
+        action: crate::permissions::PermissionAction,
+    },
+    PermissionRequest {
+        request_id: String,
+        tool: String,
+        input: serde_json::Value,
+    },
     PermissionRequestDismissed,
 
     // ── Persistence / Fact variants ──────────────────────────────────────────
-    InputChanged { state: Box<crate::model::InputState> },
+    InputChanged {
+        state: Box<crate::model::InputState>,
+    },
     #[serde(skip)]
-    ViewChanged { state: Box<crate::model::ViewState> },
-    CompletionChanged { state: Box<crate::model::CompletionState> },
-    TrustLoaded { decisions: IndexMap<Utf8PathBuf, crate::trust::TrustDecision> },
-    TrustChanged { path: Utf8PathBuf, decision: crate::trust::TrustDecision },
-    TrustSet { path: Utf8PathBuf, decision: crate::trust::TrustDecision },
-    ReadOnlyChanged { enabled: bool },
-    HistoryLoaded { entries: Vec<String> },
-    HistoryAppend { entry: String },
+    ViewChanged {
+        state: Box<crate::model::ViewState>,
+    },
+    CompletionChanged {
+        state: Box<crate::model::CompletionState>,
+    },
+    TrustLoaded {
+        decisions: IndexMap<Utf8PathBuf, crate::trust::TrustDecision>,
+    },
+    TrustChanged {
+        path: Utf8PathBuf,
+        decision: crate::trust::TrustDecision,
+    },
+    TrustSet {
+        path: Utf8PathBuf,
+        decision: crate::trust::TrustDecision,
+    },
+    ReadOnlyChanged {
+        enabled: bool,
+    },
+    HistoryLoaded {
+        entries: Vec<String>,
+    },
+    HistoryAppend {
+        entry: String,
+    },
 
     // ── Session variants ──────────────────────────────────────────────────────
     Up,
     Down,
-    ForkSession { message_index: usize },
+    ForkSession {
+        message_index: usize,
+    },
     CloneSession,
     ToggleSessionTree,
     SessionTreeFilterCycle,
-    SessionTreeSelect { id: String },
+    SessionTreeSelect {
+        id: String,
+    },
     SessionLoaded {
         name: String,
         events: Box<Vec<crate::event::DurableCoreEvent>>,
         metadata: Option<Box<crate::session::SessionMetadata>>,
     },
-    SessionSaved { name: String },
-    SessionDeleted { name: String },
-    SessionImported { session: Box<crate::session::Session> },
-    SessionExported { path: String },
-    SessionList { sessions: Box<Vec<String>> },
-    SessionOperationFailed { operation: String, error: String },
+    SessionSaved {
+        name: String,
+    },
+    SessionDeleted {
+        name: String,
+    },
+    SessionImported {
+        session: Box<crate::session::Session>,
+    },
+    SessionExported {
+        path: String,
+    },
+    SessionList {
+        sessions: Box<Vec<String>>,
+    },
+    SessionOperationFailed {
+        operation: String,
+        error: String,
+    },
     /// Fine-grained session change events (replacing whole-state SessionChanged).
-    SessionMessageAdded { id: String, role: String, content: String },
-    SessionMessageUpdated { id: String, content: String },
-    SessionMetadataUpdated { name: Option<String> },
+    SessionMessageAdded {
+        id: String,
+        role: String,
+        content: String,
+    },
+    SessionMessageUpdated {
+        id: String,
+        content: String,
+    },
+    SessionMetadataUpdated {
+        name: Option<String>,
+    },
     /// Legacy whole-state event (deprecated in favor of fine-grained events).
-    SessionChanged { state: Box<crate::model::SessionState> },
+    SessionChanged {
+        state: Box<crate::model::SessionState>,
+    },
     /// Session tree snapshot (branching history) for durable persistence.
-    SessionTreeSnapshot { snapshot: crate::session::tree::SessionTreeSnapshot },
+    SessionTreeSnapshot {
+        snapshot: crate::session::tree::SessionTreeSnapshot,
+    },
 
     // ── System / Fact variants ───────────────────────────────────────────────
-    TransientMessage { content: String, level: TLevel },
-    TransientError { content: String },
+    TransientMessage {
+        content: String,
+        level: TLevel,
+    },
+    TransientError {
+        content: String,
+    },
     ClearTransient,
     ShowDiagnostics,
-    SystemMessage { content: String },
-    ConfigLoaded { config: Box<crate::config::Config> },
+    SystemMessage {
+        content: String,
+    },
+    ConfigLoaded {
+        config: Box<crate::config::Config>,
+    },
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -886,14 +1158,22 @@ impl Event {
             Event::RunImportCommand { path } => Some(Event::RunImportCommand { path }),
             Event::RunExportCommand { path } => Some(Event::RunExportCommand { path }),
             Event::RunSkillCommand { name } => Some(Event::RunSkillCommand { name }),
-            Event::RunLoginCommand { provider, token } => Some(Event::RunLoginCommand { provider, token }),
+            Event::RunLoginCommand { provider, token } => {
+                Some(Event::RunLoginCommand { provider, token })
+            }
             Event::RunLogoutCommand { provider } => Some(Event::RunLogoutCommand { provider }),
             Event::RunNameCommand { name } => Some(Event::RunNameCommand { name }),
-            Event::RunForkCommand { message_index } => Some(Event::RunForkCommand { message_index }),
-            Event::RunCompactCommand { keep, focus } => Some(Event::RunCompactCommand { keep, focus }),
+            Event::RunForkCommand { message_index } => {
+                Some(Event::RunForkCommand { message_index })
+            }
+            Event::RunCompactCommand { keep, focus } => {
+                Some(Event::RunCompactCommand { keep, focus })
+            }
             Event::RunPromptCommand { name } => Some(Event::RunPromptCommand { name }),
             Event::RunThinkingCommand { level } => Some(Event::RunThinkingCommand { level }),
-            Event::RunPaletteCommand { name, args } => Some(Event::RunPaletteCommand { name, args }),
+            Event::RunPaletteCommand { name, args } => {
+                Some(Event::RunPaletteCommand { name, args })
+            }
             Event::ToggleWelcome => Some(Event::ToggleWelcome),
             Event::ToggleCommandPalette => Some(Event::ToggleCommandPalette),
             Event::PaletteFilter(c) => Some(Event::PaletteFilter(c)),
@@ -922,16 +1202,30 @@ impl Event {
             Event::CommandFormClose => Some(Event::CommandFormClose),
             Event::DialogBack => Some(Event::DialogBack),
             Event::ProvidersDialog => Some(Event::ProvidersDialog),
-            Event::ProvidersSelectModel { provider, model } => Some(Event::ProvidersSelectModel { provider, model }),
-            Event::ProvidersDisconnect { provider } => Some(Event::ProvidersDisconnect { provider }),
+            Event::ProvidersSelectModel { provider, model } => {
+                Some(Event::ProvidersSelectModel { provider, model })
+            }
+            Event::ProvidersDisconnect { provider } => {
+                Some(Event::ProvidersDisconnect { provider })
+            }
             Event::ProvidersAdd => Some(Event::ProvidersAdd),
-            Event::ProvidersEditModels { provider } => Some(Event::ProvidersEditModels { provider }),
+            Event::ProvidersEditModels { provider } => {
+                Some(Event::ProvidersEditModels { provider })
+            }
             Event::CopyToClipboard(s) => Some(Event::CopyToClipboard(s)),
             Event::CopySelectedBlock => Some(Event::CopySelectedBlock),
             Event::CopyBlockMetadata => Some(Event::CopyBlockMetadata),
             Event::AtFilePicker => Some(Event::AtFilePicker),
             Event::InsertAtRef(s) => Some(Event::InsertAtRef(s)),
-            Event::PendingEdit { path, original, proposed } => Some(Event::PendingEdit { path, original, proposed }),
+            Event::PendingEdit {
+                path,
+                original,
+                proposed,
+            } => Some(Event::PendingEdit {
+                path,
+                original,
+                proposed,
+            }),
             Event::ApproveEdit => Some(Event::ApproveEdit),
             Event::RejectEdit => Some(Event::RejectEdit),
             Event::Input(c) => Some(Event::Input(c)),
@@ -960,7 +1254,9 @@ impl Event {
             Event::Paste(s) => Some(Event::Paste(s)),
             Event::PasteImage => Some(Event::PasteImage),
             Event::MouseClick { row, col, button } => Some(Event::MouseClick { row, col, button }),
-            Event::MouseRelease { row, col, button } => Some(Event::MouseRelease { row, col, button }),
+            Event::MouseRelease { row, col, button } => {
+                Some(Event::MouseRelease { row, col, button })
+            }
             Event::MouseDrag { row, col, button } => Some(Event::MouseDrag { row, col, button }),
             Event::MouseMove { row, col } => Some(Event::MouseMove { row, col }),
             Event::MouseScrollUp => Some(Event::MouseScrollUp),
@@ -974,15 +1270,27 @@ impl Event {
             Event::ToggleModel { model } => Some(Event::ToggleModel { model }),
             Event::Save => Some(Event::Save),
             Event::Cancel => Some(Event::Cancel),
-            Event::SwitchModel { provider, model, explicit } => Some(Event::SwitchModel { provider, model, explicit }),
+            Event::SwitchModel {
+                provider,
+                model,
+                explicit,
+            } => Some(Event::SwitchModel {
+                provider,
+                model,
+                explicit,
+            }),
             Event::SwitchTheme { name } => Some(Event::SwitchTheme { name }),
             Event::CycleModelNext => Some(Event::CycleModelNext),
             Event::CycleModelPrev => Some(Event::CycleModelPrev),
             Event::ToggleScopedModelsDialog => Some(Event::ToggleScopedModelsDialog),
-            Event::ScopedModelToggle { provider, name } => Some(Event::ScopedModelToggle { provider, name }),
+            Event::ScopedModelToggle { provider, name } => {
+                Some(Event::ScopedModelToggle { provider, name })
+            }
             Event::ScopedModelEnableAll => Some(Event::ScopedModelEnableAll),
             Event::ScopedModelDisableAll => Some(Event::ScopedModelDisableAll),
-            Event::ScopedModelToggleProvider { provider } => Some(Event::ScopedModelToggleProvider { provider }),
+            Event::ScopedModelToggleProvider { provider } => {
+                Some(Event::ScopedModelToggleProvider { provider })
+            }
             Event::ToggleSettingsDialog => Some(Event::ToggleSettingsDialog),
             Event::SettingsUp => Some(Event::SettingsUp),
             Event::SettingsDown => Some(Event::SettingsDown),
@@ -990,14 +1298,18 @@ impl Event {
             Event::SettingsRight => Some(Event::SettingsRight),
             Event::SettingsSelect => Some(Event::SettingsSelect),
             Event::SettingsClose => Some(Event::SettingsClose),
-            Event::SettingsSwitchCategory { category } => Some(Event::SettingsSwitchCategory { category }),
+            Event::SettingsSwitchCategory { category } => {
+                Some(Event::SettingsSwitchCategory { category })
+            }
             Event::CycleThinkingLevel => Some(Event::CycleThinkingLevel),
             Event::SetThinkingLevel(lvl) => Some(Event::SetThinkingLevel(lvl)),
             Event::ToggleReadOnly => Some(Event::ToggleReadOnly),
             Event::TrustProject => Some(Event::TrustProject),
             Event::UntrustProject => Some(Event::UntrustProject),
             Event::ReloadAll => Some(Event::ReloadAll),
-            Event::PermissionResponse { request_id, action } => Some(Event::PermissionResponse { request_id, action }),
+            Event::PermissionResponse { request_id, action } => {
+                Some(Event::PermissionResponse { request_id, action })
+            }
             Event::Up => Some(Event::Up),
             Event::Down => Some(Event::Down),
             Event::ForkSession { message_index } => Some(Event::ForkSession { message_index }),
@@ -1005,7 +1317,9 @@ impl Event {
             Event::ToggleSessionTree => Some(Event::ToggleSessionTree),
             Event::SessionTreeFilterCycle => Some(Event::SessionTreeFilterCycle),
             Event::SessionTreeSelect { id } => Some(Event::SessionTreeSelect { id }),
-            Event::TransientMessage { content, level } => Some(Event::TransientMessage { content, level }),
+            Event::TransientMessage { content, level } => {
+                Some(Event::TransientMessage { content, level })
+            }
             Event::ClearTransient => Some(Event::ClearTransient),
             Event::ShowDiagnostics => Some(Event::ShowDiagnostics),
             Event::SetPrompt { name } => Some(Event::SetPrompt { name }),
@@ -1185,7 +1499,9 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("Cancel", || Event::Cancel),
     ("CycleModelNext", || Event::CycleModelNext),
     ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || Event::ToggleScopedModelsDialog),
+    ("ToggleScopedModelsDialog", || {
+        Event::ToggleScopedModelsDialog
+    }),
     ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
     ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
     ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),

@@ -68,8 +68,6 @@ pub enum MouseCapability {
     SgrExtended,
 }
 
-
-
 /// Detect capabilities from the current process environment.
 pub fn detect_capabilities_from_env() -> TermCaps {
     let env: HashMap<String, String> = std::env::vars().collect();

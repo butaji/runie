@@ -40,9 +40,17 @@ pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
     use crate::provider::registry::{find_model, find_provider};
 
     let mut errors = Vec::new();
-    errors.append(&mut validate_default_provider_model(config, find_provider, find_model));
+    errors.append(&mut validate_default_provider_model(
+        config,
+        find_provider,
+        find_model,
+    ));
     errors.append(&mut validate_configured_providers(config, find_provider));
-    errors.append(&mut validate_scoped_models(config, find_provider, find_model));
+    errors.append(&mut validate_scoped_models(
+        config,
+        find_provider,
+        find_model,
+    ));
     errors
 }
 
@@ -52,32 +60,44 @@ fn validate_default_provider_model(
     find_model: impl Fn(&str) -> Option<crate::provider::ModelMeta>,
 ) -> Vec<String> {
     let mut errors = Vec::new();
-    let Some(provider) = &config.provider else { return errors };
+    let Some(provider) = &config.provider else {
+        return errors;
+    };
     if provider.is_empty() {
         return errors;
     }
     if find_provider(provider).is_none() {
-        errors.push(format!("provider '{provider}': unknown provider (not in registry)"));
+        errors.push(format!(
+            "provider '{provider}': unknown provider (not in registry)"
+        ));
         return errors;
     }
-    let Some(model) = config.default_model() else { return errors };
+    let Some(model) = config.default_model() else {
+        return errors;
+    };
     if model.is_empty() {
         return errors;
     }
     if let Some((provider_prefix, model_name)) = model.split_once('/') {
         if provider_prefix != *provider {
-            errors.push(format!("model '{model}': provider mismatch (expected '{provider}')"));
+            errors.push(format!(
+                "model '{model}': provider mismatch (expected '{provider}')"
+            ));
         }
         if let Some(meta) = find_model(model) {
             if meta.name != model_name && !model.contains('/') {
-                errors.push(format!("model '{model}': not found for provider '{provider}'"));
+                errors.push(format!(
+                    "model '{model}': not found for provider '{provider}'"
+                ));
             }
         } else if find_model(model).is_none() {
             errors.push(format!("model '{model}': not found in registry"));
         }
     } else if let Some(p) = find_provider(provider) {
         if !p.models.iter().any(|m| m.name == model) {
-            errors.push(format!("model '{model}': not found for provider '{provider}' "));
+            errors.push(format!(
+                "model '{model}': not found for provider '{provider}' "
+            ));
         }
     }
     errors
@@ -119,7 +139,9 @@ fn validate_scoped_models(
 ) -> Vec<String> {
     use crate::provider::registry::find_provider;
     let mut errors = Vec::new();
-    let Some(scoped) = &config.models.scoped else { return errors };
+    let Some(scoped) = &config.models.scoped else {
+        return errors;
+    };
     let default_provider = config.provider.as_deref();
     for model in scoped {
         if let Some((provider, model_name)) = model.split_once('/') {
@@ -169,7 +191,6 @@ pub fn validate(value: &Value) -> Vec<String> {
     check_unknown_fields(value, &mut errors);
     errors
 }
-
 
 impl crate::config::Config {
     /// Load config from an optional path, falling back to the default path.
@@ -360,8 +381,8 @@ impl crate::config::Config {
         }
 
         // Serialize the new config.
-        let new_toml = toml::to_string_pretty(self)
-            .with_context(|| "failed to serialize config")?;
+        let new_toml =
+            toml::to_string_pretty(self).with_context(|| "failed to serialize config")?;
 
         // Read existing file preserving its structure and comments.
         let existing_text = if path.exists() {
@@ -378,9 +399,7 @@ impl crate::config::Config {
                     Ok(d) => d,
                     Err(_) => {
                         // Serialization produced invalid TOML.
-                        return Err(anyhow::anyhow!(
-                            "serialized config is not valid TOML",
-                        ));
+                        return Err(anyhow::anyhow!("serialized config is not valid TOML",));
                     }
                 };
 
@@ -471,7 +490,9 @@ impl crate::config::Config {
                 .create(true)
                 .truncate(true)
                 .open(&path)
-                .with_context(|| format!("failed to open config for writing: {}", path.display()))?;
+                .with_context(|| {
+                    format!("failed to open config for writing: {}", path.display())
+                })?;
             let _lock = fs2::FileExt::lock_exclusive(&file);
             std::fs::write(&path, final_toml)
                 .with_context(|| format!("failed to write config: {}", path.display()))?;

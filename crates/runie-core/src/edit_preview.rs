@@ -66,8 +66,7 @@ mod tests {
 
     #[test]
     fn edit_preview_path_as_utf8_string() {
-        let preview =
-            EditPreview::new(Utf8PathBuf::from("src/lib.rs"), "a".into(), "b".into());
+        let preview = EditPreview::new(Utf8PathBuf::from("src/lib.rs"), "a".into(), "b".into());
         // Utf8PathBuf is always valid UTF-8, no lossy conversion needed
         let path_str: &str = preview.path.as_str();
         assert_eq!(path_str, "src/lib.rs");
@@ -76,8 +75,7 @@ mod tests {
     #[test]
     fn edit_preview_serialization_matches_pathbuf_format() {
         // Verify the JSON format is a plain string (same as PathBuf serialization)
-        let preview =
-            EditPreview::new(Utf8PathBuf::from("/foo/bar.rs"), "a".into(), "b".into());
+        let preview = EditPreview::new(Utf8PathBuf::from("/foo/bar.rs"), "a".into(), "b".into());
         let json = serde_json::to_string(&preview).unwrap();
         // The path field should serialize as a plain string, not an object
         assert!(

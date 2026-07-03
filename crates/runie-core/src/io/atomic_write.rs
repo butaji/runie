@@ -19,8 +19,7 @@ pub fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
     std::fs::create_dir_all(parent)?;
 
     // Create temp file in same directory for atomic rename using tempfile
-    let tmp = NamedTempFile::new_in(parent)
-        .map_err(io::Error::other)?;
+    let tmp = NamedTempFile::new_in(parent).map_err(io::Error::other)?;
 
     // Acquire exclusive advisory lock on target file
     let lock_path = path.with_extension("lock");
@@ -46,8 +45,7 @@ pub fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
         }
 
         // Atomically rename temp to target while still holding the lock
-        tmp.persist(path)
-            .map_err(io::Error::other)?;
+        tmp.persist(path).map_err(io::Error::other)?;
 
         // Set permissions on the final file too (belt and suspenders)
         #[cfg(unix)]
@@ -87,7 +85,10 @@ mod tests {
         atomic_write(&path, r#"{"key": "value"}"#).unwrap();
 
         let mut contents = String::new();
-        File::open(&path).unwrap().read_to_string(&mut contents).unwrap();
+        File::open(&path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
         assert_eq!(contents, r#"{"key": "value"}"#);
     }
 
@@ -131,7 +132,12 @@ mod tests {
         let perms = std::fs::metadata(&path).unwrap().permissions();
         let mode = perms.mode();
         // 0o600 = read/write for owner only
-        assert_eq!(mode & 0o777, 0o600, "File should have 0o600 permissions, got {:o}", mode);
+        assert_eq!(
+            mode & 0o777,
+            0o600,
+            "File should have 0o600 permissions, got {:o}",
+            mode
+        );
     }
 
     /// Stress test: multiple concurrent writers should not corrupt the file.
@@ -158,9 +164,8 @@ mod tests {
         let total_writes = num_writers * writes_per_writer;
 
         // Track all possible written values
-        let all_values: Arc<Vec<String>> = Arc::new(
-            (0..total_writes).map(|i| format!("value_{}", i)).collect()
-        );
+        let all_values: Arc<Vec<String>> =
+            Arc::new((0..total_writes).map(|i| format!("value_{}", i)).collect());
 
         // Shared counter for assigning unique values
         let counter = Arc::new(AtomicUsize::new(0));

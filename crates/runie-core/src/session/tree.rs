@@ -4,9 +4,9 @@
 
 use crate::message::{ChatMessage, Role};
 use indextree::{Arena, NodeId};
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use parking_lot::Mutex;
 
 /// Error returned when a session tree snapshot cannot be created.
 ///
@@ -163,8 +163,11 @@ impl Clone for SessionTree {
         // session-tree implementation. `Clone::clone()` must return `Self`, so
         // panicking here is the only option; it signals a violation of the
         // internal invariant that `walk()` only returns valid arena nodes.
-        let snapshot = self.to_snapshot().expect("tree clone: arena node missing — internal bug");
-        Self::from_snapshot(&snapshot).expect("tree clone: snapshot round-trip failed — internal bug")
+        let snapshot = self
+            .to_snapshot()
+            .expect("tree clone: arena node missing — internal bug");
+        Self::from_snapshot(&snapshot)
+            .expect("tree clone: snapshot round-trip failed — internal bug")
     }
 }
 
@@ -279,10 +282,7 @@ impl SessionTree {
                 }
             }
 
-            nodes.push(SerializedNode {
-                id: msg_id,
-                data,
-            });
+            nodes.push(SerializedNode { id: msg_id, data });
         }
 
         // Convert current_branch from NodeId to message IDs

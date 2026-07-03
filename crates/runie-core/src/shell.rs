@@ -68,6 +68,9 @@ pub async fn run_bash_sandboxed(
 }
 
 /// Internal implementation of bash execution with optional sandboxing.
+///
+/// Note: Sandbox is only supported in shell mode (`shell=true`). When `shell=false`
+/// and `use_sandbox=true`, a warning is logged and sandboxing is silently disabled.
 async fn run_bash_internal(
     command: &str,
     working_dir: impl AsRef<Path>,
@@ -79,7 +82,16 @@ async fn run_bash_internal(
     let working_dir = working_dir.as_ref();
 
     // Check if sandbox should be used
-    let use_sandbox = use_sandbox && matches!(sandbox_available(), SandboxStatus::Available);
+    let sandbox_status = sandbox_available();
+    let use_sandbox = use_sandbox && matches!(sandbox_status, SandboxStatus::Available);
+
+    if use_sandbox && !shell {
+        // Document that sandboxing requires shell mode
+        tracing::warn!(
+            "Sandboxing requested but shell=false; sandboxing is only supported in shell mode. \
+             Command will run without sandbox restrictions. Set shell=true to enable sandboxing."
+        );
+    }
 
     if shell {
         run_bash_shell_internal(command, working_dir, env, timeout, use_sandbox).await
@@ -147,9 +159,11 @@ async fn run_sandboxed_shell(
 ) -> ShellResult {
     use crate::sandbox;
 
-    let env_pairs: Vec<(String, String)> = env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+    let env_pairs: Vec<(String, String)> =
+        env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
 
-    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_pairs).await {
+    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_pairs).await
+    {
         Ok(c) => c,
         Err(e) => return ShellResult::error(format!("Failed to spawn sandboxed shell: {}", e)),
     };
@@ -358,7 +372,10 @@ impl ShellResult {
 
     fn timed_out(timeout: Duration) -> Self {
         Self {
-            output: format!("Command timed out after {:.0} seconds", timeout.as_secs_f64()),
+            output: format!(
+                "Command timed out after {:.0} seconds",
+                timeout.as_secs_f64()
+            ),
             bytes_transferred: None,
             status: ShellStatus::TimedOut,
         }
@@ -424,27 +441,60 @@ mod tests {
     #[tokio::test]
     async fn async_bash_echo_succeeds() {
         let env = HashMap::new();
-        let result =
-            run_bash("echo hello", Path::new("."), &env, Duration::from_secs(5), true).await;
-        assert_eq!(result.status, ShellStatus::Success, "output: {}", result.output);
+        let result = run_bash(
+            "echo hello",
+            Path::new("."),
+            &env,
+            Duration::from_secs(5),
+            true,
+        )
+        .await;
+        assert_eq!(
+            result.status,
+            ShellStatus::Success,
+            "output: {}",
+            result.output
+        );
         assert!(result.output.contains("hello"));
     }
 
     #[tokio::test]
     async fn async_bash_direct_mode() {
         let env = HashMap::new();
-        let result =
-            run_bash("echo hello", Path::new("."), &env, Duration::from_secs(5), false).await;
-        assert_eq!(result.status, ShellStatus::Success, "output: {}", result.output);
+        let result = run_bash(
+            "echo hello",
+            Path::new("."),
+            &env,
+            Duration::from_secs(5),
+            false,
+        )
+        .await;
+        assert_eq!(
+            result.status,
+            ShellStatus::Success,
+            "output: {}",
+            result.output
+        );
         assert!(result.output.contains("hello"));
     }
 
     #[tokio::test]
     async fn async_bash_timeout_kills_child() {
         let env = HashMap::new();
-        let result =
-            run_bash("sleep 30", Path::new("."), &env, Duration::from_secs(1), true).await;
-        assert_eq!(result.status, ShellStatus::TimedOut, "output: {}", result.output);
+        let result = run_bash(
+            "sleep 30",
+            Path::new("."),
+            &env,
+            Duration::from_secs(1),
+            true,
+        )
+        .await;
+        assert_eq!(
+            result.status,
+            ShellStatus::TimedOut,
+            "output: {}",
+            result.output
+        );
         assert!(result.output.contains("timed out"));
     }
 
@@ -452,7 +502,12 @@ mod tests {
     fn sync_bash_echo_succeeds() {
         let env = HashMap::new();
         let result = run_bash_sync("echo hello", Path::new("."), &env, true);
-        assert_eq!(result.status, ShellStatus::Success, "output: {}", result.output);
+        assert_eq!(
+            result.status,
+            ShellStatus::Success,
+            "output: {}",
+            result.output
+        );
         assert!(result.output.contains("hello"));
     }
 
@@ -460,7 +515,12 @@ mod tests {
     fn sync_bash_direct_mode() {
         let env = HashMap::new();
         let result = run_bash_sync("echo hello", Path::new("."), &env, false);
-        assert_eq!(result.status, ShellStatus::Success, "output: {}", result.output);
+        assert_eq!(
+            result.status,
+            ShellStatus::Success,
+            "output: {}",
+            result.output
+        );
         assert!(result.output.contains("hello"));
     }
 

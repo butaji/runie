@@ -22,8 +22,8 @@ pub mod test_helpers;
 
 pub use actor::{Leader, LeaderConfig, SpawnedHandles};
 pub use handle::LeaderHandle;
-pub use test_helpers::test_leader_handle;
 pub use messages::{LeaderCommand, LeaderStatus};
+pub use test_helpers::test_leader_handle;
 
 use crate::actors::permission::RactorPermissionHandle;
 use crate::actors::provider::RactorProviderHandle;

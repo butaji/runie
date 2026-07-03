@@ -57,7 +57,11 @@ mod tests {
             args: serde_json::json!({}),
         });
         let errs = validate_messages(&msgs);
-        assert!(errs.is_empty(), "matched tool call/result should pass: {:?}", errs);
+        assert!(
+            errs.is_empty(),
+            "matched tool call/result should pass: {:?}",
+            errs
+        );
     }
 
     /// Orphan tool result (no matching tool call) is detected.
@@ -66,7 +70,9 @@ mod tests {
         let msgs = vec![user("hi"), tool("orphan result", "orphan")];
         let errs = validate_messages(&msgs);
         assert!(!errs.is_empty());
-        assert!(errs.iter().any(|e| matches!(e, SanitizeError::OrphanToolResult { .. })));
+        assert!(errs
+            .iter()
+            .any(|e| matches!(e, SanitizeError::OrphanToolResult { .. })));
     }
 
     /// Empty assistant message is detected.
@@ -75,10 +81,21 @@ mod tests {
         let msgs = vec![user("hello"), assistant(""), assistant("real reply")];
         let errs = validate_messages(&msgs);
         // Only the middle (truly empty) message should be flagged
-        let removed: Vec<_> = errs.iter()
-            .filter_map(|e| match e { SanitizeError::RemovedMessage { role: Role::Assistant, .. } => Some(()), _ => None })
+        let removed: Vec<_> = errs
+            .iter()
+            .filter_map(|e| match e {
+                SanitizeError::RemovedMessage {
+                    role: Role::Assistant,
+                    ..
+                } => Some(()),
+                _ => None,
+            })
             .collect();
-        assert_eq!(removed.len(), 1, "only one empty assistant should be flagged");
+        assert_eq!(
+            removed.len(),
+            1,
+            "only one empty assistant should be flagged"
+        );
     }
 
     /// Assistant message with only tool calls (no text) is valid.
@@ -100,7 +117,11 @@ mod tests {
             }],
         });
         let errs = validate_messages(&msgs);
-        assert!(errs.is_empty(), "assistant with tool calls but no text is valid: {:?}", errs);
+        assert!(
+            errs.is_empty(),
+            "assistant with tool calls but no text is valid: {:?}",
+            errs
+        );
     }
 
     /// Trim removes leading/trailing whitespace from assistant messages.

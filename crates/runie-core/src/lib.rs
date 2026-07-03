@@ -69,21 +69,21 @@ pub mod notification;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
+pub mod sandbox;
 pub mod sanitize;
 pub mod scoped_model;
 pub mod session;
 pub mod settings;
-pub mod sandbox;
 pub mod shell;
 pub mod skills;
 pub mod snapshot;
 // state types moved to model::state
+/// Metrics facade for telemetry (counters, histograms, gauges).
+pub mod metrics;
 pub mod streaming_buffer;
 pub mod subagents;
 /// Tracing subscriber initialization.
 pub mod tracing_init;
-/// Metrics facade for telemetry (counters, histograms, gauges).
-pub mod metrics;
 
 /// Centralized user-facing strings (errors, warnings, info, help).
 pub mod ui_strings;
@@ -162,17 +162,17 @@ pub use prompts::{
 };
 pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    known_providers, Provider, ProviderError, ProviderMetadata, ProviderMeta, RetryConfig,
-    ResponseChunk,
+    known_providers, Provider, ProviderError, ProviderMeta, ProviderMetadata, ResponseChunk,
+    RetryConfig,
 };
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use resource_loader::{
     derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
     load_resources_from_dir, parse_resource_md, resolve_name,
 };
-pub use session::SessionMetadata;
 pub use session::store::SessionStore;
 pub use session::tree::{SessionTree, SessionTreeFilter, TreeNodeData};
+pub use session::SessionMetadata;
 pub use session::{format_as_markdown, Session};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};

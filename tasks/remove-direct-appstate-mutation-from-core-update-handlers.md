@@ -77,3 +77,9 @@ Updated tests to use `turn_state` fields instead of `agent` fields:
 - [x] Unit tests — `AppState` projection rebuilds deterministically from `TurnState` events
 - [x] E2E tests — No direct `agent_state_mut()` mutation in update handlers
 - [x] Live run tests — Multi-tool turn updates state correctly
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that `AppState` still stores a mutable `turn_state` field and production code mutates it directly in `update/agent/core_messages.rs`, `update/system.rs`, `update/dispatch.rs`, and `update/session.rs`. This violates the SSOT rule that `TurnState` is owned only by `TurnActor`.
+
+See `tasks/remove-turnstate-from-appstate.md` and `tasks/close-turnstate-field-access-guardrail-gap.md` for the remaining work.

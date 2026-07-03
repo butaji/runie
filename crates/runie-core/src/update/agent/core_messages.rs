@@ -5,11 +5,7 @@ use crate::update::strip_tool_markers;
 
 impl AppState {
     pub(crate) fn flush_buffered_response(&mut self, id: &str) {
-        let buffered = self
-            .turn_state
-            .streaming_buffer
-            .force_flush()
-            .join("");
+        let buffered = self.turn_state.streaming_buffer.force_flush().join("");
         if buffered.is_empty() {
             return;
         }
@@ -104,7 +100,11 @@ impl AppState {
     pub(crate) fn finish_turn(&mut self, id: String) {
         // Read from TurnState (authoritative source), not derived agent.
         let assistant_idx = self.turn_state().last_assistant_index;
-        let remaining_tail = self.turn_state_mut().streaming_buffer.force_flush().join("");
+        let remaining_tail = self
+            .turn_state_mut()
+            .streaming_buffer
+            .force_flush()
+            .join("");
         if !remaining_tail.is_empty() {
             if let Some(idx) = assistant_idx {
                 self.append_to_message(idx, &remaining_tail);

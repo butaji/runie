@@ -67,15 +67,13 @@ for _ in range(5):
     let script_path = temp.path().join("echo.py");
     std::fs::write(&script_path, python_script)?;
 
-    let transport = TokioChildProcess::new(
-        tokio::process::Command::new("python3")
-            .configure(|c| {
-                c.arg(script_path);
-                c.stdout(Stdio::piped());
-                c.stdin(Stdio::piped());
-                c.stderr(Stdio::piped());
-            }),
-    )?;
+    let transport =
+        TokioChildProcess::new(tokio::process::Command::new("python3").configure(|c| {
+            c.arg(script_path);
+            c.stdout(Stdio::piped());
+            c.stdin(Stdio::piped());
+            c.stderr(Stdio::piped());
+        }))?;
 
     // `()` implements `ClientHandler` and therefore `Service<RoleClient>`.
     // `serve_client((), transport)` connects and performs MCP handshake.
@@ -83,7 +81,10 @@ for _ in range(5):
 
     // list_all_tools() sends JSON-RPC tools/list request.
     let tools = client.list_all_tools().await?;
-    assert!(!tools.is_empty(), "Expected at least one tool from echo server");
+    assert!(
+        !tools.is_empty(),
+        "Expected at least one tool from echo server"
+    );
     let tool_name: String = tools[0].name.clone().into_owned();
     assert_eq!(tool_name.as_str(), "echo_test");
 

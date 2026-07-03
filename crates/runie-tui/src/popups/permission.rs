@@ -1,12 +1,6 @@
 //! Blocking permission approval modal.
 
-use ratatui::{
-    layout::Rect,
-    prelude::Text,
-    style::Style,
-    text::Line,
-    Frame,
-};
+use ratatui::{layout::Rect, prelude::Text, style::Style, text::Line, Frame};
 use runie_core::Snapshot;
 use tui_popup::Popup;
 
@@ -32,89 +26,97 @@ pub fn format_tool_input(tool: &str, input: &serde_json::Value) -> String {
     let formatted = match (tool, input) {
         // bash: show the command
         ("bash", input) => {
-            let cmd = input.get("command")
+            let cmd = input
+                .get("command")
                 .or_else(|| input.get("cmd"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no command>");
             format!("Command: {}", cmd)
         }
-        
+
         // read_file: show the file path
         ("read_file", input) => {
-            let path = input.get("path")
+            let path = input
+                .get("path")
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no path>");
             format!("File: {}", path)
         }
-        
+
         // write_file: show path and content preview
         ("write_file", input) => {
-            let path = input.get("path")
+            let path = input
+                .get("path")
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no path>");
-            let content = input.get("content")
+            let content = input
+                .get("content")
                 .or_else(|| input.get("text"))
                 .and_then(|v| v.as_str())
                 .map(|s| truncate_str(s, 100))
                 .unwrap_or_else(|| "<no content>".to_string());
             format!("File: {} | Content: {}", path, content)
         }
-        
+
         // edit_file: show the file path
         ("edit_file", input) => {
-            let path = input.get("path")
+            let path = input
+                .get("path")
                 .or_else(|| input.get("file"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no path>");
             format!("File: {}", path)
         }
-        
+
         // list_dir: show the directory path
         ("list_dir", input) => {
-            let path = input.get("path")
+            let path = input
+                .get("path")
                 .or_else(|| input.get("dir"))
                 .and_then(|v| v.as_str())
                 .unwrap_or(".");
             format!("Directory: {}", path)
         }
-        
+
         // grep/find: show pattern and path
         ("grep" | "find", input) => {
-            let pattern = input.get("pattern")
+            let pattern = input
+                .get("pattern")
                 .or_else(|| input.get("query"))
                 .or_else(|| input.get("search"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no pattern>");
-            let path = input.get("path")
+            let path = input
+                .get("path")
                 .or_else(|| input.get("dir"))
                 .and_then(|v| v.as_str())
                 .unwrap_or(".");
             format!("Pattern: {} | Path: {}", pattern, path)
         }
-        
+
         // fetch_docs: show URL
         ("fetch_docs", input) => {
-            let url = input.get("url")
+            let url = input
+                .get("url")
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no url>");
             format!("URL: {}", url)
         }
-        
+
         // search: show query
         ("search", input) => {
-            let query = input.get("query")
+            let query = input
+                .get("query")
                 .or_else(|| input.get("q"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("<no query>");
             format!("Query: {}", query)
         }
-        
+
         // Default: show key-value pairs
-        _ => {
-            format_json_args(input)
-        }
+        _ => format_json_args(input),
     };
-    
+
     truncate_str(&formatted, MAX_INPUT_LENGTH)
 }
 
@@ -122,7 +124,8 @@ pub fn format_tool_input(tool: &str, input: &serde_json::Value) -> String {
 fn format_json_args(input: &serde_json::Value) -> String {
     match input {
         serde_json::Value::Object(map) => {
-            let args: Vec<String> = map.iter()
+            let args: Vec<String> = map
+                .iter()
                 .map(|(k, v)| {
                     let value_str = match v {
                         serde_json::Value::String(s) => truncate_str(s, 50),
@@ -221,7 +224,8 @@ mod tests {
 
     #[test]
     fn test_edit_file_formatting() {
-        let input = serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
+        let input =
+            serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
         let result = format_tool_input("edit_file", &input);
         assert!(result.contains("File: /tmp/test.rs"));
     }

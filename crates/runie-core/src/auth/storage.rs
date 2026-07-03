@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use secrecy::{ExposeSecret, SecretString};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Serialize a `SecretString` by exposing the secret value.
 fn serialize_secret<S: Serializer>(s: &SecretString, ser: S) -> Result<S::Ok, S::Error> {
@@ -20,7 +20,10 @@ fn deserialize_secret<'de, D: Deserializer<'de>>(de: D) -> Result<SecretString, 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AuthToken {
     pub provider: String,
-    #[serde(serialize_with = "serialize_secret", deserialize_with = "deserialize_secret")]
+    #[serde(
+        serialize_with = "serialize_secret",
+        deserialize_with = "deserialize_secret"
+    )]
     pub token: SecretString,
     pub expires_at: Option<f64>,
 }
@@ -131,10 +134,7 @@ impl AuthStorage {
         let mut obj = serde_json::Map::new();
         for (provider, tok) in &self.tokens {
             let mut entry = serde_json::Map::new();
-            entry.insert(
-                "token".into(),
-                tok.token.expose_secret().to_owned().into(),
-            );
+            entry.insert("token".into(), tok.token.expose_secret().to_owned().into());
             entry.insert("expires_at".into(), tok.expires_at.unwrap_or(0.0).into());
             obj.insert(provider.clone(), entry.into());
         }

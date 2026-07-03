@@ -33,8 +33,7 @@ impl LeaderAgentHandle for MockAgentHandle {
     fn run(
         &self,
         _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
-    {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         self.run_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Box::pin(async {})
@@ -183,7 +182,8 @@ async fn permission_dialog_keys_not_sent_to_input() {
 
     // Input should be unchanged
     assert_eq!(
-        ui.state.input().input, initial_input,
+        ui.state.input().input,
+        initial_input,
         "y key should not be sent to input when permission dialog is open"
     );
 }
@@ -217,7 +217,8 @@ async fn other_keys_not_intercepted_by_permission() {
 
     // Input should remain unchanged (mock doesn't update, but event was dispatched)
     assert_eq!(
-        ui.state.input().input, initial_input,
+        ui.state.input().input,
+        initial_input,
         "Regular key should not affect input state"
     );
 }

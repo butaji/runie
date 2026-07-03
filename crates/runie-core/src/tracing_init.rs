@@ -79,7 +79,10 @@ fn init_with_mode(mode: InitMode) {
 
             // Create the log directory if it doesn't exist.
             if let Err(e) = std::fs::create_dir_all(&log_dir) {
-                eprintln!("Warning: failed to create log directory {:?}: {}", log_dir, e);
+                eprintln!(
+                    "Warning: failed to create log directory {:?}: {}",
+                    log_dir, e
+                );
             }
 
             // Rolling file appender with daily rotation.
@@ -101,12 +104,9 @@ fn init_with_mode(mode: InitMode) {
                 .with_writer(non_blocking);
 
             // Compact console layer for errors/warnings only (avoids corrupting terminal).
-            let console_layer = fmt::layer()
-                .with_target(true)
-                .with_filter(
-                    EnvFilter::try_from_default_env()
-                        .unwrap_or_else(|_| EnvFilter::new("warn")),
-                );
+            let console_layer = fmt::layer().with_target(true).with_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
+            );
 
             Registry::default()
                 .with(file_layer)

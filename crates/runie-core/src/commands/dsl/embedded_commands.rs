@@ -6,10 +6,10 @@
 //! Uses `include_dir!` to automatically load all YAML files from
 //! resources/commands/ at compile time, avoiding a hand-maintained list.
 
-use include_dir::Dir;
 use crate::commands::dsl::handlers::HANDLER_REGISTRY;
 use crate::commands::dsl::spec::build_cmd_from_yaml;
 use crate::commands::Command;
+use include_dir::Dir;
 
 /// Embed resources/commands/ at compile time via include_dir.
 /// This avoids a hand-maintained list: adding a new .yaml file is enough.
@@ -38,17 +38,18 @@ fn load_single_command_file(
 
     // Safe: YAML files in resources/commands/ are always UTF-8.
     let yaml_contents = std::str::from_utf8(f.contents()).ok()?;
-    let yaml: crate::declarative::types::DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
-        Ok(y) => y,
-        Err(e) => {
-            tracing::warn!(
-                "Failed to parse {:?}: {}",
-                path.file_name().and_then(|n| n.to_str()),
-                e
-            );
-            return None;
-        }
-    };
+    let yaml: crate::declarative::types::DeclarativeCommandYaml =
+        match serde_yaml::from_str(yaml_contents) {
+            Ok(y) => y,
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to parse {:?}: {}",
+                    path.file_name().and_then(|n| n.to_str()),
+                    e
+                );
+                return None;
+            }
+        };
 
     match build_cmd_from_yaml(&yaml, handler_registry) {
         Some(cmd) => Some(cmd),
@@ -116,17 +117,46 @@ mod tests {
         }
 
         // Verify expected commands are present (using names from YAML content)
-        let cmd_names: std::collections::HashSet<_> =
-            cmds.iter().map(|c| c.name.clone()).collect();
+        let cmd_names: std::collections::HashSet<_> = cmds.iter().map(|c| c.name.clone()).collect();
 
         // These are the command names as defined in the YAML files
         let expected_commands = vec![
-            "settings", "help", "quit", "model", "thinking", "scoped-models",
-            "readonly", "trust", "untrust", "copy", "reload", "diagnostics",
-            "skills", "skill", "prompt", "hotkeys", "theme", "approve", "reject",
-            "provider", "save", "load", "delete", "export", "import", "sessions",
-            "new", "reset", "history", "session_info", "tree", "share", "resume",
-            "compact", "fork", "name",
+            "settings",
+            "help",
+            "quit",
+            "model",
+            "thinking",
+            "scoped-models",
+            "readonly",
+            "trust",
+            "untrust",
+            "copy",
+            "reload",
+            "diagnostics",
+            "skills",
+            "skill",
+            "prompt",
+            "hotkeys",
+            "theme",
+            "approve",
+            "reject",
+            "provider",
+            "save",
+            "load",
+            "delete",
+            "export",
+            "import",
+            "sessions",
+            "new",
+            "reset",
+            "history",
+            "session_info",
+            "tree",
+            "share",
+            "resume",
+            "compact",
+            "fork",
+            "name",
         ];
 
         for expected in expected_commands {

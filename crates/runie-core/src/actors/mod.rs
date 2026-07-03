@@ -25,12 +25,12 @@ mod persistence;
 pub use persistence::PersistenceActor;
 
 pub use config::{ConfigMsg, RactorConfigActor, RactorConfigHandle};
-pub use fff_indexer::{
-    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload,
-    FffSearchState, RactorFffIndexerActor, RactorFffIndexerHandle,
-};
 #[cfg(feature = "git")]
 pub use fff_indexer::format_git_status;
+pub use fff_indexer::{
+    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState,
+    RactorFffIndexerActor, RactorFffIndexerHandle,
+};
 pub use input::{InputActor, InputMsg, RactorInputHandle};
 pub use io::{IoMsg, RactorIoActor, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};

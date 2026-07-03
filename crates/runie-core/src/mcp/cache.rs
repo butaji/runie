@@ -94,7 +94,12 @@ impl SchemaCache {
     }
 
     /// Store cached schemas for a server.
-    pub async fn put(&self, server_name: &str, server: &McpServer, tools: Vec<CachedToolSchema>) -> anyhow::Result<()> {
+    pub async fn put(
+        &self,
+        server_name: &str,
+        server: &McpServer,
+        tools: Vec<CachedToolSchema>,
+    ) -> anyhow::Result<()> {
         let key = Self::compute_cache_key(server);
         let schemas = CachedServerSchemas {
             server_name: key,
@@ -146,7 +151,11 @@ mod tests {
     fn cache_key_deterministic() {
         let server = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec!["npx".to_string(), "-y".to_string(), "@mcp/server".to_string()],
+            command: vec![
+                "npx".to_string(),
+                "-y".to_string(),
+                "@mcp/server".to_string(),
+            ],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,
@@ -177,7 +186,10 @@ mod tests {
 
         let key1 = SchemaCache::compute_cache_key(&server1);
         let key2 = SchemaCache::compute_cache_key(&server2);
-        assert_ne!(key1, key2, "different configs should produce different keys");
+        assert_ne!(
+            key1, key2,
+            "different configs should produce different keys"
+        );
     }
 
     #[test]

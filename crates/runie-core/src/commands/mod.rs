@@ -30,7 +30,10 @@ mod registry;
 #[cfg(test)]
 mod tests;
 
-pub use dsl::{cmd, Action, Command, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType, FormHandler};
+pub use dsl::{
+    cmd, Action, Command, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType,
+    FormHandler,
+};
 pub use registry::{filter_commands, CommandRegistry, DialogKind, DialogState};
 
 /// One row in the command palette.

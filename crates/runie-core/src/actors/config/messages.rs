@@ -1,8 +1,8 @@
 //! Typed messages for `ConfigActor`.
 
-use ractor::RpcReplyPort;
 use crate::config::{Config, McpServer, TruncationSection};
 use crate::model::ThinkingLevel;
+use ractor::RpcReplyPort;
 
 // Re-export ConfigScope from config module for backwards compatibility.
 pub use crate::config::ConfigScope;
@@ -83,9 +83,7 @@ impl Clone for ConfigMsg {
                 api_key: api_key.clone(),
                 models: models.clone(),
             },
-            ConfigMsg::RemoveProvider { name } => ConfigMsg::RemoveProvider {
-                name: name.clone(),
-            },
+            ConfigMsg::RemoveProvider { name } => ConfigMsg::RemoveProvider { name: name.clone() },
             ConfigMsg::SetDefaultModel { provider, model } => ConfigMsg::SetDefaultModel {
                 provider: provider.clone(),
                 model: model.clone(),
@@ -94,9 +92,7 @@ impl Clone for ConfigMsg {
                 name: name.clone(),
                 models: models.clone(),
             },
-            ConfigMsg::SetTheme { name } => ConfigMsg::SetTheme {
-                name: name.clone(),
-            },
+            ConfigMsg::SetTheme { name } => ConfigMsg::SetTheme { name: name.clone() },
             ConfigMsg::SetVimMode { enabled } => ConfigMsg::SetVimMode { enabled: *enabled },
             ConfigMsg::SetTelemetry { enabled } => ConfigMsg::SetTelemetry { enabled: *enabled },
             ConfigMsg::SetTruncation { limits } => ConfigMsg::SetTruncation {
@@ -106,7 +102,12 @@ impl Clone for ConfigMsg {
             ConfigMsg::GetConfig(_) => ConfigMsg::Load,
             ConfigMsg::GetConfiguredProviders(_) => ConfigMsg::Reload,
             ConfigMsg::LoadLayers(_) => ConfigMsg::Load,
-            ConfigMsg::AddMcpServer { scope, name, server, .. } => {
+            ConfigMsg::AddMcpServer {
+                scope,
+                name,
+                server,
+                ..
+            } => {
                 ConfigMsg::AddMcpServer {
                     scope: *scope,
                     name: name.clone(),

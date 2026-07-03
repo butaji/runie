@@ -27,18 +27,18 @@ use crate::retry::{is_retryable, with_retry};
 // Provider trait and registry (moved to runie-core for cross-crate access).
 pub use runie_core::provider::registry::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    is_mock_enabled, known_providers, ModelMeta, ModelMetaBuilder, ProviderMeta, ProviderMetaBuilder,
+    is_mock_enabled, known_providers, ModelMeta, ModelMetaBuilder, ProviderMeta,
+    ProviderMetaBuilder,
 };
 pub use runie_core::provider::ProviderError;
-pub use runie_core::provider::{Provider, ProviderMetadata, RetryConfig, ResponseChunk};
+pub use runie_core::provider::{Provider, ProviderMetadata, ResponseChunk, RetryConfig};
 
 // Model catalog types.
 pub use runie_core::model_catalog::configured::configured_models_catalog;
 pub use runie_core::model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 
-pub use runie_core::config::Config;
 pub use factory::BuiltProviderFactory;
-
+pub use runie_core::config::Config;
 
 #[cfg(feature = "openai")]
 pub use openai::OpenAiProvider;
@@ -54,7 +54,7 @@ use anyhow::Result;
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 
 // Re-export HTTP timeout constants from runie-core so all provider crates share the same values.
-pub use runie_core::provider::{REQUEST_TIMEOUT, CONNECT_TIMEOUT};
+pub use runie_core::provider::{CONNECT_TIMEOUT, REQUEST_TIMEOUT};
 
 /// Minimum delay for mock provider (milliseconds).
 #[cfg(feature = "mock")]
@@ -117,8 +117,7 @@ pub fn build_provider(
             return Ok(build_mock_provider(key, model));
         }
     }
-    #[cfg(not(feature = "mock"))
-    ]
+    #[cfg(not(feature = "mock"))]
     {
         if key == "mock" {
             return Err(ProviderError::UnknownProvider(key.to_owned()));
@@ -135,7 +134,11 @@ pub fn build_provider(
     #[cfg(feature = "openai")]
     {
         let provider = build_openai_provider(api_key, model, &base_url);
-        Ok(BuiltProvider::new(provider, key.to_owned(), model.to_owned()))
+        Ok(BuiltProvider::new(
+            provider,
+            key.to_owned(),
+            model.to_owned(),
+        ))
     }
     #[cfg(not(feature = "openai"))]
     {
@@ -148,7 +151,10 @@ pub fn build_provider(
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     let provider: Box<dyn Provider> = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
         // Use small delay (5-10ms) for fast deterministic tests
-        Box::new(MockProvider::with_delay(MOCK_DELAY_MIN_MS, MOCK_DELAY_MAX_MS))
+        Box::new(MockProvider::with_delay(
+            MOCK_DELAY_MIN_MS,
+            MOCK_DELAY_MAX_MS,
+        ))
     } else {
         Box::new(MockProvider::default())
     };
@@ -156,7 +162,11 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
 }
 
 #[cfg(feature = "openai")]
-fn build_openai_provider(api_key: secrecy::SecretString, model: &str, base_url: &str) -> Box<dyn Provider> {
+fn build_openai_provider(
+    api_key: secrecy::SecretString,
+    model: &str,
+    base_url: &str,
+) -> Box<dyn Provider> {
     // Use the cached HTTP client so TCP connections are reused across turns.
     let client = BuiltProvider::cached_http_client("openai", base_url);
     // Convert SecretString to String for OpenAiProvider (normalization happens inside)
@@ -178,7 +188,11 @@ pub fn build_provider_with_config(
     model: &str,
     config: &runie_core::config::Config,
 ) -> Result<BuiltProvider, ProviderError> {
-    build_provider(key, model, Some(Arc::new(config.clone()) as Arc<dyn ProviderConfig>))
+    build_provider(
+        key,
+        model,
+        Some(Arc::new(config.clone()) as Arc<dyn ProviderConfig>),
+    )
 }
 
 /// Wrap an arbitrary provider implementation.

@@ -324,13 +324,7 @@ fn render_agent_list_block(
             let with_ts = first_item && j == 0;
             let prefix = if with_ts { GLYPH_AGENT } else { GLYPH_INDENT };
             lines.push(support::render_list_item_from_spans(
-                row,
-                ordered,
-                i,
-                with_ts,
-                prefix,
-                ts_str,
-                ts_width,
+                row, ordered, i, with_ts, prefix, ts_str, ts_width,
             ));
         }
         first_item = false;

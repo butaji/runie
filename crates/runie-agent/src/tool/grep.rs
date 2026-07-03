@@ -369,6 +369,11 @@ mod tests {
         // The "more matches" message confirms results were limited
         // Count total lines: 3 result lines + 1 summary line = 4
         let lines: Vec<&str> = result.content.lines().collect();
-        assert_eq!(lines.len(), 4, "Expected 4 lines (3 results + summary), got {}", result.content);
+        assert_eq!(
+            lines.len(),
+            4,
+            "Expected 4 lines (3 results + summary), got {}",
+            result.content
+        );
     }
 }

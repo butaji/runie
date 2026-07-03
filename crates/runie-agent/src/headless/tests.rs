@@ -279,9 +279,18 @@ async fn denied_tool_does_not_loop() {
         .unwrap();
 
     // Should have exactly one tool output (the denied bash tool)
-    assert_eq!(result.tool_outputs.len(), 1, "Expected exactly one tool output, got: {:?}", result.tool_outputs);
+    assert_eq!(
+        result.tool_outputs.len(),
+        1,
+        "Expected exactly one tool output, got: {:?}",
+        result.tool_outputs
+    );
     assert_eq!(result.tool_outputs[0].tool_name, "bash");
-    assert!(result.tool_outputs[0].content.contains("Permission denied"), "Expected 'Permission denied', got: {}", result.tool_outputs[0].content);
+    assert!(
+        result.tool_outputs[0].content.contains("Permission denied"),
+        "Expected 'Permission denied', got: {}",
+        result.tool_outputs[0].content
+    );
     // Verify the tool output is blocked
     assert!(result.tool_outputs[0].status == runie_core::tool::ToolStatus::Blocked);
 }

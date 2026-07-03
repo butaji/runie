@@ -193,7 +193,10 @@ fn check_command_is_sub(reg: &crate::commands::CommandRegistry, name: &str) -> O
             let flow = def.flow();
             // Check if inner flow opens a dialog
             let opens_sub = match &flow {
-                CommandFlow::Sub(inner) => matches!(inner.as_ref(), CommandFlow::PanelStack(_) | CommandFlow::Handler(_)),
+                CommandFlow::Sub(inner) => matches!(
+                    inner.as_ref(),
+                    CommandFlow::PanelStack(_) | CommandFlow::Handler(_)
+                ),
                 CommandFlow::PanelStack(_) | CommandFlow::Handler(_) => true,
                 _ => false,
             };

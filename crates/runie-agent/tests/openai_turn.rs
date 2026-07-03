@@ -11,7 +11,10 @@ use runie_testing::{allow_all_gate, capture_events, dyn_replay_provider_with, Mo
 /// Build a skill registry with canned outputs for list_dir, read_file, and bash.
 fn openai_mock_skill() -> runie_core::harness_skills::SkillRegistry {
     let mut outputs = HashMap::new();
-    outputs.insert("list_dir".to_string(), "Cargo.toml\nREADME.md\n".to_string());
+    outputs.insert(
+        "list_dir".to_string(),
+        "Cargo.toml\nREADME.md\n".to_string(),
+    );
     outputs.insert(
         "read_file".to_string(),
         "# Runie\n\nA terminal AI assistant.".to_string(),
@@ -30,10 +33,7 @@ fn command(content: &str) -> runie_agent::AgentCommand {
 }
 
 fn openai_replay(fixture_names: &[&str]) -> runie_provider::BuiltProvider {
-    let fixture_strs: Vec<String> = fixture_names
-        .iter()
-        .map(|n| fixtures::fixture(n))
-        .collect();
+    let fixture_strs: Vec<String> = fixture_names.iter().map(|n| fixtures::fixture(n)).collect();
     dyn_replay_provider_with(&fixture_strs, "openai", "gpt-4o-mini")
 }
 
@@ -53,9 +53,7 @@ async fn simple_text_turn_completes_without_tools() {
     .unwrap();
 
     let events = events.lock();
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, Event::Done { .. })));
+    assert!(events.iter().any(|e| matches!(e, Event::Done { .. })));
 }
 
 #[tokio::test]

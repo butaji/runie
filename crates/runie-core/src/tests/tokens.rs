@@ -12,7 +12,11 @@ fn estimate_tokens_english() {
     // Tiktoken: "Hello world" tokenization varies by version
     let text = "Hello world";
     let count = estimate_tokens(text);
-    assert!((2..=3).contains(&count), "Hello world should be 2-3 tokens, got {}", count);
+    assert!(
+        (2..=3).contains(&count),
+        "Hello world should be 2-3 tokens, got {}",
+        count
+    );
 }
 
 #[test]
@@ -34,14 +38,22 @@ fn estimate_tokens_unicode() {
 fn estimate_tokens_one_char_rounds_up() {
     // Tiktoken: "x" tokenization varies by version
     let count = estimate_tokens("x");
-    assert!((1..=2).contains(&count), "'x' should be 1-2 tokens, got {}", count);
+    assert!(
+        (1..=2).contains(&count),
+        "'x' should be 1-2 tokens, got {}",
+        count
+    );
 }
 
 #[test]
 fn estimate_tokens_four_chars_is_one() {
     // Tiktoken: "test" tokenization varies by version
     let count = estimate_tokens("test");
-    assert!((1..=2).contains(&count), "'test' should be 1-2 tokens, got {}", count);
+    assert!(
+        (1..=2).contains(&count),
+        "'test' should be 1-2 tokens, got {}",
+        count
+    );
 }
 
 #[test]
@@ -94,9 +106,16 @@ fn estimate_tokens_uses_tiktoken_for_openai() {
     let text = "hello world";
     // Tiktoken: "hello world" tokenization varies by version
     let tiktoken_count = estimate_tokens_with_tokenizer(text);
-    assert!((2..=3).contains(&tiktoken_count), "hello world should be 2-3 tokens, got {}", tiktoken_count);
+    assert!(
+        (2..=3).contains(&tiktoken_count),
+        "hello world should be 2-3 tokens, got {}",
+        tiktoken_count
+    );
     // OpenAI provider uses tiktoken
-    assert_eq!(estimate_tokens_for_model(text, "openai", "gpt-4o"), tiktoken_count);
+    assert_eq!(
+        estimate_tokens_for_model(text, "openai", "gpt-4o"),
+        tiktoken_count
+    );
     // Unknown provider falls back to chars/4: 11 chars ceil(11/4) = 3
     assert_eq!(estimate_tokens_for_model(text, "unknown", "unknown"), 3);
 }

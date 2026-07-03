@@ -10,7 +10,6 @@ use crate::Event;
 
 use super::messages::{DeliverQueuedResponse, MessageSource};
 
-
 /// Emit an event through the actor's event bus.
 pub(super) fn emit(state: &TurnActorState, event: Event) {
     state.bus.publish(event);
@@ -115,7 +114,12 @@ pub(super) fn handle_clear_queues(state: &mut TurnActorState) {
     // Collect messages first to avoid borrow conflict.
     let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
     for msg in messages {
-        emit(state, Event::QueueAborted { content: msg.content });
+        emit(
+            state,
+            Event::QueueAborted {
+                content: msg.content,
+            },
+        );
     }
     emit(state, Event::QueuesCleared);
 }
@@ -133,39 +137,68 @@ pub(super) fn handle_deliver_queued(
             try_deliver_follow_up(state, follow_up_mode);
         }
         if let Some(reply) = reply {
-            let _ = reply.send(steering_result.map(|(content, id)| DeliverQueuedResponse::Steering { content, id }));
+            let _ = reply.send(
+                steering_result
+                    .map(|(content, id)| DeliverQueuedResponse::Steering { content, id }),
+            );
         }
         return;
     }
     let follow_up_result = try_deliver_follow_up(state, follow_up_mode);
     if let Some(reply) = reply {
-        let _ = reply.send(follow_up_result.map(|(content, id)| DeliverQueuedResponse::FollowUp { content, id }));
+        let _ = reply.send(
+            follow_up_result.map(|(content, id)| DeliverQueuedResponse::FollowUp { content, id }),
+        );
     }
 }
 
 /// Try to deliver the next steering message from the queue.
-fn try_deliver_steering(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
+fn try_deliver_steering(
+    state: &mut TurnActorState,
+    mode: DeliveryMode,
+) -> Option<(String, String)> {
     let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
     let result = queue.pop_steering(mode);
     state.turn_state.message_queue = queue.into_inner();
     let r = result?;
     let id = next_id_internal(&mut state.turn_state);
-    state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+    state
+        .turn_state
+        .request_queue
+        .push_back((r.content.clone(), id.clone()));
     let content = r.content;
-    emit(state, Event::SteeringDelivered { content: content.clone(), id: id.clone() });
+    emit(
+        state,
+        Event::SteeringDelivered {
+            content: content.clone(),
+            id: id.clone(),
+        },
+    );
     Some((content, id))
 }
 
 /// Try to deliver the next follow-up message from the queue.
-fn try_deliver_follow_up(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
+fn try_deliver_follow_up(
+    state: &mut TurnActorState,
+    mode: DeliveryMode,
+) -> Option<(String, String)> {
     let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
     let result = queue.pop_follow_up(mode);
     state.turn_state.message_queue = queue.into_inner();
     let r = result?;
     let id = next_id_internal(&mut state.turn_state);
-    state.turn_state.request_queue.push_back((r.content.clone(), id.clone()));
+    state
+        .turn_state
+        .request_queue
+        .push_back((r.content.clone(), id.clone()));
     let content = r.content;
-    emit(state, Event::FollowUpDelivered { content: content.clone(), id: id.clone() });
+    emit(
+        state,
+        Event::FollowUpDelivered {
+            content: content.clone(),
+            id: id.clone(),
+        },
+    );
     Some((content, id))
 }
 
@@ -205,7 +238,12 @@ pub(super) fn handle_tool_start(state: &mut TurnActorState, id: String, name: St
     // This enables crash recovery by recording when tool calls were received.
     if !state.turn_state.tool_requests_recorded {
         state.turn_state.tool_requests_recorded = true;
-        emit(state, Event::ToolRequestsRecorded { request_id: id.clone() });
+        emit(
+            state,
+            Event::ToolRequestsRecorded {
+                request_id: id.clone(),
+            },
+        );
     }
 
     emit(
@@ -219,7 +257,12 @@ pub(super) fn handle_tool_start(state: &mut TurnActorState, id: String, name: St
 }
 
 /// Handle `TurnMsg::ToolEnd` — clear tool state and emit event.
-pub(super) fn handle_tool_end(state: &mut TurnActorState, id: String, duration_secs: f64, output: String) {
+pub(super) fn handle_tool_end(
+    state: &mut TurnActorState,
+    id: String,
+    duration_secs: f64,
+    output: String,
+) {
     state.turn_state.tool_started_at = None;
     state.turn_state.current_tool_name = None;
     emit(state, Event::tool_end(id, duration_secs, output));
@@ -235,7 +278,12 @@ pub(super) fn handle_response_delta(state: &mut TurnActorState, id: String, cont
         // This enables crash recovery by recording when response streaming began.
         if !state.turn_state.response_delta_recorded {
             state.turn_state.response_delta_recorded = true;
-            emit(state, Event::ResponseDeltaStarted { request_id: id.clone() });
+            emit(
+                state,
+                Event::ResponseDeltaStarted {
+                    request_id: id.clone(),
+                },
+            );
         }
 
         emit(state, Event::StreamStarted { id: id.clone() });

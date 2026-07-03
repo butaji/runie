@@ -26,7 +26,12 @@ pub(crate) async fn dispatch(
                     .as_ref()
                     .map(|h| h.provider.clone());
                 if let Some(handle) = provider_handle {
-                    tokio::spawn(crate::effects::login::run(f.provider, f.key, tx, handle.clone()));
+                    tokio::spawn(crate::effects::login::run(
+                        f.provider,
+                        f.key,
+                        tx,
+                        handle.clone(),
+                    ));
                 }
             }
         } else {

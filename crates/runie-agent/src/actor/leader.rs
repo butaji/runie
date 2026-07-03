@@ -75,7 +75,9 @@ impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
             let (handle, _, _cell) =
                 spawn_ractor_agent(bus, provider_handle, permission_handle).await?;
             Ok(std::sync::Arc::new(LeaderAgentHandleImpl::new(handle))
-                as std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>)
+                as std::sync::Arc<
+                    dyn runie_core::actors::leader::LeaderAgentHandle,
+                >)
         })
     }
 
@@ -85,7 +87,11 @@ impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
         provider_handle: RactorProviderHandle,
         permission_handle: RactorPermissionHandle,
     ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<runie_core::actors::leader::SpawnedAgent, ractor::SpawnErr>> + Send>,
+        Box<
+            dyn std::future::Future<
+                    Output = Result<runie_core::actors::leader::SpawnedAgent, ractor::SpawnErr>,
+                > + Send,
+        >,
     > {
         Box::pin(async move {
             let (handle, join, _cell) =

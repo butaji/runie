@@ -52,53 +52,52 @@ pub fn runie_to_grok_all(runie_tool: &str) -> Vec<&'static str> {
 }
 
 /// Static map: Grok tool name → Runie tool name.
-static GROK_TO_RUNIE: LazyLock<HashMap<&'static str, &'static str>> =
-    LazyLock::new(|| {
-        let mut m = HashMap::new();
-        // File operations
-        m.insert("grok-read", "Read");
-        m.insert("grok-write", "Write");
-        m.insert("grok-edit", "Edit");
-        m.insert("grok-create", "Create");
-        m.insert("grok-delete", "Delete");
-        m.insert("grok-move", "Move");
-        m.insert("grok-copy", "Copy");
-        // Directory operations
-        m.insert("grok-list-directory", "ListDir");
-        m.insert("grok-list-files", "ListDir");
-        m.insert("grok-directory-tree", "Tree");
-        // Search
-        m.insert("grok-web-search", "WebSearch");
-        m.insert("grok-web-fetch", "WebFetch");
-        m.insert("grok-search", "Grep");
-        m.insert("grok-grep", "Grep");
-        m.insert("grok-find", "Find");
-        m.insert("grok-glob", "Glob");
-        // Shell
-        m.insert("grok-bash", "Bash");
-        m.insert("grok-shell", "Bash");
-        m.insert("grok-exec", "Bash");
-        m.insert("grok-run", "Bash");
-        // System
-        m.insert("grok-open", "Open");
-        m.insert("grok-clipboard-read", "ClipboardRead");
-        m.insert("grok-clipboard-write", "ClipboardWrite");
-        // Code intelligence
-        m.insert("grok-definitions", "Definitions");
-        m.insert("grok-references", "References");
-        m.insert("grok-document-symbols", "DocumentSymbols");
-        m.insert("grok-completion", "Completion");
-        // Inspectors
-        m.insert("grok-inspect", "Inspect");
-        m.insert("grok-explain", "Inspect");
-        // Planning
-        m.insert("grok-plan", "Plan");
-        m.insert("grok-think", "Think");
-        // Misc
-        m.insert("grok-mcp", "Mcp");
-        m.insert("grok-task", "Task");
-        m
-    });
+static GROK_TO_RUNIE: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
+    let mut m = HashMap::new();
+    // File operations
+    m.insert("grok-read", "Read");
+    m.insert("grok-write", "Write");
+    m.insert("grok-edit", "Edit");
+    m.insert("grok-create", "Create");
+    m.insert("grok-delete", "Delete");
+    m.insert("grok-move", "Move");
+    m.insert("grok-copy", "Copy");
+    // Directory operations
+    m.insert("grok-list-directory", "ListDir");
+    m.insert("grok-list-files", "ListDir");
+    m.insert("grok-directory-tree", "Tree");
+    // Search
+    m.insert("grok-web-search", "WebSearch");
+    m.insert("grok-web-fetch", "WebFetch");
+    m.insert("grok-search", "Grep");
+    m.insert("grok-grep", "Grep");
+    m.insert("grok-find", "Find");
+    m.insert("grok-glob", "Glob");
+    // Shell
+    m.insert("grok-bash", "Bash");
+    m.insert("grok-shell", "Bash");
+    m.insert("grok-exec", "Bash");
+    m.insert("grok-run", "Bash");
+    // System
+    m.insert("grok-open", "Open");
+    m.insert("grok-clipboard-read", "ClipboardRead");
+    m.insert("grok-clipboard-write", "ClipboardWrite");
+    // Code intelligence
+    m.insert("grok-definitions", "Definitions");
+    m.insert("grok-references", "References");
+    m.insert("grok-document-symbols", "DocumentSymbols");
+    m.insert("grok-completion", "Completion");
+    // Inspectors
+    m.insert("grok-inspect", "Inspect");
+    m.insert("grok-explain", "Inspect");
+    // Planning
+    m.insert("grok-plan", "Plan");
+    m.insert("grok-think", "Think");
+    // Misc
+    m.insert("grok-mcp", "Mcp");
+    m.insert("grok-task", "Task");
+    m
+});
 
 /// Schema transformation for tool arguments.
 ///
@@ -129,7 +128,11 @@ pub fn transform_args(tool_name: &str, args: &serde_json::Value) -> serde_json::
             if let Some(obj) = args.as_object() {
                 let mut new_obj = serde_json::Map::new();
                 // Map grok's `pattern` to runie's `pattern`
-                if let Some(v) = obj.get("pattern").or(obj.get("regex")).or(obj.get("search")) {
+                if let Some(v) = obj
+                    .get("pattern")
+                    .or(obj.get("regex"))
+                    .or(obj.get("search"))
+                {
                     new_obj.insert("pattern".to_string(), v.clone());
                 }
                 if let Some(v) = obj.get("path").or(obj.get("file")).or(obj.get("directory")) {
@@ -227,12 +230,17 @@ mod tests {
         assert_eq!(runie_to_grok("Write"), Some("grok-write"));
         // Bash could be grok-bash, grok-shell, grok-exec, or grok-run
         let bash_aliases = runie_to_grok_all("Bash");
-        assert!(bash_aliases.contains(&"grok-bash") || bash_aliases.contains(&"grok-shell"),
-            "Bash should map to grok-bash or grok-shell");
+        assert!(
+            bash_aliases.contains(&"grok-bash") || bash_aliases.contains(&"grok-shell"),
+            "Bash should map to grok-bash or grok-shell"
+        );
         // ListDir could be grok-list-directory or grok-list-files
         let listdir_aliases = runie_to_grok_all("ListDir");
-        assert!(listdir_aliases.contains(&"grok-list-directory") || listdir_aliases.contains(&"grok-list-files"),
-            "ListDir should map to grok-list-directory or grok-list-files");
+        assert!(
+            listdir_aliases.contains(&"grok-list-directory")
+                || listdir_aliases.contains(&"grok-list-files"),
+            "ListDir should map to grok-list-directory or grok-list-files"
+        );
         assert_eq!(runie_to_grok("unknown-tool"), None);
     }
 
@@ -253,8 +261,14 @@ mod tests {
             "file": "src/main.rs"
         });
         let transformed = transform_args("Grep", &args);
-        assert_eq!(transformed.get("pattern").and_then(|v| v.as_str()), Some("fn main"));
-        assert_eq!(transformed.get("path").and_then(|v| v.as_str()), Some("src/main.rs"));
+        assert_eq!(
+            transformed.get("pattern").and_then(|v| v.as_str()),
+            Some("fn main")
+        );
+        assert_eq!(
+            transformed.get("path").and_then(|v| v.as_str()),
+            Some("src/main.rs")
+        );
     }
 
     #[test]

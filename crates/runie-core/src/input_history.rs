@@ -150,7 +150,8 @@ pub fn save_history(entries: &[String]) -> Result<()> {
         .open(&path)
         .with_context(|| format!("open history: {:?}", path))?;
     fs2::FileExt::lock_exclusive(&target)?;
-    std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
+    std::fs::rename(&temp_path, &path)
+        .with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
 
     Ok(())
 }
@@ -184,7 +185,8 @@ pub fn append_history(entry: &str) -> Result<()> {
     // Atomic write back: write to temp, then rename under lock.
     let temp_path = dir.join("history.jsonl.tmp");
     write_entries_atomic(&entries, &temp_path)?;
-    std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
+    std::fs::rename(&temp_path, &path)
+        .with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
 
     // Lock released when `file` is dropped.
     Ok(())
@@ -322,7 +324,7 @@ mod tests {
         // "hel" is a prefix of entry 1 and a substring (not prefix) of entry 2.
         let entries = vec![
             "hello world".into(), // prefix match (score 10 000+)
-            "say hello".into(),  // substring match (score 5 000+)
+            "say hello".into(),   // substring match (score 5 000+)
         ];
         let result = search_history(&entries, "hel");
         assert_eq!(result.len(), 2);
@@ -340,7 +342,11 @@ mod tests {
         //   - "caret build": c-a-r fuzzy-match (all in "caret");
         //     NOT a substring; "crgt" not in it at all → no match.
         // "cargo test" should appear via fuzzy even though it's not an exact substring.
-        let entries = vec!["cargo test".into(), "caret build".into(), "hello world".into()];
+        let entries = vec![
+            "cargo test".into(),
+            "caret build".into(),
+            "hello world".into(),
+        ];
         let result = search_history(&entries, "crgt");
         assert!(
             result.iter().any(|e| e.contains("cargo")),
@@ -416,7 +422,9 @@ mod tests {
 
     #[test]
     fn cap_entries_exactly_at_limit() {
-        let entries: Vec<String> = (0..DEFAULT_MAX_HISTORY_ENTRIES).map(|i| format!("entry {}", i)).collect();
+        let entries: Vec<String> = (0..DEFAULT_MAX_HISTORY_ENTRIES)
+            .map(|i| format!("entry {}", i))
+            .collect();
         let capped = cap_entries(&entries);
         assert_eq!(capped.len(), DEFAULT_MAX_HISTORY_ENTRIES);
     }

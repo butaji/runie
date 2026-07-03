@@ -168,10 +168,9 @@ pub(super) async fn save_provider(
 pub(super) async fn remove_provider(state: &mut ConfigActorState, name: &str) {
     let path = state.path.clone();
     let name = name.to_owned();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::remove_provider_from_path(&path, &name)
-    })
-    .await;
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::remove_provider_from_path(&path, &name))
+            .await;
     handle_write_result(state, result).await;
 }
 
@@ -188,7 +187,11 @@ pub(super) async fn set_default_model(state: &mut ConfigActorState, provider: &s
 }
 
 /// Set the models list for a provider.
-pub(super) async fn set_provider_models(state: &mut ConfigActorState, name: &str, models: &[String]) {
+pub(super) async fn set_provider_models(
+    state: &mut ConfigActorState,
+    name: &str,
+    models: &[String],
+) {
     let path = state.path.clone();
     let name = name.to_owned();
     let models = models.to_vec();
@@ -230,10 +233,9 @@ pub(super) async fn set_telemetry(state: &mut ConfigActorState, enabled: bool) {
 pub(super) async fn set_truncation(state: &mut ConfigActorState, limits: &TruncationSection) {
     let path = state.path.clone();
     let limits = limits.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::set_truncation_at_path(&path, &limits)
-    })
-    .await;
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::set_truncation_at_path(&path, &limits))
+            .await;
     handle_write_result(state, result).await;
 }
 
@@ -241,10 +243,9 @@ pub(super) async fn set_truncation(state: &mut ConfigActorState, limits: &Trunca
 pub(super) async fn set_thinking_level(state: &mut ConfigActorState, level: &ThinkingLevel) {
     let path = state.path.clone();
     let level = *level;
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::set_thinking_level_at_path(&path, level)
-    })
-    .await;
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level))
+            .await;
     handle_write_result(state, result).await;
 }
 
@@ -414,7 +415,10 @@ pub(super) fn spawn_config_watcher(myself: ActorRef<ConfigMsg>, path: PathBuf) {
 
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel();
-        let debouncer = match new_debouncer(std::time::Duration::from_millis(CONFIG_WATCHER_DEBOUNCE_MS), tx) {
+        let debouncer = match new_debouncer(
+            std::time::Duration::from_millis(CONFIG_WATCHER_DEBOUNCE_MS),
+            tx,
+        ) {
             Ok(d) => d,
             Err(e) => {
                 tracing::error!("config watcher: create debouncer failed: {e:?}");

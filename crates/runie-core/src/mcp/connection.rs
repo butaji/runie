@@ -11,8 +11,8 @@ use anyhow::Result;
 use rmcp::model::Tool;
 use rmcp::transport::TokioChildProcess;
 use serde::{Deserialize, Serialize};
-use tokio_util::sync::CancellationToken;
 use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 
 use crate::config::McpServer;
 use crate::mcp::cache::{CachedToolSchema, SchemaCache};
@@ -111,14 +111,18 @@ impl McpConnectionManager {
         // Check cache first
         if let Some(cached) = self.cache.get(&name, &config).await {
             // Update state to running with cached tools
-            let tools: Vec<McpTool> = cached.tools.into_iter().map(|ct| McpTool {
-                server_name: name.clone(),
-                tool: Tool::new(
-                    ct.name,
-                    ct.description,
-                    Arc::new(ct.input_schema.as_object().cloned().unwrap_or_default()),
-                ),
-            }).collect();
+            let tools: Vec<McpTool> = cached
+                .tools
+                .into_iter()
+                .map(|ct| McpTool {
+                    server_name: name.clone(),
+                    tool: Tool::new(
+                        ct.name,
+                        ct.description,
+                        Arc::new(ct.input_schema.as_object().cloned().unwrap_or_default()),
+                    ),
+                })
+                .collect();
 
             // For cached servers, create a dummy cancellation token
             let dummy_token = CancellationToken::new();
@@ -162,7 +166,9 @@ impl McpConnectionManager {
                 let tools: Vec<CachedToolSchema> = rmcp_tools
                     .iter()
                     .map(|t| {
-                        let desc = t.description.as_ref()
+                        let desc = t
+                            .description
+                            .as_ref()
                             .map(|d| d.to_string())
                             .unwrap_or_default();
                         CachedToolSchema {
@@ -180,16 +186,10 @@ impl McpConnectionManager {
                 let mcp_tools: Vec<McpTool> = rmcp_tools
                     .into_iter()
                     .map(|tool| {
-                        let desc = tool.description
-                            .map(|d| d.to_string())
-                            .unwrap_or_default();
+                        let desc = tool.description.map(|d| d.to_string()).unwrap_or_default();
                         McpTool {
                             server_name: name.clone(),
-                            tool: Tool::new(
-                                tool.name,
-                                desc,
-                                tool.input_schema,
-                            ),
+                            tool: Tool::new(tool.name, desc, tool.input_schema),
                         }
                     })
                     .collect();
@@ -209,9 +209,10 @@ impl McpConnectionManager {
                 Ok(())
             }
             crate::config::McpTransport::Http | crate::config::McpTransport::Sse => {
-                let url = config.url.as_ref().ok_or_else(|| {
-                    anyhow::anyhow!("URL required for HTTP/SSE transport")
-                })?;
+                let url = config
+                    .url
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("URL required for HTTP/SSE transport"))?;
 
                 tracing::info!("Starting MCP server via {}: {}", config.transport, url);
 
@@ -272,7 +273,9 @@ impl McpConnectionManager {
     /// Check if any server is running.
     pub async fn is_any_running(&self) -> bool {
         let servers = self.servers.read().await;
-        servers.values().any(|h| matches!(h.state, ServerState::Running(_)))
+        servers
+            .values()
+            .any(|h| matches!(h.state, ServerState::Running(_)))
     }
 }
 
@@ -324,19 +327,28 @@ for _ in range(5):
 
         let config = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec!["python3".to_string(), script_path.to_string_lossy().to_string()],
+            command: vec![
+                "python3".to_string(),
+                script_path.to_string_lossy().to_string(),
+            ],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,
         };
 
-        manager.start_server("test".to_string(), config).await.unwrap();
+        manager
+            .start_server("test".to_string(), config)
+            .await
+            .unwrap();
 
         let state = manager.get_server_state("test").await;
         assert!(state.is_some());
         // Verify we got tools from the MCP server
         if let Some(ServerState::Running(tools)) = state {
-            assert!(!tools.is_empty(), "Expected at least one tool from MCP server");
+            assert!(
+                !tools.is_empty(),
+                "Expected at least one tool from MCP server"
+            );
         } else {
             panic!("Expected Running state");
         }
@@ -376,13 +388,19 @@ for _ in range(5):
 
         let config = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec!["python3".to_string(), script_path.to_string_lossy().to_string()],
+            command: vec![
+                "python3".to_string(),
+                script_path.to_string_lossy().to_string(),
+            ],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,
         };
 
-        manager.start_server("test".to_string(), config).await.unwrap();
+        manager
+            .start_server("test".to_string(), config)
+            .await
+            .unwrap();
         manager.stop_server("test").await.unwrap();
 
         let state = manager.get_server_state("test").await;

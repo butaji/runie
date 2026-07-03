@@ -337,16 +337,25 @@ impl super::PermissionPolicy for PermissionSetPolicy {
         true
     }
 
-    async fn evaluate(&self, ctx: &super::PermissionContext<'_>) -> Option<super::PermissionResult> {
+    async fn evaluate(
+        &self,
+        ctx: &super::PermissionContext<'_>,
+    ) -> Option<super::PermissionResult> {
         // Extract the command string from bash input if present.
         let cmd = ctx
             .input
             .and_then(|v| v.get("command").and_then(|c| c.as_str()));
         let path_str = ctx.path.map(|p| p.to_string_lossy().into_owned());
-        let action = self.rules.effective_action(ctx.tool, path_str.as_deref(), cmd);
+        let action = self
+            .rules
+            .effective_action(ctx.tool, path_str.as_deref(), cmd);
         Some(match action {
-            crate::permissions::PermissionAction::Allow => crate::permissions::PermissionResult::Allow,
-            crate::permissions::PermissionAction::Deny => crate::permissions::PermissionResult::Deny,
+            crate::permissions::PermissionAction::Allow => {
+                crate::permissions::PermissionResult::Allow
+            }
+            crate::permissions::PermissionAction::Deny => {
+                crate::permissions::PermissionResult::Deny
+            }
             crate::permissions::PermissionAction::Ask => crate::permissions::PermissionResult::Ask,
         })
     }

@@ -14,8 +14,7 @@ pub(crate) use helpers::{
 };
 
 pub(crate) fn clean_config() {
-    let path =
-        crate::provider::config::generate_test_config_path("runie_login_test");
+    let path = crate::provider::config::generate_test_config_path("runie_login_test");
     let _ = std::fs::remove_file(&path);
     crate::provider::config::set_test_config_path(path);
 }

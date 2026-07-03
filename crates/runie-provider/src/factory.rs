@@ -31,7 +31,9 @@ impl Default for BuiltProviderFactory {
 impl BuiltProviderFactory {
     /// Create a new factory using the OS keyring.
     pub fn new() -> Self {
-        Self { keyring_store: None }
+        Self {
+            keyring_store: None,
+        }
     }
 
     /// Create a factory with an injectable keyring store.

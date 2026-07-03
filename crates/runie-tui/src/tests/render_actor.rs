@@ -25,7 +25,9 @@ fn render_snapshot(snap: &Snapshot, animation_frame: u32) -> String {
     if frame_idx != 0 {
         throbber.calc_step(frame_idx);
     }
-    terminal.draw(|f| draw_snapshot(f, snap, &mut throbber)).unwrap();
+    terminal
+        .draw(|f| draw_snapshot(f, snap, &mut throbber))
+        .unwrap();
     terminal
         .backend()
         .buffer()
@@ -139,7 +141,9 @@ fn render_actor_does_not_need_mutable_state() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut throbber = throbber_widgets_tui::ThrobberState::default();
-    terminal.draw(|f| draw_snapshot(f, &snap, &mut throbber)).unwrap();
+    terminal
+        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .unwrap();
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();

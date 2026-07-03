@@ -827,7 +827,7 @@
   {
     "file": "fix-bash-sandbox-direct-mode.md",
     "title": "Fix bash sandboxing for direct (non-shell) mode",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-broken-schema-feature-in-ci-and-justfile.md",
@@ -842,7 +842,7 @@
   {
     "file": "fix-ci-gates-on-dev.md",
     "title": "Fix CI gates on `dev`",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
@@ -917,7 +917,7 @@
   {
     "file": "fix-provider-feature-flags-leak-mock.md",
     "title": "Fix provider feature flags so mock provider does not leak into production binaries",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
@@ -1292,7 +1292,8 @@
   {
     "file": "purge-shell-and-sleep-from-tests.md",
     "title": "Purge shell tests, `sleep()` calls, and tmux smoke script from automatic tests",
-    "status": "todo"
+    "status": "partial",
+    "notes": "Added TestTimeGuard to runie-testing, deleted tmux-smoke-test.sh, but more test files need updating"
   },
   {
     "file": "reconnect-tui-agent-actor-channel.md",

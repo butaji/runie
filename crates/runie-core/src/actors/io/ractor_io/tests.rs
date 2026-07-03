@@ -25,7 +25,13 @@ fn execute_pwd_command() {
 
 #[test]
 fn command_not_found() {
-    let output = run_bash_sync("nonexistent_command_xyz", Path::new("."), &HashMap::new(), true).output;
+    let output = run_bash_sync(
+        "nonexistent_command_xyz",
+        Path::new("."),
+        &HashMap::new(),
+        true,
+    )
+    .output;
     assert!(
         output.contains("Error") || output.contains("not found"),
         "Should show error for invalid command"
@@ -36,7 +42,10 @@ fn command_not_found() {
 fn quoted_args_direct_mode() {
     // In shell mode, quoting works as expected
     let output = run_bash_sync("echo 'hello world'", Path::new("."), &HashMap::new(), true).output;
-    assert!(output.contains("hello world"), "Shell mode should preserve quotes");
+    assert!(
+        output.contains("hello world"),
+        "Shell mode should preserve quotes"
+    );
 
     // In direct mode, single quotes are not special to shell_words
     let output = run_bash_sync("echo 'hello world'", Path::new("."), &HashMap::new(), false).output;
@@ -157,7 +166,11 @@ fn detect_git_in_real_repo() {
     // Test against the actual runie-dev repo
     let start = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let info = detect_git_info_sync(&start);
-    assert!(info.is_some(), "Should detect git in runie-dev repo: {:?}", info);
+    assert!(
+        info.is_some(),
+        "Should detect git in runie-dev repo: {:?}",
+        info
+    );
     let info = info.unwrap();
     assert!(
         info.branch.is_some(),
@@ -188,9 +201,9 @@ fn detect_git_non_git_dir_returns_none() {
 #[test]
 fn detect_git_in_tmp_git_repo() {
     // Create a temp git repo
-    let tmp = std::env::temp_dir().join("runie_git_test_").join(
-        uuid::Uuid::new_v4().to_string(),
-    );
+    let tmp = std::env::temp_dir()
+        .join("runie_git_test_")
+        .join(uuid::Uuid::new_v4().to_string());
     std::fs::create_dir_all(&tmp).unwrap();
     run_bash_sync(
         &format!("git init {} --quiet", tmp.display()),
@@ -225,7 +238,11 @@ fn detect_git_in_tmp_git_repo() {
     let info = detect_git_info_sync(&tmp);
     assert!(info.is_some(), "Should detect git in temp repo: {:?}", info);
     let info = info.unwrap();
-    assert_eq!(info.branch, Some("main".to_string()), "Should detect 'main' branch");
+    assert_eq!(
+        info.branch,
+        Some("main".to_string()),
+        "Should detect 'main' branch"
+    );
     assert!(info.repo_name.is_none(), "No origin → no repo name");
     assert!(!info.is_worktree, "Not a worktree");
 
@@ -236,9 +253,9 @@ fn detect_git_in_tmp_git_repo() {
 #[cfg(feature = "git")]
 #[test]
 fn detect_git_detached_head() {
-    let tmp = std::env::temp_dir().join("runie_git_detached_").join(
-        uuid::Uuid::new_v4().to_string(),
-    );
+    let tmp = std::env::temp_dir()
+        .join("runie_git_detached_")
+        .join(uuid::Uuid::new_v4().to_string());
     std::fs::create_dir_all(&tmp).unwrap();
     run_bash_sync(
         &format!("git init {} --quiet", tmp.display()),

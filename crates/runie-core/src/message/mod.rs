@@ -8,7 +8,9 @@
 //! Use [`validate_messages`] to check a sequence for dangling tool calls and orphan
 //! results. Use [`sanitize_messages`] to validate AND trim whitespace.
 
-pub use crate::proto::message::{ChatMessage, MessageMetadata, MessageOrigin, Part, Role, ToolCall};
+pub use crate::proto::message::{
+    ChatMessage, MessageMetadata, MessageOrigin, Part, Role, ToolCall,
+};
 
 pub use crate::proto::message::{validate_message, validate_messages, SanitizeError};
 

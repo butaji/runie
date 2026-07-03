@@ -76,14 +76,17 @@ fn render_item_list(
     bg: Style,
     selected_line: Option<usize>,
 ) {
-    let list_items: Vec<ListItem<'_>> =
-        item_lines.into_iter().map(ListItem::new).collect();
+    let list_items: Vec<ListItem<'_>> = item_lines.into_iter().map(ListItem::new).collect();
 
     let mut list_state = ListState::default();
     list_state.select(selected_line);
     *list_state.offset_mut() = scroll.offset;
 
-    f.render_stateful_widget(List::new(list_items).style(bg), scroll.area, &mut list_state);
+    f.render_stateful_widget(
+        List::new(list_items).style(bg),
+        scroll.area,
+        &mut list_state,
+    );
 
     if scroll.show_bar {
         render_scrollbar(
@@ -250,7 +253,11 @@ fn push_named_item<'a>(
 
 fn push_toggle(lines: &mut Vec<Line>, label: &str, value: bool, selected: bool, width: usize) {
     let prefix = selection_glyph(selected);
-    let mark = if value { GLYPH_CHECKED } else { GLYPH_UNCHECKED };
+    let mark = if value {
+        GLYPH_CHECKED
+    } else {
+        GLYPH_UNCHECKED
+    };
     let text = format!("{} {}", mark, label);
     if selected {
         let bg = color_accent();

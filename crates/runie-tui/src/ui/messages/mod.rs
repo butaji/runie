@@ -121,18 +121,28 @@ mod tests {
         let width = 60u16;
         let height = 6u16;
         // Blockquote with bold and italic text
-        let element = Element::agent("> **bold** quote
-> and *italic* too").at(0.0);
+        let element = Element::agent(
+            "> **bold** quote
+> and *italic* too",
+        )
+        .at(0.0);
         let rendered = to_lines_internal(&element, width);
 
         // Blockquote should render at least one line with the bar character
-        assert!(!rendered.is_empty(), "blockquote should produce at least one line");
+        assert!(
+            !rendered.is_empty(),
+            "blockquote should produce at least one line"
+        );
 
         // Check that blockquote character appears
         let has_bar = rendered
             .iter()
             .any(|line| line.spans.iter().any(|s| s.content.contains('│')));
-        assert!(has_bar, "blockquote should have │ character: {:?}", rendered);
+        assert!(
+            has_bar,
+            "blockquote should have │ character: {:?}",
+            rendered
+        );
 
         // Render to terminal and check buffer
         let snap = Snapshot {

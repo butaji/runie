@@ -29,7 +29,11 @@ pub fn sandbox_available() -> SandboxStatus {
     #[cfg(target_os = "macos")]
     {
         // Check if sandbox-exec is available
-        if Command::new("sandbox-exec").arg("--version").output().is_ok() {
+        if Command::new("sandbox-exec")
+            .arg("--version")
+            .output()
+            .is_ok()
+        {
             SandboxStatus::Available
         } else {
             SandboxStatus::Unavailable {
@@ -43,7 +47,8 @@ pub fn sandbox_available() -> SandboxStatus {
         // Check if landlock is available (kernel >= 5.13)
         // We check by attempting to query the landlock ABI version
         use std::fs;
-        if fs::read_to_string("/proc/sys/kernel/unprivileged_userns_clone").ok()
+        if fs::read_to_string("/proc/sys/kernel/unprivileged_userns_clone")
+            .ok()
             .map(|s| s.trim() != "0")
             .unwrap_or(true)
         {
@@ -404,39 +409,29 @@ mod tests {
 
     #[test]
     fn unsandboxed_echo_succeeds() {
-        let result = run_unsandboxed(
-            "echo",
-            &["hello"],
-            std::path::Path::new("."),
-            &[],
-        );
+        let result = run_unsandboxed("echo", &["hello"], std::path::Path::new("."), &[]);
         assert!(result.is_ok(), "Expected ok, got: {:?}", result);
     }
 
     #[test]
     fn sandboxed_echo_succeeds_when_available() {
         let status = sandbox_available();
-        if matches!(status, SandboxStatus::Unavailable { .. }) { return; }
+        if matches!(status, SandboxStatus::Unavailable { .. }) {
+            return;
+        }
 
-        let result = run_sandboxed(
-            "echo",
-            &["hello"],
-            std::path::Path::new("."),
-            &[],
-        );
+        let result = run_sandboxed("echo", &["hello"], std::path::Path::new("."), &[]);
         assert!(result.is_ok(), "Expected ok, got: {:?}", result);
     }
 
     #[test]
     fn sandboxed_shell_succeeds_when_available() {
         let status = sandbox_available();
-        if matches!(status, SandboxStatus::Unavailable { .. }) { return; }
+        if matches!(status, SandboxStatus::Unavailable { .. }) {
+            return;
+        }
 
-        let result = run_sandboxed_shell(
-            "echo hello",
-            std::path::Path::new("."),
-            &[],
-        );
+        let result = run_sandboxed_shell("echo hello", std::path::Path::new("."), &[]);
         assert!(result.is_ok(), "Expected ok, got: {:?}", result);
     }
 

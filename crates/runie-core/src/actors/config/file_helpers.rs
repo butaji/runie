@@ -10,9 +10,9 @@ use std::path::Path;
 
 use fs2::FileExt;
 
-use anyhow::Context;
 use crate::config::{McpServer, ModelProvider};
 use crate::model::ThinkingLevel;
+use anyhow::Context;
 
 // ── Lock helpers ───────────────────────────────────────────────────────────────
 

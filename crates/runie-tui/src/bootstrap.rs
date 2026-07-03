@@ -129,46 +129,38 @@ impl Keystroke {
                 KeyCode::Char(*c),
                 KeyModifiers::empty(),
             )),
-            Keystroke::Enter => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Enter,
-                KeyModifiers::empty(),
-            )),
+            Keystroke::Enter => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()))
+            }
             Keystroke::Backspace => crossterm::event::Event::Key(KeyEvent::new(
                 KeyCode::Backspace,
                 KeyModifiers::empty(),
             )),
-            Keystroke::Escape => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Esc,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Up => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Up,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Down => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Down,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Left => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Left,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Right => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Right,
-                KeyModifiers::empty(),
-            )),
+            Keystroke::Escape => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()))
+            }
+            Keystroke::Up => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::empty()))
+            }
+            Keystroke::Down => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty()))
+            }
+            Keystroke::Left => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::empty()))
+            }
+            Keystroke::Right => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::empty()))
+            }
             Keystroke::Ctrl(c) => crossterm::event::Event::Key(KeyEvent::new(
                 KeyCode::Char(*c),
                 KeyModifiers::CONTROL,
             )),
-            Keystroke::Alt(c) => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char(*c),
-                KeyModifiers::ALT,
-            )),
-            Keystroke::Tab => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Tab,
-                KeyModifiers::empty(),
-            )),
+            Keystroke::Alt(c) => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char(*c), KeyModifiers::ALT))
+            }
+            Keystroke::Tab => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()))
+            }
             Keystroke::CtrlC => crossterm::event::Event::Key(KeyEvent::new(
                 KeyCode::Char('c'),
                 KeyModifiers::CONTROL,
@@ -217,31 +209,26 @@ impl Keystroke {
                 KeyCode::Char('n'),
                 KeyModifiers::CONTROL,
             )),
-            Keystroke::AltEnter => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Enter,
-                KeyModifiers::ALT,
-            )),
+            Keystroke::AltEnter => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT))
+            }
             Keystroke::CtrlBackslash => crossterm::event::Event::Key(KeyEvent::new(
                 KeyCode::Char('\\'),
                 KeyModifiers::CONTROL,
             )),
-            Keystroke::Home => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Home,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::End => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::End,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Delete => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Delete,
-                KeyModifiers::empty(),
-            )),
+            Keystroke::Home => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Home, KeyModifiers::empty()))
+            }
+            Keystroke::End => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::End, KeyModifiers::empty()))
+            }
+            Keystroke::Delete => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Delete, KeyModifiers::empty()))
+            }
             // RawEvent is handled in to_event() directly
-            Keystroke::RawEvent(_) => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Esc,
-                KeyModifiers::empty(),
-            )),
+            Keystroke::RawEvent(_) => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()))
+            }
         }
     }
 }
@@ -384,9 +371,7 @@ impl TuiRuntime {
         let state_for_keys = state.clone();
 
         match &self.backend {
-            BackendType::Crossterm => {
-                self.run_production(state, bus_rx, leader_handle).await
-            }
+            BackendType::Crossterm => self.run_production(state, bus_rx, leader_handle).await,
             BackendType::Test(_) => {
                 // For test mode, we run with the provided keystrokes and then quit
                 self.run_with_keystrokes(state, state_for_keys, bus_rx, leader_handle)
@@ -526,7 +511,11 @@ async fn spawn_background_tasks(
     let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
-    tokio::spawn(input_forwarder_task(input_rx, leader_handle.input.clone(), submit_tx));
+    tokio::spawn(input_forwarder_task(
+        input_rx,
+        leader_handle.input.clone(),
+        submit_tx,
+    ));
 
     // UiActor was created before start_with_bus() with a NoOp agent handle and
     // the pre-subscribed bus_rx. Install the real agent handle and run it.
@@ -622,7 +611,9 @@ async fn async_render_loop(
         let new_size = match tokio::task::spawn_blocking(move || {
             let guard = term_clone.lock();
             guard.size()
-        }).await {
+        })
+        .await
+        {
             Ok(Ok(s)) => s,
             _ => continue,
         };
@@ -632,7 +623,8 @@ async fn async_render_loop(
             let _ = tokio::task::spawn_blocking(move || {
                 let mut guard = term_clone.lock();
                 guard.clear()
-            }).await;
+            })
+            .await;
             last_size = Some(new_size);
         }
 
@@ -645,7 +637,8 @@ async fn async_render_loop(
             let mut term_guard = term_clone.lock();
             let mut throbber_guard = throbber_clone.lock();
             term_guard.draw(|f| ui::draw_snapshot(f, &snap, &mut throbber_guard))
-        }).await;
+        })
+        .await;
     }
 }
 
@@ -664,7 +657,9 @@ async fn test_render_loop(
 }
 
 /// Setup a test terminal with the given backend.
-fn setup_test_terminal(backend: TestBackend) -> (ratatui::Terminal<TestBackend>, terminal::caps::TermCaps) {
+fn setup_test_terminal(
+    backend: TestBackend,
+) -> (ratatui::Terminal<TestBackend>, terminal::caps::TermCaps) {
     let terminal = ratatui::Terminal::new(backend).expect("test terminal");
     let caps = terminal::caps::TermCaps::default();
     (terminal, caps)
@@ -683,7 +678,16 @@ fn spawn_ui_actor_with_external_rx(
     shutdown_tx: oneshot::Sender<()>,
     caps: terminal::caps::TermCaps,
 ) -> UiActor {
-    UiActor::with_external_bus_rx(state, bus_rx, turn_handle, input_handle, kb_tx, bus, shutdown_tx, caps)
+    UiActor::with_external_bus_rx(
+        state,
+        bus_rx,
+        turn_handle,
+        input_handle,
+        kb_tx,
+        bus,
+        shutdown_tx,
+        caps,
+    )
 }
 
 async fn input_reader(
@@ -771,11 +775,7 @@ mod tests {
     #[test]
     fn keystroke_sequence() {
         let bindings = HashMap::new();
-        let keystrokes = [
-            Keystroke::Char('H'),
-            Keystroke::Char('i'),
-            Keystroke::Enter,
-        ];
+        let keystrokes = [Keystroke::Char('H'), Keystroke::Char('i'), Keystroke::Enter];
         let events: Vec<_> = keystrokes
             .iter()
             .filter_map(|ks| ks.to_event(&bindings))

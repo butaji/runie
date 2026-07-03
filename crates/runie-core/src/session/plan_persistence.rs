@@ -20,8 +20,7 @@ pub fn plans_dir(sessions_dir: &Path) -> PathBuf {
 
 /// Get the default plans directory.
 pub fn default_plans_dir() -> Option<PathBuf> {
-    crate::session::store::SessionStore::default_store()
-        .map(|store| plans_dir(store.dir()))
+    crate::session::store::SessionStore::default_store().map(|store| plans_dir(store.dir()))
 }
 
 /// Save a plan to the plan store and return its ID.
@@ -45,18 +44,16 @@ pub fn save_plan(
 /// Load a plan by ID.
 pub fn load_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<Option<Plan>> {
     let store = PlanStore::new(plans_dir.to_path_buf());
-    let id = PlanId::from_uuid_str(plan_id).ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID")
-    })?;
+    let id = PlanId::from_uuid_str(plan_id)
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID"))?;
     store.load(&id)
 }
 
 /// Fork a plan by ID and return the new plan ID.
 pub fn fork_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<Option<String>> {
     let store = PlanStore::new(plans_dir.to_path_buf());
-    let id = PlanId::from_uuid_str(plan_id).ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID")
-    })?;
+    let id = PlanId::from_uuid_str(plan_id)
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID"))?;
     let new_id = store.fork(&id)?;
     Ok(new_id.map(|id| id.0.to_string()))
 }
@@ -64,9 +61,8 @@ pub fn fork_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<Option<Stri
 /// Delete a plan by ID.
 pub fn delete_plan(plans_dir: &Path, plan_id: &str) -> std::io::Result<()> {
     let store = PlanStore::new(plans_dir.to_path_buf());
-    let id = PlanId::from_uuid_str(plan_id).ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID")
-    })?;
+    let id = PlanId::from_uuid_str(plan_id)
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid plan ID"))?;
     store.delete(&id)
 }
 
@@ -114,7 +110,9 @@ mod tests {
     fn test_fork_plan() {
         let tmp = tempfile::tempdir().unwrap();
         let plans_dir = tmp.path().join("plans");
-        let original_id = save_plan(&plans_dir, "session-1", "# Original").unwrap().unwrap();
+        let original_id = save_plan(&plans_dir, "session-1", "# Original")
+            .unwrap()
+            .unwrap();
         let new_id = fork_plan(&plans_dir, &original_id).unwrap().unwrap();
         assert_ne!(original_id, new_id);
         // Both should have the same content
@@ -127,7 +125,9 @@ mod tests {
     fn test_delete_plan() {
         let tmp = tempfile::tempdir().unwrap();
         let plans_dir = tmp.path().join("plans");
-        let plan_id = save_plan(&plans_dir, "session-1", "delete me").unwrap().unwrap();
+        let plan_id = save_plan(&plans_dir, "session-1", "delete me")
+            .unwrap()
+            .unwrap();
         delete_plan(&plans_dir, &plan_id).unwrap();
         assert!(load_plan_content(&plans_dir, &plan_id).is_none());
     }

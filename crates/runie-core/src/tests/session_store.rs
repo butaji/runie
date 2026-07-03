@@ -348,7 +348,11 @@ fn contract_crash_recovery() {
     let store2 = SessionStore::new(dir_path);
     let events = store2.load_events(sid).unwrap();
 
-    assert_eq!(events.len(), 3, "all batch events should survive crash simulation");
+    assert_eq!(
+        events.len(),
+        3,
+        "all batch events should survive crash simulation"
+    );
     assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "1"));
     assert!(matches!(&events[2], DurableCoreEvent::ToolCalled { id, .. } if id == "tool1"));
 }
@@ -382,7 +386,11 @@ fn contract_append_only_allows_duplicates() {
     store.append(sid, &event2).unwrap();
 
     let events = store.load_events(sid).unwrap();
-    assert_eq!(events.len(), 2, "both events should be persisted (store is append-only)");
+    assert_eq!(
+        events.len(),
+        2,
+        "both events should be persisted (store is append-only)"
+    );
 }
 
 /// Contract: isolation — concurrent appends to different sessions don't interfere.
@@ -410,7 +418,12 @@ fn contract_session_isolation() {
     for i in 0..10 {
         let sid = format!("session-{}", i);
         let events = store.load_events(&sid).unwrap();
-        assert_eq!(events.len(), 1, "session {} should have exactly one event", sid);
+        assert_eq!(
+            events.len(),
+            1,
+            "session {} should have exactly one event",
+            sid
+        );
         assert!(
             matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if *id == format!("msg-{}", i)),
             "session {} event should have id msg-{}",
@@ -430,5 +443,8 @@ fn contract_empty_batch_noop() {
     assert!(result.is_ok(), "empty batch should succeed");
 
     let events = store.load_events(sid).unwrap();
-    assert!(events.is_empty(), "empty batch should not create session file");
+    assert!(
+        events.is_empty(),
+        "empty batch should not create session file"
+    );
 }

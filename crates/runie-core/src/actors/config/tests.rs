@@ -16,7 +16,7 @@ fn temp_config_path() -> (TempDir, std::path::PathBuf) {
 async fn config_actor_loads_and_emits_config_loaded() {
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let ( _handle , _actor , _join ) = RactorConfigActor::spawn(bus, None, None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, None, None).await.unwrap();
 
     let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
         .await
@@ -30,7 +30,9 @@ async fn config_actor_save_provider_persists_and_reloads() {
     let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let ( handle , _actor , _join ) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None)
+        .await
+        .unwrap();
 
     // Drain initial load.
     let _ = sub.recv().await;
@@ -63,7 +65,9 @@ async fn config_actor_set_default_model_updates_active_model() {
     let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let ( handle , _actor , _join ) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None)
+        .await
+        .unwrap();
 
     // Drain initial load.
     let _ = sub.recv().await;
@@ -92,7 +96,9 @@ async fn config_actor_watcher_reloads_on_external_change() {
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
     let path_clone = path.clone();
-    let ( _handle , _actor , _join ) = RactorConfigActor::spawn(bus, Some(path_clone), None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path_clone), None)
+        .await
+        .unwrap();
 
     // Drain initial load.
     let _ = sub.recv().await;
@@ -119,7 +125,9 @@ async fn config_actor_emits_error_on_failed_save() {
     let bus = EventBus::<Event>::new(8);
     let mut sub = bus.subscribe();
     let path_clone = path.clone();
-    let ( handle , _actor , _join ) = RactorConfigActor::spawn(bus.clone(), Some(path_clone), None).await.unwrap();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus.clone(), Some(path_clone), None)
+        .await
+        .unwrap();
 
     // Drain initial ConfigLoaded.
     let _ = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv()).await;
@@ -158,7 +166,9 @@ async fn mutate_config_helper_emits_event_on_success() {
     let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let ( handle , _actor , _join ) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None)
+        .await
+        .unwrap();
 
     // Drain initial load.
     let _ = sub.recv().await;
@@ -191,7 +201,9 @@ async fn mutate_config_helper_reports_error() {
     let bus = EventBus::<Event>::new(8);
     let mut sub = bus.subscribe();
     let path_clone = path.clone();
-    let ( handle , _actor , _join ) = RactorConfigActor::spawn(bus.clone(), Some(path_clone), None).await.unwrap();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus.clone(), Some(path_clone), None)
+        .await
+        .unwrap();
 
     // Drain initial ConfigLoaded.
     let _ = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv()).await;
@@ -224,7 +236,9 @@ async fn save_provider_event_still_flows() {
     let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let ( handle , _actor , _join ) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None)
+        .await
+        .unwrap();
 
     // Drain initial load.
     let _ = sub.recv().await;
@@ -280,7 +294,7 @@ async fn tracing_event_emitted_on_config_load() {
 
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let ( _handle , _actor , _join ) = RactorConfigActor::spawn(bus, None, None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, None, None).await.unwrap();
 
     // Verify ConfigLoaded fact is emitted.
     let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
@@ -298,7 +312,10 @@ async fn tracing_event_emitted_on_config_load() {
             break;
         }
     }
-    assert!(found_info, "tracing::info! should be emitted on ConfigLoaded");
+    assert!(
+        found_info,
+        "tracing::info! should be emitted on ConfigLoaded"
+    );
 
     drop(guard);
 }

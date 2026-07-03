@@ -96,7 +96,10 @@ fn theme_no_args_opens_selector_dialog() {
 fn theme_persisted_in_session() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         state.config.theme_name = "nord".to_string();

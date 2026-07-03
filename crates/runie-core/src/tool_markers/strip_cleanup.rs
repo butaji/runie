@@ -3,10 +3,13 @@
 use serde_json::Value;
 
 use super::legacy_tools::strip_inline_legacy_tools;
-use super::{is_tool_call_value, strip::{
-    strip_inline_fenced_tools, strip_inline_json_objects,
-    strip_minimax_tool_calls, strip_tool_call_markup,
-}};
+use super::{
+    is_tool_call_value,
+    strip::{
+        strip_inline_fenced_tools, strip_inline_json_objects, strip_minimax_tool_calls,
+        strip_tool_call_markup,
+    },
+};
 
 /// Run the full stripping pipeline (2 passes).
 pub fn strip_all(content: &str) -> String {
@@ -265,7 +268,8 @@ mod unicode_bug_tests {
 
     #[test]
     fn strip_inline_json_objects_strips_tool_call_and_preserves_nonascii() {
-        let content = "hola \u{1F600} {\"name\":\"bash\",\"arguments\":{\"command\":\"ls\"}} adios \u{1F609}";
+        let content =
+            "hola \u{1F600} {\"name\":\"bash\",\"arguments\":{\"command\":\"ls\"}} adios \u{1F609}";
         let result = strip_inline_json_objects(content);
         assert_eq!(result, "hola \u{1F600}  adios \u{1F609}");
     }

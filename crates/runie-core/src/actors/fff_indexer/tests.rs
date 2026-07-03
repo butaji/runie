@@ -58,7 +58,10 @@ async fn indexer_initializes_in_temp_dir() {
         .expect("spawn succeeds");
 
     // Index should be ready immediately after spawn returns.
-    assert!(FffSearchState::is_indexed(), "index should be ready after spawn");
+    assert!(
+        FffSearchState::is_indexed(),
+        "index should be ready after spawn"
+    );
 
     // Send a search request
     let request_id = 1;

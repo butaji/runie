@@ -29,3 +29,9 @@ Removed dead `start_turn` and `set_turn_active` methods from `AppState`. Fixed t
 ## Tests
 
 - All workspace tests pass (2026+ tests)
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that `AppState` still holds a `turn_state` field, which is authoritative state mirrored outside `TurnActor`. This is a more fundamental violation than the direct lifecycle mutators removed by this task.
+
+See `tasks/remove-turnstate-from-appstate.md` for the remaining work.

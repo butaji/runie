@@ -144,11 +144,11 @@ impl crate::Provider for OpenAiProvider {
 
 #[cfg(test)]
 mod tests {
+    use super::protocol::OpenAiFrame;
     use super::*;
     use request::build_request_body;
     use runie_core::proto::message::{ChatMessage, Part, Role};
     use runie_core::provider_event::{ProviderEvent, StopReason};
-    use super::protocol::OpenAiFrame;
 
     fn test_provider() -> OpenAiProvider {
         OpenAiProvider::new("sk-test".to_string(), "gpt-4o")

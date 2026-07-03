@@ -78,7 +78,10 @@ fn slash_with_extra_whitespace_trimmed() {
 fn save_trims_whitespace() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         exec(&mut state, "/save  trimmed"); // Opens form with pre-filled name
@@ -217,7 +220,10 @@ fn resume_loads_most_recent_session() {
         env.remove("RUNIE_MOCK");
 
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         // Save an older session
         let mut older = fresh_state();
@@ -282,5 +288,3 @@ fn resume_loads_most_recent_session() {
         );
     });
 }
-
-

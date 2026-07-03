@@ -63,7 +63,10 @@ mod tests {
     #[test]
     fn count_events_filters_matching() {
         let evts = events();
-        assert_eq!(count_events(&evts, |e| matches!(e, Event::Response { .. })), 1);
+        assert_eq!(
+            count_events(&evts, |e| matches!(e, Event::Response { .. })),
+            1
+        );
         assert_eq!(
             count_events(&evts, |e| matches!(e, Event::ResponseDelta { .. })),
             2
@@ -76,9 +79,7 @@ mod tests {
     fn find_event_returns_first_match() {
         let evts = events();
         assert!(find_event(&evts, |e| matches!(e, Event::Response { .. })).is_some());
-        assert!(
-            find_event(&evts, |e| matches!(e, Event::ResponseDelta { .. })).is_some()
-        );
+        assert!(find_event(&evts, |e| matches!(e, Event::ResponseDelta { .. })).is_some());
         assert!(find_event(&evts, |e| matches!(e, Event::Error { .. })).is_none());
     }
 

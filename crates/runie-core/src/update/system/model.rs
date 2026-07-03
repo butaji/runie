@@ -40,7 +40,9 @@ impl AppState {
         let model = self.config().current_model.clone();
         // Fire-and-forget persist.  In tests without actor handles, mutation is already applied.
         if let Some(h) = self.actor_handles() {
-            let _ = h.config.try_send(ConfigMsg::SetDefaultModel { provider, model });
+            let _ = h
+                .config
+                .try_send(ConfigMsg::SetDefaultModel { provider, model });
         }
     }
 

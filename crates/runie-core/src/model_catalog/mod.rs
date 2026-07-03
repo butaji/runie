@@ -305,8 +305,8 @@ fn format_cost(prompt: Option<f64>, completion: Option<f64>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::ModelCapabilitiesBuilder;
+    use super::*;
 
     #[test]
     fn model_catalog_is_not_empty() {

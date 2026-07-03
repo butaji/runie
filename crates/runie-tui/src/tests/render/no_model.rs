@@ -4,8 +4,7 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::AppState;
 
 fn clean_config() -> std::path::PathBuf {
-    let path =
-        runie_core::provider::config::generate_test_config_path("runie_no_model");
+    let path = runie_core::provider::config::generate_test_config_path("runie_no_model");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path.clone());
     path
@@ -90,7 +89,9 @@ fn input_box_and_status_bar_visible_after_model_connected() {
 #[test]
 fn apply_config_ignores_stale_top_level_provider() {
     // Use ENV_LOCK to prevent parallel test interference
-    let _guard = runie_testing::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = runie_testing::ENV_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     let prev_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::remove_var("OPENAI_API_KEY");
 
@@ -125,7 +126,9 @@ model = "gpt-4o"
 fn apply_config_ignores_stale_default_model_for_provider() {
     // Clean up RUNIE_MOCK to ensure is_mock_enabled() returns false
     // Use ENV_LOCK to prevent parallel test interference
-    let _guard = runie_testing::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = runie_testing::ENV_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     let prev_mock = std::env::var("RUNIE_MOCK").ok();
     let prev_openai_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::remove_var("RUNIE_MOCK");

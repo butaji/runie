@@ -134,7 +134,9 @@ async fn main() {
     if let Err(e) = result {
         // Log the full error chain with color-eyre formatting.
         tracing::error!("CLI command failed: {:#}", e);
-        tracing::error!("Hint: Set RUST_LOG=debug for more details, or RUST_LOG=trace for verbose output.");
+        tracing::error!(
+            "Hint: Set RUST_LOG=debug for more details, or RUST_LOG=trace for verbose output."
+        );
         std::process::exit(1);
     }
 }
@@ -162,12 +164,12 @@ async fn run_server(use_stdio: bool, yolo: bool) -> Result<()> {
 async fn run_mcp(cmd: McpCommand) -> Result<()> {
     match cmd {
         McpCommand::List => mcp::list().await,
-        McpCommand::Add { name, command, scope } => {
-            mcp::add(name, command, scope.0).await
-        }
-        McpCommand::Remove { name, scope } => {
-            mcp::remove(name, scope.0).await
-        }
+        McpCommand::Add {
+            name,
+            command,
+            scope,
+        } => mcp::add(name, command, scope.0).await,
+        McpCommand::Remove { name, scope } => mcp::remove(name, scope.0).await,
     }
 }
 
@@ -180,7 +182,13 @@ mod tests {
     #[test]
     fn cli_parses_print() {
         let cli = Cli::try_parse_from(["runie", "print", "hello world"]).unwrap();
-        assert!(matches!(cli.command, Command::Print { prompt: _, sandbox: false }));
+        assert!(matches!(
+            cli.command,
+            Command::Print {
+                prompt: _,
+                sandbox: false
+            }
+        ));
     }
 
     #[test]
@@ -216,13 +224,24 @@ mod tests {
     #[test]
     fn cli_parses_server() {
         let cli = Cli::try_parse_from(["runie", "server"]).unwrap();
-        assert!(matches!(cli.command, Command::Server { stdio: false, yolo: false }));
+        assert!(matches!(
+            cli.command,
+            Command::Server {
+                stdio: false,
+                yolo: false
+            }
+        ));
     }
 
     #[test]
     fn cli_parses_mcp_list() {
         let cli = Cli::try_parse_from(["runie", "mcp", "list"]).unwrap();
-        assert!(matches!(cli.command, Command::Mcp { command: McpCommand::List }));
+        assert!(matches!(
+            cli.command,
+            Command::Mcp {
+                command: McpCommand::List
+            }
+        ));
     }
 
     #[test]
@@ -240,7 +259,12 @@ mod tests {
         .unwrap();
         match cli.command {
             Command::Mcp {
-                command: McpCommand::Add { name, command, scope },
+                command:
+                    McpCommand::Add {
+                        name,
+                        command,
+                        scope,
+                    },
             } => {
                 assert_eq!(name, "my-server");
                 assert_eq!(command, vec!["npx", "-y", "@server"]);
@@ -253,12 +277,25 @@ mod tests {
     #[test]
     fn cli_parses_mcp_add_project_scope() {
         let cli = Cli::try_parse_from([
-            "runie", "mcp", "add", "my-server", "--scope", "project", "--", "npx", "@server",
+            "runie",
+            "mcp",
+            "add",
+            "my-server",
+            "--scope",
+            "project",
+            "--",
+            "npx",
+            "@server",
         ])
         .unwrap();
         match cli.command {
             Command::Mcp {
-                command: McpCommand::Add { name, scope, command },
+                command:
+                    McpCommand::Add {
+                        name,
+                        scope,
+                        command,
+                    },
             } => {
                 assert_eq!(name, "my-server");
                 assert_eq!(scope.0, runie_core::config::ConfigScope::Project);
@@ -302,7 +339,13 @@ mod tests {
     #[test]
     fn cli_parses_login() {
         let cli = Cli::try_parse_from(["runie", "login"]).unwrap();
-        assert!(matches!(cli.command, Command::Login { provider: None, api_key: None }));
+        assert!(matches!(
+            cli.command,
+            Command::Login {
+                provider: None,
+                api_key: None
+            }
+        ));
     }
 
     #[test]
@@ -319,7 +362,8 @@ mod tests {
 
     #[test]
     fn cli_parses_login_with_short_flags() {
-        let cli = Cli::try_parse_from(["runie", "login", "-p", "anthropic", "-a", "sk-test"]).unwrap();
+        let cli =
+            Cli::try_parse_from(["runie", "login", "-p", "anthropic", "-a", "sk-test"]).unwrap();
         match cli.command {
             Command::Login { provider, api_key } => {
                 assert_eq!(provider, Some("anthropic".to_string()));

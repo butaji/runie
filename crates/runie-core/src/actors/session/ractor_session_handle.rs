@@ -3,10 +3,10 @@
 use camino::Utf8PathBuf;
 use std::path::PathBuf;
 
-use ractor::ActorRef;
 use crate::edit_preview::EditPreview;
 use crate::session::Session;
 use crate::trust::TrustDecision;
+use ractor::ActorRef;
 
 use super::messages::SessionMsg;
 
@@ -28,9 +28,11 @@ impl RactorSessionHandle {
 
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
-        let path_utf8 = Utf8PathBuf::from_path_buf(path)
-            .unwrap_or_else(|_| Utf8PathBuf::from("."));
-        let _ = self.inner.send_message(SessionMsg::SetTrust { path: path_utf8, decision });
+        let path_utf8 = Utf8PathBuf::from_path_buf(path).unwrap_or_else(|_| Utf8PathBuf::from("."));
+        let _ = self.inner.send_message(SessionMsg::SetTrust {
+            path: path_utf8,
+            decision,
+        });
     }
 
     /// Append an entry to the history file.
@@ -75,17 +77,23 @@ impl RactorSessionHandle {
 
     /// Try to add a user message (fire-and-forget).
     pub fn try_add_user_message(&self, content: String, images: Vec<String>) {
-        let _ = self.inner.send_message(SessionMsg::AddUserMessage { content, images });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::AddUserMessage { content, images });
     }
 
     /// Try to add a system message (fire-and-forget).
     pub fn try_add_system_message(&self, content: String) {
-        let _ = self.inner.send_message(SessionMsg::AddSystemMessage { content });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::AddSystemMessage { content });
     }
 
     /// Try to add a tool message (fire-and-forget).
     pub fn try_add_tool_message(&self, id: String, name: String, content: String) {
-        let _ = self.inner.send_message(SessionMsg::AddToolMessage { id, name, content });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::AddToolMessage { id, name, content });
     }
 
     /// Try to update a tool message (fire-and-forget).
@@ -98,12 +106,16 @@ impl RactorSessionHandle {
 
     /// Try to add a turn-complete message (fire-and-forget).
     pub fn try_add_turn_complete(&self, id: String, content: String) {
-        let _ = self.inner.send_message(SessionMsg::AddTurnComplete { id, content });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::AddTurnComplete { id, content });
     }
 
     /// Try to add an error message (fire-and-forget).
     pub fn try_add_error_message(&self, id: String, content: String) {
-        let _ = self.inner.send_message(SessionMsg::AddErrorMessage { id, content });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::AddErrorMessage { id, content });
     }
 
     /// Try to reset session (fire-and-forget).
@@ -123,7 +135,9 @@ impl RactorSessionHandle {
 
     /// Try to push a pending edit (fire-and-forget).
     pub fn try_push_pending_edit(&self, edit: EditPreview) {
-        let _ = self.inner.send_message(SessionMsg::PushPendingEdit { edit });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::PushPendingEdit { edit });
     }
 
     /// Try to drain pending edits (fire-and-forget).
@@ -143,7 +157,9 @@ impl RactorSessionHandle {
 
     /// Request exporting a session to a file path.
     pub async fn export(&self, path: PathBuf, session: Session) {
-        let _ = self.inner.send_message(SessionMsg::Export { path, session });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::Export { path, session });
     }
 
     /// Try to send a message (non-blocking).

@@ -9,9 +9,9 @@
 //! - [`SanitizeError`] — message sanitization errors
 //! - [`ToolParseError`] — tool-call parse errors
 
+pub use crate::proto::message::SanitizeError;
 pub use crate::provider::ProviderError;
 pub use crate::provider_event::ModelError;
-pub use crate::proto::message::SanitizeError;
 pub use crate::tool::types::ToolParseError;
 
 // NOTE: `RunieError` and `RunieErrorKind` were deleted because they wrapped

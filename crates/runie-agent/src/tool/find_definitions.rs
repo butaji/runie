@@ -86,34 +86,44 @@ static PATTERNS: &[PatternEntry] = &[
 // Single-keyword patterns use \b to avoid matching keywords inside other language constructs
 // (e.g., "type MyStruct struct {" should match Go struct, not Rust enum).
 static RUST_STRUCT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bstruct\s+").unwrap()
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bstruct\s+")
+        .unwrap()
 });
 static RUST_FN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?async\s+fn\b|^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?fn\b").unwrap()
 });
-static RUST_ENUM: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\benum\s+").unwrap());
-static RUST_TRAIT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\btrait\s+").unwrap());
-static RUST_IMPL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl\s+").unwrap());
-static IMPL_GENERIC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl<[^>]+>\s+").unwrap());
-static PY_CLASS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\bclass\s").unwrap());
+static RUST_ENUM: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\benum\s+")
+        .unwrap()
+});
+static RUST_TRAIT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\btrait\s+")
+        .unwrap()
+});
+static RUST_IMPL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl\s+")
+        .unwrap()
+});
+static IMPL_GENERIC: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl<[^>]+>\s+",
+    )
+    .unwrap()
+});
+static PY_CLASS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\bclass\s").unwrap());
 // Python `def`: matches the original starts_with("def ") / "pub def " / "async def " behavior.
 static PY_DEF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:pub\s+)?(?:async\s+)?def\s").unwrap());
-static TS_CLASS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?(?:abstract\s+)?(?:pub\s+)?\bclass\s").unwrap());
+static TS_CLASS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\s*(?:export\s+)?(?:abstract\s+)?(?:pub\s+)?\bclass\s").unwrap()
+});
 static TS_INTERFACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?\binterface\s").unwrap());
 // TS_TYPE: requires "=" or "<" after the identifier to distinguish from Go's
 // "type X struct {" pattern. Matches: "type Foo =", "type Foo<", "type Foo<T> =".
 static TS_TYPE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?type\s+\w+.*(?:=|<)").unwrap());
-static TS_ENUM: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\benum\s").unwrap());
+static TS_ENUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\benum\s").unwrap());
 
 static GO_STRUCT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s+struct\s*\{").unwrap());
@@ -121,12 +131,10 @@ static GO_FUNC: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*func\s+(?:\([^)]+\)\s*)?").unwrap());
 static GO_INTERFACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s+interface\s*\{").unwrap());
-static GO_TYPE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s*=").unwrap());
+static GO_TYPE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s*=").unwrap());
 static RUBY_DEF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*\bdef\s+(?:self\.)?").unwrap());
-static RUBY_CLASS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\bclass\s").unwrap());
+static RUBY_CLASS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\bclass\s").unwrap());
 static JAVA_CLASS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?(?:abstract\s+|final\s+)?class\s+").unwrap());
 static JAVA_INTERFACE: LazyLock<Regex> =
@@ -135,12 +143,9 @@ static JAVA_ENUM: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?enum\s+").unwrap());
 static C_STRUCT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:typedef\s+)?struct\s+").unwrap());
-static C_ENUM: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*enum\s+").unwrap());
-static C_TYPEDEF: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*typedef\s+").unwrap());
-static SH_FUNC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\w+\s*\(\)\s*\{").unwrap());
+static C_ENUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*enum\s+").unwrap());
+static C_TYPEDEF: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*typedef\s+").unwrap());
+static SH_FUNC: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\w+\s*\(\)\s*\{").unwrap());
 
 /// Detect the definition kind from the line text using a compiled regex table.
 fn detect_kind(line: &str) -> &'static str {
@@ -148,7 +153,10 @@ fn detect_kind(line: &str) -> &'static str {
     // Special-case `impl<` generics: strip the generic portion before matching.
     if let Some(pos) = t.find('<') {
         let stripped = &t[..pos];
-        if RUST_IMPL.is_match(stripped) || stripped.starts_with("impl ") || stripped.starts_with("pub impl ") {
+        if RUST_IMPL.is_match(stripped)
+            || stripped.starts_with("impl ")
+            || stripped.starts_with("pub impl ")
+        {
             return "impl";
         }
     }
@@ -393,7 +401,10 @@ mod tests {
 
     #[test]
     fn detect_kind_c() {
-        assert_eq!(detect_kind("struct Point { double x; double y; };"), "struct");
+        assert_eq!(
+            detect_kind("struct Point { double x; double y; };"),
+            "struct"
+        );
         assert_eq!(detect_kind("typedef struct {} Node;"), "struct");
         assert_eq!(detect_kind("enum Color { RED, GREEN };"), "enum");
         assert_eq!(detect_kind("typedef int my_int;"), "type");
@@ -446,7 +457,10 @@ mod tests {
 
     #[test]
     fn find_definitions_tool_is_read_only() {
-        const _: () = assert!(FindDefinitionsTool::READ_ONLY, "find_definitions must be read-only");
+        const _: () = assert!(
+            FindDefinitionsTool::READ_ONLY,
+            "find_definitions must be read-only"
+        );
     }
 
     #[test]

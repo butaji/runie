@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use diffy::{create_patch, PatchFormatter};
+use serde::{Deserialize, Serialize};
 
 use super::{HarnessSkill, ToolCallCtx, ToolCallPhase, ToolCallResult};
 
@@ -135,7 +135,10 @@ pub struct HashlineEdit {
 fn format_diff(old: &str, new: &str) -> String {
     let patch = create_patch(old, new);
     let formatter = PatchFormatter::new();
-    format!("Applied hashline edits. Diff:\n{}", formatter.fmt_patch(&patch))
+    format!(
+        "Applied hashline edits. Diff:\n{}",
+        formatter.fmt_patch(&patch)
+    )
 }
 
 fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {

@@ -3,7 +3,6 @@
 //! Tools are executed via the MCP `ToolDef` trait. Each tool is called directly
 //! with typed input parsed from the `ParsedToolCall`.
 
-
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -15,11 +14,11 @@ use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
 #[cfg(feature = "mcp")]
 use runie_core::tool::annotations::get_tool_annotations;
-use runie_core::tool::{
-    is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext,
-    ToolOutput, ToolStatus, ToolResultCache,
-};
 use runie_core::tool::ParsedToolCall;
+use runie_core::tool::{
+    is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext, ToolOutput, ToolResultCache,
+    ToolStatus,
+};
 use tokio::time::timeout;
 
 /// Default timeout for tool execution (30 seconds).
@@ -51,10 +50,11 @@ pub async fn execute_tool_call(
             }
 
             let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);
-            let output = match timeout(duration, dispatch_tool(tool_name, &tool_call.args, ctx)).await {
-                Ok(o) => o,
-                Err(_) => timeout_error(tool_name),
-            };
+            let output =
+                match timeout(duration, dispatch_tool(tool_name, &tool_call.args, ctx)).await {
+                    Ok(o) => o,
+                    Err(_) => timeout_error(tool_name),
+                };
 
             // Cache successful read-only results.
             if let (Some(ref c), ToolStatus::Success) = (&cache, &output.status) {
@@ -188,7 +188,9 @@ pub async fn execute_tools_with_observer(
 ) -> Vec<ToolOutput> {
     let mut outputs = Vec::with_capacity(tools.len());
     for tool_call in tools {
-        let output = execute_single_with_observer(tool_call, ctx, gate, observer, hooks, cache.clone()).await;
+        let output =
+            execute_single_with_observer(tool_call, ctx, gate, observer, hooks, cache.clone())
+                .await;
         outputs.push(output);
     }
     outputs
@@ -397,7 +399,8 @@ mod tests {
         let mut observer: () = ();
 
         let outputs =
-            execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None, None).await;
+            execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None, None)
+                .await;
         assert_eq!(outputs.len(), 1);
         assert_eq!(outputs[0].tool_name, "list_dir");
         assert_eq!(outputs[0].status, ToolStatus::Success);
@@ -406,8 +409,8 @@ mod tests {
     // Layer 2: cache hit returns cached output without tool dispatch.
     #[tokio::test]
     async fn tool_cache_hit_returns_cached_output() {
-        use std::sync::Arc;
         use runie_core::tool::{CacheEntry, ToolResultCache};
+        use std::sync::Arc;
 
         let cache = ToolResultCache::new(300);
         let tool_call = ParsedToolCall {
@@ -418,15 +421,18 @@ mod tests {
 
         // Pre-populate the cache with a known result.
         let key = ToolResultCache::compute_key(&tool_call.name, &tool_call.args);
-        cache.put(key, CacheEntry {
-            tool_name: tool_call.name.clone(),
-            output: "cached: src\ntests".to_string(),
-            bytes_transferred: Some(42),
-            cached_at: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0),
-        });
+        cache.put(
+            key,
+            CacheEntry {
+                tool_name: tool_call.name.clone(),
+                output: "cached: src\ntests".to_string(),
+                bytes_transferred: Some(42),
+                cached_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0),
+            },
+        );
 
         let gate = PermissionGate::new(
             runie_core::permissions::PermissionManager::default(),
@@ -446,8 +452,8 @@ mod tests {
     // Layer 2: write tools are never cached (not in CACHEABLE_TOOL_NAMES).
     #[tokio::test]
     async fn tool_cache_not_used_for_write_tools() {
-        use std::sync::Arc;
         use runie_core::tool::{CacheEntry, ToolResultCache};
+        use std::sync::Arc;
 
         let cache = ToolResultCache::new(300);
         let tool_call = ParsedToolCall {
@@ -458,15 +464,18 @@ mod tests {
 
         // Pre-populate the cache with a result (should not be used for write tools).
         let key = ToolResultCache::compute_key(&tool_call.name, &tool_call.args);
-        cache.put(key, CacheEntry {
-            tool_name: tool_call.name.clone(),
-            output: "SHOULD NOT BE USED".to_string(),
-            bytes_transferred: None,
-            cached_at: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0),
-        });
+        cache.put(
+            key,
+            CacheEntry {
+                tool_name: tool_call.name.clone(),
+                output: "SHOULD NOT BE USED".to_string(),
+                bytes_transferred: None,
+                cached_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0),
+            },
+        );
 
         let gate = PermissionGate::new(
             runie_core::permissions::PermissionManager::default(),
@@ -478,8 +487,10 @@ mod tests {
 
         // write_file is not cacheable, so it should actually execute and succeed
         assert_eq!(output.status, ToolStatus::Success);
-        assert_ne!(output.content, "SHOULD NOT BE USED",
-            "write_file should not use the cache");
+        assert_ne!(
+            output.content, "SHOULD NOT BE USED",
+            "write_file should not use the cache"
+        );
 
         let _ = std::fs::remove_file("/tmp/cache_test.txt");
     }

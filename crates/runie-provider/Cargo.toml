@@ -11,7 +11,7 @@ workspace = true
 path = "src/lib.rs"
 
 [features]
-default = ["openai", "mock"]
+default = ["openai"]
 openai = []
 mock = []
 

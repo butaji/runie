@@ -3,13 +3,13 @@
 //! runtime save/load use `crate::session::store::SessionStore`.
 
 pub mod persistence;
-pub mod plan_store;
 pub mod plan_persistence;
+pub mod plan_store;
 pub mod replay;
 pub mod store;
+pub mod tree;
 #[cfg(test)]
 pub mod tree_tests;
-pub mod tree;
 pub mod turn_queue;
 
 use crate::model::ChatMessage;

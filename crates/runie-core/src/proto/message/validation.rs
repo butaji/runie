@@ -11,8 +11,10 @@ use super::role::Role;
 pub fn validate_message(msg: &ChatMessage) -> Option<&'static str> {
     match msg.role {
         Role::Assistant => {
-            let has_text =
-                msg.parts.iter().any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
+            let has_text = msg
+                .parts
+                .iter()
+                .any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
             let has_tc = msg.parts.iter().any(|p| matches!(p, Part::ToolCall { .. }));
             if !has_text && !has_tc {
                 return Some("assistant message has no text or tool calls");
@@ -24,8 +26,10 @@ pub fn validate_message(msg: &ChatMessage) -> Option<&'static str> {
             }
         }
         Role::Thought => {
-            let has_text =
-                msg.parts.iter().any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
+            let has_text = msg
+                .parts
+                .iter()
+                .any(|p| matches!(p, Part::Text { content } if !content.is_empty()));
             if !has_text {
                 return Some("thought message has no content");
             }

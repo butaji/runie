@@ -182,8 +182,12 @@ pub struct HttpSection {
     pub connect_timeout_secs: u64,
 }
 
-fn http_request_timeout_default() -> u64 { 120 }
-fn http_connect_timeout_default() -> u64 { 10 }
+fn http_request_timeout_default() -> u64 {
+    120
+}
+fn http_connect_timeout_default() -> u64 {
+    10
+}
 
 impl Default for HttpSection {
     fn default() -> Self {
@@ -213,10 +217,18 @@ pub struct RetrySection {
     pub multiplier: f64,
 }
 
-fn retry_max_attempts_default() -> u32 { 5 }
-fn retry_initial_delay_default() -> u64 { 100 }
-fn retry_max_delay_default() -> u64 { 30_000 }
-fn retry_multiplier_default() -> f64 { 2.0 }
+fn retry_max_attempts_default() -> u32 {
+    5
+}
+fn retry_initial_delay_default() -> u64 {
+    100
+}
+fn retry_max_delay_default() -> u64 {
+    30_000
+}
+fn retry_multiplier_default() -> f64 {
+    2.0
+}
 
 impl Default for RetrySection {
     fn default() -> Self {
@@ -247,9 +259,15 @@ pub struct FffSection {
     pub max_file_size_bytes: usize,
 }
 
-fn fff_scan_timeout_default() -> u64 { 30 }
-fn fff_default_limit_default() -> usize { 50 }
-fn fff_max_file_size_default() -> usize { 2 * 1024 * 1024 }
+fn fff_scan_timeout_default() -> u64 {
+    30
+}
+fn fff_default_limit_default() -> usize {
+    50
+}
+fn fff_max_file_size_default() -> usize {
+    2 * 1024 * 1024
+}
 
 impl Default for FffSection {
     fn default() -> Self {
@@ -266,7 +284,7 @@ impl Default for FffSection {
 // ============================================================================
 
 /// Sandbox configuration for OS-level command sandboxing.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 #[derive(JsonSchema)]
 pub struct SandboxSection {
@@ -274,12 +292,6 @@ pub struct SandboxSection {
     /// When enabled, bash commands are wrapped in platform-specific sandbox.
     /// Defaults to false.
     pub enabled: bool,
-}
-
-impl Default for SandboxSection {
-    fn default() -> Self {
-        Self { enabled: false }
-    }
 }
 
 // ============================================================================

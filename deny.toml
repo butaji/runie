@@ -11,9 +11,15 @@ ignore = [
     # git2 has unsound advisories; waiting for fff-search to update
     { id = "RUSTSEC-2026-0183" },
     { id = "RUSTSEC-2026-0184" },
+
+    # quick-xml 0.39.4 from syntect (via tui-markdown) has DoS vulnerabilities
+    # Upgrade requires updating syntect/tui-markdown dependencies
+    { id = "RUSTSEC-2026-0194" },
+    { id = "RUSTSEC-2026-0195" },
 ]
 
 [licenses]
+confidence-threshold = 0.8
 allow = [
     "MIT",
     "Apache-2.0",
@@ -28,7 +34,12 @@ allow = [
     "LGPL-3.0-or-later",
     "CDLA-Permissive-2.0",
 ]
-confidence-threshold = 0.8
+
+# Exceptions for crates with non-standard or missing license fields
+[[licenses.clarify]]
+name = "sublime_fuzzy"
+expression = "MIT OR BSD-3-Clause"
+license-files = [{ path = "LICENSE", hash = 0x0 }]
 
 [bans]
 # Deny multiple versions of the same crate
@@ -140,6 +151,24 @@ skip = [
     { crate = "windows_x86_64_msvc@0.48", reason = "different Windows API levels required by transitive deps" },
     { crate = "windows_x86_64_msvc@0.52", reason = "different Windows API levels required by transitive deps" },
     { crate = "windows_x86_64_msvc@0.53", reason = "different Windows API levels required by transitive deps" },
+
+    # darling multiple versions from derive_builder/validator vs tui-popup vs ratatui ecosystem
+    { crate = "darling@0.20", reason = "derive_builder 0.20 requires darling 0.20.x" },
+    { crate = "darling@0.21", reason = "tui-popup requires darling 0.21.x" },
+    { crate = "darling@0.23", reason = "ratatui ecosystem requires darling 0.23.x" },
+    { crate = "darling_core@0.20", reason = "derive_builder 0.20 requires darling_core 0.20.x" },
+    { crate = "darling_core@0.21", reason = "tui-popup requires darling_core 0.21.x" },
+    { crate = "darling_core@0.23", reason = "ratatui ecosystem requires darling_core 0.23.x" },
+    { crate = "darling_macro@0.20", reason = "derive_builder 0.20 requires darling_macro 0.20.x" },
+    { crate = "darling_macro@0.21", reason = "tui-popup requires darling_macro 0.21.x" },
+    { crate = "darling_macro@0.23", reason = "ratatui ecosystem requires darling_macro 0.23.x" },
+
+    # quick-xml 0.39.4 vulnerable to RUSTSEC-2026-0194 and RUSTSEC-2026-0195
+    # Required by plist -> syntect (tui-markdown dependency)
+    { crate = "quick-xml@0.39", reason = "syntect requires quick-xml 0.39.x, upgrade pending upstream fix" },
+
+    # nix 0.27 from command-group vs 0.31 from rmcp/process-wrap
+    { crate = "nix@0.27", reason = "command-group requires nix 0.27.x" },
 
     # Platform-specific crates
     { crate = "core-foundation@0.9", reason = "different macOS API levels required by transitive deps" },

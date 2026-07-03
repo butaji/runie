@@ -13,13 +13,20 @@ use crate::Event;
 
 use super::messages::SessionMsg;
 use super::ractor_session_handle::RactorSessionHandle;
-use super::session_handlers::{SessionActorState, RactorSessionActor};
+use super::session_handlers::{RactorSessionActor, SessionActorState};
 
 impl RactorSessionActor {
     /// Spawn a `RactorSessionActor` on the given event bus.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> Result<(RactorSessionHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
+    ) -> Result<
+        (
+            RactorSessionHandle,
+            ractor::ActorCell,
+            tokio::task::JoinHandle<()>,
+        ),
+        ractor::SpawnErr,
+    > {
         let (handle, join, cell) = spawn_ractor(None, Self, bus).await?;
         Ok((RactorSessionHandle::new(handle), cell, join))
     }
@@ -139,8 +146,8 @@ mod tests {
 
         // Directly call the handler (same logic as ResumeMostRecent message).
         // In a fresh temp-store actor, no sessions exist → expect failure event.
-        use crate::session::store::SessionStore;
         use crate::actors::session::session_handlers::RactorSessionActor;
+        use crate::session::store::SessionStore;
         let store = SessionStore::new(std::env::temp_dir().join("runie_test_resume_nonexistent"));
         let state = &mut crate::actors::session::session_handlers::SessionActorState {
             bus: bus.clone(),
@@ -159,7 +166,8 @@ mod tests {
                     error: _
                 } if operation == "resume"
             )
-        }).await;
+        })
+        .await;
         assert!(
             found,
             "Expected SessionOperationFailed(resume) when no sessions exist"

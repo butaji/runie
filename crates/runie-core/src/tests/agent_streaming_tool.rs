@@ -61,8 +61,9 @@ fn streaming_tool_turn_renders_tool_result_and_final_response() {
             id: id.clone(),
             duration_secs: 0.5,
             output: "Cargo.toml\nsrc/".to_string(),
-        
-        input: None,},
+
+            input: None,
+        },
         Event::Thinking { id: id.clone() },
         Event::ResponseDelta {
             id: id.clone(),

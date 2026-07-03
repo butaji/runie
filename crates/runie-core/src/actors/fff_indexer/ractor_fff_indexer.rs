@@ -13,9 +13,8 @@ use crate::event::Event;
 use crate::model::FffFileEntry;
 
 use super::{
-    FileSearchResult, FffFileItem, FffSearchRequest,
-    FffSearchResultPayload, FffSearchState, MAX_FILE_SIZE, SearchIndex, SearchIndexStateInner,
-    DEFAULT_LIMIT,
+    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState, FileSearchResult,
+    SearchIndex, SearchIndexStateInner, DEFAULT_LIMIT, MAX_FILE_SIZE,
 };
 
 /// Ractor-based FffIndexerActor handle.
@@ -81,7 +80,14 @@ impl RactorFffIndexerActor {
         root: PathBuf,
         data_dir: PathBuf,
         bus: EventBus<Event>,
-    ) -> Result<(RactorFffIndexerHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
+    ) -> Result<
+        (
+            RactorFffIndexerHandle,
+            ractor::ActorCell,
+            tokio::task::JoinHandle<()>,
+        ),
+        ractor::SpawnErr,
+    > {
         let mut actor = Self::new(root, data_dir, bus.clone());
         // Initialize the search index on a blocking thread before spawning.
         let index = actor.index.clone();
@@ -108,7 +114,10 @@ impl RactorFffIndexerActor {
             state: global_state,
         });
 
-        tracing::debug!("search indexer: initial scan complete ({} files)", actor.index.file_count());
+        tracing::debug!(
+            "search indexer: initial scan complete ({} files)",
+            actor.index.file_count()
+        );
 
         let (handle, join, cell) = spawn_ractor(None, actor, bus).await?;
         Ok((RactorFffIndexerHandle::new(handle), cell, join))
@@ -167,11 +176,7 @@ impl Actor for RactorFffIndexerActor {
 
 impl RactorFffIndexerActor {
     /// Handle a search request.
-    async fn handle_search(
-        &self,
-        req: FffSearchRequest,
-        indexed: bool,
-    ) -> FffSearchResultPayload {
+    async fn handle_search(&self, req: FffSearchRequest, indexed: bool) -> FffSearchResultPayload {
         let limit = req.limit.unwrap_or(DEFAULT_LIMIT);
 
         // Parse the query to determine the search type.

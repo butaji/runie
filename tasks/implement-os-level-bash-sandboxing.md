@@ -91,3 +91,9 @@ Implement OS-level sandboxing for bash tool execution:
 - `landlock` crate for Linux sandboxing (optional, `landlock` feature)
 - `sandbox-exec` on macOS (built-in)
 - Windows: `CREATE_NO_WINDOW` flag (built-in)
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that `run_bash_direct` does not accept or apply `use_sandbox`, so `run_bash_sandboxed(..., shell=false)` silently falls back to unsandboxed execution.
+
+See `tasks/fix-bash-sandbox-direct-mode.md` for the remaining work.

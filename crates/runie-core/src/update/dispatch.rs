@@ -105,7 +105,11 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             }
             true
         }
-        Event::CompactionTriggered { tokens_in: _, context_window, .. } => {
+        Event::CompactionTriggered {
+            tokens_in: _,
+            context_window,
+            ..
+        } => {
             // Compaction keeps roughly COMPACT_TOKEN_RATIO of the context window.
             use crate::session::store::COMPACT_TOKEN_RATIO;
             let keep = (*context_window as f64 * COMPACT_TOKEN_RATIO) as usize;
@@ -141,12 +145,20 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.start_tool(id.clone(), name.clone());
             true
         }
-        Event::ToolEnd { id: _, duration_secs, output, .. } => {
+        Event::ToolEnd {
+            id: _,
+            duration_secs,
+            output,
+            ..
+        } => {
             state.end_tool(*duration_secs, output.clone());
             true
         }
         Event::ResponseDelta { id, content } => {
-            state.handle_llm_event(Event::ResponseDelta { id: id.clone(), content: content.clone() });
+            state.handle_llm_event(Event::ResponseDelta {
+                id: id.clone(),
+                content: content.clone(),
+            });
             true
         }
         Event::TurnComplete { id, duration_secs } => {
@@ -534,7 +546,9 @@ fn plan_mode_event(state: &mut AppState, event: crate::Event) {
                 }
             }
 
-            state.add_system_msg("Plan mode enabled. Write tools are blocked until plan is approved.".to_string());
+            state.add_system_msg(
+                "Plan mode enabled. Write tools are blocked until plan is approved.".to_string(),
+            );
         }
         crate::Event::PlanModeDisabled => {
             state.view_mut().plan_mode = false;

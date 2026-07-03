@@ -12,14 +12,14 @@
 /// MCP tool annotations. Requires the `mcp` feature.
 #[cfg(feature = "mcp")]
 pub mod annotations;
-/// MCP tool schema. Requires the `mcp` feature.
-#[cfg(feature = "mcp")]
-pub mod schema;
 pub mod cache;
 mod constraints;
 mod context;
 mod format;
 pub mod parse;
+/// MCP tool schema. Requires the `mcp` feature.
+#[cfg(feature = "mcp")]
+pub mod schema;
 pub mod shim;
 mod state;
 #[cfg(test)]
@@ -48,7 +48,10 @@ pub fn resolve_path(raw: &str, working_dir: impl AsRef<std::path::Path>) -> std:
     if path.is_absolute() {
         path.absolutize().unwrap_or_else(|_| path.to_path_buf())
     } else {
-        working_dir.join(path).absolutize().unwrap_or_else(|_| working_dir.join(path))
+        working_dir
+            .join(path)
+            .absolutize()
+            .unwrap_or_else(|_| working_dir.join(path))
     }
 }
 pub use parse::{

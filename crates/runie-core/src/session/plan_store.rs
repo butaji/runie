@@ -8,9 +8,9 @@
 //! Plan mode is a blocking mode where write tools require explicit approval.
 //! Plans are persisted across sessions and copied on fork.
 
+use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::PathBuf;
-use chrono::{DateTime, Utc};
 
 /// Plan content + metadata.
 #[derive(Debug, Clone)]
@@ -191,7 +191,9 @@ impl PlanStore {
     /// Returns the new plan's ID.
     /// Caller should run this in `spawn_blocking` for async contexts.
     pub fn fork(&self, plan_id: &PlanId) -> std::io::Result<Option<PlanId>> {
-        let Some(plan) = self.load(plan_id)? else { return Ok(None) };
+        let Some(plan) = self.load(plan_id)? else {
+            return Ok(None);
+        };
         let new_id = PlanId::new();
         let new_plan = Plan {
             id: new_id.clone(),

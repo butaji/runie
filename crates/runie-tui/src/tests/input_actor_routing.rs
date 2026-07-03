@@ -148,8 +148,14 @@ async fn input_accumulates_via_input_actor() {
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // Type "hi" character by character.
-    submit_tx.send(Event::Input('h')).await.expect("submit open");
-    submit_tx.send(Event::Input('i')).await.expect("submit open");
+    submit_tx
+        .send(Event::Input('h'))
+        .await
+        .expect("submit open");
+    submit_tx
+        .send(Event::Input('i'))
+        .await
+        .expect("submit open");
 
     // Wait for the final InputChanged event.
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);

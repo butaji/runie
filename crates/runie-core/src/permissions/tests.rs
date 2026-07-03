@@ -4,15 +4,15 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::{
-    ApprovalSink, AutoAllowSink, FileAccessAsk,
-    PermissionAction, PermissionContext, PermissionManager, PermissionMode, PermissionPolicy,
-    PermissionResult, PermissionRule, PermissionScope, PermissionSet, ScriptedSink,
-};
 #[cfg(feature = "mcp")]
-use super::{DefaultToolApprove};
+use super::DefaultToolApprove;
 #[cfg(feature = "git")]
-use super::{GitTrackedWriteApprove};
+use super::GitTrackedWriteApprove;
+use super::{
+    ApprovalSink, AutoAllowSink, FileAccessAsk, PermissionAction, PermissionContext,
+    PermissionManager, PermissionMode, PermissionPolicy, PermissionResult, PermissionRule,
+    PermissionScope, PermissionSet, ScriptedSink,
+};
 
 mod declarative_rules;
 

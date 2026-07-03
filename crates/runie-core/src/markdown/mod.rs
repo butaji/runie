@@ -5,9 +5,9 @@
 //! so line counts in core stay in sync with rendered output in the TUI.
 
 mod heal;
+pub(crate) mod parsing;
 #[cfg(test)]
 mod tests;
-pub(crate) mod parsing;
 
 pub use heal::heal_markdown;
 pub use parsing::{extract_blocks, inlines_to_text, parse_inline_spans};
@@ -80,7 +80,10 @@ pub fn parse_markdown(text: &str) -> Vec<CodeBlock> {
     let mut blocks = parsing::extract_blocks(parse_text);
     if let Some(t) = trailing {
         let inlines = parsing::parse_inline_spans(t);
-        blocks.push(CodeBlock::Text { content: t.to_owned(), inlines });
+        blocks.push(CodeBlock::Text {
+            content: t.to_owned(),
+            inlines,
+        });
     }
     blocks
 }

@@ -10,7 +10,7 @@ use runie_testing::{allow_all_gate, capture_events, mock_provider, mock_tool_ski
 async fn agent_turn_state_no_raw_tool_markers() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("list files").build();
+    let cmd = agent_cmd("list files").build();
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,

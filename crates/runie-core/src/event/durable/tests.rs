@@ -244,7 +244,9 @@ fn durable_from_switch_model() {
 
 #[test]
 fn durable_from_run_name_command() {
-    let event = Event::RunNameCommand { name: "my session".into() };
+    let event = Event::RunNameCommand {
+        name: "my session".into(),
+    };
     let durable = DurableCoreEvent::try_from_event(&event);
     assert!(durable.is_some());
     assert!(matches!(
@@ -255,7 +257,9 @@ fn durable_from_run_name_command() {
 
 #[test]
 fn durable_from_switch_theme() {
-    let event = Event::SwitchTheme { name: "dark".into() };
+    let event = Event::SwitchTheme {
+        name: "dark".into(),
+    };
     let durable = DurableCoreEvent::try_from_event(&event);
     assert!(durable.is_some());
     assert!(matches!(
@@ -271,7 +275,9 @@ fn durable_from_set_thinking_level() {
     assert!(durable.is_some());
     assert!(matches!(
         durable.unwrap(),
-        DurableCoreEvent::ThinkingLevelSet { level: crate::model::ThinkingLevel::Medium }
+        DurableCoreEvent::ThinkingLevelSet {
+            level: crate::model::ThinkingLevel::Medium
+        }
     ));
 }
 
@@ -304,15 +310,24 @@ fn durable_from_message_replayed() {
 #[test]
 fn transient_events_return_none() {
     let cases: Vec<Event> = vec![
-        Event::ResponseDelta { id: "".into(), content: "x".into() },
+        Event::ResponseDelta {
+            id: "".into(),
+            content: "x".into(),
+        },
         Event::TextStart { id: "".into() },
         Event::TextEnd { id: "".into() },
-        Event::ThinkingDelta { id: "".into(), content: "".into() },
+        Event::ThinkingDelta {
+            id: "".into(),
+            content: "".into(),
+        },
         Event::ThinkingStart { id: "".into() },
         Event::ThinkingEnd { id: "".into() },
         Event::Thinking { id: "".into() },
         Event::ThoughtDone { id: "".into() },
-        Event::TokenStatsUpdated { tokens_in: 0, tokens_out: 0 },
+        Event::TokenStatsUpdated {
+            tokens_in: 0,
+            tokens_out: 0,
+        },
         Event::Quit,
         Event::Input('x'),
     ];
@@ -417,7 +432,9 @@ fn durable_from_session_tree_snapshot() {
         nodes: vec![],
         edges: vec![],
     };
-    let event = Event::SessionTreeSnapshot { snapshot: snapshot.clone() };
+    let event = Event::SessionTreeSnapshot {
+        snapshot: snapshot.clone(),
+    };
     let durable = DurableCoreEvent::try_from_event(&event);
     assert!(durable.is_some());
     let durable = durable.unwrap();
@@ -455,7 +472,9 @@ fn tree_snapshot_roundtrip() {
         nodes: vec![],
         edges: vec![],
     };
-    let original = Event::SessionTreeSnapshot { snapshot: snapshot.clone() };
+    let original = Event::SessionTreeSnapshot {
+        snapshot: snapshot.clone(),
+    };
     let durable = DurableCoreEvent::try_from_event(&original).unwrap();
     let recovered: Event = Event::try_from(&durable).unwrap();
     match (original, recovered) {
@@ -549,8 +568,12 @@ fn durable_message_sent_preserves_parts() {
     use crate::proto::message::Part;
 
     let parts = vec![
-        Part::Text { content: "Hello".into() },
-        Part::Reasoning { content: "thinking".into() },
+        Part::Text {
+            content: "Hello".into(),
+        },
+        Part::Reasoning {
+            content: "thinking".into(),
+        },
         Part::tool_call("call_1", "bash", serde_json::json!({"cmd": "ls"})),
     ];
     let durable = DurableCoreEvent::MessageSent {
@@ -567,10 +590,15 @@ fn durable_message_sent_preserves_parts() {
     let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
 
     match parsed {
-        DurableCoreEvent::MessageSent { parts: parsed_parts, .. } => {
+        DurableCoreEvent::MessageSent {
+            parts: parsed_parts,
+            ..
+        } => {
             assert_eq!(parsed_parts.len(), 3);
             assert!(matches!(&parsed_parts[0], Part::Text { content } if content == "Hello"));
-            assert!(matches!(&parsed_parts[1], Part::Reasoning { content } if content == "thinking"));
+            assert!(
+                matches!(&parsed_parts[1], Part::Reasoning { content } if content == "thinking")
+            );
             assert!(matches!(&parsed_parts[2], Part::ToolCall { name, .. } if name == "bash"));
         }
         _ => panic!("Expected MessageSent"),
@@ -627,9 +655,15 @@ fn durable_message_sent_reconstructs_content_from_parts() {
         timestamp: 100.0,
         provider: "openai".into(),
         parts: vec![
-            Part::Text { content: "Part 1".into() },
-            Part::Text { content: " Part 2".into() },
-            Part::Reasoning { content: "hidden".into() },
+            Part::Text {
+                content: "Part 1".into(),
+            },
+            Part::Text {
+                content: " Part 2".into(),
+            },
+            Part::Reasoning {
+                content: "hidden".into(),
+            },
         ],
     };
 

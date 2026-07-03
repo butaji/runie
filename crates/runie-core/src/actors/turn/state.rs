@@ -19,7 +19,6 @@ use crate::tokens::TokenTracker;
 
 pub use super::speed_window::SpeedWindow;
 
-
 /// Authoritative turn state owned by TurnActor.
 ///
 /// Contains all fields needed for both authoritative turn lifecycle management

@@ -72,13 +72,17 @@ mod tests {
         let events = events.lock().unwrap();
         // The mock provider emits text, so we expect at least one Text event.
         assert!(
-            events.iter().any(|e| matches!(e, HeadlessEvent::Text { .. })),
+            events
+                .iter()
+                .any(|e| matches!(e, HeadlessEvent::Text { .. })),
             "expected at least one Text event, got: {:?}",
             events
         );
         // Must emit End to mark the stream as finished.
         assert!(
-            events.iter().any(|e| matches!(e, HeadlessEvent::End { .. })),
+            events
+                .iter()
+                .any(|e| matches!(e, HeadlessEvent::End { .. })),
             "expected an End event, got: {:?}",
             events
         );
@@ -90,9 +94,11 @@ mod tests {
             });
             // Variants must match after round-trip.
             let evt_ref = evt;
-            let same_variant =
-                std::mem::discriminant(evt_ref) == std::mem::discriminant(&parsed);
-            assert!(same_variant, "JSONL round-trip variant mismatch for {evt:?}, line: {line}");
+            let same_variant = std::mem::discriminant(evt_ref) == std::mem::discriminant(&parsed);
+            assert!(
+                same_variant,
+                "JSONL round-trip variant mismatch for {evt:?}, line: {line}"
+            );
         }
     }
 

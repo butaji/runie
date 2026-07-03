@@ -9,8 +9,8 @@ use throbber_widgets_tui::{symbols::throbber::BRAILLE_SIX, Throbber, ThrobberSta
 
 use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};
-use unicode_width::UnicodeWidthStr;
 use runie_core::Snapshot;
+use unicode_width::UnicodeWidthStr;
 
 /// Render the status bar. The spinner is rendered as a throbber widget overlay
 /// at the start of the left area, driven by the provided `ThrobberState`.
@@ -45,10 +45,7 @@ fn render_left_with_throbber(
     let (spinner_area, text_area) = {
         let splits = ratatui::layout::Layout::default()
             .direction(ratatui::layout::Direction::Horizontal)
-            .constraints([
-                Constraint::Length(spinner_width),
-                Constraint::Min(0),
-            ])
+            .constraints([Constraint::Length(spinner_width), Constraint::Min(0)])
             .split(area);
         (splits[0], splits[1])
     };

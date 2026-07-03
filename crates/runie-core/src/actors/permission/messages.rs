@@ -1,8 +1,8 @@
 //! Messages for `PermissionActor`.
 
+use crate::permissions::{PermissionAction, PermissionSet};
 use ractor::RpcReplyPort;
 use tokio::sync::oneshot;
-use crate::permissions::{PermissionAction, PermissionSet};
 
 /// Messages accepted by `PermissionActor`.
 #[derive(Debug)]

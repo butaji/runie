@@ -14,7 +14,8 @@ use include_dir::Dir;
 use regex::Regex;
 
 /// The fixture directory.
-static FIXTURE_DIR: Dir<'_> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/fixtures/grok_build");
+static FIXTURE_DIR: Dir<'_> =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/fixtures/grok_build");
 
 /// Lazy-loaded fixture contents (raw, before sanitization).
 static FIXTURES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
@@ -31,13 +32,13 @@ static FIXTURES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|
 // ── Sanitization patterns ────────────────────────────────────────────────────
 
 /// Timestamp pattern: ISO 8601 timestamps
-static TIMESTAMP_PAT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z").unwrap()
-});
+static TIMESTAMP_PAT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z").unwrap());
 
 /// UUID pattern
-static UUID_PAT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").unwrap());
+static UUID_PAT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").unwrap()
+});
 
 /// Session ID pattern
 static SESSION_PAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"sess_[a-zA-Z0-9]+").unwrap());

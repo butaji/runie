@@ -264,11 +264,7 @@ use crate::tool::format::{which_tool, which_tool_async};
 fn which_tool_finds_known_executable() {
     // `echo` should be available on all Unix systems
     let result = which_tool("echo");
-    assert!(
-        result.is_some(),
-        "should find 'echo' on PATH: {:?}",
-        result
-    );
+    assert!(result.is_some(), "should find 'echo' on PATH: {:?}", result);
     let path = result.unwrap();
     assert!(!path.is_empty(), "path should not be empty");
     // Path should end with "echo"

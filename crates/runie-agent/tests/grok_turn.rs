@@ -107,11 +107,15 @@ async fn grok_replay_provider_stream_generates_events() {
     let stream = provider.generate(messages);
     let events: Vec<anyhow::Result<ProviderEvent>> = stream.collect().await;
     assert!(
-        events.iter().any(|e| matches!(e, Ok(ProviderEvent::TextDelta(_)))),
+        events
+            .iter()
+            .any(|e| matches!(e, Ok(ProviderEvent::TextDelta(_)))),
         "expected TextDelta event, got: {events:?}"
     );
     assert!(
-        events.iter().any(|e| matches!(e, Ok(ProviderEvent::Finish { .. }))),
+        events
+            .iter()
+            .any(|e| matches!(e, Ok(ProviderEvent::Finish { .. }))),
         "expected Finish event, got: {events:?}"
     );
 }

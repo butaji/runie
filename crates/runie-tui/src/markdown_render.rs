@@ -71,7 +71,10 @@ fn override_base_color(spans: Vec<MdSpan>, base_color: Color) -> Vec<MdSpan> {
             if let Some(b) = bg {
                 new_style = new_style.bg(b);
             }
-            MdSpan { content: s.content, style: new_style }
+            MdSpan {
+                content: s.content,
+                style: new_style,
+            }
         })
         .collect()
 }
@@ -154,8 +157,7 @@ mod tests {
         let spans = apply_color_to_inlines("plain **bold** *italic* `code`", Color::White);
 
         let has_bold = spans.iter().any(|s| {
-            s.content == "bold"
-                && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
+            s.content == "bold" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
         });
         let has_italic = spans.iter().any(|s| {
             s.content == "italic"
@@ -191,8 +193,7 @@ mod tests {
         let result = parse_inline_markdown("This is **bold** and *italic*.");
         assert!(!result.is_empty());
         let has_bold = result.iter().any(|s| {
-            s.content == "bold"
-                && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
+            s.content == "bold" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
         });
         assert!(has_bold, "bold span should have BOLD modifier");
     }
@@ -217,8 +218,7 @@ mod tests {
         // correctly parses bold/italic from raw markdown text.
         let spans = apply_color_to_inlines("**strong** and *emphasis*", Color::Green);
         let has_strong = spans.iter().any(|s| {
-            s.content == "strong"
-                && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
+            s.content == "strong" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
         });
         let has_emphasis = spans.iter().any(|s| {
             s.content == "emphasis"

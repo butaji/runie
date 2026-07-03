@@ -45,6 +45,8 @@ Rules:
 | `runie-cli` | CLI entry, headless/print/server modes |
 | `runie-testing` | Test fixtures, mock providers, and harness helpers |
 
+> **Current gap:** `runie-core` has grown into a large catch-all crate (~60k production lines, ~40 public modules) and the `Event` enum is 1,253 lines. Decomposition into smaller, single-responsibility crates is tracked in `tasks/decompose-runie-core-and-event-enum.md`.
+
 ## Runtime
 
 ```text
@@ -82,7 +84,9 @@ Rules:
 
 The runtime is centered on a `LeaderActor` that owns the event bus and the long-lived actors. Clients (TUI, headless, ACP, WebSocket) are thin producers of intents and consumers of facts. They do not duplicate runtime logic. This makes it cheap to add new surfaces: a new client only needs to speak the intent/fact protocol.
 
-Actors are plain `tokio` tasks. Each actor owns a slice of authoritative state and communicates through typed intents and facts. There is no central mutable `AppState`; `AppState` is a read-only projection updated by facts.
+Actors are plain `tokio` tasks. Each actor owns a slice of authoritative state and communicates through typed intents and facts. There is no central mutable `AppState`; `AppState` is intended to be a read-only projection updated by facts.
+
+> **Current gap:** `AppState` still stores a mutable `TurnState` field and some production paths mutate `AgentState` and `ConfigState` directly. Full compliance with the SSOT rule is tracked in `tasks/remove-turnstate-from-appstate.md`, `tasks/enforce-agentstate-projection-no-direct-mutation.md`, and `tasks/remove-direct-appstate-mutation-from-dsl-handlers.md`.
 
 ### Bootstrap and rendering rules
 

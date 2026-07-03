@@ -128,7 +128,10 @@ pub fn grok_replay_from_fixtures(names: &[&str]) -> BuiltProvider {
 /// Events are written synchronously into `events` via `parking_lot::Mutex` so
 /// tests can read them via `events.lock()` immediately after `run_agent_turn`
 /// completes — no background task, no polling, no race conditions.
-pub fn capture_events() -> (Arc<parking_lot::Mutex<Vec<Event>>>, runie_agent::stream_response::EmitFn) {
+pub fn capture_events() -> (
+    Arc<parking_lot::Mutex<Vec<Event>>>,
+    runie_agent::stream_response::EmitFn,
+) {
     let events: Arc<parking_lot::Mutex<Vec<Event>>> = Arc::new(parking_lot::Mutex::new(Vec::new()));
     let captured = events.clone();
     let emit: runie_agent::stream_response::EmitFn = Arc::new(move |evt: Event| {

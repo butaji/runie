@@ -67,3 +67,9 @@ The dual-path pattern is preserved; only the unreliable `try_current()` guard is
 
 `cargo check --workspace` passes (0 errors).
 `cargo test --workspace` passes: 1894 passed, 4 failed (pre-existing failures unrelated to this change).
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that DSL command handlers in `commands/dsl/handlers/` still take `&mut AppState` and mutate it directly (e.g., `handle_new` in `commands/dsl/handlers/session/mod.rs`). This bypasses the actor-message → event flow.
+
+See `tasks/remove-direct-appstate-mutation-from-dsl-handlers.md` for the remaining work.

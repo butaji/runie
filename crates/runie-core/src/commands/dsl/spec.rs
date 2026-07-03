@@ -136,7 +136,11 @@ pub fn build_cmd_from_yaml(
                 cmd = cmd.action(action);
             }
         }
-        YamlKind::FormWithHandler { title, fields, handler } => {
+        YamlKind::FormWithHandler {
+            title,
+            fields,
+            handler,
+        } => {
             if let Some(kind) = handler_registry.to_command_kind(handler) {
                 let title_static: &'static str = Box::leak(title.clone().into_boxed_str());
                 let fields_vec: Vec<(&'static str, &'static str, &'static str)> = fields
@@ -201,8 +205,8 @@ pub fn register_commands(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::CommandFlow;
+    use super::*;
 
     // Layer 1: command_spec_and_def_are_distinct_types
     #[test]

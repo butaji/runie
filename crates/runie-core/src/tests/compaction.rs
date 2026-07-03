@@ -49,7 +49,10 @@ fn token_estimation_consistent() {
     let count_abcd = estimate_tokens("abcd");
     assert!(count_abcd >= 1, "abcd should be at least 1 token");
     let count_abcdefgh = estimate_tokens("abcdefgh");
-    assert!(count_abcdefgh >= count_abcd, "longer strings should have >= tokens");
+    assert!(
+        count_abcdefgh >= count_abcd,
+        "longer strings should have >= tokens"
+    );
 }
 
 #[test]
@@ -184,7 +187,10 @@ fn pinned_messages_not_compacted() {
     for i in 0..10 {
         state.session.messages.push(msg(
             Role::User,
-            format!("This is question number {} with some extra content to add tokens", i),
+            format!(
+                "This is question number {} with some extra content to add tokens",
+                i
+            ),
             i as f64 + 2.0,
             format!("u{}", i),
         ));
@@ -192,7 +198,10 @@ fn pinned_messages_not_compacted() {
     // Use a very low threshold to ensure compaction happens
     let result = state.compact(10);
     eprintln!("Compaction result: {}", result);
-    eprintln!("Total messages after compaction: {}", state.session.messages.len());
+    eprintln!(
+        "Total messages after compaction: {}",
+        state.session.messages.len()
+    );
     // Pinned messages should still be present
     let pinned: Vec<_> = state
         .session

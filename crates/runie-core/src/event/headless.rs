@@ -78,11 +78,13 @@ impl HeadlessEvent {
     pub fn try_from_event(event: &crate::Event) -> Option<Self> {
         use HeadlessEvent as H;
         match event {
-            crate::Event::ResponseDelta { content, .. } if !content.is_empty() => {
-                Some(H::Text { data: content.clone() })
-            }
+            crate::Event::ResponseDelta { content, .. } if !content.is_empty() => Some(H::Text {
+                data: content.clone(),
+            }),
             crate::Event::ThinkingDelta { content, .. } if !content.is_empty() => {
-                Some(H::Thinking { data: content.clone() })
+                Some(H::Thinking {
+                    data: content.clone(),
+                })
             }
             crate::Event::ToolStart { id, name, .. } => Some(H::ToolCallStart {
                 id: id.clone(),
@@ -106,13 +108,19 @@ impl HeadlessEvent {
                 input_tokens: *tokens_in,
                 output_tokens: *tokens_out,
             }),
-            crate::Event::Error { message, .. } => Some(H::Error { message: message.clone() }),
+            crate::Event::Error { message, .. } => Some(H::Error {
+                message: message.clone(),
+            }),
             crate::Event::Done { .. } => Some(H::End {
                 stop_reason: "stop".into(),
                 session_id: None,
                 request_id: None,
             }),
-            crate::Event::PermissionRequest { request_id, tool, input } => {
+            crate::Event::PermissionRequest {
+                request_id,
+                tool,
+                input,
+            } => {
                 let args = serde_json::from_value(input.clone()).unwrap_or_default();
                 Some(H::PermissionRequest {
                     id: request_id.clone(),
@@ -130,7 +138,9 @@ impl HeadlessEvent {
 impl TryFrom<&crate::Event> for HeadlessEvent {
     type Error = ();
 
-    fn try_from(event: &crate::Event) -> Result<HeadlessEvent, <HeadlessEvent as TryFrom<&crate::Event>>::Error> {
+    fn try_from(
+        event: &crate::Event,
+    ) -> Result<HeadlessEvent, <HeadlessEvent as TryFrom<&crate::Event>>::Error> {
         Self::try_from_event(event).ok_or(())
     }
 }
@@ -169,7 +179,9 @@ mod tests {
         };
         let result = HeadlessEvent::try_from_event(&event);
         assert!(result.is_some());
-        assert!(matches!(result.unwrap(), HeadlessEvent::Thinking { data } if data == "thinking..."));
+        assert!(
+            matches!(result.unwrap(), HeadlessEvent::Thinking { data } if data == "thinking...")
+        );
     }
 
     #[test]
@@ -207,8 +219,9 @@ mod tests {
             id: "c1".into(),
             duration_secs: 1.0,
             output: "done".into(),
-        
-        input: None,};
+
+            input: None,
+        };
         let result = HeadlessEvent::try_from_event(&event);
         assert!(result.is_some());
         assert!(matches!(result.unwrap(), HeadlessEvent::ToolCallEnd { id } if id == "c1"));
@@ -224,7 +237,10 @@ mod tests {
         assert!(result.is_some());
         assert!(matches!(
             result.unwrap(),
-            HeadlessEvent::Usage { input_tokens: 100, output_tokens: 50 }
+            HeadlessEvent::Usage {
+                input_tokens: 100,
+                output_tokens: 50
+            }
         ));
     }
 
@@ -275,7 +291,10 @@ mod tests {
             crate::Event::Quit,
             crate::Event::Input('x'),
             crate::Event::SetThinkingLevel(crate::model::ThinkingLevel::Medium),
-            crate::Event::TurnComplete { id: "".into(), duration_secs: 0.0 },
+            crate::Event::TurnComplete {
+                id: "".into(),
+                duration_secs: 0.0,
+            },
         ];
         for event in cases {
             assert!(
@@ -290,7 +309,10 @@ mod tests {
 
     #[test]
     fn try_from_event_ok() {
-        let event = crate::Event::ResponseDelta { id: "".into(), content: "hi".into() };
+        let event = crate::Event::ResponseDelta {
+            id: "".into(),
+            content: "hi".into(),
+        };
         let result: Result<HeadlessEvent, _> = HeadlessEvent::try_from(&event);
         assert!(result.is_ok());
     }
@@ -303,7 +325,6 @@ mod tests {
     }
 
     // ── Existing serialization tests ────────────────────────────────────────────
-
 
     #[test]
     fn text_event_serialization() {

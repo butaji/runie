@@ -73,10 +73,13 @@ fn follow_up_resets_scroll_to_bottom() {
 fn steering_delivery_resets_scroll() {
     let mut state = fresh_state();
     // Push to authoritative turn_state queue, not agent queue.
-    state.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
-        content: "steer".to_string(),
-        kind: crate::model::QueuedMessageKind::Steering,
-    });
+    state
+        .turn_state_mut()
+        .message_queue
+        .push(crate::model::QueuedMessage {
+            content: "steer".to_string(),
+            kind: crate::model::QueuedMessageKind::Steering,
+        });
     state.sync_agent_state();
     state.view.scroll = 5;
 
@@ -92,10 +95,13 @@ fn steering_delivery_resets_scroll() {
 fn follow_up_delivery_resets_scroll() {
     let mut state = fresh_state();
     // Push to authoritative turn_state queue, not agent queue.
-    state.turn_state_mut().message_queue.push(crate::model::QueuedMessage {
-        content: "follow".to_string(),
-        kind: crate::model::QueuedMessageKind::FollowUp,
-    });
+    state
+        .turn_state_mut()
+        .message_queue
+        .push(crate::model::QueuedMessage {
+            content: "follow".to_string(),
+            kind: crate::model::QueuedMessageKind::FollowUp,
+        });
     state.sync_agent_state();
     state.view.scroll = 5;
 
@@ -118,10 +124,11 @@ fn at_bottom_shows_new_agent_response() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "hi".to_string(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
@@ -149,10 +156,11 @@ fn at_bottom_shows_new_thought() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Thinking...".to_string(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::ThoughtDone {
         id: "req.0".to_string(),
     });
@@ -182,8 +190,9 @@ fn at_bottom_shows_new_tool() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "file1".to_string(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
@@ -206,10 +215,11 @@ fn scrolled_up_stays_scrolled_up_on_agent_response() {
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "new".to_string(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.ensure_fresh();
 
     assert_eq!(

@@ -41,3 +41,13 @@ Added `check_orphan_spawns()` to `crates/runie-core/build.rs` that:
 - [x] **No direct mutations:** N/A (this task adds lint enforcement, not state changes).
 - [x] **No new mirrors:** N/A (this task adds lint enforcement, not state storage).
 - [x] **Async work observed:** This task ensures all async work is observed.
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that the lint is still incomplete:
+
+- The `build.rs` unit tests for `needs_spawn_lint` have reversed assertions.
+- The lint only scans `runie-core/src`, missing orphan spawns in `runie-tui`, `runie-cli`, `runie-agent`, and `runie-provider`.
+- The lint treats `let _ = tokio::spawn(...)` as acceptable, contradicting the SSOT ADR.
+
+See `tasks/fix-build-rs-lint-scope-and-tests.md` and `tasks/capture-orphan-spawns-across-workspace.md` for the remaining work.

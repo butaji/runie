@@ -33,7 +33,11 @@ pub struct EmitApprovalSink {
 impl EmitApprovalSink {
     /// Create a new sink backed by the given permission actor handle.
     pub fn new(permission_handle: RactorPermissionHandle) -> Self {
-        Self::with_cancel(permission_handle, DEFAULT_PERMISSION_TIMEOUT_SECS, CancellationToken::new())
+        Self::with_cancel(
+            permission_handle,
+            DEFAULT_PERMISSION_TIMEOUT_SECS,
+            CancellationToken::new(),
+        )
     }
 
     /// Create a new sink with a custom timeout.

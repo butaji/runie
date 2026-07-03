@@ -295,7 +295,10 @@ fn submit_while_turn_active_queues_message() {
 
     // Message should be queued
     assert_eq!(state.agent_state().message_queue.len(), 1);
-    assert_eq!(state.agent_state().message_queue[0].content, "queued message");
+    assert_eq!(
+        state.agent_state().message_queue[0].content,
+        "queued message"
+    );
     // Input should be cleared
     assert!(state.input().input.is_empty());
 }

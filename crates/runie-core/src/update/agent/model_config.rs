@@ -58,7 +58,8 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
 fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecision) {
     use crate::event::TransientLevel;
     let cwd = std::env::current_dir().unwrap_or_default();
-    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    let cwd_utf8 =
+        camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
     // Update state synchronously (mirrors TrustActor logic for unit test compatibility).
     // TrustActor also processes this async for persistence.
     state.set_trust_decision(cwd_utf8.clone(), decision);

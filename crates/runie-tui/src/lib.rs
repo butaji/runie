@@ -24,12 +24,12 @@ pub mod bootstrap;
 pub mod channels;
 pub mod dry_run_cmd;
 pub mod effects;
+pub mod input_mapping;
 pub mod keymap;
 pub mod terminal;
 pub mod terminal_setup;
 pub mod ui_actor;
 pub mod ui_actor_agent_handles;
-pub mod input_mapping;
 
 #[cfg(test)]
 mod tests;

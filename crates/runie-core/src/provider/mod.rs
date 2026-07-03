@@ -15,8 +15,8 @@ pub use config::{
     set_test_config_path, set_test_config_with_providers,
 };
 pub use provider_trait::{
-    Provider, ProviderError, ProviderMetadata, RetryConfig, ResponseChunk, REQUEST_TIMEOUT,
-    CONNECT_TIMEOUT,
+    Provider, ProviderError, ProviderMetadata, ResponseChunk, RetryConfig, CONNECT_TIMEOUT,
+    REQUEST_TIMEOUT,
 };
 pub use registry::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,

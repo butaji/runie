@@ -1,9 +1,10 @@
 //! Agent turn execution.
 
 use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
-use runie_core::event::Event;
+use crate::tool_registry::build_schemas as build_tool_registry;
 use crate::AgentCommand;
 use anyhow::Result;
+use runie_core::event::Event;
 use runie_core::harness_skills::{
     SkillRegistry, TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult,
 };
@@ -11,11 +12,10 @@ use runie_core::message::{ChatMessage, Role};
 use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
 use runie_core::sanitize::sanitize_messages;
+use runie_core::tool::BUILTIN_TOOL_NAMES;
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
-use crate::tool_registry::build_schemas as build_tool_registry;
-use runie_core::tool::BUILTIN_TOOL_NAMES;
 use std::time::Instant;
 
 // Helper modules
@@ -65,7 +65,15 @@ pub async fn run_agent_turn_with_skills(
     )
     .await?;
 
-    emit_turn_end(&emit, &command.id, skills, &messages, tool_call_count, turn_start).await;
+    emit_turn_end(
+        &emit,
+        &command.id,
+        skills,
+        &messages,
+        tool_call_count,
+        turn_start,
+    )
+    .await;
     Ok(())
 }
 
@@ -176,7 +184,16 @@ async fn run_agent_iteration(
     });
     let tools = build_tool_registry(command.read_only);
     let cancel_token = command.cancellation_token.clone();
-    let response = match stream_response(provider, &command.id, messages, tools, emit.clone(), cancel_token).await {
+    let response = match stream_response(
+        provider,
+        &command.id,
+        messages,
+        tools,
+        emit.clone(),
+        cancel_token,
+    )
+    .await
+    {
         Ok(r) => r,
         Err(e) => {
             emit(Event::ThoughtDone {

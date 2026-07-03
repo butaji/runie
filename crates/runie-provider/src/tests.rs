@@ -232,8 +232,7 @@ fn test_built_provider_known_with_key_succeeds() {
 #[test]
 fn test_built_provider_key_and_model_accessors() {
     with_env_lock("OPENAI_API_KEY", "sk-test", || {
-        let provider =
-            build_provider_with_config("openai", "gpt-4o", &Config::default()).unwrap();
+        let provider = build_provider_with_config("openai", "gpt-4o", &Config::default()).unwrap();
         assert_eq!(provider.key(), "openai");
         assert_eq!(provider.model(), "gpt-4o");
     });
@@ -355,14 +354,12 @@ async fn test_validate_api_key_parses_minimax_models_and_trims_key() {
     Mock::given(method("GET"))
         .and(path("/v1/models"))
         .and(header("authorization", "Bearer sk-test"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "data": [
-                    {"id": "MiniMax-M3"},
-                    {"id": "MiniMax-M2.7"}
-                ]
-            })),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [
+                {"id": "MiniMax-M3"},
+                {"id": "MiniMax-M2.7"}
+            ]
+        })))
         .mount(&mock_server)
         .await;
 
@@ -408,10 +405,15 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
     std::env::set_var("RUNIE_MOCK", "1");
 
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory::new()))
-            .await
-            .unwrap();
+    let (config_handle, _config_actor, _join) =
+        ConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
+        bus,
+        config_handle,
+        std::sync::Arc::new(BuiltProviderFactory::new()),
+    )
+    .await
+    .unwrap();
 
     let built = provider_handle
         .build("mock".into(), "echo".into())
@@ -427,10 +429,15 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
 #[tokio::test]
 async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory::new()))
-            .await
-            .unwrap();
+    let (config_handle, _config_actor, _join) =
+        ConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
+        bus,
+        config_handle,
+        std::sync::Arc::new(BuiltProviderFactory::new()),
+    )
+    .await
+    .unwrap();
 
     let err = provider_handle
         .build("ghost-provider".into(), "x".into())
@@ -450,14 +457,12 @@ async fn provider_actor_validates_key_against_mock_server() {
     Mock::given(method("GET"))
         .and(path("/v1/models"))
         .and(header("authorization", "Bearer sk-test"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "data": [
-                    {"id": "model-a"},
-                    {"id": "model-b"}
-                ]
-            })),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [
+                {"id": "model-a"},
+                {"id": "model-b"}
+            ]
+        })))
         .mount(&mock_server)
         .await;
 
@@ -474,10 +479,16 @@ api_key = "sk-test"
 
     let bus = EventBus::<Event>::new(1);
     let (config_handle, _config_actor, _) =
-        ConfigActor::spawn(bus.clone(), Some(config_path), None).await.unwrap();
-    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(bus, config_handle, std::sync::Arc::new(BuiltProviderFactory::new()))
+        ConfigActor::spawn(bus.clone(), Some(config_path), None)
             .await
             .unwrap();
+    let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
+        bus,
+        config_handle,
+        std::sync::Arc::new(BuiltProviderFactory::new()),
+    )
+    .await
+    .unwrap();
 
     let models = provider_handle
         .validate_key("test".into(), "sk-test".into())

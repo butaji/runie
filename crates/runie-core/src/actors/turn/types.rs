@@ -56,16 +56,23 @@ impl RactorTurnHandle {
         follow_up_mode: crate::model::DeliveryMode,
     ) -> DeliverQueuedRpcResult {
         use ractor::rpc::CallResult;
-        match self.inner
+        match self
+            .inner
             .call(
-                |tx| TurnMsg::DeliverQueued { steering_mode, follow_up_mode, reply: Some(tx) },
+                |tx| TurnMsg::DeliverQueued {
+                    steering_mode,
+                    follow_up_mode,
+                    reply: Some(tx),
+                },
                 None,
             )
             .await
         {
             Ok(CallResult::Success(r)) => DeliverQueuedRpcResult::Delivered(r),
             Ok(CallResult::SenderError) => DeliverQueuedRpcResult::SenderError,
-            Ok(CallResult::Timeout) => DeliverQueuedRpcResult::ActorError("RPC timeout".to_string()),
+            Ok(CallResult::Timeout) => {
+                DeliverQueuedRpcResult::ActorError("RPC timeout".to_string())
+            }
             Err(e) => DeliverQueuedRpcResult::ActorError(e.to_string()),
         }
     }

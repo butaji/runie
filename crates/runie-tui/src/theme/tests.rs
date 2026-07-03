@@ -3,15 +3,15 @@
 use std::sync::Arc;
 
 use crate::terminal::caps::{MouseCapability, TermCaps};
-use crate::theme::loader::{default_theme, minimal_fallback_theme};
-use crate::theme::{
-    current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES,
-};
 use crate::theme::glyph::{
     BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT, BOX_HORIZONTAL, BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL,
     GLYPH_BULLET, GLYPH_CHECK, GLYPH_CHECKED, GLYPH_DOWNLOAD, GLYPH_FILTER, GLYPH_SELECTED,
-    GLYPH_SPINNER, GLYPH_TOOL, GLYPH_UNCHECKED, GLYPH_UNSELECTED, GLYPH_X,
-    INDICATOR_COLLAPSED, INDICATOR_ERROR, PANEL_CHAT, PANEL_INPUT, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
+    GLYPH_SPINNER, GLYPH_TOOL, GLYPH_UNCHECKED, GLYPH_UNSELECTED, GLYPH_X, INDICATOR_COLLAPSED,
+    INDICATOR_ERROR, PANEL_CHAT, PANEL_INPUT, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
+};
+use crate::theme::loader::{default_theme, minimal_fallback_theme};
+use crate::theme::{
+    current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES,
 };
 
 #[test]

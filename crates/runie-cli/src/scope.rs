@@ -22,7 +22,10 @@ impl std::str::FromStr for ConfigScopeValue {
         match s.to_lowercase().as_str() {
             "global" | "g" => Ok(ConfigScopeValue(ConfigScope::Global)),
             "project" | "p" => Ok(ConfigScopeValue(ConfigScope::Project)),
-            _ => Err(format!("invalid scope '{}': expected 'global' or 'project'", s)),
+            _ => Err(format!(
+                "invalid scope '{}': expected 'global' or 'project'",
+                s
+            )),
         }
     }
 }

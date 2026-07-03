@@ -291,9 +291,7 @@ impl ChatMessageBuilder {
     }
 
     pub fn origin(mut self, origin: super::role::MessageOrigin) -> Self {
-        self.metadata
-            .get_or_insert_with(Default::default)
-            .origin = origin;
+        self.metadata.get_or_insert_with(Default::default).origin = origin;
         self
     }
 

@@ -49,9 +49,7 @@ pub fn load_prompts(default: Option<&str>, custom_path: Option<&str>) -> Vec<Pro
     });
 
     if let Some(path) = custom_path {
-        if let Ok(content) =
-            tokio::task::block_in_place(move || std::fs::read_to_string(path))
-        {
+        if let Ok(content) = tokio::task::block_in_place(move || std::fs::read_to_string(path)) {
             prompts.push(PromptTemplate {
                 name: "custom".into(),
                 content: content.trim().into(),

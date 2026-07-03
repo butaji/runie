@@ -84,13 +84,23 @@ impl SharedStreamState {
     }
 
     /// Start a named tool call and notify the handler.
-    pub fn on_tool_start<H: StreamingHandler>(&mut self, handler: &mut H, id: String, name: String) {
+    pub fn on_tool_start<H: StreamingHandler>(
+        &mut self,
+        handler: &mut H,
+        id: String,
+        name: String,
+    ) {
         self.start_tool(&id, &name);
         handler.on_tool_start(id, name);
     }
 
     /// Append input to an in-progress tool call and notify the handler.
-    pub fn on_tool_input<H: StreamingHandler>(&mut self, handler: &mut H, id: String, delta: String) {
+    pub fn on_tool_input<H: StreamingHandler>(
+        &mut self,
+        handler: &mut H,
+        id: String,
+        delta: String,
+    ) {
         self.append_tool_input(&id, &delta);
         handler.on_tool_input(id, delta);
     }
@@ -169,31 +179,29 @@ pub async fn stream_with_handler<H: StreamingHandler>(
 
         let raw = futures::StreamExt::next(&mut stream).await;
         match raw {
-            Some(Ok(raw)) => {
-                match raw {
-                    ProviderEvent::TextDelta(delta) => {
-                        state.on_text_delta(&mut handler, delta);
-                    }
-                    ProviderEvent::ToolCallStart { id, name } => {
-                        state.on_tool_start(&mut handler, id, name);
-                    }
-                    ProviderEvent::ToolCallInputDelta { id, delta } => {
-                        state.on_tool_input(&mut handler, id, delta);
-                    }
-                    ProviderEvent::ToolCallEnd { id } => {
-                        state.on_tool_end(&mut handler, id);
-                    }
-                    ProviderEvent::Finish { .. } => {
-                        handler.on_finish();
-                        return Ok(state.into_response());
-                    }
-                    ProviderEvent::Error(e) => {
-                        handler.on_error(format!("{:?}", e))?;
-                        return Ok(state.into_response());
-                    }
-                    _ => {}
+            Some(Ok(raw)) => match raw {
+                ProviderEvent::TextDelta(delta) => {
+                    state.on_text_delta(&mut handler, delta);
                 }
-            }
+                ProviderEvent::ToolCallStart { id, name } => {
+                    state.on_tool_start(&mut handler, id, name);
+                }
+                ProviderEvent::ToolCallInputDelta { id, delta } => {
+                    state.on_tool_input(&mut handler, id, delta);
+                }
+                ProviderEvent::ToolCallEnd { id } => {
+                    state.on_tool_end(&mut handler, id);
+                }
+                ProviderEvent::Finish { .. } => {
+                    handler.on_finish();
+                    return Ok(state.into_response());
+                }
+                ProviderEvent::Error(e) => {
+                    handler.on_error(format!("{:?}", e))?;
+                    return Ok(state.into_response());
+                }
+                _ => {}
+            },
             Some(Err(e)) => {
                 return Err(e);
             }

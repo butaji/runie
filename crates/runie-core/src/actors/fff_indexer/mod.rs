@@ -194,5 +194,3 @@ pub struct ContentMatch {
     pub line_content: String,
     pub fuzzy_score: Option<i32>,
 }
-
-

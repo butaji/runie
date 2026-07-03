@@ -4,10 +4,10 @@
 //! use them for scroll math while the TUI uses the same logic to produce
 //! actual rendered lines.
 
-use unicode_width::UnicodeWidthStr;
 use crate::markdown::{extract_code_blocks, CodeBlock};
 use crate::view::elements::Element;
 use textwrap::wrap;
+use unicode_width::UnicodeWidthStr;
 
 /// User message prefix glyph (must match `runie_tui::theme::GLYPH_USER`).
 pub const GLYPH_USER: &str = "❯ ";
@@ -296,8 +296,13 @@ mod tests {
         // "ab longwordxyz cd" → wrap to 15 → ["ab longwordxyz", "cd"]
         // "ab longwordxyz" (15) > rest_w (5), re-wrap → ["ab lo", "ngwor", "dxyz"]
         let lines2_str = lines2.join("|");
-        assert!(lines2.iter().all(|l| UnicodeWidthStr::width(l.as_str()) <= 15));
-        assert!(lines2_str.contains("ab lo"), "expected re-wrap: {lines2_str}");
+        assert!(lines2
+            .iter()
+            .all(|l| UnicodeWidthStr::width(l.as_str()) <= 15));
+        assert!(
+            lines2_str.contains("ab lo"),
+            "expected re-wrap: {lines2_str}"
+        );
     }
 
     #[test]

@@ -97,7 +97,8 @@ fn handle_form_input(state: &mut AppState, panel: &mut Panel, c: char) -> FormAc
         // receives the current value without requiring cmd_name on the panel.
         if panel.id == "login-key" {
             if let Some(flow) = state.login_flow_mut() {
-                flow.key.clone_from(panel.form_values.get("key").unwrap_or(&String::new()));
+                flow.key
+                    .clone_from(panel.form_values.get("key").unwrap_or(&String::new()));
             }
         }
         return A::KeepOpen;
@@ -190,11 +191,7 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
                 .get("provider")
                 .cloned()
                 .unwrap_or_else(|| state.active_provider());
-            let key = panel
-                .form_values
-                .get("key")
-                .cloned()
-                .unwrap_or_default();
+            let key = panel.form_values.get("key").cloned().unwrap_or_default();
             A::Submit(Some(crate::Event::SubmitKey { provider, key }))
         }
         // Intercept FormSubmit for login-key: emit SubmitKey directly instead of
@@ -210,11 +207,7 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
                 .get("provider")
                 .cloned()
                 .unwrap_or_else(|| state.active_provider());
-            let key = panel
-                .form_values
-                .get("key")
-                .cloned()
-                .unwrap_or_default();
+            let key = panel.form_values.get("key").cloned().unwrap_or_default();
             A::Submit(Some(crate::Event::SubmitKey { provider, key }))
         }
         _ => route_form_submit(panel),

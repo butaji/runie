@@ -24,7 +24,7 @@ use runie_testing::{allow_all_gate, capture_events, mock_provider, RecordingSkil
 async fn test_agent_loop_single_word_echo_completes_once() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("hello").build();
+    let cmd = agent_cmd("hello").build();
     let (events, emit) = capture_events();
     run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
         .await
@@ -55,7 +55,7 @@ async fn test_agent_loop_single_word_echo_completes_once() {
 async fn test_agent_loop_simple_response() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("Hello World").build();
+    let cmd = agent_cmd("Hello World").build();
     let (events, emit) = capture_events();
     run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
         .await
@@ -76,7 +76,7 @@ async fn test_agent_loop_simple_response() {
 async fn test_agent_loop_with_tool_call() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("list files").build();
+    let cmd = agent_cmd("list files").build();
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
@@ -102,7 +102,7 @@ async fn test_agent_loop_with_tool_call() {
 async fn test_agent_loop_with_native_tool_call_events() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("run native tool").build();
+    let cmd = agent_cmd("run native tool").build();
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
@@ -117,7 +117,10 @@ async fn test_agent_loop_with_native_tool_call_events() {
 
     let tool_starts = count_events(&events, |e| matches!(e, Event::ToolStart { .. }));
     let tool_ends = count_events(&events, |e| matches!(e, Event::ToolEnd { .. }));
-    let bash_calls = count_events(&events, |e| matches!(e, Event::ToolStart { name, .. } if name == "bash"));
+    let bash_calls = count_events(
+        &events,
+        |e| matches!(e, Event::ToolStart { name, .. } if name == "bash"),
+    );
 
     assert_eq!(tool_starts, 1, "expected one tool start");
     assert_eq!(tool_starts, tool_ends);
@@ -128,7 +131,7 @@ async fn test_agent_loop_with_native_tool_call_events() {
 async fn test_agent_loop_respects_max_iterations() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("loop").build();
+    let cmd = agent_cmd("loop").build();
     let (events, emit) = capture_events();
     run_agent_turn(&provider, &cmd, emit, 3, allow_all_gate())
         .await
@@ -140,7 +143,7 @@ async fn test_agent_loop_respects_max_iterations() {
 async fn test_agent_loop_events_have_correct_id() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("test").id("req.42").build();
+    let cmd = agent_cmd("test").id("req.42").build();
     let (events, emit) = capture_events();
     run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
         .await
@@ -163,7 +166,7 @@ async fn test_agent_loop_events_have_correct_id() {
 
 #[test]
 fn read_only_excludes_write_tools() {
-        let cmd = agent_cmd("test").read_only(true).build();
+    let cmd = agent_cmd("test").read_only(true).build();
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
         runie_core::message::Role::System => msgs[0].content().clone(),
@@ -186,7 +189,7 @@ fn read_only_excludes_write_tools() {
 
 #[test]
 fn read_write_includes_all_tools() {
-        let cmd = agent_cmd("test").id("req.1").build();
+    let cmd = agent_cmd("test").id("req.1").build();
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0].role {
         runie_core::message::Role::System => msgs[0].content().clone(),
@@ -207,7 +210,7 @@ fn read_write_includes_all_tools() {
 async fn agent_tool_event_carries_mock_output() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("list files").build();
+    let cmd = agent_cmd("list files").build();
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
@@ -237,7 +240,7 @@ async fn agent_tool_event_carries_mock_output() {
 async fn tool_call_event_matches_mock_output() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("list files").build();
+    let cmd = agent_cmd("list files").build();
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
@@ -296,14 +299,17 @@ fn tool_call_hook_receives_input() {
 async fn text_turn_emits_turn_complete() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("plain hello").id("req.text").build();
+    let cmd = agent_cmd("plain hello").id("req.text").build();
     let (events, emit) = capture_events();
     run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate())
         .await
         .unwrap();
 
     let turn_complete_count = count_events(&events, |e| matches!(e, Event::TurnComplete { .. }));
-    assert_eq!(turn_complete_count, 1, "text-only turn must emit TurnComplete");
+    assert_eq!(
+        turn_complete_count, 1,
+        "text-only turn must emit TurnComplete"
+    );
     let done_count = count_events(&events, |e| matches!(e, Event::Done { .. }));
     assert_eq!(done_count, 1, "turn must emit Done");
 }
@@ -313,7 +319,7 @@ async fn text_turn_emits_turn_complete() {
 async fn tool_turn_emits_turn_complete() {
     let _mock_guard = ensure_mock_provider().await;
     let provider = mock_provider();
-        let cmd = agent_cmd("list files").id("req.tools").build();
+    let cmd = agent_cmd("list files").id("req.tools").build();
     let (events, emit) = capture_events();
     run_agent_turn_with_skills(
         &provider,
@@ -351,7 +357,11 @@ impl Provider for ErrorProvider {
 #[tokio::test]
 async fn stream_error_emits_thought_done() {
     let provider = ErrorProvider;
-        let cmd = agent_cmd("error").id("req.err").provider("error").model("error").build();
+    let cmd = agent_cmd("error")
+        .id("req.err")
+        .provider("error")
+        .model("error")
+        .build();
     let (events, emit) = capture_events();
     let result = run_agent_turn(&provider, &cmd, emit, 5, allow_all_gate()).await;
 

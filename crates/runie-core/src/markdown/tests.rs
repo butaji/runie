@@ -42,7 +42,9 @@ fn parse_markdown_handles_blockquote() {
     let blocks = parse_markdown(text);
     assert_eq!(blocks.len(), 1);
     // Count text inlines to verify blockquote content
-    assert!(matches!(&blocks[0], CodeBlock::Blockquote(inlines) if inlines.iter().any(|i| matches!(i, MdInline::Text(_)))));
+    assert!(
+        matches!(&blocks[0], CodeBlock::Blockquote(inlines) if inlines.iter().any(|i| matches!(i, MdInline::Text(_))))
+    );
 }
 
 #[test]

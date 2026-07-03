@@ -52,3 +52,9 @@ impl From<&TurnState> for AgentState {
 1. ✅ **Unit tests** — `AgentState::from(&turn_state)` is used for all projections.
 2. ✅ **E2E tests** — Replay produces identical `AgentState`.
 3. ✅ **Live tmux tests** — Run a turn and verify UI state matches turn state.
+
+## Follow-up required
+
+The 2026-07-03 architecture/code review found that `AgentState` is still mutated directly in production code, specifically `crates/runie-tui/src/ui_actor/mod.rs:552` and `crates/runie-core/src/update/system.rs:117`.
+
+See `tasks/enforce-agentstate-projection-no-direct-mutation.md` for the remaining work.

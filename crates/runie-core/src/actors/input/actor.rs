@@ -82,12 +82,15 @@ impl InputActor {
     /// Returns a `Result` to allow callers to handle spawn failures gracefully.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> anyhow::Result<(RactorInputHandle, ractor::ActorCell, tokio::task::JoinHandle<()>)> {
+    ) -> anyhow::Result<(
+        RactorInputHandle,
+        ractor::ActorCell,
+        tokio::task::JoinHandle<()>,
+    )> {
         let actor = Self;
-        let (handle, join, cell) =
-            spawn_ractor(None, actor, bus)
-                .await
-                .map_err(|e| anyhow::anyhow!("InputActor spawn failed: {}", e))?;
+        let (handle, join, cell) = spawn_ractor(None, actor, bus)
+            .await
+            .map_err(|e| anyhow::anyhow!("InputActor spawn failed: {}", e))?;
         Ok((handle, cell, join))
     }
 }

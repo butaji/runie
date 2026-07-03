@@ -290,12 +290,11 @@ mod tests {
     // Layer 1: command_form_has_handler
     #[test]
     fn command_form_provides_handler() {
-        let cmd = Command::new("save")
-            .form_with_handler(
-                "Save",
-                |f| f.field("Name", "session", "name"),
-                |_, _| CommandResult::None,
-            );
+        let cmd = Command::new("save").form_with_handler(
+            "Save",
+            |f| f.field("Name", "session", "name"),
+            |_, _| CommandResult::None,
+        );
         assert!(cmd.form_handler.is_some());
     }
 

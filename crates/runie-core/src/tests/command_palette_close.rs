@@ -17,7 +17,10 @@ fn state_with_open_palette() -> AppState {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active { kind: DialogKind::CommandPalette, .. })
+            Some(DialogState::Active {
+                kind: DialogKind::CommandPalette,
+                ..
+            })
         ),
         "command palette should be open"
     );
@@ -36,7 +39,11 @@ fn message_result_closes_command_palette() {
         "command palette should be closed after Message result"
     );
     assert!(
-        state.session().messages.iter().any(|m| m.content().contains("Test message")),
+        state
+            .session()
+            .messages
+            .iter()
+            .any(|m| m.content().contains("Test message")),
         "message should be added to session"
     );
 }
@@ -59,10 +66,7 @@ fn warning_result_closes_command_palette() {
 fn event_result_closes_command_palette() {
     let mut state = state_with_open_palette();
 
-    process_command_result(
-        &mut state,
-        CommandResult::Event(crate::Event::Reset),
-    );
+    process_command_result(&mut state, CommandResult::Event(crate::Event::Reset));
 
     assert!(
         state.open_dialog().is_none(),
@@ -98,7 +102,10 @@ fn open_dialog_result_pushes_to_back_stack() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active { kind: DialogKind::Settings, .. })
+            Some(DialogState::Active {
+                kind: DialogKind::Settings,
+                ..
+            })
         ),
         "settings dialog should be open"
     );
@@ -122,7 +129,10 @@ fn open_panel_stack_result_pushes_to_back_stack() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active { kind: DialogKind::Generic, .. })
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                ..
+            })
         ),
         "generic panel stack should be open"
     );
@@ -144,7 +154,10 @@ fn non_palette_dialog_unchanged_by_message_result() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active { kind: DialogKind::Settings, .. })
+            Some(DialogState::Active {
+                kind: DialogKind::Settings,
+                ..
+            })
         ),
         "settings dialog should be open"
     );
@@ -155,7 +168,10 @@ fn non_palette_dialog_unchanged_by_message_result() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active { kind: DialogKind::Settings, .. })
+            Some(DialogState::Active {
+                kind: DialogKind::Settings,
+                ..
+            })
         ),
         "settings dialog should remain open after Message result"
     );
@@ -190,7 +206,10 @@ fn scroll_resets_when_palette_closes() {
 
     process_command_result(&mut state, CommandResult::Message("test".into()));
 
-    assert_eq!(state.view.scroll, 0, "scroll should be reset when palette closes");
+    assert_eq!(
+        state.view.scroll, 0,
+        "scroll should be reset when palette closes"
+    );
 }
 
 /// Layer 1: View dirty flag is set when palette closes.
@@ -201,5 +220,8 @@ fn view_marked_dirty_when_palette_closes() {
 
     process_command_result(&mut state, CommandResult::Message("test".into()));
 
-    assert!(state.view.dirty, "view should be marked dirty when palette closes");
+    assert!(
+        state.view.dirty,
+        "view should be marked dirty when palette closes"
+    );
 }

@@ -133,9 +133,7 @@ impl LeaderHandle {
         self.io_cell.stop(None);
 
         // Collect all join handles for parallel await.
-        let mut all_joins = Vec::with_capacity(
-            self.joins.as_ref().map_or(0, |v| v.len()) + 2,
-        );
+        let mut all_joins = Vec::with_capacity(self.joins.as_ref().map_or(0, |v| v.len()) + 2);
 
         if let Some(joins) = self.joins.take() {
             all_joins.extend(joins);
@@ -162,7 +160,11 @@ impl LeaderHandle {
         .await;
 
         if result.is_err() {
-            tracing::warn!("Leader shutdown timed out after {:?}, {} actors may still be running", timeout_duration, self.joins.as_ref().map_or(0, |v| v.len()));
+            tracing::warn!(
+                "Leader shutdown timed out after {:?}, {} actors may still be running",
+                timeout_duration,
+                self.joins.as_ref().map_or(0, |v| v.len())
+            );
         }
     }
 

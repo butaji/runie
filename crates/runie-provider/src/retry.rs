@@ -16,19 +16,13 @@ pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
     use reqwest_eventsource::Error as SseErr;
     match err {
         // UTF-8 decode error — wrap as source
-        SseErr::Utf8(_) => {
-            ProviderError::Source(anyhow::anyhow!("{err}"))
-        }
+        SseErr::Utf8(_) => ProviderError::Source(anyhow::anyhow!("{err}")),
         // Parser error — wrap as source
-        SseErr::Parser(_) => {
-            ProviderError::Source(anyhow::anyhow!("{err}"))
-        }
+        SseErr::Parser(_) => ProviderError::Source(anyhow::anyhow!("{err}")),
         // HTTP-level error from reqwest
         SseErr::Transport(e) => ProviderError::from_reqwest(e),
         // Content-type mismatch
-        SseErr::InvalidContentType(_, _) => {
-            ProviderError::Source(anyhow::anyhow!("{err}"))
-        }
+        SseErr::InvalidContentType(_, _) => ProviderError::Source(anyhow::anyhow!("{err}")),
         // HTTP status code error (5xx, 429, 401, 403) — use shared classifier
         SseErr::InvalidStatusCode(status, _) => {
             let code = status.as_u16();
@@ -36,9 +30,7 @@ pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
                 .unwrap_or_else(|| ProviderError::Source(anyhow::anyhow!("{err}")))
         }
         // Invalid Last-Event-ID header
-        SseErr::InvalidLastEventId(_) => {
-            ProviderError::Source(anyhow::anyhow!("{err}"))
-        }
+        SseErr::InvalidLastEventId(_) => ProviderError::Source(anyhow::anyhow!("{err}")),
         // Stream ended unexpectedly
         SseErr::StreamEnded => {
             ProviderError::Source(anyhow::anyhow!("SSE stream ended unexpectedly"))
@@ -85,10 +77,7 @@ where
 /// - `initial_delay` → `with_min_delay()`
 /// - `max_delay` → `with_max_delay()`
 /// - `multiplier` → `with_factor()`
-pub async fn with_retry_config<F, Fut, T>(
-    f: F,
-    config: &RetryConfig,
-) -> Result<T, Error>
+pub async fn with_retry_config<F, Fut, T>(f: F, config: &RetryConfig) -> Result<T, Error>
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<T, Error>>,
@@ -134,9 +123,9 @@ mod tests {
     #[test_case(500, "Server(500)", true)]
     #[test_case(502, "Server(502)", true)]
     #[test_case(503, "Server(503)", true)]
-    #[test_case(400, "None", false)]  // 4xx other than 401/403/429 returns None
+    #[test_case(400, "None", false)] // 4xx other than 401/403/429 returns None
     #[test_case(404, "None", false)]
-    #[test_case(418, "None", false)]  // Additional 4xx cases
+    #[test_case(418, "None", false)] // Additional 4xx cases
     fn classify_http_status(code: u16, _variant: &str, retryable: bool) {
         let err = ProviderError::classify_http_status(code);
         match code {
@@ -178,7 +167,12 @@ mod tests {
         let test_cases = [
             (401, ProviderError::Auth(401)),
             (403, ProviderError::Auth(403)),
-            (429, ProviderError::RateLimit { retry_after_secs: None }),
+            (
+                429,
+                ProviderError::RateLimit {
+                    retry_after_secs: None,
+                },
+            ),
             (500, ProviderError::Server(500, String::new())),
             (502, ProviderError::Server(502, String::new())),
             (503, ProviderError::Server(503, String::new())),
@@ -202,7 +196,10 @@ mod tests {
                 (ProviderError::Server(exp_code, _), ProviderError::Server(cls_code, _)) => {
                     assert_eq!(exp_code, cls_code);
                 }
-                _ => panic!("Unexpected mismatch for {}: expected {:?}, got {:?}", code, expected, classified),
+                _ => panic!(
+                    "Unexpected mismatch for {}: expected {:?}, got {:?}",
+                    code, expected, classified
+                ),
             }
         }
     }

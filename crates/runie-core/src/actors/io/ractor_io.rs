@@ -115,7 +115,14 @@ impl RactorIoActor {
     /// Spawn a `RactorIoActor` on the given event bus.
     pub async fn spawn(
         bus: EventBus<Event>,
-    ) -> Result<(RactorIoHandle, ractor::ActorCell, tokio::task::JoinHandle<()>), ractor::SpawnErr> {
+    ) -> Result<
+        (
+            RactorIoHandle,
+            ractor::ActorCell,
+            tokio::task::JoinHandle<()>,
+        ),
+        ractor::SpawnErr,
+    > {
         let actor = Self::new(bus.clone());
         let (handle, join, cell) = spawn_ractor(None, actor, bus).await?;
         Ok((RactorIoHandle::new(handle), cell, join))
@@ -176,7 +183,9 @@ impl RactorIoActor {
             let cwd = std::env::current_dir().unwrap_or_default();
             let env = std::collections::HashMap::new();
             run_bash_sync(&cmd, &cwd, &env, shell).output
-        }).await {
+        })
+        .await
+        {
             Ok(out) => out,
             Err(e) => format!("Error running command: {}", e),
         };
@@ -353,4 +362,3 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
 
 #[cfg(test)]
 mod tests;
-

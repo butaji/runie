@@ -7,8 +7,8 @@ pub mod emit_approval_sink;
 pub mod headless;
 pub mod headless_helper;
 pub mod safety;
-pub mod streaming_parser;
 pub mod stream_response;
+pub mod streaming_parser;
 pub mod subagent;
 pub mod think_filter;
 pub mod tool;
@@ -17,10 +17,8 @@ pub mod tool_runner;
 pub mod truncate;
 pub mod turn;
 
-pub use actor::{
-    spawn_ractor_agent, AgentMsg, RactorAgentHandle,
-};
 pub use actor::leader::{AgentActorFactoryImpl, LeaderAgentHandleImpl};
+pub use actor::{spawn_ractor_agent, AgentMsg, RactorAgentHandle};
 pub use headless::{
     run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult,
 };

@@ -21,7 +21,10 @@ struct KeybindingsYaml {
 pub fn default_keybindings() -> HashMap<String, String> {
     let yaml_content = include_str!("../../resources/keybindings/default.yaml");
     let data: KeybindingsYaml = serde_yaml::from_str(yaml_content).unwrap_or_else(|e| {
-        tracing::warn!("Failed to parse default keybindings YAML: {}, using empty map", e);
+        tracing::warn!(
+            "Failed to parse default keybindings YAML: {}, using empty map",
+            e
+        );
         KeybindingsYaml { bindings: vec![] }
     });
 

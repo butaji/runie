@@ -21,12 +21,12 @@ use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
-use runie_provider::BuiltProviderFactory;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool::{
     assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
 };
 use runie_core::tool::{ToolContext, ToolOutput};
+use runie_provider::BuiltProviderFactory;
 use std::sync::Arc;
 
 /// Run a headless turn with a fresh runtime, a PermissionGate, and an ApprovalSink.
@@ -223,7 +223,9 @@ impl<'a> StreamingHandler for HeadlessHandler<'a> {
     fn on_text_delta(&mut self, delta: String) {
         self.shared.push_text(&delta);
         self.content.push_str(&delta);
-        self.emit(HeadlessEvent::Text { data: delta.clone() });
+        self.emit(HeadlessEvent::Text {
+            data: delta.clone(),
+        });
         if let Some(cb) = self.options.on_chunk.as_mut() {
             cb(&delta);
         }
@@ -289,7 +291,9 @@ async fn stream_headless_response(
             }
             ProviderEvent::Error(e) => {
                 let msg = format!("{:?}", e);
-                handler.emit(HeadlessEvent::Error { message: msg.clone() });
+                handler.emit(HeadlessEvent::Error {
+                    message: msg.clone(),
+                });
                 handler.on_error(msg)?;
                 return Ok(handler.shared.into_response());
             }
@@ -324,7 +328,6 @@ async fn stream_headless_response(
 
     Ok(handler.shared.into_response())
 }
-
 
 async fn execute_headless_tools(
     tools: &[ParsedToolCall],

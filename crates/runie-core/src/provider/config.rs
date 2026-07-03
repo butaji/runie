@@ -26,8 +26,7 @@ static TEST_CONFIG_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// This avoids thread-local conflicts when tests run in parallel on worker threads.
 pub fn generate_test_config_path(prefix: &str) -> PathBuf {
     let n = TEST_CONFIG_COUNTER.fetch_add(1, Ordering::SeqCst);
-    std::env::temp_dir()
-        .join(format!("{}_{}_{}.toml", prefix, std::process::id(), n))
+    std::env::temp_dir().join(format!("{}_{}_{}.toml", prefix, std::process::id(), n))
 }
 
 /// Override the config file path for the current thread (tests only).

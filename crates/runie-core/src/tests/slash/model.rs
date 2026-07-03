@@ -195,7 +195,10 @@ fn provider_dialog_shows_edit_models_action() {
 fn save_creates_session_file() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         type_str(&mut state, "hello world");
@@ -222,7 +225,10 @@ fn save_creates_session_file() {
 fn save_preserves_messages_provider_model() {
     with_env(|env| {
         let store = tmp_store();
-        env.set("RUNIE_SESSIONS_DIR", store.dir().to_path_buf().to_str().unwrap_or("/tmp"));
+        env.set(
+            "RUNIE_SESSIONS_DIR",
+            store.dir().to_path_buf().to_str().unwrap_or("/tmp"),
+        );
 
         let mut state = fresh_state();
         state.config.current_provider = "openai".to_string();

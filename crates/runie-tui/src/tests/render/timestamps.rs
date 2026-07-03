@@ -1,8 +1,8 @@
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::labels::format_timestamp;
 use runie_core::AppState;
 use runie_core::Part;
-use runie_core::labels::format_timestamp;
 
 #[test]
 fn user_message_has_border_bg_color() {

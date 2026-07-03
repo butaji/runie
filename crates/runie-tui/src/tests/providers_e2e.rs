@@ -7,8 +7,7 @@ use super::*;
 use runie_core::Event;
 
 fn clean_config() {
-    let path =
-        runie_core::provider::config::generate_test_config_path("runie_providers_e2e");
+    let path = runie_core::provider::config::generate_test_config_path("runie_providers_e2e");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path);
 }

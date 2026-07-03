@@ -57,7 +57,9 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
     // Publish ConfigLoaded BEFORE UiActor::run() starts.
     // It lands in the bus_rx buffer.
     let config = runie_core::config::Config::default();
-    bus.publish(Event::ConfigLoaded { config: Box::new(config) });
+    bus.publish(Event::ConfigLoaded {
+        config: Box::new(config),
+    });
 
     let mut ui = crate::ui_actor::UiActor::with_external_bus_rx(
         state,
@@ -181,7 +183,10 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
             Ok(Err(_)) | Err(_) => break,
         }
     }
-    assert!(found, "UiActor should process events even with empty initial buffer");
+    assert!(
+        found,
+        "UiActor should process events even with empty initial buffer"
+    );
 
     // Shut down.
     drop(shutdown_rx);
@@ -238,7 +243,10 @@ async fn uiactor_drain_loop_quits_before_first_snapshot() {
 
     // If drain loop works, UiActor should exit within 200ms (not waiting forever).
     let result = tokio::time::timeout(std::time::Duration::from_millis(200), ui_handle).await;
-    assert!(result.is_ok(), "UiActor should exit after draining Quit event");
+    assert!(
+        result.is_ok(),
+        "UiActor should exit after draining Quit event"
+    );
 
     let _ = leader.shutdown().await;
 }

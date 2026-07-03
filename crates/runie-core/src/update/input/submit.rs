@@ -5,8 +5,8 @@
 //! Input state mutations go through `InputActor`; projection updates via
 //! `Event::InputChanged`.
 
-use crate::actors::{IoMsg, SessionMsg, TurnMsg};
 use crate::actors::turn::messages::MessageSource;
+use crate::actors::{IoMsg, SessionMsg, TurnMsg};
 use crate::message::{now, ChatMessage, Role};
 use crate::model::state::AgentState;
 use crate::model::AppState;
@@ -197,7 +197,10 @@ impl AppState {
         if let Some(ref h) = handles {
             // Production mode: send to IoActor (non-blocking)
             let command = command.to_owned();
-            let _ = h.io.try_send(IoMsg::RunBash { command, shell: true });
+            let _ = h.io.try_send(IoMsg::RunBash {
+                command,
+                shell: true,
+            });
             return;
         }
         // Test-only fallback: no actor handles, so we must run synchronously.

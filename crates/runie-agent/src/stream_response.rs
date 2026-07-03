@@ -227,9 +227,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(result.text, "I'll read.");
         assert_eq!(result.tool_calls.len(), 1);
@@ -249,9 +256,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(result.tool_calls.len(), 1);
         assert_eq!(result.tool_calls[0].name, "bash");
@@ -273,9 +287,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(result.tool_calls.len(), 1);
         assert_eq!(result.tool_calls[0].name, "list_dir");
@@ -300,9 +321,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         // "Let me " + "done" should be text, inline thinking stripped
         assert!(result.text.contains("Let me"));
@@ -323,9 +351,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert!(result.text.contains("text"));
         assert!(!result.text.contains("thinking"));
@@ -345,9 +380,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         // Structured thinking should not appear in text output
         assert!(!result.text.contains("reasoning"));
@@ -365,9 +407,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         // Should complete without error; thinking stripped
         assert!(!result.text.contains("unclosed"));
@@ -386,9 +435,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(result.text, "Hello world!");
     }
@@ -407,9 +463,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert!(result.text.contains("rest"));
         assert!(!result.text.contains("first"));
@@ -428,9 +491,16 @@ mod tests {
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&provider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new())
-            .await
-            .unwrap();
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
 
         assert!(result.text.contains("answer"));
         assert!(!result.text.contains("reasoning"));
@@ -448,14 +518,23 @@ mod tests {
             fn generate(
                 &self,
                 _: Vec<ChatMessage>,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>,
-            > {
-                Box::pin(futures::stream::iter([Err(anyhow::anyhow!("provider error"))]))
+            ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>>
+            {
+                Box::pin(futures::stream::iter([Err(anyhow::anyhow!(
+                    "provider error"
+                ))]))
             }
         }
         let emit: EmitFn = Arc::new(|_| ());
-        let result = stream_response(&ErrorProvider, "cmd", &[], vec![], emit, tokio_util::sync::CancellationToken::new()).await;
+        let result = stream_response(
+            &ErrorProvider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "provider error");
     }

@@ -54,8 +54,7 @@ fn search_item_has_git_status_field() {
 #[test]
 fn build_search_item_creates_valid_item() {
     let modified_status = GitStatus::WT_MODIFIED;
-    let item =
-        build_search_item("src/lib.rs".to_string(), Some(modified_status), 0.95);
+    let item = build_search_item("src/lib.rs".to_string(), Some(modified_status), 0.95);
     assert_eq!(item.path, "src/lib.rs");
     assert_eq!(item.score, 0.95);
     assert_eq!(item.git_status, Some("modified".to_string()));
@@ -105,7 +104,11 @@ fn search_result_serialization() {
 fn query_parser_applies_glob_constraint() {
     let parsed = parse_search_query("*.rs");
     let has_glob = parsed.globs().eq(["*.rs"]);
-    assert!(has_glob, "Expected glob constraint, got: {:?}", parsed.constraints);
+    assert!(
+        has_glob,
+        "Expected glob constraint, got: {:?}",
+        parsed.constraints
+    );
 }
 
 #[test]

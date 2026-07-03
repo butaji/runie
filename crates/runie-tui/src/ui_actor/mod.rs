@@ -16,8 +16,8 @@ pub use crate::ui_actor_agent_handles::{AgentActorHandle, AgentHandleBox, Leader
 use std::collections::HashMap;
 use std::time::Duration;
 
-use runie_agent::AgentCommand;
 use runie_agent::truncate::TruncationPolicy;
+use runie_agent::AgentCommand;
 use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::actors::RactorInputHandle;
 use runie_core::bus::{EventBus, Receiver};
@@ -192,13 +192,11 @@ impl UiActor {
     /// Use this when you need to subscribe to the bus BEFORE `Leader::start_with_bus()`
     /// returns (so that UiActor receives initial facts like `ConfigLoaded`).
     /// Create the bus, subscribe UiActor, call `start_with_bus()`, then call this method.
-    pub async fn run_with_external_rx(
-        mut self,
-        submit_rx: tokio::sync::mpsc::Receiver<Event>,
-    ) {
-        let rx = self._bus_rx.take().expect(
-            "run_with_external_rx requires UiActor created with with_external_bus_rx",
-        );
+    pub async fn run_with_external_rx(mut self, submit_rx: tokio::sync::mpsc::Receiver<Event>) {
+        let rx = self
+            ._bus_rx
+            .take()
+            .expect("run_with_external_rx requires UiActor created with with_external_bus_rx");
         self.run(rx, submit_rx).await;
     }
 
@@ -214,7 +212,8 @@ impl UiActor {
         mut rx: Receiver<Event>,
         mut submit_rx: tokio::sync::mpsc::Receiver<Event>,
     ) {
-        let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(EFFECT_FORWARDER_CHANNEL_CAPACITY);
+        let (effect_tx, effect_rx) =
+            tokio::sync::mpsc::channel::<Event>(EFFECT_FORWARDER_CHANNEL_CAPACITY);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
         // Drain all buffered bootstrap events before sending the first snapshot.
@@ -289,7 +288,11 @@ impl UiActor {
     /// Handle a single event and publish a fresh snapshot.
     /// Returns `true` when the actor should shut down.
     #[cfg(test)]
-    pub(crate) async fn handle_event(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
+    pub(crate) async fn handle_event(
+        &mut self,
+        evt: Event,
+        effect_tx: tokio::sync::mpsc::Sender<Event>,
+    ) -> bool {
         let quit = self.handle_event_inner(evt, effect_tx).await;
         self.publish_snapshot();
         quit
@@ -306,7 +309,11 @@ impl UiActor {
 
     /// Handle a single event without publishing. Returns `true` when the actor
     /// should shut down.
-    pub(crate) async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
+    pub(crate) async fn handle_event_inner(
+        &mut self,
+        evt: Event,
+        effect_tx: tokio::sync::mpsc::Sender<Event>,
+    ) -> bool {
         // Priority quit handling — Ctrl+C / Ctrl+Q always exit, even during active turns.
         if matches!(&evt, Event::Quit | Event::ForceQuit) {
             return true;
@@ -335,12 +342,19 @@ impl UiActor {
         // The content was already delivered to the session via FollowUpDelivered;
         // UiActor should NOT call submit_user_message again (which would emit
         // a duplicate UserMessageSubmitted).
-        if matches!(&evt, Event::FollowUpDelivered { .. } | Event::SteeringDelivered { .. }) {
+        if matches!(
+            &evt,
+            Event::FollowUpDelivered { .. } | Event::SteeringDelivered { .. }
+        ) {
             self.pending_queued_turn = true;
         }
 
-
-        if let Event::TurnStarted { request_id, content, .. } = &evt {
+        if let Event::TurnStarted {
+            request_id,
+            content,
+            ..
+        } = &evt
+        {
             // Guard: prevent duplicate agent spawns if TurnStarted arrives multiple times.
             // prev_turn_active was captured at the top of this function, BEFORE
             // apply_event (inside handle_input_event) updated the projection.
@@ -380,11 +394,13 @@ impl UiActor {
         // FIX: /new aborts the turn and clears the queue. This is called from both
         // handle_event_inner (for Abort from event bus) and dispatch_submit_content
         // (for Abort from CommandResult::Events from /new handler).
-        if matches!(&evt, Event::TurnCompleted | Event::TurnErrored { .. } | Event::Abort) {
+        if matches!(
+            &evt,
+            Event::TurnCompleted | Event::TurnErrored { .. } | Event::Abort
+        ) {
             let is_abort = matches!(&evt, Event::Abort);
             self.clear_turn_state(is_abort).await;
         }
-
 
         false
     }
@@ -555,7 +571,9 @@ impl UiActor {
         if let Some(ref turn_handle) = self.turn_handle {
             if is_abort {
                 // Abort: clear the queue so a new session starts clean.
-                turn_handle.send(runie_core::actors::TurnMsg::ClearQueues).await;
+                turn_handle
+                    .send(runie_core::actors::TurnMsg::ClearQueues)
+                    .await;
             } else {
                 // TurnCompleted: deliver queued messages and start the next turn.
                 // Uses ractor RPC so TurnActor emits FollowUpDelivered/SteeringDelivered

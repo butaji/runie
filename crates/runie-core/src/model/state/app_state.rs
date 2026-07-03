@@ -107,7 +107,9 @@ impl AppState {
         use crate::actors::TurnMsg;
         let handles = self.actor_handles().cloned();
         if let Some(ref h) = handles {
-            let _ = h.turn.try_send(TurnMsg::QueueFollowUp { content: content.clone() });
+            let _ = h.turn.try_send(TurnMsg::QueueFollowUp {
+                content: content.clone(),
+            });
         } else {
             // Mutate authoritative TurnState, then sync to AgentState projection.
             self.turn_state_mut()

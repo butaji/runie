@@ -49,10 +49,7 @@ mod fixtures {
                 "I'll list the files in the current directory.\n".to_owned(),
                 "TOOL:list_dir:.".to_owned(),
             ],
-            tool_call: Some((
-                "list_dir".to_owned(),
-                r#"{"path": "."}"#.to_owned(),
-            )),
+            tool_call: Some(("list_dir".to_owned(), r#"{"path": "."}"#.to_owned())),
         }
     }
 
@@ -63,7 +60,10 @@ mod fixtures {
                 "Let me read that file for you.\n".to_owned(),
                 "TOOL:read_file:README.md".to_owned(),
             ],
-            tool_call: Some(("read_file".to_owned(), r#"{"path": "README.md"}"#.to_owned())),
+            tool_call: Some((
+                "read_file".to_owned(),
+                r#"{"path": "README.md"}"#.to_owned(),
+            )),
         }
     }
 
@@ -153,18 +153,19 @@ mod fixtures {
         Fixture {
             prelude: vec![
                 "I'll list the files in the current directory.\n".to_owned(),
-                r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#.to_owned(),
+                r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#
+                    .to_owned(),
             ],
-            tool_call: Some((
-                "list_dir".to_owned(),
-                r#"{"path": "."}"#.to_owned(),
-            )),
+            tool_call: Some(("list_dir".to_owned(), r#"{"path": "."}"#.to_owned())),
         }
     }
 
     /// Simple echo fixture that echoes back the user's words.
     pub fn echo(input: &str) -> Vec<String> {
-        input.split_whitespace().map(|w| format!("{} ", w)).collect()
+        input
+            .split_whitespace()
+            .map(|w| format!("{} ", w))
+            .collect()
     }
 
     /// Completion response after tool result.
@@ -298,7 +299,9 @@ impl MockProvider {
     /// Create a provider with a deterministic delay sequence for reproducible
     /// tests. The same seed always yields the same delays across calls.
     pub fn with_delay(min_ms: u64, max_ms: u64) -> Self {
-        MockProviderBuilder::new().with_delay(min_ms, max_ms).build()
+        MockProviderBuilder::new()
+            .with_delay(min_ms, max_ms)
+            .build()
     }
 
     /// Create a provider with an explicit seed for deterministic delays.
@@ -370,7 +373,11 @@ fn detect_fixture(input: &str) -> Option<Fixture> {
 }
 
 /// Build response chunks from fixture or echo fallback.
-fn response_from_fixture(fixture: Option<Fixture>, user_input: &str, echo_fallback: bool) -> Vec<String> {
+fn response_from_fixture(
+    fixture: Option<Fixture>,
+    user_input: &str,
+    echo_fallback: bool,
+) -> Vec<String> {
     if let Some(f) = fixture {
         return f.prelude;
     }
@@ -642,11 +649,15 @@ mod tests {
     #[test]
     fn mock_provider_builder_creates_list_dir_fixture() {
         let provider = MockProviderBuilder::new().list_dir().build();
-        let chunks = response_from_fixture(provider.fixture.clone(), "hello", provider.echo_fallback);
-        assert_eq!(chunks, vec![
-            "I'll list the files in the current directory.\n".to_owned(),
-            "TOOL:list_dir:.".to_owned()
-        ]);
+        let chunks =
+            response_from_fixture(provider.fixture.clone(), "hello", provider.echo_fallback);
+        assert_eq!(
+            chunks,
+            vec![
+                "I'll list the files in the current directory.\n".to_owned(),
+                "TOOL:list_dir:.".to_owned()
+            ]
+        );
     }
 
     #[test]

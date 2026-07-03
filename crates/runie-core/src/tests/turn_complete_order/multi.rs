@@ -45,15 +45,17 @@ fn duplicate_turn_complete_events() -> Vec<Event> {
             id: "".to_string(),
             duration_secs: 0.5,
             output: "a".into(),
-        
-        input: None,},
+
+            input: None,
+        },
         crate::Event::Response {
             id: "req.0".into(),
             content: "Hello".into(),
-        
-        role: String::new(),
-        timestamp: 0.0,
-        provider: String::new(),},
+
+            role: String::new(),
+            timestamp: 0.0,
+            provider: String::new(),
+        },
         crate::Event::TurnComplete {
             id: "req.0".into(),
             duration_secs: 1.0,
@@ -104,15 +106,17 @@ fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -120,10 +124,11 @@ fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
     state.update(crate::Event::Response {
         id: "req.1".into(),
         content: "Delayed".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -151,15 +156,17 @@ fn turn_complete_is_last_when_error_after_turn_complete() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -194,15 +201,17 @@ fn turn_complete_is_last_when_response_after_done() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -211,10 +220,11 @@ fn turn_complete_is_last_when_response_after_done() {
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "world".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
@@ -241,15 +251,17 @@ fn turn_complete_is_last_when_thinking_after_done() {
         id: "".to_string(),
         duration_secs: 0.5,
         output: "a".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
@@ -279,15 +291,17 @@ fn run_turn(state: &mut AppState, id: &str, tool_name: &str, agent_content: &str
         id: "".to_string(),
         duration_secs: 0.3,
         output: "x".into(),
-    
-        input: None,});
+
+        input: None,
+    });
     state.update(crate::Event::Response {
         id: id.into(),
         content: agent_content.into(),
-    
+
         role: String::new(),
         timestamp: 0.0,
-        provider: String::new(),});
+        provider: String::new(),
+    });
     state.update(crate::Event::TurnComplete {
         id: id.into(),
         duration_secs: 1.0,

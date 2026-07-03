@@ -34,8 +34,7 @@ impl LeaderAgentHandle for MockAgentHandle {
     fn run(
         &self,
         _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
-    {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         self.run_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Box::pin(async {})
@@ -138,9 +137,7 @@ async fn ctrl_s_aborts_during_turn() {
     ui.state.agent_state_mut().turn_active = true;
 
     // Ctrl+S should NOT return true (it's an abort, not a quit)
-    let quit = ui
-        .handle_event_inner(Event::Abort, effect_tx.clone())
-        .await;
+    let quit = ui.handle_event_inner(Event::Abort, effect_tx.clone()).await;
     assert!(!quit, "Abort event must NOT return true (it's not a quit)");
 
     // The turn should be aborted (turn_active cleared)
@@ -163,8 +160,6 @@ async fn abort_during_idle() {
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
     // No active turn — Abort should not quit
-    let quit = ui
-        .handle_event_inner(Event::Abort, effect_tx.clone())
-        .await;
+    let quit = ui.handle_event_inner(Event::Abort, effect_tx.clone()).await;
     assert!(!quit, "Abort event must not return true even in idle state");
 }

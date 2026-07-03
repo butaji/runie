@@ -76,8 +76,7 @@ pub(crate) fn truncate_args(args: &str) -> String {
         return args.to_owned();
     }
     // textwrap::wrap returns lines; take the first line and append '…'.
-    let opt = Options::new(ARGS_TRUNCATE_WIDTH)
-        .word_splitter(WordSplitter::NoHyphenation);
+    let opt = Options::new(ARGS_TRUNCATE_WIDTH).word_splitter(WordSplitter::NoHyphenation);
     let lines = textwrap::wrap(args, opt);
     let first = lines.first().map(|s| s.as_ref()).unwrap_or(args);
     if first.len() < args.len() {

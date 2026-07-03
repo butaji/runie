@@ -79,7 +79,8 @@ impl ProviderFactory for MockFactory {
 
     async fn validate_key(&self, _base_url: &str, _api_key: &str) -> anyhow::Result<Vec<String>> {
         let result = self.validate_result.lock().unwrap().take();
-        result.expect("mock validate result not configured")
+        result
+            .expect("mock validate result not configured")
             .map_err(anyhow::Error::msg)
     }
 

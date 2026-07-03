@@ -301,8 +301,11 @@ mod tests {
         std::fs::write(nested.join("test.rs"), "content").unwrap();
 
         let result = run_find("*.rs", temp_dir.path(), 100);
-        assert!(result.contains("test.rs") || result.contains("src/lib/test.rs"),
-            "Got: {}", result);
+        assert!(
+            result.contains("test.rs") || result.contains("src/lib/test.rs"),
+            "Got: {}",
+            result
+        );
     }
 
     #[tokio::test]
