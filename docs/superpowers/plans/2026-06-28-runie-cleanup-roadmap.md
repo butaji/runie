@@ -18,7 +18,9 @@ Recent closure: add-grok-provider-event-translator-and-headless-replay (added Gr
 
 Recent closure: finish-replacing-remaining-custom-helpers-with-crates (deleted `display_width.rs` and `path.rs`; all callers updated to use `unicode_width::UnicodeWidthStr` and `shellexpand`/`path_absolutize` directly; workspace tests pass).
 
-Recent sync: Regenerated `tasks/index.json` from task files. Marked 4 remaining Grok Build comparison tasks as `wontfix` (Grok Build unavailable). Recent sync: Regenerated `tasks/index.json` from task files. Total: 427 done, 26 wontfix, 1 partial, 0 blocked, 10 todo (464 total). Recent closure: add-missing-queue-fact-events (added Event::QueueFollowUpAdded and Event::QueueSteeringAdded; 2026+ workspace tests pass).
+Recent sync: Regenerated `tasks/index.json` from task files. Marked 4 remaining Grok Build comparison tasks as `wontfix` (Grok Build unavailable). Recent sync: Regenerated `tasks/index.json` from task files. Total: 436 done, 26 wontfix, 2 partial, 0 blocked, 1 todo (464 total). Recent closure: add-turn-journal-phases-for-crash-recovery (added TurnPhase enum with TurnStarted, ProviderCalled, ToolRequestsRecorded, ResponseDelta, TurnCommitted, TurnAborted phases; TurnPhaseChanged durable event persisted to JSONL; phase tracking in TurnState with reset on turn end; workspace tests pass).
+
+Recent closure: add-missing-queue-fact-events (added Event::QueueFollowUpAdded and Event::QueueSteeringAdded; TurnActor handlers emit these events; dispatch and projection handlers added; fixed handle_clear_queues to emit QueueAborted for each message; fixed queue_steering_message to use QueueSteering not QueueFollowUp; 2026+ workspace tests pass).
 
 Recent closure: move-tunable-values-from-constants-to-config (added HttpSection, RetrySection, FffSection, and UiSection extensions to Config; 11 unit tests; defaults match previous constants; schema regenerated).
 

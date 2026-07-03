@@ -200,6 +200,14 @@ pub(super) fn handle_tool_start(state: &mut TurnActorState, id: String, name: St
     state.turn_state.tool_started_at = Some(std::time::Instant::now());
     state.turn_state.current_tool_name = Some(name.clone());
     state.turn_state.intermediate_step_count += 1;
+
+    // Emit ToolRequestsRecorded phase on first tool call of this turn.
+    // This enables crash recovery by recording when tool calls were received.
+    if !state.turn_state.tool_requests_recorded {
+        state.turn_state.tool_requests_recorded = true;
+        emit(state, Event::ToolRequestsRecorded { request_id: id.clone() });
+    }
+
     emit(
         state,
         Event::ToolStart {
@@ -222,6 +230,14 @@ pub(super) fn handle_response_delta(state: &mut TurnActorState, id: String, cont
     let was_streaming = state.turn_state.streaming;
     if !was_streaming {
         state.turn_state.streaming = true;
+
+        // Emit ResponseDelta phase when streaming starts.
+        // This enables crash recovery by recording when response streaming began.
+        if !state.turn_state.response_delta_recorded {
+            state.turn_state.response_delta_recorded = true;
+            emit(state, Event::ResponseDeltaStarted { request_id: id.clone() });
+        }
+
         emit(state, Event::StreamStarted { id: id.clone() });
     }
     emit(state, Event::ResponseDelta { id, content });

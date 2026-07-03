@@ -2,6 +2,174 @@
 
 use super::*;
 
+// ── TurnJournalPhase tests ────────────────────────────────────────────────
+
+#[test]
+fn turn_phase_serialization() {
+    // Test TurnPhase roundtrips through JSON
+    let phases = vec![
+        (TurnPhase::TurnStarted, "turnStarted"),
+        (TurnPhase::ProviderCalled, "providerCalled"),
+        (TurnPhase::ToolRequestsRecorded, "toolRequestsRecorded"),
+        (TurnPhase::ResponseDelta, "responseDelta"),
+        (TurnPhase::TurnCommitted, "turnCommitted"),
+        (TurnPhase::TurnAborted, "turnAborted"),
+    ];
+    for (phase, expected) in phases {
+        let json = serde_json::to_string(&phase).unwrap();
+        assert_eq!(json, format!("\"{}\"", expected));
+        let parsed: TurnPhase = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, phase);
+    }
+}
+
+#[test]
+fn durable_turn_phase_changed_roundtrips_through_json() {
+    let durable = DurableCoreEvent::TurnPhaseChanged {
+        phase: TurnPhase::TurnStarted,
+        request_id: "req.1".into(),
+    };
+    let json = serde_json::to_string(&durable).unwrap();
+    let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
+    match parsed {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::TurnStarted);
+            assert_eq!(request_id, "req.1");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
+#[test]
+fn durable_turn_phase_changed_all_phases_roundtrip() {
+    let phases = vec![
+        TurnPhase::TurnStarted,
+        TurnPhase::ProviderCalled,
+        TurnPhase::ToolRequestsRecorded,
+        TurnPhase::ResponseDelta,
+        TurnPhase::TurnCommitted,
+        TurnPhase::TurnAborted,
+    ];
+    for phase in phases {
+        let durable = DurableCoreEvent::TurnPhaseChanged {
+            phase,
+            request_id: "req.test".into(),
+        };
+        let json = serde_json::to_string(&durable).unwrap();
+        let parsed: DurableCoreEvent = serde_json::from_str(&json).unwrap();
+        if let DurableCoreEvent::TurnPhaseChanged { phase: p, .. } = parsed {
+            assert_eq!(p, phase);
+        } else {
+            panic!("Expected TurnPhaseChanged");
+        }
+    }
+}
+
+#[test]
+fn event_turn_started_converts_to_phase_changed() {
+    let event = Event::TurnStarted {
+        id: "t1".into(),
+        request_id: "req.1".into(),
+        content: "hello".into(),
+    };
+    let durable = DurableCoreEvent::try_from_event(&event);
+    assert!(durable.is_some());
+    match durable.unwrap() {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::TurnStarted);
+            assert_eq!(request_id, "req.1");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
+#[test]
+fn event_turn_complete_converts_to_phase_changed() {
+    let event = Event::TurnComplete {
+        id: "t1".into(),
+        duration_secs: 1.0,
+    };
+    let durable = DurableCoreEvent::try_from_event(&event);
+    assert!(durable.is_some());
+    match durable.unwrap() {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::TurnCommitted);
+            assert_eq!(request_id, ""); // Empty for committed phases
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
+#[test]
+fn event_turn_aborted_converts_to_phase_changed() {
+    let event = Event::TurnAborted;
+    let durable = DurableCoreEvent::try_from_event(&event);
+    assert!(durable.is_some());
+    match durable.unwrap() {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::TurnAborted);
+            assert_eq!(request_id, "");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
+#[test]
+fn event_tool_requests_recorded_converts_to_phase_changed() {
+    let event = Event::ToolRequestsRecorded {
+        request_id: "req.1".into(),
+    };
+    let durable = DurableCoreEvent::try_from_event(&event);
+    assert!(durable.is_some());
+    match durable.unwrap() {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::ToolRequestsRecorded);
+            assert_eq!(request_id, "req.1");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
+#[test]
+fn event_response_delta_started_converts_to_phase_changed() {
+    let event = Event::ResponseDeltaStarted {
+        request_id: "req.1".into(),
+    };
+    let durable = DurableCoreEvent::try_from_event(&event);
+    assert!(durable.is_some());
+    match durable.unwrap() {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::ResponseDelta);
+            assert_eq!(request_id, "req.1");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
+#[test]
+fn durable_turn_phase_changed_reverse_conversion_returns_err() {
+    // TurnPhaseChanged doesn't convert back to Event (handled separately for crash recovery)
+    let durable = DurableCoreEvent::TurnPhaseChanged {
+        phase: TurnPhase::TurnStarted,
+        request_id: "req.1".into(),
+    };
+    let event: Result<Event, _> = Event::try_from(&durable);
+    assert!(event.is_err());
+}
+
+#[test]
+fn turn_phase_changed_request_id_default_empty() {
+    // Test backward compatibility: missing request_id defaults to empty string
+    let json = r#"{"event":"turnPhaseChanged","phase":"turnStarted"}"#;
+    let durable: DurableCoreEvent = serde_json::from_str(json).unwrap();
+    match durable {
+        DurableCoreEvent::TurnPhaseChanged { request_id, .. } => {
+            assert_eq!(request_id, "");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
+    }
+}
+
 // ── Event → DurableCoreEvent ─────────────────────────────────────────────
 
 #[test]
@@ -406,6 +574,20 @@ fn durable_message_sent_preserves_parts() {
             assert!(matches!(&parsed_parts[2], Part::ToolCall { name, .. } if name == "bash"));
         }
         _ => panic!("Expected MessageSent"),
+    }
+}
+
+#[test]
+fn durable_turn_phase_changed_in_jsonl_format() {
+    // Simulate a JSONL line with turn phase
+    let json = r#"{"event":"turnPhaseChanged","phase":"turnStarted","requestId":"req.1"}"#;
+    let durable: DurableCoreEvent = serde_json::from_str(json).unwrap();
+    match durable {
+        DurableCoreEvent::TurnPhaseChanged { phase, request_id } => {
+            assert_eq!(phase, TurnPhase::TurnStarted);
+            assert_eq!(request_id, "req.1");
+        }
+        _ => panic!("Expected TurnPhaseChanged"),
     }
 }
 

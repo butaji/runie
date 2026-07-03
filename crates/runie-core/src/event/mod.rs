@@ -70,6 +70,12 @@ pub enum Event {
         tool: String,
         violations: Vec<crate::tool::ConstraintViolation>,
     },
+    /// Turn journal phase: tool requests have been recorded from the LLM.
+    /// Used for crash recovery.
+    ToolRequestsRecorded { request_id: String },
+    /// Turn journal phase: response streaming has started.
+    /// Used for crash recovery.
+    ResponseDeltaStarted { request_id: String },
     ResponseDelta { id: String, content: String },
     ThinkingDelta { id: String, content: String },
     TextStart { id: String },
@@ -532,6 +538,8 @@ impl Event {
             Event::ToolInputDelta { .. } => EventKind::Fact,
             Event::ToolEnd { .. } => EventKind::Fact,
             Event::ToolConstraintError { .. } => EventKind::Fact,
+            Event::ToolRequestsRecorded { .. } => EventKind::Fact,
+            Event::ResponseDeltaStarted { .. } => EventKind::Fact,
             Event::ResponseDelta { .. } => EventKind::Fact,
             Event::ThinkingDelta { .. } => EventKind::Fact,
             Event::TextStart { .. } => EventKind::Fact,
@@ -638,6 +646,8 @@ impl Event {
             Event::ToolInputDelta { .. } => EventCategory::Agent,
             Event::ToolEnd { .. } => EventCategory::Agent,
             Event::ToolConstraintError { .. } => EventCategory::Agent,
+            Event::ToolRequestsRecorded { .. } => EventCategory::Agent,
+            Event::ResponseDeltaStarted { .. } => EventCategory::Agent,
             Event::ResponseDelta { .. } => EventCategory::Agent,
             Event::ThinkingDelta { .. } => EventCategory::Agent,
             Event::TextStart { .. } => EventCategory::Agent,

@@ -78,6 +78,14 @@ pub struct TurnState {
     pub tokens_in_prev: usize,
     /// Previous token_out value for detecting changes.
     pub tokens_out_prev: usize,
+
+    // ── Turn phase tracking (for crash recovery) ─────────────────────────────────
+    /// Whether ToolRequestsRecorded phase has been emitted.
+    /// Used to emit the phase only once per turn.
+    pub tool_requests_recorded: bool,
+    /// Whether ResponseDelta phase has been emitted.
+    /// Used to emit the phase only once per turn.
+    pub response_delta_recorded: bool,
 }
 
 impl Default for TurnState {
@@ -111,6 +119,8 @@ impl Default for TurnState {
             tokens_out_display: 0.0,
             tokens_in_prev: 0,
             tokens_out_prev: 0,
+            tool_requests_recorded: false,
+            response_delta_recorded: false,
         }
     }
 }
@@ -143,6 +153,9 @@ impl TurnState {
         self.turn_started_at = None;
         self.thinking_started_at = None;
         self.tool_started_at = None;
+        // Reset phase tracking for next turn
+        self.tool_requests_recorded = false;
+        self.response_delta_recorded = false;
     }
 
     pub fn reset(&mut self) {

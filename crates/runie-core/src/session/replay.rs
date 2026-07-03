@@ -53,6 +53,9 @@ pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
                 state.update(evt);
             }
         }
+        // TurnPhaseChanged is used for crash recovery but doesn't update AppState.
+        // The phase is reconstructed from other events during replay.
+        DurableCoreEvent::TurnPhaseChanged { .. } => {}
     }
 }
 

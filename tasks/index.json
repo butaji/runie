@@ -167,7 +167,7 @@
   {
     "file": "add-turn-journal-phases-for-crash-recovery.md",
     "title": "Add turn journal phases for crash recovery",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "adopt-camino-utf8pathbuf-for-internal-paths.md",

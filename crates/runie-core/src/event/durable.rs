@@ -13,6 +13,28 @@ use crate::proto::message::Part;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
+/// Turn journal phases for crash recovery.
+///
+/// These phases track the lifecycle of a turn and enable recovery after crashes.
+/// Each phase is persisted to the session JSONL and can be replayed to determine
+/// where a turn was interrupted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TurnPhase {
+    /// Turn has begun (user message received).
+    TurnStarted,
+    /// LLM provider request has been sent.
+    ProviderCalled,
+    /// Tool calls have been recorded from the LLM response.
+    ToolRequestsRecorded,
+    /// Streaming response has started.
+    ResponseDelta,
+    /// Turn completed successfully.
+    TurnCommitted,
+    /// Turn was aborted or failed.
+    TurnAborted,
+}
+
 impl DurableCoreEvent {
     /// Convert a canonical `Event` to a durable event for JSONL persistence.
     /// Returns `None` for transient-only events (keystrokes, scroll, streaming deltas).
@@ -32,10 +54,6 @@ impl DurableCoreEvent {
             | Event::TokenStatsUpdated { .. }
             | Event::CompactionTriggered { .. }
             | Event::StreamStarted { .. }
-            | Event::TurnStarted { .. }
-            | Event::TurnComplete { .. }
-            | Event::Done { .. }
-            | Event::TurnAborted
             | Event::TurnCompleted
             | Event::TurnErrored { .. }
             | Event::TurnConstraintError { .. }
@@ -103,6 +121,32 @@ impl DurableCoreEvent {
             Event::SetThinkingLevel(level) => Some(D::ThinkingLevelSet { level: *level }),
             // Durable: session tree
             Event::SessionTreeSnapshot { snapshot } => Some(D::TreeSnapshot { snapshot: snapshot.clone() }),
+
+            // Durable: turn journal phases
+            Event::TurnStarted { request_id, .. } => Some(D::TurnPhaseChanged {
+                phase: TurnPhase::TurnStarted,
+                request_id: request_id.clone(),
+            }),
+            Event::TurnComplete { .. } => Some(D::TurnPhaseChanged {
+                phase: TurnPhase::TurnCommitted,
+                request_id: String::new(),
+            }),
+            Event::Done { .. } => Some(D::TurnPhaseChanged {
+                phase: TurnPhase::TurnCommitted,
+                request_id: String::new(),
+            }),
+            Event::TurnAborted => Some(D::TurnPhaseChanged {
+                phase: TurnPhase::TurnAborted,
+                request_id: String::new(),
+            }),
+            Event::ToolRequestsRecorded { request_id } => Some(D::TurnPhaseChanged {
+                phase: TurnPhase::ToolRequestsRecorded,
+                request_id: request_id.clone(),
+            }),
+            Event::ResponseDeltaStarted { request_id } => Some(D::TurnPhaseChanged {
+                phase: TurnPhase::ResponseDelta,
+                request_id: request_id.clone(),
+            }),
 
             // Input, scroll, permission — not persisted
             Event::Input(_)
@@ -358,6 +402,9 @@ impl TryFrom<&DurableCoreEvent> for Event {
             // SessionRenamed and ReadOnlySet are handled directly in replay_event
             D::SessionRenamed { .. } | D::ReadOnlySet { .. } => Err(()),
             D::TreeSnapshot { snapshot } => Ok(Event::SessionTreeSnapshot { snapshot: snapshot.clone() }),
+            // TurnPhaseChanged is used for crash recovery but doesn't directly
+            // translate to a canonical event (phase is reconstructed from other events).
+            D::TurnPhaseChanged { .. } => Err(()),
 
         }
     }
@@ -406,6 +453,16 @@ pub enum DurableCoreEvent {
     /// Session tree structure snapshot (edges and branch).
     TreeSnapshot {
         snapshot: crate::session::tree::SessionTreeSnapshot,
+    },
+    /// Turn journal phase changed.
+    ///
+    /// Used for crash recovery: records the current phase of turn execution.
+    /// Scan the last `TurnPhaseChanged` event to determine where a turn was
+    /// interrupted and what recovery action is needed.
+    TurnPhaseChanged {
+        phase: TurnPhase,
+        #[serde(default, rename = "requestId")]
+        request_id: String,
     },
 }
 

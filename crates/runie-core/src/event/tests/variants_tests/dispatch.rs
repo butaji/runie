@@ -77,6 +77,8 @@ fn dispatcher_handles_all_variants() {
             | Event::ToolInputDelta { .. }
             | Event::ToolEnd { .. }
             | Event::ToolConstraintError { .. }
+            | Event::ToolRequestsRecorded { .. }
+            | Event::ResponseDeltaStarted { .. }
             | Event::ResponseDelta { .. }
             | Event::ThinkingDelta { .. }
             | Event::TextStart { .. }
