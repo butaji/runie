@@ -9,6 +9,189 @@ mod validate_tests;
 
 static HOME_LOCK: Mutex<()> = Mutex::new(());
 
+// ── Tunable value section tests ───────────────────────────────────────────────
+
+#[test]
+fn ui_section_has_tunable_history_max_entries() {
+    let section = UiSection::default();
+    assert_eq!(section.history_max_entries, 1000);
+    assert_eq!(section.history_max(), 1000);
+
+    let custom = UiSection {
+        history_max_entries: 500,
+        ..UiSection::default()
+    };
+    assert_eq!(custom.history_max(), 500);
+}
+
+#[test]
+fn ui_section_has_tunable_page_size() {
+    let section = UiSection::default();
+    assert_eq!(section.page_size, 5);
+    assert_eq!(section.page_size(), 5);
+
+    let custom = UiSection {
+        page_size: 10,
+        ..UiSection::default()
+    };
+    assert_eq!(custom.page_size(), 10);
+}
+
+#[test]
+fn http_section_has_tunable_timeouts() {
+    let section = HttpSection::default();
+    assert_eq!(section.request_timeout_secs, 120);
+    assert_eq!(section.connect_timeout_secs, 10);
+
+    let custom = HttpSection {
+        request_timeout_secs: 60,
+        connect_timeout_secs: 5,
+        ..HttpSection::default()
+    };
+    assert_eq!(custom.request_timeout_secs, 60);
+    assert_eq!(custom.connect_timeout_secs, 5);
+}
+
+#[test]
+fn retry_section_has_tunable_policy() {
+    let section = RetrySection::default();
+    assert_eq!(section.max_attempts, 5);
+    assert_eq!(section.initial_delay_ms, 100);
+    assert_eq!(section.max_delay_ms, 30_000);
+    assert!((section.multiplier - 2.0).abs() < f64::EPSILON);
+
+    let custom = RetrySection {
+        max_attempts: 3,
+        initial_delay_ms: 200,
+        max_delay_ms: 60_000,
+        multiplier: 1.5,
+        ..RetrySection::default()
+    };
+    assert_eq!(custom.max_attempts, 3);
+    assert_eq!(custom.initial_delay_ms, 200);
+    assert_eq!(custom.max_delay_ms, 60_000);
+    assert!((custom.multiplier - 1.5).abs() < f64::EPSILON);
+}
+
+#[test]
+fn fff_section_has_tunable_scan_settings() {
+    let section = FffSection::default();
+    assert_eq!(section.scan_timeout_secs, 30);
+    assert_eq!(section.default_limit, 50);
+    assert_eq!(section.max_file_size_bytes, 2 * 1024 * 1024);
+
+    let custom = FffSection {
+        scan_timeout_secs: 60,
+        default_limit: 100,
+        max_file_size_bytes: 5 * 1024 * 1024,
+        ..FffSection::default()
+    };
+    assert_eq!(custom.scan_timeout_secs, 60);
+    assert_eq!(custom.default_limit, 100);
+    assert_eq!(custom.max_file_size_bytes, 5 * 1024 * 1024);
+}
+
+#[test]
+fn config_includes_all_tunable_sections() {
+    let config = Config::default();
+    // HTTP section
+    assert_eq!(config.http.request_timeout_secs, 120);
+    assert_eq!(config.http.connect_timeout_secs, 10);
+    // Retry section
+    assert_eq!(config.retry.max_attempts, 5);
+    // FFF section
+    assert_eq!(config.fff.scan_timeout_secs, 30);
+    assert_eq!(config.fff.default_limit, 50);
+    // UI section
+    assert_eq!(config.ui.history_max_entries, 1000);
+    assert_eq!(config.ui.page_size, 5);
+}
+
+#[test]
+fn config_load_parses_http_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[http]
+request_timeout_secs = 60
+connect_timeout_secs = 5
+"#,
+    );
+    let config = Config::load(Some(&path));
+    assert_eq!(config.http.request_timeout_secs, 60);
+    assert_eq!(config.http.connect_timeout_secs, 5);
+}
+
+#[test]
+fn config_load_parses_retry_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[retry]
+max_attempts = 3
+initial_delay_ms = 200
+max_delay_ms = 60000
+multiplier = 1.5
+"#,
+    );
+    let config = Config::load(Some(&path));
+    assert_eq!(config.retry.max_attempts, 3);
+    assert_eq!(config.retry.initial_delay_ms, 200);
+    assert_eq!(config.retry.max_delay_ms, 60_000);
+    assert!((config.retry.multiplier - 1.5).abs() < f64::EPSILON);
+}
+
+#[test]
+fn config_load_parses_fff_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[fff]
+scan_timeout_secs = 60
+default_limit = 100
+max_file_size_bytes = 5242880
+"#,
+    );
+    let config = Config::load(Some(&path));
+    assert_eq!(config.fff.scan_timeout_secs, 60);
+    assert_eq!(config.fff.default_limit, 100);
+    assert_eq!(config.fff.max_file_size_bytes, 5 * 1024 * 1024);
+}
+
+#[test]
+fn config_load_parses_ui_history_and_page_size() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[ui]
+vim_mode = false
+history_max_entries = 500
+page_size = 10
+"#,
+    );
+    let config = Config::load(Some(&path));
+    assert!(!config.vim_mode());
+    assert_eq!(config.ui.history_max_entries, 500);
+    assert_eq!(config.ui.page_size(), 10);
+}
+
+#[test]
+fn tunable_values_match_previous_constants() {
+    // Verify defaults match the previous hardcoded constants.
+    assert_eq!(HttpSection::default().request_timeout_secs, 120);
+    assert_eq!(HttpSection::default().connect_timeout_secs, 10);
+    assert_eq!(RetrySection::default().max_attempts, 5);
+    assert_eq!(FffSection::default().scan_timeout_secs, 30);
+    assert_eq!(FffSection::default().default_limit, 50);
+    assert_eq!(FffSection::default().max_file_size_bytes, 2 * 1024 * 1024);
+    assert_eq!(UiSection::default().history_max_entries, 1000);
+    assert_eq!(UiSection::default().page_size, 5);
+}
+
 fn make_test_config(dir: &tempfile::TempDir, content: &str) -> std::path::PathBuf {
     let path = dir.path().join("config.toml");
     fs::write(&path, content).unwrap();

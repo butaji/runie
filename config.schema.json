@@ -4,11 +4,28 @@
   "description": "Canonical config type for `~/.runie/config.toml`.",
   "type": "object",
   "properties": {
+    "fff": {
+      "description": "FFF full-text search settings.",
+      "$ref": "#/$defs/FffSection",
+      "default": {
+        "default_limit": 50,
+        "max_file_size_bytes": 2097152,
+        "scan_timeout_secs": 30
+      }
+    },
     "hooks": {
       "description": "Hook commands registered by event name.",
       "$ref": "#/$defs/HooksConfig",
       "default": {
         "commands": {}
+      }
+    },
+    "http": {
+      "description": "HTTP timeouts for provider network calls.",
+      "$ref": "#/$defs/HttpSection",
+      "default": {
+        "connect_timeout_secs": 10,
+        "request_timeout_secs": 120
       }
     },
     "keybindings": {
@@ -72,6 +89,16 @@
         "null"
       ]
     },
+    "retry": {
+      "description": "Retry policy for transient provider errors.",
+      "$ref": "#/$defs/RetrySection",
+      "default": {
+        "initial_delay_ms": 100,
+        "max_attempts": 5,
+        "max_delay_ms": 30000,
+        "multiplier": 2.0
+      }
+    },
     "telemetry": {
       "description": "Telemetry settings.",
       "$ref": "#/$defs/TelemetrySection",
@@ -110,6 +137,8 @@
       "description": "UI settings.",
       "$ref": "#/$defs/UiSection",
       "default": {
+        "history_max_entries": 1000,
+        "page_size": 5,
         "vim_mode": true
       }
     }
@@ -130,6 +159,33 @@
         }
       ]
     },
+    "FffSection": {
+      "description": "FFF full-text search configuration.",
+      "type": "object",
+      "properties": {
+        "default_limit": {
+          "description": "Default maximum number of results to return (default: 50).",
+          "type": "integer",
+          "format": "uint",
+          "default": 50,
+          "minimum": 0
+        },
+        "max_file_size_bytes": {
+          "description": "Maximum file size in bytes to index (default: 2 MiB).",
+          "type": "integer",
+          "format": "uint",
+          "default": 2097152,
+          "minimum": 0
+        },
+        "scan_timeout_secs": {
+          "description": "Scan timeout in seconds (default: 30).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 30,
+          "minimum": 0
+        }
+      }
+    },
     "HooksConfig": {
       "description": "Hook configuration.",
       "type": "object",
@@ -144,6 +200,26 @@
             }
           },
           "default": {}
+        }
+      }
+    },
+    "HttpSection": {
+      "description": "HTTP and retry configuration for provider network calls.",
+      "type": "object",
+      "properties": {
+        "connect_timeout_secs": {
+          "description": "Connection timeout in seconds (default: 10).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 10,
+          "minimum": 0
+        },
+        "request_timeout_secs": {
+          "description": "Request timeout in seconds (default: 120).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 120,
+          "minimum": 0
         }
       }
     },
@@ -406,6 +482,39 @@
         }
       }
     },
+    "RetrySection": {
+      "description": "Retry configuration for transient provider errors.",
+      "type": "object",
+      "properties": {
+        "initial_delay_ms": {
+          "description": "Initial delay in milliseconds (default: 100).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 100,
+          "minimum": 0
+        },
+        "max_attempts": {
+          "description": "Maximum number of retry attempts (default: 5).",
+          "type": "integer",
+          "format": "uint32",
+          "default": 5,
+          "minimum": 0
+        },
+        "max_delay_ms": {
+          "description": "Maximum delay in milliseconds (default: 30000).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 30000,
+          "minimum": 0
+        },
+        "multiplier": {
+          "description": "Exponential backoff multiplier (default: 2.0).",
+          "type": "number",
+          "format": "double",
+          "default": 2.0
+        }
+      }
+    },
     "TelemetrySection": {
       "description": "Telemetry configuration section.",
       "type": "object",
@@ -461,7 +570,22 @@
       "description": "UI configuration section.",
       "type": "object",
       "properties": {
+        "history_max_entries": {
+          "description": "Maximum number of input history entries to retain.",
+          "type": "integer",
+          "format": "uint",
+          "default": 1000,
+          "minimum": 0
+        },
+        "page_size": {
+          "description": "Number of items per page in list dialogs.",
+          "type": "integer",
+          "format": "uint",
+          "default": 5,
+          "minimum": 0
+        },
         "vim_mode": {
+          "description": "Enable vim-style navigation mode.",
           "type": "boolean",
           "default": true
         }
