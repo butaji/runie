@@ -10,7 +10,7 @@ fn disconnected_state() -> AppState {
 }
 
 #[test]
-fn login_panel_abort_closes_without_model() {
+fn login_panel_abort_blocked_without_model() {
     clean_config();
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
@@ -19,14 +19,14 @@ fn login_panel_abort_closes_without_model() {
     state.update(crate::Event::Abort);
 
     assert!(
-        state.login_flow.is_none(),
-        "Abort should close the login panel when no model is connected"
+        state.login_flow.is_some(),
+        "Abort should not close the login panel when no model is connected"
     );
-    assert!(state.open_dialog.is_none(), "login panel should close");
+    assert!(state.open_dialog.is_some(), "login panel should stay open");
 }
 
 #[test]
-fn login_panel_dialog_back_closes_without_model() {
+fn login_panel_dialog_back_blocked_without_model() {
     clean_config();
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
@@ -35,10 +35,10 @@ fn login_panel_dialog_back_closes_without_model() {
     state.update(crate::Event::DialogBack);
 
     assert!(
-        state.login_flow.is_none(),
-        "DialogBack should close the login panel when no model is connected"
+        state.login_flow.is_some(),
+        "DialogBack should not close the login panel when no model is connected"
     );
-    assert!(state.open_dialog.is_none(), "login panel should close");
+    assert!(state.open_dialog.is_some(), "login panel should stay open");
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn login_panel_cancel_navigates_sub_panels_but_does_not_close() {
 }
 
 #[test]
-fn login_panel_dialog_back_closes_at_root_after_sub_panel_navigation() {
+fn login_panel_dialog_back_blocked_at_root_after_sub_panel_navigation() {
     clean_config();
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
@@ -134,17 +134,16 @@ fn login_panel_dialog_back_closes_at_root_after_sub_panel_navigation() {
 
     let stack = state.open_dialog.as_ref().unwrap().panel_stack().unwrap();
     assert!(
-        stack.root().unwrap().closable,
-        "root panel should be closable"
+        !stack.root().unwrap().closable,
+        "root panel must stay non-closable while no model is connected"
     );
 
-    // A second DialogBack at the root closes onboarding.
+    // A second DialogBack at the root must still be blocked.
     state.update(crate::Event::DialogBack);
     assert!(
-        state.open_dialog.is_none(),
-        "DialogBack at root should close onboarding"
+        state.open_dialog.is_some(),
+        "DialogBack at root should not close onboarding without a connected model"
     );
-    assert!(state.login_flow.is_none(), "login flow should clear");
 }
 
 #[test]
@@ -191,7 +190,7 @@ impl Drop for MockGuard {
 }
 
 #[test]
-fn login_panel_dialog_back_closes_when_only_mock_fallback() {
+fn login_panel_dialog_back_blocked_when_only_mock_fallback() {
     clean_config();
     let _guard = MockGuard::enabled();
 
@@ -206,8 +205,8 @@ fn login_panel_dialog_back_closes_when_only_mock_fallback() {
     state.update(crate::Event::DialogBack);
 
     assert!(
-        state.login_flow.is_none(),
-        "DialogBack should close onboarding even when only the mock fallback is active"
+        state.login_flow.is_some(),
+        "DialogBack should not close onboarding when only the mock fallback is active"
     );
-    assert!(state.open_dialog.is_none(), "login panel should close");
+    assert!(state.open_dialog.is_some(), "login panel should stay open");
 }

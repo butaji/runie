@@ -46,7 +46,7 @@ fn cancel_at_model_select_returns_to_key_input() {
 }
 
 #[test]
-fn cancel_at_provider_picker_closes_without_model() {
+fn cancel_at_provider_picker_blocked_without_model() {
     clean_config();
     let mut state = disconnected_state();
     start_login_flow(&mut state);
@@ -55,10 +55,12 @@ fn cancel_at_provider_picker_closes_without_model() {
     state.update(Event::from(crate::Event::Cancel));
 
     assert!(
-        state.login_flow.is_none(),
-        "login flow should close when cancel is pressed at the root"
+        state.login_flow.is_some(),
+        "login flow should remain active"
     );
-    assert!(state.open_dialog.is_none(), "login dialog should close");
+    assert!(state.open_dialog.is_some(), "login dialog should stay open");
+    assert_step(&state, LoginStep::ProviderPicker);
+    assert_panel_id(&state, "login-provider");
 }
 
 #[test]
@@ -123,7 +125,7 @@ fn force_quit_always_closes() {
 }
 
 #[test]
-fn esc_at_root_closes_without_model() {
+fn esc_at_root_blocked_without_model() {
     clean_config();
     let mut state = disconnected_state();
     start_login_flow(&mut state);
@@ -132,8 +134,10 @@ fn esc_at_root_closes_without_model() {
     state.update(Event::from(crate::Event::DialogBack));
 
     assert!(
-        state.login_flow.is_none(),
-        "login flow should close when Esc is pressed at the root"
+        state.login_flow.is_some(),
+        "login flow should remain active"
     );
-    assert!(state.open_dialog.is_none(), "login dialog should close");
+    assert!(state.open_dialog.is_some(), "login dialog should stay open");
+    assert_step(&state, LoginStep::ProviderPicker);
+    assert_panel_id(&state, "login-provider");
 }
