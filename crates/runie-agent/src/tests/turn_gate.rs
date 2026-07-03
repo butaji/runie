@@ -4,8 +4,12 @@ use crate::tests::ensure_mock_provider;
 use crate::{agent_command_builder::agent_cmd, run_agent_turn};
 use runie_core::event::Event;
 use runie_core::permissions::{
-    AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
+    AutoAllowSink, FileAccessAsk, PermissionManager,
 };
+#[cfg(feature = "mcp")]
+use runie_core::permissions::DefaultToolApprove;
+#[cfg(feature = "git")]
+use runie_core::permissions::GitTrackedWriteApprove;
 use runie_testing::event_helpers::count_events;
 use runie_testing::{capture_events, mock_provider};
 use std::sync::Arc;
@@ -19,11 +23,14 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
         let cmd = agent_cmd("list files").build();
 
     let (events, emit) = capture_events();
-    let permissions = PermissionManager::default().with_policies(vec![
-        Box::new(DefaultToolApprove::new()),
-        Box::new(GitTrackedWriteApprove::new()),
+    let mut policies: Vec<Box<dyn runie_core::permissions::PermissionPolicy>> = vec![
         Box::new(FileAccessAsk::new()),
-    ]);
+    ];
+    #[cfg(feature = "mcp")]
+    policies.push(Box::new(DefaultToolApprove::new()));
+    #[cfg(feature = "git")]
+    policies.push(Box::new(GitTrackedWriteApprove::new()));
+    let permissions = PermissionManager::default().with_policies(policies);
     // Use AutoAllowSink so read-only tools are auto-approved without needing a real PermissionActor.
     let gate = crate::PermissionGate::new(permissions, Arc::new(AutoAllowSink));
 

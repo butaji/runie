@@ -5,10 +5,14 @@ use std::path::Path;
 use serde_json::Value;
 
 use super::{
-    ApprovalSink, AutoAllowSink, DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove,
+    ApprovalSink, AutoAllowSink, FileAccessAsk,
     PermissionAction, PermissionContext, PermissionManager, PermissionMode, PermissionPolicy,
     PermissionResult, PermissionRule, PermissionScope, PermissionSet, ScriptedSink,
 };
+#[cfg(feature = "mcp")]
+use super::{DefaultToolApprove};
+#[cfg(feature = "git")]
+use super::{GitTrackedWriteApprove};
 
 mod declarative_rules;
 
@@ -18,11 +22,13 @@ fn ctx<'a>(tool: &'a str, path: Option<&'a Path>, cwd: Option<&'a Path>) -> Perm
         path,
         input: None,
         cwd,
+        #[cfg(feature = "mcp")]
         annotations: crate::tool::annotations::get_tool_annotations(tool),
     }
 }
 
 #[tokio::test]
+#[cfg(feature = "mcp")]
 async fn permission_policy_chain_first_match_wins() {
     let manager = PermissionManager::new(PermissionMode::Auto).with_policies(vec![
         Box::new(DefaultToolApprove::new()),
@@ -44,6 +50,7 @@ async fn permission_policy_chain_first_match_wins() {
 }
 
 #[tokio::test]
+#[cfg(feature = "mcp")]
 async fn default_tool_approve_allows_safe_tools() {
     let policy = DefaultToolApprove::new();
     for tool in ["read_file", "list_dir", "grep", "find", "fetch_docs"] {
@@ -59,6 +66,7 @@ async fn default_tool_approve_allows_safe_tools() {
 }
 
 #[tokio::test]
+#[cfg(feature = "git")]
 async fn git_tracked_write_approve_passes_git_files() {
     let temp = tempfile::tempdir().unwrap();
     let repo_path = temp.path();

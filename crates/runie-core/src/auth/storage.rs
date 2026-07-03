@@ -61,11 +61,14 @@ impl AuthStorage {
     pub fn load() -> Self {
         let mut storage = Self::new();
 
-        // Try keyring first
-        if let Ok(tokens) = super::keyring::load_all_from_keyring() {
-            storage.tokens = tokens;
-            storage.keyring_available = true;
-            return storage;
+        #[cfg(feature = "keyring")]
+        {
+            // Try keyring first
+            if let Ok(tokens) = super::keyring::load_all_from_keyring() {
+                storage.tokens = tokens;
+                storage.keyring_available = true;
+                return storage;
+            }
         }
 
         // Fall back to file
@@ -112,11 +115,15 @@ impl AuthStorage {
 
     /// Persist tokens: keyring if available, otherwise file.
     pub fn save(&self) -> anyhow::Result<()> {
+        #[cfg(feature = "keyring")]
         if self.keyring_available {
             self.save_to_keyring()?;
-        } else {
-            self.save_to_file()?;
         }
+        #[cfg(not(feature = "keyring"))]
+        {
+            let _ = self; // suppress unused warning
+        }
+        self.save_to_file()?;
         Ok(())
     }
 
@@ -136,6 +143,7 @@ impl AuthStorage {
         Ok(())
     }
 
+    #[cfg(feature = "keyring")]
     fn save_to_keyring(&self) -> anyhow::Result<()> {
         for (provider, tok) in &self.tokens {
             super::keyring::set_keyring(provider, tok.token.expose_secret())?;
@@ -145,13 +153,16 @@ impl AuthStorage {
 
     pub fn set(&mut self, provider: &str, token: &str, expires_at: Option<f64>) {
         // Try keyring first if available
-        if self.keyring_available {
-            if let Err(e) = crate::auth::keyring::set_keyring(provider, token) {
-                // Fall back to file if keyring fails
-                tracing::warn!("keyring set failed, falling back to file: {}", e);
-                self.keyring_available = false;
-                // Switch to file mode and save everything
-                self.save_to_file().ok();
+        #[cfg(feature = "keyring")]
+        {
+            if self.keyring_available {
+                if let Err(e) = crate::auth::keyring::set_keyring(provider, token) {
+                    // Fall back to file if keyring fails
+                    tracing::warn!("keyring set failed, falling back to file: {}", e);
+                    self.keyring_available = false;
+                    // Switch to file mode and save everything
+                    self.save_to_file().ok();
+                }
             }
         }
 
@@ -168,6 +179,7 @@ impl AuthStorage {
     pub fn remove(&mut self, provider: &str) {
         self.tokens.remove(provider);
 
+        #[cfg(feature = "keyring")]
         if self.keyring_available {
             let _ = super::keyring::delete_keyring(provider);
         }
@@ -179,8 +191,15 @@ impl AuthStorage {
 
     /// Get a keyring token directly by provider name.
     /// Returns the token string if found in keyring, None otherwise.
+    #[cfg(feature = "keyring")]
     pub fn get_keyring_token(provider: &str) -> Option<String> {
         super::keyring::get_keyring(provider).ok()
+    }
+
+    /// Stub when `keyring` feature is disabled.
+    #[cfg(not(feature = "keyring"))]
+    pub fn get_keyring_token(_provider: &str) -> Option<String> {
+        None
     }
 
     pub fn is_authenticated(&self, provider: &str) -> bool {

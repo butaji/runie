@@ -49,11 +49,15 @@ pub fn migrate_with_path(
     Ok(true)
 }
 
-/// v3 → v4: migrate plaintext `api_key` values to OS keyring.
+/// v3 → v4: migrate plaintext `api_key` values.
 ///
-/// Iterates through `[model_providers.*]` and moves any non-empty `api_key`
-/// to the OS keyring, then clears it from the config file.
+/// Iterates through `[model_providers.*]` and removes plaintext `api_key`
+/// from the config file. When the `keyring` feature is enabled, keys are
+/// also stored in the OS keyring. When disabled, keys are simply removed
+/// from config (resolution falls back to env variables).
 fn v3_to_v4(config: &mut toml::Value) -> anyhow::Result<()> {
+    #[cfg(feature = "keyring")]
+    #[allow(unused_imports)]
     use crate::auth;
 
     let map = config
@@ -76,12 +80,15 @@ fn v3_to_v4(config: &mut toml::Value) -> anyhow::Result<()> {
             _ => None,
         };
 
-        // If there's a non-empty api_key, store it in keyring first
-        if let Some(key) = api_key {
-            if let Err(e) = auth::set_keyring_value(name, &key) {
-                tracing::warn!("failed to migrate api_key for {} to keyring: {}", name, e);
-            } else {
-                tracing::info!("migrated api_key for {} to keyring", name);
+        // If there's a non-empty api_key, store it in keyring (requires keyring feature)
+        #[cfg(feature = "keyring")]
+        {
+            if let Some(key) = api_key {
+                if let Err(e) = crate::auth::set_keyring_value(name, &key) {
+                    tracing::warn!("failed to migrate api_key for {} to keyring: {}", name, e);
+                } else {
+                    tracing::info!("migrated api_key for {} to keyring", name);
+                }
             }
         }
 

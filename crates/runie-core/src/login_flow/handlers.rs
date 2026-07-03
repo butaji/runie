@@ -313,6 +313,7 @@ fn sync_config_cache(
     models: &[String],
 ) {
     // Store api_key in keyring (never in config)
+    #[cfg(feature = "keyring")]
     if !api_key.is_empty() {
         if let Err(e) = crate::auth::set_keyring_value(provider, api_key) {
             tracing::warn!("failed to store api_key in keyring: {}", e);

@@ -70,11 +70,13 @@ impl RactorIoHandle {
     }
 
     /// Request clipboard write.
+    #[cfg(feature = "clipboard")]
     pub async fn write_clipboard(&self, text: String) {
         let _ = self.inner.send_message(IoMsg::WriteClipboard { text });
     }
 
     /// Request clipboard read.
+    #[cfg(feature = "clipboard")]
     pub async fn read_clipboard(&self) {
         let _ = self.inner.send_message(IoMsg::ReadClipboard);
     }
@@ -154,7 +156,9 @@ impl Actor for RactorIoActor {
             IoMsg::OpenExternalEditor { text } => {
                 self.open_external_editor(text).await;
             }
+            #[cfg(feature = "clipboard")]
             IoMsg::WriteClipboard { text } => self.write_clipboard(text).await,
+            #[cfg(feature = "clipboard")]
             IoMsg::ReadClipboard => self.read_clipboard().await,
             IoMsg::SuspendProcess => self.suspend_process().await,
             IoMsg::LoadSkills => self.load_skills().await,
@@ -237,6 +241,7 @@ impl RactorIoActor {
         self.emit(Event::ExternalEditorClosed { result });
     }
 
+    #[cfg(feature = "clipboard")]
     async fn write_clipboard(&self, text: String) {
         let success =
             tokio::task::spawn_blocking(move || super::effects::write_clipboard_sync(&text))
@@ -245,6 +250,7 @@ impl RactorIoActor {
         self.emit(Event::ClipboardWritten { success });
     }
 
+    #[cfg(feature = "clipboard")]
     async fn read_clipboard(&self) {
         let result = tokio::task::spawn_blocking(super::effects::read_clipboard_sync)
             .await
@@ -296,10 +302,14 @@ fn detect_env_sync() -> (Option<GitInfo>, String) {
         .and_then(|p| p.file_name())
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
+    #[cfg(feature = "git")]
     let git_info = cwd.as_ref().and_then(|p| detect_git_info_sync(p));
+    #[cfg(not(feature = "git"))]
+    let git_info = None;
     (git_info, cwd_name)
 }
 
+#[cfg(feature = "git")]
 fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
     let repo = git2::Repository::discover(start).ok()?;
 

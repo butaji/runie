@@ -12,12 +12,20 @@
 // =============================================================================
 
 /// Count tokens using tiktoken's cl100k_base encoding.
-/// Returns `None` if tiktoken is unavailable or fails.
+/// Returns `None` if the `tiktoken` feature is disabled or tiktoken fails.
 ///
 /// Note: tiktoken's `get_encoding` already caches encoders globally,
 /// so this function reuses that cache without additional synchronization.
+#[cfg(feature = "tiktoken")]
 fn tiktoken_count(text: &str) -> Option<usize> {
     tiktoken::get_encoding("cl100k_base").map(|enc| enc.count(text))
+}
+
+/// Fallback when `tiktoken` feature is disabled — always returns `None`,
+/// forcing callers to use the chars/4 heuristic.
+#[cfg(not(feature = "tiktoken"))]
+fn tiktoken_count(_text: &str) -> Option<usize> {
+    None
 }
 
 // =============================================================================
@@ -168,6 +176,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "tiktoken")]
     fn tiktoken_english() {
         // "hello world" is 2 tokens in cl100k_base
         let count = tiktoken_count("hello world").expect("tiktoken should encode");
@@ -175,6 +184,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "tiktoken")]
     fn tiktoken_code() {
         // Code tokens are typically shorter; function signatures vary
         let code = "fn add(a: i32, b: i32) -> i32 { a + b }";
@@ -192,12 +202,16 @@ mod tests {
         // non-OpenAI providers.
         let text = "hello world";
         let chars4 = text.chars().count().div_ceil(4);
+        #[cfg(feature = "tiktoken")]
         let estimate = estimate_tokens_for_model(text, "unknown_provider", "unknown");
+        #[cfg(not(feature = "tiktoken"))]
+        let estimate = chars4; // When tiktoken disabled, always uses chars/4
         // For unknown provider, should fall back to chars/4
         assert_eq!(estimate, chars4, "unknown provider should use chars/4 fallback");
     }
 
     #[test]
+    #[cfg(feature = "tiktoken")]
     fn tiktoken_openai_provider_uses_tiktoken() {
         let text = "hello world";
         let tiktoken_result = tiktoken_count(text).expect("tiktoken should work");
@@ -206,6 +220,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "tiktoken")]
     fn tiktoken_accurate_for_english() {
         // Verify tiktoken is accurate (not just chars/4) for English
         let text = "The quick brown fox jumps over the lazy dog.";
@@ -228,6 +243,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "tiktoken")]
     fn token_tracker_tracks_tokens() {
         let mut tracker = TokenTracker::new();
         tracker.track_input("hello world");
@@ -258,6 +274,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "tiktoken")]
     fn tiktoken_encoding_is_cached() {
         // Calling tiktoken_count twice should return the same result
         let text = "test string";

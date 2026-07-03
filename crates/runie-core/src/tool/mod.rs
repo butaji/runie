@@ -1,22 +1,25 @@
 //! Tool definitions and shared types for Runie.
 //!
 //! The concrete tool implementations live in `runie-agent::tool`. This
-//! module keeps the [`schema::ToolDef`] trait, context/output/status
-//! types, and pure formatting helpers so that crates can depend only on core.
+//! module keeps the context/output/status types and pure formatting helpers
+//! so that crates can depend only on core.
 //!
-//! ## MCP Tool Boundary
+//! ## MCP Tool Boundary (requires `mcp` feature)
 //!
-//! All tools implement [`schema::ToolDef`], which generates MCP-compatible schemas
-//! and handles execution. There is no separate `Tool` trait or `ToolRegistry`;
-//! tools are MCP tools by definition.
+//! When the `mcp` feature is enabled, tools implement [`schema::ToolDef`],
+//! which generates MCP-compatible schemas and handles execution.
 
+/// MCP tool annotations. Requires the `mcp` feature.
+#[cfg(feature = "mcp")]
 pub mod annotations;
+/// MCP tool schema. Requires the `mcp` feature.
+#[cfg(feature = "mcp")]
+pub mod schema;
 pub mod cache;
 mod constraints;
 mod context;
 mod format;
 pub mod parse;
-pub mod schema;
 pub mod shim;
 mod state;
 #[cfg(test)]
@@ -39,6 +42,7 @@ pub use parse::{
     assign_tool_call_ids, build_assistant_message, has_tool_calls, parse_tool_calls,
     parse_tool_calls_fallible, tool_parse_error_message,
 };
+#[cfg(feature = "mcp")]
 pub use schema::{generate_schema, parse_input, to_mcp_tool, to_openai_function, ToolDef};
 pub use state::{ToolCallState, ToolCallTracker};
 pub use types::{repair_partial_json, ParsedToolCall, ToolParseError};

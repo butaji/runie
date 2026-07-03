@@ -28,8 +28,10 @@ pub enum IoMsg {
     /// Open external editor with text, return edited text.
     OpenExternalEditor { text: String },
     /// Copy text to clipboard.
+    #[cfg(feature = "clipboard")]
     WriteClipboard { text: String },
     /// Read text from clipboard.
+    #[cfg(feature = "clipboard")]
     ReadClipboard,
     /// Suspend/resume the process.
     SuspendProcess,

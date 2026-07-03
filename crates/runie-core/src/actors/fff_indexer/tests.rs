@@ -189,14 +189,17 @@ async fn search_request_event_returns_results() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Git status formatting tests
+// Git status formatting tests (requires `git` feature)
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "git")]
 use git2::Status as G;
 
+#[cfg(feature = "git")]
 /// L1: `format_git_status` maps tracked file statuses to expected labels.
 #[test]
 fn format_git_status_covers_tracked_statuses() {
+    use super::format_git_status;
     // WT_NEW / INDEX_NEW → "untracked"
     assert_eq!(format_git_status(G::WT_NEW), "untracked");
     assert_eq!(format_git_status(G::INDEX_NEW), "untracked");
@@ -214,16 +217,20 @@ fn format_git_status_covers_tracked_statuses() {
     assert_eq!(format_git_status(G::INDEX_RENAMED), "renamed");
 }
 
+#[cfg(feature = "git")]
 /// L1: `format_git_status` returns "clean" when no tracked flags are set.
 #[test]
 fn format_git_status_returns_clean_for_empty_status() {
+    use super::format_git_status;
     // Status::empty() means no tracked changes
     assert_eq!(format_git_status(G::empty()), "clean");
 }
 
+#[cfg(feature = "git")]
 /// L1: `format_git_status` handles combined flags (e.g., staged + unstaged).
 #[test]
 fn format_git_status_handles_combined_flags() {
+    use super::format_git_status;
     // File with both staged and unstaged changes
     let combined = G::INDEX_MODIFIED | G::WT_MODIFIED;
     // Should return "modified" (the first match in our lookup order)

@@ -175,6 +175,7 @@ async fn agent_gate_uses_user_trust_rules() {
         path: None,
         input: Some(&serde_json::json!({"command": "echo hi"})),
         cwd: None,
+        #[cfg(feature = "mcp")]
         annotations: crate::tool::annotations::get_tool_annotations("bash"),
     };
 

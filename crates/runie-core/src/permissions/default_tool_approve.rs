@@ -1,5 +1,9 @@
 //! Auto-approve read-only / safe tools.
 //!
+//! Requires the `mcp` feature (uses `ToolAnnotations.read_only_hint`).
+
+#![cfg(feature = "mcp")]
+//!
 //! Uses MCP `ToolAnnotations.read_only_hint` from the permission context to
 //! determine whether a tool is safe for auto-approval.
 

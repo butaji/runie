@@ -47,9 +47,10 @@ pub mod input_history;
 /// I/O utilities (atomic writes, file locking).
 pub mod io;
 pub mod keybindings;
-// NOTE: mcp module was deleted, keeping reference commented for now
-// pub mod mcp;
+/// MCP client protocol. Requires the `mcp` feature.
+#[cfg(feature = "mcp")]
 pub mod mcp;
+#[cfg(feature = "mcp")]
 pub use mcp::{McpConnectionManager, McpTool, SchemaCache};
 /// Static labels and text constants.
 pub mod labels;

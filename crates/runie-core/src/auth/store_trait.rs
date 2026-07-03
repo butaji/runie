@@ -31,20 +31,24 @@ pub trait KeyringStore: Send + Sync {
 
 /// OS keyring backend using the `keyring` crate.
 /// All entries use the `"runie"` service name with `"provider:{name}"` accounts.
+#[cfg(feature = "keyring")]
 pub struct OsKeyringStore;
 
+#[cfg(feature = "keyring")]
 impl OsKeyringStore {
     pub fn new() -> Self {
         Self
     }
 }
 
+#[cfg(feature = "keyring")]
 impl Default for OsKeyringStore {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[cfg(feature = "keyring")]
 impl KeyringStore for OsKeyringStore {
     fn set(&self, provider: &str, token: &str) -> anyhow::Result<()> {
         let entry = keyring::Entry::new("runie", &format!("provider:{provider}"))?;
@@ -107,6 +111,7 @@ impl KeyringStore for MockKeyringStore {
 
 // ── Unit Tests ─────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "keyring")]
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -172,6 +177,57 @@ mod tests {
     fn mock_keyring_delete_nonexistent() {
         let store = MockKeyringStore::new();
         // Deleting a non-existent key should succeed
+        let result = store.delete("never_existed");
+        assert!(result.is_ok());
+        assert!(store.get("never_existed").unwrap().is_none());
+    }
+
+    #[test]
+    fn mock_keyring_shared_across_threads() {
+        let store = Arc::new(MockKeyringStore::new());
+        let store_clone = Arc::clone(&store);
+
+        store.set("openai", "sk-thread").unwrap();
+
+        // Verify the shared store has the value
+        assert_eq!(store_clone.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-thread"));
+    }
+}
+
+#[cfg(not(feature = "keyring"))]
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use secrecy::ExposeSecret;
+    use super::*;
+
+    #[test]
+    fn mock_keyring_set_and_get() {
+        let store = MockKeyringStore::new();
+        store.set("openai", "sk-test").unwrap();
+        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-test"));
+        assert!(store.get("anthropic").unwrap().is_none());
+    }
+
+    #[test]
+    fn mock_keyring_overwrite() {
+        let store = MockKeyringStore::new();
+        store.set("openai", "sk-old").unwrap();
+        store.set("openai", "sk-new").unwrap();
+        assert_eq!(store.get("openai").unwrap().as_ref().map(|s| s.expose_secret().as_str()), Some("sk-new"));
+    }
+
+    #[test]
+    fn mock_keyring_delete() {
+        let store = MockKeyringStore::new();
+        store.set("openai", "sk-test").unwrap();
+        store.delete("openai").unwrap();
+        assert!(store.get("openai").unwrap().is_none());
+    }
+
+    #[test]
+    fn mock_keyring_delete_nonexistent() {
+        let store = MockKeyringStore::new();
         let result = store.delete("never_existed");
         assert!(result.is_ok());
         assert!(store.get("never_existed").unwrap().is_none());

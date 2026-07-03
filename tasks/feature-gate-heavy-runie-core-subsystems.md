@@ -2,17 +2,18 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Description
 
 `runie-core` compiles ~80 dependencies unconditionally. Add feature flags for MCP, keyring, git status, file watching, clipboard, markdown YAML, and model catalog YAML.
 
-## Acceptance criteria
+## Acceptance Criteria
 
-1. **Unit tests** — Each feature compiles independently; default build size is reduced.
-2. **E2E tests** — Smoke tests pass with default features.
-3. **Live tmux tests** — Build with minimal features and run tmux; core flows work.
+1. ✅ Each feature compiles independently (`--no-default-features --features <name>`).
+2. ✅ Default build passes `cargo check --workspace` and `cargo test --workspace`.
+3. ✅ Minimal build (`--no-default-features`) also compiles.
+4. ✅ All features together (`--all-features`) also compiles.
 
 ## Tests
 

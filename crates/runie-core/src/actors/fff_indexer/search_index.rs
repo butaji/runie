@@ -5,12 +5,15 @@
 
 use std::path::Path;
 
+#[cfg(feature = "git")]
 use git2::Status as GitStatus;
 
 use super::{ContentMatch, FileSearchResult};
 use crate::actors::fff_indexer::content_search::{find_literal_matches, find_regex_matches};
 use crate::actors::fff_indexer::frecency::FrecencyStore;
-use crate::actors::fff_indexer::git_status::git_status_matches;
+#[cfg(feature = "git")]
+#[allow(unused_imports)]
+use crate::actors::fff_indexer::git_status::{format_git_status, git_status_matches};
 
 /// Metadata for an indexed file.
 #[derive(Debug, Clone)]
@@ -34,6 +37,7 @@ struct SearchIndexInner {
     /// Frecency scores (relative path -> access count + recency decay).
     frecency: FrecencyStore,
     /// Git status for each file.
+    #[cfg(feature = "git")]
     git_status: std::collections::HashMap<String, GitStatus>,
     indexed: bool,
 }
@@ -45,6 +49,7 @@ impl SearchIndex {
             inner: Arc::new(parking_lot::RwLock::new(SearchIndexInner {
                 files: std::collections::BTreeMap::new(),
                 frecency: FrecencyStore::new(),
+                #[cfg(feature = "git")]
                 git_status: std::collections::HashMap::new(),
                 indexed: false,
             })),
@@ -107,15 +112,18 @@ impl SearchIndex {
         }
 
         // Get git status for all files.
-        if let Ok(repo) = git2::Repository::open(root) {
-            let mut opts = git2::StatusOptions::new();
-            opts.include_untracked(true);
-            opts.recurse_untracked_dirs(true);
-            if let Ok(iter) = repo.statuses(Some(&mut opts)) {
-                for entry in iter.iter() {
-                    if let Some(path) = entry.path() {
-                        let status = entry.status();
-                        inner.git_status.insert(path.to_owned(), status);
+        #[cfg(feature = "git")]
+        {
+            if let Ok(repo) = git2::Repository::open(root) {
+                let mut opts = git2::StatusOptions::new();
+                opts.include_untracked(true);
+                opts.recurse_untracked_dirs(true);
+                if let Ok(iter) = repo.statuses(Some(&mut opts)) {
+                    for entry in iter.iter() {
+                        if let Some(path) = entry.path() {
+                            let status = entry.status();
+                            inner.git_status.insert(path.to_owned(), status);
+                        }
                     }
                 }
             }
@@ -156,13 +164,16 @@ impl SearchIndex {
                 }
 
                 // Apply git-status filters.
-                if parsed.git_status_filters().next().is_some() {
-                    let status = inner.git_status.get(*path);
-                    let matches = parsed.git_status_filters().all(|filter| {
-                        status.map(|s| git_status_matches(*s, filter)).unwrap_or(false)
-                    });
-                    if !matches {
-                        return false;
+                #[cfg(feature = "git")]
+                {
+                    if parsed.git_status_filters().next().is_some() {
+                        let status = inner.git_status.get(*path);
+                        let matches = parsed.git_status_filters().all(|filter| {
+                            status.map(|s| git_status_matches(*s, filter)).unwrap_or(false)
+                        });
+                        if !matches {
+                            return false;
+                        }
                     }
                 }
 
@@ -180,6 +191,7 @@ impl SearchIndex {
                         relative_path: path.clone(),
                         absolute_path: meta.absolute_path.clone(),
                         score: 0.0,
+                        #[cfg(feature = "git")]
                         git_status: inner.git_status.get(path).copied(),
                     });
                 }
@@ -199,6 +211,7 @@ impl SearchIndex {
                         relative_path: path.clone(),
                         absolute_path: meta.absolute_path.clone(),
                         score: full_score,
+                        #[cfg(feature = "git")]
                         git_status: inner.git_status.get(path).copied(),
                     })
                 } else {
@@ -206,6 +219,7 @@ impl SearchIndex {
                         relative_path: path.clone(),
                         absolute_path: meta.absolute_path.clone(),
                         score,
+                        #[cfg(feature = "git")]
                         git_status: inner.git_status.get(path).copied(),
                     })
                 }
@@ -290,11 +304,13 @@ impl SearchIndex {
             .iter()
             .filter(|(path, _)| glob.compile_matcher().is_match(path))
             .map(|(path, meta)| {
+                #[cfg(feature = "git")]
                 let git_status = inner.git_status.get(path).copied();
                 FileSearchResult {
                     relative_path: path.clone(),
                     absolute_path: meta.absolute_path.clone(),
                     score: 0.0,
+                    #[cfg(feature = "git")]
                     git_status,
                 }
             })

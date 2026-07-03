@@ -1,10 +1,13 @@
 //! Async message handlers for `RactorConfigActor`.
 //!
 //! Extracted from `ractor_config.rs` to satisfy the 500-line file limit.
+//! The file-watcher (`spawn_config_watcher`) requires the `watch` feature.
 
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "watch")]
 use notify::RecursiveMode;
+#[cfg(feature = "watch")]
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 
 use crate::actors::CONFIG_WATCHER_DEBOUNCE_MS;
@@ -376,6 +379,7 @@ pub(super) fn path_for_scope(
     }
 }
 
+#[cfg(feature = "watch")]
 /// Check if debounced events touch the config file with a relevant kind.
 pub(super) fn config_event_is_relevant(events: &[DebouncedEvent], config_path: &PathBuf) -> bool {
     let touches_config = events.iter().any(|e| e.path == *config_path);
@@ -388,6 +392,7 @@ pub(super) fn config_event_is_relevant(events: &[DebouncedEvent], config_path: &
     touches_config && has_relevant_kind
 }
 
+#[cfg(feature = "watch")]
 /// Spawn the file watcher thread that watches config for changes.
 pub(super) fn spawn_config_watcher(myself: ActorRef<ConfigMsg>, path: PathBuf) {
     let myself_clone = myself.clone();

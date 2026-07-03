@@ -219,14 +219,28 @@ impl RactorFffIndexerActor {
 
 /// Convert a file search result to an `FffFileItem`.
 fn convert_file_result(_req: &FffSearchRequest, result: FileSearchResult) -> FffFileItem {
+    #[cfg(feature = "git")]
     let git_status = result.git_status;
+    #[cfg(feature = "git")]
     let git_tracked = git_status.is_some();
+    #[cfg(not(feature = "git"))]
+    let git_tracked = false;
     FffFileItem {
         relative_path: result.relative_path.clone(),
         absolute_path: result.absolute_path.to_string_lossy().into_owned(),
         score: result.score,
         git_tracked,
-        git_status: git_status.map(|s| super::format_git_status(s).to_owned()),
+        git_status: {
+            #[cfg(feature = "git")]
+            {
+                use super::format_git_status;
+                git_status.map(|s| format_git_status(s).to_owned())
+            }
+            #[cfg(not(feature = "git"))]
+            {
+                None
+            }
+        },
     }
 }
 

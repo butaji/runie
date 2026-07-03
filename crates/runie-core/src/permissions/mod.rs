@@ -18,6 +18,7 @@
 use std::path::Path;
 
 use async_trait::async_trait;
+#[cfg(feature = "mcp")]
 use rmcp::model::ToolAnnotations;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -25,13 +26,16 @@ use serde_json::Value;
 pub mod default_tool_approve;
 pub mod file_access_ask;
 pub mod gate;
+#[cfg(feature = "git")]
 pub mod git_tracked_write;
 pub mod rules;
 mod sink;
 
+#[cfg(feature = "mcp")]
 pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;
 pub use gate::PermissionGate;
+#[cfg(feature = "git")]
 pub use git_tracked_write::GitTrackedWriteApprove;
 pub use rules::{PermissionRule, PermissionScope, PermissionSet, PermissionSetPolicy};
 pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprovalSink};
@@ -150,6 +154,7 @@ pub struct PermissionContext<'a> {
     pub cwd: Option<&'a Path>,
     /// MCP tool annotations for the requested tool, if known.
     /// Populated by `PermissionActor` from `runie_core::tool::annotations`.
+    #[cfg(feature = "mcp")]
     pub annotations: Option<ToolAnnotations>,
 }
 
@@ -188,6 +193,7 @@ impl PermissionManager {
             PermissionMode::Auto => {
                 // Auto-approve safe tools, ask for others.
                 vec![
+                    #[cfg(feature = "mcp")]
                     Box::new(DefaultToolApprove::new()),
                     Box::new(FileAccessAsk::new()),
                 ]
@@ -195,6 +201,7 @@ impl PermissionManager {
             PermissionMode::AcceptEdits => {
                 // Auto-approve read and write, ask for bash.
                 vec![
+                    #[cfg(feature = "mcp")]
                     Box::new(DefaultToolApprove::new()),
                     Box::new(AcceptEditsPolicy),
                 ]

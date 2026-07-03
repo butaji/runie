@@ -1,5 +1,8 @@
 //! Clipboard operations for IoActor using `arboard`.
+//!
+//! Requires the `clipboard` feature.
 
+#[cfg(feature = "clipboard")]
 /// Write text to system clipboard (blocking).
 pub fn write_clipboard_sync(text: &str) -> bool {
     match arboard::Clipboard::new() {
@@ -11,6 +14,7 @@ pub fn write_clipboard_sync(text: &str) -> bool {
     }
 }
 
+#[cfg(feature = "clipboard")]
 /// Read text from system clipboard (blocking).
 pub fn read_clipboard_sync() -> Result<String, String> {
     let mut clipboard =

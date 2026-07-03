@@ -13,7 +13,7 @@ name = "runie"
 path = "src/main.rs"
 
 [dependencies]
-runie-core.workspace = true
+runie-core = { workspace = true, features = ["keyring"] }
 runie-agent.workspace = true
 runie-provider.workspace = true
 tokio = { workspace = true, features = ["io-std", "signal"] }

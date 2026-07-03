@@ -86,7 +86,8 @@ impl Actor for RactorConfigActor {
             });
         }
 
-        // Spawn the file watcher in a std thread.
+        // Spawn the file watcher in a std thread (requires `watch` feature).
+        #[cfg(feature = "watch")]
         handlers::spawn_config_watcher(myself.clone(), path.clone());
 
         let state = ConfigActorState {

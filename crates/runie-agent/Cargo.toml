@@ -7,13 +7,23 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Enable all runie-core features by default so that the workspace builds with full functionality.
+default = ["mcp", "git", "keyring", "clipboard", "watch", "tiktoken"]
+mcp = ["runie-core/mcp"]
+git = ["runie-core/git"]
+keyring = ["runie-core/keyring"]
+clipboard = ["runie-core/clipboard"]
+watch = ["runie-core/watch"]
+tiktoken = ["runie-core/tiktoken"]
+
 [lib]
 path = "src/lib.rs"
 
 [dependencies]
 camino.workspace = true
 diffy.workspace = true
-runie-core.workspace = true
+runie-core = { workspace = true, features = ["mcp", "git", "keyring", "clipboard", "watch", "tiktoken"] }
 runie-provider.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true

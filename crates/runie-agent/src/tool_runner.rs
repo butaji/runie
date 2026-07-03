@@ -13,6 +13,7 @@ use runie_core::harness_skills::{SkillRegistry, ToolCallCtx, ToolCallPhase, Tool
 use runie_core::message::Role;
 use runie_core::message::{ChatMessage, Part};
 use runie_core::permissions::{PermissionAction, PermissionContext};
+#[cfg(feature = "mcp")]
 use runie_core::tool::annotations::get_tool_annotations;
 use runie_core::tool::{
     is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext,
@@ -123,6 +124,7 @@ pub fn build_permission_context<'a>(
         path,
         input: Some(input),
         cwd: Some(cwd),
+        #[cfg(feature = "mcp")]
         annotations: get_tool_annotations(tool),
     }
 }

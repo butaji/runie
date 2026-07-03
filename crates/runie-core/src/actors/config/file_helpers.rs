@@ -78,6 +78,7 @@ pub fn save_provider_to_path(
     models: &[String],
 ) -> anyhow::Result<()> {
     // Store api_key in keyring (never in config)
+    #[cfg(feature = "keyring")]
     if !api_key.is_empty() {
         if let Err(e) = crate::auth::set_and_verify_keyring(name, api_key) {
             tracing::warn!("failed to store api_key in keyring for {}: {}", name, e);
@@ -107,6 +108,7 @@ pub fn save_provider_to_path(
 /// Remove a provider entry from the config file and keyring.
 pub fn remove_provider_from_path(path: &Path, name: &str) -> anyhow::Result<()> {
     // Also remove from keyring
+    #[cfg(feature = "keyring")]
     let _ = crate::auth::delete_keyring_entry(name);
 
     let n = name.to_owned();

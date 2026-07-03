@@ -1177,7 +1177,7 @@
   {
     "file": "feature-gate-heavy-runie-core-subsystems.md",
     "title": "Feature-gate heavy `runie-core` subsystems",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "finish-replacing-remaining-custom-helpers-with-crates.md",

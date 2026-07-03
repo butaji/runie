@@ -9,9 +9,13 @@ use runie_core::permissions::PermissionGate;
 
 use crate::constants::DEFAULT_PERMISSION_TIMEOUT_SECS;
 use runie_core::permissions::{
-    DefaultToolApprove, FileAccessAsk, GitTrackedWriteApprove, PermissionManager,
+    FileAccessAsk, PermissionManager,
     PermissionSetPolicy,
 };
+#[cfg(feature = "mcp")]
+use runie_core::permissions::DefaultToolApprove;
+#[cfg(feature = "git")]
+use runie_core::permissions::GitTrackedWriteApprove;
 
 use crate::emit_approval_sink::EmitApprovalSink;
 
@@ -52,16 +56,19 @@ pub(crate) async fn create_permission_gate(
     // from [[permissions]] in config.toml and any /trust decisions.
     let rules = permission_handle.get_rules().await;
 
-    let permissions = PermissionManager::default().with_policies(vec![
-        Box::new(DefaultToolApprove::new()),
-        Box::new(GitTrackedWriteApprove::new()),
+    let mut policies: Vec<Box<dyn runie_core::permissions::PermissionPolicy>> = vec![
         Box::new(FileAccessAsk::new()),
         // User declarative rules — added last so they take precedence
         // (PermissionSetPolicy.evaluate always returns Some, winning the chain).
         Box::new(PermissionSetPolicy::new(rules)),
-    ]);
+    ];
+    #[cfg(feature = "mcp")]
+    policies.push(Box::new(DefaultToolApprove::new()));
+    #[cfg(feature = "git")]
+    policies.push(Box::new(GitTrackedWriteApprove::new()));
+
     PermissionGate::new(
-        permissions,
+        PermissionManager::default().with_policies(policies),
         Arc::new(EmitApprovalSink::with_cancel(
             permission_handle,
             DEFAULT_PERMISSION_TIMEOUT_SECS,

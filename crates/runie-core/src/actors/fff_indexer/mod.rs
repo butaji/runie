@@ -13,6 +13,7 @@
 
 mod content_search;
 mod frecency;
+#[cfg(feature = "git")]
 mod git_status;
 mod search_index;
 
@@ -28,6 +29,7 @@ pub use self::ractor_fff_indexer::RactorFffIndexerHandle;
 mod ractor_fff_indexer;
 
 // Re-exports for use by other modules (e.g., file_pickers)
+#[cfg(feature = "git")]
 pub use git_status::format_git_status;
 pub use search_index::SearchIndex;
 
@@ -178,6 +180,8 @@ pub struct FileSearchResult {
     pub relative_path: String,
     pub absolute_path: PathBuf,
     pub score: f64,
+    /// Git status for the file, if available (requires `git` feature).
+    #[cfg(feature = "git")]
     pub git_status: Option<git2::Status>,
 }
 

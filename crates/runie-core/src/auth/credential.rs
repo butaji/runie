@@ -51,6 +51,7 @@ impl Default for CredentialResolver {
 
 impl CredentialResolver {
     /// Create a new resolver using the OS keyring.
+    /// Falls back to `MockKeyringStore` when the `keyring` feature is disabled.
     pub fn new() -> Self {
         let env: HashMap<String, SecretString> = std::env::vars()
             .map(|(k, v)| (k, SecretString::from(v)))
@@ -60,7 +61,7 @@ impl CredentialResolver {
             env,
             dotenv,
             entries: HashMap::new(),
-            store: Arc::new(super::OsKeyringStore::new()),
+            store: Self::default_store(),
         }
     }
 
@@ -70,7 +71,20 @@ impl CredentialResolver {
             env: HashMap::new(),
             dotenv: HashMap::new(),
             entries: HashMap::new(),
-            store: Arc::new(super::OsKeyringStore::new()),
+            store: Self::default_store(),
+        }
+    }
+
+    /// Returns the default keyring store, falling back to `MockKeyringStore`
+    /// when the `keyring` feature is not enabled.
+    fn default_store() -> Arc<dyn super::KeyringStore> {
+        #[cfg(feature = "keyring")]
+        {
+            Arc::new(super::OsKeyringStore::new())
+        }
+        #[cfg(not(feature = "keyring"))]
+        {
+            Arc::new(super::MockKeyringStore::new())
         }
     }
 

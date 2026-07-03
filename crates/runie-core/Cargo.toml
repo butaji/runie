@@ -19,11 +19,22 @@ regex = { workspace = true }
 [features]
 default = []
 
+# Heavy / optional subsystems — each ships zero deps unless the feature is enabled.
+# Consumers who need the subsystem add the feature to their dependency on runie-core.
+# Feature names match the cargo convention of lowercase-with-hyphens.
+
+git       = ["dep:git2"]                  # git-status checks in fff indexer + git-tracked-write
+watch     = ["dep:notify", "dep:notify-debouncer-mini"]  # file-system watcher in ConfigActor
+keyring   = ["dep:keyring"]               # OS keyring credential storage
+clipboard = ["dep:arboard"]               # OS clipboard read/write
+mcp       = ["dep:rmcp", "dep:chrono"]   # MCP client + timestamp cache (rmcp pulls chrono)
+tiktoken  = ["dep:tiktoken"]             # accurate token counting via tiktoken
+
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
-rmcp.workspace = true
+rmcp = { workspace = true, optional = true }
 schemars.workspace = true
 jsonschema.workspace = true
 anyhow.workspace = true
@@ -42,8 +53,8 @@ pulldown-cmark-frontmatter.workspace = true
 quick-xml.workspace = true
 unicode-width.workspace = true
 textwrap.workspace = true
-notify.workspace = true
-notify-debouncer-mini.workspace = true
+notify               = { workspace = true, optional = true }
+notify-debouncer-mini = { workspace = true, optional = true }
 regex.workspace = true
 # winnow.workspace = true  # unused - cargo machete
 glob.workspace = true
@@ -52,13 +63,13 @@ shell-words.workspace = true
 command-group.workspace = true
 sublime_fuzzy.workspace = true
 strum.workspace = true
-git2.workspace = true
+git2  = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["blocking"] }
 tempfile.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tracing-appender.workspace = true
-keyring.workspace = true
+keyring = { workspace = true, optional = true }
 ringbuffer.workspace = true
 secrecy = { workspace = true, features = ["serde"] }
 sha2 = { workspace = true }
@@ -67,7 +78,7 @@ dotenvy.workspace = true
 fs2.workspace = true
 indextree.workspace = true
 indexmap.workspace = true
-arboard.workspace = true
+arboard = { workspace = true, optional = true }
 which.workspace = true
 ignore.workspace = true
 globset.workspace = true
@@ -83,12 +94,12 @@ ractor.workspace = true
 parking_lot.workspace = true
 tokio-util.workspace = true
 metrics.workspace = true
-tiktoken.workspace = true
+tiktoken = { workspace = true, optional = true }
 camino.workspace = true
 tinytemplate.workspace = true
 # serde_with.workspace = true  # unused - cargo machete
 validator.workspace = true
-chrono.workspace = true
+chrono = { workspace = true, optional = true }
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true
