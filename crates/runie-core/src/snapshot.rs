@@ -159,6 +159,8 @@ pub struct Snapshot {
     pub plan_mode: bool,
     /// Content of the active plan (markdown).
     pub active_plan_content: String,
+    /// ID of the active plan file.
+    pub active_plan_id: Option<String>,
 }
 
 /// Compute the index of the element currently at the top of the

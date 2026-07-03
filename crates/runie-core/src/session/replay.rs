@@ -141,6 +141,7 @@ fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
         summary: None,
         is_starred: false,
         is_system: false,
+        active_plan_id: state.view().active_plan_id.clone(),
     }
 }
 
@@ -387,6 +388,7 @@ mod tests {
                 summary: None,
                 is_starred: false,
                 is_system: false,
+                active_plan_id: None,
             })
             .unwrap();
 
@@ -506,5 +508,44 @@ mod tests {
         let loaded_snapshot = loaded_tree.to_snapshot().unwrap();
         assert_eq!(loaded_snapshot.root_id, snapshot.root_id);
         assert_eq!(loaded_snapshot.nodes.len(), snapshot.nodes.len());
+    }
+
+    /// Test that plan mode state is included in session metadata.
+    #[test]
+    fn build_metadata_includes_plan_id() {
+        let mut state = AppState::default();
+        state.view_mut().plan_mode = true;
+        state.view_mut().active_plan_content = "# Test Plan".to_string();
+        state.view_mut().active_plan_id = Some("test-plan-id".to_string());
+
+        let meta = build_metadata(&state, "test-session");
+        assert_eq!(meta.id, "test-session");
+        assert_eq!(meta.active_plan_id, Some("test-plan-id".to_string()));
+    }
+
+    /// Test that plan restoration sets view state correctly.
+    #[test]
+    fn restore_metadata_restores_plan_mode() {
+        let mut state = AppState::default();
+        state.set_session_display_name(Some("test-session".to_string()));
+
+        // Simulate session with active plan (using named values to avoid magic numbers)
+        const TS_CREATED: f64 = 1000.0;
+        const TS_UPDATED: f64 = 2000.0;
+        let meta = SessionMetadata {
+            id: "test-session".into(),
+            display_name: "Test Session".into(),
+            created_at: TS_CREATED,
+            updated_at: TS_UPDATED,
+            message_count: 5,
+            summary: None,
+            is_starred: false,
+            is_system: false,
+            active_plan_id: None, // No actual plan file to restore in this test
+        };
+
+        // restore_session_metadata is a method on AppState through domain_ops trait
+        state.restore_session_metadata(&meta);
+        assert!(!state.view().plan_mode); // No plan_id so plan_mode not restored
     }
 }

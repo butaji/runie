@@ -312,6 +312,18 @@ pub(super) fn handle_session_event(state: &mut AppState, event: crate::Event) {
         crate::Event::ForkSession { message_index } => {
             state.fork_session_at(message_index);
             state.view_mut().cached_session_tree_valid = false;
+            // Fork the plan if one is active
+            let plan_id_opt = state.view().active_plan_id.clone();
+            if let Some(ref plan_id) = plan_id_opt {
+                if let Some(plans_dir) = crate::session::plan_persistence::default_plans_dir() {
+                    if let Ok(Some(new_plan_id)) =
+                        crate::session::plan_persistence::fork_plan(&plans_dir, plan_id)
+                    {
+                        state.view_mut().active_plan_id = Some(new_plan_id.clone());
+                        tracing::debug!("Forked plan {} to {}", plan_id, new_plan_id);
+                    }
+                }
+            }
         }
         crate::Event::CloneSession => {
             state.clone_session();

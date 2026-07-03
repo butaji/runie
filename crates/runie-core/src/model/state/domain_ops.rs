@@ -444,6 +444,20 @@ impl AppState {
         if meta.display_name != meta.id {
             self.session_mut().session_display_name = Some(meta.display_name.clone());
         }
+
+        // Restore plan mode if the session has an associated plan
+        if let Some(ref plan_id) = meta.active_plan_id {
+            if let Some(plans_dir) = crate::session::plan_persistence::default_plans_dir() {
+                if let Some(plan) =
+                    crate::session::plan_persistence::load_plan(&plans_dir, plan_id).ok().flatten()
+                {
+                    self.view_mut().plan_mode = true;
+                    self.view_mut().active_plan_id = Some(plan_id.clone());
+                    self.view_mut().active_plan_content = plan.content;
+                    tracing::debug!("Restored plan {} for session {}", plan_id, meta.id);
+                }
+            }
+        }
     }
 
     /// Set session display name (replay helper).

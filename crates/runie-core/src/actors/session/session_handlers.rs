@@ -308,6 +308,7 @@ impl RactorSessionActor {
             summary: None,
             is_starred: false,
             is_system: false,
+            active_plan_id: None, // Plan ID is stored in AppState, not Session
         };
 
         let res = tokio::task::spawn_blocking(move || -> anyhow::Result<()> {

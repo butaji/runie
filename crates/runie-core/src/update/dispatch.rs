@@ -447,13 +447,31 @@ fn plan_mode_event(state: &mut AppState, event: crate::Event) {
     match event {
         crate::Event::PlanModeEnabled { content } => {
             state.view_mut().plan_mode = true;
-            state.view_mut().active_plan_content = content;
+            let content_clone = content.clone();
+            state.view_mut().active_plan_content = content_clone;
             state.view_mut().dirty = true;
+
+            // Save plan to disk and store the plan ID
+            if let Some(plans_dir) = crate::session::plan_persistence::default_plans_dir() {
+                let session_id = state
+                    .session()
+                    .session_display_name
+                    .clone()
+                    .unwrap_or_else(|| "default".to_string());
+                if let Ok(Some(plan_id)) =
+                    crate::session::plan_persistence::save_plan(&plans_dir, &session_id, &content)
+                {
+                    state.view_mut().active_plan_id = Some(plan_id);
+                    tracing::debug!("Saved plan for session {}", session_id);
+                }
+            }
+
             state.add_system_msg("Plan mode enabled. Write tools are blocked until plan is approved.".to_string());
         }
         crate::Event::PlanModeDisabled => {
             state.view_mut().plan_mode = false;
             state.view_mut().active_plan_content.clear();
+            state.view_mut().active_plan_id = None;
             state.view_mut().dirty = true;
             state.add_system_msg("Plan mode disabled.".to_string());
         }

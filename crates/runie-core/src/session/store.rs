@@ -483,6 +483,7 @@ mod tests {
             summary: Some("Test summary".into()),
             is_starred: true,
             is_system: false,
+            active_plan_id: None,
         };
         store.update_metadata(&meta).unwrap();
 
@@ -505,6 +506,7 @@ mod tests {
                 summary: None,
                 is_starred: false,
                 is_system: false,
+                active_plan_id: None,
             })
             .unwrap();
         store
@@ -517,6 +519,7 @@ mod tests {
                 summary: None,
                 is_starred: false,
                 is_system: false,
+                active_plan_id: None,
             })
             .unwrap();
 

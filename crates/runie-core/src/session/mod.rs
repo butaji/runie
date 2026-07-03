@@ -4,6 +4,7 @@
 
 pub mod persistence;
 pub mod plan_store;
+pub mod plan_persistence;
 pub mod replay;
 pub mod store;
 #[cfg(test)]
@@ -28,6 +29,9 @@ pub struct SessionMetadata {
     pub is_starred: bool,
     #[serde(default)]
     pub is_system: bool,
+    /// ID of the active plan associated with this session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_plan_id: Option<String>,
 }
 
 /// Alias for `SessionMetadata` — used in the persistence layer for file headers.

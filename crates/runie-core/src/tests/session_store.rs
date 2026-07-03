@@ -163,6 +163,7 @@ fn meta_round_trips_through_index() {
         summary: Some("A summary".into()),
         is_starred: true,
         is_system: false,
+        active_plan_id: None,
     };
 
     store.update_metadata(&meta).unwrap();

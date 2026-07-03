@@ -70,6 +70,8 @@ pub struct ViewState {
     pub plan_mode: bool,
     /// Content of the active plan (markdown).
     pub active_plan_content: String,
+    /// ID of the active plan file.
+    pub active_plan_id: Option<String>,
 }
 
 impl PartialEq for ViewState {
@@ -116,6 +118,10 @@ impl ViewState {
     pub fn active_plan_content_mut(&mut self) -> &mut String {
         &mut self.active_plan_content
     }
+
+    pub fn active_plan_id_mut(&mut self) -> &mut Option<String> {
+        &mut self.active_plan_id
+    }
 }
 
 impl Default for ViewState {
@@ -148,6 +154,7 @@ impl Default for ViewState {
             input_receiver: InputReceiver::default(),
             plan_mode: false,
             active_plan_content: String::new(),
+            active_plan_id: None,
         }
     }
 }

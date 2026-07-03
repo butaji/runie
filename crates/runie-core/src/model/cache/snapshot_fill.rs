@@ -85,4 +85,5 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     // Plan mode projection
     s.plan_mode = state.view().plan_mode;
     s.active_plan_content = state.view().active_plan_content.clone();
+    s.active_plan_id = state.view().active_plan_id.clone();
 }
