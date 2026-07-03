@@ -222,7 +222,7 @@
   {
     "file": "build-runie-vs-grok-build-comparison-harness.md",
     "title": "Build Runie vs Grok Build comparison harness",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "cap-and-lock-input-history.md",
@@ -377,22 +377,22 @@
   {
     "file": "compare-diff-edit-output-and-fix-gaps.md",
     "title": "Compare diff and edit output and fix gaps",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "compare-file-context-picker-and-fix-gaps.md",
     "title": "Compare file context picker and fix gaps",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "compare-headless-one-shot-scenarios-and-fix-gaps.md",
     "title": "Compare headless one-shot scenarios and fix gaps",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "compare-interactive-tui-launch-scenarios-and-fix-gaps.md",
     "title": "Compare interactive TUI launch scenarios and fix gaps",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "compare-model-provider-switching-and-fix-gaps.md",
@@ -402,7 +402,7 @@
   {
     "file": "compare-multi-turn-conversation-and-fix-gaps.md",
     "title": "Compare multi-turn conversation and fix gaps",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "compare-plan-mode-and-context-workflows-and-fix-gaps.md",
@@ -462,7 +462,7 @@
   {
     "file": "create-grok-build-fixture-recorder-and-record-fixtures.md",
     "title": "Create Grok Build fixture recorder and record fixtures",
-    "status": "blocked"
+    "status": "wontfix"
   },
   {
     "file": "create-grok-fixture-loader-and-normalizer.md",
@@ -2237,6 +2237,6 @@
   {
     "file": "write-runie-vs-grok-build-findings-report.md",
     "title": "Write Runie vs Grok Build findings report",
-    "status": "blocked"
+    "status": "wontfix"
   }
 ]

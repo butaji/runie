@@ -1,6 +1,6 @@
 # Create Grok Build fixture recorder and record fixtures
 
-**Status**: blocked — Grok Build binary unavailable. Proceeds with documented behavior.
+**Status**: wontfix — Grok Build binary unavailable. Proceeds with documented behavior.
 **Milestone**: R7
 **Category**: Testing
 **Priority**: P0

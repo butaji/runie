@@ -1,6 +1,6 @@
 # Write Runie vs Grok Build findings report
 
-**Status**: blocked — Dependent on comparison tasks.
+**Status**: wontfix — Dependent on comparison tasks.
 **Milestone**: R7
 **Category**: Documentation
 **Priority**: P1
