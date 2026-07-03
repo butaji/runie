@@ -25,7 +25,7 @@ fn providers_add_starts_login_flow() {
 }
 
 #[test]
-fn login_flow_cancel_blocked_without_model() {
+fn login_flow_cancel_closes_without_model() {
     clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
@@ -38,10 +38,13 @@ fn login_flow_cancel_blocked_without_model() {
     state.update(crate::Event::Cancel);
 
     assert!(
-        state.login_flow.is_some(),
-        "cancel should be blocked when no model is connected"
+        state.login_flow.is_none(),
+        "cancel should close the login flow when no model is connected"
     );
-    assert!(state.open_dialog.is_some(), "login panel should stay open");
+    assert!(
+        state.open_dialog.is_some(),
+        "previous providers dialog should be restored"
+    );
 }
 
 #[test]

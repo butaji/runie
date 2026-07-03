@@ -15,11 +15,11 @@ use crate::dialog::{Panel, PanelStack};
 
 /// Whether the login flow root panel should be dismissible.
 ///
-/// The onboarding dialog must stay open until a real provider/model is
-/// connected. The mock fallback (RUNIE_MOCK=1) does not count as a real
-/// connection for this purpose.
-fn login_root_closable(state: &crate::model::AppState) -> bool {
-    state.has_models() && !crate::provider::is_mock_enabled()
+/// The onboarding dialog is always dismissible with Esc/Back so the user can
+/// explore the app before connecting a provider. The dialog will reopen
+/// automatically on the next action that requires a model.
+fn login_root_closable(_state: &crate::model::AppState) -> bool {
+    true
 }
 
 /// Push a panel onto the login stack (and set the step on the state).
