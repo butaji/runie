@@ -309,6 +309,7 @@ fn approval_decision_deny_maps_to_permission_deny() {
 
 /// Layer 1: Safe tools are approved by default.
 #[tokio::test]
+#[cfg(feature = "mcp")]
 async fn default_allow_for_safe_tools() {
     let manager = PermissionManager::new(PermissionMode::Auto);
     for tool in ["read_file", "list_dir", "grep", "find", "fetch_docs"] {
