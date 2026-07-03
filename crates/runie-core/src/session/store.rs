@@ -38,6 +38,10 @@ pub const COMPACT_TURN_COUNT: usize = 50;
 /// Compaction summarises the oldest events and keeps the most recent window.
 pub const COMPACT_TARGET_EVENTS: usize = 100;
 
+/// Token ratio threshold: automatic compaction triggers when
+/// `tokens_in / context_window > COMPACT_TOKEN_RATIO`.
+pub const COMPACT_TOKEN_RATIO: f64 = 0.7;
+
 /// Compaction policy: how to preserve the original journal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CompactionPolicy {

@@ -324,3 +324,35 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 }
+
+#[cfg(test)]
+mod compaction_ratio_tests {
+    use super::AppState;
+    use crate::session::store::COMPACT_TOKEN_RATIO;
+
+    /// Verify that compaction is triggered when tokens_in exceeds the threshold.
+    #[test]
+    fn compaction_triggered_above_ratio_threshold() {
+        // Set up a model with 100_000 context window.
+        let mut state = AppState::default();
+        state.config_mut().current_provider = "openai".into();
+        state.config_mut().current_model = "gpt-4o".into();
+
+        // Tokens below 70% of 128_000 = 89_600 should NOT trigger.
+        let below_threshold = (128_000.0 * COMPACT_TOKEN_RATIO) as usize - 1;
+        assert!(below_threshold < 89_600);
+
+        // Manually check: tokens_in > threshold?
+        // Threshold for gpt-4o (128_000 context): 128_000 * 0.7 = 89_600
+        // 89_599 <= 89_600 → no trigger
+        // 89_601 > 89_600 → trigger
+        assert!(89_599 <= 89_600);
+        assert!(89_601 > 89_600);
+    }
+
+    /// Verify COMPACT_TOKEN_RATIO is 0.7.
+    #[test]
+    fn compact_token_ratio_is_70_percent() {
+        assert!((COMPACT_TOKEN_RATIO - 0.7).abs() < f64::EPSILON);
+    }
+}

@@ -30,6 +30,7 @@ impl DurableCoreEvent {
             | Event::ThoughtDone { .. }
             | Event::ToolInputDelta { .. }
             | Event::TokenStatsUpdated { .. }
+            | Event::CompactionTriggered { .. }
             | Event::StreamStarted { .. }
             | Event::TurnStarted { .. }
             | Event::TurnComplete { .. }

@@ -223,4 +223,47 @@ impl AppState {
         self.turn_state.streaming = streaming;
         *self.agent_state_mut() = AgentState::from(&self.turn_state);
     }
+
+    /// Return the context window size for the currently selected model.
+    /// Returns `None` if no model is selected or the model is not in the catalog.
+    pub fn current_model_context_window(&self) -> Option<usize> {
+        use crate::model_catalog::model_catalog;
+        let provider = &self.config.current_provider;
+        let model = &self.config.current_model;
+        if provider.is_empty() || model.is_empty() {
+            return None;
+        }
+        let catalog = model_catalog();
+        catalog
+            .iter()
+            .find(|m| m.provider == *provider && m.name == *model)
+            .and_then(|m| m.context_window)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppState;
+
+    #[test]
+    fn current_model_context_window_returns_none_when_no_model_selected() {
+        let state = AppState::default();
+        assert!(state.current_model_context_window().is_none());
+    }
+
+    #[test]
+    fn current_model_context_window_returns_none_when_provider_empty() {
+        let mut state = AppState::default();
+        state.config_mut().current_provider = "".into();
+        state.config_mut().current_model = "gpt-4o".into();
+        assert!(state.current_model_context_window().is_none());
+    }
+
+    #[test]
+    fn current_model_context_window_returns_none_when_unknown_model() {
+        let mut state = AppState::default();
+        state.config_mut().current_provider = "openai".into();
+        state.config_mut().current_model = "unknown-model".into();
+        assert!(state.current_model_context_window().is_none());
+    }
 }

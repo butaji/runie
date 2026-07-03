@@ -88,6 +88,28 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             speed_tps,
         } => {
             state.apply_token_stats(*tokens_in, *tokens_out, *speed_tps);
+            // Check if compaction should be triggered based on token ratio.
+            if let Some(ctx) = state.current_model_context_window() {
+                use crate::session::store::COMPACT_TOKEN_RATIO;
+                let threshold = (ctx as f64 * COMPACT_TOKEN_RATIO) as usize;
+                if *tokens_in > threshold {
+                    dispatch_event(
+                        state,
+                        Event::CompactionTriggered {
+                            ratio: COMPACT_TOKEN_RATIO,
+                            tokens_in: *tokens_in,
+                            context_window: ctx,
+                        },
+                    );
+                }
+            }
+            true
+        }
+        Event::CompactionTriggered { tokens_in: _, context_window, .. } => {
+            // Compaction keeps roughly COMPACT_TOKEN_RATIO of the context window.
+            use crate::session::store::COMPACT_TOKEN_RATIO;
+            let keep = (*context_window as f64 * COMPACT_TOKEN_RATIO) as usize;
+            let _ = state.compact(keep);
             true
         }
         Event::UserMessageSubmitted { id, content } => {
