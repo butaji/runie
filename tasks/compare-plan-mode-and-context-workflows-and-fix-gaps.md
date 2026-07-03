@@ -1,6 +1,6 @@
 # Compare plan mode and context workflows and fix gaps
 
-**Status**: todo
+**Status**: wontfix — blocked on Grok Build (unavailable). Compare tasks are deferred; Runie plan mode implemented independently via add-plan-file-artifact-and-plan-mode-rpc.
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P1

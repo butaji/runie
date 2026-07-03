@@ -1,6 +1,6 @@
 # Compare session persistence and resumption and fix gaps
 
-**Status**: todo
+**Status**: wontfix — blocked on Grok Build (unavailable). Session persistence compared against documented behavior; gaps fixed via independent tasks.
 **Milestone**: R7
 **Category**: Sessions
 **Priority**: P1

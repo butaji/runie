@@ -1,6 +1,6 @@
 # Compare subagent and MCP support and fix gaps
 
-**Status**: todo
+**Status**: wontfix — blocked on Grok Build (unavailable). Subagent/MCP scope decided independently via implement-or-remove-mcp-runtime-scaffolding.
 **Milestone**: R7
 **Category**: Architecture / Actors
 **Priority**: P2

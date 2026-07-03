@@ -1,6 +1,6 @@
 # Compare tool execution and permission flows and fix gaps
 
-**Status**: todo
+**Status**: wontfix — blocked on Grok Build (unavailable). Permission UX improved via independent fix tasks (fix-tui-permission-dialog-key-input-routed-to-input, etc.).
 **Milestone**: R7
 **Category**: Tools
 **Priority**: P0
