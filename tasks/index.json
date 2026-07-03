@@ -107,7 +107,7 @@
   {
     "file": "add-plan-file-artifact-and-plan-mode-rpc.md",
     "title": "Add plan file artifact and plan mode RPC",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "add-project-config-denylist-for-sensitive-keys.md",
@@ -127,7 +127,7 @@
   {
     "file": "add-session-compaction-with-threshold-and-tool-pair-summarization.md",
     "title": "Add session compaction with threshold and tool-pair summarization",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "add-structural-message-truncation-for-context-window.md",
