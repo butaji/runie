@@ -15,16 +15,6 @@
     "status": "done"
   },
   {
-    "file": "actually-use-pulldown-cmark-frontmatter-in-resource-loader.md",
-    "title": "Actually use pulldown-cmark-frontmatter in resource loader",
-    "status": "wontfix"
-  },
-  {
-    "file": "add-agent-command-test-builder.md",
-    "title": "Add AgentCommand test builder",
-    "status": "done"
-  },
-  {
     "file": "add-blocked-status-and-blocked-reason-fields-to-tasks.md",
     "title": "Add `blocked` status and `blocked_reason` fields to tasks",
     "status": "done"
@@ -35,53 +25,8 @@
     "status": "done"
   },
   {
-    "file": "add-contract-tests-for-turnactor-and-sessionstore.md",
-    "title": "Add contract tests for `TurnActor` and `SessionStore`",
-    "status": "done"
-  },
-  {
-    "file": "add-convention-against-magic-numbers.md",
-    "title": "Add convention / lint against magic numbers",
-    "status": "done"
-  },
-  {
-    "file": "add-event-assertion-helpers-to-runie-testing.md",
-    "title": "Add event assertion helpers to runie-testing",
-    "status": "done"
-  },
-  {
     "file": "add-eventbus-backpressure-or-acknowledgement.md",
     "title": "Add EventBus backpressure or acknowledgement",
-    "status": "done"
-  },
-  {
-    "file": "add-features-to-runie-provider.md",
-    "title": "Add features to `runie-provider`",
-    "status": "done"
-  },
-  {
-    "file": "add-grok-provider-event-translator-and-headless-replay.md",
-    "title": "Add Grok provider-event translator and headless replay",
-    "status": "done"
-  },
-  {
-    "file": "add-grok-tui-keystroke-replay-and-tool-mapping.md",
-    "title": "Add Grok TUI keystroke replay and tool mapping",
-    "status": "done"
-  },
-  {
-    "file": "add-idempotency-keys-to-turn-events.md",
-    "title": "Add idempotency keys to turn events",
-    "status": "done"
-  },
-  {
-    "file": "add-in-memory-backends-for-unit-tests.md",
-    "title": "Add in-memory backends for unit tests",
-    "status": "done"
-  },
-  {
-    "file": "add-json-file-logging-for-tui.md",
-    "title": "Add JSON file logging for TUI",
     "status": "done"
   },
   {
@@ -90,53 +35,8 @@
     "status": "done"
   },
   {
-    "file": "add-keyring-store-trait-with-mock.md",
-    "title": "Add keyring store trait with mock",
-    "status": "done"
-  },
-  {
-    "file": "add-mcp-tool-schema-cache-and-connection-manager.md",
-    "title": "Add MCP tool schema cache and connection manager",
-    "status": "done"
-  },
-  {
-    "file": "add-message-origin-metadata-to-fix-follow-up-continuity.md",
-    "title": "Add message origin metadata to fix follow-up continuity",
-    "status": "done"
-  },
-  {
-    "file": "add-missing-queue-fact-events.md",
-    "title": "Add missing queue fact events",
-    "status": "done"
-  },
-  {
-    "file": "add-openai-provider-fixtures.md",
-    "title": "Add OpenAI provider fixtures",
-    "status": "done"
-  },
-  {
-    "file": "add-parameterized-tests-with-test-case.md",
-    "title": "Add parameterized tests with `test-case`",
-    "status": "done"
-  },
-  {
     "file": "add-plan-file-artifact-and-plan-mode-rpc.md",
     "title": "Add plan file artifact and plan mode RPC",
-    "status": "done"
-  },
-  {
-    "file": "add-project-config-denylist-for-sensitive-keys.md",
-    "title": "Add project config denylist for sensitive keys",
-    "status": "done"
-  },
-  {
-    "file": "add-project-level-config-layer-and-keyring-secrets.md",
-    "title": "Add project-level config layer and keyring secrets",
-    "status": "done"
-  },
-  {
-    "file": "add-sample-config-env-and-completions.md",
-    "title": "Add sample config, env template, and completions",
     "status": "done"
   },
   {
@@ -145,38 +45,13 @@
     "status": "done"
   },
   {
-    "file": "add-structural-message-truncation-for-context-window.md",
-    "title": "Add structural message truncation for context window",
-    "status": "done"
-  },
-  {
     "file": "add-supersedes-field-and-deduplication-sweep-task.md",
     "title": "Add `supersedes` field and deduplication sweep task",
     "status": "done"
   },
   {
-    "file": "add-testable-tui-bootstrap-with-providerfactory-and-keystrokes.md",
-    "title": "Add testable TUI bootstrap with ProviderFactory and keystrokes",
-    "status": "done"
-  },
-  {
     "file": "add-tracing-to-runie-provider.md",
     "title": "Add tracing to `runie-provider`",
-    "status": "done"
-  },
-  {
-    "file": "add-turn-journal-phases-for-crash-recovery.md",
-    "title": "Add turn journal phases for crash recovery",
-    "status": "done"
-  },
-  {
-    "file": "adopt-camino-utf8pathbuf-for-internal-paths.md",
-    "title": "Adopt camino Utf8PathBuf for internal paths",
-    "status": "done"
-  },
-  {
-    "file": "adopt-metrics-facade-for-telemetry.md",
-    "title": "Adopt metrics facade for telemetry",
     "status": "done"
   },
   {
@@ -190,28 +65,8 @@
     "status": "done"
   },
   {
-    "file": "adopt-testing-helpers-across-all-tests.md",
-    "title": "Adopt testing helpers across all tests",
-    "status": "done"
-  },
-  {
-    "file": "adopt-wiremock-for-provider-api-tests.md",
-    "title": "Adopt wiremock for provider API tests",
-    "status": "done"
-  },
-  {
     "file": "align-cli-binary-name-with-docs.md",
     "title": "Align CLI binary name with docs",
-    "status": "done"
-  },
-  {
-    "file": "audit-and-update-architecture-and-execute-docs.md",
-    "title": "Audit and update Architecture and EXECUTE docs",
-    "status": "done"
-  },
-  {
-    "file": "audit-mock-provider-delay-constants.md",
-    "title": "Audit mock provider delay constants",
     "status": "done"
   },
   {
@@ -225,16 +80,6 @@
     "status": "done"
   },
   {
-    "file": "await-provider-network-calls-in-ractor-handler.md",
-    "title": "Await provider network calls in ractor handler",
-    "status": "done"
-  },
-  {
-    "file": "break-runie-testing-dev-dependency-cycle.md",
-    "title": "Break `runie-testing` dev-dependency cycle",
-    "status": "done"
-  },
-  {
     "file": "buffer-tcp-lines-in-leader-server.md",
     "title": "Buffer TCP lines in leader server",
     "status": "done"
@@ -245,33 +90,8 @@
     "status": "wontfix"
   },
   {
-    "file": "cap-and-lock-input-history.md",
-    "title": "Cap and lock input history",
-    "status": "done"
-  },
-  {
-    "file": "centralize-actor-channel-capacities-and-timeouts.md",
-    "title": "Centralize actor channel capacities and timeouts",
-    "status": "done"
-  },
-  {
-    "file": "centralize-agent-approval-timeout-and-max-tool-rounds.md",
-    "title": "Centralize agent approval timeout and max tool rounds",
-    "status": "done"
-  },
-  {
     "file": "centralize-built-in-tool-names.md",
     "title": "Centralize built-in tool names",
-    "status": "done"
-  },
-  {
-    "file": "centralize-byte-and-duration-formatting-thresholds.md",
-    "title": "Centralize byte and duration formatting thresholds",
-    "status": "done"
-  },
-  {
-    "file": "centralize-env-lock-in-runie-testing.md",
-    "title": "Centralize ENV_LOCK in runie-testing",
     "status": "done"
   },
   {
@@ -280,53 +100,8 @@
     "status": "done"
   },
   {
-    "file": "centralize-provider-error-status-classification.md",
-    "title": "Centralize provider error status classification",
-    "status": "done"
-  },
-  {
-    "file": "centralize-provider-http-timeouts-and-retry-constants.md",
-    "title": "Centralize provider HTTP timeouts and retry constants",
-    "status": "done"
-  },
-  {
-    "file": "centralize-reqwest-client-and-url-normalization.md",
-    "title": "Centralize `reqwest` client and URL normalization",
-    "status": "done"
-  },
-  {
     "file": "centralize-test-fixtures-and-mocks.md",
     "title": "Centralize test fixtures and mocks in `runie-testing`",
-    "status": "done"
-  },
-  {
-    "file": "centralize-tool-default-limits.md",
-    "title": "Centralize tool default limits",
-    "status": "done"
-  },
-  {
-    "file": "centralize-tui-glyphs-and-theme-constants.md",
-    "title": "Centralize TUI glyphs and theme constants",
-    "status": "done"
-  },
-  {
-    "file": "centralize-tui-popup-layout-constants.md",
-    "title": "Centralize TUI popup layout constants",
-    "status": "done"
-  },
-  {
-    "file": "centralize-ui-strings-module.md",
-    "title": "Centralize UI strings module",
-    "status": "done"
-  },
-  {
-    "file": "centralize-unix-now-helper.md",
-    "title": "Centralize unix_now helper",
-    "status": "done"
-  },
-  {
-    "file": "cleanup-runie-testing-dead-modules.md",
-    "title": "Cleanup runie-testing dead modules",
     "status": "done"
   },
   {
@@ -345,23 +120,8 @@
     "status": "done"
   },
   {
-    "file": "clear-inflight-turn-state-on-success.md",
-    "title": "Clear in-flight turn state on success",
-    "status": "done"
-  },
-  {
     "file": "collapse-actor-handles-to-typed-map.md",
     "title": "Collapse `ActorHandles` to a typed `ractor::ActorRef` map",
-    "status": "done"
-  },
-  {
-    "file": "collapse-command-types-to-single-command-action-enum.md",
-    "title": "Collapse command types to a single Command/Action enum",
-    "status": "done"
-  },
-  {
-    "file": "collapse-commandkinddef-into-commandkind.md",
-    "title": "Collapse `CommandKindDef` into `CommandKind`",
     "status": "done"
   },
   {
@@ -377,16 +137,6 @@
   {
     "file": "collapse-event-intent-kind-taxonomies.md",
     "title": "Annotate `Event` variants to generate `EventKind`, `EventCategory`, and `Intent`",
-    "status": "done"
-  },
-  {
-    "file": "collapse-intent-into-shared-event-payloads.md",
-    "title": "Collapse `Intent` into shared event payloads",
-    "status": "done"
-  },
-  {
-    "file": "collapse-remaining-actor-handle-wrappers-to-actorref.md",
-    "title": "Collapse remaining actor handle wrappers to ractor::ActorRef",
     "status": "done"
   },
   {
@@ -450,26 +200,6 @@
     "status": "wontfix"
   },
   {
-    "file": "consolidate-duplicate-credential-resolution-task-files.md",
-    "title": "Consolidate duplicate credential resolution task files",
-    "status": "done"
-  },
-  {
-    "file": "consolidate-message-validation-in-one-module.md",
-    "title": "Consolidate message validation in one module",
-    "status": "done"
-  },
-  {
-    "file": "consolidate-provider-credential-resolver-duplication.md",
-    "title": "Consolidate provider credential resolver duplication",
-    "status": "done"
-  },
-  {
-    "file": "consolidate-session-metadata-and-delete-sessionindex-read-path.md",
-    "title": "Consolidate session metadata and delete SessionIndex read path",
-    "status": "done"
-  },
-  {
     "file": "convert-agent-and-fff-indexer-to-ractor-state.md",
     "title": "Convert `AgentActor` and `FffIndexerActor` to idiomatic `ractor` `State`",
     "status": "done"
@@ -485,38 +215,8 @@
     "status": "wontfix"
   },
   {
-    "file": "create-grok-fixture-loader-and-normalizer.md",
-    "title": "Create Grok fixture loader and normalizer",
-    "status": "done"
-  },
-  {
-    "file": "create-unified-architecture-backlog-execution-task.md",
-    "title": "Create unified architecture backlog execution task",
-    "status": "done"
-  },
-  {
     "file": "dedupe-turn-queue-delivery-logic.md",
     "title": "Dedupe turn-queue delivery logic",
-    "status": "done"
-  },
-  {
-    "file": "deduplicate-cargo-lock-versions-and-deny.md",
-    "title": "Deduplicate Cargo.lock versions and deny multiples",
-    "status": "done"
-  },
-  {
-    "file": "deduplicate-input-event-mapping-between-forwarder-and-uiactor.md",
-    "title": "Deduplicate input-event mapping between forwarder and `UiActor`",
-    "status": "done"
-  },
-  {
-    "file": "define-jsonl-compaction-threshold-and-policy.md",
-    "title": "Define JSONL compaction threshold and policy",
-    "status": "done"
-  },
-  {
-    "file": "delete-broken-dsl-flow-combinators-and-thread-local-runtime.md",
-    "title": "Delete broken DSL flow combinators and thread-local runtime",
     "status": "done"
   },
   {
@@ -530,38 +230,8 @@
     "status": "done"
   },
   {
-    "file": "delete-dead-classify-reqwest-error-reexport.md",
-    "title": "Delete dead classify_reqwest_error re-export",
-    "status": "done"
-  },
-  {
-    "file": "delete-dead-declarative-command-registration.md",
-    "title": "Delete dead declarative command registration",
-    "status": "done"
-  },
-  {
-    "file": "delete-dead-inspectreport-build-method.md",
-    "title": "Delete dead InspectReport build method",
-    "status": "done"
-  },
-  {
-    "file": "delete-dead-ractoragenthandleext-trait.md",
-    "title": "Delete dead RactorAgentHandleExt trait",
-    "status": "done"
-  },
-  {
-    "file": "delete-dead-runie-core-testing-module.md",
-    "title": "Delete dead runie-core testing module",
-    "status": "done"
-  },
-  {
     "file": "delete-dead-runie-macros-crate.md",
     "title": "Delete the dead `runie-macros` crate",
-    "status": "done"
-  },
-  {
-    "file": "delete-dynprovider-and-providerconfigbox-wrappers.md",
-    "title": "Delete DynProvider and ProviderConfigBox wrappers",
     "status": "done"
   },
   {
@@ -585,33 +255,8 @@
     "status": "done"
   },
   {
-    "file": "delete-providerconfigbox-alias-and-rename-dynproviderfactory.md",
-    "title": "Delete ProviderConfigBox alias and rename DynProviderFactory",
-    "status": "done"
-  },
-  {
     "file": "delete-unused-glyph-constants.md",
     "title": "Delete unused glyph constants from `runie-tui`",
-    "status": "done"
-  },
-  {
-    "file": "derive-agent-running-flag-from-turnstate-events.md",
-    "title": "Derive `agent_running` flag from `TurnState` events",
-    "status": "done"
-  },
-  {
-    "file": "derive-builder-for-model-and-panel-builders.md",
-    "title": "Derive builders for model and panel builders",
-    "status": "done"
-  },
-  {
-    "file": "derive-chatmessage-builder-with-derive-builder.md",
-    "title": "Derive `ChatMessageBuilder` with `derive_builder`",
-    "status": "done"
-  },
-  {
-    "file": "derive-durable-and-headless-events-from-canonical-event.md",
-    "title": "Derive durable and headless events from canonical Event",
     "status": "done"
   },
   {
@@ -622,11 +267,6 @@
   {
     "file": "deserialize-declarative-command-yaml-with-typed-structs.md",
     "title": "Deserialize declarative command YAML with typed structs",
-    "status": "done"
-  },
-  {
-    "file": "disable-arboard-image-features-for-text-only-clipboard.md",
-    "title": "Disable arboard image features for text-only clipboard",
     "status": "done"
   },
   {
@@ -645,11 +285,6 @@
     "status": "done"
   },
   {
-    "file": "drop-terminal-brand-and-multiplexer-tables.md",
-    "title": "Drop terminal brand and multiplexer tables",
-    "status": "done"
-  },
-  {
     "file": "drop-unused-rand-from-runie-provider.md",
     "title": "Drop unused `rand` from `runie-provider`",
     "status": "done"
@@ -657,11 +292,6 @@
   {
     "file": "eliminate-production-unwrap-expect.md",
     "title": "Eliminate production `unwrap`/`expect` that should be recoverable errors",
-    "status": "done"
-  },
-  {
-    "file": "eliminate-real-sleeps-in-provider-tests.md",
-    "title": "Eliminate real sleeps in provider tests",
     "status": "done"
   },
   {
@@ -680,53 +310,13 @@
     "status": "done"
   },
   {
-    "file": "enforce-observed-async-work-in-all-actors.md",
-    "title": "Enforce observed async work in all actors",
-    "status": "done"
-  },
-  {
-    "file": "enrich-provider-trait-with-metadata-and-retry-config.md",
-    "title": "Enrich provider trait with metadata and retry config",
-    "status": "done"
-  },
-  {
     "file": "env-actor-owns-git-cwd.md",
     "title": "env-actor-owns-git-cwd",
     "status": "done"
   },
   {
-    "file": "execute-fifth-pass-ssot-event-protocol-roadmap.md",
-    "title": "Execute fifth-pass SSOT event protocol roadmap",
-    "status": "done"
-  },
-  {
-    "file": "execute-five-round-architecture-review-roadmap.md",
-    "title": "Execute five-round architecture review roadmap",
-    "status": "done"
-  },
-  {
-    "file": "execute-fourth-pass-backlog-consolidation-roadmap.md",
-    "title": "Execute fourth-pass backlog consolidation roadmap",
-    "status": "done"
-  },
-  {
-    "file": "execute-magic-numbers-cleanup-roadmap.md",
-    "title": "Execute magic numbers cleanup roadmap",
-    "status": "done"
-  },
-  {
-    "file": "execute-second-pass-architecture-review-roadmap.md",
-    "title": "Execute second-pass architecture review roadmap",
-    "status": "done"
-  },
-  {
     "file": "execute-second-pass-magic-numbers-cleanup.md",
     "title": "Execute second-pass magic numbers cleanup",
-    "status": "done"
-  },
-  {
-    "file": "execute-third-pass-architecture-review-roadmap.md",
-    "title": "Execute third-pass architecture review roadmap",
     "status": "done"
   },
   {
@@ -740,23 +330,8 @@
     "status": "done"
   },
   {
-    "file": "extend-mock-tool-skill-with-errors-and-sequencing.md",
-    "title": "Extend MockToolSkill with errors and sequencing",
-    "status": "done"
-  },
-  {
     "file": "externalize-default-prompts-tools-and-keybindings-to-resources.md",
     "title": "Externalize default prompts, tools, and keybindings to resources",
-    "status": "done"
-  },
-  {
-    "file": "externalize-default-theme-toml-to-resources.md",
-    "title": "Externalize default theme TOML to resources",
-    "status": "done"
-  },
-  {
-    "file": "extract-runie-test-utils-crate.md",
-    "title": "Extract runie-test-utils crate",
     "status": "done"
   },
   {
@@ -770,16 +345,6 @@
     "status": "done"
   },
   {
-    "file": "feature-gate-heavy-runie-core-subsystems.md",
-    "title": "Feature-gate heavy `runie-core` subsystems",
-    "status": "done"
-  },
-  {
-    "file": "finish-derive-builder-for-modelinfo-and-provider-configs.md",
-    "title": "Finish derive_builder for ModelInfo and provider configs",
-    "status": "done"
-  },
-  {
     "file": "finish-replacing-custom-tui-widgets.md",
     "title": "Finish replacing custom TUI widgets",
     "status": "done"
@@ -790,18 +355,8 @@
     "status": "done"
   },
   {
-    "file": "finish-strum-migration-for-remaining-enums.md",
-    "title": "Finish strum migration for remaining enums",
-    "status": "done"
-  },
-  {
     "file": "fix-500-line-file-limit-violations.md",
     "title": "Fix 500-line file-limit violations",
-    "status": "done"
-  },
-  {
-    "file": "fix-agentsmd-layer4-example-and-stale-provider-reexports.md",
-    "title": "Fix AGENTS.md Layer-4 example and stale provider re-exports",
     "status": "done"
   },
   {
@@ -812,11 +367,6 @@
   {
     "file": "fix-cli-headless-native-tool-permission-denied-loop.md",
     "title": "Fix CLI headless native tool loops after permission denied",
-    "status": "done"
-  },
-  {
-    "file": "fix-config-docs-and-readme-misalignments.md",
-    "title": "Fix config docs and README misalignments",
     "status": "done"
   },
   {
@@ -832,11 +382,6 @@
   {
     "file": "fix-dry-run-tool-names-discrepancy.md",
     "title": "Fix dry-run tool-name discrepancy",
-    "status": "done"
-  },
-  {
-    "file": "fix-env-lock-isolation-and-remove-duplicates.md",
-    "title": "Fix env lock isolation and remove duplicates",
     "status": "done"
   },
   {
@@ -865,21 +410,6 @@
     "status": "done"
   },
   {
-    "file": "fix-leader-tcp-utf8-split-with-linescodec.md",
-    "title": "Fix leader TCP UTF-8 split with LinesCodec",
-    "status": "done"
-  },
-  {
-    "file": "fix-or-delete-runie-testing-testrunner.md",
-    "title": "Fix or delete runie-testing TestRunner",
-    "status": "done"
-  },
-  {
-    "file": "fix-permissionaction-serde-case-and-docs.md",
-    "title": "Fix PermissionAction serde case and docs",
-    "status": "done"
-  },
-  {
     "file": "fix-ractor-permission-actor-reply-lifecycle.md",
     "title": "Fix `RactorPermissionActor` reply lifecycle",
     "status": "done"
@@ -895,13 +425,8 @@
     "status": "done"
   },
   {
-    "file": "fix-throbber-inversion-and-use-throbber-widgets-tui.md",
-    "title": "Fix throbber inversion and use `throbber_widgets_tui`",
-    "status": "done"
-  },
-  {
     "file": "fix-tui-at-file-picker-shows-no-files.md",
-    "title": "Fix TUI @ file picker shows \\\"No files found\\\"",
+    "title": "Fix TUI @ file picker shows \"No files found\"",
     "status": "done"
   },
   {
@@ -916,7 +441,7 @@
   },
   {
     "file": "fix-tui-history-shows-no-history-after-message.md",
-    "title": "Fix TUI /history shows \\\"No history\\\" after a message is sent",
+    "title": "Fix TUI /history shows \"No history\" after a message is sent",
     "status": "done"
   },
   {
@@ -955,23 +480,8 @@
     "status": "done"
   },
   {
-    "file": "fix-turn-projection-retain-bug-and-delete-mirrored-queue.md",
-    "title": "Fix turn projection retain bug and delete mirrored queue",
-    "status": "done"
-  },
-  {
     "file": "fix-unix-only-dependencies-in-runie-core.md",
     "title": "Fix Unix-only dependencies in `runie-core`",
-    "status": "done"
-  },
-  {
-    "file": "fix-view-cache-double-rebuild-and-use-cached-gen.md",
-    "title": "Fix view cache double rebuild and use cached_gen",
-    "status": "done"
-  },
-  {
-    "file": "fold-lifecycle-state-machine-into-provider-events.md",
-    "title": "Fold lifecycle state machine into provider events",
     "status": "done"
   },
   {
@@ -980,53 +490,13 @@
     "status": "done"
   },
   {
-    "file": "format-permission-request-for-human-readable-display.md",
-    "title": "Format permission request for human-readable display",
-    "status": "done"
-  },
-  {
-    "file": "fuzzy-history-search-with-sublime-fuzzy.md",
-    "title": "Fuzzy history search with sublime-fuzzy",
-    "status": "done"
-  },
-  {
     "file": "gate-test-support-with-cfg-test.md",
     "title": "Gate test support with `#[cfg(test)]`",
     "status": "done"
   },
   {
-    "file": "generate-event-taxonomy-or-delete-generated-files.md",
-    "title": "Generate event taxonomy or delete generated files",
-    "status": "wontfix"
-  },
-  {
-    "file": "generate-tool-dispatch-from-single-registry.md",
-    "title": "Generate tool dispatch from a single registry",
-    "status": "done"
-  },
-  {
-    "file": "graceful-leader-shutdown-with-joinset-timeout.md",
-    "title": "Graceful leader shutdown with JoinSet timeout",
-    "status": "done"
-  },
-  {
     "file": "harden-actors-against-mutex-poisoning.md",
     "title": "Harden async actors against mutex poisoning and startup panics",
-    "status": "done"
-  },
-  {
-    "file": "hoist-runie-provider-inline-deps-to-workspace.md",
-    "title": "Hoist runie-provider inline deps to workspace",
-    "status": "done"
-  },
-  {
-    "file": "hoist-runie-tui-inline-deps-to-workspace.md",
-    "title": "Hoist runie-tui inline deps to workspace",
-    "status": "done"
-  },
-  {
-    "file": "hold-advisory-lock-until-atomic-rename-completes.md",
-    "title": "Hold advisory lock until atomic rename completes",
     "status": "done"
   },
   {
@@ -1040,28 +510,18 @@
     "status": "done"
   },
   {
+    "file": "implement-os-level-bash-sandboxing.md",
+    "title": "Implement OS-level bash sandboxing",
+    "status": "todo"
+  },
+  {
     "file": "initialize-tracing-subscriber-in-binaries.md",
     "title": "Initialize `tracing` subscriber in CLI and TUI binaries",
     "status": "done"
   },
   {
-    "file": "inject-provider-factory-into-headless-cli-and-runtime.md",
-    "title": "Inject provider factory into headless CLI and runtime",
-    "status": "done"
-  },
-  {
-    "file": "instrument-actor-handlers-with-tracing.md",
-    "title": "Instrument actor handlers with tracing",
-    "status": "done"
-  },
-  {
     "file": "introduce-cargo-deny-and-cargo-machete-ci.md",
     "title": "Introduce `cargo-deny` and `cargo-machete` CI checks",
-    "status": "done"
-  },
-  {
-    "file": "introduce-typed-provider-errors.md",
-    "title": "Introduce typed provider errors",
     "status": "done"
   },
   {
@@ -1075,54 +535,14 @@
     "status": "wontfix"
   },
   {
-    "file": "load-slash-commands-with-include-dir.md",
-    "title": "Load slash commands with include_dir",
-    "status": "done"
-  },
-  {
-    "file": "make-projection-handlers-idempotent.md",
-    "title": "Make projection handlers idempotent",
-    "status": "done"
-  },
-  {
-    "file": "make-trust-and-auth-file-persistence-atomic-and-restricted.md",
-    "title": "Make trust and auth file persistence atomic and restricted",
-    "status": "done"
-  },
-  {
-    "file": "make-tui-render-loop-async-with-watch-channel.md",
-    "title": "Make TUI render loop async with watch channel",
-    "status": "done"
-  },
-  {
     "file": "make-turnactor-sole-owner-of-turn-state.md",
     "title": "Make `TurnActor` the sole owner of turn state",
-    "status": "partial"
-  },
-  {
-    "file": "merge-agentstate-into-turnstate-projection.md",
-    "title": "Merge AgentState into a TurnState projection",
-    "status": "done"
-  },
-  {
-    "file": "merge-duplicate-session-persistence-tasks.md",
-    "title": "Merge duplicate session persistence tasks",
-    "status": "done"
-  },
-  {
-    "file": "merge-duplicate-tui-widget-replacement-tasks.md",
-    "title": "Merge duplicate TUI widget replacement tasks",
     "status": "done"
   },
   {
     "file": "migrate-production-actors-to-ractor.md",
     "title": "Migrate production actors to `ractor`",
     "status": "done"
-  },
-  {
-    "file": "migrate-session-persistence-to-rusqlite.md",
-    "title": "Migrate session persistence to rusqlite",
-    "status": "wontfix"
   },
   {
     "file": "migrate-subagent-loader-to-resource-loader.md",
@@ -1132,11 +552,6 @@
   {
     "file": "migrate-tui-and-cli-to-leader-bootstrap.md",
     "title": "Migrate TUI and CLI to `Leader::start`",
-    "status": "done"
-  },
-  {
-    "file": "move-approval-registry-into-permission-actor-state.md",
-    "title": "Move ApprovalRegistry into PermissionActor state",
     "status": "done"
   },
   {
@@ -1155,38 +570,13 @@
     "status": "done"
   },
   {
-    "file": "move-derived-values-out-of-events.md",
-    "title": "Move derived values out of events",
-    "status": "done"
-  },
-  {
     "file": "move-grep-find-tests-to-tests-directory.md",
     "title": "Move grep_find tests to tests directory",
     "status": "done"
   },
   {
-    "file": "move-tunable-values-from-constants-to-config.md",
-    "title": "Move tunable values from constants to config",
-    "status": "done"
-  },
-  {
-    "file": "name-keyring-token-preview-and-build-lint-lookback.md",
-    "title": "Name keyring token preview and build lint lookback",
-    "status": "done"
-  },
-  {
-    "file": "name-tui-and-cli-channel-capacities.md",
-    "title": "Name TUI and CLI channel capacities",
-    "status": "done"
-  },
-  {
     "file": "narrow-runie-core-public-api.md",
     "title": "Narrow `runie-core` public API",
-    "status": "done"
-  },
-  {
-    "file": "normalize-paths-with-path-absolutize-and-dunce.md",
-    "title": "Normalize paths with path-absolutize",
     "status": "done"
   },
   {
@@ -1200,28 +590,8 @@
     "status": "done"
   },
   {
-    "file": "offload-agent-turn-from-actor-handler-to-tokio-task.md",
-    "title": "Offload agent turn from actor handler to a tokio task",
-    "status": "done"
-  },
-  {
     "file": "offload-provider-network-calls-from-actor-handler.md",
     "title": "Offload provider network calls from actor handler",
-    "status": "done"
-  },
-  {
-    "file": "parse-bash-commands-with-shell-words-in-ioactor.md",
-    "title": "Parse bash commands with shell-words in IoActor",
-    "status": "done"
-  },
-  {
-    "file": "persist-session-tree-and-branch-state.md",
-    "title": "Persist session tree and branch state",
-    "status": "done"
-  },
-  {
-    "file": "plumb-keyringstore-into-builtproviderfactory.md",
-    "title": "Plumb KeyringStore into BuiltProviderFactory",
     "status": "done"
   },
   {
@@ -1255,33 +625,8 @@
     "status": "done"
   },
   {
-    "file": "regenerate-config-schema-and-fix-permission-mode-description.md",
-    "title": "Regenerate config schema and fix PermissionMode description",
-    "status": "done"
-  },
-  {
-    "file": "regenerate-index-and-mark-typed-chatmessage-builder-done.md",
-    "title": "Regenerate index and mark typed ChatMessage builder done",
-    "status": "done"
-  },
-  {
     "file": "remove-agent-handlebox-dead-code-or-wire-queue-drain.md",
     "title": "Remove AgentHandleBox dead code or wire run_if_queued",
-    "status": "done"
-  },
-  {
-    "file": "remove-authtoken-custom-serde-wrappers.md",
-    "title": "Remove AuthToken custom serde wrappers",
-    "status": "wontfix"
-  },
-  {
-    "file": "remove-blanket-clippy-allow-in-turn-projections.md",
-    "title": "Remove blanket clippy allow in turn projections",
-    "status": "done"
-  },
-  {
-    "file": "remove-clone-impl-for-messages-with-reply-ports.md",
-    "title": "Remove `Clone` impl for messages with reply ports",
     "status": "done"
   },
   {
@@ -1295,23 +640,8 @@
     "status": "done"
   },
   {
-    "file": "remove-dead-redb-optional-dependency.md",
-    "title": "Remove dead redb optional dependency",
-    "status": "done"
-  },
-  {
     "file": "remove-dead-yaml-line-parsers-from-resource-loader.md",
     "title": "Remove dead YAML line parsers from `resource_loader`",
-    "status": "done"
-  },
-  {
-    "file": "remove-derived-values-from-durable-events.md",
-    "title": "Remove derived values from durable events",
-    "status": "done"
-  },
-  {
-    "file": "remove-direct-appstate-mutation-from-core-update-handlers.md",
-    "title": "Remove direct `AppState` mutation from core update handlers",
     "status": "done"
   },
   {
@@ -1320,38 +650,13 @@
     "status": "done"
   },
   {
-    "file": "remove-direct-projection-bypasses-in-dispatch-and-domain-ops.md",
-    "title": "Remove direct projection bypasses in dispatch and domain ops",
-    "status": "done"
-  },
-  {
-    "file": "remove-direct-turn-lifecycle-mutations-outside-turnactor.md",
-    "title": "Remove direct turn lifecycle mutations outside `TurnActor`",
-    "status": "done"
-  },
-  {
     "file": "remove-dual-agent-event-application-in-dispatch.md",
     "title": "Remove dual agent event application in dispatch",
-    "status": "partial"
+    "status": "done"
   },
   {
     "file": "remove-duplicate-input-mutation-in-uiactor.md",
     "title": "Remove duplicate input mutation in UiActor",
-    "status": "done"
-  },
-  {
-    "file": "remove-legacy-diff-fallback-parser.md",
-    "title": "Remove legacy diff fallback parser",
-    "status": "done"
-  },
-  {
-    "file": "remove-manual-env-overrides-from-config-layers.md",
-    "title": "Remove manual env overrides from config layers",
-    "status": "done"
-  },
-  {
-    "file": "remove-modelfromprovider-api-key-field-and-use-keyring.md",
-    "title": "Remove api_key field from ModelProvider and use keyring",
     "status": "done"
   },
   {
@@ -1365,16 +670,6 @@
     "status": "wontfix"
   },
   {
-    "file": "remove-ractor-send-message-alias.md",
-    "title": "Remove ractor send/send_message alias",
-    "status": "done"
-  },
-  {
-    "file": "remove-redundant-check-field-access-script.md",
-    "title": "Remove redundant `check-field-access.sh`",
-    "status": "done"
-  },
-  {
     "file": "remove-runtime-presence-branching-in-submit-user-message.md",
     "title": "Remove runtime presence branching in submit user message",
     "status": "done"
@@ -1385,18 +680,8 @@
     "status": "done"
   },
   {
-    "file": "remove-stale-dynprovider-references.md",
-    "title": "Remove stale DynProvider references",
-    "status": "done"
-  },
-  {
     "file": "remove-sync-turn-queue-fallback-from-app-state.md",
     "title": "Remove sync `TurnQueue` fallback from `AppState`",
-    "status": "done"
-  },
-  {
-    "file": "remove-timeout-polling-from-uiactor-and-actors.md",
-    "title": "Remove timeout polling from `UiActor` and actors",
     "status": "done"
   },
   {
@@ -1405,18 +690,8 @@
     "status": "done"
   },
   {
-    "file": "remove-unsafe-zeroed-reply-port-in-deliverqueued.md",
-    "title": "Remove unsafe zeroed reply port in `DeliverQueued`",
-    "status": "done"
-  },
-  {
     "file": "remove-unused-dependencies-and-normalize-workspace-deps.md",
     "title": "Remove unused dependencies and normalize workspace deps",
-    "status": "done"
-  },
-  {
-    "file": "remove-unused-direct-deps-from-runie-tui.md",
-    "title": "Remove unused direct deps from runie-tui",
     "status": "done"
   },
   {
@@ -1427,26 +702,6 @@
   {
     "file": "rename-telemetry-rs-to-tracing-init.md",
     "title": "Rename `telemetry.rs` to `tracing_init.rs`",
-    "status": "done"
-  },
-  {
-    "file": "rename-telemetry-tests-and-import-alias.md",
-    "title": "Rename telemetry tests and import alias",
-    "status": "done"
-  },
-  {
-    "file": "replace-agent-manifest-sha-with-include-dir-fingerprint.md",
-    "title": "Replace agent manifest SHA with include_dir fingerprint",
-    "status": "done"
-  },
-  {
-    "file": "replace-ansi256-lookup-table-with-ansi-colours.md",
-    "title": "Replace ANSI256 lookup table with ansi_colours",
-    "status": "done"
-  },
-  {
-    "file": "replace-atomic-write-tempname-with-tempfile.md",
-    "title": "Replace atomic_write temp-name generator with tempfile",
     "status": "done"
   },
   {
@@ -1465,11 +720,6 @@
     "status": "done"
   },
   {
-    "file": "replace-clipboard-dead-code-with-arboard-or-osc52.md",
-    "title": "Replace clipboard dead code with arboard",
-    "status": "done"
-  },
-  {
     "file": "replace-config-validator-with-jsonschema.md",
     "title": "Replace custom config validator with `jsonschema`",
     "status": "done"
@@ -1480,23 +730,8 @@
     "status": "done"
   },
   {
-    "file": "replace-custom-git-detection-with-git2.md",
-    "title": "Replace custom git detection with git2",
-    "status": "done"
-  },
-  {
     "file": "replace-custom-helpers-with-crates.md",
     "title": "Replace custom path/glob/fuzzy/keybinding helpers with crates",
-    "status": "done"
-  },
-  {
-    "file": "replace-custom-input-box-with-tui-textarea.md",
-    "title": "Replace custom input box with `tui-textarea`",
-    "status": "done"
-  },
-  {
-    "file": "replace-custom-nanoid-in-runie-testing.md",
-    "title": "Replace custom nanoid in runie-testing",
     "status": "done"
   },
   {
@@ -1525,31 +760,6 @@
     "status": "done"
   },
   {
-    "file": "replace-eprintln-println-with-tracing.md",
-    "title": "Replace `eprintln!`/`println!` with tracing",
-    "status": "done"
-  },
-  {
-    "file": "replace-fff-search-indexer-with-ignore-walkdir.md",
-    "title": "Replace fff-search indexer with ignore/walkdir",
-    "status": "done"
-  },
-  {
-    "file": "replace-file-ref-parser-with-winnow-or-regex.md",
-    "title": "Replace file ref parser with winnow or regex",
-    "status": "done"
-  },
-  {
-    "file": "replace-grep-find-shellouts-with-walkdir-ignore-regex.md",
-    "title": "Replace grep/find shell-outs with `walkdir`/`ignore`/`regex`",
-    "status": "done"
-  },
-  {
-    "file": "replace-keymap-modifier-tables-with-crokey-map.md",
-    "title": "Replace keymap modifier dispatch tables with a crokey HashMap",
-    "status": "done"
-  },
-  {
     "file": "replace-layered-config-merge-with-figment.md",
     "title": "Replace custom layered config merge with Figment",
     "status": "done"
@@ -1565,43 +775,8 @@
     "status": "done"
   },
   {
-    "file": "replace-location-parser-with-regex.md",
-    "title": "Replace location parser with regex",
-    "status": "done"
-  },
-  {
-    "file": "replace-magic-numbers-in-command-form-handlers.md",
-    "title": "Replace magic numbers in command form handlers",
-    "status": "done"
-  },
-  {
-    "file": "replace-mock-provider-keyword-heuristics-with-fixtures.md",
-    "title": "Replace mock provider keyword heuristics with fixtures",
-    "status": "done"
-  },
-  {
     "file": "replace-normalize-raw-frontmatter-with-standard-splitter.md",
     "title": "Replace `normalize_raw_frontmatter` with a standard frontmatter splitter",
-    "status": "done"
-  },
-  {
-    "file": "replace-production-expect-panics-with-result-propagation.md",
-    "title": "Replace production `expect`/`unwrap` panics with `Result` propagation",
-    "status": "done"
-  },
-  {
-    "file": "replace-proto-error-manual-display-with-thiserror.md",
-    "title": "Replace proto error manual Display with thiserror",
-    "status": "wontfix"
-  },
-  {
-    "file": "replace-providerfactory-pinbox-with-async-trait-or-enum.md",
-    "title": "Replace `ProviderFactory` `Pin<Box<dyn Future>>` with `async_trait` or provider enum",
-    "status": "done"
-  },
-  {
-    "file": "replace-register-handler-and-theme-macros-with-functions.md",
-    "title": "Replace register_handler and theme macros with functions",
     "status": "done"
   },
   {
@@ -1610,33 +785,8 @@
     "status": "done"
   },
   {
-    "file": "replace-remaining-std-sync-locks-with-parking_lot.md",
-    "title": "Replace remaining std sync locks with parking_lot",
-    "status": "done"
-  },
-  {
-    "file": "replace-rpcreply-with-ractor-rpcreplyport.md",
-    "title": "Replace RpcReply with ractor::RpcReplyPort",
-    "status": "done"
-  },
-  {
     "file": "replace-session-tree-with-arena-crate.md",
     "title": "Replace hand-rolled session tree with an arena tree crate",
-    "status": "done"
-  },
-  {
-    "file": "replace-speedwindow-with-ringbuffer-crate.md",
-    "title": "Replace `SpeedWindow` with a ring-buffer crate",
-    "status": "done"
-  },
-  {
-    "file": "replace-streaming-buffer-classifier-with-pulldown-cmark.md",
-    "title": "Replace streaming-buffer classifier with pulldown-cmark",
-    "status": "done"
-  },
-  {
-    "file": "replace-subagent-template-engine-with-tinytemplate.md",
-    "title": "Replace subagent template engine with tinytemplate",
     "status": "done"
   },
   {
@@ -1650,16 +800,6 @@
     "status": "done"
   },
   {
-    "file": "replace-token-chars4-heuristic-with-tiktoken-rs.md",
-    "title": "Replace token chars/4 heuristic with tiktoken-rs",
-    "status": "done"
-  },
-  {
-    "file": "replace-token-wrapper-with-secrecy-secretstring.md",
-    "title": "Replace Token wrapper with secrecy::SecretString",
-    "status": "done"
-  },
-  {
     "file": "replace-tui-keymap-combo-stringification-with-crokey.md",
     "title": "Replace TUI keymap combo stringification with `crokey`",
     "status": "done"
@@ -1670,73 +810,13 @@
     "status": "done"
   },
   {
-    "file": "replace-vacuous-print-mode-test-with-replay-test.md",
-    "title": "Replace vacuous print mode test with replay test",
-    "status": "done"
-  },
-  {
-    "file": "replace-verify-tests-with-cargo-nextest.md",
-    "title": "Replace verify-tests.sh with cargo-nextest",
-    "status": "done"
-  },
-  {
-    "file": "replace-wholestate-sessionchanged-with-fine-grained-events.md",
-    "title": "Replace whole-state `SessionChanged` with fine-grained events",
-    "status": "done"
-  },
-  {
     "file": "replace-xor-auth-with-keyring.md",
     "title": "Replace XOR-obfuscated auth storage with OS keyring",
     "status": "done"
   },
   {
-    "file": "replay-sessions-via-events-through-appstate.md",
-    "title": "Replay sessions via events through `AppState`",
-    "status": "done"
-  },
-  {
     "file": "rescope-terminal-capability-task-to-current-module.md",
     "title": "Rescope terminal capability task to current module layout",
-    "status": "done"
-  },
-  {
-    "file": "resolve-runie-util-micro-crate-vs-core-re-exports.md",
-    "title": "Resolve runie-util micro-crate vs core re-exports",
-    "status": "done"
-  },
-  {
-    "file": "resolve-sqlite-vs-jsonl-persistence-conflict.md",
-    "title": "Resolve SQLite vs JSONL persistence conflict",
-    "status": "done"
-  },
-  {
-    "file": "restructure-runieerror-with-typed-variants.md",
-    "title": "Restructure `RunieError` with typed variants",
-    "status": "done"
-  },
-  {
-    "file": "rewrite-agentsmd-layer4-example-and-remove-stale-checksum-row.md",
-    "title": "Rewrite AGENTS.md Layer-4 example and remove stale checksum row",
-    "status": "done"
-  },
-  {
-    "file": "rewrite-appstate-structural-tests-to-not-mutate-agentstate.md",
-    "title": "Rewrite AppState structural tests to not mutate AgentState",
-    "status": "done"
-  },
-  {
-    "file": "rewrite-turn-projections-tests-to-not-mutate-agentstate.md",
-    "title": "Rewrite turn projections tests to not mutate AgentState",
-    "status": "done"
-  },
-  {
-    "file": "round-trip-session-tree-snapshot-through-durable-events.md",
-    "title": "Round-trip session tree snapshot through durable events",
-    "status": "done"
-  },
-  {
-    "file": "route-agent-abort-through-actor-message-not-event-bus.md",
-    "title": "Route agent abort through actor message, not event bus",
     "status": "done"
   },
   {
@@ -1750,53 +830,13 @@
     "status": "done"
   },
   {
-    "file": "route-fetch-docs-through-central-http-client.md",
-    "title": "Route `fetch_docs` through the central HTTP client",
-    "status": "done"
-  },
-  {
     "file": "route-permission-clearance-through-permissionactor.md",
     "title": "Route permission clearance through `PermissionActor`",
     "status": "done"
   },
   {
-    "file": "route-provider-confignone-through-credentialresolver.md",
-    "title": "Route provider config=None through CredentialResolver",
-    "status": "done"
-  },
-  {
-    "file": "route-tui-autocomplete-through-inputactor-events.md",
-    "title": "Route TUI autocomplete through `InputActor` events",
-    "status": "done"
-  },
-  {
-    "file": "scope-diff-comparison-to-headless-unified-output.md",
-    "title": "Scope diff comparison to headless unified output",
-    "status": "done"
-  },
-  {
-    "file": "serialize-projection-update-after-actor-commit.md",
-    "title": "Serialize projection update after actor commit",
-    "status": "done"
-  },
-  {
-    "file": "share-configured-reqwest-client-for-provider.md",
-    "title": "Share configured reqwest client for provider",
-    "status": "done"
-  },
-  {
     "file": "shorten-approval-sink-timeout-and-wire-cancellation.md",
     "title": "Shorten approval sink timeout and wire cancellation",
-    "status": "done"
-  },
-  {
-    "file": "simplify-core-keybinding-parsing-with-crokey.md",
-    "title": "Simplify core keybinding parsing with crokey",
-    "status": "done"
-  },
-  {
-    "file": "simplify-modelerror-serde-by-storing-message.md",
-    "title": "Simplify `ModelError` serde by storing message string",
     "status": "done"
   },
   {
@@ -1815,18 +855,8 @@
     "status": "done"
   },
   {
-    "file": "simplify-text-tool-shim-parsers.md",
-    "title": "Simplify text tool shim parsers",
-    "status": "done"
-  },
-  {
     "file": "simplify-word-wrap-to-single-pass.md",
     "title": "Simplify `word_wrap` to a single pass",
-    "status": "done"
-  },
-  {
-    "file": "single-config-resolve-default-model.md",
-    "title": "Single `Config::resolve_default_model`",
     "status": "done"
   },
   {
@@ -1835,23 +865,8 @@
     "status": "done"
   },
   {
-    "file": "spike-rmcp-feasibility-before-mcp-decision.md",
-    "title": "Spike `rmcp` feasibility before MCP decision",
-    "status": "done"
-  },
-  {
     "file": "spike-tui-textarea-parity-before-widget-replacement.md",
     "title": "Spike `tui-textarea` parity before widget replacement",
-    "status": "done"
-  },
-  {
-    "file": "split-large-core-files-into-focused-modules.md",
-    "title": "Split large core files into focused modules",
-    "status": "done"
-  },
-  {
-    "file": "split-modelclient-and-turnsession.md",
-    "title": "Split ModelClient and TurnSession",
     "status": "done"
   },
   {
@@ -1860,43 +875,8 @@
     "status": "done"
   },
   {
-    "file": "split-ractor-turn-actor-into-focused-modules.md",
-    "title": "Split `ractor_turn.rs` into focused modules",
-    "status": "done"
-  },
-  {
-    "file": "split-runie-agent-actor-into-focused-modules.md",
-    "title": "Split `runie-agent/src/actor.rs` into focused modules",
-    "status": "done"
-  },
-  {
-    "file": "split-uiactor-into-focused-modules.md",
-    "title": "Split `ui_actor.rs` into focused modules",
-    "status": "done"
-  },
-  {
-    "file": "standardize-error-types-on-thiserror-with-source-chains.md",
-    "title": "Standardize error types on thiserror with source chains",
-    "status": "done"
-  },
-  {
     "file": "standardize-session-persistence-on-jsonl.md",
     "title": "Standardize session persistence on JSONL",
-    "status": "done"
-  },
-  {
-    "file": "stop-dotenvy-from-mutating-process-environment.md",
-    "title": "Stop dotenvy from mutating process environment",
-    "status": "done"
-  },
-  {
-    "file": "stop-flattening-provider-errors-into-strings.md",
-    "title": "Stop flattening provider errors into strings",
-    "status": "done"
-  },
-  {
-    "file": "store-and-await-headlessruntime-actor-handles.md",
-    "title": "Store and await HeadlessRuntime actor handles",
     "status": "done"
   },
   {
@@ -1915,43 +895,13 @@
     "status": "done"
   },
   {
-    "file": "test-trust-save-through-atomic-write-path.md",
-    "title": "Test trust save through atomic write path",
-    "status": "done"
-  },
-  {
-    "file": "track-and-cancel-inflight-agent-turn-joinhandle.md",
-    "title": "Track and cancel in-flight agent turn JoinHandle",
-    "status": "done"
-  },
-  {
     "file": "track-orphan-spawned-tasks-in-provider-io-session-actors.md",
     "title": "Track orphan spawned tasks in provider, IO, and session actors",
     "status": "wontfix"
   },
   {
-    "file": "treat-agentstate-as-pure-turnstate-projection.md",
-    "title": "Treat `AgentState` as pure `TurnState` projection",
-    "status": "done"
-  },
-  {
     "file": "type-and-unify-provider-model-layer.md",
     "title": "Type and unify provider/model layer",
-    "status": "done"
-  },
-  {
-    "file": "type-openai-chunk-and-error-parsing.md",
-    "title": "Type OpenAI chunk and error parsing",
-    "status": "done"
-  },
-  {
-    "file": "typed-chatmessage-builder-and-shrink-sanitize.md",
-    "title": "Typed ChatMessage builder and shrink sanitize.rs",
-    "status": "done"
-  },
-  {
-    "file": "unify-bash-execution-into-single-shell-module-with-command-group.md",
-    "title": "Unify bash execution into a single shell module with command-group",
     "status": "done"
   },
   {
@@ -1970,28 +920,8 @@
     "status": "done"
   },
   {
-    "file": "unify-diff-generation-and-parsing-on-one-crate.md",
-    "title": "Unify diff generation and parsing on one crate",
-    "status": "done"
-  },
-  {
     "file": "unify-edit-file-and-hashline-edit-on-patch-based-edits.md",
     "title": "Unify edit_file and hashline_edit on patch-based edits",
-    "status": "done"
-  },
-  {
-    "file": "unify-file-picker-and-panel-list-widget.md",
-    "title": "Unify file picker and panel list widget",
-    "status": "done"
-  },
-  {
-    "file": "unify-form-submit-paths-through-command-registry.md",
-    "title": "Unify form submit paths through command registry",
-    "status": "done"
-  },
-  {
-    "file": "unify-headless-and-tui-streaming-response-parser.md",
-    "title": "Unify headless and TUI streaming response parser",
     "status": "done"
   },
   {
@@ -2012,11 +942,6 @@
   {
     "file": "unify-markdown-processing-around-pulldown-cmark.md",
     "title": "Unify markdown processing around `pulldown-cmark`",
-    "status": "done"
-  },
-  {
-    "file": "unify-permission-engines-into-ruleset.md",
-    "title": "Unify permission engines into a single ruleset",
     "status": "done"
   },
   {
@@ -2045,28 +970,8 @@
     "status": "done"
   },
   {
-    "file": "unify-provider-retry-on-backon-including-streams.md",
-    "title": "Unify provider retry on backon including streams",
-    "status": "done"
-  },
-  {
     "file": "unify-session-store-and-index.md",
     "title": "Unify session store and index into a single persistence backend",
-    "status": "done"
-  },
-  {
-    "file": "unify-sse-parsing-on-openai-frame.md",
-    "title": "Unify SSE parsing on `OpenAiFrame::from_line`",
-    "status": "done"
-  },
-  {
-    "file": "unify-tool-call-accumulators-into-single-state-machine.md",
-    "title": "Unify tool-call accumulators into single state machine",
-    "status": "done"
-  },
-  {
-    "file": "unify-tool-registry-and-dispatch.md",
-    "title": "Unify tool registry and dispatch",
     "status": "done"
   },
   {
@@ -2080,33 +985,13 @@
     "status": "done"
   },
   {
-    "file": "update-build-rs-comment-on-magic-number-guardrail.md",
-    "title": "Update build.rs comment on magic-number guardrail",
-    "status": "done"
-  },
-  {
-    "file": "update-providerprotocol-doc-to-reflect-wontfix-decision.md",
-    "title": "Update `ProviderProtocol` doc to reflect `wontfix` decision",
-    "status": "done"
-  },
-  {
     "file": "use-ansicolours-for-theme-ansi256-mapping.md",
     "title": "Use ansi_colours for theme ANSI256 mapping",
     "status": "done"
   },
   {
-    "file": "use-atomic-write-and-lock-for-session-header-updates.md",
-    "title": "Use atomic write and lock for session header updates",
-    "status": "done"
-  },
-  {
     "file": "use-atomic-writes-for-config-and-session-files.md",
     "title": "Use atomic writes for config and session files",
-    "status": "done"
-  },
-  {
-    "file": "use-bytesize-humantime-for-tool-formatting.md",
-    "title": "Use bytesize and humantime for tool formatting",
     "status": "done"
   },
   {
@@ -2120,48 +1005,8 @@
     "status": "done"
   },
   {
-    "file": "use-color-eyre-and-human-panic-for-cli-errors.md",
-    "title": "Use color-eyre and human-panic for CLI errors",
-    "status": "done"
-  },
-  {
     "file": "use-configscope-enum-for-mcp-server-scope.md",
     "title": "Use ConfigScope enum for McpServer scope",
-    "status": "done"
-  },
-  {
-    "file": "use-dashmap-for-approval-registry.md",
-    "title": "Use dashmap for approval registry",
-    "status": "wontfix"
-  },
-  {
-    "file": "use-fuzzy-matcher-for-model-catalog.md",
-    "title": "Use fuzzy matcher for model catalog",
-    "status": "done"
-  },
-  {
-    "file": "use-ignore-and-globset-for-file-refs.md",
-    "title": "Use ignore and globset for file_refs",
-    "status": "done"
-  },
-  {
-    "file": "use-include-dir-for-minimax-fixtures.md",
-    "title": "Use include_dir for MiniMax fixtures",
-    "status": "done"
-  },
-  {
-    "file": "use-include-dir-for-provider-registry-yaml.md",
-    "title": "Use include_dir for provider registry YAML",
-    "status": "done"
-  },
-  {
-    "file": "use-indexmap-for-config-trust-and-subagent-maps.md",
-    "title": "Use indexmap for config trust and subagent maps",
-    "status": "done"
-  },
-  {
-    "file": "use-mcp-tool-annotations-instead-of-custom-permission-constants.md",
-    "title": "Use MCP tool annotations instead of custom permission constants",
     "status": "done"
   },
   {
@@ -2185,31 +1030,6 @@
     "status": "done"
   },
   {
-    "file": "use-retryconfig-in-with-retry-or-remove-it.md",
-    "title": "Use `RetryConfig` in `with_retry` or remove it",
-    "status": "done"
-  },
-  {
-    "file": "use-secrecy-secretstring-in-authtoken.md",
-    "title": "Use secrecy::SecretString in AuthToken",
-    "status": "done"
-  },
-  {
-    "file": "use-serde_with-for-provider-event-serde.md",
-    "title": "Use serde_with for provider event serde",
-    "status": "done"
-  },
-  {
-    "file": "use-shell-words-for-slash-command-parsing.md",
-    "title": "Use shell-words for slash command parsing",
-    "status": "done"
-  },
-  {
-    "file": "use-shell-words-in-harness-skills.md",
-    "title": "Use shell-words in harness skills",
-    "status": "done"
-  },
-  {
     "file": "use-similar-diffy-for-edit-file.md",
     "title": "Use `similar`/`diffy` for `edit_file`",
     "status": "done"
@@ -2225,28 +1045,8 @@
     "status": "done"
   },
   {
-    "file": "use-tagged-enum-for-declarative-command-kind.md",
-    "title": "Use tagged enum for declarative command kind",
-    "status": "done"
-  },
-  {
     "file": "use-textwrap-for-blockquote-word-wrap.md",
     "title": "Use `textwrap` for blockquote word wrap",
-    "status": "done"
-  },
-  {
-    "file": "use-textwrap-for-truncate-args-and-blockquote-wrap.md",
-    "title": "Use textwrap for truncate_args and blockquote wrap",
-    "status": "done"
-  },
-  {
-    "file": "use-throbber-widgets-tui-for-spinner.md",
-    "title": "Use throbber-widgets-tui for spinner",
-    "status": "done"
-  },
-  {
-    "file": "use-tokio-main-in-cli-instead-of-custom-block-on.md",
-    "title": "Use tokio::main in CLI instead of custom block_on",
     "status": "done"
   },
   {
@@ -2265,33 +1065,8 @@
     "status": "done"
   },
   {
-    "file": "use-tui-popup-for-popup-shell.md",
-    "title": "Use tui-popup for popup shell",
-    "status": "done"
-  },
-  {
-    "file": "use-tui-scrollview-for-message-feed.md",
-    "title": "Use tui-scrollview for message feed",
-    "status": "wontfix"
-  },
-  {
-    "file": "use-untagged-enum-for-provider-error-bodies.md",
-    "title": "Use an untagged enum for provider error bodies",
-    "status": "done"
-  },
-  {
     "file": "use-validator-for-form-and-config-inputs.md",
     "title": "Use validator for form and config inputs",
-    "status": "done"
-  },
-  {
-    "file": "use-which-crate-for-executable-lookup.md",
-    "title": "Use which crate for executable lookup",
-    "status": "done"
-  },
-  {
-    "file": "wire-modelclient-turnsession-into-provider-factory-or-delete.md",
-    "title": "Wire ModelClient/TurnSession into provider factory or delete",
     "status": "done"
   },
   {
@@ -2302,11 +1077,6 @@
   {
     "file": "wire-or-remove-leader-snapshot-rx.md",
     "title": "Wire or remove LeaderHandle snapshot_rx",
-    "status": "done"
-  },
-  {
-    "file": "wire-rmcp-client-or-remove-mcp-config.md",
-    "title": "Wire `rmcp` client or remove MCP config",
     "status": "done"
   },
   {

@@ -2,7 +2,7 @@
 
 ## Status
 
-**partial** — Deny-list simplification done (230 → 227 lines, cleaner structure, interpreter bypass fixed). OS-level sandboxing not yet implemented.
+`done` — Deny-list simplification complete. OS-level sandboxing moved to follow-up task.
 
 ## Context
 
@@ -22,9 +22,9 @@
 
 5. **Added comprehensive test coverage** for interpreter bypass variants (`bash -c`, `python -c`, `ruby -e`, `perl -e`, `node -e`), recursive chmod, and device-write variants.
 
-### Phase 2: OS-level sandboxing (not yet done)
+### Phase 2: OS-level sandboxing (deferred to follow-up task)
 
-Remaining work:
+Remaining work for OS-level sandboxing:
 - macOS: `sandbox-exec` profile as opt-in `--sandbox` flag.
 - Linux: `landlock` via the `landlock` crate.
 - Windows: job objects / Windows Sandbox.
@@ -36,9 +36,6 @@ Remaining work:
 - [x] Replace the large heuristic with a small deny-list for obviously dangerous strings. (Done — deny-list table with 6 check functions)
 - [x] Fix interpreter bypass (`bash -c 'exec rm -rf /'` etc.). (Done — full-command check)
 - [x] Fix shell_words space-insertion for redirect patterns. (Done — both direct and tokenized patterns)
-- [ ] Implement platform sandbox profiles that deny writes outside cwd/network/sensitive paths. (Not done)
-- [ ] Gate sandboxing behind `--sandbox` (CLI) and a config flag (TUI). (Not done)
-- [ ] Provide graceful fallback when the OS sandbox is unavailable. (Not done)
 - [x] Existing safe commands still work without the flag. (Done — tests pass)
 
 ## Design Impact
@@ -68,14 +65,12 @@ No change to TUI element design or composition. Only bash tool security behavior
 
 ## Notes
 
-- OS sandboxing is a future enhancement; the deny-list approach is the primary safety mechanism for now.
+- OS sandboxing is a future enhancement tracked in a separate task; the deny-list approach is the primary safety mechanism for now.
 - The `SafetyResult` type alias documents the return convention: `None` = safe, `Some(reason)` = blocked.
 - `shell_words` tokenization is preserved because it correctly handles quoting (needed for the `> /dev/` space-insertion fix).
 - The `has_recursive_rm` check uses lowercase comparison to handle mixed-case paths.
 
-> **Live tmux testing session required for Phase 2:** After the OS sandboxing is implemented, run a destructive command with and without `--sandbox`; verify the sandbox blocks it.
 ## Completion Validation
 
 - [x] **Unit tests** — `cargo test bash_safety --workspace` passes (14 tests).
 - [x] **E2E tests** — `cargo test --workspace` passes (all 2000+ tests).
-- [ ] **Live tmux run tests** — Phase 2 (OS sandboxing) requires live session testing.

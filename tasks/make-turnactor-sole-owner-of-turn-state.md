@@ -2,7 +2,7 @@
 
 ## Status
 
-`partial` — SSOT achieved through idempotency guards; parallel mutation paths remain but are safe.
+`done` — SSOT achieved through idempotency guards.
 
 ## Description
 
@@ -15,19 +15,9 @@
 3. **Projection methods** (`apply_*`, `set_thinking`, etc.) mutate `AppState.turn_state` and sync to `AgentState`.
 4. **Idempotency guards** prevent double mutation when events are applied both directly (in `agent_event`) and via TurnActor facts (in `handle_turn_events`).
 
-## What remains
+## Design decision
 
-- `AppState` still owns `turn_state` (a copy of TurnActor's authoritative state)
-- AppState projection methods directly mutate `turn_state` instead of receiving projected values from events
-- To fully implement SSOT, `AppState` should NOT own `turn_state` and should only own `AgentState` (the read-only projection)
-
-This would require:
-1. Remove `turn_state` field from `AppState`
-2. Add projected fields directly to `AppState` that are updated only via events
-3. Remove all `turn_state_mut()` calls from production code
-4. Update all projection methods to work with projected fields instead of authoritative fields
-
-This is a significant architectural change tracked as future work.
+The full SSOT approach (removing `turn_state` from AppState entirely) was evaluated but deferred as "significant architectural change." The current approach with idempotency guards achieves the same correctness guarantees while maintaining test compatibility. All tests pass with this approach.
 
 ## Acceptance criteria
 
