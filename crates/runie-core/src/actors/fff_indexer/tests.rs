@@ -6,8 +6,7 @@ use crate::event::Event;
 use crate::model::FffFileEntry;
 
 // Serialize FFF indexer tests to prevent cross-test state interference.
-// Each test acquires this lock during synchronous setup only.
-// The lock is dropped before any async work to avoid holding std::sync::Mutex across awaits.
+// The lock is held for the entire test duration (safe with current_thread flavor).
 static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn setup_test_files(root: &std::path::Path) {
@@ -27,25 +26,23 @@ fn setup_cli_files(root: &std::path::Path) {
 
 /// Acquires the test lock, resets global state, creates a temp directory with test files,
 /// and returns the guard and paths. The guard (TempDir) must be kept alive until the test ends.
-fn setup_test_env<F>(setup_files: F) -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf)
+fn setup_test_env<F>(setup_files: F) -> (std::sync::MutexGuard<'static, ()>, tempfile::TempDir, std::path::PathBuf, std::path::PathBuf)
 where
     F: FnOnce(&std::path::Path),
 {
-    let _lock = TEST_MUTEX.lock().unwrap();
+    let lock = TEST_MUTEX.lock().unwrap();
     FffSearchState::reset_for_test();
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().to_path_buf();
     let data_dir = tmp.path().to_path_buf();
     setup_files(&root);
-    (tmp, root, data_dir)
+    (lock, tmp, root, data_dir)
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn indexer_initializes_in_temp_dir() {
-    // Lock is held only during synchronous setup to serialize tests.
-    // Drop before async work to avoid holding std::sync::Mutex across awaits.
-    // Keep temp dir alive by binding it to a variable.
-    let (_tmp_dir, root, data_dir) = setup_test_env(setup_test_files);
+    // Hold the lock for the entire test to prevent other tests from resetting state.
+    let (_lock, _tmp_dir, root, data_dir) = setup_test_env(setup_test_files);
 
     let bus = EventBus::new(16);
 
@@ -100,9 +97,8 @@ async fn indexer_initializes_in_temp_dir() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn indexer_answers_file_search() {
-    // Lock is held only during synchronous setup to serialize tests.
-    // Drop before async work to avoid holding std::sync::Mutex across awaits.
-    let (_tmp_dir, root, data_dir) = setup_test_env(setup_cli_files);
+    // Hold the lock for the entire test to prevent other tests from resetting state.
+    let (_lock, _tmp_dir, root, data_dir) = setup_test_env(setup_cli_files);
 
     let bus = EventBus::new(16);
 
@@ -155,10 +151,9 @@ async fn indexer_answers_file_search() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn search_request_event_returns_results() {
-    // Lock is held only during synchronous setup to serialize tests.
-    // Drop before async work to avoid holding std::sync::Mutex across awaits.
-    let (_tmp_dir, root, data_dir) = {
-        let _lock = TEST_MUTEX.lock().unwrap();
+    // Hold the lock for the entire test to prevent other tests from resetting state.
+    let (_lock, _tmp_dir, root, data_dir) = {
+        let lock = TEST_MUTEX.lock().unwrap();
         FffSearchState::reset_for_test();
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().to_path_buf();
@@ -167,7 +162,7 @@ async fn search_request_event_returns_results() {
         std::fs::write(root.join("readme.md"), "# Hello World").unwrap();
         std::fs::write(root.join("todo.txt"), "buy milk").unwrap();
 
-        (tmp, root, data_dir)
+        (lock, tmp, root, data_dir)
     };
 
     let bus = EventBus::new(16);
