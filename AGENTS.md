@@ -130,34 +130,32 @@ src/
 
 **ENFORCED GUARDRAILS**
 
-The build script at `crates/runie-core/build.rs` enforces:
+The build script at `crates/runie-core/build.rs` enforces, across all workspace production `.rs` files:
 
 | Check | Scope | Fail-on-violation |
 |-------|-------|-------------------|
-| AppState field access patterns | `crates/runie-core/src` only | Yes |
-| Magic numbers (>= 1000) | `crates/runie-core/src` only | Yes |
+| AppState field access patterns | all `crates/*/src` production code | Yes |
+| Magic numbers (>= 1000) | all `crates/*/src` production code | Yes |
+| Orphan `tokio::spawn` calls | all `crates/*/src` production code | Yes |
 
-**Known gaps:**
-- The guardrails currently scan only `crates/runie-core/src`, not the full workspace.
-- The orphan-spawn linter unit tests have reversed assertions and treat `let _ = tokio::spawn(...)` as acceptable, which contradicts the SSOT ADR rule against unbounded fire-and-forget spawns.
-- `turn_state` field access on `AppState` is not caught.
+`scripts/check-file-limits.sh` (run in CI) enforces the structural limits on all workspace production `.rs` files:
+
+| Metric | Limit |
+|--------|-------|
+| File lines | ≤ 500 |
+| Function lines | ≤ 40 |
+| Approximate complexity | ≤ 10 |
+
+Complexity is an approximate heuristic that counts `if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`, `return`, `&&`, `||`, and `?` tokens. It does not parse Rust syntax and may miss nested closures, match guards, and similar constructs.
+
+**Known gaps / exemptions:**
+- A number of legacy files and functions are temporarily exempt from the structural limits while they are refactored. The exemption list is in `scripts/check_structure.py`. New code should not be added to this list.
+- Test code and `build.rs` files are exempt from structural limits so tests can stay comprehensive.
 
 **AppState field access** ensures internal state fields are accessed through accessor methods, not directly.
 
 **Magic number guardrail** prevents raw numeric literals (>= 1000) in production code. Numbers below 1000, underscore-separated numbers, hex literals, HTTP status codes, JSON-RPC error codes, and numbers in test code are exempt. Use named constants for buffer sizes, timeouts, and thresholds.
 
-**GUIDELINES (Not Enforced)**
+**GUIDELINES**
 
-These are aspirational limits documented in the codebase but not automatically enforced:
-
-| Metric | Target | Rationale |
-|--------|--------|----------|
-| File lines | ≤ 500 | Readability, modularity |
-| Function lines | ≤ 40 | Single responsibility |
-| Complexity | ≤ 10 | Maintainability |
-
-Complexity is an approximate heuristic that counts `if`, `else if`, `match`, `while`, `for`, `loop`, `break`, `continue`, `return`, `&&`, `||`, and `?` tokens. It does not parse Rust syntax and may miss nested closures, match guards, and similar constructs.
-
-**Best practice:** Keep files small, functions focused, and complexity low. When a function grows beyond ~60 lines, consider extracting helper functions. When a file exceeds ~400 lines, consider splitting or extracting modules.
-
-**Current state:** Sixteen production files exceed the 500-line target, including `event/mod.rs` (1,253 lines), `bootstrap.rs` (789 lines), `config_impl.rs` (772 lines), `ui_actor/mod.rs` (615 lines), `mock.rs` (662 lines), and `openai/protocol.rs` (669 lines). Several functions also exceed the 100-line clippy default, including `InputMsg::apply_to` (204 lines), `DurableCoreEvent::try_from_event` (281 lines), `Event::kind` (231 lines), and `Event::category` (230 lines).
+Keep files small, functions focused, and complexity low. When a function grows beyond ~60 lines, consider extracting helper functions. When a file exceeds ~400 lines, consider splitting or extracting modules.

@@ -381,7 +381,9 @@ Rules:
 
 ## Build guardrails
 
-`crates/runie-core/build.rs` enforces structural limits on production code:
+`crates/runie-core/build.rs` enforces AppState access, magic-number, and orphan-spawn guardrails on all workspace production code.
+
+`scripts/check-file-limits.sh` (run in CI) enforces structural limits on production `.rs` files:
 
 | Metric | Limit |
 |--------|-------|
@@ -389,7 +391,7 @@ Rules:
 | Function lines | 40 |
 | Approximate complexity | 10 |
 
-Tests are exempt from function-length and complexity checks so they can stay comprehensive.
+Tests and `build.rs` files are exempt from function-length and complexity checks so they can stay comprehensive.
 
 ## Testing philosophy
 
