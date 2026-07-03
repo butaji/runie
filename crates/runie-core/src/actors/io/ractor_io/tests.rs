@@ -151,6 +151,7 @@ async fn ractor_io_load_auth_emits_auth_loaded() {
 
 // ── Git detection tests ──────────────────────────────────────────────────────
 
+#[cfg(feature = "git")]
 #[test]
 fn detect_git_in_real_repo() {
     // Test against the actual runie-dev repo
@@ -171,6 +172,7 @@ fn detect_git_in_real_repo() {
     // is_worktree depends on where the test is run; just verify info is returned
 }
 
+#[cfg(feature = "git")]
 #[test]
 fn detect_git_non_git_dir_returns_none() {
     // /tmp should not be a git repo (usually)
@@ -182,6 +184,7 @@ fn detect_git_non_git_dir_returns_none() {
     );
 }
 
+#[cfg(feature = "git")]
 #[test]
 fn detect_git_in_tmp_git_repo() {
     // Create a temp git repo
@@ -230,6 +233,7 @@ fn detect_git_in_tmp_git_repo() {
     std::fs::remove_dir_all(tmp.parent().unwrap()).ok();
 }
 
+#[cfg(feature = "git")]
 #[test]
 fn detect_git_detached_head() {
     let tmp = std::env::temp_dir().join("runie_git_detached_").join(

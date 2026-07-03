@@ -4,12 +4,15 @@ use std::time::Duration;
 use crate::tool::resolve_path;
 use crate::tool::{
     format_bytes, format_duration, format_tool_label, tool_error, tool_status_line, ToolContext,
-    ToolDef, ToolOutput, ToolStatus,
+    ToolStatus,
 };
+#[cfg(feature = "mcp")]
+use crate::tool::{ToolDef, ToolOutput};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-// Test tool definition
+// Test tool definition (requires mcp feature for ToolDef trait)
+#[cfg(feature = "mcp")]
 struct TestTool;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -17,6 +20,7 @@ struct TestToolInput {
     input: String,
 }
 
+#[cfg(feature = "mcp")]
 impl TestTool {
     fn execute_impl(input: TestToolInput) -> ToolOutput {
         ToolOutput {
@@ -30,6 +34,7 @@ impl TestTool {
     }
 }
 
+#[cfg(feature = "mcp")]
 impl ToolDef for TestTool {
     type Input = TestToolInput;
 
@@ -43,12 +48,14 @@ impl ToolDef for TestTool {
     }
 }
 
-// Read-only test tool
+// Read-only test tool (requires mcp feature for ToolDef trait)
+#[cfg(feature = "mcp")]
 struct ReadOnlyTestTool;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ReadOnlyToolInput {}
 
+#[cfg(feature = "mcp")]
 impl ToolDef for ReadOnlyTestTool {
     type Input = ReadOnlyToolInput;
 
@@ -227,6 +234,7 @@ fn tool_error_warning_flag_reports_success() {
 
 // ── ToolDef trait tests ─────────────────────────────────────────────────
 
+#[cfg(feature = "mcp")]
 #[tokio::test]
 async fn tool_def_executes_and_returns_output() {
     let input = TestToolInput {
@@ -239,6 +247,7 @@ async fn tool_def_executes_and_returns_output() {
     assert!(output.content.contains("processed: hello"));
 }
 
+#[cfg(feature = "mcp")]
 #[test]
 fn tool_def_constants_are_accessible() {
     assert_eq!(TestTool::NAME, "test_tool");

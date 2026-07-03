@@ -384,6 +384,7 @@ mod tests {
         let _ = std::fs::remove_file(&temp_path);
     }
 
+    #[cfg(feature = "watch")]
     #[test]
     fn config_event_is_relevant_touches_config_file() {
         use std::path::PathBuf;
