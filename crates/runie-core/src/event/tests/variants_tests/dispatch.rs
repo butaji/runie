@@ -290,6 +290,11 @@ fn dispatcher_handles_all_variants() {
                 tokens_out: 0,
                 speed_tps: 0.0,
             },
+            Event::CompactionTriggered { .. } => Event::CompactionTriggered {
+                ratio: 0.7,
+                tokens_in: 100,
+                context_window: 128000,
+            },
             Event::StreamStarted { .. } => Event::StreamStarted { id: String::new() },
             Event::UserMessageSubmitted { .. } => Event::UserMessageSubmitted {
                 id: String::new(),
