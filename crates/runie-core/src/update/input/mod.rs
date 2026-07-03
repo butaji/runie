@@ -28,6 +28,9 @@ pub fn input_event(state: &mut AppState, event: crate::Event) {
     if state.permission_request_opt().is_some() {
         return permission_input_event(state, event);
     }
+    if state.view().plan_mode {
+        return plan_mode_input_event(state, event);
+    }
     apply_input_event(state, event);
 }
 
@@ -87,6 +90,59 @@ fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
 /// Handle PasteImage event. Image paste was removed, so just flash.
 fn handle_paste_image(state: &mut AppState) {
     state.input_mut().input_flash = 3;
+}
+
+/// Handle input events while plan mode is active.
+///
+/// - `Enter` approves the plan (disables plan mode)
+/// - `Esc` cancels/disables plan mode
+/// - Navigation keys are consumed silently (no-ops)
+/// - All other keys are routed to the input box for plan editing
+fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
+    match event {
+        // Approve plan — disable plan mode
+        crate::Event::Submit | crate::Event::Newline => {
+            state.view_mut().plan_mode = false;
+            state.view_mut().active_plan_content.clear();
+            state.view_mut().dirty = true;
+            state.add_system_msg("Plan approved. Write tools unblocked.".to_string());
+        }
+        // Navigation and editing: consume silently (plan editing via panel)
+        crate::Event::Backspace
+        | crate::Event::DeleteWord
+        | crate::Event::DeleteToEnd
+        | crate::Event::DeleteToStart
+        | crate::Event::KillChar
+        | crate::Event::Undo
+        | crate::Event::Redo
+        | crate::Event::CursorWordLeft
+        | crate::Event::CursorWordRight
+        | crate::Event::CursorLeft
+        | crate::Event::CursorRight
+        | crate::Event::CursorStart
+        | crate::Event::CursorEnd
+        | crate::Event::HistoryPrev
+        | crate::Event::HistoryNext
+        | crate::Event::PageUp
+        | crate::Event::PageDown
+        | crate::Event::GoToTop
+        | crate::Event::GoToBottom
+        | crate::Event::MouseClick { .. }
+        | crate::Event::MouseMove { .. }
+        | crate::Event::MouseScrollUp
+        | crate::Event::MouseScrollDown
+        | crate::Event::MouseDrag { .. }
+        | crate::Event::MouseRelease { .. }
+        | crate::Event::FocusGained
+        | crate::Event::FocusLost
+        | crate::Event::TerminalSize { .. } => {
+            // Consumed silently — do not route to input box
+        }
+        // Route all other input to the input box for plan content editing
+        _ => {
+            apply_input_event(state, event);
+        }
+    }
 }
 
 /// Handle input events while a permission dialog is open.

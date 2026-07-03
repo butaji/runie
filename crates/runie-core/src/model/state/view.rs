@@ -66,6 +66,10 @@ pub struct ViewState {
     /// Identifies which component is currently receiving keyboard input.
     /// Used to determine how Esc should behave (e.g., close dialog vs enter vim-nav).
     pub input_receiver: InputReceiver,
+    /// Plan mode active — blocks write tools until plan is approved.
+    pub plan_mode: bool,
+    /// Content of the active plan (markdown).
+    pub active_plan_content: String,
 }
 
 impl PartialEq for ViewState {
@@ -104,6 +108,14 @@ impl ViewState {
     pub fn vim_nav_mode_mut(&mut self) -> &mut bool {
         &mut self.vim_nav_mode
     }
+
+    pub fn plan_mode_mut(&mut self) -> &mut bool {
+        &mut self.plan_mode
+    }
+
+    pub fn active_plan_content_mut(&mut self) -> &mut String {
+        &mut self.active_plan_content
+    }
 }
 
 impl Default for ViewState {
@@ -134,6 +146,8 @@ impl Default for ViewState {
             cached_feed: None,
             vim_nav_pending: false,
             input_receiver: InputReceiver::default(),
+            plan_mode: false,
+            active_plan_content: String::new(),
         }
     }
 }

@@ -348,6 +348,10 @@ fn dispatcher_handles_all_variants() {
                 result: Ok("clipboard content".to_string()),
             },
             Event::ProcessResumed => Event::ProcessResumed,
+            Event::PlanModeEnabled { content } => Event::PlanModeEnabled {
+                content: content.clone(),
+            },
+            Event::PlanModeDisabled => Event::PlanModeDisabled,
         }
     }
     let _ = assert_exhaustive(Event::Submit);

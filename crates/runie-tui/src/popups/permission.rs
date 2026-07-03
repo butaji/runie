@@ -1,13 +1,17 @@
 //! Blocking permission approval modal.
 
 use ratatui::{
+    layout::Rect,
+    prelude::Text,
+    style::Style,
     text::Line,
-    widgets::{Paragraph, Wrap},
     Frame,
 };
 use runie_core::Snapshot;
+use tui_popup::Popup;
 
-use crate::theme::style_hint;
+use crate::popups::palette_popup_rect;
+use crate::theme::{color_bg_panel, style_hint};
 
 /// Maximum length for formatted input before truncation.
 const MAX_INPUT_LENGTH: usize = 500;
@@ -160,7 +164,9 @@ pub fn permission_dialog(f: &mut Frame, snap: &Snapshot) {
         None => return,
     };
 
-    let inner = super::panel::setup_popup(f, " Permission Required ");
+    // Use tui-popup for the shell (border + title + background).
+    let popup_rect = palette_popup_rect(f.area());
+    let bg = color_bg_panel();
     let input_summary = format_tool_input(&request.tool, &request.input);
     let lines = vec![
         Line::from(format!("Tool: {}", request.tool)),
@@ -170,12 +176,21 @@ pub fn permission_dialog(f: &mut Frame, snap: &Snapshot) {
         Line::from("[y] Allow   [n] Deny   [a] Always allow").style(style_hint()),
     ];
 
-    f.render_widget(
-        Paragraph::new(lines)
-            .wrap(Wrap { trim: true })
-            .style(style_hint()),
-        inner,
-    );
+    let content = Text::from(lines).style(Style::default().bg(bg));
+
+    let popup = Popup::new(content)
+        .title(" Permission Required ")
+        .style(Style::default().bg(bg));
+    f.render_widget(popup, popup_rect);
+
+    // Explicitly set inner background (tui-popup uses Clear which resets to terminal bg).
+    let inner = Rect {
+        x: popup_rect.x + 1,
+        y: popup_rect.y + 1,
+        width: popup_rect.width.saturating_sub(2),
+        height: popup_rect.height.saturating_sub(2),
+    };
+    f.buffer_mut().set_style(inner, Style::default().bg(bg));
 }
 
 #[cfg(test)]

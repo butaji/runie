@@ -155,6 +155,10 @@ pub struct Snapshot {
     pub input_title: String,
     /// True when a provider and model are connected.
     pub has_models: bool,
+    /// Plan mode active — write tools blocked until plan is approved.
+    pub plan_mode: bool,
+    /// Content of the active plan (markdown).
+    pub active_plan_content: String,
 }
 
 /// Compute the index of the element currently at the top of the

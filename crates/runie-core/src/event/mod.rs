@@ -147,6 +147,12 @@ pub enum Event {
     RenameSession { id: String, name: String },
     DeleteSession { id: String },
 
+    // ── Plan mode variants ────────────────────────────────────────────────────
+    /// Enable plan mode with optional initial content.
+    PlanModeEnabled { content: String },
+    /// Disable plan mode.
+    PlanModeDisabled,
+
     // ── Dialog variants ──────────────────────────────────────────────────────
     ToggleWelcome,
     ToggleCommandPalette,
@@ -365,6 +371,7 @@ pub enum EventCategory {
     Other,
     Permission,
     Persistence,
+    PlanMode,
     Scroll,
     Session,
     System,
@@ -603,13 +610,17 @@ impl Event {
             Event::StarSession { .. } => EventKind::Control,
             Event::RenameSession { .. } => EventKind::Control,
             Event::DeleteSession { .. } => EventKind::Control,
+            Event::PlanModeEnabled { .. } => EventKind::Intent,
+            Event::PlanModeDisabled => EventKind::Intent,
         }
     }
 
     /// Return the [`EventCategory`] for this event variant.
+    /// Return the [`EventCategory`] for this event variant.
     pub fn category(&self) -> EventCategory {
         match self {
             Event::Thinking { .. } => EventCategory::Agent,
+            Event::PlanModeEnabled { .. } | Event::PlanModeDisabled => EventCategory::PlanMode,
             Event::ThoughtDone { .. } => EventCategory::Agent,
             Event::ToolStart { .. } => EventCategory::Agent,
             Event::ToolInputDelta { .. } => EventCategory::Agent,

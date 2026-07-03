@@ -28,6 +28,7 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::Persistence => {
             let _ = handle_persistence_events(state, &event);
         }
+        EventCategory::PlanMode => plan_mode_event(state, event),
         EventCategory::Other | EventCategory::Unknown => {}
     }
 }
@@ -439,4 +440,23 @@ fn is_form_dialog_event(event: &crate::Event) -> bool {
             | crate::Event::CommandFormSubmit
             | crate::Event::CommandFormClose
     )
+}
+
+/// Handle plan mode events — enable/disable plan mode in ViewState.
+fn plan_mode_event(state: &mut AppState, event: crate::Event) {
+    match event {
+        crate::Event::PlanModeEnabled { content } => {
+            state.view_mut().plan_mode = true;
+            state.view_mut().active_plan_content = content;
+            state.view_mut().dirty = true;
+            state.add_system_msg("Plan mode enabled. Write tools are blocked until plan is approved.".to_string());
+        }
+        crate::Event::PlanModeDisabled => {
+            state.view_mut().plan_mode = false;
+            state.view_mut().active_plan_content.clear();
+            state.view_mut().dirty = true;
+            state.add_system_msg("Plan mode disabled.".to_string());
+        }
+        _ => {}
+    }
 }

@@ -2,7 +2,7 @@
 
 pub mod run;
 
-pub use run::{run_compact, run_fork, run_name};
+pub use run::{run_compact, run_fork, run_name, run_plan};
 
 use crate::actors::{PermissionMsg, SessionMsg};
 use crate::commands::CommandResult;
@@ -83,6 +83,7 @@ fn register_session_simple_handlers(
     registry.register("tree", NamedHandler::Handler(handle_tree));
     registry.register("share", NamedHandler::Handler(handle_share));
     registry.register("resume", NamedHandler::Handler(handle_resume));
+    registry.register("plan", NamedHandler::Handler(run_plan));
 }
 
 pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {

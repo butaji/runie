@@ -288,7 +288,9 @@ impl DurableCoreEvent {
             | Event::UntrustProject
             | Event::ReloadAll
             | Event::KeybindingsReloaded
-            | Event::SetPrompt { .. } => None,
+            | Event::SetPrompt { .. }
+            | Event::PlanModeEnabled { .. }
+            | Event::PlanModeDisabled => None,
         }
     }
 }

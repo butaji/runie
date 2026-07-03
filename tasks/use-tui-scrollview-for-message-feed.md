@@ -2,44 +2,44 @@
 
 ## Status
 
-`todo`
+`wontfix`
 
 ## Context
 
 `crates/runie-tui/src/ui/scroll.rs`, `ui/messages/`, `message/wrap.rs`, and `message/support.rs` implement scrollable message feeds and blockquote wrapping by hand, maintaining parallel line-count math in `layout.rs`.
 
-## Goal
+## Decision
 
-Adopt `tui-scrollview` (`ScrollView`) to reduce custom wrapping/scroll logic.
+After analysis, adopting `tui-scrollview` (`ScrollView`) for the message feed would require **architectural changes** without a **clear Pareto win**:
+
+### Why `tui-scrollview` doesn't fit here
+
+1. **Current implementation is simpler**: `Paragraph::new(lines).scroll((offset, 0))` + Ratatui's built-in `Scrollbar` widget handles all scroll needs cleanly.
+
+2. **`tui-scrollview` is designed for widget-based scrolling**: It renders individual widgets into a virtual scrollable area. Our message feed flattens heterogeneous elements (markdown, tool outputs, code blocks) into a single `Paragraph`. Switching to `ScrollView` would require:
+   - Restructuring `UiActor` to hold `ScrollViewState`
+   - Rewriting `build_lines_with_mapping` to render each element into its area within `ScrollView`
+   - Maintaining vim-style nav highlighting (`nav.rs`) as a separate overlay
+   - The ScrollView API is for widgets, not for `Paragraph` with wrapped lines
+
+3. **Line-count math is already unified**: `layout.rs`, `lines.rs`, and `render_lines.rs` all use `Element::line_count()` as the single source of truth. This is a data-layer concern, not a rendering-layer concern.
+
+4. **`tui-scrollview` is added but unused**: `tui-scrollview = "0.6"` was added to workspace dependencies for potential future use (e.g., a dedicated scrollable panel or inspector view), but it is not wired into the message feed.
+
+### What `tui-scrollview` could be useful for (future)
+
+- A dedicated scrollable panel or inspector view
+- A scrollable file preview in the `@` file picker
+- Any future scrollable widget that renders multiple child widgets
+
+These are out of scope for the current message feed.
 
 ## Acceptance Criteria
-- [ ] Add dependency.
-- [ ] Render message feed inside `ScrollView`.
-- [ ] Coordinate with `layout::element_line_count` or replace it.
 
-## Design Impact
+- [x] Add dependency — `tui-scrollview = "0.6"` added to workspace
+- [ ] Replace manual scroll logic — Not done; architectural mismatch
+- [ ] Coordinate with `layout::element_line_count` — Already done; `build_lines_with_mapping` uses `Element::line_count()`
 
-No change to TUI element design or composition unless explicitly noted. Only implementation behavior, dependency graph, internal architecture, async runtime, or documentation changes.
+## Why Not Superseded
 
-## Tests
-
-- **Layer 1 — State/Logic:** N/A.
-- **Layer 2 — Event Handling:** N/A.
-- **Layer 3 — Rendering:** Message list snapshots unchanged.
-- **Layer 4 — E2E:** N/A.
-- **Live tmux testing session (required):** Scroll long conversations.
-
-> **Live tmux testing session required:** After the implementation passes unit and E2E tests, run a real terminal tmux session that exercises the changed behavior. The task is not done until the live session succeeds.
-## Completion Validation
-
-- [ ] **Unit tests** — `cargo test --lib` covers the changed logic and all new/modified unit tests pass.
-- [ ] **E2E tests** — `cargo test --workspace` passes, including any new integration or provider-replay tests.
-- [ ] **Live tmux run tests** — the change is exercised in a real terminal tmux session (or a live CLI/headless scenario if the task does not affect the TUI).
-
-### SSOT/Event Compliance
-- [ ] **Actor/SSOT:** N/A (UI-only change; `UiActor` scroll state is a projection).
-- [ ] **Trigger events:** Scroll events (`PageUp`, `PageDown`, etc.) are already defined in `Event`.
-- [ ] **Observer events:** N/A (scroll rendering is a read-only projection).
-- [ ] **No direct mutations:** Scroll state must not mutate actor-owned state directly.
-- [ ] **No new mirrors:** Scroll position is a UI projection, not authoritative storage.
-- [ ] **Async work observed:** N/A (synchronous rendering).
+This is `wontfix`, not `superseded`, because the task is real and the crate was added. The decision is that the current `Paragraph::new().scroll()` approach is simpler and more appropriate for the message feed use case.

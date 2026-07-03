@@ -4,15 +4,17 @@
 
 use ratatui::{
     layout::Rect,
+    prelude::Text,
     style::Style,
     text::Line,
-    widgets::{Clear, Paragraph},
+    widgets::Clear,
     Frame,
 };
 use runie_core::Snapshot;
+use tui_popup::Popup;
 
 use crate::theme::{
-    block_popup, color_bg_panel, style_hint, style_popup_selected, style_popup_unselected,
+    color_bg_panel, style_hint, style_popup_selected, style_popup_unselected,
     GLYPH_SELECTED, GLYPH_UNSELECTED,
 };
 
@@ -20,12 +22,29 @@ pub mod layout_constants;
 pub mod panel;
 pub mod permission;
 pub mod welcome;
+pub mod plan;
 
 /// Clear the given rect with the panel background color.
 pub fn clear_panel_bg(f: &mut Frame, area: Rect) {
     f.render_widget(Clear, area);
     f.buffer_mut()
         .set_style(area, Style::default().bg(color_bg_panel()));
+}
+
+/// Compute the centered popup rect for the command palette.
+pub fn palette_popup_rect(area: Rect) -> Rect {
+    let popup_width = layout_constants::POPUP_WIDTH
+        .min(area.width.saturating_sub(4))
+        .max(layout_constants::POPUP_MIN_WIDTH);
+    let popup_height = layout_constants::POPUP_HEIGHT
+        .min(area.height.saturating_sub(4))
+        .max(layout_constants::POPUP_MIN_HEIGHT);
+    Rect {
+        x: area.x + (area.width.saturating_sub(popup_width)) / 2,
+        y: area.y + (area.height.saturating_sub(popup_height)) / 2,
+        width: popup_width,
+        height: popup_height,
+    }
 }
 
 pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
@@ -37,16 +56,29 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
         .path_selected
         .unwrap_or(0)
         .min(items.len().saturating_sub(1));
-    let popup_area = path_popup_area(f.area(), items.len());
-    let lines = build_path_suggestion_lines(items, selected);
 
-    clear_panel_bg(f, popup_area);
-    f.render_widget(
-        Paragraph::new(lines)
-            .style(Style::default().bg(color_bg_panel()))
-            .block(block_popup(&format!(" paths ({}) ", items.len()))),
-        popup_area,
-    );
+    // Use tui-popup for the shell (border + title + background).
+    let popup_rect = path_popup_area(f.area(), items.len());
+    let lines = build_path_suggestion_lines(items, selected);
+    let bg = color_bg_panel();
+
+    // tui-popup clears to terminal bg; fill inner with panel bg.
+    let content = Text::from(lines).style(Style::default().bg(bg));
+
+    let title = format!(" paths ({}) ", items.len());
+    let popup = Popup::new(content)
+        .title(title.as_str())
+        .style(Style::default().bg(bg));
+    f.render_widget(popup, popup_rect);
+
+    // Set inner background explicitly (tui-popup uses Clear which resets to terminal bg).
+    let inner = Rect {
+        x: popup_rect.x + 1,
+        y: popup_rect.y + 1,
+        width: popup_rect.width.saturating_sub(2),
+        height: popup_rect.height.saturating_sub(2),
+    };
+    f.buffer_mut().set_style(inner, Style::default().bg(bg));
 }
 
 fn path_popup_area(area: Rect, item_count: usize) -> Rect {
@@ -91,15 +123,4 @@ fn path_suggestion_line(
     };
     let suffix = if item.is_dir { "/" } else { "" };
     Line::from(format!("{}{}{}", prefix, item.path, suffix)).style(style)
-}
-
-pub fn palette_popup_rect(area: Rect) -> Rect {
-    let popup_width = layout_constants::POPUP_WIDTH.min(area.width.saturating_sub(4)).max(layout_constants::POPUP_MIN_WIDTH);
-    let popup_height = layout_constants::POPUP_HEIGHT.min(area.height.saturating_sub(4)).max(layout_constants::POPUP_MIN_HEIGHT);
-    Rect {
-        x: area.x + (area.width.saturating_sub(popup_width)) / 2,
-        y: area.y + (area.height.saturating_sub(popup_height)) / 2,
-        width: popup_width,
-        height: popup_height,
-    }
 }

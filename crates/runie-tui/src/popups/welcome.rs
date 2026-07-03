@@ -9,15 +9,16 @@ use std::sync::Arc;
 
 use ratatui::{
     layout::Rect,
+    prelude::Text,
     style::Style,
     text::{Line, Span},
-    widgets::Paragraph,
     Frame,
 };
 use runie_core::Snapshot;
+use tui_popup::Popup;
 
 use crate::popups::palette_popup_rect;
-use crate::theme::{block_popup, color_accent, color_bg_panel, color_dim};
+use crate::theme::{color_accent, color_bg_panel, color_dim};
 use crate::Stylize;
 
 /// Render the welcome/launcher overlay covering the main area.
@@ -25,26 +26,36 @@ use crate::Stylize;
 #[allow(clippy::vec_init_then_push)]
 pub fn render_welcome(f: &mut Frame, snap: &Snapshot) {
     let area = palette_popup_rect(f.area());
-    f.buffer_mut()
-        .set_style(area, Style::default().bg(color_bg_panel()));
+    let bg = color_bg_panel();
 
-    let block = block_popup("Runie");
-    let inner = block.inner(area);
-    f.render_widget(Paragraph::new("").block(block), area);
+    // Build welcome content lines.
+    let lines = build_welcome_content(snap);
 
-    let content = build_welcome_content(snap, inner);
-    let para = Paragraph::new(content);
-    f.render_widget(para, inner);
+    // Use tui-popup for the shell (border + title + centering).
+    let content = Text::from(lines).style(Style::default().bg(bg));
+    let popup = Popup::new(content)
+        .title("Runie")
+        .style(Style::default().bg(bg));
+    f.render_widget(popup, area);
+
+    // Explicitly set inner background (tui-popup uses Clear which resets to terminal bg).
+    let inner = Rect {
+        x: area.x + 1,
+        y: area.y + 1,
+        width: area.width.saturating_sub(2),
+        height: area.height.saturating_sub(2),
+    };
+    f.buffer_mut().set_style(inner, Style::default().bg(bg));
 }
 
-fn build_welcome_content(snap: &Snapshot, inner: Rect) -> Vec<Line<'static>> {
+fn build_welcome_content(snap: &Snapshot) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     build_header(&mut lines);
     build_session_options(&mut lines);
     build_quit_option(&mut lines);
     build_recent_sessions(&mut lines, snap);
     build_hint(&mut lines);
-    pad_to_height(&mut lines, inner.height);
+    pad_to_height(&mut lines);
     lines
 }
 
@@ -107,12 +118,8 @@ fn build_hint(lines: &mut Vec<Line<'static>>) {
     ]));
 }
 
-fn pad_to_height(lines: &mut Vec<Line<'static>>, height: u16) {
-    let used = lines.len() as u16;
-    let remaining = height.saturating_sub(used);
-    for _ in 0..remaining {
-        lines.push(Line::from(""));
-    }
+fn pad_to_height(_lines: &mut Vec<Line<'static>>) {
+    // Content height is determined by tui-popup's auto-sizing; no padding needed.
 }
 
 #[cfg(test)]
@@ -124,7 +131,7 @@ mod tests {
     #[test]
     fn welcome_renders_new_resume_quit() {
         let snap = Snapshot::default();
-        let backend = TestBackend::new(60, 20);
+        let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| render_welcome(f, &snap)).unwrap();
         let buf = terminal.backend().buffer();
@@ -152,7 +159,7 @@ mod tests {
             ]),
             ..Default::default()
         };
-        let backend = TestBackend::new(60, 20);
+        let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| render_welcome(f, &snap)).unwrap();
         let buf = terminal.backend().buffer();

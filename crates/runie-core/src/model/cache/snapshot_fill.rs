@@ -82,4 +82,7 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.image_attachments = state.session().image_attachments.clone();
     s.permission_request = state.permission_request_opt().cloned();
     s.last_visible_height = state.view().last_visible_height;
+    // Plan mode projection
+    s.plan_mode = state.view().plan_mode;
+    s.active_plan_content = state.view().active_plan_content.clone();
 }

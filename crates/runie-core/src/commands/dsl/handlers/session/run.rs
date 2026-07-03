@@ -69,6 +69,49 @@ pub fn run_compact(_state: &mut AppState, args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RunCompactCommand { keep, focus })
 }
 
+/// Toggle plan mode.  Args: empty or "off".
+/// When enabled, creates a new plan from the current session context.
+pub fn run_plan(state: &mut AppState, args: &str) -> CommandResult {
+    let args = args.trim();
+    if args.eq_ignore_ascii_case("off") || args.eq_ignore_ascii_case("disable") {
+        // Disable plan mode
+        return CommandResult::Event(crate::Event::PlanModeDisabled);
+    }
+    // Build initial plan content from the session
+    let content = build_plan_content(state);
+    CommandResult::Event(crate::Event::PlanModeEnabled { content })
+}
+
+/// Build initial plan markdown from the session context.
+fn build_plan_content(state: &AppState) -> String {
+    let messages = state.session().messages();
+    let mut lines = vec!["# Plan".to_string(), String::new()];
+    if messages.is_empty() {
+        lines.push("No conversation history yet.".to_string());
+    } else {
+        lines.push("## Context".to_string());
+        for msg in messages.iter().rev().take(5) {
+            let role = match msg.role {
+                crate::model::Role::User => "You",
+                crate::model::Role::Assistant => "Assistant",
+                crate::model::Role::Tool => "Tool",
+                crate::model::Role::Thought => "Thought",
+                _ => "System",
+            };
+            let preview = if msg.content().len() > 120 {
+                format!("{}...", &msg.content()[..120])
+            } else {
+                msg.content().to_string()
+            };
+            lines.push(format!("- [{}] {}", role, preview));
+        }
+    }
+    lines.push(String::new());
+    lines.push("## Steps".to_string());
+    lines.push("- [ ] ".to_string());
+    lines.join("\n")
+}
+
 // ── Session IO handlers ──────────────────────────────────────────────────────
 // These handle save/load/delete/import/export with async support.
 // Form submissions pass args as positional values (e.g. "session-name" or

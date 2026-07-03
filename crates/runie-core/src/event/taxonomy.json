@@ -199,6 +199,10 @@
         "StarSession", "RenameSession", "DeleteSession"
       ]
     },
+    "PlanMode": {
+      "kind": "Intent",
+      "intent_variants": ["PlanModeEnabled", "PlanModeDisabled"]
+    },
     "ModelConfig": {
       "kind": "Intent",
       "intent_variants": [

@@ -2192,12 +2192,12 @@
   {
     "file": "use-tui-popup-for-popup-shell.md",
     "title": "Use tui-popup for popup shell",
-    "status": "todo"
+    "status": "done"
   },
   {
     "file": "use-tui-scrollview-for-message-feed.md",
     "title": "Use tui-scrollview for message feed",
-    "status": "todo"
+    "status": "wontfix"
   },
   {
     "file": "use-untagged-enum-for-provider-error-bodies.md",
