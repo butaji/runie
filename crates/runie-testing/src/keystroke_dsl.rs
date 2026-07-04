@@ -78,7 +78,8 @@ pub fn parse_keystroke(dsl: &str) -> Option<CoreEvent> {
     match dsl_lower.as_str() {
         // Named keys first (case-insensitive) - these must come before single-char patterns
         "enter" | "return" | "submit" => Some(CoreEvent::Newline),
-        "escape" | "esc" => Some(CoreEvent::Escape),
+        // Map escape to DialogBack to match the keymap (KeyCode::Esc → DialogBack)
+        "escape" | "esc" => Some(CoreEvent::DialogBack),
         "backspace" | "bksp" | "delete" => Some(CoreEvent::Backspace),
         "tab" => Some(CoreEvent::Input('\t')),
         "space" => Some(CoreEvent::Input(' ')),
@@ -428,7 +429,11 @@ mod tests {
     #[test]
     fn test_named_keys() {
         assert!(matches!(parse_keystroke("enter"), Some(CoreEvent::Newline)));
-        assert!(matches!(parse_keystroke("ESCAPE"), Some(CoreEvent::Escape)));
+        // ESC maps to DialogBack to match keymap (KeyCode::Esc → DialogBack)
+        assert!(matches!(
+            parse_keystroke("ESCAPE"),
+            Some(CoreEvent::DialogBack)
+        ));
         assert!(matches!(
             parse_keystroke("Backspace"),
             Some(CoreEvent::Backspace)
