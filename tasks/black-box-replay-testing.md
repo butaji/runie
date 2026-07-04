@@ -332,3 +332,5 @@ crates/runie-testing/src/fixtures/openai/opencode_go_deepseek_v4_pro_multiturn_w
 - Should we record 3+ turn conversations, or add system-prompt / persona
   scenarios? Extend `scripts/record_opencode_go_multiturn.py` with additional
   `SCENARIOS` entries when needed.
+- See `tasks/black-box-replay-dsl.md` for a proposed ergonomic DSL that
+  consumes these fixtures in `runie-testing` black-box tests.
