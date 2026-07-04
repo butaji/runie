@@ -5,15 +5,14 @@
 default:
     just --list
 
-# Run all workspace tests with nextest (120s slow timeout per test)
-# Override slow-timeout: just test SLOW_TIMEOUT=60
-# Pass through to nextest: just test -- --no-fail-fast
+# Run all workspace tests single-threaded to avoid tmux resource contention.
+# Tests spawn tmux sessions which can conflict when run in parallel.
 test:
-    cargo nextest run --workspace
+    cargo test --workspace -- --test-threads=1
 
 # Run tests with output visible
 test-verbose:
-    cargo nextest run --workspace --no-capture
+    cargo test --workspace -- --test-threads=1 --nocapture
 
 # Run doctests separately (nextest skips doctests by default)
 test-doc:
@@ -68,7 +67,7 @@ check:
 
 # Run all tests (same as CI)
 verify-tests:
-    cargo nextest run --workspace && cargo test --workspace --doc
+    cargo test --workspace -- --test-threads=1 && cargo test --workspace --doc
 
 # Watch mode for TUI crate only
 watch-tui:
