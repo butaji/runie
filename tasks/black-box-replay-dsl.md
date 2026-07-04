@@ -2,133 +2,96 @@
 
 ## Goal
 
-Design a small, ergonomic DSL that makes it trivial to write black-box tests
-against the recorded OpenCode Go fixtures. The DSL should handle single-turn
-and multi-turn conversations, CLI and TUI targets, and common assertion
-patterns without repeating boilerplate.
+Design an ergonomic Rust DSL for writing black-box tests in the standalone
+`runie-tests` crate. The DSL has zero code dependency on runie — it only
+spawns runie binaries as subprocesses and asserts on their observable output.
 
-No code changes in this task — design only.
+## Constraints
+
+- Test suite lives in `~/code/GitHub/runie-tests/`.
+- No `use runie_*` imports.
+- Binaries are built from `../runie` source during test setup.
+- Fixtures are read from `runie-tests/fixtures/{openai,anthropic}/`.
+- Tests run real `tmux` sessions for TUI coverage.
 
 ## Principles
 
-- **Fixture-first**: tests start from a named fixture or a list of fixtures,
-  not from provider construction.
-- **Multi-turn is the default shape**: a test is a sequence of turns, where a
-  single-turn test is just a sequence of length one.
-- **CLI and TUI share the same surface**: the DSL abstracts over spawning a
-  subprocess vs driving an in-process `TuiRuntime`.
-- **Readable assertions**: stdout/stderr/exit-code assertions read like
-  predicates; render assertions are opt-in for TUI.
-- **No secrets, no network**: DSL-enforced defaults that only use replay mode.
+- **Fixture-first**: tests start from a fixture path or a list of paths.
+- **Multi-turn is a sequence**: a test is a list of fixtures; single-turn tests
+  are sequences of length one.
+- **CLI and TUI share patterns**: both use builders, both use predicate
+  assertions, both support multi-turn.
+- **No secrets, no network**: the DSL always sets replay mode.
 
-## Proposed Rust builder DSL
-
-Add a `runie-testing` helper module (e.g. `black_box`) that exposes a fluent
-builder. This is the recommended layer-5 test style.
-
-### Single-turn CLI test
+## Entry points
 
 ```rust
-use runie_testing::black_box::cli;
+use runie_tests::prelude::*;
 
+// CLI test
 #[test]
-fn simple_text_replays() {
-    cli()
-        .fixtures(["openai/opencode_go_deepseek_v4_flash_simple.sse"])
+fn cli_example() {
+    test_cli()
+        .fixture("openai/opencode_go_deepseek_v4_flash_simple.sse")
         .args(["print", "say ok"])
         .assert()
         .stdout(contains("ok"))
         .success();
 }
-```
 
-### Multi-turn CLI test
-
-```rust
+// TUI test
 #[test]
-fn weather_chain_replays() {
-    cli()
-        .fixtures([
-            "openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn1.sse",
-            "openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn2.sse",
-        ])
-        .args(["print", "What is the weather in Paris?", "What about Berlin?"])
-        .assert()
-        .stdout(contains("Paris").and(contains("Berlin")))
-        .success();
-}
-```
-
-### Tool-call fixture with canned tool output
-
-```rust
-#[test]
-fn tool_call_replays() {
-    cli()
-        .fixtures(["openai/opencode_go_deepseek_v4_flash_tool.sse"])
-        .tools([get_weather().returns(json!({"temperature": 22, "unit": "celsius"}))])
-        .args(["json", "--model", "opencode-go/deepseek-v4-flash", "weather in Paris"])
-        .assert()
-        .stdout(contains("get_weather"))
-        .success();
-}
-```
-
-### TUI test with TestBackend
-
-```rust
-use runie_testing::black_box::tui;
-
-#[test]
-fn tui_displays_streaming_text() {
-    tui()
-        .fixtures(["openai/opencode_go_kimi_k2_6_simple.sse"])
+fn tui_example() {
+    test_tui()
+        .fixture("openai/opencode_go_kimi_k2_6_simple.sse")
         .type_keys("say ok")
         .submit()
-        .wait_for(rendered(contains("ok")))
-        .assert();
+        .wait_for_idle(Duration::from_millis(500))
+        .capture_pane()
+        .assert(contains("ok"));
 }
 ```
 
-### TUI test with raw terminal (tmux / expect)
+## Core types
 
 ```rust
-#[test]
-fn tui_runs_in_terminal() {
-    tui_terminal()
-        .fixtures(["openai/opencode_go_kimi_k2_6_simple.sse"])
-        .type_keys("say ok")
-        .submit()
-        .snapshot("tui_simple_ok")
-        .assert();
+/// Start a CLI black-box test.
+pub fn test_cli() -> CliTest;
+
+/// Start a TUI black-box test inside a tmux session.
+pub fn test_tui() -> TuiTest;
+
+/// Helpers imported via `runie_tests::prelude::*`.
+pub mod predicates {
+    pub fn contains<S: AsRef<str>>(text: S) -> impl Predicate<str>;
+    pub fn not_contains<S: AsRef<str>>(text: S) -> impl Predicate<str>;
 }
 ```
 
-## Key DSL types
+## CLI builder
 
 ```rust
-/// Entry point for CLI black-box tests.
-pub fn cli() -> CliTest;
-
-/// Entry point for TUI black-box tests (TestBackend).
-pub fn tui() -> TuiTest;
-
-/// Entry point for TUI terminal tests (tmux/expect).
-pub fn tui_terminal() -> TerminalTuiTest;
-
 pub struct CliTest {
-    fixtures: Vec<String>,
+    fixtures: Vec<PathBuf>,
     args: Vec<String>,
-    tools: Vec<MockTool>,
     env: Vec<(String, String)>,
-    config_overrides: Vec<(String, toml::Value)>,
+    home: Option<TempDir>,
 }
 
 impl CliTest {
-    pub fn fixtures<I, S>(self, fixtures: I) -> Self;
+    /// Add one fixture.
+    pub fn fixture<P: AsRef<Path>>(self, path: P) -> Self;
+
+    /// Add multiple fixtures (multi-turn).
+    pub fn fixtures<I, P>(self, paths: I) -> Self;
+
+    /// CLI arguments after `runie`.
     pub fn args<I, S>(self, args: I) -> Self;
-    pub fn tools<I>(self, tools: I) -> Self;
+
+    /// Extra env var.
     pub fn env<K, V>(self, key: K, value: V) -> Self;
+
+    /// Build and run.
     pub fn assert(self) -> CliAssert;
 }
 
@@ -145,176 +108,293 @@ impl CliAssert {
 }
 ```
 
-## Declarative YAML spec (optional bulk runner)
+### CLI examples
 
-For quickly adding many similar tests without writing Rust, support a YAML
-spec interpreted by a single Rust test runner.
-
-```yaml
-# crates/runie-cli/tests/replay_blackbox.yaml
-fixtures_root: "../../runie-testing/src/fixtures"
-
-tests:
-  - name: simple_text
-    target: cli
-    fixtures:
-      - openai/opencode_go_deepseek_v4_flash_simple.sse
-    args: ["print", "say ok"]
-    assert:
-      stdout_contains: "ok"
-      exit_code: 0
-
-  - name: weather_chain
-    target: cli
-    fixtures:
-      - openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn1.sse
-      - openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn2.sse
-    args: ["print", "What is the weather in Paris?", "What about Berlin?"]
-    assert:
-      stdout_contains:
-        - "Paris"
-        - "Berlin"
-      exit_code: 0
-
-  - name: minimax_simple_anthropic
-    target: cli
-    protocol: anthropic
-    fixtures:
-      - anthropic/opencode_go_minimax_m3_simple.sse
-    args: ["print", "say ok"]
-    assert:
-      stdout_contains: "ok"
-```
-
-A single Rust test loads the YAML and runs every entry:
+Single-turn:
 
 ```rust
 #[test]
-fn replay_yaml_suite() {
-    runie_testing::black_box::run_yaml_suite("tests/replay_blackbox.yaml");
+fn print_simple_text() {
+    test_cli()
+        .fixture("openai/opencode_go_deepseek_v4_flash_simple.sse")
+        .args(["print", "say ok"])
+        .assert()
+        .stdout(contains("ok"))
+        .success();
 }
 ```
 
-This is optional. The builder DSL is the primary target.
-
-## Multi-turn semantics
-
-- `.fixtures([a, b, c])` maps to `RUNIE_REPLAY_FIXTURES=a,b,c`.
-- The replay provider consumes fixtures round-robin: turn 1 uses fixture 0,
-  turn 2 uses fixture 1, etc.
-- If there are more turns than fixtures, the provider wraps around. Tests
-  should normally provide exactly one fixture per user turn.
-- For CLI tests, each fixture corresponds to one `print`/`json` invocation or
-  one prompt in a multi-prompt invocation.
-
-## Tool mocking in the DSL
-
-The DSL should build a static tool registry that the replay provider reads
-from an env var or a temp file:
+Multi-turn:
 
 ```rust
-fn get_weather() -> MockTool;
-fn read_file() -> MockTool;
-fn list_dir() -> MockTool;
-
-MockTool::new("get_weather")
-    .when(json!({"city": "Paris"}))
-    .returns(json!({"temperature": 22, "unit": "celsius"}))
+#[test]
+fn weather_chain() {
+    test_cli()
+        .fixtures([
+            "openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn1.sse",
+            "openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn2.sse",
+        ])
+        .args([
+            "print",
+            "What is the weather in Paris?",
+            "What about Berlin?",
+        ])
+        .assert()
+        .stdout(contains("Paris").and(contains("Berlin")))
+        .success();
+}
 ```
 
-At runtime, the DSL serializes the registry and sets:
+Tool-call fixture:
+
+```rust
+#[test]
+fn json_tool_call() {
+    test_cli()
+        .fixture("openai/opencode_go_deepseek_v4_flash_tool.sse")
+        .args(["json", "--model", "opencode-go/deepseek-v4-flash", "weather in Paris"])
+        .assert()
+        .stdout(contains("get_weather"))
+        .success();
+}
+```
+
+Anthropic protocol:
+
+```rust
+#[test]
+fn anthropic_simple() {
+    test_cli()
+        .fixture("anthropic/opencode_go_minimax_m3_simple.sse")
+        .env("RUNIE_REPLAY_PROTOCOL", "anthropic")
+        .args(["print", "say ok"])
+        .assert()
+        .stdout(contains("ok"))
+        .success();
+}
+```
+
+## TUI builder
+
+```rust
+pub struct TuiTest {
+    fixtures: Vec<PathBuf>,
+    keys: Vec<KeyEvent>,
+    idle_timeout: Duration,
+    home: Option<TempDir>,
+}
+
+impl TuiTest {
+    pub fn fixture<P: AsRef<Path>>(self, path: P) -> Self;
+    pub fn fixtures<I, P>(self, paths: I) -> Self;
+
+    /// Type literal text.
+    pub fn type_keys<S: AsRef<str>>(self, text: S) -> Self;
+
+    /// Press Enter.
+    pub fn submit(self) -> Self;
+
+    /// Press a specific key.
+    pub fn press(self, key: KeyEvent) -> Self;
+
+    /// Wait for pane content to stop changing.
+    pub fn wait_for_idle(self, timeout: Duration) -> Self;
+
+    /// Capture tmux pane content.
+    pub fn capture_pane(self) -> TuiAssert;
+}
+
+pub struct TuiAssert {
+    pane_text: String,
+}
+
+impl TuiAssert {
+    pub fn assert(self, pred: impl Predicate<str>);
+    pub fn stdout(self, pred: impl Predicate<str>) -> Self; // tmux pane == stdout
+    pub fn stderr(self, pred: impl Predicate<str>) -> Self; // captured separately
+}
+```
+
+### TUI examples
+
+Basic chat:
+
+```rust
+#[test]
+fn tui_simple_chat() {
+    test_tui()
+        .fixture("openai/opencode_go_kimi_k2_6_simple.sse")
+        .type_keys("say ok")
+        .submit()
+        .wait_for_idle(Duration::from_millis(500))
+        .capture_pane()
+        .assert(contains("ok"));
+}
+```
+
+Tool-call rendering:
+
+```rust
+#[test]
+fn tui_shows_tool_call() {
+    test_tui()
+        .fixture("openai/opencode_go_deepseek_v4_flash_tool.sse")
+        .type_keys("weather in Paris")
+        .submit()
+        .wait_for_idle(Duration::from_millis(500))
+        .capture_pane()
+        .assert(contains("get_weather"));
+}
+```
+
+Multi-turn chat:
+
+```rust
+#[test]
+fn tui_multi_turn() {
+    test_tui()
+        .fixtures([
+            "openai/opencode_go_kimi_k2_6_multiturn_math_chain_turn1.sse",
+            "openai/opencode_go_kimi_k2_6_multiturn_math_chain_turn2.sse",
+        ])
+        .type_keys("What is 2 + 2?")
+        .submit()
+        .wait_for_idle(Duration::from_millis(500))
+        .type_keys("Multiply that by 3.")
+        .submit()
+        .wait_for_idle(Duration::from_millis(500))
+        .capture_pane()
+        .assert(contains("6"));
+}
+```
+
+## Fixture resolution
+
+The DSL resolves fixture paths relative to a root directory that defaults to
+`runie-tests/fixtures/`:
+
+```rust
+pub fn fixture_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("fixtures")
+        .join(name)
+}
+```
+
+For multi-turn tests, the list order maps to user turns in order. The replay
+provider cycles through fixtures round-robin.
+
+## Environment setup
+
+Every test gets a temp `HOME` directory containing `~/.runie/config.toml`:
+
+```toml
+provider = "opencode-go"
+model = "deepseek-v4-flash"
+```
+
+The DSL sets:
 
 ```text
-RUNIE_REPLAY_TOOLS={"get_weather":{"default":{"temperature":22,...}},...}
+HOME=<temp_dir>
+RUNIE_REPLAY_FIXTURES=<fixture_paths>
+RUNIE_REPLAY_PROTOCOL=<openai|anthropic> (optional)
 ```
 
-The replay provider uses this registry to answer `ToolCallStart` events
-instead of invoking real tools.
+and unsets any real provider API-key env vars to prevent accidental live calls.
 
-## TUI DSL design
+## Binary discovery
 
-For `tui()` (TestBackend):
+The DSL locates the compiled binaries using cargo's automatic env vars once
+`runie-tests/Cargo.toml` declares the binaries as dependencies:
 
-```rust
-tui()
-    .fixtures([...])
-    .type_keys("say ok")          // type literal text
-    .press(KeyCode::Enter)        // press a key
-    .submit()                     // convenience for Enter
-    .wait_for(event(|e| matches!(e, Event::Done { .. })))
-    .assert_buffer(|buf| {
-        assert!(buf_contains(buf, "ok"));
-    });
+```toml
+[[bin]]
+name = "runie"
+path = "../runie/crates/runie-cli/src/main.rs"
+
+[[bin]]
+name = "runie-tui"
+path = "../runie/crates/runie-tui/src/main.rs"
 ```
 
-For `tui_terminal()` (tmux/expect):
+Alternatively, a build script in `runie-tests` runs `cargo build` in `../runie`
+and records `target/debug/runie` and `target/debug/runie-tui` paths.
+
+Recommended approach for Phase 1: a `build.rs` in `runie-tests` that builds
+`../runie` and sets env vars pointing to the resulting binaries.
+
+## Tool mocking
+
+The replay provider inside runie must supply fake tool outputs. The DSL does
+not configure this per-test in Phase 1; it relies on a static registry keyed
+by tool name.
+
+If per-test custom tool output is needed later, the DSL can set:
+
+```text
+RUNIE_REPLAY_TOOL_GET_WEATHER={"temperature":-5,"unit":"celsius"}
+```
+
+and expose:
 
 ```rust
-tui_terminal()
-    .fixtures([...])
-    .type_keys("say ok")
-    .submit()
-    .wait_for_screen(contains("ok"))
+test_cli()
+    .fixture("...")
+    .tool("get_weather", json!({"temperature": -5}))
+    .args([...])
     .assert();
 ```
 
-## Configuration overrides
-
-Some black-box tests need an isolated home directory or specific config:
+## Predicate helpers
 
 ```rust
-cli()
-    .fixtures([...])
-    .config("provider", "opencode-go")
-    .config("model", "deepseek-v4-flash")
-    .args(["print", "hi"])
-    .assert()
-    .success();
+pub fn contains<S: AsRef<str>>(text: S) -> impl Predicate<str>;
+pub fn not_contains<S: AsRef<str>>(text: S) -> impl Predicate<str>;
+pub fn matches<S: AsRef<str>>(regex: S) -> impl Predicate<str>;
+
+// Convenience for chaining
+pub fn and<A, B>(a: A, b: B) -> impl Predicate<str>;
+pub fn or<A, B>(a: A, b: B) -> impl Predicate<str>;
 ```
 
-The DSL creates a temp home, writes `~/.runie/config.toml`, and sets `HOME`
-for the subprocess.
+These wrap a small internal predicate trait so the DSL does not depend on
+`predicates`/`assert_cmd` crates if we want to keep dependencies minimal.
 
 ## Error reporting
 
-- On failure, print the fixture names, the CLI args, and the actual stdout/stderr.
-- For TUI failures, print the final `Buffer` diff or terminal screen capture.
-- Include which turn failed in multi-turn tests.
+On failure, print:
 
-## Suggested file layout
+- Test name and fixture paths
+- CLI args or TUI key sequence
+- Actual stdout / pane text
+- Expected predicate
+- Exit code
+- tmux session/pane ID if applicable
+
+## Suggested file layout in runie-tests
 
 ```text
-crates/runie-testing/src/black_box/
-├── mod.rs          # public entry points: cli(), tui(), tui_terminal()
-├── cli.rs          # CliTest / CliAssert
-├── tui.rs          # TuiTest for TestBackend
-├── terminal.rs     # TerminalTuiTest for tmux/expect
-├── tools.rs        # MockTool builders
-└── yaml.rs         # optional YAML spec runner
+runie-tests/src/
+├── lib.rs          # prelude re-exports
+├── cli.rs          # CliTest, CliAssert
+├── tui.rs          # TuiTest, TuiAssert, tmux helpers
+├── fixtures.rs     # fixture path resolution
+├── predicates.rs   # predicate trait and helpers
+├── tools.rs        # static tool registry (optional Phase 2)
+└── env.rs          # temp HOME and env isolation
 ```
 
-## Relationship to existing runie-testing modules
+## Relationship to runie
 
-- Reuse `fixtures::openai::fixture` and `fixtures::anthropic::fixture` to
-  resolve fixture paths.
-- Reuse `with_env`/`EnvGuard` for environment isolation.
-- Reuse `keystroke_dsl` for TUI key sequences.
-- Reuse `capture_events` for event-based assertions.
+- No imports from `runie_*` crates.
+- No shared code with runie.
+- Only contract is the subprocess CLI and the `RUNIE_REPLAY_*` env vars.
 
-## Acceptance criteria for the DSL task
+## Acceptance criteria
 
-- [ ] A Rust developer can write a single-turn CLI black-box test in <5 lines.
-- [ ] Multi-turn CLI tests require only adding more fixtures to `.fixtures([...])`.
-- [ ] Tool-call fixtures can be paired with deterministic tool responses.
-- [ ] TUI tests can assert on rendered output without spawning a real terminal.
-- [ ] Optional YAML runner lets non-Rust contributors add fixture-driven tests.
-- [ ] DSL implementation lives in `runie-testing` and is gated behind a
-      `black-box` feature.
-
-## Open questions
-
-- Should the DSL support snapshots (insta) for TUI buffer assertions?
-- Should CLI tests use `assert_cmd`/`predicates` directly, or wrap them to
-  enforce replay-only mode?
-- Should fixture paths be relative to `crates/runie-testing/src/fixtures/` or
-  absolute from workspace root?
+- [ ] A Rust developer can write a single-turn CLI test in <8 lines.
+- [ ] A multi-turn CLI test requires only adding fixtures to `.fixtures([...])`.
+- [ ] A TUI tmux test can assert on captured pane text.
+- [ ] The DSL builds without any runie crate dependency.
+- [ ] Tests are deterministic and require no API keys.
