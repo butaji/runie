@@ -44,6 +44,10 @@ clap.workspace = true
 throbber-widgets-tui = "0.11"
 textwrap.workspace = true
 
+[features]
+default = ["mock"]
+mock = ["runie-provider/mock"]
+
 [target.'cfg(unix)'.dependencies]
 nix.workspace = true
 
