@@ -41,6 +41,15 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     restore_or_pop_dialog(state, dialog, result, is_palette_activation);
 
     if is_dialog_back && state.open_dialog().is_none() {
+        // Closing a hosted permission dialog without resolving it (e.g. pressing
+        // Escape) must cancel the underlying request so the agent is not left
+        // blocked indefinitely.
+        if let Some(req) = state.permission_request_opt() {
+            if let Some(handles) = state.actor_handles() {
+                handles.permission.try_cancel_permission(req.request_id.clone());
+            }
+            *state.permission_request_mut() = None;
+        }
         state.handle_vim_dialog_back();
     }
 

@@ -147,6 +147,54 @@ fn submit_on_emit_action_dispatches_event() {
 
 // Layer 2: submit_command_form_routes_to_registry
 #[test]
+fn tab_navigates_forward_between_buttons() {
+    let mut state = AppState::default();
+    let mut panel = Panel::new("permission", "Permission Required")
+        .item("_Allow", ItemAction::Emit(crate::Event::Save))
+        .item("_Deny", ItemAction::Emit(crate::Event::Abort))
+        .item("_Always", ItemAction::Emit(crate::Event::NewSession));
+
+    assert_eq!(panel.selected, 0);
+
+    let action = form_panel_action(&mut state, &mut panel, Event::Input('\t'));
+    assert!(matches!(action, FormAction::KeepOpen));
+    assert_eq!(panel.selected, 1);
+
+    let action = form_panel_action(&mut state, &mut panel, Event::Input('\t'));
+    assert!(matches!(action, FormAction::KeepOpen));
+    assert_eq!(panel.selected, 2);
+}
+
+#[test]
+fn shift_tab_navigates_backward_between_buttons() {
+    let mut state = AppState::default();
+    let mut panel = Panel::new("permission", "Permission Required")
+        .item("_Allow", ItemAction::Emit(crate::Event::Save))
+        .item("_Deny", ItemAction::Emit(crate::Event::Abort))
+        .item("_Always", ItemAction::Emit(crate::Event::NewSession));
+
+    let action = form_panel_action(&mut state, &mut panel, Event::CycleThinkingLevel);
+    assert!(matches!(action, FormAction::KeepOpen));
+    assert_eq!(panel.selected, 2, "shift+tab from first button should wrap to last");
+}
+
+#[test]
+fn tab_skips_past_form_field_without_typing() {
+    let mut state = AppState::default();
+    let mut panel = Panel::new("settings", "Settings")
+        .form_field("Name", "", "name")
+        .item("_Save", ItemAction::Emit(crate::Event::Save));
+
+    assert_eq!(panel.selected, 0);
+
+    // Tab should move focus from the field to the button, not insert a tab.
+    let action = form_panel_action(&mut state, &mut panel, Event::Input('\t'));
+    assert!(matches!(action, FormAction::KeepOpen));
+    assert_eq!(panel.selected, 1);
+    assert_eq!(panel.form_values.get("name"), None);
+}
+
+#[test]
 fn submit_on_form_with_cmd_name_routes_to_registry() {
     let mut state = AppState::default();
     // Simulate a form with cmd_name (like /save form)

@@ -3,8 +3,7 @@
 pub use crate::ui::view;
 pub use ratatui::{backend::TestBackend, Terminal};
 pub use runie_core::{
-    commands::DialogKind, AppState, ChatMessage, Element, Event, Part, PermissionRequestState,
-    Role, ScopedModel, Snapshot,
+    commands::DialogKind, AppState, ChatMessage, Element, Event, Part, Role, ScopedModel, Snapshot,
 };
 
 #[cfg(test)]

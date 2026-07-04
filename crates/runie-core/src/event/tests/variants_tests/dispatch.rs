@@ -272,6 +272,16 @@ fn dispatcher_handles_all_variants() {
                 action: crate::permissions::PermissionAction::Ask,
             },
             Event::PermissionRequestDismissed => Event::PermissionRequestDismissed,
+            Event::PermissionAllow { .. } => Event::PermissionAllow {
+                request_id: String::new(),
+            },
+            Event::PermissionDeny { .. } => Event::PermissionDeny {
+                request_id: String::new(),
+            },
+            Event::PermissionAlwaysAllow { .. } => Event::PermissionAlwaysAllow {
+                request_id: String::new(),
+                tool: String::new(),
+            },
 
             // TurnActor
             Event::TurnStarted { .. } => Event::TurnStarted {

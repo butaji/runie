@@ -182,9 +182,16 @@ impl AppState {
             prompts_section.custom.as_deref(),
         );
         self.apply_scoped_models(config);
-        if (!self.has_models() && !crate::provider::is_mock_enabled())
-            || crate::provider::is_mock_onboarding()
-        {
+        // Trigger the onboarding/login flow only when there is no usable model.
+        // For `--mock-onboarding` the app already has a default mock model, so
+        // we also force the flow the first time a config is loaded; after that
+        // the session flag prevents re-opening the picker when the saved config
+        // reloads.
+        let needs_onboarding = !self.onboarding_started
+            && ((!self.has_models() && !crate::provider::is_mock_enabled())
+                || crate::provider::is_mock_onboarding());
+        if needs_onboarding {
+            self.onboarding_started = true;
             self.update(crate::Event::Start);
         }
     }

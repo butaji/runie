@@ -1,5 +1,6 @@
 //! Tests for the `/providers` command and login flow state machine.
 
+use crate::dialog::PanelItem;
 use crate::model::AppState;
 
 use super::{add_provider_and_select_model, clean_config};
@@ -84,6 +85,38 @@ fn edit_models_opens_dedicated_panel() {
             .iter()
             .any(|i| i.label().is_some_and(|l| l == "gpt-4o")),
         "editor should contain configured model"
+    );
+}
+
+#[test]
+fn edit_models_selects_active_mock_model() {
+    clean_config();
+    crate::provider::set_mock_enabled(true);
+    let mut state = AppState::default();
+    state.config_mut().current_provider = "mock".into();
+    state.config_mut().current_model = "echo".into();
+
+    state.update(crate::Event::ProvidersDialog);
+    state.update(crate::Event::ProvidersEditModels {
+        provider: "mock".into(),
+    });
+
+    let panel = state
+        .open_dialog
+        .as_ref()
+        .and_then(|d| d.panel_stack())
+        .expect("panel stack should be open")
+        .current()
+        .expect("editor panel should exist");
+    let echo_enabled = panel.items.iter().find_map(|i| match i {
+        PanelItem::Toggle { label, value, .. } if label == "echo" => Some(*value),
+        _ => None,
+    });
+    crate::provider::set_mock_enabled(false);
+    assert_eq!(
+        echo_enabled,
+        Some(true),
+        "active mock model echo should be selected in the provider models editor"
     );
 }
 

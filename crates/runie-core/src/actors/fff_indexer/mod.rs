@@ -19,9 +19,25 @@ mod search_index;
 
 use parking_lot::RwLock;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+
+/// Global flag used to abort the startup index scan as soon as the user quits.
+/// The scan runs on a blocking thread, so a shared atomic is the simplest
+/// cross-layer cancellation signal.
+static INDEXER_CANCEL: AtomicBool = AtomicBool::new(false);
+
+/// Ask the background indexer scan to stop. Safe to call multiple times.
+pub fn cancel_indexer_scan() {
+    INDEXER_CANCEL.store(true, Ordering::Release);
+}
+
+/// Returns true if the indexer scan has been cancelled.
+pub fn is_indexer_scan_cancelled() -> bool {
+    INDEXER_CANCEL.load(Ordering::Acquire)
+}
 
 pub use self::ractor_fff_indexer::RactorFffIndexerActor;
 pub use self::ractor_fff_indexer::RactorFffIndexerHandle;

@@ -50,6 +50,10 @@ pub fn handle_panel_navigation(
             stack.select_down();
             return true;
         }
+        Event::CycleThinkingLevel => {
+            stack.select_up();
+            return true;
+        }
         // intentionally ignored: other input events fall through
         _ => {}
     }

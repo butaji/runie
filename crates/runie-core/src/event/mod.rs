@@ -518,6 +518,16 @@ pub enum Event {
         input: serde_json::Value,
     },
     PermissionRequestDismissed,
+    PermissionAllow {
+        request_id: String,
+    },
+    PermissionDeny {
+        request_id: String,
+    },
+    PermissionAlwaysAllow {
+        request_id: String,
+        tool: String,
+    },
 
     // ── Persistence / Fact variants ──────────────────────────────────────────
     InputChanged {

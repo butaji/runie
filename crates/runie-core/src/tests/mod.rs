@@ -81,6 +81,8 @@ mod input_undo;
 #[cfg(test)]
 mod input_word_nav;
 #[cfg(test)]
+mod list_files_render;
+#[cfg(test)]
 pub(crate) mod login_logout;
 #[cfg(test)]
 mod misc;

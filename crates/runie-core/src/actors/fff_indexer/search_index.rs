@@ -68,6 +68,10 @@ impl SearchIndex {
     }
 
     /// Build the index by walking `root` with gitignore support.
+    ///
+    /// The scan respects [`super::is_indexer_scan_cancelled`] so it stops early
+    /// when the user quits while indexing is still running, letting the process
+    /// exit immediately.
     pub fn build(&self, root: &Path) {
         use ignore::WalkBuilder;
 
@@ -83,6 +87,9 @@ impl SearchIndex {
             .git_exclude(true)
             .build()
         {
+            if super::is_indexer_scan_cancelled() {
+                break;
+            }
             match entry {
                 Ok(entry) => {
                     let path = entry.path();
@@ -114,22 +121,27 @@ impl SearchIndex {
         // Get git status for all files.
         #[cfg(feature = "git")]
         {
-            if let Ok(repo) = git2::Repository::open(root) {
-                let mut opts = git2::StatusOptions::new();
-                opts.include_untracked(true);
-                opts.recurse_untracked_dirs(true);
-                if let Ok(iter) = repo.statuses(Some(&mut opts)) {
-                    for entry in iter.iter() {
-                        if let Some(path) = entry.path() {
-                            let status = entry.status();
-                            inner.git_status.insert(path.to_owned(), status);
+            if !super::is_indexer_scan_cancelled() {
+                if let Ok(repo) = git2::Repository::open(root) {
+                    let mut opts = git2::StatusOptions::new();
+                    opts.include_untracked(true);
+                    opts.recurse_untracked_dirs(true);
+                    if let Ok(iter) = repo.statuses(Some(&mut opts)) {
+                        for entry in iter.iter() {
+                            if super::is_indexer_scan_cancelled() {
+                                break;
+                            }
+                            if let Some(path) = entry.path() {
+                                let status = entry.status();
+                                inner.git_status.insert(path.to_owned(), status);
+                            }
                         }
                     }
                 }
             }
         }
 
-        inner.indexed = true;
+        inner.indexed = !super::is_indexer_scan_cancelled();
     }
 
     /// Perform a fuzzy file search and return scored results.

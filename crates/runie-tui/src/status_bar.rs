@@ -29,7 +29,8 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect, throbber: &mut Throbbe
 
 /// Render the left side of the status bar. The spinner uses the Throbber
 /// widget directly from throbber-widgets-tui, replacing the hand-rolled
-/// symbol-overlay approach.
+/// symbol-overlay approach. The spinner is only shown while a turn is active;
+/// when idle the left area shows only the git/folder status and badges.
 fn render_left_with_throbber(
     f: &mut Frame,
     snap: &Snapshot,
@@ -38,6 +39,16 @@ fn render_left_with_throbber(
 ) {
     // Build text parts.
     let text_parts = build_left_text_parts(snap);
+
+    if !snap.turn_active {
+        // Idle: no spinner, just the status text.
+        let left_text = text_parts.join(" · ");
+        f.render_widget(
+            Paragraph::new(left_text).style(style_status_idle()),
+            area,
+        );
+        return;
+    }
 
     // Split area: [spinner][status_text]
     // Spinner takes 2 cells (symbol + trailing space), rest is text.

@@ -86,6 +86,9 @@
     "IdGenerated": "crate::actors::turn::NextIdResponse",
     "PermissionRequest": "{ request_id: String, tool: String, input: serde_json::Value }",
     "PermissionResponse": "{ request_id: String, action: crate::permissions::PermissionAction }",
+    "PermissionAllow": "{ request_id: String }",
+    "PermissionDeny": "{ request_id: String }",
+    "PermissionAlwaysAllow": "{ request_id: String, tool: String }",
     "AssistantMessageReady": "{ message: crate::message::ChatMessage }",
     "MessageReplayed": "{ id: String, role: String, content: String, timestamp: f64, provider: String }",
     "ExternalEditorDone": "{ content: String }",
@@ -290,7 +293,7 @@
     },
     "Permission": {
       "kind": "Intent",
-      "intent_variants": ["PermissionResponse"],
+      "intent_variants": ["PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow"],
       "fact_variants": ["PermissionRequest", "PermissionRequestDismissed"]
     },
     "Other": {

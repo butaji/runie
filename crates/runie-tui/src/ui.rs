@@ -60,7 +60,6 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot, throbber: &mut ThrobberStat
     }
     crate::popups::path_suggestions(f, snap);
     crate::popups::panel::panel_dialog(f, snap);
-    crate::popups::permission::permission_dialog(f, snap);
     crate::popups::plan::render_plan_panel(f, snap);
 }
 

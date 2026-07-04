@@ -5,50 +5,54 @@ mod tests {
     use crate::model::AppState;
     use crate::Event;
 
-    /// Regression test: HistoryPrev/HistoryNext must NOT be consumed by vim_nav
-    /// handler. They should fall through to normal history navigation dispatch.
+    /// HistoryPrev/HistoryNext navigate the input history when the input box is
+    /// active, but they are consumed by vim nav mode to move the feed selection.
     #[test]
-    fn history_events_not_consumed_in_vim_nav() {
+    fn history_events_navigate_feed_in_vim_nav() {
         let mut state = AppState::default();
 
-        // Populate input history with two submissions
+        // Populate input history with two submissions.
         state.update(crate::Event::Input('a'));
         state.update(Event::submit());
         state.update(crate::Event::Input('b'));
         state.update(Event::submit());
 
-        // Verify history works without vim_nav (baseline)
+        // Baseline: HistoryPrev recalls history when not in nav mode.
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "b");
         assert!(!state.view.vim_nav_mode);
 
-        // Clear input and reset history navigation
-        state.update(Event::submit());
-        assert_eq!(state.input.input.len(), 0);
+        // Clear the input box before entering nav mode.
+        state.input.input.clear();
+        state.input.cursor_pos = 0;
 
-        // Enter vim_nav mode
+        // Enter vim_nav mode.
         state.update(crate::Event::DialogBack);
         assert!(state.view.vim_nav_mode);
 
-        // HistoryPrev while in vim_nav — must recall "b"
+        // HistoryPrev while in vim_nav must be consumed for feed navigation,
+        // not inserted into the input box.
         state.update(crate::Event::HistoryPrev);
         assert_eq!(
-            state.input.input, "b",
-            "HistoryPrev must work in vim_nav mode (not consumed by vim nav handler)"
+            state.input.input, "",
+            "HistoryPrev in nav mode must not mutate the input box"
         );
+        assert!(state.view.vim_nav_mode);
 
-        // HistoryPrev again — should recall "a"
+        // Repeated HistoryPrev keeps navigating the feed.
         state.update(crate::Event::HistoryPrev);
-        assert_eq!(
-            state.input.input, "a",
-            "second HistoryPrev must work in vim_nav mode"
-        );
+        assert_eq!(state.input.input, "");
+        assert!(state.view.vim_nav_mode);
 
-        // HistoryNext — should return to "b"
+        // HistoryNext moves back toward newer posts.
         state.update(crate::Event::HistoryNext);
-        assert_eq!(
-            state.input.input, "b",
-            "HistoryNext must work in vim_nav mode"
-        );
+        assert_eq!(state.input.input, "");
+        assert!(state.view.vim_nav_mode);
+
+        // Exit nav mode and verify history navigation still works.
+        state.update(crate::Event::DialogBack);
+        assert!(!state.view.vim_nav_mode);
+        state.update(crate::Event::HistoryPrev);
+        assert_eq!(state.input.input, "a");
     }
 }

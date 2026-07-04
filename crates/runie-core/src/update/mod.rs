@@ -100,6 +100,7 @@ mod dispatch;
 pub mod input;
 
 mod permission;
+pub mod permission_dialog;
 mod session;
 mod system;
 mod tools;

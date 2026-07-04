@@ -22,6 +22,7 @@ use runie_core::actors::RactorInputHandle;
 use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::update::dialog::handle_form_dialog;
+use runie_core::permissions::PermissionAction;
 use runie_core::{AppState, Event, Snapshot};
 
 use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
@@ -322,6 +323,9 @@ impl UiActor {
     ) -> bool {
         // Priority quit handling — Ctrl+C / Ctrl+Q always exit, even during active turns.
         if matches!(&evt, Event::Quit | Event::ForceQuit) {
+            // Abort the background file-index scan so the process exits immediately
+            // instead of waiting for the initial walk to finish.
+            runie_core::actors::fff_indexer::cancel_indexer_scan();
             return true;
         }
         // Capture whether the turn was already active BEFORE apply_event runs.
@@ -329,6 +333,11 @@ impl UiActor {
         // very top to capture the pre-event state.
         let prev_turn_active = self.state.agent_state().turn_active;
         let was_config_loaded = matches!(&evt, Event::ConfigLoaded { .. });
+
+        // Hosted permission-dialog actions: resolve the pending request via the
+        // PermissionActor handle and clear the request state.
+        self.handle_permission_dialog_action(&evt).await;
+
         // Track whether `Done` was just applied so `agent_running()` stays true until
         // `TurnCompleted`/`Abort`. Done clears `turn_active` but must not clear the guard.
         self.handle_input_event(&evt).await;
@@ -411,28 +420,95 @@ impl UiActor {
         false
     }
 
+    /// Handle hosted permission-dialog actions emitted by the dialog panel.
+    ///
+    /// Resolves the pending request through the PermissionActor handle and clears
+    /// the request state so the UI and the waiting agent move forward together.
+    async fn handle_permission_dialog_action(&mut self, evt: &Event) {
+        let request_id = match evt {
+            Event::PermissionAllow { request_id } => request_id.clone(),
+            Event::PermissionDeny { request_id } => request_id.clone(),
+            Event::PermissionAlwaysAllow { request_id, .. } => request_id.clone(),
+            _ => return,
+        };
+
+        let Some(req) = self.state.permission_request_opt() else {
+            return;
+        };
+        if req.request_id != request_id {
+            return;
+        }
+
+        let action = match evt {
+            Event::PermissionAllow { .. } => PermissionAction::Allow,
+            Event::PermissionDeny { .. } => PermissionAction::Deny,
+            Event::PermissionAlwaysAllow { tool, .. } => {
+                if let Some(handles) = self.state.actor_handles() {
+                    handles
+                        .permission
+                        .try_upsert_rule(tool.clone(), PermissionAction::Allow);
+                }
+                PermissionAction::Allow
+            }
+            _ => return,
+        };
+
+        if let Some(handles) = self.state.actor_handles() {
+            handles
+                .permission
+                .try_resolve_permission(request_id.clone(), action);
+        }
+
+        let dismiss = Event::PermissionRequestDismissed;
+        self.bus.publish(dismiss.clone());
+        self.apply_event(dismiss);
+    }
+
     /// Route input events through InputActor instead of applying directly.
     /// Route input events through `route_to_input_actor` (the canonical mapping).
-    /// UiActor-specific cases (permission dialog y/n/a, Submit, InputChanged) are
-    /// handled separately; everything else is routed via the shared helper.
+    /// UiActor-specific cases (Submit, InputChanged) are handled separately;
+    /// everything else is routed via the shared helper.
     ///
     /// UiActor must NEVER mutate `AppState.input` directly — only through `apply_event`.
     async fn handle_input_event(&mut self, evt: &Event) {
-        // Permission-dialog guard: suppress navigation/editing keys while dialog is open.
-        // y/n/a are handled in the special case below.
-        if self.state.permission_request_opt().is_some()
-            && helpers::is_navigation_or_editing_event(evt)
-        {
-            return;
+        // Synchronous autocomplete trigger: open the command palette/file picker
+        // immediately when '/' or '@' is typed at a trigger position. This prevents
+        // a race where the dialog opens asynchronously after subsequent key events
+        // have already been routed to the chat input, leaving the palette filter
+        // empty and causing Enter to run the first item (/approve).
+        if let Event::Input(c) = evt {
+            if self.state.open_dialog().is_none()
+                && !self.state.view().vim_nav_mode
+                && self.open_autocomplete_if_trigger(*c).await
+            {
+                return;
+            }
         }
 
         // Dialog input guard: when a dialog is open, apply typing/navigation/submit
         // events directly to state so the dialog form/palette receives them. The
         // canonical router would otherwise send these to InputActor, which only
         // mutates the chat input box and ignores modal forms (e.g. onboarding login flow).
+        // This also covers the hosted permission panel, which is a Generic dialog.
         if self.state.open_dialog().is_some() && helpers::is_dialog_input_event(evt) {
             self.apply_event(evt.clone());
             return;
+        }
+
+        // Vim nav mode intercepts keys that would otherwise edit the chat input.
+        // Route them through the canonical state update so j/k/i/I/space/arrows
+        // move the feed selection or return to the input box.
+        if self.state.view().vim_nav_mode {
+            match evt {
+                Event::Input(_)
+                | Event::HistoryPrev
+                | Event::HistoryNext
+                | Event::Backspace => {
+                    self.apply_event(evt.clone());
+                    return;
+                }
+                _ => {}
+            }
         }
 
         // Canonical routing via the shared helper (one place to maintain the mapping).
@@ -444,39 +520,19 @@ impl UiActor {
 
         // UiActor-specific event handling (not routed to InputActor).
         match evt {
-            Event::Input(c) => {
-                // Intercept y/n/a keys when a permission dialog is open.
-                if let Some(req) = self.state.permission_request_opt() {
-                    match c.to_ascii_lowercase() {
-                        'y' | 'n' | 'a' => {
-                            let action = match c.to_ascii_lowercase() {
-                                'y' | 'a' => runie_core::permissions::PermissionAction::Allow,
-                                'n' => runie_core::permissions::PermissionAction::Deny,
-                                _ => return,
-                            };
-                            if let Some(handles) = self.state.actor_handles() {
-                                handles
-                                    .permission
-                                    .try_resolve_permission(req.request_id.clone(), action);
-                            }
-                            // Route permission clearance through event: emit PermissionRequestDismissed
-                            // and apply it locally so state is updated synchronously.
-                            // The PermissionActor also emits this event (see handle_resolve_permission),
-                            // so in a full system this may be processed twice (harmless).
-                            let dismiss = Event::PermissionRequestDismissed;
-                            self.bus.publish(dismiss.clone());
-                            self.apply_event(dismiss);
-                        }
-                        _ => {}
-                    }
-                }
+            Event::Input(_c) => {
                 // Non-permission Input events would have been routed above.
+                // Permission decisions are now handled through the hosted dialog
+                // panel and the PermissionAllow/Deny/AlwaysAllow events.
             }
             Event::Submit => {
                 // Quit commands must exit immediately, without waiting for the
                 // InputActor round-trip that normal submit flow requires.
                 let content = self.state.input().input().trim();
                 if runie_core::update::input::is_quit_command(content) {
+                    // Abort the background file-index scan so the process exits
+                    // immediately instead of waiting for the initial walk.
+                    runie_core::actors::fff_indexer::cancel_indexer_scan();
                     *self.state.should_quit_mut() = true;
                     return;
                 }

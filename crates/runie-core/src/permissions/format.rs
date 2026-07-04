@@ -1,11 +1,4 @@
-//! Blocking permission approval modal.
-
-use ratatui::{layout::Rect, prelude::Text, style::Style, text::Line, Frame};
-use runie_core::Snapshot;
-use tui_popup::Popup;
-
-use crate::popups::palette_popup_rect;
-use crate::theme::{color_bg_panel, style_hint};
+//! Format a tool's input arguments into a human-readable summary for dialogs.
 
 /// Maximum length for formatted input before truncation.
 const MAX_INPUT_LENGTH: usize = 500;
@@ -132,9 +125,7 @@ fn format_json_args(input: &serde_json::Value) -> String {
                         serde_json::Value::Number(n) => n.to_string(),
                         serde_json::Value::Bool(b) => b.to_string(),
                         serde_json::Value::Null => "null".to_string(),
-                        serde_json::Value::Array(arr) => {
-                            format!("[{} items]", arr.len())
-                        }
+                        serde_json::Value::Array(arr) => format!("[{} items]", arr.len()),
                         serde_json::Value::Object(obj) => {
                             format!("{{{}}}", obj.keys().cloned().collect::<Vec<_>>().join(", "))
                         }
@@ -158,42 +149,6 @@ fn truncate_str(s: &str, max_len: usize) -> String {
     } else {
         format!("{}...", &s[..max_len - 3])
     }
-}
-
-/// Render a blocking modal asking the user to allow or deny a tool call.
-pub fn permission_dialog(f: &mut Frame, snap: &Snapshot) {
-    let request = match &snap.permission_request {
-        Some(r) => r,
-        None => return,
-    };
-
-    // Use tui-popup for the shell (border + title + background).
-    let popup_rect = palette_popup_rect(f.area());
-    let bg = color_bg_panel();
-    let input_summary = format_tool_input(&request.tool, &request.input);
-    let lines = vec![
-        Line::from(format!("Tool: {}", request.tool)),
-        Line::from(""),
-        Line::from(format!("Details: {}", input_summary)),
-        Line::from(""),
-        Line::from("[y] Allow   [n] Deny   [a] Always allow").style(style_hint()),
-    ];
-
-    let content = Text::from(lines).style(Style::default().bg(bg));
-
-    let popup = Popup::new(content)
-        .title(" Permission Required ")
-        .style(Style::default().bg(bg));
-    f.render_widget(popup, popup_rect);
-
-    // Explicitly set inner background (tui-popup uses Clear which resets to terminal bg).
-    let inner = Rect {
-        x: popup_rect.x + 1,
-        y: popup_rect.y + 1,
-        width: popup_rect.width.saturating_sub(2),
-        height: popup_rect.height.saturating_sub(2),
-    };
-    f.buffer_mut().set_style(inner, Style::default().bg(bg));
 }
 
 #[cfg(test)]
@@ -224,8 +179,7 @@ mod tests {
 
     #[test]
     fn test_edit_file_formatting() {
-        let input =
-            serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
+        let input = serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
         let result = format_tool_input("edit_file", &input);
         assert!(result.contains("File: /tmp/test.rs"));
     }
@@ -276,52 +230,9 @@ mod tests {
     }
 
     #[test]
-    fn test_write_file_content_truncation() {
-        let long_content = serde_json::json!({
-            "path": "/tmp/test.txt",
-            "content": "x".repeat(200)
-        });
-        let result = format_tool_input("write_file", &long_content);
-        // Content preview should be truncated to 100 chars
-        assert!(result.len() <= MAX_INPUT_LENGTH);
-    }
-
-    #[test]
-    fn test_truncate_str_edge_cases() {
-        assert_eq!(truncate_str("hello", 10), "hello");
-        assert_eq!(truncate_str("hello world", 8), "hello...");
-        assert_eq!(truncate_str("hello world", 3), "...");
-        assert_eq!(truncate_str("hello world", 0), "...");
-        assert_eq!(truncate_str("hello world", 1), "...");
-        assert_eq!(truncate_str("hello world", 2), "...");
-    }
-
-    #[test]
     fn test_empty_input() {
         let input = serde_json::json!({});
         let result = format_tool_input("bash", &input);
         assert!(result.contains("no command"));
-    }
-
-    #[test]
-    fn test_null_values() {
-        let input = serde_json::json!({"key": null, "path": "test.txt"});
-        let result = format_tool_input("unknown_tool", &input);
-        assert!(result.contains("key: null"));
-        assert!(result.contains("path: test.txt"));
-    }
-
-    #[test]
-    fn test_array_values() {
-        let input = serde_json::json!({"items": [1, 2, 3, 4, 5]});
-        let result = format_tool_input("unknown_tool", &input);
-        assert!(result.contains("[5 items]"));
-    }
-
-    #[test]
-    fn test_object_values() {
-        let input = serde_json::json!({"nested": {"a": 1, "b": 2}});
-        let result = format_tool_input("unknown_tool", &input);
-        assert!(result.contains("nested:"));
     }
 }

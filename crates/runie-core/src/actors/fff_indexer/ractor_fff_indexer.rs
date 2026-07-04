@@ -3,6 +3,8 @@
 //! Migrated from `fff-search` to `ignore::WalkBuilder` + `sublime_fuzzy` + `notify` 7.0.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
 use tracing::instrument;
@@ -53,14 +55,12 @@ pub struct RactorFffIndexerActor {
     root: PathBuf,
     bus: EventBus<Event>,
     index: SearchIndex,
-    indexed: bool,
-    init_done: bool,
+    scan_complete: Arc<AtomicBool>,
 }
 
 /// Ractor State for FffIndexerActor — tracks init and indexing status.
 pub struct FffIndexerActorState {
     pub indexed: bool,
-    pub init_done: bool,
 }
 
 impl RactorFffIndexerActor {
@@ -69,13 +69,12 @@ impl RactorFffIndexerActor {
             root,
             bus,
             index: SearchIndex::new(),
-            indexed: false,
-            init_done: false,
+            scan_complete: Arc::new(AtomicBool::new(false)),
         }
     }
 
     /// Spawn a `RactorFffIndexerActor` and return a handle + cell + join.
-    /// Initializes the index and waits for initial scan before returning.
+    /// The actor starts immediately; the initial scan runs in the background.
     pub async fn spawn(
         root: PathBuf,
         data_dir: PathBuf,
@@ -88,36 +87,33 @@ impl RactorFffIndexerActor {
         ),
         ractor::SpawnErr,
     > {
-        let mut actor = Self::new(root, data_dir, bus.clone());
-        // Initialize the search index on a blocking thread before spawning.
+        let actor = Self::new(root, data_dir, bus.clone());
+
+        // Start the initial scan in the background so the UI can start before it finishes.
         let index = actor.index.clone();
         let scan_root = actor.root.clone();
+        let project_path = actor.root.clone();
+        let scan_complete = actor.scan_complete.clone();
         tokio::task::spawn_blocking(move || {
             index.build(&scan_root);
-        })
-        .await
-        .map_err(|e| {
-            let msg = format!("scan task failed: {}", e);
-            ractor::SpawnErr::StartupPanic(msg.into())
-        })?;
 
-        actor.indexed = true;
-        actor.init_done = true;
+            if !super::is_indexer_scan_cancelled() {
+                let global_state = FffSearchState {
+                    project_path,
+                    index: index.clone(),
+                    indexed: true,
+                };
+                *super::search_index_state().write() = Some(SearchIndexStateInner {
+                    state: global_state,
+                });
+                scan_complete.store(true, Ordering::Release);
 
-        // Register the index globally.
-        let global_state = FffSearchState {
-            project_path: actor.root.clone(),
-            index: actor.index.clone(),
-            indexed: true,
-        };
-        *super::search_index_state().write() = Some(SearchIndexStateInner {
-            state: global_state,
+                tracing::debug!(
+                    "search indexer: initial scan complete ({} files)",
+                    index.file_count()
+                );
+            }
         });
-
-        tracing::debug!(
-            "search indexer: initial scan complete ({} files)",
-            actor.index.file_count()
-        );
 
         let (handle, join, cell) = spawn_ractor(None, actor, bus).await?;
         Ok((RactorFffIndexerHandle::new(handle), cell, join))
@@ -136,9 +132,19 @@ impl Actor for RactorFffIndexerActor {
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         Ok(FffIndexerActorState {
-            indexed: self.indexed,
-            init_done: self.init_done,
+            indexed: self.scan_complete.load(Ordering::Acquire),
         })
+    }
+
+    async fn post_stop(
+        &self,
+        _myself: ActorRef<Self::Msg>,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        // Signal the background scan to stop so the process can exit immediately
+        // when the user quits while the initial index is still being built.
+        super::cancel_indexer_scan();
+        Ok(())
     }
 
     #[instrument(name = "fff_indexer", skip_all, fields(msg = ?msg))]
@@ -146,9 +152,9 @@ impl Actor for RactorFffIndexerActor {
         &self,
         _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
-        state: &mut Self::State,
+        _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let indexed = state.indexed;
+        let indexed = self.scan_complete.load(Ordering::Acquire);
         let payload = self.handle_search(msg, indexed).await;
         let entries = payload
             .items

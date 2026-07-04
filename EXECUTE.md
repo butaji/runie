@@ -1,5 +1,7 @@
 # EXECUTE — Agent Mode
 
+Use sub-agents to work in parallel. Runie-test black box first (TDD) style, and adjustments in Runie after (with unit and e2e tests to fix properly).
+
 Implement, refactor, and ship backlog items while keeping the codebase unified, simple, and event-driven.
 
 ## Goal

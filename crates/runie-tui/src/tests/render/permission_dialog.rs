@@ -9,15 +9,20 @@ fn buffer_text(buf: &ratatui::buffer::Buffer) -> String {
 }
 
 #[test]
-fn renders_permission_modal() {
+fn renders_hosted_permission_panel() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
+
+    let req = runie_core::model::PermissionRequestState {
+        request_id: "perm-1".into(),
+        tool: "bash".into(),
+        input: serde_json::json!("echo hello"),
+    };
+    let dialog = runie_core::update::permission_dialog::open_permission_dialog(&req);
+
     let snap = Snapshot {
-        permission_request: Some(PermissionRequestState {
-            request_id: "perm-1".into(),
-            tool: "bash".into(),
-            input: serde_json::json!("echo hello"),
-        }),
+        dialog: Some(dialog),
+        permission_request: Some(req),
         ..Default::default()
     };
 
@@ -27,7 +32,8 @@ fn renders_permission_modal() {
         .unwrap();
 
     let text = buffer_text(terminal.backend().buffer());
-    assert!(text.contains("Permission Required"), "modal title missing");
+    assert!(text.contains("Permission Required"), "panel title missing");
     assert!(text.contains("bash"), "tool name missing");
-    assert!(text.contains("[y] Allow"), "allow hint missing");
+    assert!(text.contains("Allow"), "allow action missing");
+    assert!(text.contains("Deny"), "deny action missing");
 }

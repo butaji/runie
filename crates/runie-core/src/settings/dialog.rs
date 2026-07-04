@@ -120,12 +120,21 @@ fn provider_models_item(state: &AppState) -> SettingItem {
 }
 
 pub fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<String>, Vec<String>) {
-    let saved = state
+    let mut saved = state
         .config()
         .model_providers()
         .get(provider)
         .map(|p| p.models.clone())
         .unwrap_or_default();
+    // If this provider is currently active, its active model must be treated as
+    // enabled even when it has not been persisted to the provider's model list
+    // yet (e.g. the dev-only mock provider).
+    if state.config().current_provider == provider {
+        let active = state.config().current_model.clone();
+        if !active.is_empty() && !saved.contains(&active) {
+            saved.push(active);
+        }
+    }
     let mut available = saved.clone();
     if let Some(meta) = crate::provider::find_provider(provider) {
         for model in meta.models {
@@ -135,6 +144,7 @@ pub fn provider_model_lists(state: &AppState, provider: &str) -> (Vec<String>, V
             }
         }
     }
+    saved.sort();
     available.sort();
     (saved, available)
 }
@@ -326,6 +336,28 @@ mod tests {
             matches!(edit.value, SettingValue::MultiSelect { .. }),
             "Provider Models should be a multi-select, got {:?}",
             edit.value
+        );
+    }
+
+    #[test]
+    fn provider_model_lists_includes_active_model_for_mock_provider() {
+        crate::provider::set_mock_enabled(true);
+        let mut state = AppState::default();
+        state.config_mut().current_provider = "mock".into();
+        state.config_mut().current_model = "echo".into();
+
+        let (saved, available) = provider_model_lists(&state, "mock");
+
+        crate::provider::set_mock_enabled(false);
+        assert!(
+            saved.contains(&"echo".to_owned()),
+            "active mock model should be in saved models, got {:?}",
+            saved
+        );
+        assert!(
+            available.contains(&"echo".to_owned()),
+            "active mock model should be in available models, got {:?}",
+            available
         );
     }
 }

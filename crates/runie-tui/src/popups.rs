@@ -1,4 +1,4 @@
-//! Popup rendering — command palette, path suggestions, permission dialog.
+//! Popup rendering — command palette, path suggestions, plan panel.
 //!
 //! Layout constants are centralized in `layout_constants.rs`.
 
@@ -13,7 +13,6 @@ use crate::theme::{
 
 pub mod layout_constants;
 pub mod panel;
-pub mod permission;
 pub mod plan;
 pub mod welcome;
 

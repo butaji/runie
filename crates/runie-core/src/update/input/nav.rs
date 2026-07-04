@@ -188,7 +188,7 @@ impl AppState {
             self.insert_char(' ');
             return;
         }
-        if c == 'i' {
+        if c == 'i' || c == 'I' {
             self.view_mut().vim_nav_mode = false;
             self.view_mut().dirty = true;
             return;
@@ -256,11 +256,11 @@ impl AppState {
 
     pub(crate) fn handle_vim_nav_event(&mut self, event: &crate::Event) -> Option<bool> {
         match event {
-            crate::Event::Up => {
+            crate::Event::Up | crate::Event::HistoryPrev => {
                 self.vim_nav_up();
                 Some(false)
             }
-            crate::Event::Down => {
+            crate::Event::Down | crate::Event::HistoryNext => {
                 self.vim_nav_down();
                 Some(false)
             }

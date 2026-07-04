@@ -35,7 +35,8 @@ impl AppState {
             | crate::Event::HistoryNext
             | crate::Event::CursorLeft
             | crate::Event::CursorRight
-            | crate::Event::Paste(_) => {
+            | crate::Event::Paste(_)
+            | crate::Event::CycleThinkingLevel => {
                 dialog::update_dialog(self, event.clone());
                 return true;
             }
@@ -104,7 +105,7 @@ impl AppState {
     }
 
     /// Abort turn when entering vim nav mode.
-    fn abort_turn_for_vim_nav(&mut self) {
+    pub(crate) fn abort_turn_for_vim_nav(&mut self) {
         // Route through TurnActor; fall back in tests without actor handles.
         if let Some(h) = self.actor_handles() {
             let _ = h.turn.try_send(TurnMsg::AbortTurn);

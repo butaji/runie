@@ -55,6 +55,10 @@ pub struct AppState {
     /// Optional event bus bridge so core state handlers can publish events that
     /// must be observed by the actor layer (e.g. a form-generated `SubmitKey`).
     pub(crate) event_bus: Option<crate::bus::EventBus<crate::Event>>,
+    /// Set once the onboarding/login flow has been started for this session.
+    /// Prevents `--mock-onboarding` from re-opening the provider picker after
+    /// the user completes the flow and the saved config is loaded.
+    pub(crate) onboarding_started: bool,
     /// Separate counter for session message IDs, independent of TurnActor's `next_id`.
     /// AppState generates IDs for session messages; TurnActor generates IDs for
     /// request queue messages. These are kept separate to avoid double-increment.

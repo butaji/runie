@@ -2,7 +2,7 @@
 
 // Re-export types used by child test modules so they can `use super::*;`
 pub use super::{
-    AppState, ChatMessage, DialogKind, Part, PermissionRequestState, Role, ScopedModel, Snapshot,
+    AppState, ChatMessage, DialogKind, Part, Role, ScopedModel, Snapshot,
 };
 
 mod render_at;

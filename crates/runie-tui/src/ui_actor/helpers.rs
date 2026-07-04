@@ -2,46 +2,6 @@
 
 use runie_core::Event;
 
-/// Returns `true` for events that should be silently consumed (no-op) while
-/// a permission dialog is open. These keys must NOT deny the request and must
-/// NOT be routed to the input box.
-///
-/// This intentionally does NOT include `Event::Input` — those are handled
-/// separately in `handle_input_event` to resolve the permission.
-pub fn is_navigation_or_editing_event(evt: &Event) -> bool {
-    matches!(
-        evt,
-        Event::Escape
-            | Event::Backspace
-            | Event::Newline
-            | Event::DeleteWord
-            | Event::DeleteToEnd
-            | Event::DeleteToStart
-            | Event::KillChar
-            | Event::Undo
-            | Event::Redo
-            | Event::Paste(_)
-            | Event::CursorLeft
-            | Event::CursorRight
-            | Event::CursorStart
-            | Event::CursorEnd
-            | Event::CursorWordLeft
-            | Event::CursorWordRight
-            | Event::HistoryPrev
-            | Event::HistoryNext
-            | Event::PageUp
-            | Event::PageDown
-            | Event::GoToTop
-            | Event::GoToBottom
-            | Event::Submit
-            | Event::MouseScrollUp
-            | Event::MouseScrollDown
-            | Event::MouseClick { .. }
-            | Event::MouseMove { .. }
-            | Event::TerminalSize { .. }
-    )
-}
-
 /// Returns `true` for input/navigation events that should be applied to
 /// `AppState` when any dialog is open, instead of being routed to the main
 /// chat `InputActor`.
@@ -60,6 +20,7 @@ pub fn is_dialog_input_event(evt: &Event) -> bool {
             | Event::CursorRight
             | Event::HistoryPrev
             | Event::HistoryNext
+            | Event::CycleThinkingLevel
             | Event::Submit
     )
 }
@@ -90,6 +51,11 @@ mod tests {
         }));
         assert!(!is_dialog_input_event(&Event::CursorStart));
         assert!(!is_dialog_input_event(&Event::Undo));
+    }
+
+    #[test]
+    fn dialog_input_event_includes_shift_tab_navigation() {
+        assert!(is_dialog_input_event(&Event::CycleThinkingLevel));
     }
 
     /// Layer 1: Submit is a dialog input event so Enter activates the selected

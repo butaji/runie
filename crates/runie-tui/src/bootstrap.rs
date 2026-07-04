@@ -62,12 +62,17 @@ impl TuiRuntimeHandles {
         self.handles.push(handle);
     }
 
-    /// Await all spawned tasks with a timeout.
+    /// Abort and await all spawned tasks with a short timeout.
     ///
-    /// Panics and unexpected exits become observable here.
-    /// Uses a short timeout since background tasks should exit quickly on shutdown signal.
+    /// Background tasks such as the crossterm input reader are blocked on I/O
+    /// and will not observe the shutdown signal until a new event arrives, so
+    /// we abort them explicitly to ensure the process exits immediately when
+    /// the user quits.
     pub async fn shutdown(mut self) {
-        let timeout = std::time::Duration::from_secs(5);
+        for handle in &self.handles {
+            handle.abort();
+        }
+        let timeout = std::time::Duration::from_millis(500);
         let _ = tokio::time::timeout(timeout, async {
             while let Some(handle) = self.handles.pop() {
                 if let Err(e) = handle.await {

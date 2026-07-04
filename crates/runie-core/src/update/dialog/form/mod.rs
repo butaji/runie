@@ -54,6 +54,14 @@ pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) 
         }
         crate::Event::CommandFormInput(c) => handle_form_input(state, panel, *c),
         crate::Event::Input(' ') => handle_form_space(state, panel),
+        crate::Event::Input('\t') => {
+            let _ = panel.select_down();
+            A::KeepOpen
+        }
+        crate::Event::CycleThinkingLevel => {
+            let _ = panel.select_up();
+            A::KeepOpen
+        }
         crate::Event::Input(c) => handle_form_input(state, panel, *c),
         crate::Event::Paste(text) => handle_form_paste(panel, text),
         crate::Event::CommandFormBackspace | crate::Event::Backspace => {

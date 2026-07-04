@@ -165,10 +165,6 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.complete_turn(id.clone(), *duration_secs);
             true
         }
-        Event::Done { id } => {
-            state.finish_turn(id.clone());
-            true
-        }
         Event::Error { id, message } => {
             state.add_error(id.clone(), message.clone());
             true
@@ -444,9 +440,31 @@ fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
 
 fn handle_dialog_back_no_dialog(state: &mut AppState) {
     if state.open_dialog().is_none() && state.config_mut().vim_mode {
-        state.view_mut().vim_nav_mode = true;
-        state.view_mut().selected_post = state.current_bottom_post_index();
-        state.view_mut().dirty = true;
+        if state.agent_state().turn_active {
+            // First Esc aborts the turn and arms nav-on-next-esc, matching
+            // the behavior advertised by the active-turn hint.
+            state.abort_turn_for_vim_nav();
+            return;
+        }
+
+        if state.view().vim_nav_pending {
+            state.view_mut().vim_nav_pending = false;
+            state.view_mut().vim_nav_mode = true;
+            state.view_mut().dirty = true;
+            let selected = state.current_bottom_post_index();
+            state.view_mut().selected_post = selected;
+        } else {
+            let entering = !state.view().vim_nav_mode;
+            {
+                let view = state.view_mut();
+                view.vim_nav_mode = entering;
+                view.dirty = true;
+            }
+            if entering {
+                let selected = state.current_bottom_post_index();
+                state.view_mut().selected_post = selected;
+            }
+        }
     }
 }
 

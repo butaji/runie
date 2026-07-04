@@ -47,6 +47,10 @@ pub enum InputMsg {
 
     // ── History & undo/redo ────────────────────────────────────────────────
     /// Navigate to the previous history entry.
+    /// When the input box is empty this recalls the most recently persisted
+    /// command; the history is loaded from disk on startup and is independent
+    /// of modal dialog navigation (dialogs consume HistoryPrev before it reaches
+    /// the chat input actor).
     HistoryPrev,
     /// Navigate to the next history entry.
     HistoryNext,

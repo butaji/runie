@@ -59,7 +59,8 @@ VARIANTS_WITH_FIELDS = {
     # Intent variants with (char) field
     "Input", "PaletteFilter", "ModelSelectorFilter", "CommandFormInput",
     # Intent variants with {..} fields
-    "PermissionResponse", "TransientMessage", "TransientError",
+    "PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow",
+    "TransientMessage", "TransientError",
 }
 
 # Control variants that are also intents (from taxonomy.json intent_variants for Control)

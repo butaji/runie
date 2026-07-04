@@ -56,16 +56,19 @@ async fn indexer_initializes_in_temp_dir() {
     // Subscribe BEFORE spawning so we don't miss any events
     let mut sub = bus.subscribe();
 
-    // Spawn the indexer — index is built synchronously before actor starts.
+    // Spawn the indexer — it starts immediately and the initial scan runs in the background.
     let (handle, _cell, _join) = RactorFffIndexerActor::spawn(root.clone(), data_dir, bus.clone())
         .await
         .expect("spawn succeeds");
 
-    // Index should be ready immediately after spawn returns.
-    assert!(
-        FffSearchState::is_indexed(),
-        "index should be ready after spawn"
-    );
+    // Wait for the background scan to finish.
+    for _ in 0..500 {
+        if FffSearchState::is_indexed() {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert!(FffSearchState::is_indexed(), "index should be ready after spawn");
 
     // Send a search request
     let request_id = 1;
@@ -116,7 +119,13 @@ async fn indexer_answers_file_search() {
         .await
         .expect("spawn succeeds");
 
-    // Index should be ready
+    // Wait for the background scan to finish.
+    for _ in 0..500 {
+        if FffSearchState::is_indexed() {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
     assert!(FffSearchState::is_indexed());
 
     // Search for "cli"

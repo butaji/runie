@@ -1,7 +1,8 @@
-//! Layer 2 tests: permission dialog keys are consumed by the dialog.
+//! Layer 2 tests: permission dialog is now a hosted panel.
 //!
-//! When a permission request is pending, y/n/a keys should resolve
-//! the permission instead of being sent to the input box.
+//! Permission decisions are made by selecting an action in the hosted form
+//! panel, which emits PermissionAllow / PermissionDeny / PermissionAlwaysAllow
+//! events. UiActor resolves the pending request and clears the UI state.
 
 use std::sync::Arc;
 
@@ -70,273 +71,236 @@ fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     (ui, agent_arc)
 }
 
-/// Layer 2: y key grants permission and clears the dialog.
-#[tokio::test]
-async fn permission_dialog_y_grants() {
-    let (mut ui, _agent) = make_ui_actor();
-    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
-
-    // Set up a pending permission request directly
+fn set_permission_request(ui: &mut UiActor, request_id: &str) {
     *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-req-1".into(),
+        request_id: request_id.into(),
         tool: "bash".into(),
         input: serde_json::json!({"command": "echo hi"}),
     });
+}
 
-    // Verify permission is pending
-    assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Permission request should be pending"
-    );
+async fn open_permission_request(ui: &mut UiActor, effect_tx: &tokio::sync::mpsc::Sender<Event>) {
+    ui.handle_event_inner(
+        Event::PermissionRequest {
+            request_id: "test-req".into(),
+            tool: "bash".into(),
+            input: serde_json::json!({"command": "echo hi"}),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+}
 
-    // Press 'y' — permission should be granted and dialog cleared
-    ui.handle_event_inner(Event::Input('y'), effect_tx.clone())
-        .await;
+fn selected_index(state: &runie_core::AppState) -> usize {
+    state
+        .open_dialog()
+        .as_ref()
+        .expect("dialog should be open")
+        .panel_stack()
+        .expect("panel stack")
+        .current()
+        .expect("panel")
+        .selected
+}
 
-    // Dialog should be cleared
+/// Layer 2: PermissionAllow event grants permission and clears the request state.
+#[tokio::test]
+async fn permission_allow_event_clears_request() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    set_permission_request(&mut ui, "test-allow");
+
+    ui.handle_event_inner(
+        Event::PermissionAllow {
+            request_id: "test-allow".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
     assert!(
         ui.state.permission_request_opt().is_none(),
-        "Permission dialog should be cleared after y is pressed"
+        "PermissionAllow should clear the request state"
     );
 }
 
-/// Layer 2: n key denies permission and clears the dialog.
+/// Layer 2: PermissionDeny event denies permission and clears the request state.
 #[tokio::test]
-async fn permission_dialog_n_denies() {
+async fn permission_deny_event_clears_request() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    // Set up a pending permission request directly
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-req-2".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    set_permission_request(&mut ui, "test-deny");
 
-    // Verify permission is pending
-    assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Permission request should be pending"
-    );
+    ui.handle_event_inner(
+        Event::PermissionDeny {
+            request_id: "test-deny".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
 
-    // Press 'n' — permission should be denied and dialog cleared
-    ui.handle_event_inner(Event::Input('n'), effect_tx.clone())
-        .await;
-
-    // Dialog should be cleared
     assert!(
         ui.state.permission_request_opt().is_none(),
-        "Permission dialog should be cleared after n is pressed"
+        "PermissionDeny should clear the request state"
     );
 }
 
-/// Layer 2: a key grants permission (Always allow) and clears the dialog.
+/// Layer 2: PermissionAlwaysAllow event grants permission and clears the request state.
 #[tokio::test]
-async fn permission_dialog_a_always_allows() {
+async fn permission_always_allow_event_clears_request() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    // Set up a pending permission request directly
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-req-3".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    set_permission_request(&mut ui, "test-always");
 
-    // Verify permission is pending
-    assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Permission request should be pending"
-    );
+    ui.handle_event_inner(
+        Event::PermissionAlwaysAllow {
+            request_id: "test-always".into(),
+            tool: "bash".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
 
-    // Press 'a' — permission should be granted and dialog cleared
-    ui.handle_event_inner(Event::Input('a'), effect_tx.clone())
-        .await;
-
-    // Dialog should be cleared
     assert!(
         ui.state.permission_request_opt().is_none(),
-        "Permission dialog should be cleared after a is pressed"
+        "PermissionAlwaysAllow should clear the request state"
     );
 }
 
-/// Layer 2: y/n/a keys are NOT sent to input when permission dialog is open.
+/// Layer 2: permission dialog events for a different request id are ignored.
 #[tokio::test]
-async fn permission_dialog_keys_not_sent_to_input() {
+async fn permission_event_wrong_id_is_ignored() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    // Set up a pending permission request directly
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-req-4".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    set_permission_request(&mut ui, "test-a");
 
-    // Record initial input
-    let initial_input = ui.state.input().input.clone();
+    ui.handle_event_inner(
+        Event::PermissionAllow {
+            request_id: "test-b".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
 
-    // Press 'y' — should not affect input
-    ui.handle_event_inner(Event::Input('y'), effect_tx.clone())
-        .await;
-
-    // Input should be unchanged
-    assert_eq!(
-        ui.state.input().input,
-        initial_input,
-        "y key should not be sent to input when permission dialog is open"
-    );
-}
-
-/// Layer 2: other keys ARE handled normally when permission dialog is open.
-/// Note: this test verifies that regular keys don't trigger permission handling.
-#[tokio::test]
-async fn other_keys_not_intercepted_by_permission() {
-    let (mut ui, _agent) = make_ui_actor();
-    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
-
-    // Set up a pending permission request directly
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-req-5".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
-
-    // Record initial input
-    let initial_input = ui.state.input().input.clone();
-
-    // Press a regular key 'h' — should NOT be intercepted by permission handler
-    ui.handle_event_inner(Event::Input('h'), effect_tx.clone())
-        .await;
-
-    // Dialog should still be open (not cleared by non-y/n/a key)
     assert!(
         ui.state.permission_request_opt().is_some(),
-        "Regular key should not clear the permission dialog"
-    );
-
-    // Input should remain unchanged (mock doesn't update, but event was dispatched)
-    assert_eq!(
-        ui.state.input().input,
-        initial_input,
-        "Regular key should not affect input state"
+        "Mismatched request id should not clear the request state"
     );
 }
 
 // ============================================================================
-// Layer 2 — Event Handling: navigation keys consumed as no-ops
+// Layer 2 — Hosted permission panel receives navigation and activation keys
 // ============================================================================
 
-/// Esc while a permission dialog is open is consumed as a no-op.
-/// It does NOT deny the permission and is NOT routed to the input box.
 #[tokio::test]
-async fn esc_during_permission_dialog_is_noop() {
+async fn hosted_permission_dialog_opens_on_request() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-esc".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::Escape, effect_tx.clone())
-        .await;
+    assert!(ui.state.permission_request_opt().is_some());
+    assert!(ui.state.open_dialog().is_some(), "hosted dialog should be open");
+}
 
+#[tokio::test]
+async fn hosted_permission_dialog_arrow_keys_navigate() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    open_permission_request(&mut ui, &effect_tx).await;
+
+    assert_eq!({ selected_index(&ui.state) }, 0);
+
+    ui.handle_event_inner(Event::HistoryNext, effect_tx.clone()).await;
+    assert_eq!({ selected_index(&ui.state) }, 1);
+
+    ui.handle_event_inner(Event::HistoryPrev, effect_tx.clone()).await;
+    assert_eq!({ selected_index(&ui.state) }, 0);
+}
+
+#[tokio::test]
+async fn hosted_permission_dialog_enter_activates_allow() {
+    let (mut ui, _agent) = make_ui_actor();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    open_permission_request(&mut ui, &effect_tx).await;
+
+    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
+
+    assert!(ui.state.open_dialog().is_none(), "dialog should close");
     assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Esc should not deny the permission request"
+        ui.state.permission_request_opt().is_none(),
+        "request should be resolved"
     );
 }
 
-/// Backspace while a permission dialog is open is consumed as a no-op.
 #[tokio::test]
-async fn backspace_during_permission_dialog_is_noop() {
+async fn hosted_permission_dialog_down_enter_activates_deny() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-bs".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::Backspace, effect_tx.clone())
-        .await;
+    ui.handle_event_inner(Event::HistoryNext, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
 
+    assert!(ui.state.open_dialog().is_none(), "dialog should close");
     assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Backspace should not deny the permission request"
+        ui.state.permission_request_opt().is_none(),
+        "request should be resolved"
     );
 }
 
-/// Enter while a permission dialog is open is consumed as a no-op.
 #[tokio::test]
-async fn newline_during_permission_dialog_is_noop() {
+async fn hosted_permission_dialog_esc_keeps_dialog_open() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-nl".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::Newline, effect_tx.clone())
-        .await;
+    ui.handle_event_inner(Event::Escape, effect_tx.clone()).await;
 
+    assert!(ui.state.open_dialog().is_some(), "dialog should stay open");
     assert!(
         ui.state.permission_request_opt().is_some(),
-        "Newline should not deny the permission request"
+        "request should remain pending"
     );
 }
 
-/// Arrow keys while a permission dialog is open are consumed as no-ops.
 #[tokio::test]
-async fn cursor_keys_during_permission_dialog_are_noop() {
+async fn hosted_permission_dialog_tab_navigates_buttons() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-cursor".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::CursorLeft, effect_tx.clone())
-        .await;
-    ui.handle_event_inner(Event::CursorRight, effect_tx.clone())
-        .await;
-    ui.handle_event_inner(Event::CursorStart, effect_tx.clone())
-        .await;
-    ui.handle_event_inner(Event::CursorEnd, effect_tx.clone())
-        .await;
+    assert_eq!({ selected_index(&ui.state) }, 0);
 
-    assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Cursor keys should not deny the permission request"
-    );
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    assert_eq!({ selected_index(&ui.state) }, 1);
+
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    assert_eq!({ selected_index(&ui.state) }, 2);
+
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    assert_eq!({ selected_index(&ui.state) }, 0);
 }
 
-/// PageUp/PageDown while a permission dialog is open are consumed as no-ops.
 #[tokio::test]
-async fn page_keys_during_permission_dialog_are_noop() {
+async fn hosted_permission_dialog_shift_tab_navigates_buttons() {
     let (mut ui, _agent) = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    *ui.state.permission_request_mut() = Some(runie_core::model::PermissionRequestState {
-        request_id: "test-page".into(),
-        tool: "bash".into(),
-        input: serde_json::json!({"command": "echo hi"}),
-    });
+    open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::PageUp, effect_tx.clone())
-        .await;
-    ui.handle_event_inner(Event::PageDown, effect_tx.clone())
-        .await;
+    assert_eq!({ selected_index(&ui.state) }, 0);
 
-    assert!(
-        ui.state.permission_request_opt().is_some(),
-        "Page keys should not deny the permission request"
-    );
+    ui.handle_event_inner(Event::CycleThinkingLevel, effect_tx.clone())
+        .await;
+    assert_eq!({ selected_index(&ui.state) }, 2);
 }

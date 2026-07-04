@@ -426,3 +426,97 @@ async fn login_form_submit_publishes_submit_key_event() {
 
     leader.shutdown().await;
 }
+
+/// Build a `UiActor` wired to real actors but driven manually by tests.
+async fn manual_ui_actor() -> (
+    crate::ui_actor::UiActor,
+    tokio::sync::mpsc::Sender<Event>,
+    runie_core::actors::leader::LeaderHandle,
+) {
+    let leader = runie_core::actors::leader::test_leader_handle().await;
+    let bus = leader.event_bus().clone();
+
+    let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
+    let agent_handle =
+        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+
+    let mut state = runie_core::AppState::default();
+    state.set_actor_handles(leader.clone());
+
+    let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
+    let (shutdown_tx, _shutdown_rx) = tokio::sync::oneshot::channel();
+    let caps = crate::terminal::caps::TermCaps::default();
+
+    let ui = crate::ui_actor::UiActor::with_agent_handle(
+        state,
+        crate::ui_actor_agent_handles::AgentHandleBox::Leader(agent_handle),
+        Some(leader.turn.clone()),
+        Some(leader.input.clone()),
+        kb_tx,
+        bus,
+        shutdown_tx,
+        caps,
+    );
+
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+    (ui, effect_tx, leader)
+}
+
+/// Regression: the '/' autocomplete trigger must open the command palette
+/// synchronously, before the next key event is processed. Otherwise rapid
+/// typing can leave the palette filter empty and cause Enter to run the
+/// first palette item (/approve) instead of the intended command.
+#[tokio::test]
+async fn slash_opens_command_palette_synchronously() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    assert!(ui.state.open_dialog().is_none());
+
+    ui.handle_event(Event::Input('/'), effect_tx).await;
+
+    assert!(
+        ui.state.open_dialog().is_some(),
+        "'/' should open the command palette synchronously"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Regression: typing `/model` as a continuous sequence must open the model
+/// selector, even when no InputChanged round-trips have been processed.
+#[tokio::test]
+async fn slash_model_selects_model_synchronously() {
+    use runie_core::commands::{DialogKind, DialogState};
+
+    std::env::remove_var("RUNIE_MOCK");
+    std::env::remove_var("RUNIE_MOCK_DELAY");
+    runie_core::provider::set_mock_enabled(true);
+
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+
+    for c in "/model".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+    }
+    ui.handle_event(Event::Submit, effect_tx.clone()).await;
+
+    runie_core::provider::set_mock_enabled(false);
+
+    let msgs: Vec<String> = ui.state.session().messages.iter().map(|m| m.content()).collect();
+    assert!(
+        !msgs.iter().any(|m| m.contains("No pending edits to approve")),
+        "/model must not run /approve, messages: {:?}",
+        msgs
+    );
+    assert!(
+        matches!(
+            ui.state.open_dialog(),
+            Some(DialogState::Active {
+                kind: DialogKind::ModelSelector,
+                panels: _,
+            })
+        ),
+        "/model should open the model selector, got {:?}",
+        ui.state.open_dialog()
+    );
+
+    leader.shutdown().await;
+}

@@ -4,8 +4,55 @@ use crate::ui_actor::UiActor;
 use runie_core::actors::InputMsg;
 
 impl UiActor {
+    /// Open the command palette or file picker synchronously when a trigger
+    /// character is typed. Doing this immediately (rather than waiting for the
+    /// InputActor → InputChanged round-trip) prevents a race where subsequent
+    /// key events are routed to the chat input before the dialog opens.
+    ///
+    /// Returns `true` when a dialog was opened and the caller should stop
+    /// processing the key event.
+    pub(crate) async fn open_autocomplete_if_trigger(&mut self, c: char) -> bool {
+        let input = self.state.input();
+        let is_empty_or_space =
+            input.input.is_empty() || input.input.ends_with(' ') || input.input.ends_with('\n');
+        if !is_empty_or_space
+            || self.state.completion().at_suggestions.is_some()
+            || input.cursor_pos != input.input.len()
+        {
+            return false;
+        }
+
+        match c {
+            '@' => {
+                let new_input = format!("{}@", input.input);
+                let new_cursor = new_input.len();
+                self.state.input_mut().file_picker_backup =
+                    Some((new_input, new_cursor, new_cursor, false));
+                self.send_input_msg(InputMsg::Clear).await;
+                self.apply_event(runie_core::Event::AtFilePicker);
+                true
+            }
+            '/' => {
+                let new_input = format!("{}/", input.input);
+                if Self::is_quit_command(&new_input) {
+                    return false;
+                }
+                self.state.input_mut().input = String::new();
+                self.state.input_mut().cursor_pos = 0;
+                self.send_input_msg(InputMsg::Clear).await;
+                self.apply_event(runie_core::Event::ToggleCommandPalette);
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// Detect autocomplete trigger characters ('@' or '/') typed at end of input.
     /// Opens the command palette or file picker accordingly.
+    ///
+    /// This is the asynchronous fallback used when the input state changes via
+    /// `InputChanged` (e.g. pastes). The synchronous `open_autocomplete_if_trigger`
+    /// path handles normal key presses and avoids the rapid-typing race.
     pub(crate) async fn detect_autocomplete_trigger(
         &mut self,
         prev_input: &str,

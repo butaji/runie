@@ -95,6 +95,12 @@ impl RactorPermissionHandle {
         let _ = self.inner.send_message(msg);
     }
 
+    /// Add or update a permission rule (sync fire-and-forget).
+    pub fn try_upsert_rule(&self, tool: String, action: PermissionAction) {
+        let msg = PermissionMsg::UpsertRule { tool, action };
+        let _ = self.inner.send_message(msg);
+    }
+
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
         self.inner.send_message(msg)

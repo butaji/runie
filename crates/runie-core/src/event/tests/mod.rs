@@ -452,3 +452,29 @@ fn event_names_contains_known_intents() {
 // ── Integration tests for event variants ───────────────────────────────────────
 
 mod variants_tests;
+
+#[test]
+fn permission_intent_events_classify_correctly() {
+    use crate::event::{EventCategory, EventKind};
+
+    let allow = Event::PermissionAllow {
+        request_id: "r1".into(),
+    };
+    assert_eq!(allow.kind(), EventKind::Intent);
+    assert_eq!(allow.category(), EventCategory::Permission);
+    assert!(allow.clone().into_intent().is_some());
+
+    let deny = Event::PermissionDeny {
+        request_id: "r1".into(),
+    };
+    assert_eq!(deny.kind(), EventKind::Intent);
+    assert_eq!(deny.category(), EventCategory::Permission);
+
+    let always = Event::PermissionAlwaysAllow {
+        request_id: "r1".into(),
+        tool: "bash".into(),
+    };
+    assert_eq!(always.kind(), EventKind::Intent);
+    assert_eq!(always.category(), EventCategory::Permission);
+    assert!(always.clone().into_intent().is_some());
+}

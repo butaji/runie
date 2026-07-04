@@ -13,7 +13,6 @@ mod submit;
 mod support;
 mod text;
 
-use crate::actors::PermissionMsg;
 use crate::model::AppState;
 
 // Re-export only what callers actually need.
@@ -25,9 +24,6 @@ pub use support::{
 };
 
 pub fn input_event(state: &mut AppState, event: crate::Event) {
-    if state.permission_request_opt().is_some() {
-        return permission_input_event(state, event);
-    }
     if state.view().plan_mode {
         return plan_mode_input_event(state, event);
     }
@@ -145,76 +141,6 @@ fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
     }
 }
 
-/// Handle input events while a permission dialog is open.
-///
-/// - `y`/`Y` allows once
-/// - `a`/`A` allows always
-/// - `n`/`N` explicitly denies
-/// - Esc, Back, Enter, arrows, PageUp/Down, mouse, and resize events are
-///   consumed silently (no-ops) so they do not accidentally deny the request.
-/// - All other keys deny.
-fn permission_input_event(state: &mut AppState, event: crate::Event) {
-    use crate::permissions::PermissionAction;
-
-    let Some(req) = state.permission_request_opt().cloned() else {
-        return;
-    };
-
-    // Events that are consumed silently (no-ops) while the dialog is open.
-    // They do NOT deny the request and are NOT routed to the input box.
-    let consumed = matches!(
-        event,
-        // Navigation / editing keys — consumed silently
-        crate::Event::Escape
-            | crate::Event::Backspace
-            | crate::Event::Newline
-            | crate::Event::DeleteWord
-            | crate::Event::DeleteToEnd
-            | crate::Event::DeleteToStart
-            | crate::Event::KillChar
-            | crate::Event::Undo
-            | crate::Event::Redo
-            | crate::Event::CursorLeft
-            | crate::Event::CursorRight
-            | crate::Event::CursorStart
-            | crate::Event::CursorEnd
-            | crate::Event::CursorWordLeft
-            | crate::Event::CursorWordRight
-            | crate::Event::HistoryPrev
-            | crate::Event::HistoryNext
-            | crate::Event::PageUp
-            | crate::Event::PageDown
-            | crate::Event::GoToTop
-            | crate::Event::GoToBottom
-            | crate::Event::MouseScrollUp
-            | crate::Event::MouseScrollDown
-            | crate::Event::MouseClick { .. }
-            | crate::Event::MouseMove { .. }
-            | crate::Event::TerminalSize { .. }
-    );
-    if consumed {
-        return;
-    }
-
-    let action = match event {
-        crate::Event::Input('y')
-        | crate::Event::Input('Y')
-        | crate::Event::Input('a')
-        | crate::Event::Input('A') => PermissionAction::Allow,
-        // n/N explicitly deny; everything else also denies
-        _ => PermissionAction::Deny,
-    };
-    // Emit intent to PermissionActor instead of direct registry mutation
-    if let Some(handles) = state.actor_handles() {
-        let _ = handles
-            .permission
-            .try_send(PermissionMsg::ResolvePermission {
-                request_id: req.request_id.clone(),
-                action,
-            });
-    }
-}
-
 fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {
     state.view_mut().mouse_position = Some((row, col));
     handle_mouse_click(state, row, col, button);
@@ -272,17 +198,23 @@ fn handle_escape(state: &mut AppState) {
         state.view_mut().dirty = true;
         return;
     }
-    if state.view_mut().vim_nav_pending {
+    if state.view().vim_nav_pending {
         state.view_mut().vim_nav_pending = false;
         state.view_mut().vim_nav_mode = true;
-        state.view_mut().selected_post = state.current_bottom_post_index();
         state.view_mut().dirty = true;
+        let selected = state.current_bottom_post_index();
+        state.view_mut().selected_post = selected;
         return;
     }
-    if !state.view_mut().vim_nav_mode {
-        state.view_mut().vim_nav_mode = true;
-        state.view_mut().selected_post = state.current_bottom_post_index();
-        state.view_mut().dirty = true;
+    let entering = !state.view().vim_nav_mode;
+    {
+        let view = state.view_mut();
+        view.vim_nav_mode = entering;
+        view.dirty = true;
+    }
+    if entering {
+        let selected = state.current_bottom_post_index();
+        state.view_mut().selected_post = selected;
     }
 }
 

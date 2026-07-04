@@ -357,6 +357,58 @@ fn i_in_nav_mode_then_char_inserts() {
 }
 
 #[test]
+fn uppercase_i_in_nav_mode_exits_nav_and_does_not_insert() {
+    let mut state = state_with_vim();
+    state.update(crate::Event::DialogBack); // enter nav
+    state.update(crate::Event::Input('I'));
+    assert!(!state.view.vim_nav_mode, "I should exit nav mode");
+    assert_eq!(
+        state.input.input, "",
+        "I must not insert the letter 'I' (it is the vim insert key)"
+    );
+}
+
+#[test]
+fn arrow_up_and_down_navigate_in_nav_mode() {
+    let mut state = state_with_vim_and_messages();
+    state.view.last_visible_height = 10;
+    state.update(crate::Event::DialogBack); // enter nav
+    assert!(state.view.vim_nav_mode);
+
+    let start = state.view.selected_post.expect("a post should be selected");
+
+    state.update(crate::Event::HistoryPrev); // physical Up arrow
+    let after_up = state
+        .view
+        .selected_post
+        .expect("a post should be selected after Up");
+    assert!(
+        after_up < start,
+        "Up arrow should move selection toward older posts: start={start} after_up={after_up}"
+    );
+
+    state.update(crate::Event::HistoryNext); // physical Down arrow
+    let after_down = state
+        .view
+        .selected_post
+        .expect("a post should be selected after Down");
+    assert!(
+        after_down > after_up,
+        "Down arrow should move selection toward newer posts: after_up={after_up} after_down={after_down}"
+    );
+}
+
+#[test]
+fn esc_toggles_nav_mode_off_via_dialog_back() {
+    let mut state = state_with_vim();
+    state.update(crate::Event::DialogBack);
+    assert!(state.view.vim_nav_mode);
+
+    state.update(crate::Event::DialogBack);
+    assert!(!state.view.vim_nav_mode, "second Esc should exit nav mode");
+}
+
+#[test]
 fn hint_text_in_nav_mode_advertises_i_and_space() {
     let mut state = state_with_vim();
     state.update(crate::Event::DialogBack);

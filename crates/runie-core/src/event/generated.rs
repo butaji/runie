@@ -110,6 +110,9 @@ impl Event {
             Event::PathCompletionSelect => EventKind::Intent,
             Event::PathCompletionUp => EventKind::Intent,
             Event::PendingEdit { .. } => EventKind::Intent,
+            Event::PermissionAllow { .. } => EventKind::Intent,
+            Event::PermissionAlwaysAllow { .. } => EventKind::Intent,
+            Event::PermissionDeny { .. } => EventKind::Intent,
             Event::PermissionRequest { .. } => EventKind::Fact,
             Event::PermissionRequestDismissed => EventKind::Fact,
             Event::PermissionResponse { .. } => EventKind::Intent,
@@ -345,6 +348,9 @@ impl Event {
             Event::PathCompletionSelect => EventCategory::Dialog,
             Event::PathCompletionUp => EventCategory::Dialog,
             Event::PendingEdit { .. } => EventCategory::Edit,
+            Event::PermissionAllow { .. } => EventCategory::Permission,
+            Event::PermissionAlwaysAllow { .. } => EventCategory::Permission,
+            Event::PermissionDeny { .. } => EventCategory::Permission,
             Event::PermissionRequest { .. } => EventCategory::Permission,
             Event::PermissionRequestDismissed => EventCategory::Permission,
             Event::PermissionResponse { .. } => EventCategory::Permission,
@@ -618,6 +624,9 @@ impl Event {
             Event::ToggleSettingsDialog => Some(self),
             Event::TrustProject => Some(self),
             Event::UntrustProject => Some(self),
+            Event::PermissionAllow { .. } => Some(self.clone()),
+            Event::PermissionAlwaysAllow { .. } => Some(self.clone()),
+            Event::PermissionDeny { .. } => Some(self.clone()),
             Event::PermissionResponse { .. } => Some(self.clone()),
             Event::PlanModeDisabled => Some(self),
             Event::PlanModeEnabled { .. } => Some(self.clone()),
@@ -641,7 +650,8 @@ impl Event {
 pub fn is_fact_variant(e: &Event) -> bool {
     matches!(
         e,
-        |Event::AssistantMessageReady { .. }| Event::CompactionTriggered { .. }
+            | Event::AssistantMessageReady { .. }
+            | Event::CompactionTriggered { .. }
             | Event::Done { .. }
             | Event::Error { .. }
             | Event::FollowUpDelivered { .. }
@@ -795,9 +805,7 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("Cancel", || Event::Cancel),
     ("CycleModelNext", || Event::CycleModelNext),
     ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || {
-        Event::ToggleScopedModelsDialog
-    }),
+    ("ToggleScopedModelsDialog", || Event::ToggleScopedModelsDialog),
     ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
     ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
     ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),
@@ -854,7 +862,11 @@ impl Event {
     }
 
     /// Create a ToolEnd with default input field.
-    pub fn tool_end(id: impl Into<String>, duration_secs: f64, output: impl Into<String>) -> Self {
+    pub fn tool_end(
+        id: impl Into<String>,
+        duration_secs: f64,
+        output: impl Into<String>,
+    ) -> Self {
         Event::ToolEnd {
             id: id.into(),
             input: None,

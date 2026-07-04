@@ -25,6 +25,7 @@ use serde_json::Value;
 
 pub mod default_tool_approve;
 pub mod file_access_ask;
+pub mod format;
 pub mod gate;
 #[cfg(feature = "git")]
 pub mod git_tracked_write;

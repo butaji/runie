@@ -56,6 +56,22 @@ fn status_line_empty_when_turn_inactive() {
 }
 
 #[test]
+fn status_line_hides_spinner_when_turn_inactive() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    state.agent.turn_active = false;
+    state.view.animation_frame = 3;
+    state.ensure_fresh();
+
+    let spinner = state.spinner_frame().to_string();
+    let out = render_status(&mut state);
+    assert!(
+        !out.contains(&spinner),
+        "Status must not render the braille spinner when idle, got: {out}"
+    );
+}
+
+#[test]
 fn status_timer_updates_over_time() {
     let mut state = AppState::default();
     connect_model(&mut state);
