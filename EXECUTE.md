@@ -1,34 +1,42 @@
 # EXECUTE — Agent Mode
 
-Use sub-agents to work in parallel. Runie-test black box first (TDD) style, and adjustments in Runie after (with unit and e2e tests to fix properly).
-
-Implement, refactor, and ship backlog items while keeping the codebase unified, simple, and event-driven.
+Implement, refactor, and ship backlog items while keeping the codebase unified,
+simple, and event-driven.
 
 ## Goal
 
-Unified code with clear declarative DSLs. Apply **Pareto (80/20)**: minimum change to reach the desired state, then stop.
+Implement all tasks listed in `tasks/` in the `runie-tests` repo. Work test-first:
+write black-box tests in `runie-tests`, then implement the behavior in `runie`
+with the matching unit and E2E tests. Apply **Pareto (80/20)**: minimum change
+to reach the desired state, then stop.
 
 ## Architecture
 
 Three layers:
 
-1. **IO layer (async)** — files, network, subprocesses, OS. Runs inside dedicated actors. Results arrive as events.
-2. **Domain layer (pure + actors)** — actors own authoritative state; business rules are pure.
-3. **UI layer (pure / MVU)** — `draw(&mut Frame, &Snapshot)` is a pure function of facts.
+1. **IO layer (async)** — files, network, subprocesses, OS. Runs inside dedicated
+   actors. Results arrive as events.
+2. **Domain layer (pure + actors)** — actors own authoritative state; business
+   rules are pure.
+3. **UI layer (pure / MVU)** — `draw(&mut Frame, &Snapshot)` is a pure function
+   of facts.
 
 Rules:
 
 - Actors are the single source of truth for their state slice.
-- Handlers emit **intents**; actors consume intents, update state, and emit **facts**.
-- No handler, command, dialog, or render function mutates actor-owned state directly.
+- Handlers emit **intents**; actors consume intents, update state, and emit
+  **facts**.
+- No handler, command, dialog, or render function mutates actor-owned state
+  directly.
 - Blocking IO belongs in IO actors, never in handlers or the render path.
 - Complexity is hidden behind small declarative DSLs.
 
 ## Before you write code
 
 1. Read `AGENTS.md`, `docs/Architecture.md`, `docs/UI_UX.md`, and this file.
-2. Plan non-trivial changes first (`EnterPlanMode`), then execute.
-3. Use parallel subagents for independent sub-tasks.
+2. Pick the next task from `tasks/` and read its spec.
+3. Plan non-trivial changes first (`EnterPlanMode`), then execute.
+4. Use parallel subagents for independent sub-tasks.
 
 ## How to implement
 
@@ -40,7 +48,8 @@ Rules:
 
 ## Testing
 
-Every change must be verifiable by `cargo test --workspace`. Follow the 4 layers in `AGENTS.md`.
+Every change must be verifiable by `cargo test --workspace`. Follow the 4 layers
+in `AGENTS.md`.
 
 Never:
 
@@ -51,7 +60,7 @@ Never:
 
 ## Verification before claiming done
 
-1. Re-read the requirements and check acceptance criteria against the code.
+1. Re-read the task requirements and check acceptance criteria against the code.
 2. Run `cargo check --workspace` and `cargo test --workspace`.
 3. Grep for the old code that was supposed to be removed.
 
