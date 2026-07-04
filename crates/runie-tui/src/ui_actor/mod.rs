@@ -16,10 +16,10 @@ pub use crate::ui_actor_agent_handles::{AgentActorHandle, AgentHandleBox, Leader
 use std::collections::HashMap;
 use std::time::Duration;
 
-use runie_agent::truncate::TruncationPolicy;
 use runie_agent::AgentCommand;
-use runie_core::actors::turn::RactorTurnHandle;
+use runie_agent::truncate::TruncationPolicy;
 use runie_core::actors::RactorInputHandle;
+use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::update::dialog::handle_form_dialog;
 use runie_core::{AppState, Event, Snapshot};
@@ -473,6 +473,13 @@ impl UiActor {
                 // Non-permission Input events would have been routed above.
             }
             Event::Submit => {
+                // Quit commands must exit immediately, without waiting for the
+                // InputActor round-trip that normal submit flow requires.
+                let content = self.state.input().input().trim();
+                if runie_core::update::input::is_quit_command(content) {
+                    *self.state.should_quit_mut() = true;
+                    return;
+                }
                 self.handle_submit_event().await;
             }
             Event::InputChanged { state } => {

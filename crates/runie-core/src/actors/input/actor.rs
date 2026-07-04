@@ -67,11 +67,20 @@ impl Actor for InputActor {
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
+        // Detect quit commands before Submit clears the authoritative input,
+        // so the app can exit immediately without waiting for UiActor projection.
+        let is_quit_submit = matches!(&msg, InputMsg::Submit { .. })
+            && crate::update::input::is_quit_command(state.input.input());
+
         InputMsg::apply_to(&msg, &mut state.input);
         // Always emit InputChanged: UiActor uses this as the single source of
         // truth for input state, enabling autocomplete trigger detection and
         // clean state synchronization without dual updates.
         state.publish_input_changed();
+
+        if is_quit_submit {
+            state.bus.publish(Event::Quit);
+        }
         Ok(())
     }
 }
