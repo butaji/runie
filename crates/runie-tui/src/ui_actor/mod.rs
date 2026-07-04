@@ -515,7 +515,8 @@ impl UiActor {
             state: Box::new((*state).clone()),
         });
 
-        self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos);
+        self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos)
+            .await;
 
         if let Some(content) = self.pending_submit.take() {
             self.dispatch_submit_content(content).await;

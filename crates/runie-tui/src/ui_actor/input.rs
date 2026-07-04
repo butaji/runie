@@ -1,11 +1,12 @@
 //! Input handling, autocomplete detection, and form detection.
 
 use crate::ui_actor::UiActor;
+use runie_core::actors::InputMsg;
 
 impl UiActor {
     /// Detect autocomplete trigger characters ('@' or '/') typed at end of input.
     /// Opens the command palette or file picker accordingly.
-    pub(crate) fn detect_autocomplete_trigger(
+    pub(crate) async fn detect_autocomplete_trigger(
         &mut self,
         prev_input: &str,
         _prev_cursor: usize,
@@ -28,6 +29,9 @@ impl UiActor {
                 let (input_text, cursor) = (new_input.to_owned(), new_cursor);
                 self.state.input_mut().file_picker_backup =
                     Some((input_text, cursor, cursor, false));
+                // Clear the authoritative InputActor so the trigger character does
+                // not reappear after the picker closes.
+                self.send_input_msg(InputMsg::Clear).await;
                 // Route through event: UiActor's apply_event will call
                 // dialog_toggle_event which calls open_at_file_picker_all.
                 self.apply_event(runie_core::Event::AtFilePicker);
@@ -36,6 +40,9 @@ impl UiActor {
                 // UiActor-specific: clear input projection before palette opens.
                 self.state.input_mut().input = String::new();
                 self.state.input_mut().cursor_pos = 0;
+                // Clear the authoritative InputActor so the '/' trigger does not
+                // reappear in the chat input box after the palette closes.
+                self.send_input_msg(InputMsg::Clear).await;
                 // Route through event: UiActor's apply_event will call
                 // dialog_toggle_event which calls open_command_palette.
                 self.apply_event(runie_core::Event::ToggleCommandPalette);
