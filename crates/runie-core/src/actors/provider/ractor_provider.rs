@@ -313,10 +313,16 @@ impl RactorProviderActor {
                     api_key
                 };
                 if api_key.is_empty() {
-                    Err(anyhow::anyhow!("API key is required"))
-                } else {
-                    factory.validate_key(&base_url, api_key).await
+                    return Err(anyhow::anyhow!("API key is required"));
                 }
+                // The dev-only mock provider has no real API to validate against;
+                // return its registered models directly so onboarding works offline.
+                if provider == "mock" && crate::provider::is_mock_enabled() {
+                    if let Some(meta) = crate::provider::find_provider(provider) {
+                        return Ok(meta.models.into_iter().map(|m| m.name).collect());
+                    }
+                }
+                factory.validate_key(&base_url, api_key).await
             }
             Err(e) => Err(anyhow::anyhow!("{e}")),
         }
