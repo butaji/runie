@@ -1,0 +1,12 @@
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-k2.6","choices":[{"index":0,"finish_reason":null,"delta":{"role":"assistant"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-k2.6","choices":[{"index":0,"finish_reason":"stop","delta":{}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-k2.6","choices":[],"usage":{"prompt_tokens":18,"completion_tokens":8,"total_tokens":26,"prompt_tokens_details":{"cached_tokens":17}}}
+
+data: {"choices":[],"x-opencode-type":"inference-cost","cost":"0.00003567","normalizedUsage":{"inputTokens":1,"outputTokens":8,"reasoningTokens":0,"cacheReadTokens":17,"cacheWrite5mTokens":0,"cacheWrite1hTokens":0}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+

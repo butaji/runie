@@ -33,6 +33,17 @@ Representative models also have:
 - `multi_tool` — "What is the weather in Paris and Berlin?"
 - `reasoning` — "What is 9 times 7? Show your reasoning briefly."
 
+In addition, multi-turn conversation fixtures are recorded for representative
+models. Each turn is stored as a separate `.sse` file named
+`opencode_go_<model>_multiturn_<scenario>_turn<N>.sse`:
+
+- `math_chain` — "What is 2 + 2?" / "Multiply that by 3."
+- `weather_chain` — "What is the weather in Paris?" / "What about Berlin?"
+- `read_summarize_followup` — read file, summarize, then answer follow-up
+- `reasoning_followup` — reasoning answer then follow-up on the result
+- `multi_tool_then_compare` — parallel tool calls then comparison question
+- `clarification` — vague request, model asks clarification, then answers
+
 Representative OpenAI-compatible models: `deepseek-v4-pro`,
 `deepseek-v4-flash`, `glm-5.2`, `kimi-k2.6`, `mimo-v2.5`.
 Representative Anthropic-compatible models: `minimax-m3`, `minimax-m2.7`,
@@ -70,14 +81,24 @@ See `crates/runie-provider/tests/opencode_go_openai_replay.rs` and
 
 ## Re-recording
 
+Single-turn fixtures:
+
 ```bash
 export OPENCODE_GO_API_KEY=sk-...
 python3 scripts/record_opencode_go.py
 ```
 
-Raw captures land in `target/tmp/opencode-go-raw/` and sanitized fixtures are
-written to the `openai/` and `anthropic/` directories above. Inspect
-`target/tmp/opencode-go-raw/manifest.json` for the full mapping.
+Multi-turn fixtures:
+
+```bash
+export OPENCODE_GO_API_KEY=sk-...
+python3 scripts/record_opencode_go_multiturn.py
+```
+
+Raw captures land in `target/tmp/opencode-go-raw/` (single-turn) or
+`target/tmp/opencode-go-raw/multiturn/` (multi-turn). Sanitized fixtures are
+written to the `openai/` and `anthropic/` directories above. Inspect the
+recording manifests for the full mapping.
 
 ## Black-box testing
 
@@ -103,4 +124,10 @@ RUNIE_REPLAY_FIXTURES=../openai/opencode_go_kimi_k2_6_simple.sse \
 RUNIE_REPLAY_PROTOCOL=anthropic \
 RUNIE_REPLAY_FIXTURES=../anthropic/opencode_go_minimax_m3_simple.sse \
   cargo run -p runie-cli -- print "say ok"
+
+# Multi-turn conversation
+RUNIE_REPLAY_FIXTURES="\
+../openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn1.sse,\
+../openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn2.sse" \
+  cargo run -p runie-cli -- print "What is the weather in Paris?" "What about Berlin?"
 ```

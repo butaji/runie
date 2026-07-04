@@ -36,6 +36,28 @@ crates/runie-testing/src/fixtures/openai/opencode_go_deepseek_v4_flash_tool.sse"
   cargo run -p runie-cli -- print "turn one" "turn two"
 ```
 
+### Multi-turn fixtures
+
+OpenCode Go multi-turn conversations are recorded per-turn. Each turn is a
+separate `.sse` file named `*_multiturn_<scenario>_turn<N>.sse`. Chain them in
+order to replay a full conversation:
+
+```bash
+RUNIE_REPLAY_FIXTURES="\
+crates/runie-testing/src/fixtures/openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn1.sse,\
+crates/runie-testing/src/fixtures/openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn2.sse" \
+  cargo run -p runie-cli -- print "What is the weather in Paris?" "What about Berlin?"
+```
+
+Recorded multi-turn scenarios include:
+
+- `math_chain` — follow-up math question
+- `weather_chain` — tool call followed by another tool call
+- `read_summarize_followup` — read file, summarize, answer follow-up
+- `reasoning_followup` — reasoning answer followed by another reasoning step
+- `multi_tool_then_compare` — parallel tool calls then comparison question
+- `clarification` — vague request, model asks clarification, then answers
+
 ## Running the TUI in replay mode
 
 ```bash

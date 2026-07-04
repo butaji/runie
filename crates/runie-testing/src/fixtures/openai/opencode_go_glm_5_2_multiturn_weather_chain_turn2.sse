@@ -1,0 +1,40 @@
+: ping - 2026-07-04 22:28:40.097687+00:00
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"The","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" weather in Paris is","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"22°C and","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"sunny.","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"The","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" current weather in Paris","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" is **22","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"°C** and","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" **sunny**","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" ☀️.","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" It's a beautiful","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" day in","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" the French","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":" capital!","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":254,"total_tokens":296,"completion_tokens":42,"estimated_cost":null,"prompt_tokens_details":null,"reasoning_tokens":0}}
+
+data: {"service_tier":"default","id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[],"usage":{"prompt_tokens":254,"total_tokens":296,"completion_tokens":42,"estimated_cost":0.0,"prompt_tokens_details":{"cached_tokens":192,"cache_write_tokens":null},"reasoning_tokens":0}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+

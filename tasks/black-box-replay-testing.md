@@ -261,6 +261,64 @@ fn replay_provider_drives_turn() {
 - [ ] No API keys or secrets are required to run the new tests.
 - [ ] Docs and `AGENTS.md` describe the new testing layer.
 
+## Multi-step / multi-turn fixtures
+
+The OpenCode Go fixtures now include per-turn recordings of multi-step
+conversations in
+`crates/runie-testing/src/fixtures/{openai,anthropic}/opencode_go_*_multiturn_*_turn*.sse`.
+These are essential for black-box tests that exercise conversation history,
+follow-up questions, and tool-result replay.
+
+### Recorded scenarios
+
+| Scenario | Turns | Tool use | Models recorded |
+|---|---|---|---|
+| `math_chain` | 2 | No | deepseek-v4-pro, deepseek-v4-flash, glm-5.2, kimi-k2.6, minimax-m3, qwen3.7-max |
+| `weather_chain` | 2 | Yes | deepseek-v4-pro, deepseek-v4-flash, glm-5.2, kimi-k2.6, minimax-m3, qwen3.7-max |
+| `read_summarize_followup` | 2 | Yes | deepseek-v4-pro, deepseek-v4-flash, minimax-m3, qwen3.7-max |
+| `reasoning_followup` | 2 | No | deepseek-v4-pro, deepseek-v4-flash, glm-5.2, kimi-k2.6, minimax-m3, qwen3.7-max |
+| `multi_tool_then_compare` | 2 | Yes | deepseek-v4-pro, deepseek-v4-flash, minimax-m3, qwen3.7-max |
+| `clarification` | 2 | No | deepseek-v4-pro, deepseek-v4-flash, minimax-m3, qwen3.7-max |
+
+Total: **60 per-turn fixtures** (36 OpenAI-compatible, 24 Anthropic-compatible)
+across 30 model/scenario pairs.
+
+### Recording harness
+
+`scripts/record_opencode_go_multiturn.py` replays a scripted conversation
+against OpenCode Go, injects fake tool results, and records each turn as a
+separate sanitized fixture. Re-run with:
+
+```bash
+export OPENCODE_GO_API_KEY=sk-...
+python3 scripts/record_opencode_go_multiturn.py
+```
+
+### How to use in black-box tests
+
+A multi-turn CLI/TUI test feeds the fixtures in order. The replay provider
+cycles through `RUNIE_REPLAY_FIXTURES` round-robin, so turn *n* of the test
+uses turn *n* of the fixture list:
+
+```bash
+RUNIE_REPLAY_FIXTURES="\
+crates/runie-testing/src/fixtures/openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn1.sse,\
+crates/runie-testing/src/fixtures/openai/opencode_go_deepseek_v4_pro_multiturn_weather_chain_turn2.sse" \
+  cargo run -p runie-cli -- print "What is the weather in Paris?" "What about Berlin?"
+```
+
+### Implementation notes specific to multi-turn
+
+- The replay provider must cycle fixtures, not stop after the first one.
+- Tool results injected during recording are fake and deterministic; the
+  replay provider must provide matching fake results when the fixture emits
+  `ToolCallStart`.
+- Each turn fixture is a complete SSE stream and can be replayed standalone
+  for unit tests, or chained for end-to-end conversation tests.
+- Update `crates/runie-testing/src/fixtures/openai.rs` and
+  `crates/runie-testing/src/fixtures/anthropic.rs` `ALL_*_FIXTURES` lists to
+  include the new `_multiturn_*_turn*.sse` names.
+
 ## Open questions / follow-ups
 
 - Should replay fixtures be embedded at compile time (for hermetic tests) or
@@ -271,3 +329,6 @@ fn replay_provider_drives_turn() {
 - How should tool-call fixtures that require stateful tools (e.g. file edits)
   be handled? Prefer read-only tool fixtures for black-box tests; stateful
   tool tests belong in agent-level Rust tests with `MockToolSkill`.
+- Should we record 3+ turn conversations, or add system-prompt / persona
+  scenarios? Extend `scripts/record_opencode_go_multiturn.py` with additional
+  `SCENARIOS` entries when needed.
