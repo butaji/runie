@@ -42,8 +42,18 @@ pub struct DeltaJson {
     /// MiniMax / OpenAI o-series reasoning field.
     #[serde(rename = "reasoning_content", alias = "reasoning", default)]
     pub reasoning_content: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_nullable_vec")]
     pub tool_calls: Vec<ToolCallJson>,
+}
+
+fn deserialize_nullable_vec<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    use serde::Deserialize;
+    let opt = Option::<Vec<T>>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
 }
 
 /// A tool call delta inside a delta.

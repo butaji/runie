@@ -24,6 +24,8 @@ pub use events::{
     ev_completed, ev_error, ev_output_text_delta, ev_response_created, llm_finish, llm_text_delta,
 };
 #[cfg(feature = "provider")]
+pub use fixtures::anthropic::fixture as anthropic_fixture;
+#[cfg(feature = "provider")]
 pub use fixtures::openai::fixture as openai_fixture;
 #[cfg(feature = "provider")]
 pub use fixtures::{

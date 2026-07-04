@@ -15,6 +15,8 @@ pub mod retry;
 #[cfg(feature = "openai")]
 pub mod openai;
 
+pub mod anthropic;
+
 #[cfg(feature = "mock")]
 pub mod mock;
 

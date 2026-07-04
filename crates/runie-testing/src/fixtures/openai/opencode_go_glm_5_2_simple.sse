@@ -1,0 +1,20 @@
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"1","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":".  **An","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"alyze the Request:","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"**\n    *  ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" Input: \"Reply","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" with only the","tool_calls":null},"logprobs":null,"finish_reason":"length"}],"usage":{"prompt_tokens":20,"total_tokens":40,"completion_tokens":20,"estimated_cost":null,"prompt_tokens_details":null,"reasoning_tokens":0}}
+
+data: {"service_tier":"default","id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[],"usage":{"prompt_tokens":20,"total_tokens":40,"completion_tokens":20,"estimated_cost":0.0,"prompt_tokens_details":null,"reasoning_tokens":0}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+
