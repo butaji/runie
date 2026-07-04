@@ -78,3 +78,29 @@ python3 scripts/record_opencode_go.py
 Raw captures land in `target/tmp/opencode-go-raw/` and sanitized fixtures are
 written to the `openai/` and `anthropic/` directories above. Inspect
 `target/tmp/opencode-go-raw/manifest.json` for the full mapping.
+
+## Black-box testing
+
+These fixtures can drive the real `runie-cli` and `runie-tui` binaries through
+the replay provider. See `docs/BlackBoxTesting.md` for details.
+
+Quick examples:
+
+```bash
+# CLI simple text
+RUNIE_REPLAY_FIXTURES=../openai/opencode_go_deepseek_v4_flash_simple.sse \
+  cargo run -p runie-cli -- print "say ok"
+
+# CLI tool call
+RUNIE_REPLAY_FIXTURES=../openai/opencode_go_deepseek_v4_flash_tool.sse \
+  cargo run -p runie-cli -- json --model opencode-go/deepseek-v4-flash "weather in Paris"
+
+# TUI
+RUNIE_REPLAY_FIXTURES=../openai/opencode_go_kimi_k2_6_simple.sse \
+  cargo run -p runie-tui -- --provider opencode-go --model kimi-k2.6
+
+# Anthropic protocol
+RUNIE_REPLAY_PROTOCOL=anthropic \
+RUNIE_REPLAY_FIXTURES=../anthropic/opencode_go_minimax_m3_simple.sse \
+  cargo run -p runie-cli -- print "say ok"
+```

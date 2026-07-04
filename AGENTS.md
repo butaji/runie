@@ -2,14 +2,15 @@
 
 Every change needs fast automatic tests (unit + e2e). No `sleep()` in tests. TUI changes also need a quick live run in tmux or a real terminal.
 
-## Testing Strategy (4 Layers)
+## Testing Strategy (4 Layers + Black-box Replay)
 
 1. **State/Logic** — pure functions, no Ratatui imports.
 2. **Event Handling** — feed `crossterm` events into handlers.
 3. **Rendering** — `TestBackend` + `Buffer` assertions.
 4. **Provider Replay / Mock-Tool E2E** — captured SSE fixtures and fake tool outputs. Catches async ordering, stale indices, inflight leaks, duplicated `TurnComplete`, stuck timers.
+5. **Black-box Replay** — run the real `runie-cli` and `runie-tui` binaries against recorded SSE fixtures via `RUNIE_REPLAY_FIXTURES`. No API keys, no network.
 
-Run layer 4 before every push or when changing async/event logic.
+Run layer 4 before every push or when changing async/event logic. Run black-box replay tests when changing CLI/TUI wiring, provider factory behavior, or fixture format.
 
 ## Anti-Patterns
 
