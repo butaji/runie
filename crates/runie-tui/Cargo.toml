@@ -19,7 +19,7 @@ runie-core.workspace = true
 supports-color.workspace = true
 supports-hyperlinks.workspace = true
 runie-agent.workspace = true
-runie-provider.workspace = true
+runie-provider = { workspace = true, features = ["mock", "replay"] }
 ratatui.workspace = true
 crossterm.workspace = true
 ansi_colours.workspace = true
@@ -47,6 +47,7 @@ textwrap.workspace = true
 [features]
 default = ["mock"]
 mock = ["runie-provider/mock"]
+replay = ["runie-provider/replay"]
 
 [target.'cfg(unix)'.dependencies]
 nix.workspace = true

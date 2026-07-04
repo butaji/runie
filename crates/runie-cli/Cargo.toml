@@ -15,7 +15,7 @@ path = "src/main.rs"
 [dependencies]
 runie-core = { workspace = true, features = ["keyring"] }
 runie-agent.workspace = true
-runie-provider.workspace = true
+runie-provider = { workspace = true, features = ["mock", "replay"] }
 tokio = { workspace = true, features = ["io-std", "signal"] }
 anyhow.workspace = true
 serde.workspace = true
@@ -32,3 +32,7 @@ clap_complete = { workspace = true, optional = true }
 [features]
 default = []
 completions = ["clap_complete"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "process"] }
+strip-ansi-escapes = "0.2"

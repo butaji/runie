@@ -11,6 +11,9 @@ use runie_core::auth::KeyringStore;
 use runie_core::config::Config;
 use runie_core::proto::ProviderConfig;
 
+#[cfg(feature = "replay")]
+use crate::replay::{Protocol, ReplayProvider};
+
 /// The production provider factory.
 ///
 /// This is the only production implementation of [`ProviderFactory`] and the
@@ -44,6 +47,66 @@ impl BuiltProviderFactory {
             keyring_store: Some(store),
         }
     }
+
+    /// Try to build a replay provider from `RUNIE_REPLAY_FIXTURES` env var.
+    ///
+    /// The env var should contain a comma-separated list of file paths to SSE
+    /// fixtures. The protocol is inferred from the fixture contents, or can be
+    /// explicitly set via `RUNIE_REPLAY_PROTOCOL` (values: `openai`, `anthropic`).
+    #[cfg(feature = "replay")]
+    fn try_build_replay_provider(provider: &str, model: &str) -> Option<BuiltProvider> {
+        let fixture_list = std::env::var("RUNIE_REPLAY_FIXTURES").ok()?;
+        if fixture_list.trim().is_empty() {
+            return None;
+        }
+
+        let paths: Vec<&str> = fixture_list.split(',').map(str::trim).collect();
+        let mut fixtures = Vec::new();
+
+        for path in paths {
+            if path.is_empty() {
+                continue;
+            }
+            match std::fs::read_to_string(path) {
+                Ok(contents) => fixtures.push(contents),
+                Err(e) => {
+                    tracing::warn!(path, error = %e, "failed to read replay fixture");
+                    return None;
+                }
+            }
+        }
+
+        if fixtures.is_empty() {
+            return None;
+        }
+
+        // Determine protocol from env var or fixture inference.
+        let protocol = match std::env::var("RUNIE_REPLAY_PROTOCOL")
+            .ok()
+            .as_deref()
+        {
+            Some("anthropic") => Protocol::Anthropic,
+            Some("openai") => Protocol::OpenAi,
+            _ => ReplayProvider::infer_protocol(&fixtures),
+        };
+
+        let replay = ReplayProvider::new(fixtures, protocol);
+        tracing::debug!(provider, model, protocol = ?protocol, "using replay provider");
+
+        // Use provided provider/model, or defaults for replay context.
+        let key = if provider.is_empty() || provider == "replay" {
+            "openai"
+        } else {
+            provider
+        };
+        let model = if model.is_empty() { "replay" } else { model };
+
+        Some(BuiltProvider::from_provider(
+            Box::new(replay),
+            key,
+            model,
+        ))
+    }
 }
 
 #[async_trait]
@@ -54,6 +117,12 @@ impl ProviderFactory for BuiltProviderFactory {
         model: &str,
         config: &Config,
     ) -> Result<BuiltProvider, ProviderError> {
+        // Check for replay mode first.
+        #[cfg(feature = "replay")]
+        if let Some(replay_provider) = Self::try_build_replay_provider(provider, model) {
+            return Ok(replay_provider);
+        }
+
         build_provider(
             provider,
             model,

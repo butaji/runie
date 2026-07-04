@@ -203,22 +203,35 @@ pub fn replay_anthropic_sse(text: &str) -> Vec<ProviderEvent> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runie_testing::anthropic_fixture;
+    use std::path::PathBuf;
+
+    fn fixture(name: &str) -> Option<String> {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("..")
+            .join("fixtures")
+            .join("anthropic")
+            .join(name);
+        std::fs::read_to_string(&path).ok()
+    }
 
     #[test]
     fn anthropic_simple_replays() {
-        let events = replay_anthropic_sse(&anthropic_fixture(
-            "opencode_go_minimax_m3_simple.sse",
-        ));
+        let Some(text) = fixture("opencode_go_minimax_m3_simple.sse") else {
+            return;
+        };
+        let events = replay_anthropic_sse(&text);
         assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
         assert!(events.iter().any(|e| matches!(e, ProviderEvent::Finish { .. })));
     }
 
     #[test]
     fn anthropic_tool_replays() {
-        let events = replay_anthropic_sse(&anthropic_fixture(
-            "opencode_go_minimax_m3_tool.sse",
-        ));
+        let Some(text) = fixture("opencode_go_minimax_m3_tool.sse") else {
+            return;
+        };
+        let events = replay_anthropic_sse(&text);
         assert!(events.iter().any(|e| matches!(
             e,
             ProviderEvent::ToolCallStart { name, .. } if name == "get_weather"

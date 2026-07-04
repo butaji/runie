@@ -20,6 +20,12 @@ pub mod anthropic;
 #[cfg(feature = "mock")]
 pub mod mock;
 
+#[cfg(feature = "replay")]
+pub mod replay;
+
+#[cfg(feature = "replay")]
+pub use replay::{Protocol as ReplayProtocol, ReplayProvider};
+
 use crate::retry::{is_retryable, with_retry};
 
 // ---------------------------------------------------------------------------
