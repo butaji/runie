@@ -429,6 +429,8 @@ impl UiActor {
             Event::PermissionAllow { request_id } => request_id.clone(),
             Event::PermissionDeny { request_id } => request_id.clone(),
             Event::PermissionAlwaysAllow { request_id, .. } => request_id.clone(),
+            Event::PermissionSessionAllow { request_id, .. } => request_id.clone(),
+            Event::PermissionOnce { request_id } => request_id.clone(),
             _ => return,
         };
 
@@ -448,6 +450,18 @@ impl UiActor {
                         .permission
                         .try_upsert_rule(tool.clone(), PermissionAction::Allow);
                 }
+                PermissionAction::Allow
+            }
+            Event::PermissionSessionAllow { tool, .. } => {
+                if let Some(handles) = self.state.actor_handles() {
+                    handles
+                        .permission
+                        .try_upsert_session_rule(tool.clone(), PermissionAction::Allow);
+                }
+                PermissionAction::Allow
+            }
+            Event::PermissionOnce { .. } => {
+                // Once: just allow this single request, no rule persistence
                 PermissionAction::Allow
             }
             _ => return,

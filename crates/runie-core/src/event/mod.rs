@@ -524,9 +524,19 @@ pub enum Event {
     PermissionDeny {
         request_id: String,
     },
+    /// Always allow — persists across sessions (stored in config).
     PermissionAlwaysAllow {
         request_id: String,
         tool: String,
+    },
+    /// This session — persists for the current session only.
+    PermissionSessionAllow {
+        request_id: String,
+        tool: String,
+    },
+    /// Once — single use, will ask again next time.
+    PermissionOnce {
+        request_id: String,
     },
 
     // ── Persistence / Fact variants ──────────────────────────────────────────

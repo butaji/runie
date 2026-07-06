@@ -101,6 +101,12 @@ impl RactorPermissionHandle {
         let _ = self.inner.send_message(msg);
     }
 
+    /// Add or update a permission rule with Session scope (sync fire-and-forget).
+    pub fn try_upsert_session_rule(&self, tool: String, action: PermissionAction) {
+        let msg = PermissionMsg::UpsertSessionRule { tool, action };
+        let _ = self.inner.send_message(msg);
+    }
+
     /// Try to send a message (non-blocking).
     pub fn try_send(&self, msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
         self.inner.send_message(msg)
@@ -320,6 +326,16 @@ impl RactorPermissionActor {
         let rule = crate::permissions::PermissionRule::new(action, tool);
         state.rules.add_rule(rule);
     }
+
+    fn handle_upsert_session_rule(
+        state: &mut PermissionActorState,
+        tool: String,
+        action: PermissionAction,
+    ) {
+        let rule = crate::permissions::PermissionRule::new(action, tool)
+            .with_scope(crate::permissions::PermissionScope::Session);
+        state.rules.add_rule(rule);
+    }
 }
 
 #[ractor::async_trait]
@@ -391,6 +407,9 @@ impl Actor for RactorPermissionActor {
             }
             PermissionMsg::UpsertRule { tool, action } => {
                 Self::handle_upsert_rule(state, tool, action);
+            }
+            PermissionMsg::UpsertSessionRule { tool, action } => {
+                Self::handle_upsert_session_rule(state, tool, action);
             }
         }
         Ok(())

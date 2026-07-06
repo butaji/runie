@@ -89,6 +89,8 @@
     "PermissionAllow": "{ request_id: String }",
     "PermissionDeny": "{ request_id: String }",
     "PermissionAlwaysAllow": "{ request_id: String, tool: String }",
+    "PermissionSessionAllow": "{ request_id: String, tool: String }",
+    "PermissionOnce": "{ request_id: String }",
     "AssistantMessageReady": "{ message: crate::message::ChatMessage }",
     "MessageReplayed": "{ id: String, role: String, content: String, timestamp: f64, provider: String }",
     "ExternalEditorDone": "{ content: String }",
@@ -293,7 +295,7 @@
     },
     "Permission": {
       "kind": "Intent",
-      "intent_variants": ["PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow"],
+      "intent_variants": ["PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow", "PermissionSessionAllow", "PermissionOnce"],
       "fact_variants": ["PermissionRequest", "PermissionRequestDismissed"]
     },
     "Other": {

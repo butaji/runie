@@ -189,7 +189,9 @@ impl DurableCoreEvent {
             | Event::PermissionRequestDismissed
             | Event::PermissionAllow { .. }
             | Event::PermissionDeny { .. }
-            | Event::PermissionAlwaysAllow { .. } => None,
+            | Event::PermissionAlwaysAllow { .. }
+            | Event::PermissionSessionAllow { .. }
+            | Event::PermissionOnce { .. } => None,
             // PermissionResponse / PermissionRequest — not persisted
             // Other facts — not persisted
             Event::InputChanged { .. }

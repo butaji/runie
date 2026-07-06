@@ -40,6 +40,11 @@ pub enum PermissionMsg {
         tool: String,
         action: PermissionAction,
     },
+    /// Add or update a permission rule with Session scope (lives for current session only).
+    UpsertSessionRule {
+        tool: String,
+        action: PermissionAction,
+    },
 }
 
 impl Clone for PermissionMsg {
@@ -74,6 +79,10 @@ impl Clone for PermissionMsg {
             PermissionMsg::TrustProject => PermissionMsg::TrustProject,
             PermissionMsg::UntrustProject => PermissionMsg::UntrustProject,
             PermissionMsg::UpsertRule { tool, action } => PermissionMsg::UpsertRule {
+                tool: tool.clone(),
+                action: *action,
+            },
+            PermissionMsg::UpsertSessionRule { tool, action } => PermissionMsg::UpsertSessionRule {
                 tool: tool.clone(),
                 action: *action,
             },

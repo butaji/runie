@@ -60,6 +60,7 @@ VARIANTS_WITH_FIELDS = {
     "Input", "PaletteFilter", "ModelSelectorFilter", "CommandFormInput",
     # Intent variants with {..} fields
     "PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow",
+    "PermissionSessionAllow", "PermissionOnce",
     "TransientMessage", "TransientError",
 }
 

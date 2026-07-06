@@ -82,6 +82,27 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
             }
             clear_matching_request(state, &request_id);
         }
+        Event::PermissionSessionAllow { request_id, tool } => {
+            if let Some(handles) = state.actor_handles() {
+                // SessionAllow: add rule with Session scope for this session
+                handles
+                    .permission
+                    .try_upsert_session_rule(tool.clone(), PermissionAction::Allow);
+                handles
+                    .permission
+                    .try_resolve_permission(request_id.clone(), PermissionAction::Allow);
+            }
+            clear_matching_request(state, &request_id);
+        }
+        Event::PermissionOnce { request_id } => {
+            // Once: just allow this single request, no rule persistence
+            if let Some(handles) = state.actor_handles() {
+                handles
+                    .permission
+                    .try_resolve_permission(request_id.clone(), PermissionAction::Allow);
+            }
+            clear_matching_request(state, &request_id);
+        }
         _ => {}
     }
 }
