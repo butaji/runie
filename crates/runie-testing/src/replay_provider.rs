@@ -13,7 +13,7 @@ use std::sync::Arc;
 use futures::Stream;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
-use runie_core::provider_event::ProviderEvent;
+use runie_core::provider_event::{ModelError, ProviderEvent};
 use runie_core::Event;
 use runie_provider::openai::stream::replay_sse;
 use runie_provider::BuiltProvider;
@@ -43,10 +43,39 @@ impl Provider for ReplayProvider {
         let events = self
             .fixtures
             .get(idx)
-            .map(|f| replay_sse(f))
+            .map(|f| parse_fixture(f))
             .unwrap_or_default();
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
     }
+}
+
+/// Parse a fixture string into `ProviderEvent`s.
+///
+/// If the fixture starts with `# HTTP <code>`, returns a single error event
+/// for that HTTP status. Otherwise, parses as normal SSE content.
+fn parse_fixture(content: &str) -> Vec<ProviderEvent> {
+    // Check for HTTP status prefix: "# HTTP 429"
+    if let Some(first_line) = content.lines().next() {
+        if first_line.starts_with("# HTTP ") {
+            let code_str = first_line.trim_start_matches("# HTTP ").trim();
+            let code: u16 = code_str.parse().unwrap_or(500);
+            let message = content
+                .lines()
+                .nth(1)
+                .map(|l| l.trim_start_matches('#').trim().to_string())
+                .unwrap_or_else(|| format!("HTTP {}", code));
+
+            let model_err = match code {
+                401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
+                429 => ModelError::RateLimit { retry_after_secs: None },
+                500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
+                _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
+            };
+            return vec![ProviderEvent::Error(model_err)];
+        }
+    }
+    // Otherwise parse as normal SSE
+    replay_sse(content)
 }
 
 /// Wrap a `ReplayProvider` in a `BuiltProvider`.
@@ -99,7 +128,7 @@ impl Provider for GrokReplayProvider {
         let events = self
             .fixtures
             .get(idx)
-            .map(|f| replay_sse(f))
+            .map(|f| parse_fixture(f))
             .unwrap_or_default();
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
     }

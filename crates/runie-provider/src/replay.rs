@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use futures::Stream;
 use runie_core::message::ChatMessage;
 use runie_core::provider::Provider;
-use runie_core::provider_event::ProviderEvent;
+use runie_core::provider_event::{ModelError, ProviderEvent};
 
 /// Protocol for replay fixtures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,13 +91,42 @@ impl Provider for ReplayProvider {
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let idx = self.index.fetch_add(1, Ordering::SeqCst) % self.fixtures.len().max(1);
         let events = match self.fixtures.get(idx) {
-            Some(fixture) => match self.protocol {
-                Protocol::OpenAi => crate::openai::stream::replay_sse(fixture),
-                Protocol::Anthropic => crate::anthropic::replay_anthropic_sse(fixture),
-            },
+            Some(fixture) => parse_fixture(fixture, self.protocol),
             None => Vec::new(),
         };
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
+    }
+}
+
+/// Parse a fixture string into `ProviderEvent`s.
+///
+/// If the fixture starts with `# HTTP <code>`, returns a single error event
+/// for that HTTP status. Otherwise, parses as normal SSE content.
+fn parse_fixture(content: &str, protocol: Protocol) -> Vec<ProviderEvent> {
+    // Check for HTTP status prefix: "# HTTP 429"
+    if let Some(first_line) = content.lines().next() {
+        if first_line.starts_with("# HTTP ") {
+            let code_str = first_line.trim_start_matches("# HTTP ").trim();
+            let code: u16 = code_str.parse().unwrap_or(500);
+            let message = content
+                .lines()
+                .nth(1)
+                .map(|l| l.trim_start_matches('#').trim().to_string())
+                .unwrap_or_else(|| format!("HTTP {}", code));
+
+            let model_err = match code {
+                401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
+                429 => ModelError::RateLimit { retry_after_secs: None },
+                500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
+                _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
+            };
+            return vec![ProviderEvent::Error(model_err)];
+        }
+    }
+    // Otherwise parse as normal SSE
+    match protocol {
+        Protocol::OpenAi => crate::openai::stream::replay_sse(content),
+        Protocol::Anthropic => crate::anthropic::replay_anthropic_sse(content),
     }
 }
 
