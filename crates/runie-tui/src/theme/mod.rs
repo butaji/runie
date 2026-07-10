@@ -73,11 +73,18 @@ fn current_caps() -> Option<crate::terminal::caps::TermCaps> {
 pub fn current_theme() -> Arc<opaline::Theme> {
     let guard = CURRENT_THEME.read();
     guard.clone().unwrap_or_else(|| {
-        // Last resort: load embedded default. If that fails, use the minimal
-        // hardcoded fallback — this would only happen if the build pipeline
-        // corrupted the embedded theme TOML.
+        // Drop the read lock before doing any load work.
+        drop(guard);
+        // No theme has been set yet (e.g. first frame, or tests that render
+        // without calling `set_current_theme`). Load the embedded default and
+        // register the runie semantic styles so `style_*()` accessors return
+        // real colors (dim hints, borders, …) instead of empty/default styles.
+        // This must match what `set_current_theme` → `load_theme` produces.
+        // Only on a corrupted embedded theme do we fall back to the bare
+        // minimal theme, intentionally left unregistered to avoid panicking on
+        // its deliberately tiny token set.
         loader::default_theme()
-            .map(Arc::new)
+            .map(|t| Arc::new(crate::theme::styles::register_runie_styles(t)))
             .unwrap_or_else(|_| Arc::new(loader::minimal_fallback_theme()))
     })
 }
