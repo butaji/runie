@@ -53,6 +53,10 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
         kind: DialogKind::CommandPalette,
         panels: stack,
     });
+    // Default to the persistent command-bar behavior (Esc returns to the
+    // palette). The chat-input "/" autocomplete paths flip this to `true`
+    // immediately after opening so an autocomplete palette returns to chat.
+    state.command_palette_from_input = false;
 }
 
 pub fn open_model_selector(state: &mut AppState) {

@@ -41,6 +41,10 @@ impl UiActor {
                 self.state.input_mut().cursor_pos = 0;
                 self.send_input_msg(InputMsg::Clear).await;
                 self.apply_event(runie_core::Event::ToggleCommandPalette);
+                // Palette opened from the chat-input "/" autocomplete: it is
+                // ephemeral and must return to chat (not the palette) after a
+                // command runs, so the next "/" starts a fresh palette.
+                self.state.command_palette_from_input = true;
                 true
             }
             _ => false,
@@ -93,6 +97,9 @@ impl UiActor {
                 // Route through event: UiActor's apply_event will call
                 // dialog_toggle_event which calls open_command_palette.
                 self.apply_event(runie_core::Event::ToggleCommandPalette);
+                // Same as the synchronous trigger: mark this palette as the
+                // ephemeral chat-input autocomplete so it returns to chat.
+                self.state.command_palette_from_input = true;
             }
         }
     }

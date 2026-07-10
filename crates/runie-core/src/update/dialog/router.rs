@@ -31,7 +31,12 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     }
     let is_dialog_back = matches!(&event, Event::DialogBack);
     let is_palette_activation = is_palette_activation(&dialog, &event);
-    if is_palette_activation {
+    if is_palette_activation && !state.command_palette_from_input {
+        // Persistent command bar (Ctrl+P): push the palette so Esc on the
+        // sub-dialog returns to the menu. Palettes opened from the chat-input
+        // "/" autocomplete are ephemeral and return to chat instead, so the
+        // next "/" opens a fresh palette rather than appending to a stale
+        // filter ("status" + "/" -> "No matching commands").
         state.push_dialog_to_back_stack(dialog.clone());
     }
     let stack = dialog

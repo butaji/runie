@@ -36,6 +36,13 @@ pub struct AppState {
     pub should_quit: bool,
     pub open_dialog: Option<crate::commands::DialogState>,
     pub dialog_back_stack: Vec<crate::commands::DialogState>,
+    /// True when the command palette was opened from the chat-input "/"
+    /// autocomplete (rather than the persistent Ctrl+P command bar). An
+    /// autocomplete palette is ephemeral: activating a command returns to the
+    /// chat input instead of back to the palette, so the next "/" opens a fresh
+    /// palette. Reset to `false` on every palette open; the autocomplete open
+    /// paths flip it to `true` right after opening.
+    pub command_palette_from_input: bool,
     pub login_flow: Option<crate::login_flow::LoginFlowState>,
     pub registry: crate::commands::CommandRegistry,
     pub skills: Vec<crate::skills::Skill>,

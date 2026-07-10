@@ -194,6 +194,8 @@ impl AppState {
     fn open_command_palette_from_input(&mut self) {
         let initial_filter = self.input().input.clone();
         crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
+        // Opened from the chat-input autocomplete: ephemeral, returns to chat.
+        self.command_palette_from_input = true;
         self.view_mut().dirty = true;
     }
 

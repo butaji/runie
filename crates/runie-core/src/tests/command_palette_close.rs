@@ -225,3 +225,79 @@ fn view_marked_dirty_when_palette_closes() {
         "view should be marked dirty when palette closes"
     );
 }
+
+/// Regression (live-test #3): a command palette opened from the chat-input "/"
+/// autocomplete (`command_palette_from_input = true`) is ephemeral: activating
+/// a command must NOT push the palette onto the back stack, so dismissing the
+/// command's panel returns to the chat input. The persistent Ctrl+P command
+/// bar (`command_palette_from_input = false`) keeps the menu behavior (Esc
+/// returns to the palette).
+fn palette_with_status_selected(from_input: bool) -> AppState {
+    let mut state = AppState::default();
+    state.update(crate::Event::ToggleCommandPalette);
+    state.command_palette_from_input = from_input;
+    // Filter down to the "status" command so the selected row is deterministic.
+    if let Some(DialogState::Active { panels, .. }) = &mut state.open_dialog {
+        if let Some(panel) = panels.current_mut() {
+            panel.set_filter("status");
+        }
+    }
+    state
+}
+
+#[test]
+fn autocomplete_palette_returns_to_chat_after_command() {
+    let mut state = palette_with_status_selected(true);
+
+    // Activate the selected "status" command from the autocomplete palette.
+    state.update(crate::Event::Submit);
+
+    assert!(
+        state.dialog_back_stack().is_empty(),
+        "autocomplete palette must NOT be pushed to the back stack, len={}",
+        state.dialog_back_stack().len()
+    );
+    assert!(
+        matches!(
+            state.open_dialog(),
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                ..
+            })
+        ),
+        "the /status result panel should be open"
+    );
+
+    // Esc on the result panel -> back to the chat input (nothing to restore).
+    state.update(crate::Event::DialogBack);
+    assert!(
+        state.open_dialog().is_none(),
+        "autocomplete palette must return to chat after the command panel closes"
+    );
+}
+
+#[test]
+fn command_bar_palette_returns_to_palette_after_command() {
+    let mut state = palette_with_status_selected(false);
+
+    state.update(crate::Event::Submit);
+
+    assert_eq!(
+        state.dialog_back_stack().len(),
+        1,
+        "command bar palette must be pushed so Esc returns to the menu"
+    );
+
+    // Esc on the result panel -> back to the palette (menu behavior).
+    state.update(crate::Event::DialogBack);
+    assert!(
+        matches!(
+            state.open_dialog(),
+            Some(DialogState::Active {
+                kind: DialogKind::CommandPalette,
+                ..
+            })
+        ),
+        "command bar must restore the palette after the command panel closes"
+    );
+}
