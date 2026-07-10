@@ -8,15 +8,41 @@ use super::*;
 use runie_core::login_flow::LoginStep;
 use runie_core::Event;
 
-fn clean_config() {
+// `sync_config_cache` reads the process-global `RUNIE_AUTH_FILE` env var when
+// persisting the API key, so every test in this module that drives a Save must
+// be serialized: a concurrent Save would otherwise redirect onto the env-overridden
+// test's temp auth file and clobber it (last-writer-wins on the same provider key).
+// `clean_config()` returns the lock guard, so binding it (e.g. `let _guard =
+// clean_config();`) both isolates the config path and holds the lock for the test.
+static AUTH_FILE_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn clean_config() -> std::sync::MutexGuard<'static, ()> {
+    let guard = AUTH_FILE_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let path = runie_core::provider::config::generate_test_config_path("runie_login_e2e");
     let _ = std::fs::remove_file(&path);
     runie_core::provider::config::set_test_config_path(path);
+    guard
+}
+
+/// Pick a unique temp auth.json path and remove any leftover file. The caller
+/// points `RUNIE_AUTH_FILE` at it so persistence is deterministic and does not
+/// touch the real OS keychain.
+fn clean_auth_file() -> std::path::PathBuf {
+    let path = std::env::temp_dir().join(format!(
+        "runie_login_e2e_auth_{}_{}.json",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let _ = std::fs::remove_file(&path);
+    path
 }
 
 #[test]
 fn e2e_login_flow_shows_verifying_panel() {
-    clean_config();
+    let _guard = clean_config();
 
     let mut state = AppState::default();
     state.config.current_provider.clear();
@@ -46,7 +72,7 @@ fn e2e_login_flow_shows_verifying_panel() {
 
 #[test]
 fn e2e_login_flow_reaches_model_selector() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -82,7 +108,7 @@ fn e2e_login_flow_reaches_model_selector() {
 
 #[test]
 fn e2e_login_flow_save_activates_first_model() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -109,7 +135,7 @@ fn e2e_login_flow_save_activates_first_model() {
 
 #[test]
 fn e2e_providers_select_model_renders_input_box() {
-    clean_config();
+    let _guard = clean_config();
     runie_core::provider::config::save_provider_config(
         "minimax",
         "https://api.minimaxi.chat/v1",
@@ -146,7 +172,7 @@ fn e2e_providers_select_model_renders_input_box() {
 
 #[test]
 fn e2e_login_flow_title_has_exactly_one_space_padding() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -175,7 +201,7 @@ fn e2e_login_flow_title_has_exactly_one_space_padding() {
 
 #[test]
 fn e2e_providers_add_flow_save_renders_input_box() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -214,7 +240,7 @@ fn e2e_providers_add_flow_save_renders_input_box() {
 
 #[test]
 fn e2e_login_flow_submit_save_button_renders_input_box() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -254,7 +280,7 @@ fn e2e_login_flow_submit_save_button_renders_input_box() {
 
 #[test]
 fn e2e_login_flow_save_renders_input_box() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -288,7 +314,7 @@ fn e2e_login_flow_save_renders_input_box() {
 
 #[test]
 fn e2e_login_flow_submit_on_model_toggle_saves_and_connects() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -327,7 +353,7 @@ fn e2e_login_flow_submit_on_model_toggle_saves_and_connects() {
 
 #[test]
 fn e2e_login_flow_api_key_label_renders_fully() {
-    clean_config();
+    let _guard = clean_config();
     let mut state = AppState::default();
     state.config.current_provider.clear();
     state.config.current_model.clear();
@@ -376,5 +402,58 @@ fn e2e_reset_preserves_input_box() {
         content.contains(" openai/gpt-4o "),
         "input box title should still render after /reset, got: {}",
         content
+    );
+}
+
+/// End-to-end regression for ISSUE A (write side): completing the login flow
+/// must persist the submitted API key to the auth.json file pointed at by
+/// `RUNIE_AUTH_FILE`, so a later turn can resolve it even when the OS keychain
+/// is unavailable or locked (headless/tmux).
+#[test]
+fn e2e_login_flow_save_persists_api_key_to_auth_file() {
+    let _guard = clean_config();
+
+    let auth_path = clean_auth_file();
+    std::env::remove_var("MINIMAX_API_KEY");
+
+    let mut state = AppState::default();
+    state.config.current_provider.clear();
+    state.config.current_model.clear();
+
+    state.update(Event::from(Event::Start));
+    // Use a provider name no other e2e test writes, so even a Save from another
+    // test module that raced onto our temp auth file could not clobber this
+    // entry (same-key writes are last-writer-wins). Tests within this module are
+    // already serialized by the `clean_config()` lock above.
+    state.update(Event::from(Event::SelectProvider {
+        provider: "minimax-persist".into(),
+    }));
+    state.update(Event::from(Event::SubmitKey {
+        provider: "minimax-persist".into(),
+        key: "sk-e2e".into(),
+    }));
+    state.update(Event::from(Event::ModelsFetched {
+        provider: "minimax-persist".into(),
+        key: "sk-e2e".into(),
+        models: vec!["MiniMax-M3".into()],
+    }));
+
+    // Point persistence at our temp file only for the Save that writes the key,
+    // keeping the env-var window as short as possible for parallel test safety.
+    std::env::set_var("RUNIE_AUTH_FILE", &auth_path);
+    state.update(Event::from(Event::Save));
+
+    let json = std::fs::read_to_string(&auth_path)
+        .expect("auth.json should be written on Save when RUNIE_AUTH_FILE is set");
+    std::env::remove_var("RUNIE_AUTH_FILE");
+    drop(_guard);
+
+    assert!(
+        json.contains("minimax-persist"),
+        "auth.json should contain a minimax-persist entry, got: {json}"
+    );
+    assert!(
+        json.contains("sk-e2e"),
+        "auth.json should contain the submitted token, got: {json}"
     );
 }
