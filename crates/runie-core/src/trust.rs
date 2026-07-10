@@ -81,6 +81,12 @@ impl TrustManager {
 mod tests {
     use super::*;
 
+    // `load_path()` reads the process-global `RUNIE_TEST_CONFIG_DIR` env var, so
+    // tests that override it must not run concurrently — otherwise one test's
+    // set/remove races with another's save() and the file lands in the wrong
+    // directory. Serialize the env-touching tests behind this lock.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn trust_manager_default_empty() {
         let tm = TrustManager::default();
@@ -122,6 +128,8 @@ mod tests {
         std::fs::create_dir_all(&tmp).unwrap();
         let path = tmp.join("trust.json");
 
+        // Serialize with other tests that override RUNIE_TEST_CONFIG_DIR.
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // Set env so save() uses our temp directory
         std::env::set_var("RUNIE_TEST_CONFIG_DIR", &tmp);
 
@@ -129,6 +137,7 @@ mod tests {
         tm.save().unwrap();
 
         std::env::remove_var("RUNIE_TEST_CONFIG_DIR");
+        drop(_guard);
 
         // Verify file was created at expected path
         assert!(path.exists(), "trust.json should exist after save");
@@ -159,12 +168,15 @@ mod tests {
         std::fs::create_dir_all(&tmp).unwrap();
         let path = tmp.join("trust.json");
 
+        // Serialize with other tests that override RUNIE_TEST_CONFIG_DIR.
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // Set env so save() uses our temp directory
         std::env::set_var("RUNIE_TEST_CONFIG_DIR", &tmp);
 
         tm.save().unwrap();
 
         std::env::remove_var("RUNIE_TEST_CONFIG_DIR");
+        drop(_guard);
 
         // Verify 0o600 permissions (user read/write only)
         let perms = std::fs::metadata(&path).unwrap().permissions();
