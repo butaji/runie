@@ -279,6 +279,7 @@ async fn hosted_permission_dialog_tab_navigates_buttons() {
 
     open_permission_request(&mut ui, &effect_tx).await;
 
+    // The hosted permission dialog has 4 options: Always, This session, Once, Deny.
     assert_eq!({ selected_index(&ui.state) }, 0);
 
     ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
@@ -286,6 +287,9 @@ async fn hosted_permission_dialog_tab_navigates_buttons() {
 
     ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
     assert_eq!({ selected_index(&ui.state) }, 2);
+
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    assert_eq!({ selected_index(&ui.state) }, 3);
 
     ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
     assert_eq!({ selected_index(&ui.state) }, 0);
@@ -300,7 +304,8 @@ async fn hosted_permission_dialog_shift_tab_navigates_buttons() {
 
     assert_eq!({ selected_index(&ui.state) }, 0);
 
+    // Shift+Tab (select_up) from the first option wraps to the last of the 4 options.
     ui.handle_event_inner(Event::CycleThinkingLevel, effect_tx.clone())
         .await;
-    assert_eq!({ selected_index(&ui.state) }, 2);
+    assert_eq!({ selected_index(&ui.state) }, 3);
 }

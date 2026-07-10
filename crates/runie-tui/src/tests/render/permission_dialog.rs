@@ -34,6 +34,9 @@ fn renders_hosted_permission_panel() {
     let text = buffer_text(terminal.backend().buffer());
     assert!(text.contains("Permission Required"), "panel title missing");
     assert!(text.contains("bash"), "tool name missing");
-    assert!(text.contains("Allow"), "allow action missing");
+    // 4-option dialog: Always / This session / Once / Deny.
+    assert!(text.contains("Always"), "always action missing");
+    assert!(text.contains("This session"), "session action missing");
+    assert!(text.contains("Once"), "once action missing");
     assert!(text.contains("Deny"), "deny action missing");
 }
