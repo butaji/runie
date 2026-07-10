@@ -33,7 +33,6 @@ pub fn build_key_input(state: &LoginFlowState) -> Panel {
         .form_field_value("API Key", "sk-...", "key", state.key.clone())
         .form_hidden("provider", state.provider.clone())
         .form_submit()
-        .item("_Submit", ItemAction::Emit(crate::Event::Save))
         .item("_Cancel", ItemAction::Emit(crate::Event::Abort))
 }
 
@@ -140,6 +139,28 @@ mod tests {
         assert!(
             !panel.filterable,
             "login key form must not be filterable so keystrokes edit the field"
+        );
+    }
+
+    /// Regression (live-test #5): the login key form must show exactly one
+    /// "Submit" button. It previously had both a `FormSubmit` item and an
+    /// explicit `_Submit` action, rendering "Submit  Submit  Cancel".
+    #[test]
+    fn key_input_panel_has_single_submit_button() {
+        let state = LoginFlowState::new().with_provider("minimax".into());
+        let panel = build_key_input(&state);
+        let submit_count = panel
+            .items
+            .iter()
+            .filter(|i| match i {
+                PanelItem::FormSubmit => true,
+                PanelItem::Action { label, .. } => label.contains("Submit"),
+                _ => false,
+            })
+            .count();
+        assert_eq!(
+            submit_count, 1,
+            "login key form must render exactly one Submit button, got {submit_count}"
         );
     }
 
