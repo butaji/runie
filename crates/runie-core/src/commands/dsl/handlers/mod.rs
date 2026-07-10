@@ -5,6 +5,7 @@ pub mod help;
 pub mod model;
 pub mod registry;
 pub mod session;
+pub mod status;
 pub mod system;
 pub mod tool;
 
@@ -25,6 +26,7 @@ fn init_handler_registry() -> HandlerRegistry {
     tool::register_handlers(&mut registry);
     system::register_handlers(&mut registry);
     help::register_handlers(&mut registry);
+    status::register_handlers(&mut registry);
 
     // Register built-in handlers that are defined inline in model.rs
     registry.register("model", NamedHandler::Handler(model::handle_model));

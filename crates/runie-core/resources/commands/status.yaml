@@ -1,0 +1,9 @@
+# Status command
+name: status
+description: Show current session status (provider, model, thinking, permissions, context)
+category: Core
+sub: false
+triggers:
+  - /status
+type: handler
+handler: status
