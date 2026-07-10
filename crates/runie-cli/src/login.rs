@@ -10,7 +10,11 @@ use anyhow::{Context, Result};
 use std::io::{self, Write};
 
 /// Run the login command interactively.
-pub async fn run(provider_name: Option<String>, api_key: Option<String>) -> Result<()> {
+///
+/// The API key is always read from the interactive prompt (or the provider's
+/// env var by the user beforehand) — never from a command-line argument, since
+/// argv is visible via `ps` and shell history.
+pub async fn run(provider_name: Option<String>) -> Result<()> {
     let providers = runie_core::provider::known_providers();
 
     // If no provider specified, show interactive picker
@@ -36,15 +40,12 @@ pub async fn run(provider_name: Option<String>, api_key: Option<String>) -> Resu
         }
     };
 
-    // Get API key
-    let key = match api_key {
-        Some(k) => k,
-        None => {
-            println!("\nConfiguring {} ({})", provider.display_name, provider.key);
-            println!("Environment variable: {}", provider.env_var);
-            prompt_api_key(&provider)?
-        }
-    };
+    // Read the API key interactively (never from argv — avoids leaking it via
+    // `ps` or shell history). For non-interactive setups, the user can export
+    // the provider's env var instead.
+    println!("\nConfiguring {} ({})", provider.display_name, provider.key);
+    println!("Environment variable: {}", provider.env_var);
+    let key = prompt_api_key(&provider)?;
 
     // Store in keyring
     println!("\nStoring API key in OS keyring...");

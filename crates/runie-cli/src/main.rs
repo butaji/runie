@@ -48,14 +48,13 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Configure a provider with API key
+    /// Configure a provider with API key (key is read from an interactive prompt
+    /// or the provider's env var — never from argv, to avoid leaking it via
+    /// `ps` or shell history).
     Login {
         /// Provider name (e.g., openai, anthropic, minimax)
         #[arg(short, long)]
         provider: Option<String>,
-        /// API key (will prompt if not provided)
-        #[arg(short, long)]
-        api_key: Option<String>,
     },
     /// JSON stdin/stdout for scripting
     Json,
@@ -115,6 +114,13 @@ async fn main() {
     // Initialize tracing subscriber.
     runie_core::tracing_init::init();
 
+    // One-time migration: move any legacy plaintext ~/.runie/auth.json into
+    // the OS keyring and rename it to auth.json.bak. Best-effort — never abort
+    // startup if the keyring is unavailable (headless/CI).
+    if let Err(e) = runie_core::auth::migrate_legacy_auth() {
+        tracing::warn!("legacy auth migration skipped: {e}");
+    }
+
     // Install color-eyre for better error chains.
     color_eyre::install().expect("Failed to install color-eyre hook");
 
@@ -123,7 +129,7 @@ async fn main() {
     let result = match cli.command {
         Command::Print { prompt, sandbox } => run_print(&prompt, sandbox).await,
         Command::Inspect { json } => run_inspect(json).await,
-        Command::Login { provider, api_key } => run_login(provider, api_key).await,
+        Command::Login { provider } => run_login(provider).await,
         Command::Json => run_json().await,
         Command::Server { stdio, yolo } => run_server(stdio, yolo).await,
         Command::Mcp { command } => run_mcp(command).await,
@@ -145,8 +151,8 @@ async fn run_inspect(json: bool) -> Result<()> {
     inspect::run(json).await
 }
 
-async fn run_login(provider: Option<String>, api_key: Option<String>) -> Result<()> {
-    login::run(provider, api_key).await
+async fn run_login(provider: Option<String>) -> Result<()> {
+    login::run(provider).await
 }
 
 async fn run_print(prompt: &str, sandbox: bool) -> Result<()> {
@@ -213,6 +219,17 @@ mod tests {
     fn cli_parses_inspect_json() {
         let cli = Cli::try_parse_from(["runie", "inspect", "--json"]).unwrap();
         assert!(matches!(cli.command, Command::Inspect { json: true }));
+    }
+
+    /// `--api-key` (and its old `-a` short flag) must not be accepted on argv:
+    /// passing a secret on the command line leaks it via `ps` and shell history.
+    /// The key is read from the interactive prompt (or the provider env var).
+    #[test]
+    fn login_rejects_api_key_on_argv() {
+        let long = Cli::try_parse_from(["runie", "login", "--api-key", "sk-secret"]);
+        assert!(long.is_err(), "login must reject --api-key on argv");
+        let short = Cli::try_parse_from(["runie", "login", "-a", "sk-secret"]);
+        assert!(short.is_err(), "login must reject -a on argv");
     }
 
     #[test]
@@ -339,22 +356,15 @@ mod tests {
     #[test]
     fn cli_parses_login() {
         let cli = Cli::try_parse_from(["runie", "login"]).unwrap();
-        assert!(matches!(
-            cli.command,
-            Command::Login {
-                provider: None,
-                api_key: None
-            }
-        ));
+        assert!(matches!(cli.command, Command::Login { provider: None }));
     }
 
     #[test]
     fn cli_parses_login_with_provider() {
         let cli = Cli::try_parse_from(["runie", "login", "--provider", "openai"]).unwrap();
         match cli.command {
-            Command::Login { provider, api_key } => {
+            Command::Login { provider } => {
                 assert_eq!(provider, Some("openai".to_string()));
-                assert_eq!(api_key, None);
             }
             _ => panic!("Expected Login command"),
         }
@@ -362,12 +372,10 @@ mod tests {
 
     #[test]
     fn cli_parses_login_with_short_flags() {
-        let cli =
-            Cli::try_parse_from(["runie", "login", "-p", "anthropic", "-a", "sk-test"]).unwrap();
+        let cli = Cli::try_parse_from(["runie", "login", "-p", "anthropic"]).unwrap();
         match cli.command {
-            Command::Login { provider, api_key } => {
+            Command::Login { provider } => {
                 assert_eq!(provider, Some("anthropic".to_string()));
-                assert_eq!(api_key, Some("sk-test".to_string()));
             }
             _ => panic!("Expected Login command"),
         }

@@ -6,16 +6,17 @@
 unmaintained = "workspace"
 # Check unsound crates in all crates (will warn, not deny, for transitive issues)
 unsound = "workspace"
-# Ignore RUSTSEC until we audit
+# Ignore RUSTSEC until we audit. Each entry MUST carry a reason and a review
+# date; re-audit by 2026-09-30 and remove once git2 / quick-xml are bumped.
 ignore = [
     # git2 has unsound advisories; waiting for fff-search to update
-    { id = "RUSTSEC-2026-0183" },
-    { id = "RUSTSEC-2026-0184" },
+    { id = "RUSTSEC-2026-0183", reason = "git2 unsound; blocked on fff-search upgrade. Review by 2026-09-30." },
+    { id = "RUSTSEC-2026-0184", reason = "git2 unsound; blocked on fff-search upgrade. Review by 2026-09-30." },
 
     # quick-xml 0.39.4 from syntect (via tui-markdown) has DoS vulnerabilities
     # Upgrade requires updating syntect/tui-markdown dependencies
-    { id = "RUSTSEC-2026-0194" },
-    { id = "RUSTSEC-2026-0195" },
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.39.4 DoS via syntect/tui-markdown; upgrade pending upstream. Review by 2026-09-30." },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.39.4 DoS via syntect/tui-markdown; upgrade pending upstream. Review by 2026-09-30." },
 ]
 
 [licenses]
@@ -184,7 +185,7 @@ skip-tree = [
 ]
 
 [sources]
-unknown-registry = "warn"
-unknown-git = "warn"
+unknown-registry = "deny"
+unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = []

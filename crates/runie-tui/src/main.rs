@@ -64,6 +64,13 @@ async fn main() -> io::Result<()> {
     // Initialize tracing for TUI mode: JSON file logging + compact error console.
     tracing_init::init_tui();
 
+    // One-time migration: move any legacy plaintext ~/.runie/auth.json into
+    // the OS keyring and rename it to auth.json.bak. Best-effort — never abort
+    // startup if the keyring is unavailable (headless/CI).
+    if let Err(e) = runie_core::auth::migrate_legacy_auth() {
+        tracing::warn!("legacy auth migration skipped: {e}");
+    }
+
     let cli = Cli::parse();
     enable_mock_if_requested(cli.mock, cli.mock_onboarding, cli.mock_model.as_deref());
     if cli.dry_run || cli.preview {

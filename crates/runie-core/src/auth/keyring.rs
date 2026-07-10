@@ -11,8 +11,12 @@ use crate::auth::AuthToken;
 
 use super::store_trait::{KeyringStore, OsKeyringStore};
 
-/// Number of characters shown in a token preview when logging mismatches.
-const TOKEN_PREVIEW_LENGTH: usize = 8;
+/// Format the keyring mismatch error. Intentionally contains only lengths — the
+/// stored token is never sliced or interpolated, so a mismatch cannot leak part
+/// of the secret into logs or crash reports.
+fn format_keyring_mismatch(stored_len: usize, expected_len: usize) -> String {
+    format!("keyring returned a different token (stored len={stored_len}, expected len={expected_len})")
+}
 
 /// Set a provider token directly in the keyring (no instance state needed).
 /// This is used by the config migration to move plaintext keys to keyring.
@@ -31,11 +35,10 @@ pub fn set_and_verify_keyring(provider: &str, token: &str) -> anyhow::Result<()>
     match store.get(provider) {
         Ok(Some(stored)) if stored.expose_secret() == token => Ok(()),
         Ok(Some(stored)) => {
-            let s = stored.expose_secret();
+            let stored_len = stored.expose_secret().len();
             Err(anyhow::anyhow!(
-                "keyring returned different token (len={}): {:?}",
-                s.len(),
-                &s[..s.len().min(TOKEN_PREVIEW_LENGTH)]
+                "{}",
+                format_keyring_mismatch(stored_len, token.len())
             ))
         }
         Ok(None) => Err(anyhow::anyhow!("keyring retrieval returned None after set")),
@@ -107,12 +110,21 @@ pub fn migrate_legacy_auth() -> anyhow::Result<()> {
     let Some(path) = default_auth_path() else {
         return Ok(());
     };
+    migrate_legacy_auth_from(&path)
+}
 
+/// Migrate a specific legacy `auth.json` file to the keyring, then rename it to
+/// `auth.json.bak` so the plaintext secret is no longer at the well-known path.
+///
+/// Keyring writes are best-effort (a headless/CI host may have no keyring); the
+/// rename away from the plaintext path happens regardless, so a partially-
+/// migrated host still stops leaving secrets on disk. Exposed for tests.
+pub fn migrate_legacy_auth_from(path: &std::path::Path) -> anyhow::Result<()> {
     if !path.exists() {
         return Ok(());
     }
 
-    let json = std::fs::read_to_string(&path)?;
+    let json = std::fs::read_to_string(path)?;
     let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
 
     if let Some(obj) = raw.as_object() {
@@ -128,9 +140,67 @@ pub fn migrate_legacy_auth() -> anyhow::Result<()> {
     }
 
     let backup = path.with_extension("json.bak");
-    if let Err(e) = std::fs::rename(&path, &backup) {
+    if let Err(e) = std::fs::rename(path, &backup) {
         tracing::debug!("could not rename legacy auth file: {}", e);
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mismatch_message_contains_only_lengths() {
+        let msg = format_keyring_mismatch(40, 38);
+        assert!(msg.contains("stored len=40"), "{msg}");
+        assert!(msg.contains("expected len=38"), "{msg}");
+    }
+
+    /// A mismatch must never echo any token characters (no prefix/slice),
+    /// otherwise a keyring backend bug could leak part of a secret into logs.
+    #[test]
+    fn mismatch_message_does_not_leak_token_material() {
+        // Build a secret-shaped string at runtime so no real-looking key is ever
+        // committed to source. The helper never receives the token regardless;
+        // the message format itself must not contain any secret-shaped chars.
+        let prefix = "sk-";
+        let body = "FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE";
+        let secret = format!("{prefix}{body}");
+        let msg = format_keyring_mismatch(secret.len(), secret.len());
+        assert!(!msg.contains(body), "leaked token chars: {msg}");
+        assert!(!msg.contains(prefix), "leaked token prefix: {msg}");
+        assert!(!msg.contains("preview"), "{msg}");
+    }
+
+    /// Migrating a legacy `auth.json` must always rename it to `auth.json.bak`
+    /// so the plaintext secret no longer sits at the well-known path — even
+    /// when the keyring write fails (headless/CI host).
+    #[test]
+    fn migrate_legacy_auth_from_renames_plaintext_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        std::fs::write(
+            &path,
+            r#"{"openai":{"token":"sk-FAKEFAKEFAKEFAKE"},"anthropic":{"token":""}}"#,
+        )
+        .unwrap();
+
+        migrate_legacy_auth_from(&path).unwrap();
+
+        assert!(!path.exists(), "plaintext auth.json must be moved away");
+        let backup = path.with_extension("json.bak");
+        assert!(backup.exists(), "backup at auth.json.bak must exist");
+    }
+
+    /// No legacy file is a clean no-op (no error, no backup created).
+    #[test]
+    fn migrate_legacy_auth_from_missing_file_is_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        migrate_legacy_auth_from(&path).unwrap();
+        assert!(!path.exists());
+        assert!(!path.with_extension("json.bak").exists());
+    }
 }

@@ -15,7 +15,7 @@ name = "runie-tui"
 path = "src/main.rs"
 
 [dependencies]
-runie-core.workspace = true
+runie-core = { workspace = true, features = ["keyring"] }
 supports-color.workspace = true
 supports-hyperlinks.workspace = true
 runie-agent.workspace = true
