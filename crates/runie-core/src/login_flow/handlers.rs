@@ -296,6 +296,13 @@ fn sync_config_cache(
     if !api_key.is_empty() {
         if let Err(e) = crate::auth::set_keyring_value(provider, api_key) {
             tracing::warn!("failed to store api_key in keyring: {}", e);
+            // Surface to the user: a silent store failure shows up later as
+            // "API key is missing" at turn time. Name the env-var fallback.
+            let env_var = format!("{}_API_KEY", provider.to_uppercase());
+            state.warn(format!(
+                "Could not save the {provider} API key to the OS keychain ({e}). \
+                 Set {env_var} in your environment or grant Keychain access, then reconnect."
+            ));
         }
     }
 

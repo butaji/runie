@@ -95,19 +95,24 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
 pub(super) async fn load_and_emit(state: &mut ConfigActorState) {
     let effective = load_layers_async(state.path.clone(), state.project_path.clone()).await;
 
-    // Validate against the JSON schema. Emit error and keep defaults if invalid.
+    // Validate against the JSON schema and registry. Emit an error and keep the
+    // current config if the reloaded one is invalid.
+    //
+    // Important: do NOT emit `ConfigLoaded` on validation failure. The in-memory
+    // `AppState` projection may already hold a newer, eagerly-synced config (e.g.
+    // a provider the user just connected via the login flow, kept in sync by
+    // `sync_config_cache`). Re-emitting the previous `state.cfg` here would
+    // overwrite that projection with stale data — dropping providers and breaking
+    // `/model` ("No connected providers"). Keeping the current projection mirrors
+    // `reload_and_emit`, which also declines to emit on validation failure.
     if let Err(errors) = effective.validate_full() {
-        tracing::warn!("initial config validation failed: {:?}", errors);
+        tracing::warn!("config validation failed: {:?}", errors);
         state.emit(Event::Error {
             id: "config".to_owned(),
             message: format!(
-                "Config validation failed: {}. Using defaults.",
+                "Config validation failed: {}. Keeping current config.",
                 errors.join("; ")
             ),
-        });
-        // Keep the default config (already in state from pre_start), emit it.
-        state.emit(Event::ConfigLoaded {
-            config: Box::new(state.cfg.clone()),
         });
         return;
     }

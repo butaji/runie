@@ -13,7 +13,8 @@ use secrecy::{ExposeSecret, SecretString};
 /// 1. Environment variables
 /// 2. .env file (via dotenvy)
 /// 3. OS keyring
-/// 4. Config file
+/// 4. Legacy `auth.json` file (CI/headless fallback)
+/// 5. Config file
 ///
 /// API keys are stored as `SecretString` throughout the resolver to prevent
 /// accidental exposure in logs or error messages. The secret value is only
@@ -27,6 +28,11 @@ pub struct CredentialResolver {
     env: HashMap<String, SecretString>,
     /// Variables loaded from .env file via dotenvy.
     dotenv: HashMap<String, SecretString>,
+    /// Tokens loaded from the legacy `auth.json` file (provider -> token),
+    /// keyed by lowercased provider name. Used as a fallback when the OS
+    /// keyring is unavailable or unreadable (e.g. CI/headless, or a Keychain
+    /// access failure), matching `AuthStorage`'s keyring-or-file behaviour.
+    file_tokens: HashMap<String, SecretString>,
     /// Provider config entries (provider name -> (api_key, base_url)).
     entries: HashMap<String, (Option<SecretString>, Option<String>)>,
     /// Keyring storage backend (injectable for tests).
@@ -38,6 +44,7 @@ impl std::fmt::Debug for CredentialResolver {
         f.debug_struct("CredentialResolver")
             .field("env", &self.env)
             .field("dotenv", &self.dotenv)
+            .field("file_tokens", &self.file_tokens)
             .field("entries", &self.entries)
             .finish()
     }
@@ -60,6 +67,7 @@ impl CredentialResolver {
         Self {
             env,
             dotenv,
+            file_tokens: Self::load_auth_file(),
             entries: HashMap::new(),
             store: Self::default_store(),
         }
@@ -70,6 +78,7 @@ impl CredentialResolver {
         Self {
             env: HashMap::new(),
             dotenv: HashMap::new(),
+            file_tokens: HashMap::new(),
             entries: HashMap::new(),
             store: Self::default_store(),
         }
@@ -97,6 +106,7 @@ impl CredentialResolver {
         Self {
             env,
             dotenv,
+            file_tokens: Self::load_auth_file(),
             entries: HashMap::new(),
             store,
         }
@@ -110,6 +120,7 @@ impl CredentialResolver {
         Self {
             env: HashMap::new(),
             dotenv: HashMap::new(),
+            file_tokens: HashMap::new(),
             entries: HashMap::new(),
             store,
         }
@@ -128,6 +139,49 @@ impl CredentialResolver {
                 .collect(),
             Err(_) => HashMap::new(),
         }
+    }
+
+    /// Load tokens from the legacy `auth.json` file
+    /// (`dirs::data_dir()/runie/auth.json`), the same file `AuthStorage` uses as
+    /// its keyring fallback.
+    ///
+    /// Returns an empty map when the file is missing or unreadable. Provider
+    /// keys are lowercased so lookup is case-insensitive, matching config
+    /// resolution. This keeps credentials reachable when the OS keyring is
+    /// unavailable or unreadable (CI/headless, or a macOS Keychain access
+    /// failure) instead of failing a turn with `MissingApiKey`.
+    fn load_auth_file() -> HashMap<String, SecretString> {
+        // `RUNIE_AUTH_FILE` overrides the path, primarily so tests (and CI) can
+        // stay hermetic instead of reading the developer's real credentials.
+        // Falls back to the standard `dirs::data_dir()/runie/auth.json`.
+        let path = std::env::var_os("RUNIE_AUTH_FILE")
+            .map(std::path::PathBuf::from)
+            .or_else(|| dirs::data_dir().map(|d| d.join("runie").join("auth.json")));
+        let Some(path) = path else {
+            return HashMap::new();
+        };
+        Self::load_auth_file_from(&path)
+    }
+
+    fn load_auth_file_from(path: &std::path::Path) -> HashMap<String, SecretString> {
+        let mut out = HashMap::new();
+        let Ok(json) = std::fs::read_to_string(path) else {
+            return out;
+        };
+        let raw: serde_json::Value =
+            serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
+        if let Some(obj) = raw.as_object() {
+            for (provider, val) in obj {
+                let Some(token) = val.get("token").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                if token.is_empty() {
+                    continue;
+                }
+                out.insert(provider.to_lowercase(), SecretString::from(token.to_owned()));
+            }
+        }
+        out
     }
 
     /// Set a config entry for a provider.
@@ -167,7 +221,14 @@ impl CredentialResolver {
             return Some(token);
         }
 
-        // 4. Config file
+        // 4. Legacy auth.json file (CI/headless / keyring-unavailable fallback)
+        if let Some(token) = self.file_tokens.get(&provider.to_lowercase()) {
+            if !token.expose_secret().is_empty() {
+                return Some(token.clone());
+            }
+        }
+
+        // 5. Config file
         self.entries
             .get(&provider.to_lowercase())
             .and_then(|(api_key, _)| api_key.clone())
@@ -350,5 +411,67 @@ mod tests {
             resolver.resolve_api_key("config_test").as_ref(),
             "mock-token",
         );
+    }
+
+    #[test]
+    fn load_auth_file_from_parses_and_lowercases() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        std::fs::write(
+            &path,
+            r#"{"MiniMax":{"token":"mm-file-token","expires_at":0},"Empty":{"token":""}}"#,
+        )
+        .unwrap();
+
+        let tokens = CredentialResolver::load_auth_file_from(&path);
+        assert_secret_eq(tokens.get("minimax"), "mm-file-token");
+        assert!(tokens.get("empty").is_none(), "empty tokens must be skipped");
+    }
+
+    #[test]
+    fn load_auth_file_from_missing_returns_empty() {
+        let path = std::path::Path::new("/definitely/not/here/runie_auth_missing.json");
+        assert!(CredentialResolver::load_auth_file_from(path).is_empty());
+    }
+
+    #[test]
+    fn resolver_falls_back_to_auth_file() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        let mut resolver = CredentialResolver::with_store_empty_env(mock);
+        resolver
+            .file_tokens
+            .insert("minimax".to_owned(), ss("file-token"));
+
+        assert_secret_eq(resolver.resolve_api_key("minimax").as_ref(), "file-token");
+    }
+
+    #[test]
+    fn resolver_prefers_keyring_over_auth_file() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        mock.set("minimax", "keyring-token").unwrap();
+
+        let mut resolver = CredentialResolver::with_store_empty_env(Arc::clone(&mock));
+        resolver
+            .file_tokens
+            .insert("minimax".to_owned(), ss("file-token"));
+
+        // Keyring should win over the auth.json file
+        assert_secret_eq(
+            resolver.resolve_api_key("minimax").as_ref(),
+            "keyring-token",
+        );
+    }
+
+    #[test]
+    fn resolver_prefers_auth_file_over_config() {
+        let mock: Arc<dyn KeyringStore> = Arc::new(MockKeyringStore::new());
+        let mut resolver = CredentialResolver::with_store_empty_env(mock);
+        resolver
+            .file_tokens
+            .insert("minimax".to_owned(), ss("file-token"));
+        resolver.set_config("minimax", Some(ss("config-token")), None);
+
+        // auth.json file should win over config
+        assert_secret_eq(resolver.resolve_api_key("minimax").as_ref(), "file-token");
     }
 }

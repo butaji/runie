@@ -254,7 +254,9 @@ fn registry_validation_rejects_unknown_provider() {
 }
 
 #[test]
-fn registry_validation_rejects_unknown_model_for_provider() {
+fn registry_validation_accepts_unlisted_model_for_known_provider() {
+    // A known provider with a default model the bundled registry does not list
+    // must be accepted: the registry model list is advisory, not exhaustive.
     let config = Config {
         provider: Some("openai".to_string()),
         models: crate::config::ModelsSection {
@@ -264,12 +266,9 @@ fn registry_validation_rejects_unknown_model_for_provider() {
         ..Config::default()
     };
     let errors = validate_registry(&config);
-    assert!(!errors.is_empty(), "unknown model should fail");
     assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("nonexistent-model") && e.contains("not found")),
-        "error should mention model not found: {:?}",
+        errors.is_empty(),
+        "unlisted model for a known provider should be accepted: {:?}",
         errors
     );
 }
@@ -387,7 +386,8 @@ fn registry_validation_accepts_mock_prefixed_model_when_mock_enabled() {
 }
 
 #[test]
-fn registry_validation_rejects_unknown_prefixed_model() {
+fn registry_validation_accepts_unlisted_prefixed_model_for_known_provider() {
+    // Correctly-prefixed but unlisted model for a known provider is accepted.
     let config = Config {
         provider: Some("minimax".to_string()),
         models: crate::config::ModelsSection {
@@ -398,8 +398,29 @@ fn registry_validation_rejects_unknown_prefixed_model() {
     };
     let errors = validate_registry(&config);
     assert!(
-        errors.iter().any(|e| e.contains("not-a-real-model")),
-        "unknown prefixed model should fail: {:?}",
+        errors.is_empty(),
+        "unlisted prefixed model for a known provider should be accepted: {:?}",
+        errors
+    );
+}
+
+#[test]
+fn registry_validation_accepts_minimax_highspeed_default_model() {
+    // Regression: "MiniMax-M2.7-highspeed" is a real upstream model (returned by
+    // the API) that the bundled registry did not list; it must not fail config
+    // validation and block model switching / reloads.
+    let config = Config {
+        provider: Some("minimax".to_string()),
+        models: crate::config::ModelsSection {
+            default: Some("MiniMax-M2.7-highspeed".to_string()),
+            scoped: None,
+        },
+        ..Config::default()
+    };
+    let errors = validate_registry(&config);
+    assert!(
+        errors.is_empty(),
+        "MiniMax-M2.7-highspeed default should be accepted: {:?}",
         errors
     );
 }

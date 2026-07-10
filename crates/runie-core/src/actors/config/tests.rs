@@ -4,7 +4,11 @@ use tempfile::TempDir;
 
 use crate::actors::RactorConfigActor;
 use crate::bus::EventBus;
+use crate::commands::dsl::handlers::model::handle_model;
+use crate::commands::{CommandResult, DialogType};
+use crate::config::ModelProvider;
 use crate::event::Event;
+use crate::model::{AppState, ModelSource};
 
 fn temp_config_path() -> (TempDir, std::path::PathBuf) {
     let dir = TempDir::new().unwrap();
@@ -14,9 +18,12 @@ fn temp_config_path() -> (TempDir, std::path::PathBuf) {
 
 #[tokio::test]
 async fn config_actor_loads_and_emits_config_loaded() {
+    // Use an isolated empty config so the test does not depend on the
+    // developer's real `~/.runie/config.toml` validating cleanly.
+    let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, None, None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
 
     let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
         .await
@@ -292,9 +299,11 @@ async fn tracing_event_emitted_on_config_load() {
     let dispatcher = tracing::dispatcher::Dispatch::new(Registry::default().with(layer));
     let guard = tracing::dispatcher::set_global_default(dispatcher);
 
+    // Isolated empty config: do not depend on the developer's real config validating.
+    let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, None, None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
 
     // Verify ConfigLoaded fact is emitted.
     let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
@@ -321,3 +330,108 @@ async fn tracing_event_emitted_on_config_load() {
 }
 
 // CaptureLayer is defined above.
+
+/// Regression: connecting a provider whose config fails `validate_full` (e.g. a
+/// custom/OpenAI-compatible provider not in the bundled registry, or an
+/// aggregator whose models carry an upstream prefix) must not break `/model`.
+///
+/// Root cause (fixed): `load_and_emit` used to re-emit the *previous* config as
+/// `ConfigLoaded` when the reloaded config failed validation. `AppState::apply_config`
+/// then overwrote the eagerly-synced `model_providers` with that stale/empty map,
+/// so `/model` reported "No connected providers" even though the user had just
+/// connected one (and the input box still showed the active model).
+///
+/// The fix makes `load_and_emit` decline to emit `ConfigLoaded` on validation
+/// failure (matching `reload_and_emit`), so the in-memory projection is preserved.
+#[tokio::test]
+async fn save_provider_that_fails_validation_does_not_clobber_projection() {
+    use tokio::time::{timeout, Duration, Instant};
+
+    let (_dir, path) = temp_config_path();
+    let bus = EventBus::<Event>::new(32);
+    let mut sub = bus.subscribe();
+    let (handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path.clone()), None)
+        .await
+        .unwrap();
+
+    // Drain initial load.
+    let _ = timeout(Duration::from_secs(2), sub.recv()).await;
+
+    // A provider NOT in the bundled registry -> `validate_full` fails on reload.
+    handle
+        .save_provider(
+            "my-custom-llm".into(),
+            "http://localhost:11434/v1".into(),
+            String::new(),
+            vec!["foo-model".into(), "bar-model".into()],
+        )
+        .await;
+
+    // Collect everything the actor emits in response to the save. Stop once the
+    // bus goes idle (no events for 150ms) or the safety deadline elapses.
+    let mut events = Vec::new();
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while Instant::now() < deadline {
+        match timeout(Duration::from_millis(150), sub.recv()).await {
+            Ok(Ok(evt)) => events.push(evt),
+            _ => break,
+        }
+    }
+
+    let saw_config_error = events
+        .iter()
+        .any(|e| matches!(e, Event::Error { id, .. } if id == "config"));
+    let saw_config_loaded = events
+        .iter()
+        .any(|e| matches!(e, Event::ConfigLoaded { .. }));
+
+    assert!(
+        saw_config_error,
+        "validation failure should still surface an Error event, got: {events:?}"
+    );
+    assert!(
+        !saw_config_loaded,
+        "actor must NOT emit a stale ConfigLoaded on validation failure \
+         (it would clobber the in-memory projection); got: {events:?}"
+    );
+
+    // The provider is still persisted to disk; only the stale broadcast is gone.
+    let raw = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        raw.contains("my-custom-llm"),
+        "provider should be persisted to disk despite validation failure:\n{raw}"
+    );
+
+    // End-to-end: an AppState that the login flow just eagerly synced (mimicking
+    // `sync_config_cache` + activating a model) must survive the actor's events.
+    let mut state = AppState::default();
+    state.config_mut().model_providers_mut().insert(
+        "my-custom-llm".into(),
+        ModelProvider {
+            provider_type: None,
+            base_url: "http://localhost:11434/v1".into(),
+            models: vec!["foo-model".into(), "bar-model".into()],
+        },
+    );
+    state.config.current_provider = "my-custom-llm".into();
+    state.config.current_model = "foo-model".into();
+    state.config.model_source = ModelSource::UserOverride;
+
+    for evt in events {
+        state.update(evt);
+    }
+
+    assert!(
+        state
+            .configured_providers()
+            .iter()
+            .any(|(p, _, _)| p == "my-custom-llm"),
+        "eagerly-synced provider must survive the actor's validation-failure response"
+    );
+
+    let result = handle_model(&mut state, "");
+    assert!(
+        matches!(result, CommandResult::OpenDialog(DialogType::ModelSelector)),
+        "/model must open the selector, not report 'No connected providers'; got {result:?}"
+    );
+}

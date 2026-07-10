@@ -282,6 +282,13 @@ fn dispatcher_handles_all_variants() {
                 request_id: String::new(),
                 tool: String::new(),
             },
+            Event::PermissionSessionAllow { .. } => Event::PermissionSessionAllow {
+                request_id: String::new(),
+                tool: String::new(),
+            },
+            Event::PermissionOnce { .. } => Event::PermissionOnce {
+                request_id: String::new(),
+            },
 
             // TurnActor
             Event::TurnStarted { .. } => Event::TurnStarted {

@@ -37,27 +37,18 @@ fn check_unknown_fields(value: &Value, errors: &mut Vec<String>) {
 
 /// Validate that provider/model references exist in the registry.
 pub fn validate_registry(config: &crate::config::Config) -> Vec<String> {
-    use crate::provider::registry::{find_model_for_provider, find_provider};
+    use crate::provider::registry::find_provider;
 
     let mut errors = Vec::new();
-    errors.append(&mut validate_default_provider_model(
-        config,
-        find_provider,
-        find_model_for_provider,
-    ));
+    errors.append(&mut validate_default_provider_model(config, find_provider));
     errors.append(&mut validate_configured_providers(config, find_provider));
-    errors.append(&mut validate_scoped_models(
-        config,
-        find_provider,
-        find_model_for_provider,
-    ));
+    errors.append(&mut validate_scoped_models(config));
     errors
 }
 
 fn validate_default_provider_model(
     config: &crate::config::Config,
     find_provider: impl Fn(&str) -> Option<crate::provider::ProviderMeta>,
-    find_model_for_provider: impl Fn(&str, &str) -> Option<crate::provider::ModelMeta>,
 ) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(provider) = &config.provider else {
@@ -78,18 +69,19 @@ fn validate_default_provider_model(
     if model.is_empty() {
         return errors;
     }
+    // A provider-prefixed default model must name THIS provider. We deliberately
+    // do NOT require the model to appear in the bundled registry list: that list
+    // is advisory and inevitably stale (real upstream models ship faster than we
+    // enumerate them, and OpenAI-compatible/custom providers are not fully listed).
+    // Rejecting the whole config over an unlisted model blocked legitimate model
+    // switching and reloads. Structural mistakes (unknown provider, or a model
+    // prefixed for a DIFFERENT provider) are still caught below.
     if let Some((provider_prefix, _model_name)) = model.split_once('/') {
         if provider_prefix != *provider {
             errors.push(format!(
                 "model '{model}': provider mismatch (expected '{provider}')"
             ));
-            return errors;
         }
-    }
-    if find_model_for_provider(provider, model).is_none() {
-        errors.push(format!(
-            "model '{model}': not found for provider '{provider}'"
-        ));
     }
     errors
 }
@@ -123,11 +115,7 @@ fn validate_configured_providers(
     errors
 }
 
-fn validate_scoped_models(
-    config: &crate::config::Config,
-    _find_provider: impl Fn(&str) -> Option<crate::provider::ProviderMeta>,
-    find_model_for_provider: impl Fn(&str, &str) -> Option<crate::provider::ModelMeta>,
-) -> Vec<String> {
+fn validate_scoped_models(config: &crate::config::Config) -> Vec<String> {
     use crate::provider::registry::find_provider;
     let mut errors = Vec::new();
     let Some(scoped) = &config.models.scoped else {
@@ -144,13 +132,9 @@ fn validate_scoped_models(
             errors.push(format!(
                 "[models.scoped]: model '{model}' references unknown provider '{provider}'"
             ));
-            continue;
         }
-        if find_model_for_provider(provider, model).is_none() {
-            errors.push(format!(
-                "[models.scoped]: model '{model}' not found for provider '{provider}'"
-            ));
-        }
+        // As with the default model, we do not require scoped models to be
+        // enumerated in the bundled registry list (see validate_default_provider_model).
     }
     errors
 }

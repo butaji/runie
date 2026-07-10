@@ -258,7 +258,10 @@ fn test_built_provider_missing_api_key_returns_err() {
     // Use env_lock for test isolation
     let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::remove_var("OPENAI_API_KEY");
+    // Isolate from the developer's real auth.json so the resolver finds no key.
+    std::env::set_var("RUNIE_AUTH_FILE", "/dev/null/nonexistent_runie_auth.json");
     let result = build_provider_with_config("openai", "gpt-4o-mini", &Config::default());
+    std::env::remove_var("RUNIE_AUTH_FILE");
     match result {
         Err(ProviderError::MissingApiKey(ref err)) => assert_eq!(err.env_var, "OPENAI_API_KEY"),
         other => panic!("expected MissingApiKey error, got: {:?}", other),
