@@ -22,6 +22,15 @@ fn with_exclusive_lock<F>(path: &Path, mut f: F) -> anyhow::Result<()>
 where
     F: FnMut(&mut crate::config::Config),
 {
+    // Ensure the parent directory (e.g. ~/.runie) exists — first-run onboarding
+    // writes config before it has been created. `OpenOptions::create(true)` only
+    // creates the file, not missing parents, so without this the open fails with
+    // "No such file or directory" and the write is lost.
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create config dir: {}", parent.display()))?;
+    }
+
     // Open file before acquiring lock
     let mut file = fs::OpenOptions::new()
         .read(true)
@@ -213,5 +222,33 @@ fn default_empty_provider() -> ModelProvider {
         provider_type: None,
         base_url: String::new(),
         models: Vec::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// First-run onboarding writes config before `~/.runie/` exists. The write
+    /// must create the missing parent directory instead of failing with
+    /// "failed to open config" (the symptom that stranded the key un-wired).
+    #[test]
+    fn write_creates_missing_parent_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir
+            .path()
+            .join("absent")
+            .join(".runie")
+            .join("config.toml");
+        assert!(
+            !path.parent().unwrap().exists(),
+            "precondition: parent dir must be missing"
+        );
+
+        set_theme_at_path(&path, "runie").expect("config write must create missing parent dir");
+
+        assert!(path.exists(), "config.toml must be created");
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("runie"), "theme not persisted: {content}");
     }
 }
