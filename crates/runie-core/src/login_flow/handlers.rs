@@ -291,19 +291,17 @@ fn sync_config_cache(
     api_key: &str,
     models: &[String],
 ) {
-    // Store api_key in keyring (never in config)
-    #[cfg(feature = "keyring")]
-    if !api_key.is_empty() {
-        if let Err(e) = crate::auth::set_keyring_value(provider, api_key) {
-            tracing::warn!("failed to store api_key in keyring: {}", e);
-            // Surface to the user: a silent store failure shows up later as
-            // "API key is missing" at turn time. Name the env-var fallback.
-            let env_var = format!("{}_API_KEY", provider.to_uppercase());
-            state.warn(format!(
-                "Could not save the {provider} API key to the OS keychain ({e}). \
-                 Set {env_var} in your environment or grant Keychain access, then reconnect."
-            ));
-        }
+    // Store api_key via AuthStorage (keyring when available, auth.json file
+    // fallback otherwise; honors RUNIE_AUTH_FILE). Never written to config.toml.
+    if let Err(e) = crate::auth::persist_provider_api_key(provider, api_key) {
+        tracing::warn!("failed to store api_key for {provider}: {e}");
+        // Surface to the user: a silent store failure shows up later as
+        // "API key is missing" at turn time. Name the env-var fallback.
+        let env_var = format!("{}_API_KEY", provider.to_uppercase());
+        state.warn(format!(
+            "Could not save the {provider} API key ({e}). \
+             Set {env_var} in your environment, then reconnect."
+        ));
     }
 
     let providers = state.config_mut().model_providers_mut();

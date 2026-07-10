@@ -62,6 +62,14 @@ impl AuthStorage {
 
     /// Load storage, trying keyring first then falling back to file.
     pub fn load() -> Self {
+        // `RUNIE_AUTH_FILE` forces file mode at the given path, mirroring
+        // `CredentialResolver::load_auth_file`. This keeps tests/CI hermetic and
+        // gives a deterministic file fallback when the OS keyring is unavailable
+        // or locked (headless/tmux), so a freshly logged-in key is not lost.
+        if let Some(path) = std::env::var_os("RUNIE_AUTH_FILE").map(PathBuf::from) {
+            return Self::load_from(&path);
+        }
+
         let mut storage = Self::new();
 
         #[cfg(feature = "keyring")]
@@ -243,6 +251,23 @@ impl AuthStorage {
     }
 }
 
+/// Persist a provider API key through [`AuthStorage`]: keyring when available,
+/// the auth.json file otherwise, honoring `RUNIE_AUTH_FILE` for hermetic
+/// file-mode persistence. No-op when `api_key` is empty so callers do not have
+/// to guard it.
+///
+/// This is the single write path used by the login flow; it guarantees the key
+/// survives on hosts where the OS keyring is unavailable or locked, instead of
+/// being lost and surfacing later as a `MissingApiKey` turn error.
+pub fn persist_provider_api_key(provider: &str, api_key: &str) -> anyhow::Result<()> {
+    if api_key.is_empty() {
+        return Ok(());
+    }
+    let mut storage = AuthStorage::load();
+    storage.set(provider, api_key, None);
+    storage.save()
+}
+
 /// PartialEq compares tokens by exposing them — acceptable here since both sides
 /// are in-memory and we are not logging them.
 impl PartialEq for AuthToken {
@@ -257,6 +282,12 @@ impl PartialEq for AuthToken {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // `AuthStorage::load()` and `CredentialResolver::new()` both read the
+    // process-global `RUNIE_AUTH_FILE` env var, so tests that override it must
+    // be serialized — otherwise two tests racing on the var would write to and
+    // read from each other's temp file. Mirrors the `ENV_LOCK` in `trust.rs`.
+    static AUTH_FILE_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     fn tmp_storage() -> AuthStorage {
         let id = std::time::SystemTime::now()
@@ -374,5 +405,54 @@ mod tests {
         // Direct access to .token gives the SecretString wrapper, not the value
         let _secret = &token.token;
         // Cannot accidentally compare SecretString to &str without ExposeSecret
+    }
+
+    /// `AuthStorage::load()` must honor `RUNIE_AUTH_FILE` by switching to file
+    /// mode at that path, so a token persisted through the storage layer lands
+    /// in the file and is reachable by the resolver's priority-4 file fallback.
+    ///
+    /// Regression for ISSUE A (write side): previously `load()` ignored the env
+    /// var and always tried the real keyring, so a login in a headless/tmux
+    /// session (locked keychain) lost the key entirely.
+    #[test]
+    fn auth_storage_load_honors_runie_auth_file_env() {
+        use secrecy::ExposeSecret;
+
+        let _guard = AUTH_FILE_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        let _ = std::fs::remove_file(&path);
+
+        // Force file mode at our temp path, and keep a real MINIMAX_API_KEY in
+        // the runner environment from winning the resolver's priority-1 check.
+        std::env::set_var("RUNIE_AUTH_FILE", &path);
+        std::env::remove_var("MINIMAX_API_KEY");
+
+        let mut store = AuthStorage::load();
+        assert!(
+            !store.is_keyring_available(),
+            "RUNIE_AUTH_FILE must force file mode (keyring unavailable)"
+        );
+        store.set("minimax", "sk-test", None);
+        store.save().unwrap();
+
+        // The temp auth.json must now contain the provider entry.
+        let json = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            json.contains("minimax"),
+            "auth.json should contain a minimax entry, got: {json}"
+        );
+
+        // A fresh resolver reading the same file must resolve the key via the
+        // priority-4 file fallback (env/dotenv/keyring are all empty here).
+        let resolver = super::super::CredentialResolver::new();
+        let resolved = resolver
+            .resolve_api_key("minimax")
+            .expect("minimax key should resolve from auth.json");
+        assert_eq!(resolved.expose_secret(), "sk-test");
+
+        std::env::remove_var("RUNIE_AUTH_FILE");
+        drop(_guard);
     }
 }
