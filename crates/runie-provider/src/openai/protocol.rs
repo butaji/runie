@@ -299,7 +299,11 @@ impl ProviderProtocol for OpenAiProtocol {
 
     fn on_halt(&self, state: Self::State) -> Vec<ProviderEvent> {
         let mut new_state = state;
-        flush_tool_calls(&mut new_state)
+        let mut events = flush_tool_calls(&mut new_state);
+        // Emit Finish to ensure the stream always terminates properly.
+        // This handles cases where SSE stream ends without a terminal frame (e.g., data: [DONE]).
+        events.extend(new_state.lifecycle.finish(StopReason::Stop));
+        events
     }
 
     fn terminal(&self, frame: &Self::Frame) -> bool {

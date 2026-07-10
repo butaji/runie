@@ -72,9 +72,21 @@ fn openai_event_stream(
             }
         };
         let mut es = Box::pin(es);
-        let state = stream_sse_events(&mut es).await;
-        tracing::debug!("SSE stream completed");
-        for event in OpenAiProtocol::new().on_halt(state) { yield Ok(event); }
+        let (state, streamed_events) = stream_sse_events(&mut es).await;
+        tracing::debug!("SSE stream completed with state");
+        // Yield every event produced while parsing SSE frames first. These must
+        // be preserved even when the stream ends without `data: [DONE]` (e.g.
+        // minimax closing the connection after the last chunk).
+        for event in streamed_events {
+            tracing::debug!(event = ?event, "yielding event");
+            yield Ok(event);
+        }
+        let halt_events = OpenAiProtocol::new().on_halt(state);
+        tracing::debug!(events_count = halt_events.len(), "on_halt events");
+        for event in halt_events { 
+            tracing::debug!(event = ?event, "yielding event");
+            yield Ok(event); 
+        }
     }
 }
 
@@ -139,15 +151,19 @@ async fn build_eventsource_with_retry(
     .await
 }
 
-/// Process SSE events and yield provider events.
+/// Process SSE events and return the accumulated protocol state plus every
+/// provider event produced while parsing frames. Returning the events (rather
+/// than dropping them) ensures content survives a stream that ends without a
+/// terminal `data: [DONE]` frame.
 async fn stream_sse_events(
     es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>>
               + Unpin),
-) -> OpenAiState {
+) -> (OpenAiState, Vec<ProviderEvent>) {
     let span = tracing::debug_span!("stream_sse_events");
     async move {
         let protocol = OpenAiProtocol::new();
         let mut state = OpenAiState::default();
+        let mut events = Vec::new();
         let mut event_count = 0usize;
 
         while let Some(result) = futures::StreamExt::next(&mut *es).await {
@@ -155,7 +171,7 @@ async fn stream_sse_events(
                 Some(Ok(l)) => l,
                 Some(Err(e)) => {
                     tracing::warn!(error = %e, "SSE stream error");
-                    return state;
+                    return (state, events);
                 }
                 None => continue,
             };
@@ -165,11 +181,15 @@ async fn stream_sse_events(
                     event_count += 1;
                     tracing::trace!(event_count = event_count, "processing SSE frame");
                     if protocol.terminal(&frame) {
-                        let (new_state, _) = protocol.step(state, frame);
+                        let (new_state, frame_events) = protocol.step(state, frame);
+                        tracing::debug!(events = ?frame_events, "terminal frame events");
+                        events.extend(frame_events);
                         tracing::debug!(total_events = event_count, "SSE stream terminated");
-                        return new_state;
+                        return (new_state, events);
                     }
-                    let (new_state, _) = protocol.step(state, frame);
+                    let (new_state, frame_events) = protocol.step(state, frame);
+                    tracing::debug!(events = ?frame_events, "chunk events");
+                    events.extend(frame_events);
                     state = new_state;
                 }
                 Some(Err(err)) => {
@@ -182,7 +202,7 @@ async fn stream_sse_events(
             }
         }
         tracing::debug!(total_events = event_count, "SSE stream ended");
-        state
+        (state, events)
     }
     .instrument(span)
     .await
@@ -351,6 +371,53 @@ pub mod tests {
             .filter(|e| matches!(e, ProviderEvent::ThinkingStart { id } if id == "reasoning"))
             .collect();
         assert_eq!(thinking_starts.len(), 1);
+    }
+
+    /// Build an `Ok(Event::Message)` item carrying the given SSE data line.
+    fn sse_message(data: &str) -> Result<reqwest_eventsource::Event, reqwest_eventsource::Error> {
+        let mut event = reqwest_eventsource::Event::Message(Default::default());
+        if let reqwest_eventsource::Event::Message(ref mut m) = event {
+            m.data = data.to_string();
+        }
+        Ok(event)
+    }
+
+    /// Regression test: when the SSE stream ends unexpectedly (no `data: [DONE]`,
+    /// e.g. minimax closing the connection after the last chunk), the content
+    /// already streamed MUST still be yielded. Previously, `stream_sse_events`
+    /// discarded the events returned by `protocol.step()` and only the final
+    /// `on_halt` events (just `Finish`) survived, so the assistant's text was
+    /// lost.
+    #[tokio::test]
+    async fn stream_sse_events_yields_content_when_stream_ends_without_done() {
+        let items: Vec<
+            Result<reqwest_eventsource::Event, reqwest_eventsource::Error>,
+        > = vec![
+            sse_message(r#"{"choices":[{"delta":{"content":"Hello"}}]}"#),
+            sse_message(r#"{"choices":[{"delta":{"content":" world"}}]}"#),
+            // Stream closes without a terminal `data: [DONE]` frame.
+            Err(reqwest_eventsource::Error::StreamEnded),
+        ];
+        let mut stream = futures::stream::iter(items);
+
+        let (state, streamed_events) = stream_sse_events(&mut stream).await;
+        let mut all = streamed_events;
+        all.extend(OpenAiProtocol::new().on_halt(state));
+
+        assert!(
+            all.iter()
+                .any(|e| matches!(e, ProviderEvent::TextDelta(d) if d == "Hello")),
+            "expected TextDelta(\"Hello\") to survive the truncated stream, got: {all:?}"
+        );
+        assert!(
+            all.iter()
+                .any(|e| matches!(e, ProviderEvent::TextDelta(d) if d == " world")),
+            "expected TextDelta(\" world\") to survive the truncated stream, got: {all:?}"
+        );
+        assert!(
+            all.iter().any(|e| matches!(e, ProviderEvent::Finish { .. })),
+            "expected a Finish event to terminate the stream, got: {all:?}"
+        );
     }
 
     /// Layer 4: OpenAI SSE stream accumulates to canonical ToolCall.
