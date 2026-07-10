@@ -3,17 +3,37 @@ source: crates/runie-provider/tests/minimax_replay.rs
 expression: events
 ---
 [
+    ThinkingStart {
+        id: "reasoning",
+    },
+    ThinkingDelta(
+        "\nThe user wants me to read the README.md file. Let me do that.\n",
+    ),
     TextStart {
         id: "text",
     },
     TextDelta(
-        "<think>\nThe user",
+        "\n\n\n",
     ),
-    TextDelta(
-        " wants me to read the README.md file. Let me do that.\n</think>\n\n\n<minimax:tool_call>\n<invoke name=\"read_file\">\n<parameter name=\"path\">README.md</parameter>\n</invoke>\n</minimax:tool_call>",
-    ),
+    ToolCallStart {
+        id: "content_tool_0",
+        name: "read_file",
+    },
+    ToolCallInputDelta {
+        id: "content_tool_0",
+        delta: "{\"path\":\"README.md\"}",
+    },
+    ToolCallEnd {
+        id: "content_tool_0",
+    },
     TextEnd {
         id: "text",
+    },
+    ThinkingEnd {
+        id: "reasoning",
+    },
+    Finish {
+        reason: Stop,
     },
     Finish {
         reason: Stop,

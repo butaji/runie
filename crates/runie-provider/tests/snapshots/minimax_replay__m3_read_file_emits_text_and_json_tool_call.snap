@@ -3,41 +3,46 @@ source: crates/runie-provider/tests/minimax_replay.rs
 expression: events
 ---
 [
-    TextStart {
-        id: "text",
-    },
-    TextDelta(
-        "<think>\nThe user is",
-    ),
     ThinkingStart {
         id: "reasoning",
     },
     ThinkingDelta(
         "The user is",
     ),
-    TextDelta(
-        " asking me to read a file and quote its exact contents. I should use the read_file tool to do this. However, I notice the user mentioned a tool name \"read_file\" - I should use the correct tool name from my available tools",
-    ),
     ThinkingDelta(
         " asking me to read a file and quote its exact contents. I should use the read_file tool to do this. However, I notice the user mentioned a tool name \"read_file\" - I should use the correct tool name from my available tools",
-    ),
-    TextDelta(
-        ". Looking at my tools, I have \"read_file\" available.\n\nLet me read the file.",
     ),
     ThinkingDelta(
         ". Looking at my tools, I have \"read_file\" available.\n\nLet me read the file.",
     ),
-    TextDelta(
-        "\n</think>\n\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"/tmp/runie_minimax_notes_99892.txt\"}}",
+    ThinkingDelta(
+        "\nThe user is asking me to read a file and quote its exact contents. I should use the read_file tool to do this. However, I notice the user mentioned a tool name \"read_file\" - I should use the correct tool name from my available tools. Looking at my tools, I have \"read_file\" available.\n\nLet me read the file.\n",
     ),
+    TextStart {
+        id: "text",
+    },
     TextDelta(
-        "",
+        "\n\n",
     ),
+    ToolCallStart {
+        id: "content_tool_0",
+        name: "read_file",
+    },
+    ToolCallInputDelta {
+        id: "content_tool_0",
+        delta: "{\"path\":\"/tmp/runie_minimax_notes_99892.txt\"}",
+    },
+    ToolCallEnd {
+        id: "content_tool_0",
+    },
     TextEnd {
         id: "text",
     },
     ThinkingEnd {
         id: "reasoning",
+    },
+    Finish {
+        reason: Stop,
     },
     Finish {
         reason: Stop,

@@ -3,35 +3,43 @@ source: crates/runie-provider/tests/minimax_replay.rs
 expression: events
 ---
 [
-    TextStart {
-        id: "text",
-    },
-    TextDelta(
-        "<think>\nThe user wants to list files in the",
-    ),
     ThinkingStart {
         id: "reasoning",
     },
     ThinkingDelta(
         "The user wants to list files in the",
     ),
-    TextDelta(
-        " current directory. I'll use the list_dir tool.",
-    ),
     ThinkingDelta(
         " current directory. I'll use the list_dir tool.",
     ),
-    TextDelta(
-        "\n</think>\n\n{\"name\": \"list_dir\", \"arguments\": {\"path\": \".\"}}",
+    ThinkingDelta(
+        "\nThe user wants to list files in the current directory. I'll use the list_dir tool.\n",
     ),
+    TextStart {
+        id: "text",
+    },
     TextDelta(
-        "",
+        "\n\n",
     ),
+    ToolCallStart {
+        id: "content_tool_0",
+        name: "list_dir",
+    },
+    ToolCallInputDelta {
+        id: "content_tool_0",
+        delta: "{\"path\":\".\"}",
+    },
+    ToolCallEnd {
+        id: "content_tool_0",
+    },
     TextEnd {
         id: "text",
     },
     ThinkingEnd {
         id: "reasoning",
+    },
+    Finish {
+        reason: Stop,
     },
     Finish {
         reason: Stop,

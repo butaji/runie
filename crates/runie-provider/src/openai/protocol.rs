@@ -5,6 +5,9 @@
 use super::types::{ChunkJson, ToolCallJson};
 use crate::protocol::ProviderProtocol;
 use runie_core::provider_event::{ProviderEvent, StopReason};
+use runie_core::tool::shim::json::find_object_end;
+use runie_core::tool::shim::{is_tool_call_value, parse_minimax_tool_calls};
+use runie_core::tool::ParsedToolCall;
 use std::collections::{BTreeMap, HashSet};
 
 // ============================================================================
@@ -166,6 +169,336 @@ mod lifecycle_tests {
     }
 }
 
+// ============================================================================
+// Streaming content filter (MiniMax reasoning + tool calls inside content)
+// ============================================================================
+//
+// MiniMax puts reasoning (`<think>...</think>`) and tool calls
+// (`<minimax:tool_call>...`, `<tool_call>...`, or inline
+// `{"name","arguments"}` JSON) INSIDE `delta.content`. This filter routes those
+// to the thinking / structured-tool paths so the live feed never renders the
+// raw markup. It is a pure passthrough until a MiniMax marker is seen, so other
+// OpenAI-compatible providers are unaffected.
+
+/// A segment produced by [`ContentFilter`].
+#[derive(Debug)]
+enum ContentSegment {
+    /// Plain visible text.
+    Text(String),
+    /// Reasoning extracted from a `<think>...</think>` block.
+    Thinking(String),
+    /// A tool call parsed from in-content markup or inline JSON.
+    ToolCall(ParsedToolCall),
+}
+
+const OPEN_THINK: &str = "<think>";
+const CLOSE_THINK: &str = "</think>";
+const OPEN_MINIMAX: &str = "<minimax:tool_call>";
+const CLOSE_MINIMAX: &str = "</minimax:tool_call>";
+const OPEN_TOOL_CALL: &str = "<tool_call>";
+const CLOSE_TOOL_CALL: &str = "</tool_call>";
+
+/// Tags that activate the filter when seen inside `delta.content`.
+const ACTIVATION_OPENERS: &[&str] = &[OPEN_THINK, OPEN_MINIMAX, OPEN_TOOL_CALL];
+
+#[derive(Debug, Clone, Copy)]
+enum Marker {
+    Think,
+    Minimax,
+    ToolCall,
+    Json,
+}
+
+/// Streaming filter for MiniMax-style `delta.content`. Buffers partial tags
+/// across chunks and reuses the core complete-span parsers for the actual
+/// tool-call parsing.
+#[derive(Debug, Default)]
+struct ContentFilter {
+    buffer: String,
+    activated: bool,
+    tool_seq: usize,
+}
+
+impl ContentFilter {
+    fn next_tool_id(&mut self) -> String {
+        let id = format!("content_tool_{}", self.tool_seq);
+        self.tool_seq += 1;
+        id
+    }
+
+    /// Feed a content delta. `suppress_tools` strips (rather than emits) any
+    /// in-content tool-call markup — used when the stream already carries the
+    /// same call via the structured `tool_calls` field.
+    fn feed(&mut self, delta: &str, suppress_tools: bool) -> Vec<ContentSegment> {
+        self.buffer.push_str(delta);
+        if !self.activated {
+            if contains_activation_opener(&self.buffer) {
+                self.activated = true;
+            } else {
+                // Pure passthrough: preserve the original behavior where any
+                // (possibly empty) content delta opens the text block, holding
+                // back only a trailing suffix that might be a partial opener.
+                return self.emit_safe_prefix();
+            }
+        }
+        self.process_activated(suppress_tools)
+    }
+
+    /// Flush remaining buffered content at end of stream.
+    fn flush(&mut self, suppress_tools: bool) -> Vec<ContentSegment> {
+        if self.buffer.is_empty() {
+            return Vec::new();
+        }
+        if !self.activated {
+            // A trailing partial-opener suffix that never completed: emit verbatim.
+            return vec![ContentSegment::Text(std::mem::take(&mut self.buffer))];
+        }
+        // Drain any complete spans first; whatever remains is an incomplete span.
+        let mut out = self.process_activated(suppress_tools);
+        if !self.buffer.is_empty() {
+            let buf = std::mem::take(&mut self.buffer);
+            if let Some(rest) = buf.strip_prefix(OPEN_THINK) {
+                // Unclosed `<think>`: the tail is reasoning to end of stream.
+                if !rest.is_empty() {
+                    out.push(ContentSegment::Thinking(rest.to_owned()));
+                }
+            } else {
+                // Drop unterminated tool-call markup; emit whatever clean text
+                // remains so nothing leaks into the live feed.
+                let text = runie_core::tool_markers::strip_tool_markers(&buf);
+                if !text.is_empty() {
+                    out.push(ContentSegment::Text(text));
+                }
+            }
+        }
+        out
+    }
+
+    /// Not-yet-activated fast path: hold back only a trailing suffix that might
+    /// be a partial opener; emit everything else as plain text. Always emits a
+    /// (possibly empty) `Text` segment so the text block still opens on the
+    /// first content chunk, matching the original passthrough behavior.
+    fn emit_safe_prefix(&mut self) -> Vec<ContentSegment> {
+        let hold = trailing_partial_opener_len(&self.buffer);
+        let emit_len = self.buffer.len() - hold;
+        let text = self.buffer[..emit_len].to_owned();
+        self.buffer.drain(..emit_len);
+        vec![ContentSegment::Text(text)]
+    }
+
+    fn process_activated(&mut self, suppress_tools: bool) -> Vec<ContentSegment> {
+        let mut out = Vec::new();
+        loop {
+            let marker = self.earliest_marker();
+            let Some((pos, kind)) = marker else {
+                // No marker in buffer: emit safe prefix, hold trailing partial.
+                let hold = trailing_partial_opener_len(&self.buffer);
+                let emit_len = self.buffer.len() - hold;
+                if emit_len > 0 {
+                    let text = self.buffer[..emit_len].to_owned();
+                    self.buffer.drain(..emit_len);
+                    if !text.is_empty() {
+                        out.push(ContentSegment::Text(text));
+                    }
+                }
+                return out;
+            };
+            // Emit any plain text before the marker.
+            if pos > 0 {
+                let text = self.buffer[..pos].to_owned();
+                self.buffer.drain(..pos);
+                if !text.is_empty() {
+                    out.push(ContentSegment::Text(text));
+                }
+            }
+            // Buffer now starts with the marker.
+            let consumed = match kind {
+                Marker::Think => self.consume_think(&mut out),
+                Marker::Minimax => {
+                    self.consume_xml_tool(OPEN_MINIMAX, CLOSE_MINIMAX, suppress_tools, &mut out)
+                }
+                Marker::ToolCall => self.consume_xml_tool(
+                    OPEN_TOOL_CALL,
+                    CLOSE_TOOL_CALL,
+                    suppress_tools,
+                    &mut out,
+                ),
+                Marker::Json => self.consume_json_tool(suppress_tools, &mut out),
+            };
+            if !consumed {
+                return out; // incomplete span — hold and await more data
+            }
+        }
+    }
+
+    /// Earliest marker position + kind in the current buffer.
+    fn earliest_marker(&self) -> Option<(usize, Marker)> {
+        let think = self.buffer.find(OPEN_THINK).map(|p| (p, Marker::Think));
+        let minimax = self.buffer.find(OPEN_MINIMAX).map(|p| (p, Marker::Minimax));
+        let tool = self
+            .buffer
+            .find(OPEN_TOOL_CALL)
+            .map(|p| (p, Marker::ToolCall));
+        let json = self.buffer.find('{').map(|p| (p, Marker::Json));
+        [think, minimax, tool, json]
+            .into_iter()
+            .flatten()
+            .min_by_key(|(p, _)| *p)
+    }
+
+    /// Consume a `<think>` block at the front of the buffer. Returns false if
+    /// the block is incomplete (caller should hold and await more data).
+    fn consume_think(&mut self, out: &mut Vec<ContentSegment>) -> bool {
+        let after = OPEN_THINK.len();
+        let close = self.buffer.find(CLOSE_THINK);
+        let minimax = self.buffer.find(OPEN_MINIMAX);
+        let tool = self.buffer.find(OPEN_TOOL_CALL);
+        // A tool-call opener implicitly closes an unterminated `<think>`.
+        let end = [close, minimax, tool].into_iter().flatten().min();
+        let Some(end_pos) = end else {
+            return false;
+        };
+        let inner = self.buffer[after..end_pos].to_owned();
+        let consume = if Some(end_pos) == close {
+            end_pos + CLOSE_THINK.len()
+        } else {
+            end_pos // leave the tool opener for re-processing
+        };
+        self.buffer.drain(..consume);
+        if !inner.is_empty() {
+            out.push(ContentSegment::Thinking(inner));
+        }
+        true
+    }
+
+    /// Consume an XML tool-call block (`<minimax:tool_call>` or `<tool_call>`)
+    /// at the front of the buffer. Returns false if incomplete.
+    fn consume_xml_tool(
+        &mut self,
+        open: &str,
+        close: &str,
+        suppress_tools: bool,
+        out: &mut Vec<ContentSegment>,
+    ) -> bool {
+        let Some(rel_end) = self.buffer[open.len()..].find(close) else {
+            return false;
+        };
+        let end = open.len() + rel_end + close.len();
+        let span = self.buffer[..end].to_owned();
+        self.buffer.drain(..end);
+        if !suppress_tools {
+            for result in parse_minimax_tool_calls(&span) {
+                if let Ok(call) = result {
+                    out.push(ContentSegment::ToolCall(call));
+                }
+            }
+        }
+        true
+    }
+
+    /// Consume an inline `{...}` JSON object at the front of the buffer. Returns
+    /// false if the object is incomplete.
+    fn consume_json_tool(
+        &mut self,
+        suppress_tools: bool,
+        out: &mut Vec<ContentSegment>,
+    ) -> bool {
+        let Some(obj_end) = find_object_end(self.buffer.as_bytes(), 0) else {
+            return false;
+        };
+        let slice = self.buffer[..=obj_end].to_owned();
+        self.buffer.drain(..=obj_end);
+        let parsed = serde_json::from_str::<serde_json::Value>(&slice).ok();
+        let is_tool = parsed.as_ref().is_some_and(is_tool_call_value);
+        match parsed {
+            Some(v) if is_tool && !suppress_tools => {
+                let name = v
+                    .get("name")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("")
+                    .to_owned();
+                let args = v
+                    .get("arguments")
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+                if !name.is_empty() {
+                    out.push(ContentSegment::ToolCall(ParsedToolCall {
+                        name,
+                        args,
+                        id: None,
+                    }));
+                }
+            }
+            Some(_) if is_tool => {
+                // Suppressed: the structured tool_calls field carries this call.
+            }
+            _ => out.push(ContentSegment::Text(slice)),
+        }
+        true
+    }
+}
+
+fn contains_activation_opener(s: &str) -> bool {
+    ACTIVATION_OPENERS.iter().any(|o| s.contains(o))
+}
+
+/// Length of the longest suffix of `s` that is a proper prefix of an opener.
+fn trailing_partial_opener_len(s: &str) -> usize {
+    let max = ACTIVATION_OPENERS
+        .iter()
+        .map(|o| o.len().saturating_sub(1))
+        .max()
+        .unwrap_or(0)
+        .min(s.len());
+    for len in (1..=max).rev() {
+        let suffix = &s[s.len() - len..];
+        if ACTIVATION_OPENERS
+            .iter()
+            .any(|o| o.len() > suffix.len() && o.starts_with(suffix))
+        {
+            return len;
+        }
+    }
+    0
+}
+
+/// Map a content segment to provider events via the lifecycle tracker.
+fn segment_to_events(seg: ContentSegment, state: &mut OpenAiState) -> Vec<ProviderEvent> {
+    match seg {
+        ContentSegment::Text(t) => state.lifecycle.text_delta("text", &t),
+        // Route `<think>` reasoning into the same "reasoning" block used by the
+        // `reasoning_content` field so there is a single, deterministic
+        // thinking block (a HashSet-drained second block would be flaky).
+        ContentSegment::Thinking(t) => state.lifecycle.thinking_delta("reasoning", &t),
+        ContentSegment::ToolCall(tc) => {
+            let id = state.content_filter.next_tool_id();
+            let args = serde_json::to_string(&tc.args).unwrap_or_else(|_| "{}".to_owned());
+            vec![
+                ProviderEvent::ToolCallStart {
+                    id: id.clone(),
+                    name: tc.name,
+                },
+                ProviderEvent::ToolCallInputDelta {
+                    id: id.clone(),
+                    delta: args,
+                },
+                ProviderEvent::ToolCallEnd { id },
+            ]
+        }
+    }
+}
+
+/// Flush any buffered content through the filter at end of stream.
+fn finalize_content(state: &mut OpenAiState) -> Vec<ProviderEvent> {
+    let suppress = state.has_structured_tools;
+    let segs = state.content_filter.flush(suppress);
+    let mut events = Vec::new();
+    for seg in segs {
+        events.extend(segment_to_events(seg, state));
+    }
+    events
+}
+
 /// A delta of content in an OpenAI chunk.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Delta {
@@ -232,6 +565,11 @@ pub struct OpenAiState {
     /// IDs of tools that have ended (emitted ToolCallEnd).
     pub ended: HashSet<String>,
     lifecycle: LifecycleState,
+    /// Streaming filter for MiniMax-style reasoning/tool-call markup in content.
+    content_filter: ContentFilter,
+    /// Whether the stream emitted any structured `tool_calls` (so redundant
+    /// in-content tool-call markup is suppressed rather than duplicated).
+    has_structured_tools: bool,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -290,7 +628,8 @@ impl ProviderProtocol for OpenAiProtocol {
             }
             OpenAiFrame::Done => {
                 let mut new_state = state;
-                let mut events = flush_tool_calls(&mut new_state);
+                let mut events = finalize_content(&mut new_state);
+                events.extend(flush_tool_calls(&mut new_state));
                 events.extend(new_state.lifecycle.finish(StopReason::Stop));
                 (new_state, events)
             }
@@ -299,7 +638,8 @@ impl ProviderProtocol for OpenAiProtocol {
 
     fn on_halt(&self, state: Self::State) -> Vec<ProviderEvent> {
         let mut new_state = state;
-        let mut events = flush_tool_calls(&mut new_state);
+        let mut events = finalize_content(&mut new_state);
+        events.extend(flush_tool_calls(&mut new_state));
         // Emit Finish to ensure the stream always terminates properly.
         // This handles cases where SSE stream ends without a terminal frame (e.g., data: [DONE]).
         events.extend(new_state.lifecycle.finish(StopReason::Stop));
@@ -346,18 +686,33 @@ fn tool_call_json_to_delta(tc: ToolCallJson) -> ToolCallDelta {
 fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let mut events = Vec::new();
 
-    if let Some(text) = chunk.delta.content {
-        events.extend(state.lifecycle.text_delta("text", &text));
+    // Structured tool_calls first: when present, the content filter suppresses
+    // the redundant in-content tool-call markup so it is not duplicated.
+    for tool_delta in chunk.delta.tool_calls {
+        let evs = process_tool_call_delta(tool_delta, state);
+        if evs
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::ToolCallStart { .. }))
+        {
+            state.has_structured_tools = true;
+        }
+        events.extend(evs);
     }
+
+    if let Some(text) = chunk.delta.content {
+        let suppress = state.has_structured_tools;
+        let segs = state.content_filter.feed(&text, suppress);
+        for seg in segs {
+            events.extend(segment_to_events(seg, state));
+        }
+    }
+
     if let Some(reasoning) = chunk.delta.reasoning {
         events.extend(state.lifecycle.thinking_delta("reasoning", &reasoning));
     }
 
-    for tool_delta in chunk.delta.tool_calls {
-        events.extend(process_tool_call_delta(tool_delta, state));
-    }
-
     if chunk.finish_reason.is_some() {
+        events.extend(finalize_content(state));
         events.extend(flush_tool_calls(state));
         events.extend(
             state

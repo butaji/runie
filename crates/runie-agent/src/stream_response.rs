@@ -538,4 +538,110 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "provider error");
     }
+
+    // ========================================================================
+    // ISSUE D — MiniMax content leak regression tests
+    // ========================================================================
+    //
+    // MiniMax puts reasoning (`<think>`) and tool calls
+    // (`<minimax:tool_call>` / `<tool_call>` / inline `{"name","arguments"}`)
+    // INSIDE the SSE `delta.content`. The live feed must never render those raw
+    // tags/JSON: thinking must travel via the ThinkingDelta path and tool calls
+    // via structured tool events.
+
+    /// Drive an SSE fixture through the full provider→agent streaming path and
+    /// return every `Event` emitted to the live feed plus the final response.
+    async fn drive_minimax_fixture(
+        name: &str,
+    ) -> (Vec<runie_core::Event>, StreamedResponse) {
+        use runie_provider::openai::stream::replay_sse;
+        let events =
+            replay_sse(&runie_testing::fixtures::minimax::fixture(name));
+        let provider = TestProvider { events };
+        let captured: Arc<std::sync::Mutex<Vec<runie_core::Event>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let cap = captured.clone();
+        let emit: EmitFn = Arc::new(move |ev| cap.lock().unwrap().push(ev));
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        let emitted = std::mem::take(&mut *captured.lock().unwrap());
+        (emitted, result)
+    }
+
+    fn joined_response_deltas(emitted: &[runie_core::Event]) -> String {
+        emitted
+            .iter()
+            .filter_map(|e| match e {
+                runie_core::Event::ResponseDelta { content, .. } => {
+                    Some(content.as_str())
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
+    fn assert_no_live_leak(joined: &str) {
+        for forbidden in [
+            "<think",
+            "</think>",
+            "<minimax:tool_call",
+            "</minimax:tool_call>",
+            "</invoke>",
+            "\"name\"",
+            "\"arguments\"",
+        ] {
+            assert!(
+                !joined.contains(forbidden),
+                "live feed leaked {forbidden:?}; joined ResponseDelta = {joined:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn minimax_m27_content_does_not_leak_tags_into_live_feed() {
+        let (emitted, result) =
+            drive_minimax_fixture("m27_multi_tool_readme.sse").await;
+        let joined = joined_response_deltas(&emitted);
+        assert_no_live_leak(&joined);
+
+        // Reasoning is delivered via the thinking path, not as text.
+        assert!(
+            result
+                .reasoning
+                .as_deref()
+                .unwrap_or("")
+                .contains("read the README"),
+            "thinking should reach the reasoning path; reasoning={:?}",
+            result.reasoning
+        );
+        // Tool call is delivered as a structured tool call.
+        assert!(
+            result.tool_calls.iter().any(|tc| tc.name == "read_file"),
+            "expected a structured read_file tool call; got {:?}",
+            result.tool_calls
+        );
+    }
+
+    #[tokio::test]
+    async fn minimax_m3_inline_json_tool_call_does_not_leak_into_live_feed() {
+        let (emitted, result) =
+            drive_minimax_fixture("m3_list_files_call.sse").await;
+        let joined = joined_response_deltas(&emitted);
+        assert_no_live_leak(&joined);
+
+        assert!(
+            result.tool_calls.iter().any(|tc| tc.name == "list_dir"),
+            "expected a structured list_dir tool call; got {:?}",
+            result.tool_calls
+        );
+    }
 }
