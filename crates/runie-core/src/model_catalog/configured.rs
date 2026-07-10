@@ -9,14 +9,19 @@ use super::{model_catalog, ModelInfo};
 /// selector shows every configured model, even if the provider returned a
 /// model name that is not yet in the bundled registry.
 ///
-/// A provider configured without an explicit model list contributes no models
-/// to the selector; the user must choose models via `/provider` before they
-/// appear in `/model`.
+/// A provider configured without an explicit model list falls back to its
+/// known models from the static catalog, so the `/model` selector is never
+/// empty right after connecting a provider (the user can pick one instead of
+/// having to detour through `/provider` first). Providers with no catalog
+/// entry and no chosen models contribute nothing.
 pub fn configured_models_catalog(configured: &[(String, String, Vec<String>)]) -> Vec<ModelInfo> {
     let catalog = model_catalog();
     let mut models = Vec::new();
     for (provider, _base_url, chosen) in configured {
         if chosen.is_empty() {
+            // No models chosen yet: surface the provider's known catalog models
+            // so the switcher is usable immediately after connecting.
+            models.extend(catalog.iter().filter(|m| m.provider == *provider).cloned());
             continue;
         }
         for name in chosen {
@@ -66,14 +71,36 @@ mod tests {
         assert!(!models.iter().any(|m| m.name == "gpt-4o-mini"));
     }
 
+    /// Regression (live-test #7): a provider that is configured but has no
+    /// models chosen yet must still show its known models in `/model`, so the
+    /// switcher is not empty right after connecting a provider.
     #[test]
-    fn excludes_provider_when_no_models_configured() {
-        let configured = vec![("minimax".into(), "http://test".into(), vec![])];
+    fn falls_back_to_known_models_when_none_configured() {
+        let configured = vec![("openai".into(), "http://test".into(), vec![])];
+        let models = configured_models_catalog(&configured);
+        assert!(
+            !models.is_empty(),
+            "configured provider with no chosen models should fall back to its known catalog models"
+        );
+        assert!(
+            models.iter().any(|m| m.full() == "openai/gpt-4o"),
+            "fallback should include the provider's known models (e.g. openai/gpt-4o), got {models:?}"
+        );
+        assert!(
+            models.iter().all(|m| m.provider == "openai"),
+            "fallback must only add models for the empty provider itself"
+        );
+    }
+
+    /// A custom provider with no chosen models and no static-catalog entry has
+    /// nothing to fall back to, so it still contributes no models.
+    #[test]
+    fn unknown_provider_without_models_stays_empty() {
+        let configured = vec![("custom-provider-xyz".into(), "http://test".into(), vec![])];
         let models = configured_models_catalog(&configured);
         assert!(
             models.is_empty(),
-            "provider without chosen models should contribute no models, got {:?}",
-            models
+            "unknown provider with no chosen models has no known models to fall back to, got {models:?}"
         );
     }
 }
