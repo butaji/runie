@@ -70,7 +70,11 @@ pub fn handle_panel_action(
         ItemAction::Emit(evt) => handle_emit_action(state, stack, evt),
         ItemAction::Toggle(key) => {
             panel_toggle_item(state, stack, &key);
-            close_panel_on_activate(state, stack)
+            // Toggling a checkbox (Enter or Space) keeps the dialog open so the
+            // user can flip several settings in a row; only Esc / an explicit
+            // Close action dismisses it. Previously Enter toggled and then
+            // closed the dialog, which looked like Enter merely dismissed it.
+            false
         }
         ItemAction::Cycle(key) => {
             panel_cycle_item(state, stack, &key);

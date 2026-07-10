@@ -12,6 +12,9 @@ mod filter;
 mod navigation;
 mod settings;
 
+#[cfg(test)]
+mod tests;
+
 use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{Panel, PanelStack};
 use crate::model::AppState;

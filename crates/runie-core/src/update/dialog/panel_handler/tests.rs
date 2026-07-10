@@ -1,7 +1,7 @@
 #![allow(clippy::useless_conversion)]
 use super::*;
 use crate::commands::DialogState;
-use crate::dialog::Panel;
+use crate::dialog::{ItemAction, Panel, PanelItem};
 
 #[test]
 fn space_toggles_checkbox_item_value() {
@@ -88,4 +88,45 @@ fn space_in_list_panel_keeps_dialog_open() {
         "dialog should stay open after toggling"
     );
     assert!(state.config.read_only);
+}
+
+/// Regression (live-test #6): pressing Enter on a settings/model toggle row must
+/// toggle the checkbox and KEEP the dialog open (same as Space). It previously
+/// toggled and then closed the dialog, so Enter looked like it just dismissed it.
+#[test]
+fn enter_on_toggle_row_toggles_and_keeps_dialog_open() {
+    let mut state = AppState::default();
+    state.config.read_only = false;
+    let panel = Panel::new("settings", "Settings").toggle(
+        "Read-Only",
+        false,
+        ItemAction::Toggle("read_only".into()),
+    );
+    let mut stack = PanelStack::new(panel);
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack.clone(),
+    });
+
+    let result = update_panel_stack(&mut state, crate::Event::Submit.into(), &mut stack);
+
+    assert_eq!(
+        result,
+        PanelUpdateResult::Consumed,
+        "Enter on a toggle row should toggle (consumed), not close the dialog"
+    );
+    assert!(
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                ..
+            })
+        ),
+        "dialog should stay open after Enter toggles a row"
+    );
+    assert!(
+        state.config.read_only,
+        "the setting should have been toggled by Enter"
+    );
 }
