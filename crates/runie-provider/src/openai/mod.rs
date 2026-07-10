@@ -28,6 +28,8 @@ pub struct OpenAiProvider {
     tool_choice: Option<serde_json::Value>,
     /// Retry configuration for transient failures during stream establishment.
     retry_config: Option<crate::RetryConfig>,
+    /// Per-read idle timeout for the SSE stream. `None` => use the default.
+    idle_timeout: Option<std::time::Duration>,
 }
 
 impl OpenAiProvider {
@@ -42,6 +44,7 @@ impl OpenAiProvider {
             tools: Vec::new(),
             tool_choice: None,
             retry_config: None,
+            idle_timeout: None,
         }
     }
 
@@ -60,6 +63,7 @@ impl OpenAiProvider {
             tools: Vec::new(),
             tool_choice: None,
             retry_config: None,
+            idle_timeout: None,
         }
     }
 
@@ -88,6 +92,11 @@ impl OpenAiProvider {
         self
     }
 
+    pub fn with_idle_timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.idle_timeout = Some(timeout);
+        self
+    }
+
     pub fn model(&self) -> &str {
         &self.model
     }
@@ -106,6 +115,10 @@ impl OpenAiProvider {
 
     pub fn retry_config(&self) -> Option<&crate::RetryConfig> {
         self.retry_config.as_ref()
+    }
+
+    pub fn idle_timeout(&self) -> Option<std::time::Duration> {
+        self.idle_timeout
     }
 }
 

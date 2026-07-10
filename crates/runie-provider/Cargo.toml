@@ -41,3 +41,6 @@ tempfile.workspace = true
 runie-testing = { workspace = true, features = ["provider"] }
 wiremock.workspace = true
 proptest.workspace = true
+# Raw-TCP mock SSE servers in streaming tests need net + io-util (feature-
+# unified with the lib tokio dependency; harmless).
+tokio = { workspace = true, features = ["net", "io-util"] }

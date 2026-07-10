@@ -552,26 +552,73 @@ async fn provider_actor_rejects_unknown_provider_real_factory() {
 #[tokio::test]
 async fn prefixed_model_name_is_stripped_in_api_request() {
     use futures::StreamExt;
-    use wiremock::matchers::{header, method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
+    use std::sync::{Arc, Mutex};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::set_var("MINIMAX_API_KEY", "sk-minimax-test");
 
-    let mock_server = MockServer::start().await;
+    // Raw-TCP mock: capture the request body (for the model-field assertion) and
+    // return a *valid* 200 SSE response (Content-Type: text/event-stream). A raw
+    // server is used because wiremock cannot reliably emit text/event-stream, and
+    // reqwest-eventsource now correctly rejects non-SSE content-types.
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let base_url = format!("http://{addr}");
+    let captured: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let captured_for = captured.clone();
+    tokio::spawn(async move {
+        let Ok((mut sock, _)) = listener.accept().await else {
+            return;
+        };
+        let mut buf = Vec::new();
+        let mut tmp = [0u8; 1024];
+        let header_end;
+        loop {
+            match sock.read(&mut tmp).await {
+                Ok(0) | Err(_) => return,
+                Ok(k) => {
+                    buf.extend_from_slice(&tmp[..k]);
+                    if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                        header_end = pos + 4;
+                        break;
+                    }
+                    if buf.len() > 64 * 1024 {
+                        return;
+                    }
+                }
+            }
+        }
+        let header_str = String::from_utf8_lossy(&buf[..header_end]);
+        let content_len: usize = header_str
+            .lines()
+            .find_map(|l| {
+                let (k, v) = l.split_once(':')?;
+                if k.eq_ignore_ascii_case("content-length") {
+                    v.trim().parse().ok()
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(0);
+        let mut body = buf[header_end..].to_vec();
+        while body.len() < content_len {
+            match sock.read(&mut tmp).await {
+                Ok(0) | Err(_) => break,
+                Ok(k) => body.extend_from_slice(&tmp[..k]),
+            }
+        }
+        body.truncate(content_len);
+        *captured_for.lock().unwrap() = body;
 
-    // Wiremock will record the request so we can inspect the model field.
-    Mock::given(method("POST"))
-        .and(path("/v1/chat/completions"))
-        .and(header("authorization", "Bearer sk-minimax-test"))
-        .and(header("content-type", "application/json"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(
-            "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n\
+        let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n\
+             data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n\
              data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n\
-             data: [DONE]\n\n",
-        ))
-        .mount(&mock_server)
-        .await;
+             data: [DONE]\n\n";
+        let _ = sock.write_all(resp.as_bytes()).await;
+        let _ = sock.flush().await;
+    });
 
     let mut config = Config::default();
     config.provider = Some("minimax".to_string());
@@ -580,7 +627,7 @@ async fn prefixed_model_name_is_stripped_in_api_request() {
         "minimax".to_string(),
         runie_core::config::ModelProvider {
             provider_type: Some("openai-compatible".to_string()),
-            base_url: format!("{}/v1", mock_server.uri()),
+            base_url: format!("{base_url}/v1"),
             models: vec!["MiniMax-M3".to_string()],
         },
     );
@@ -595,17 +642,9 @@ async fn prefixed_model_name_is_stripped_in_api_request() {
         .collect()
         .await;
 
-    let requests = mock_server
-        .received_requests()
-        .await
-        .expect("mock server should have received requests");
-    assert_eq!(
-        requests.len(),
-        1,
-        "exactly one chat/completions request should be made"
-    );
-    let body_bytes: &[u8] = &requests[0].body;
-    let body: serde_json::Value = serde_json::from_slice(body_bytes).expect("body is valid JSON");
+    let body_bytes = captured.lock().unwrap().clone();
+    let body: serde_json::Value =
+        serde_json::from_slice(&body_bytes).expect("request body is valid JSON");
     assert_eq!(
         body.get("model").and_then(|v| v.as_str()),
         Some("MiniMax-M3"),
