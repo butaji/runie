@@ -37,9 +37,9 @@ fmt-fix:
 build:
     cargo build --workspace
 
-# Build release binary
+# Build release binaries (runie-tui and runie CLI)
 build-release:
-    cargo build --release -p runie-tui
+    cargo build --release -p runie-tui -p runie-cli
 
 # Run the TUI (development).
 # Pass `--mock` to enable the mock provider without an API key:

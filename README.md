@@ -60,4 +60,5 @@ See `AGENTS.md` for conventions and `docs/Architecture.md` for the runtime model
 
 ## License
 
-MIT
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or the
+[MIT license](LICENSE-MIT) at your option.
