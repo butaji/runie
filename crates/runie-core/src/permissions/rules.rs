@@ -4,17 +4,22 @@
 //!
 //! ## Rule Format
 //!
+//! Rules live under the `[permissions]` table as `[[permissions.rules]]`:
+//!
 //! ```toml
-//! [[permissions]]
+//! [permissions]
+//! mode = "default"
+//!
+//! [[permissions.rules]]
 //! action = "allow"
 //! tool = "read_file"
 //!
-//! [[permissions]]
+//! [[permissions.rules]]
 //! action = "deny"
 //! tool = "bash"
 //! pattern = "rm -rf /"
 //!
-//! [[permissions]]
+//! [[permissions.rules]]
 //! action = "ask"
 //! tool = "write_file"
 //! pattern = "*.rs"

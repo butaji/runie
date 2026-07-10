@@ -440,11 +440,14 @@ impl TuiRuntime {
         )
         .await;
 
-        shutdown_rx
-            .await
-            .map_err(|_| std::io::Error::other("shutdown signal dropped"))?;
+        // Wait for the in-app quit signal OR an OS SIGTERM/SIGINT, so a plain
+        // `kill` does not strand the terminal in raw mode / alternate screen.
+        wait_for_shutdown(shutdown_rx).await;
 
-        // Await all spawned tasks to ensure clean shutdown.
+        // Graceful teardown on every exit path. `leader_handle.shutdown()` is
+        // idempotent (never panics; safe even if a clone already shut the leader
+        // down via the in-app quit key) and `handles.shutdown()` awaits the rest.
+        leader_handle.shutdown().await;
         handles.shutdown().await;
         Ok(())
     }
@@ -756,6 +759,49 @@ fn is_input_stop_event(evt: &Event) -> bool {
     matches!(evt, Event::Quit | Event::Reset | Event::ForceQuit)
 }
 
+/// Wait for either the in-app shutdown signal or an OS termination signal
+/// (SIGTERM/SIGINT on Unix), returning as soon as any of them fire.
+///
+/// A plain `kill` (SIGTERM) — or a Ctrl+C delivered outside the raw-mode TTY —
+/// would otherwise terminate the process before the `Cleanup` drop guard can
+/// restore the terminal, stranding the user's shell in alternate screen / raw
+/// mode. Catching the signal and returning normally lets `run_production` run
+/// its graceful teardown, after which the guard restores the terminal on exit.
+async fn wait_for_shutdown(shutdown_rx: oneshot::Receiver<()>) {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        let mut sigterm = signal(SignalKind::terminate()).ok();
+        let mut sigint = signal(SignalKind::interrupt()).ok();
+        tokio::pin!(shutdown_rx);
+        tokio::select! {
+            _ = &mut shutdown_rx => {}
+            _ = recv_optional_signal(&mut sigterm) => {
+                tracing::warn!("SIGTERM received; shutting down gracefully");
+            }
+            _ = recv_optional_signal(&mut sigint) => {
+                tracing::warn!("SIGINT received; shutting down gracefully");
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = shutdown_rx.await;
+    }
+}
+
+/// Resolve when an optional Unix signal stream fires, or never if it is `None`
+/// (signal registration failed). Drives one arm of `wait_for_shutdown`'s select.
+#[cfg(unix)]
+async fn recv_optional_signal(sig: &mut Option<tokio::signal::unix::Signal>) {
+    match sig {
+        Some(s) => {
+            s.recv().await;
+        }
+        None => std::future::pending::<()>().await,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -886,5 +932,21 @@ mod tests {
         // Shutdown takes ownership and awaits all tasks without panicking.
         handles.shutdown().await;
         // After shutdown, handles is consumed.
+    }
+
+    /// Layer 1: `wait_for_shutdown` resolves promptly when the in-app oneshot
+    /// fires (the common quit path), so wiring it into `run_production` does not
+    /// regress normal shutdown. The OS-signal arms are exercised live; they are
+    /// not unit-tested here because delivering SIGTERM to the test process would
+    /// terminate it.
+    #[tokio::test]
+    async fn wait_for_shutdown_resolves_on_oneshot() {
+        let (tx, rx) = oneshot::channel();
+        let waiter = tokio::spawn(wait_for_shutdown(rx));
+        tx.send(()).unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(2), waiter)
+            .await
+            .expect("wait_for_shutdown must resolve when the shutdown oneshot fires")
+            .unwrap();
     }
 }

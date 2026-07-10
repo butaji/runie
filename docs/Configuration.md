@@ -55,23 +55,38 @@ scoped = [
 
 ## Permissions
 
-Rules are checked top-to-bottom; the first match wins.
+Permissions are configured in a `[permissions]` table with a `mode` and a list
+of `[[permissions.rules]]`. Rules are evaluated **last-match wins within each
+scope** (session > project > user); sensitive paths are always denied regardless
+of rules.
+
+`mode` is one of: `default`, `accept_edits`, `auto`, `dont_ask`,
+`bypass_permissions`, `plan`.
 
 ```toml
-[[permissions]]
-action = "allow"
-tool = "read_file"
+[permissions]
+mode = "default"
 
-[[permissions]]
+[[permissions.rules]]
+action = "allow"
+tool = "read_*"
+path = "~/.config/**"
+
+[[permissions.rules]]
 action = "ask"
 tool = "bash"
-pattern = "git push"
+pattern = "git push*"
 
-[[permissions]]
+[[permissions.rules]]
 action = "deny"
-tool = "rm"
-pattern = "rm -rf /"
+tool = "bash"
+pattern = "rm -rf /*"
+scope = "project"
 ```
+
+Each rule takes an `action` (`allow`, `ask`, or `deny`), a glob `tool` pattern,
+and optional `path` (file glob), `pattern` (shell-argument glob), and `scope`
+(`user`, `project`, or `session`).
 
 ## Environment & secrets
 

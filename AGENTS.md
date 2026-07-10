@@ -33,14 +33,20 @@ Events-based, single-source-of-truth actors:
 
 ## File Structure
 
+Runie is a Cargo workspace of focused crates under `crates/`:
+
 ```
-src/
-├── app.rs      # State + logic (pure tests)
-├── handler.rs  # Event mapping (input tests)
-├── ui.rs       # Widgets + layout (render tests)
+crates/
+├── runie-core/      # Config, providers, permissions, actors, event bus (pure logic; no ratatui)
+├── runie-provider/  # Model provider clients + SSE streaming (OpenAI/Anthropic/MiniMax/…), mock + replay
+├── runie-agent/     # Agent loop: tool use, streaming turns, history
+├── runie-cli/       # `runie` binary: print/json/server/mcp/login modes
+├── runie-tui/       # `runie-tui` binary: event loop, render actor, UI DSL (ratatui)
+└── runie-testing/   # Shared test harness (black-box tmux driver, replay helpers)
 ```
 
-**Rule**: Your `App` should compile without `ratatui` if you strip rendering.
+The legacy single-`App` split (`app.rs` / `handler.rs` / `ui.rs`) survives only as a
+design goal: keep state and logic independent of rendering.
 
 ## Linter Rules
 

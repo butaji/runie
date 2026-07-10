@@ -23,7 +23,7 @@ runie-provider = { workspace = true, features = ["mock", "replay"] }
 ratatui.workspace = true
 crossterm.workspace = true
 ansi_colours.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["signal"] }
 tokio-util.workspace = true
 tracing.workspace = true
 futures.workspace = true

@@ -43,7 +43,7 @@ Add provider keys in `~/.runie/config.toml`. See [docs/Configuration.md](docs/Co
 
 ## Providers
 
-Anthropic · OpenAI · Google Gemini · DeepSeek · OpenRouter · Groq · Fireworks · Together · MiniMax · Moonshot AI · xAI · Mistral · Ollama
+Anthropic · OpenAI · Google Gemini · DeepSeek · OpenRouter · Groq · Fireworks · Together AI · MiniMax · Moonshot AI · xAI · Mistral · Ollama (local)
 
 ## Development
 
