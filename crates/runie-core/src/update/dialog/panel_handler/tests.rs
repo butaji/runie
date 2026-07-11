@@ -130,3 +130,49 @@ fn enter_on_toggle_row_toggles_and_keeps_dialog_open() {
         "the setting should have been toggled by Enter"
     );
 }
+
+/// Regression (live-test ISSUE B): pressing Enter on a settings *cycle/select* row
+/// (e.g. Thinking Level, Theme, Steering/Follow-Up Mode) must advance the option,
+/// apply the setting, and KEEP the dialog open — same as a toggle row. It
+/// previously cycled and then closed the dialog.
+#[test]
+fn enter_on_cycle_row_cycles_and_keeps_dialog_open() {
+    use crate::model::ThinkingLevel;
+
+    let mut state = AppState::default();
+    let mut panel = Panel::new("settings", "Settings");
+    panel.items.push(PanelItem::Select {
+        label: "Thinking Level".into(),
+        current: "Off".into(),
+        options: vec!["Off".into(), "Low".into(), "Medium".into(), "High".into()],
+        key: "thinking_level".into(),
+    });
+    let mut stack = PanelStack::new(panel);
+    state.open_dialog = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: stack.clone(),
+    });
+
+    let result = update_panel_stack(&mut state, crate::Event::Submit.into(), &mut stack);
+
+    assert_eq!(
+        result,
+        PanelUpdateResult::Consumed,
+        "Enter on a cycle/select row should cycle (consumed), not close the dialog"
+    );
+    assert!(
+        matches!(
+            state.open_dialog,
+            Some(DialogState::Active {
+                kind: DialogKind::Generic,
+                ..
+            })
+        ),
+        "dialog should stay open after Enter cycles a settings row"
+    );
+    assert_eq!(
+        state.config.thinking_level,
+        ThinkingLevel::Low,
+        "the setting should have advanced Off -> Low and been applied"
+    );
+}

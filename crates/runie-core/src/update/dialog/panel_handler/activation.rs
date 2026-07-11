@@ -78,7 +78,10 @@ pub fn handle_panel_action(
         }
         ItemAction::Cycle(key) => {
             panel_cycle_item(state, stack, &key);
-            close_panel_on_activate(state, stack)
+            // Cycling a settings select (Enter) keeps the dialog open so the
+            // user can adjust several rows in a row; only Esc / an explicit
+            // Close action dismisses it. Matches the Toggle arm behaviour.
+            false
         }
     }
 }
@@ -115,20 +118,6 @@ pub fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: Eve
     };
 
     state.update(evt);
-    !keep_open
-}
-
-/// Close panel on activation if keep_open is false.
-pub fn close_panel_on_activate(state: &mut AppState, stack: &mut PanelStack) -> bool {
-    let keep_open = stack
-        .current()
-        .map(|p| p.keep_open_on_activate)
-        .unwrap_or(false);
-    if !keep_open {
-        *state.open_dialog_mut() = None;
-        state.view_mut().input_receiver = InputReceiver::ChatInput;
-        state.view_mut().dirty = true;
-    }
     !keep_open
 }
 
