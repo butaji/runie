@@ -152,6 +152,10 @@ async fn run_iterations(
     tool_call_count: &mut usize,
     gate: PermissionGate,
 ) -> Result<()> {
+    // Signature of the tool-call set executed in the immediately previous
+    // iteration. Used to detect a model re-issuing the exact same call and stop
+    // the loop instead of spinning to `max_iterations`.
+    let mut last_tool_signature: Option<Vec<(String, String)>> = None;
     for _ in 0..max_iterations {
         if !run_agent_iteration(
             provider,
@@ -161,6 +165,7 @@ async fn run_iterations(
             skills,
             tool_call_count,
             &gate,
+            &mut last_tool_signature,
         )
         .await?
         {
@@ -170,6 +175,8 @@ async fn run_iterations(
     Ok(())
 }
 
+// allow: `last_tool_signature` threads the repeat-guard state across iterations.
+#[allow(clippy::too_many_arguments)]
 async fn run_agent_iteration(
     provider: &dyn Provider,
     command: &AgentCommand,
@@ -178,6 +185,7 @@ async fn run_agent_iteration(
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
     gate: &PermissionGate,
+    last_tool_signature: &mut Option<Vec<(String, String)>>,
 ) -> Result<bool> {
     emit(Event::Thinking {
         id: command.id.clone(),
@@ -209,7 +217,17 @@ async fn run_agent_iteration(
         return Ok(false);
     }
     let tools = collect_parsed_tool_calls(&response, messages);
-    execute_tools(
+
+    // Repeat guard: if the model re-issued the exact same set of (name, args)
+    // tool calls as the immediately previous iteration in this turn, stop
+    // instead of re-executing. This prevents an infinite re-issue loop even
+    // when the tool is allowed.
+    let signature = tool_call_signature(&tools);
+    if last_tool_signature.as_ref() == Some(&signature) {
+        return Ok(false);
+    }
+
+    let any_blocked = execute_tools(
         &command.id,
         &tools,
         emit,
@@ -219,8 +237,31 @@ async fn run_agent_iteration(
         gate,
     )
     .await;
+    *last_tool_signature = Some(signature);
     sanitize_messages(messages);
+
+    // Stop the loop if any tool was blocked (denied by the permission gate).
+    // Mirrors the headless runner: the agent must not re-issue a tool call
+    // after a denial.
+    if any_blocked {
+        return Ok(false);
+    }
     Ok(true)
+}
+
+/// Canonical, order-independent signature of a tool-call set: sorted
+/// `(name, serialized_args)` pairs. Used to detect a repeated call across
+/// consecutive iterations.
+fn tool_call_signature(tools: &[ParsedToolCall]) -> Vec<(String, String)> {
+    let mut sig: Vec<(String, String)> = tools
+        .iter()
+        .map(|t| {
+            let args = serde_json::to_string(&t.args).unwrap_or_default();
+            (t.name.clone(), args)
+        })
+        .collect();
+    sig.sort();
+    sig
 }
 
 fn collect_parsed_tool_calls(

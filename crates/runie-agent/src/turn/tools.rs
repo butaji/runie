@@ -9,8 +9,13 @@ use runie_core::harness_skills::SkillRegistry;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::PermissionGate;
 use runie_core::tool::ParsedToolCall;
-use runie_core::tool::{ToolContext, ToolOutput};
+use runie_core::tool::{ToolContext, ToolOutput, ToolStatus};
 
+/// Execute the parsed tool calls for one iteration.
+///
+/// Returns `true` if any tool was blocked (denied by the permission gate). The
+/// caller uses this to stop the turn loop — mirroring the headless runner, the
+/// agent must not re-issue a tool call after a denial.
 pub async fn execute_tools(
     cmd_id: &str,
     tools: &[ParsedToolCall],
@@ -19,14 +24,19 @@ pub async fn execute_tools(
     skills: Option<&SkillRegistry>,
     tool_call_count: &mut usize,
     gate: &PermissionGate,
-) {
+) -> bool {
     let ctx = ToolContext::default();
+    let mut any_blocked = false;
 
     for tool_call in tools {
         *tool_call_count += 1;
         let tool_id = tool_call.id.as_deref().unwrap_or(cmd_id);
         let output =
             execute_single_tool(tool_id, tool_call, emit.clone(), skills, &ctx, gate).await;
+
+        if output.status == ToolStatus::Blocked {
+            any_blocked = true;
+        }
 
         emit(runie_core::Event::tool_end(
             tool_id.to_owned(),
@@ -35,6 +45,8 @@ pub async fn execute_tools(
         ));
         messages.push(tool_result_message(tool_call, &output));
     }
+
+    any_blocked
 }
 
 pub async fn execute_single_tool(

@@ -375,3 +375,109 @@ async fn stream_error_emits_thought_done() {
         "ThoughtDone must be emitted even on stream error"
     );
 }
+
+// ========================================================================
+// ISSUE F — denied / repeated tool calls must not loop in the TUI turn path
+// ========================================================================
+//
+// MiniMax bash loop: the agent ran `ls -la`, was denied, then re-issued the
+// same call until the iteration cap (and a queued follow-up restarted it).
+// The headless runner already stops on denial (`any_blocked`); these tests
+// pin the same guard plus a same-call repeat guard into the TUI turn loop.
+
+/// Stop-on-deny: a denied bash tool must terminate the turn after the first
+/// denial. The mock provider re-emits the same native bash call every round,
+/// so without the guard this would spin to `max_iterations`.
+#[tokio::test]
+async fn denied_tool_does_not_loop_in_turn() {
+    use runie_core::permissions::{DenyAllSink, PermissionManager};
+    use std::sync::Arc;
+
+    let _mock_guard = ensure_mock_provider().await;
+    let provider = mock_provider();
+    let cmd = agent_cmd("native tool").build();
+    let (events, emit) = capture_events();
+
+    let gate = crate::PermissionGate::new(
+        PermissionManager::default(),
+        Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>,
+    );
+
+    // High cap: without the fix the loop would re-issue the bash call every
+    // round up to the cap.
+    run_agent_turn(&provider, &cmd, emit, 10, gate)
+        .await
+        .unwrap();
+
+    let bash_starts = count_events(&events, |e| {
+        matches!(e, Event::ToolStart { name, .. } if name == "bash")
+    });
+    assert_eq!(
+        bash_starts, 1,
+        "denied bash tool must execute exactly once (no re-issue), got {bash_starts}"
+    );
+
+    // Exactly one model request: the turn stopped after the denial and never
+    // asked the model a second time.
+    let thinking = count_events(&events, |e| matches!(e, Event::Thinking { .. }));
+    assert_eq!(
+        thinking, 1,
+        "turn must not issue a second model request after denial, got {thinking}"
+    );
+
+    let tool_ends: Vec<String> = events
+        .lock()
+        .iter()
+        .filter_map(|e| match e {
+            Event::ToolEnd { output, .. } => Some(output.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        tool_ends.len(),
+        1,
+        "expected exactly one ToolEnd, got {tool_ends:?}"
+    );
+    assert!(
+        tool_ends[0].contains("Permission denied"),
+        "expected denial content, got: {}",
+        tool_ends[0]
+    );
+
+    assert_eq!(
+        count_events(&events, |e| matches!(e, Event::Done { .. })),
+        1,
+        "turn must still complete cleanly"
+    );
+}
+
+/// Repeat guard: a provider that always returns the identical (name, args)
+/// bash call with an allow-all gate must execute once and then stop — well
+/// before `max_iterations` — instead of spinning to the cap.
+#[tokio::test]
+async fn repeated_tool_call_does_not_loop_in_turn() {
+    let _mock_guard = ensure_mock_provider().await;
+    let provider = mock_provider();
+    let cmd = agent_cmd("native tool").build();
+    let (events, emit) = capture_events();
+
+    // High cap on purpose: the repeat guard must stop the loop after the
+    // first execution, long before the cap is reached.
+    run_agent_turn(&provider, &cmd, emit, 10, allow_all_gate())
+        .await
+        .unwrap();
+
+    let bash_starts = count_events(&events, |e| {
+        matches!(e, Event::ToolStart { name, .. } if name == "bash")
+    });
+    assert_eq!(
+        bash_starts, 1,
+        "identical re-issued bash call must run once then be stopped by the repeat guard, got {bash_starts}"
+    );
+
+    assert_eq!(
+        count_events(&events, |e| matches!(e, Event::Done { .. })),
+        1,
+        "turn must complete cleanly after the repeat guard stops it"
+    );
+}
