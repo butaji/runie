@@ -219,7 +219,7 @@ pub(crate) struct ContextUsage {
 }
 
 pub(crate) fn context_usage(snap: &Snapshot) -> ContextUsage {
-    let limit = context_window_for(&snap.provider, &snap.model);
+    let limit = runie_core::model_catalog::context_window_for(&snap.provider, &snap.model);
     let used: usize = snap
         .elements
         .iter()
@@ -255,22 +255,9 @@ impl ContextUsage {
     }
 }
 
-const DEFAULT_CONTEXT_WINDOW: usize = 128_000;
-
-pub(crate) fn context_window_for(provider: &str, model: &str) -> usize {
-    runie_core::provider::find_provider(provider)
-        .and_then(|p| {
-            p.models
-                .iter()
-                .find(|m| m.name == model)
-                .and_then(|m| m.context_window)
-        })
-        .unwrap_or(DEFAULT_CONTEXT_WINDOW)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::context_window_for;
+    use runie_core::model_catalog::{context_window_for, DEFAULT_CONTEXT_WINDOW};
 
     #[test]
     fn status_bar_context_window_matches_registry() {
@@ -283,11 +270,16 @@ mod tests {
     }
 
     #[test]
+    fn status_bar_context_window_minimax() {
+        assert_eq!(context_window_for("minimax", "MiniMax-M2.7"), 256_000);
+        assert_eq!(context_window_for("minimax", "MiniMax-M3"), 256_000);
+        // "MiniMax-M2" is not in the registry -> shared 128k default.
+        assert_eq!(context_window_for("minimax", "MiniMax-M2"), 128_000);
+    }
+
+    #[test]
     fn status_bar_context_window_falls_back_to_default() {
-        assert_eq!(
-            context_window_for("unknown", "model"),
-            super::DEFAULT_CONTEXT_WINDOW
-        );
+        assert_eq!(context_window_for("unknown", "model"), DEFAULT_CONTEXT_WINDOW);
     }
 
     #[test]

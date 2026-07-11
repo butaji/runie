@@ -19,6 +19,17 @@ pub fn handle_status(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(build_status_panel(state))))
 }
 
+/// Format a token count for compact display (e.g. 128_000 -> "128k").
+fn format_tokens_short(n: usize) -> String {
+    if n >= 1_000_000 {
+        format!("{}M", n / 1_000_000)
+    } else if n >= 1_000 {
+        format!("{}k", n / 1_000)
+    } else {
+        n.to_string()
+    }
+}
+
 fn build_status_panel(state: &AppState) -> Panel {
     let provider = state.current_provider();
     let model = state.current_model();
@@ -29,13 +40,17 @@ fn build_status_panel(state: &AppState) -> Panel {
         "read-write"
     };
     let queued = state.agent_state().message_queue.len();
-    let ctx = match state.current_model_context_window() {
-        Some(window) if window > 0 => {
-            let used = state.agent_state().tokens_in.min(window);
-            let pct = (used as f64 / window as f64 * 100.0).round() as u64;
-            format!("~{pct}% ({used} / {window} tokens)")
-        }
-        _ => "n/a".to_string(),
+    let ctx = if provider.is_empty() || model.is_empty() {
+        "n/a".to_string()
+    } else {
+        let window = crate::model_catalog::context_window_for(provider, model);
+        let used = state.agent_state().tokens_in.min(window);
+        let pct = (used as f64 / window as f64 * 100.0).round() as u64;
+        format!(
+            "~{pct}% ({} / {} tokens)",
+            format_tokens_short(used),
+            format_tokens_short(window)
+        )
     };
 
     Panel::new("status", " Status ")

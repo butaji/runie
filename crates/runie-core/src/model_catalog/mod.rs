@@ -147,6 +147,30 @@ pub fn model_catalog() -> Vec<ModelInfo> {
     models
 }
 
+/// Default context window (tokens) used when a model is not in the catalog.
+///
+/// Shared by the status bar and `/status` so both surfaces agree on the
+/// context size for unknown/custom models instead of diverging ("n/a" vs 128k).
+pub const DEFAULT_CONTEXT_WINDOW: usize = 128_000;
+
+/// Resolve the context window (in tokens) for a provider/model pair.
+///
+/// Returns the catalog `context_window` when the provider and model are known,
+/// otherwise falls back to [`DEFAULT_CONTEXT_WINDOW`] so callers can always
+/// render a concrete number. An empty provider or model still yields the
+/// default; it is the caller's responsibility to render "n/a" when nothing is
+/// configured at all.
+pub fn context_window_for(provider: &str, model: &str) -> usize {
+    crate::provider::find_provider(provider)
+        .and_then(|p| {
+            p.models
+                .iter()
+                .find(|m| m.name == model)
+                .and_then(|m| m.context_window)
+        })
+        .unwrap_or(DEFAULT_CONTEXT_WINDOW)
+}
+
 /// Filter and score models by name, provider, or display name using fuzzy matching.
 /// Returns indices sorted by match score (highest first).
 pub fn filter_models(models: &[ModelInfo], query: &str) -> Vec<usize> {
@@ -492,6 +516,19 @@ mod tests {
         assert_eq!(minimax.context_window, Some(256_000));
         assert!(minimax.capabilities.streaming);
         assert!(minimax.capabilities.supports_tools);
+    }
+
+    #[test]
+    fn context_window_for_resolves_catalog_and_default() {
+        // Known MiniMax models keep their catalog context window.
+        assert_eq!(context_window_for("minimax", "MiniMax-M2.7"), 256_000);
+        assert_eq!(context_window_for("minimax", "MiniMax-M3"), 256_000);
+        // "MiniMax-M2" is not in the registry -> falls back to the shared default.
+        assert_eq!(context_window_for("minimax", "MiniMax-M2"), 128_000);
+        // Unknown provider -> shared default.
+        assert_eq!(context_window_for("unknown", "model"), 128_000);
+        // The fallback is the single documented default.
+        assert_eq!(DEFAULT_CONTEXT_WINDOW, 128_000);
     }
 
     // ── Fuzzy matching tests ─────────────────────────────────────────────────

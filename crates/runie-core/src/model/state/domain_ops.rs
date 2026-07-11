@@ -251,19 +251,31 @@ impl AppState {
 
     /// Resolve the default provider/model pair from ConfigState.
     ///
-    /// Falls back through: explicit `provider` + `default_model`,
-    /// first configured provider's first model, and finally empty strings.
-    /// Mirrors `Config::resolve_default_model` so there is a single source of truth.
+    /// Falls back through: explicit `provider` + `default_model`, the
+    /// provider's first configured model, the first configured provider's
+    /// first model, and finally empty strings. Mirrors
+    /// `Config::resolve_default_model` so there is a single source of truth.
+    /// The explicit default is preferred over `models[0]` so the active model
+    /// does not drift when the stored list is reordered (e.g. sorted on write).
     pub fn resolve_default_model(&self) -> (String, String) {
         if crate::provider::is_mock_enabled() {
             return ("mock".into(), crate::provider::mock_model());
         }
         let cfg = self.config();
         if let Some(provider) = cfg.provider.as_ref().filter(|p| !p.is_empty()) {
-            let model = self
-                .first_model_for_provider(provider)
-                .or_else(|| cfg.default_model.clone())
+            let models: Vec<String> = cfg
+                .model_providers
+                .get(provider)
+                .map(|mp| mp.models.clone())
                 .unwrap_or_default();
+            // Honor the explicit default when it is a valid choice for this
+            // provider; a stale default from another provider is ignored.
+            let model = match cfg.default_model.as_deref() {
+                Some(def) if models.is_empty() || models.iter().any(|m| m == def) => {
+                    def.to_string()
+                }
+                _ => models.first().cloned().unwrap_or_default(),
+            };
             let provider_str = (&provider).to_string();
             return (provider_str, model);
         }
@@ -276,14 +288,6 @@ impl AppState {
             }
         }
         (String::new(), String::new())
-    }
-
-    /// Return the first model for a provider, if any.
-    fn first_model_for_provider(&self, provider: &str) -> Option<String> {
-        self.config()
-            .model_providers
-            .get(provider)
-            .and_then(|mp| mp.models.first().cloned())
     }
 
     /// Look up a configured provider from ConfigState.
@@ -471,5 +475,44 @@ impl AppState {
     /// Set session display name (replay helper).
     pub fn set_session_display_name(&mut self, name: Option<String>) {
         self.session_mut().session_display_name = name;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_default_model_prefers_explicit_default_over_first_model() {
+        // Mirror of Config::resolve_default_model (ISSUE H): the domain_ops
+        // resolver must honor `default_model` ahead of `models[0]` so the
+        // active model does not drift to the lexicographically-first entry.
+        crate::provider::set_mock_enabled(false);
+        let mut state = AppState::default();
+        {
+            let cfg = state.config_mut();
+            cfg.provider = Some("minimax".to_string());
+            cfg.default_model = Some("MiniMax-M2.7".to_string());
+            cfg.model_providers.insert(
+                "minimax".to_string(),
+                crate::config::ModelProvider {
+                    provider_type: Some("minimax".to_string()),
+                    base_url: "https://api.minimaxi.chat/v1".to_string(),
+                    models: vec!["MiniMax-M2".to_string(), "MiniMax-M2.7".to_string()],
+                },
+            );
+        }
+
+        let (provider, model) = state.resolve_default_model();
+        assert_eq!(provider, "minimax");
+        assert_eq!(
+            model, "MiniMax-M2.7",
+            "domain_ops resolver must honor default_model over models[0]"
+        );
+
+        // Wiring the resolved pair into the active model must not drift.
+        state.set_active_model(provider, model, ModelSource::ConfigDefault);
+        assert_eq!(state.current_model(), "MiniMax-M2.7");
+        assert_ne!(state.current_model(), "MiniMax-M2");
     }
 }

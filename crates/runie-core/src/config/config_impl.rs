@@ -544,17 +544,27 @@ impl crate::config::Config {
 
     /// Resolve the default provider/model pair from this config.
     ///
-    /// Falls back through: explicit `provider` + saved models, first configured
-    /// provider's first model, and finally empty strings when nothing is set.
+    /// Falls back through: explicit `provider` + `models.default`, the
+    /// provider's first configured model, the first configured provider's
+    /// first model, and finally empty strings when nothing is set. The
+    /// explicit default is preferred over `models[0]` so the active model does
+    /// not drift when the stored list is reordered (e.g. sorted on write).
     pub fn resolve_default_model(&self) -> (String, String) {
         if crate::provider::is_mock_enabled() {
             return ("mock".into(), crate::provider::mock_model());
         }
         if let Some(provider) = self.provider.as_deref().filter(|p| !p.is_empty()) {
-            let model = self
-                .first_model_for_provider(provider)
-                .or_else(|| self.default_model().map(String::from))
-                .unwrap_or_default();
+            let models = self.models_for_provider(provider);
+            // Honor the explicit default when it is a valid choice for this
+            // provider (present in the configured list, or no list to constrain
+            // it). A stale default left over from another provider is ignored
+            // and we fall back to the provider's first configured model.
+            let model = match self.default_model() {
+                Some(def) if models.is_empty() || models.iter().any(|m| m == def) => {
+                    def.to_string()
+                }
+                _ => self.first_model_for_provider(provider).unwrap_or_default(),
+            };
             return (provider.to_owned(), model);
         }
         let mut providers: Vec<_> = self.model_providers.iter().collect();

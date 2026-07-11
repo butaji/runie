@@ -420,6 +420,34 @@ default = "gpt-4o"
 }
 
 #[test]
+fn resolve_default_model_prefers_explicit_default_over_first_model() {
+    // Regression for active-model drift (ISSUE H): when the stored models
+    // array is sorted so a lexicographically-smaller name sits at index 0,
+    // the resolver must still honor the explicit `[models].default` instead
+    // of falling back to `models[0]`.
+    crate::provider::set_mock_enabled(false);
+    let mut config = Config::default();
+    config.provider = Some("minimax".to_string());
+    config.models.default = Some("MiniMax-M2.7".to_string());
+    config.model_providers.insert(
+        "minimax".to_string(),
+        ModelProvider {
+            provider_type: Some("minimax".to_string()),
+            base_url: "https://api.minimaxi.chat/v1".to_string(),
+            // Deliberately ordered so "MiniMax-M2" is models[0].
+            models: vec!["MiniMax-M2".to_string(), "MiniMax-M2.7".to_string()],
+        },
+    );
+
+    let (provider, model) = config.resolve_default_model();
+    assert_eq!(provider, "minimax");
+    assert_eq!(
+        model, "MiniMax-M2.7",
+        "explicit models.default must beat models[0]"
+    );
+}
+
+#[test]
 fn config_validation_accepts_valid_config() {
     let dir = tempfile::tempdir().unwrap();
     let path = make_test_config(
