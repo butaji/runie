@@ -321,12 +321,42 @@ impl UiActor {
         evt: Event,
         effect_tx: tokio::sync::mpsc::Sender<Event>,
     ) -> bool {
-        // Priority quit handling — Ctrl+C / Ctrl+Q always exit, even during active turns.
-        if matches!(&evt, Event::Quit | Event::ForceQuit) {
-            // Abort the background file-index scan so the process exits immediately
-            // instead of waiting for the initial walk to finish.
-            runie_core::actors::fff_indexer::cancel_indexer_scan();
-            return true;
+        // Priority quit / abort handling.
+        //
+        // `turn_active` is captured at the very top, BEFORE apply_event runs
+        // inside handle_input_event, so the decision reflects the pre-event state.
+        let turn_active = self.state.agent_state().turn_active || self.turn_was_active;
+        match &evt {
+            // Ctrl+Q (ForceQuit) is the "really exit" hatch: always quit, even
+            // during an active turn.
+            Event::ForceQuit { .. } => {
+                // Abort the background file-index scan so the process exits
+                // immediately instead of waiting for the initial walk to finish.
+                runie_core::actors::fff_indexer::cancel_indexer_scan();
+                return true;
+            }
+            // Ctrl+C (Quit): during a turn, abort the in-flight agent and stay
+            // open; when idle, quit (unchanged behavior).
+            Event::Quit { .. } => {
+                if turn_active {
+                    // clear_turn_state(true) cancels the agent's per-turn token
+                    // (exactly once) and clears the turn state.
+                    self.clear_turn_state(true).await;
+                    return false;
+                }
+                runie_core::actors::fff_indexer::cancel_indexer_scan();
+                return true;
+            }
+            _ => {}
+        }
+
+        // Esc / DialogBack at the chat root while a turn is active: abort the
+        // turn and stay open. Only fires when no dialog is open, so dialog
+        // dismissal is preserved (DialogBack for an open dialog, and vim-nav
+        // when idle, flow through apply_event below).
+        if matches!(&evt, Event::DialogBack) && self.state.open_dialog().is_none() && turn_active {
+            self.clear_turn_state(true).await;
+            return false;
         }
         // Capture whether the turn was already active BEFORE apply_event runs.
         // apply_event is called inside handle_input_event, so this must be at the
@@ -657,6 +687,13 @@ impl UiActor {
         self.state.agent_state_mut().turn_active = false;
         self.turn_was_active = false;
         self.pending_queued_turn = false;
+        if is_abort {
+            // Cancel the in-flight agent (per-turn CancellationToken) so Ctrl+C,
+            // Esc, Ctrl+S and /new actually stop the stream — not just the UI.
+            // Safe even when idle: token.cancel is idempotent and the handle
+            // abort is a harmless no-op when nothing is running.
+            self.agent_handle.abort().await;
+        }
         if let Some(ref turn_handle) = self.turn_handle {
             if is_abort {
                 // Abort: clear the queue so a new session starts clean.
