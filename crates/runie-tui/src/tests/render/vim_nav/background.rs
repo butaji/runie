@@ -88,3 +88,33 @@ fn input_box_chevron_has_no_accent_background() {
     }
     assert!(found, "input chevron not found");
 }
+
+#[test]
+fn user_message_has_bg_user_background() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    add_message(&mut state, Role::User, "hello", 0.0, "req.0");
+    state.refresh_after_message_change();
+
+    let buf = draw(&mut state, 60, 12);
+    let bg = crate::theme::color_bg_user();
+
+    // User message should have bg.user background on some cells
+    let mut found = false;
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width {
+            let cell = &buf[(x, y)];
+            if cell.style().bg == Some(bg) {
+                found = true;
+                break;
+            }
+        }
+        if found {
+            break;
+        }
+    }
+    assert!(
+        found,
+        "user message should have bg.user background color"
+    );
+}

@@ -46,7 +46,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height);
 }
 
-/// Render lines with user message backgrounds applied directly.
+/// Render lines with user message backgrounds applied after rendering.
 /// User messages and their adjacent spacers get full-width backgrounds.
 fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
@@ -60,9 +60,19 @@ fn render_paragraph_with_user_backgrounds(
     let start = offset as usize;
     let bg = crate::theme::color_bg_user();
     let visible_start = offset as usize;
-    let visible_end = (offset as usize + area.height as usize).min(row_to_element.len());
+    let full_width = f.area().width;
 
+    // First render all lines normally
     for (row_offset, line) in lines.iter().skip(start).take(height).enumerate() {
+        let row = area.y + row_offset as u16;
+        f.render_widget(
+            ratatui::widgets::Paragraph::new(line.clone()),
+            Rect::new(area.x, row, area.width, 1),
+        );
+    }
+
+    // Then fill in backgrounds for user-related rows (preserving text)
+    for row_offset in 0..height {
         let row = area.y + row_offset as u16;
         let abs_row = visible_start + row_offset;
 
@@ -70,19 +80,16 @@ fn render_paragraph_with_user_backgrounds(
         let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
         let is_user_related = is_user_related_row(snap, elem_idx);
 
-        // Draw full-width background first for user-related rows
         if is_user_related {
-            for x in 0..f.area().width {
+            // Fill full-width background, preserving text characters
+            for x in 0..full_width {
                 let cell = &mut f.buffer_mut()[(x, row)];
-                let _ = cell.set_bg(bg);
+                // Only set background if the cell doesn't already have one
+                if cell.style().bg.is_none() {
+                    let _ = cell.set_bg(bg);
+                }
             }
         }
-
-        // Render the line content on top of the background
-        f.render_widget(
-            ratatui::widgets::Paragraph::new(line.clone()),
-            Rect::new(area.x, row, area.width, 1),
-        );
     }
 }
 

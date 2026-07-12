@@ -21,6 +21,7 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
     let secondary = theme.color("text.secondary");
     let bg_user = theme.color("bg.user");
     theme.register_default_style("runie.user", opaline::OpalineStyle::fg(accent).with_bg(bg_user).bold());
+    theme.register_default_style("runie.user.chevron", opaline::OpalineStyle::fg(accent).bold());
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
     theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(secondary).italic());
     theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(secondary));
@@ -260,10 +261,10 @@ pub fn style_scrollbar() -> Style {
 }
 
 /// Chevron style for input box: orange when input holds the token, gray when released.
-/// Uses style_user for active state (with bg.user), style_hint for disabled.
+/// Uses style without background for the input box.
 pub fn style_chevron(token_held: bool) -> Style {
     if token_held {
-        style_user()
+        style_fn("runie.user.chevron")
     } else {
         style_hint()
     }
