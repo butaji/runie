@@ -134,34 +134,17 @@ fn line_to_owned(line: &Line<'_>) -> Line<'static> {
     Line::from(spans)
 }
 
-/// Check if a row is related to a user message (message itself or adjacent spacers).
+/// Check if a row belongs to a user message card.
+///
+/// The bg.user background covers only the user message element's own rows
+/// (its internal top/bottom padding plus content). The trailing spacer that
+/// follows a user post stays on the normal feed background, forming the
+/// margin line that separates the card from whatever comes next.
 fn is_user_related_row(snap: &Snapshot, elem_idx: usize) -> bool {
     if elem_idx == usize::MAX {
         return false;
     }
-
-    let elem = snap.elements.get(elem_idx);
-    let is_user = matches!(elem, Some(Element::UserMessage { .. }));
-
-    // Check if it's a spacer adjacent to a user message
-    if !is_user && matches!(elem, Some(Element::Spacer { .. })) {
-        // Check previous element
-        if let Some(prev_idx) = elem_idx.checked_sub(1) {
-            if let Some(prev) = snap.elements.get(prev_idx) {
-                if matches!(prev, Element::UserMessage { .. }) {
-                    return true;
-                }
-            }
-        }
-        // Check next element
-        if let Some(next) = snap.elements.get(elem_idx + 1) {
-            if matches!(next, Element::UserMessage { .. }) {
-                return true;
-            }
-        }
-    }
-
-    is_user
+    matches!(snap.elements.get(elem_idx), Some(Element::UserMessage { .. }))
 }
 
 fn render_paragraph(f: &mut Frame, area: Rect, lines: Vec<Line<'_>>, offset: u16) {

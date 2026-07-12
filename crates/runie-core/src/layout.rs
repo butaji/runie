@@ -104,7 +104,9 @@ fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
         content_lines += word_wrap(line, w, rest_w).len().max(1);
     }
 
-    content_lines.max(1)
+    // +2 for the bg-padding lines the renderer adds above and below the card
+    // (see render_user_message). Keeps scroll math in sync with the render.
+    content_lines.max(1) + 2
 }
 
 fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
@@ -377,8 +379,8 @@ mod tests {
     #[test]
     fn user_message_line_count_matches_wide_viewport() {
         let msg = Element::user("hello").at(0.0);
-        // One content line (no vertical margins for user messages).
-        assert_eq!(element_line_count(&msg, 80), 1);
+        // One content line plus the bg-padding line above and below the card.
+        assert_eq!(element_line_count(&msg, 80), 3);
     }
 
     #[test]

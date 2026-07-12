@@ -115,8 +115,8 @@ fn nav_mode_bracket_for_one_line_user_post_is_three_rows() {
     let rows = bracket_rows(&buf);
     assert_eq!(
         rows.len(),
-        1,
-        "one-line user post should have a 1-row bracket (no vertical margins)"
+        3,
+        "one-line user card should have a 3-row bracket (bg-padding + content + bg-padding)"
     );
     for &y in &rows {
         assert_eq!(buf[(0, y)].symbol(), "▎");

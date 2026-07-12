@@ -95,6 +95,6 @@ fn total_lines_includes_spacers() {
         .iter()
         .map(|e| element_line_count(e, TEST_WIDTH))
         .sum();
-    // UserMessage is 1 content line, Spacer is 1 line = 2 total
-    assert_eq!(total, 2, "Total lines should include spacer empty line");
+    // UserMessage card is 3 lines (bg-padding + content + bg-padding), Spacer is 1 = 4 total
+    assert_eq!(total, 4, "Total lines should include card padding and spacer empty line");
 }

@@ -105,14 +105,13 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     }
     state.refresh_after_message_change();
 
-    // 30 messages = 60 lines (30*1 messages + 30 spacers)
-    // max_scroll = 50, thumb = max(1, 10*10/60) = 2
+    // 30 messages = 120 lines (30*3 user card + 30 spacers)
+    // max_scroll = 110, position = 110 - 25 = 85
     state.view.scroll = 25; // halfway
     let (thumb, offset) = state.snapshot().scrollbar_metrics(10);
-    // position = 50 - 25 = 25
-    // thumb_start = round(25 * 10 / 60) = 4, thumb_end = round(35 * 10 / 60) = 6
-    assert_eq!(thumb, 2, "Thumb size");
-    assert_eq!(offset, 4, "Thumb should be in middle");
+    // thumb_start = round(85 * 10 / 120) = 7, thumb_end = round(95 * 10 / 120) = 8
+    assert_eq!(thumb, 1, "Thumb size");
+    assert_eq!(offset, 7, "Thumb should be in middle");
 }
 
 #[test]

@@ -60,7 +60,12 @@ pub fn render_user_message(
         .max(10); // Ensure at least 10 chars for content
     let rest_w = inner_width.saturating_sub(indent_width);
 
-    build_user_body(
+    // The user "card" is content plus one blank padding line above and below.
+    // Those blank rows render with the bg.user background (applied in the feed
+    // renderer to every UserMessage row), forming the card's top/bottom margin.
+    let mut lines = Vec::with_capacity(4);
+    lines.push(Line::from(""));
+    lines.extend(build_user_body(
         content,
         prefix_width,
         indent_width,
@@ -72,7 +77,9 @@ pub fn render_user_message(
             ts_width,
             base_style,
         },
-    )
+    ));
+    lines.push(Line::from(""));
+    lines
 }
 
 /// Parameters for building user message lines.
