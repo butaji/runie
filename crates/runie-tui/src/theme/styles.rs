@@ -282,6 +282,7 @@ pub fn block_input(title: &str, flash: bool) -> Block<'_> {
         .title_position(TitlePosition::Bottom)
         .title(Line::from(title).alignment(Alignment::Right))
         .border_style(border_style)
+        .style(Style::default().bg(crate::theme::color_bg()))
 }
 
 /// Build a popup dialog block with rounded borders.

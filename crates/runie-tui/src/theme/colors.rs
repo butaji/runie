@@ -24,6 +24,9 @@ pub fn color_bg() -> Color {
 pub fn color_bg_panel() -> Color {
     theme_color_fallback("bg.panel", Color::Reset)
 }
+pub fn color_bg_user() -> Color {
+    theme_color_fallback("bg.user", Color::Reset)
+}
 pub fn color_fg() -> Color {
     theme_color("text.primary")
 }

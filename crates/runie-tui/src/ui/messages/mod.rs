@@ -7,6 +7,7 @@ use ratatui::{
     Frame,
 };
 use runie_core::Snapshot;
+use runie_core::Element;
 
 pub(crate) mod lines;
 pub(crate) mod nav;
@@ -35,6 +36,9 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 
+    // Draw user message backgrounds first (full-line backgrounds)
+    draw_user_message_backgrounds(f, snap, area, &row_to_element, offset);
+
     render_paragraph(f, area, lines, offset);
 
     if snap.vim_nav_mode {
@@ -42,6 +46,33 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     }
 
     render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height);
+}
+
+/// Draw full-line backgrounds for user messages, including their trailing spacers.
+fn draw_user_message_backgrounds(
+    f: &mut Frame,
+    snap: &Snapshot,
+    area: Rect,
+    row_to_element: &[usize],
+    offset: u16,
+) {
+    let bg = crate::theme::color_bg_user();
+    let visible_start = offset as usize;
+    let visible_end = (offset as usize + area.height as usize).min(row_to_element.len());
+
+    for row in visible_start..visible_end {
+        let elem_idx = *row_to_element.get(row).unwrap_or(&usize::MAX);
+        if let Some(elem) = snap.elements.get(elem_idx) {
+            // Draw background for user messages and their trailing spacers
+            if matches!(elem, Element::UserMessage { .. }) {
+                let y = area.y + (row - visible_start) as u16;
+                for x in 0..area.width {
+                    let cell = &mut f.buffer_mut()[(area.x + x, y)];
+                    let _ = cell.set_bg(bg);
+                }
+            }
+        }
+    }
 }
 
 fn render_paragraph(f: &mut Frame, area: Rect, lines: Vec<Line<'_>>, offset: u16) {
