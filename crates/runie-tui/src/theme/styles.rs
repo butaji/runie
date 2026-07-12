@@ -19,7 +19,8 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
     let fg = theme.color("text.primary");
     let dim = theme.color("text.dim");
     let secondary = theme.color("text.secondary");
-    theme.register_default_style("runie.user", opaline::OpalineStyle::fg(accent).bold());
+    let bg_user = theme.color("bg.user");
+    theme.register_default_style("runie.user", opaline::OpalineStyle::fg(accent).with_bg(bg_user).bold());
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
     theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(secondary).italic());
     theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(secondary));
