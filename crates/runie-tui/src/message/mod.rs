@@ -53,10 +53,19 @@ pub fn render_user_message(
     let indent_width = str_width(GLYPH_INDENT);
     let ts_width = str_width(&ts_str) + 1;
 
+    // Reserve space for timestamp on first line to prevent wrapping/overflow
+    let first_w = inner_width
+        .saturating_sub(prefix_width)
+        .saturating_sub(ts_width)
+        .max(10); // Ensure at least 10 chars for content
+    let rest_w = inner_width.saturating_sub(indent_width);
+
     build_user_body(
         content,
         prefix_width,
         indent_width,
+        first_w,
+        rest_w,
         &UserLineParams {
             inner_width,
             ts_str,
@@ -78,13 +87,12 @@ fn build_user_body(
     content: &str,
     prefix_width: u16,
     indent_width: u16,
+    first_w: u16,
+    rest_w: u16,
     params: &UserLineParams,
 ) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling (applies inline styles + base color).
     let spans = apply_color_to_inlines(content, color_fg_bright());
-    // Wrap to full width - timestamp will be added after wrapping
-    let first_w = params.inner_width.saturating_sub(prefix_width);
-    let rest_w = params.inner_width.saturating_sub(indent_width);
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
     rows.iter()
@@ -136,8 +144,18 @@ pub fn render_agent_message(
 ) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let ts_str = format_timestamp(timestamp);
-    let inner_width = content_width.saturating_sub(8);
-    let mut lines = build_agent_body(&blocks, &ts_str, inner_width);
+    let ts_width = str_width(&ts_str) + 1;
+    let inner_width = content_width;
+
+    // Reserve space for timestamp on first line
+    let prefix_width = str_width(GLYPH_AGENT);
+    let first_w = inner_width
+        .saturating_sub(prefix_width)
+        .saturating_sub(ts_width)
+        .max(10);
+    let rest_w = inner_width.saturating_sub(str_width(GLYPH_INDENT));
+
+    let mut lines = build_agent_body(&blocks, &ts_str, inner_width, first_w, rest_w);
 
     if lines.is_empty() {
         lines.push(render_empty_agent_line(inner_width, &ts_str));
@@ -145,12 +163,12 @@ pub fn render_agent_message(
     lines
 }
 
-fn build_agent_body(blocks: &[CodeBlock], ts_str: &str, inner_width: u16) -> Vec<Line<'static>> {
+fn build_agent_body(blocks: &[CodeBlock], ts_str: &str, inner_width: u16, first_w: u16, rest_w: u16) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let mut is_first = true;
 
     for block in blocks {
-        is_first = render_agent_block(block, ts_str, inner_width, is_first, &mut lines);
+        is_first = render_agent_block(block, ts_str, inner_width, first_w, rest_w, is_first, &mut lines);
     }
     lines
 }
@@ -159,18 +177,20 @@ fn render_agent_block(
     block: &CodeBlock,
     ts_str: &str,
     inner_width: u16,
+    first_w: u16,
+    rest_w: u16,
     is_first: bool,
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
     match block {
         CodeBlock::Text { inlines, .. } => {
-            render_agent_text_block(inlines, ts_str, inner_width, is_first, lines)
+            render_agent_text_block(inlines, ts_str, inner_width, first_w, rest_w, is_first, lines)
         }
         CodeBlock::Code { lang, content } => {
             render_agent_code_block(lang, content, ts_str, inner_width, is_first, lines)
         }
         CodeBlock::List { ordered, items } => {
-            render_agent_list_block(items, *ordered, ts_str, inner_width, is_first, lines)
+            render_agent_list_block(items, *ordered, ts_str, inner_width, first_w, rest_w, is_first, lines)
         }
         CodeBlock::Blockquote(inlines) => {
             let text = inlines_to_text(inlines);
@@ -184,6 +204,8 @@ fn render_agent_text_block(
     inlines: &[runie_core::markdown::MdInline],
     ts_str: &str,
     inner_width: u16,
+    first_w: u16,
+    rest_w: u16,
     is_first: bool,
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
@@ -194,11 +216,7 @@ fn render_agent_text_block(
     let text = inlines_to_text(inlines);
     let spans = apply_color_to_inlines(&text, color_fg());
     let prefix_width = str_width(GLYPH_AGENT);
-    let indent_width = str_width(GLYPH_INDENT);
     let ts_width = str_width(ts_str) + 1;
-    // Wrap to full width - timestamp will be added after wrapping
-    let first_w = inner_width.saturating_sub(prefix_width);
-    let rest_w = inner_width.saturating_sub(indent_width);
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
     for (i, row) in rows.iter().enumerate() {
@@ -266,6 +284,8 @@ fn render_agent_list_block(
     ordered: bool,
     ts_str: &str,
     inner_width: u16,
+    first_w: u16,
+    rest_w: u16,
     is_first: bool,
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
@@ -278,19 +298,14 @@ fn render_agent_list_block(
         let item_text = inlines_to_text(item);
         let spans = apply_color_to_inlines(&item_text, color_fg());
         let prefix_width = str_width(GLYPH_AGENT);
-        let indent_width = str_width(GLYPH_INDENT);
         let ts_width = str_width(ts_str) + 1;
-        let first_w = inner_width
-            .saturating_sub(prefix_width)
-            .saturating_sub(ts_width);
-        let rest_w = inner_width.saturating_sub(indent_width);
         let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
         for (j, row) in rows.iter().enumerate() {
             let with_ts = first_item && j == 0;
             let prefix = if with_ts { GLYPH_AGENT } else { GLYPH_INDENT };
             lines.push(support::render_list_item_from_spans(
-                row, ordered, i, with_ts, prefix, ts_str, ts_width,
+                row, ordered, i, with_ts, prefix, ts_str, ts_width, inner_width,
             ));
         }
         first_item = false;

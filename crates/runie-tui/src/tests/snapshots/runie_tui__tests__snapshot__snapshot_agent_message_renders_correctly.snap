@@ -2,4 +2,4 @@
 source: crates/runie-tui/src/tests/snapshot.rs
 expression: output
 ---
-◆ Hello from the agent. 12:00 AM
+◆ Hello from the agent.         12:00 AM

@@ -271,7 +271,8 @@ pub fn render_list_item_from_spans(
     is_first: bool,
     prefix: &str,
     ts_str: &str,
-    _ts_width: u16,
+    ts_width: u16,
+    content_width: u16,
 ) -> Line<'static> {
     let bullet = if ordered {
         format!("{}.", idx + 1)
@@ -279,12 +280,24 @@ pub fn render_list_item_from_spans(
         GLYPH_BULLET.to_owned()
     };
     let bullet_prefix = format!("{} {}", prefix, bullet);
+    let bullet_width = str_width(&bullet_prefix);
 
     let mut result_spans = vec![Span::styled(bullet_prefix, style_agent())];
     result_spans.extend(md_to_spans(row));
 
-    // Only add timestamp to first item
+    // Only add timestamp to first item with proper padding
     if is_first {
+        let text_width: usize = result_spans[1..]
+            .iter()
+            .map(|s| str_width(&s.content))
+            .sum();
+        let padding = content_width
+            .saturating_sub(bullet_width as u16)
+            .saturating_sub(text_width as u16)
+            .saturating_sub(ts_width);
+        if padding > 0 {
+            result_spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
         result_spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
     }
 
