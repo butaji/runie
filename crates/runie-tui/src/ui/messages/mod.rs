@@ -48,7 +48,8 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height);
 }
 
-/// Draw full-line backgrounds for user messages, including their trailing spacers.
+/// Draw full-line backgrounds for user messages, including their trailing spacers
+/// and one line above (previous spacer or top) and one line below.
 fn draw_user_message_backgrounds(
     f: &mut Frame,
     snap: &Snapshot,
@@ -57,19 +58,35 @@ fn draw_user_message_backgrounds(
     offset: u16,
 ) {
     let bg = crate::theme::color_bg_user();
+    let full_width = f.area().width;
     let visible_start = offset as usize;
     let visible_end = (offset as usize + area.height as usize).min(row_to_element.len());
 
     for row in visible_start..visible_end {
         let elem_idx = *row_to_element.get(row).unwrap_or(&usize::MAX);
-        if let Some(elem) = snap.elements.get(elem_idx) {
-            // Draw background for user messages and their trailing spacers
-            if matches!(elem, Element::UserMessage { .. }) {
-                let y = area.y + (row - visible_start) as u16;
-                for x in 0..area.width {
-                    let cell = &mut f.buffer_mut()[(area.x + x, y)];
-                    let _ = cell.set_bg(bg);
-                }
+
+        let is_user_message = snap.elements.get(elem_idx).map_or(false, |e| {
+            matches!(e, Element::UserMessage { .. })
+        });
+        let is_trailing_spacer = snap.elements.get(elem_idx).map_or(false, |e| {
+            matches!(e, Element::Spacer { .. })
+        }) && snap.elements.get(elem_idx.saturating_sub(1)).map_or(false, |e| {
+            matches!(e, Element::UserMessage { .. })
+        });
+        let is_leading_spacer = (elem_idx == 0 && !row_to_element.is_empty()) ||
+            snap.elements.get(elem_idx.saturating_sub(1)).map_or(false, |prev| {
+                snap.elements.get(elem_idx).map_or(false, |curr| {
+                    matches!(curr, Element::Spacer { .. }) &&
+                    matches!(prev, Element::UserMessage { .. })
+                })
+            });
+
+        if is_user_message || is_trailing_spacer || is_leading_spacer {
+            let y = area.y + (row - visible_start) as u16;
+            // Draw full-width background from x=0 to terminal edge
+            for x in 0..full_width {
+                let cell = &mut f.buffer_mut()[(x, y)];
+                let _ = cell.set_bg(bg);
             }
         }
     }
