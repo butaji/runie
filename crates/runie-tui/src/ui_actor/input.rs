@@ -34,7 +34,7 @@ impl UiActor {
             }
             '/' => {
                 let new_input = format!("{}/", input.input);
-                if Self::is_quit_command(&new_input) {
+                if matches!(new_input.trim(), "/q" | "/quit" | "/exit") {
                     return false;
                 }
                 self.state.input_mut().input = String::new();
@@ -86,7 +86,7 @@ impl UiActor {
                 // Route through event: UiActor's apply_event will call
                 // dialog_toggle_event which calls open_at_file_picker_all.
                 self.apply_event(runie_core::Event::AtFilePicker);
-            } else if last_char == '/' && !Self::is_quit_command(new_input) {
+            } else if last_char == '/' && !matches!(new_input.trim(), "/q" | "/quit" | "/exit") {
                 // Open command palette via event.
                 // UiActor-specific: clear input projection before palette opens.
                 self.state.input_mut().input = String::new();
@@ -122,7 +122,7 @@ impl UiActor {
             return;
         }
 
-        if last_char == '/' && !Self::is_quit_command(&input.input) {
+        if last_char == '/' && !matches!(input.input.trim(), "/q" | "/quit" | "/exit") {
             // Command palette: already opened in detect_autocomplete_trigger.
         }
     }

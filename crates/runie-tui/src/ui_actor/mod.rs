@@ -679,11 +679,6 @@ impl UiActor {
         }
     }
 
-    /// Check if a command is a quit command (matches slash-command semantics).
-    pub(crate) fn is_quit_command(content: &str) -> bool {
-        matches!(content.trim(), "/q" | "/quit" | "/exit")
-    }
-
     /// Clear agent-running flag and queue.
     ///
     /// Used for both `Event::Abort` (from /new or event bus) and
