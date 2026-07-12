@@ -29,7 +29,9 @@ use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TermCaps;
 
-const ANIM_MS: u64 = 100;
+/// Animation frame rate: 60fps = ~16.67ms per frame.
+/// Public for testing.
+pub(crate) const ANIM_MS: u64 = 16;
 
 /// Actor that owns the application state.
 pub struct UiActor {

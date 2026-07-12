@@ -60,6 +60,8 @@ mod providers_e2e;
 #[cfg(test)]
 mod quit_shortcut;
 #[cfg(test)]
+mod frame_rate;
+#[cfg(test)]
 mod toggle_e2e;
 #[cfg(test)]
 mod uiactor_init;
