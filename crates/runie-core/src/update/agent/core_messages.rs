@@ -171,8 +171,11 @@ impl AppState {
 
     fn clear_turn_state(&mut self, id: &str) {
         // Clear turn state fields on AgentState.
+        // Only clear fields that belong to this specific request.
         if self.agent_state().current_request_id.as_deref() == Some(id) {
             self.agent_state_mut().current_request_id = None;
+            // thinking_started_at belongs to this request — clear it.
+            self.agent_state_mut().thinking_started_at = None;
         }
         self.agent_state_mut().current_tool_name = None;
         self.agent_state_mut().current_action = None;

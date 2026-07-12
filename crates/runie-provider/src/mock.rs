@@ -161,11 +161,12 @@ mod fixtures {
     }
 
     /// Simple echo fixture that echoes back the user's input exactly.
+    /// Adds a trailing newline so the streaming buffer can flush the response.
     pub fn echo(input: &str) -> Vec<String> {
         if input.is_empty() {
             Vec::new()
         } else {
-            vec![input.to_owned()]
+            vec![format!("{}\n", input)]
         }
     }
 
@@ -293,7 +294,11 @@ impl MockProviderBuilder {
 
 impl Default for MockProvider {
     fn default() -> Self {
-        MockProviderBuilder::new().build()
+        // Delay by default so streaming is visible and events are processed in order.
+        // Tests that need zero delay can use `MockProviderBuilder::new().with_echo_fallback(true).build()`.
+        MockProviderBuilder::new()
+            .with_delay(100, 200)
+            .build()
     }
 }
 
@@ -648,11 +653,11 @@ mod tests {
 
     #[test]
     fn echo_preserves_exact_input() {
-        assert_eq!(fixtures::echo("Hello World"), vec!["Hello World".to_owned()]);
-        assert_eq!(fixtures::echo("  spaced  "), vec!["  spaced  ".to_owned()]);
+        assert_eq!(fixtures::echo("Hello World"), vec!["Hello World\n".to_owned()]);
+        assert_eq!(fixtures::echo("  spaced  "), vec!["  spaced  \n".to_owned()]);
         assert_eq!(
             fixtures::echo("multi\nline\ttext"),
-            vec!["multi\nline\ttext".to_owned()]
+            vec!["multi\nline\ttext\n".to_owned()]
         );
         assert!(fixtures::echo("").is_empty());
     }
@@ -680,5 +685,26 @@ mod tests {
         assert!(!is_after_tool_result(Some(&user_msg)));
 
         assert!(!is_after_tool_result(None));
+    }
+
+    #[test]
+    fn echo_fixture_returns_full_input_with_trailing_newline() {
+        // The echo fixture should return the full user input with trailing newline
+        let chunks = fixtures::echo("hello world");
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0], "hello world\n");
+    }
+
+    #[test]
+    fn response_from_fixture_uses_echo_when_no_fixture_matches() {
+        let chunks = response_from_fixture(None, "hello world", true);
+        assert_eq!(chunks, vec!["hello world\n"]);
+    }
+
+    #[test]
+    fn detect_fixture_returns_none_for_unknown_input() {
+        // A truly unknown input should NOT match any fixture
+        let result = detect_fixture("xyzabc123 what is 2+2");
+        assert!(result.is_none(), "Unexpected fixture detected: {:?}", result);
     }
 }

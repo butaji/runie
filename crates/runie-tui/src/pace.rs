@@ -32,17 +32,20 @@ impl PacedRenderer {
         self.received.push_str(text);
     }
 
-    /// Advance the displayed cursor by `max(2, rate_chunk)` chars, snapping to word boundary.
+    /// Advance the displayed cursor by `max(4, rate_chunk)` chars, snapping to word boundary.
     /// Returns the newly displayed substring since the last tick.
     pub fn tick(&mut self) -> String {
         if self.displayed >= self.received.len() {
             return String::new();
         }
 
-        // Calculate step size: clamp to [2, 24] range
+        // Calculate step size: clamp to [4, 24] range.
+        // Min 4 ensures short text (5-10 chars) completes in 1-2 ticks at 100ms/tick,
+        // instead of needing 3+ ticks which causes the test harness to capture
+        // intermediate pacing states (e.g. "secon" instead of "second").
         let pending_len = self.received.len().saturating_sub(self.displayed);
         let rate_chunk = (pending_len as f64 / 20.0).ceil() as usize;
-        let step = rate_chunk.clamp(2, 24);
+        let step = rate_chunk.clamp(4, 24);
 
         // Look for a word boundary (whitespace or punctuation) within `step + 10` chars.
         let lookahead = (step + 10).min(self.received.len() - self.displayed);

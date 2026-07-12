@@ -26,8 +26,8 @@ fn assert_tool_flow_renders(state: &mut AppState) {
     );
     assert!(content.contains("✓"), "Should contain '✓': {}", content);
     assert!(
-        content.contains("→"),
-        "Should contain agent arrow '→': {}",
+        content.contains("◆"),
+        "Should contain agent arrow '◆': {}",
         content
     );
 }

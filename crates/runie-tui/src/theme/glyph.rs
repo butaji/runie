@@ -49,18 +49,22 @@ pub fn code_header_label(prefix: &str, lang: &str) -> String {
     }
 }
 
+/// Thinking indicator line.
 pub fn thinking_line(elapsed_secs: f64) -> String {
     format!("{} {} {:.1}s", GLYPH_AGENT, GLYPH_THINKING, elapsed_secs)
 }
 
+/// Tool running line.
 pub fn tool_running_line(name: &str, elapsed_secs: f64) -> String {
     format!("{}Running {}... {:.1}s", GLYPH_TOOL, name, elapsed_secs)
 }
 
+/// Tool done header.
 pub fn tool_done_header(name: &str, duration_secs: f64) -> String {
     format!("{}{} {:.1}s", GLYPH_TOOL, name, duration_secs)
 }
 
+/// Tool summary line.
 pub fn tool_summary_line(name: &str, duration_secs: f64) -> String {
     format!(
         "{}{} {:.1}s{}",
@@ -68,10 +72,12 @@ pub fn tool_summary_line(name: &str, duration_secs: f64) -> String {
     )
 }
 
+/// Turn complete line.
 pub fn turn_complete_line(duration_secs: f64) -> String {
     format!("Turn completed in {:.1}s", duration_secs)
 }
 
+/// Thought summary line.
 pub fn thought_summary_line(first_line: &str) -> String {
     format!("{}{}", first_line, INDICATOR_COLLAPSED)
 }

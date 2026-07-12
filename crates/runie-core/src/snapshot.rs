@@ -33,6 +33,8 @@ impl GitInfo {
         }
         base
     }
+
+
 }
 
 /// Which region of the TUI the mouse is currently over.
@@ -248,7 +250,9 @@ pub fn visible_slice<T>(elements: &[T], skip: usize, take: usize) -> &[T] {
 pub fn scroll_offset(total_lines: usize, scroll: usize, visible_height: usize) -> u16 {
     let max_scroll = total_lines.saturating_sub(visible_height);
     let scroll = scroll.min(max_scroll);
-    max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
+    // Content is rendered newest-at-top: at scroll=0 (bottom), offset=max_scroll
+    // shows the newest lines at the top of the visible area.
+    (max_scroll - scroll).min(u16::MAX as usize) as u16
 }
 
 /// Shared scrollbar metrics helper used by `AppState` and `Snapshot`.

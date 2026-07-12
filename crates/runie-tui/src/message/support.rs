@@ -7,7 +7,7 @@ use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
     style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_BULLET,
-    GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_ERROR,
+    GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X,
 };
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 use unicode_width::UnicodeWidthStr;
@@ -17,48 +17,40 @@ fn str_width(s: impl AsRef<str>) -> usize {
     UnicodeWidthStr::width(s.as_ref())
 }
 
-use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap};
+use super::word_wrap;
 
 pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'static>> {
-    let inner_width = content_width.saturating_sub(2);
     let style = style_thought();
     let mut lines: Vec<Line<'static>> = Vec::new();
     for raw_line in content.lines() {
         if raw_line.is_empty() {
-            lines.push(add_lr_margins(Line::from("").style(style)));
+            lines.push(Line::from("").style(style));
             continue;
         }
-        for chunk in word_wrap(raw_line, inner_width, inner_width) {
-            lines.push(add_lr_margins(Line::from(chunk.to_string()).style(style)));
+        for chunk in word_wrap(raw_line, content_width, content_width) {
+            lines.push(Line::from(chunk.to_string()).style(style));
         }
     }
     if lines.is_empty() {
-        lines.push(add_lr_margins(Line::from("").style(style)));
+        lines.push(Line::from("").style(style));
     }
     lines
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    let lines = vec![
-        Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64()))
-            .style(style_thinking()),
-    ];
-    add_lr_margins_to_lines(lines)
+    vec![Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64()))
+        .style(style_thinking())]
 }
 
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
     let first_line = content.lines().next().unwrap_or(content);
-    let lines = vec![Line::from(format!("{} [+]", first_line)).style(style_thought())];
-    add_lr_margins_to_lines(lines)
+    vec![Line::from(format!("{} [+]", first_line)).style(style_thought())]
 }
 
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
     let label = format_tool_label(name, args);
-    let lines = vec![
-        Line::from(format!("{} {} {:.1}s", GLYPH_SPINNER, label, duration_secs))
-            .style(style_tool_running()),
-    ];
-    add_lr_margins_to_lines(lines)
+    vec![Line::from(format!("{} {} {:.1}s", GLYPH_SPINNER, label, duration_secs))
+        .style(style_tool_running())]
 }
 
 pub fn render_tool_done(
@@ -76,12 +68,11 @@ pub fn render_tool_done(
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
     let header = format!(
-        "{} {} {} {}{}",
+        "{} {} {}{}",
         status_icon,
         label,
         duration,
         bytes_str,
-        if error { INDICATOR_ERROR } else { "" }
     );
     let mut lines = vec![Line::from(header).style(style_tool_header())];
     if !output.is_empty() {
@@ -93,29 +84,23 @@ pub fn render_tool_done(
             }
         }
     }
-    add_lr_margins_to_lines(lines)
+    lines
 }
 
 pub fn render_tool_summary(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
     let label = format_tool_label(name, args);
     let duration = format_duration(duration_secs);
-    let lines =
-        vec![Line::from(format!("✓ {} {} [+]", label, duration)).style(style_tool_summary())];
-    add_lr_margins_to_lines(lines)
+    vec![Line::from(format!("✓ {} {} [+]", label, duration)).style(style_tool_summary())]
 }
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    let lines = vec![
-        Line::from(format!("Turn completed in {:.1}s", duration_secs)).style(style_turn_complete()),
-    ];
-    add_lr_margins_to_lines(lines)
+    vec![Line::from(format!("Turn completed in {:.1}s", duration_secs))
+        .style(style_turn_complete())]
 }
 
 pub fn render_context_group(tools: &[runie_core::Element], collapsed: bool) -> Vec<Line<'static>> {
     if collapsed {
-        return vec![add_lr_margins(
-            Line::from(context_group_summary(tools)).style(style_tool_summary()),
-        )];
+        return vec![Line::from(context_group_summary(tools)).style(style_tool_summary())];
     }
 
     let mut lines = Vec::new();

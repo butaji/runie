@@ -24,7 +24,7 @@ path = "src/lib.rs"
 camino.workspace = true
 diffy.workspace = true
 runie-core = { workspace = true, features = ["mcp", "git", "keyring", "clipboard", "watch", "tiktoken"] }
-runie-provider.workspace = true
+runie-provider = { workspace = true, features = ["mock"] }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true

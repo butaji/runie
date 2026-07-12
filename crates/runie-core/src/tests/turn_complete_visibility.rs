@@ -38,7 +38,7 @@ fn feed_has_turn_complete(state: &AppState) -> bool {
 }
 
 #[test]
-fn single_thought_hides_turn_complete() {
+fn single_thought_shows_turn_complete() {
     let mut state = fresh_state();
     state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
@@ -57,7 +57,8 @@ fn single_thought_hides_turn_complete() {
     });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
-    assert!(!feed_has_turn_complete(&state));
+    // TurnComplete is ALWAYS shown (like Grok does)
+    assert!(feed_has_turn_complete(&state));
 }
 
 #[test]
@@ -96,7 +97,7 @@ fn tool_plus_thought_shows_turn_complete() {
 }
 
 #[test]
-fn tool_only_hides_turn_complete() {
+fn tool_only_shows_turn_complete() {
     let mut state = fresh_state();
     state.set_streaming(true);
     state.update(crate::Event::Response {
@@ -133,7 +134,8 @@ fn tool_only_hides_turn_complete() {
     });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
-    assert!(!feed_has_turn_complete(&state));
+    // TurnComplete is ALWAYS shown (like Grok does)
+    assert!(feed_has_turn_complete(&state));
 }
 
 #[test]
@@ -244,7 +246,7 @@ fn mixed_thought_tool_shows_turn_complete() {
 }
 
 #[test]
-fn zero_actions_hides_turn_complete() {
+fn zero_actions_shows_turn_complete() {
     let mut state = fresh_state();
     state.set_streaming(true);
     state.update(crate::Event::Response {
@@ -261,7 +263,8 @@ fn zero_actions_hides_turn_complete() {
     });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
-    assert!(!feed_has_turn_complete(&state));
+    // TurnComplete is ALWAYS shown (like Grok does)
+    assert!(feed_has_turn_complete(&state));
 }
 
 fn first_turn_events() -> Vec<Event> {
@@ -328,7 +331,7 @@ fn second_turn_events() -> Vec<Event> {
 }
 
 #[test]
-fn second_turn_independent_action_count() {
+fn both_turns_show_turn_complete() {
     let mut state = fresh_state();
     state.set_streaming(true);
     dispatch(&mut state, &first_turn_events());
@@ -336,9 +339,10 @@ fn second_turn_independent_action_count() {
     state.ensure_fresh();
     let kinds = element_kinds_no_spacer(&state);
     let turn_count = kinds.iter().filter(|k| *k == "Turn").count();
+    // ALL TurnComplete messages are shown (like Grok does)
     assert_eq!(
-        turn_count, 1,
-        "Only turn 1's TurnComplete should be visible; got {:?}",
+        turn_count, 2,
+        "Both TurnComplete messages should be visible; got {:?}",
         kinds
     );
 }
@@ -381,7 +385,7 @@ fn three_mixed_actions_shows_turn_complete() {
 }
 
 #[test]
-fn turn_complete_still_in_session_when_hidden() {
+fn turn_complete_in_session_and_feed() {
     let mut state = fresh_state();
     state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
@@ -407,5 +411,6 @@ fn turn_complete_still_in_session_when_hidden() {
         .filter(|m| m.role == Role::TurnComplete)
         .count();
     assert_eq!(turn_msgs, 1);
-    assert!(!feed_has_turn_complete(&state));
+    // TurnComplete is in session AND visible in feed (like Grok does)
+    assert!(feed_has_turn_complete(&state));
 }

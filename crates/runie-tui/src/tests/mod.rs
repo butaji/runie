@@ -88,7 +88,17 @@ pub fn render_content(state: &mut AppState) -> String {
 }
 
 /// Helper: render AppState with a custom terminal size.
+/// Sets the viewport dimensions in state so scroll math and content wrapping
+/// use the correct values matching the test backend size.
 pub fn render_with_size(state: &mut AppState, width: u16, height: u16) -> String {
+    // Set viewport dimensions so cache math uses correct values.
+    // Content width accounts for 1-cell left/right margin applied in ui.rs.
+    state.set_last_content_width(width.saturating_sub(2));
+    // Message viewport: full terminal minus input box, status bar, and margins.
+    // This mirrors the calculation in handle_terminal_resize().
+    let viewport_height = height.saturating_sub(8).max(3);
+    state.set_last_visible_height(viewport_height);
+
     let backend = TestBackend::new(width, height);
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal.draw(|f| view(f, state)).expect("draw");

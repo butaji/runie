@@ -19,7 +19,7 @@ use runie_core::markdown::{extract_code_blocks, inlines_to_text, CodeBlock};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_accent_bg, color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
+    color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
     GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
 };
 
@@ -35,26 +35,11 @@ pub use support::{
     render_tool_done, render_tool_running, render_tool_summary, render_turn_complete,
 };
 
-const MARGIN_SYMBOL: &str = " ";
-
-fn add_lr_margins(line: Line<'static>) -> Line<'static> {
-    let mut spans = vec![Span::raw(MARGIN_SYMBOL.to_owned())];
-    spans.extend(line.spans.iter().cloned());
-    spans.push(Span::raw(MARGIN_SYMBOL.to_owned()));
-    Line::from(spans).style(line.style)
-}
-
-fn add_lr_margins_to_lines(lines: Vec<Line<'static>>) -> Vec<Line<'static>> {
-    lines.into_iter().map(add_lr_margins).collect()
-}
-
 fn span_width(spans: &[Span<'_>]) -> u16 {
     spans.iter().map(|s| str_width(&s.content)).sum()
 }
 
-fn margin_line(width: u16, style: Style) -> Line<'static> {
-    Line::from(" ".repeat(width as usize)).style(style)
-}
+
 
 pub fn render_user_message(
     content: &str,
@@ -63,15 +48,12 @@ pub fn render_user_message(
 ) -> Vec<Line<'static>> {
     let ts_str = format_timestamp(timestamp);
     let base_style = style_user();
-    let bg_style = Style::default().bg(color_accent_bg());
-    let inner_width = content_width.saturating_sub(2);
+    let inner_width = content_width;
     let prefix_width = str_width(GLYPH_USER);
     let indent_width = str_width(GLYPH_INDENT);
     let ts_width = str_width(&ts_str) + 1;
 
-    let mut lines = Vec::new();
-    lines.push(margin_line(content_width, bg_style));
-    lines.extend(build_user_body(
+    build_user_body(
         content,
         prefix_width,
         indent_width,
@@ -80,11 +62,8 @@ pub fn render_user_message(
             ts_str,
             ts_width,
             base_style,
-            bg_style,
         },
-    ));
-    lines.push(margin_line(content_width, bg_style));
-    lines
+    )
 }
 
 /// Parameters for building user message lines.
@@ -93,7 +72,6 @@ struct UserLineParams {
     ts_str: String,
     ts_width: u16,
     base_style: Style,
-    bg_style: Style,
 }
 
 fn build_user_body(
@@ -128,14 +106,11 @@ fn build_user_line_from_spans(
     params: &UserLineParams,
 ) -> Line<'static> {
     let p_width = str_width(prefix);
-    let mut line_spans = vec![
-        Span::styled(" ", params.bg_style),
-        Span::styled(prefix, params.base_style),
-    ];
+    let mut line_spans = vec![Span::styled(prefix, params.base_style)];
     line_spans.extend(md_to_spans(spans));
 
     if with_ts {
-        let text_width = span_width(&line_spans[2..]);
+        let text_width = span_width(&line_spans[1..]);
         let padding = params
             .inner_width
             .saturating_sub(p_width)
@@ -153,13 +128,7 @@ fn build_user_line_from_spans(
         ));
     }
 
-    let used = span_width(&line_spans);
-    let fill = params.inner_width.saturating_sub(used);
-    if fill > 0 {
-        line_spans.push(Span::styled(" ".repeat(fill as usize), params.bg_style));
-    }
-    line_spans.push(Span::styled(" ", params.bg_style));
-    Line::from(line_spans).style(params.bg_style)
+    Line::from(line_spans)
 }
 
 pub fn render_agent_message(
@@ -169,13 +138,13 @@ pub fn render_agent_message(
 ) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let ts_str = format_timestamp(timestamp);
-    let inner_width = content_width.saturating_sub(2);
+    let inner_width = content_width.saturating_sub(8);
     let mut lines = build_agent_body(&blocks, &ts_str, inner_width);
 
     if lines.is_empty() {
         lines.push(render_empty_agent_line(inner_width, &ts_str));
     }
-    add_lr_margins_to_lines(lines)
+    lines
 }
 
 fn build_agent_body(blocks: &[CodeBlock], ts_str: &str, inner_width: u16) -> Vec<Line<'static>> {

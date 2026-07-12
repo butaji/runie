@@ -168,9 +168,11 @@ fn at_bottom_shows_new_thought() {
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
     let last = visible.elements.last().unwrap();
+    // ThoughtSummary now always shows (like Grok), so the last element after ThoughtDone
+    // is the ThoughtSummary
     assert!(
-        matches!(last, crate::view::elements::Element::ThoughtMarker { .. }),
-        "New thought should be visible at bottom: {:?}",
+        matches!(last, crate::view::elements::Element::ThoughtSummary { .. }),
+        "New thought response should end with ThoughtSummary: {:?}",
         last
     );
 }

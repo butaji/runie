@@ -8,10 +8,10 @@ use crate::model::AppState;
 
 impl AppState {
     pub(crate) fn hint_text(&self) -> String {
-        let mut parts = vec!["ctrl+o expand/collapse".to_owned()];
+        let mut parts = vec!["Ctrl+O expand/collapse".to_owned()];
         parts.extend(self.mode_hints());
-        parts.push("ctrl+c quit".to_owned());
-        parts.join(" · ")
+        parts.push("Ctrl+C quit".to_owned());
+        parts.join("  │  ")
     }
 
     fn mode_hints(&self) -> Vec<String> {
@@ -31,20 +31,20 @@ impl AppState {
             return crate::update::input::input_active_hints();
         }
         if self.config().vim_mode {
-            return vec!["esc nav".to_owned()];
+            return vec!["Esc nav".to_owned()];
         }
         crate::update::input::empty_input_hints()
     }
 
     fn active_turn_hints(&self) -> Vec<String> {
         let esc = if self.config().vim_mode {
-            "esc abort·nav"
+            "Esc abort · nav"
         } else {
-            "esc abort"
+            "Esc abort"
         };
         vec![
-            "enter steer".to_owned(),
-            "alt+enter follow-up".to_owned(),
+            "Enter steer".to_owned(),
+            "Alt+Enter follow-up".to_owned(),
             esc.to_owned(),
         ]
     }

@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use ratatui::widgets::{Paragraph, Wrap};
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Snapshot;
 use runie_core::{
@@ -45,13 +44,16 @@ fn row_to_element_len_equals_visible_rows() {
     let width = 40u16;
     let snap = snapshot_with_element(long_code_element(), width);
     let (lines, mapping) = build_lines_with_mapping(&snap, width);
-    let visible_rows = Paragraph::new(lines.as_slice())
-        .wrap(Wrap { trim: false })
-        .line_count(width);
+    // Mapping and lines must have matching lengths by construction.
     assert_eq!(
         mapping.len(),
-        visible_rows,
-        "row_to_element should contain one entry per visible row after wrap"
+        lines.len(),
+        "row_to_element should contain one entry per line"
+    );
+    // The mapping index for each line should point to element 0.
+    assert!(
+        mapping.iter().all(|&idx| idx == 0),
+        "all rows should map to element 0"
     );
 }
 

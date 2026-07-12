@@ -3,7 +3,7 @@
 use ratatui::{
     layout::Rect,
     text::Line,
-    widgets::{Paragraph, Wrap},
+    widgets::Paragraph,
     Frame,
 };
 use runie_core::Snapshot;
@@ -22,8 +22,7 @@ pub(crate) fn render_messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 fn render_empty_state(f: &mut Frame, area: Rect) {
-    let hint = Line::from("Type a message to start...").style(crate::theme::style_empty_state());
-    f.render_widget(Paragraph::new(hint), area);
+    f.render_widget(Paragraph::new(""), area);
 }
 
 fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
@@ -32,7 +31,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
         return;
     }
 
-    let content_width = area.width;
+    let content_width = area.width.saturating_sub(2);
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 
@@ -46,12 +45,16 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 fn render_paragraph(f: &mut Frame, area: Rect, lines: Vec<Line<'_>>, offset: u16) {
-    f.render_widget(
-        Paragraph::new(lines)
-            .scroll((offset, 0))
-            .wrap(Wrap { trim: false }),
-        area,
-    );
+    let height = area.height as usize;
+    let start = offset as usize;
+    // Render lines directly into the buffer — skip Paragraph to avoid re-wrapping.
+    for (row_offset, line) in lines.iter().skip(start).take(height).enumerate() {
+        let row = area.y + row_offset as u16;
+        f.render_widget(
+            ratatui::widgets::Paragraph::new(line.clone()),
+            Rect::new(area.x, row, area.width, 1),
+        );
+    }
 }
 
 fn render_scrollbar_if_needed(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {

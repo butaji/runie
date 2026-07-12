@@ -89,6 +89,7 @@ pub mod tracing_init;
 pub mod ui_strings;
 
 pub mod theme_tokens;
+pub mod theme_detection;
 
 pub mod tokens;
 pub mod tool;

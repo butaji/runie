@@ -12,7 +12,7 @@ use runie_core::Event;
 fn state_with_vim_and_messages() -> AppState {
     let mut state = AppState::default();
     state.config.vim_mode = true;
-    state.view.last_content_width = 80;
+    // last_content_width defaults to 82 (area width; rendering subtracts 2)
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
@@ -391,7 +391,7 @@ fn j_and_arrow_down_visit_identical_posts() {
 fn state_with_welcome_post() -> AppState {
     let mut state = AppState::default();
     state.config.vim_mode = true;
-    state.view.last_content_width = 80;
+    // last_content_width defaults to 82 (area width; rendering subtracts 2)
     state.session.messages.push(ChatMessage {
         role: Role::System,
         content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \

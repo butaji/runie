@@ -122,7 +122,7 @@ fn empty_line_between_input_box_and_hints() {
             let line: String = (0..buf.area().width)
                 .map(|x| buf[(x, y)].symbol())
                 .collect();
-            line.contains("ctrl+o")
+            line.contains("Ctrl+O")
         })
         .expect("Should find hints line");
 

@@ -84,6 +84,7 @@ impl AppState {
         }
         if view.vim_nav_mode {
             view.vim_nav_mode = false;
+            view.selected_post = None;
             view.dirty = true;
             return;
         }

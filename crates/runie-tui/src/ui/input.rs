@@ -20,7 +20,7 @@ use runie_core::Snapshot;
 
 use crate::theme::{
     block_input, style_agent, style_chevron, style_hint, style_input_cursor,
-    style_input_cursor_disabled, style_placeholder, GLYPH_USER,
+    style_input_cursor_disabled, GLYPH_USER,
 };
 
 /// Render the input box.
@@ -49,7 +49,8 @@ pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     }
 }
 
-/// Render the empty input state with placeholder text.
+/// Render the empty input state with cursor only (no placeholder).
+/// Matches grok's behavior: shows "❯ " with a blinking cursor when focused.
 fn render_empty_input(
     f: &mut Frame,
     snap: &Snapshot,
@@ -63,14 +64,12 @@ fn render_empty_input(
     } else {
         style_input_cursor_disabled()
     };
-    let placeholder_style = style_placeholder();
 
-    // Build placeholder line with chevron, cursor, and placeholder text
+    // Build line with chevron and cursor (no placeholder text, matching grok)
     let mut spans = vec![Span::styled(GLYPH_USER, chevron_style)];
     if token_held {
         spans.push(Span::styled(" ", cursor_style));
     }
-    spans.push(Span::styled(snap.placeholder.clone(), placeholder_style));
 
     // Add image attachment label if present
     if let Some(label) = image_attachment_label(snap) {

@@ -33,8 +33,10 @@ mod tests {
 
         state.apply_turn_completed();
 
-        // Verify projection via agent_state.
-        assert!(!state.agent_state().turn_active);
+        // Note: turn_active is intentionally NOT cleared by apply_turn_completed.
+        // The UiActor's clear_turn_state handles that transition after the final
+        // snapshot is rendered, so streaming text appears in the feed.
+        assert!(state.agent_state().turn_active, "turn_active stays true until UiActor clears it");
         assert!(!state.agent_state().streaming);
         assert_eq!(state.agent_state().inflight, 0);
         assert!(state.agent_state().current_tool_name.is_none());
@@ -282,12 +284,25 @@ impl AppState {
     }
 
     /// Project TurnCompleted fact into AppState's AgentState.
+    ///
+    /// Note: `turn_active` is intentionally NOT cleared here — `clear_turn_state`
+    /// in the UI actor handles that final transition after publishing the snapshot
+    /// so the completed streaming text is shown.
     pub(crate) fn apply_turn_completed(&mut self) {
         let agent = self.agent_state_mut();
         agent.streaming = false;
-        agent.turn_active = false;
+        // NOTE: turn_active is NOT cleared here. clear_turn_state in UiActor
+        // handles the final transition to false after publishing the snapshot.
         agent.inflight = agent.inflight.saturating_sub(1);
         agent.current_tool_name = None;
+        // Clear thinking state so that `should_skip_msg` stops hiding the
+        // assistant message in the feed. Previously these were only cleared by
+        // `finish_turn` (the Event::Done path), causing agent responses to
+        // vanish ("ghost agent message" bug) when the TurnActor path used
+        // Event::TurnCompleted instead.
+        agent.thinking_started_at = None;
+        agent.current_request_id = None;
+        agent.current_action = None;
     }
 
     /// Project TurnErrored fact into AppState's AgentState.
@@ -311,8 +326,13 @@ impl AppState {
 
     /// Project UserMessageSubmitted fact into AppState.
     /// Adds the message to session.messages and pushes to request_queue.
+    /// Idempotent: if a message with this ID already exists, skip silently.
     pub(crate) fn apply_user_message_submitted(&mut self, id: String, content: String) {
         use crate::message::{now, ChatMessage, Part, Role};
+        // Idempotency guard: skip if this exact message ID is already in session.
+        if self.session().messages.iter().any(|m| m.id == id) {
+            return;
+        }
         self.session_mut().messages.push(ChatMessage {
             role: Role::User,
             timestamp: now(),

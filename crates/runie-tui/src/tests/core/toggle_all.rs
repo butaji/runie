@@ -205,13 +205,14 @@ fn new_thought_respects_global_expand_when_false() {
     state.ensure_fresh();
 
     let feed = runie_core::view::LazyCache::feed(&state);
-    let has_marker = feed
+    // Duration-only thoughts show as ThoughtSummary (Grok-style)
+    let has_summary = feed
         .elements
         .iter()
-        .any(|e| matches!(e, runie_core::view::elements::Element::ThoughtMarker { .. }));
+        .any(|e| matches!(e, runie_core::view::elements::Element::ThoughtSummary { .. }));
     assert!(
-        has_marker,
-        "New thought should be expanded when all_collapsed=false"
+        has_summary,
+        "New thought should be visible as ThoughtSummary when all_collapsed=false"
     );
 }
 

@@ -644,6 +644,9 @@ impl UiActor {
             }
             Event::TurnComplete { .. } | Event::Done { .. } => {
                 self.paced.finish();
+                // Reset the paced renderer so it doesn't show stale streaming_tail
+                // after the response has been committed to the feed as AgentMessage.
+                self.paced = PacedRenderer::new();
             }
             _ => {}
         }
@@ -657,8 +660,15 @@ impl UiActor {
     fn build_paced_snapshot(&mut self) -> Snapshot {
         self.state.ensure_fresh();
         let mut snap = self.state.snapshot();
-        // Show the paced display text instead of the raw streaming tail.
-        snap.streaming_tail = self.paced.displayed().to_owned();
+        // Only show streaming tail when turn is active.
+        // When turn_active is false, the pacing renderer may contain stale content
+        // from the previous turn, so we clear it to avoid showing old responses.
+        if snap.turn_active {
+            snap.streaming_tail = self.paced.displayed().to_owned();
+        } else {
+            snap.streaming_tail = String::new();
+        }
+
         snap
     }
 
@@ -682,8 +692,12 @@ impl UiActor {
     /// For Abort: clears the queue so a new session starts clean.
     /// For TurnCompleted: delivers queued messages and starts the next turn.
     async fn clear_turn_state(&mut self, is_abort: bool) {
-        // Derive agent_running from turn_active (updated by apply_event for
-        // TurnCompleted/TurnErrored, or cleared directly for Abort).
+        // Force turn_active=true for the final snapshot so streaming_tail is rendered.
+        // TurnActor already cleared it, but we need it true here to capture the complete
+        // streamed response text in the snapshot before it gets cleared.
+        self.state.agent_state_mut().turn_active = true;
+        let snap = self.build_paced_snapshot();
+        let _ = self.render_tx.send(snap);
         self.state.agent_state_mut().turn_active = false;
         self.turn_was_active = false;
         self.pending_queued_turn = false;

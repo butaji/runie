@@ -61,3 +61,46 @@ fn snapshot_diff_renders_correctly() {
     let output = render_lines(lines, 40, 5);
     insta::assert_snapshot!(output);
 }
+
+#[test]
+fn test_render_agent_shows_full_content() {
+    use crate::message::render_agent_message;
+    let content = "xyzabc123 what is 2+2";
+    let lines = render_agent_message(content, 1000.0, 80);
+    let full_text: String = lines.iter().map(|l| l.to_string()).collect();
+    assert!(full_text.contains("xyzabc123"), "Full text should appear, got: {}", full_text);
+}
+
+#[test]
+fn test_render_user_message_long_content() {
+    // This is the exact content from the tmux session that was truncated
+    let content = "what is rust async";
+    let lines = render_user_message(content, 1000.0, 80);
+    let full_text: String = lines.iter().map(|l| l.to_string()).collect();
+    let rendered = render_lines(lines, 80, 5);
+    // Print for debugging
+    eprintln!("=== render_user_message('{}') ===", content);
+    eprintln!("Full text: {}", full_text);
+    eprintln!("Rendered:\n{}", rendered);
+    assert!(
+        full_text.contains("what is rust async"),
+        "Full text should appear, got: {}",
+        full_text
+    );
+}
+
+#[test]
+fn test_render_user_message_with_timestamp() {
+    let content = "what is rust async";
+    let lines = render_user_message(content, 1720761720.0, 80); // realistic timestamp
+    let full_text: String = lines.iter().map(|l| l.to_string()).collect();
+    eprintln!("=== With timestamp ===");
+    eprintln!("Full text: {}", full_text);
+    let rendered = render_lines(lines, 80, 5);
+    eprintln!("Rendered:\n{}", rendered);
+    assert!(
+        full_text.contains("what is rust async"),
+        "Full text should appear, got: {}",
+        full_text
+    );
+}

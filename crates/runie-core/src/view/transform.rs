@@ -56,28 +56,6 @@ impl LazyCache {
         }
     }
 
-    fn action_turn_id(msg: &crate::model::ChatMessage) -> Option<String> {
-        match msg.role {
-            Role::Thought => msg.id.split_once('#').map(|(prefix, _)| prefix.to_owned()),
-            Role::Tool => {
-                let rest = msg.id.strip_prefix("tool.")?;
-                let idx = rest.rfind('.')?;
-                Some(rest[..idx].to_string())
-            }
-            _ => None,
-        }
-    }
-
-    fn action_counts(state: &AppState) -> std::collections::HashMap<String, usize> {
-        let mut counts = std::collections::HashMap::new();
-        for msg in state.session().messages.iter() {
-            if let Some(turn_id) = Self::action_turn_id(msg) {
-                *counts.entry(turn_id).or_insert(0) += 1;
-            }
-        }
-        counts
-    }
-
     fn thinking_timestamp(state: &AppState) -> f64 {
         let max_ts = state
             .session
@@ -110,18 +88,12 @@ impl LazyCache {
 
     fn collect_entries(state: &AppState) -> Vec<Element> {
         let mut entries: Vec<Element> = Vec::new();
-        let action_counts = Self::action_counts(state);
 
         for msg in state.session().messages.iter() {
             if Self::should_skip_msg(msg, state) {
                 continue;
             }
-            if msg.role == Role::TurnComplete {
-                let count = action_counts.get(&msg.id).copied().unwrap_or(0);
-                if count <= 1 {
-                    continue;
-                }
-            }
+            // Always show TurnComplete (like Grok does)
             entries.extend(Self::msg_to_elem(msg, state));
         }
 
@@ -185,9 +157,10 @@ impl LazyCache {
         let is_tool_only = !msg.tool_calls().is_empty() && !has_text_or_reasoning;
         let has_tool_markers = crate::update::content_has_tool_markers(&msg.content());
         let is_tool_call_msg = is_tool_only || has_tool_markers;
-        is_tool_call_msg
+        let skip = is_tool_call_msg
             || (state.agent_state().thinking_started_at.is_some()
-                && state.agent_state().current_request_id.as_deref() == Some(&msg.id))
+                && state.agent_state().current_request_id.as_deref() == Some(&msg.id));
+        skip
     }
 
     pub fn visible(cache: &[Element], skip: usize, take: usize) -> &[Element] {
@@ -262,12 +235,27 @@ impl LazyCache {
 
     fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
         let content = msg.content();
+        // Show "Thought for Xs" as a summary (like Grok does)
+        if Self::is_duration_only_thought(&content) {
+            // Always show as summary, even when collapsed
+            return Element::thought_summary(
+                content.clone(),
+                Self::parse_thought_dur(&content),
+            )
+            .at(ts);
+        }
         if state.view().all_collapsed {
             let first_line = content.lines().next().unwrap_or(&content).to_owned();
             Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(ts)
         } else {
             Element::thought(content).at(ts)
         }
+    }
+
+    /// Check if the thought is just a duration marker like "Thought for 0.2s"
+    fn is_duration_only_thought(content: &str) -> bool {
+        let trimmed = content.trim();
+        trimmed.starts_with("◆ Thought for ") && !trimmed.contains('\n')
     }
 
     fn parse_thought_dur(content: &str) -> f64 {

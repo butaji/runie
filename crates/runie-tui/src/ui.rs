@@ -47,6 +47,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot, throbber: &mut ThrobberStat
     let area = full_area.inner(margin);
     let constraints = snapshot_constraints(snap);
     let c = layout::vstack(area, &constraints);
+
     messages::render_messages(f, snap, c[0]);
     if snap.has_models {
         // c[1] is the empty margin line — no rendering needed
@@ -76,7 +77,10 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
             Constraint::Length(1), // hints
         ]
     } else {
-        vec![Constraint::Min(3), Constraint::Length(1)]
+        vec![
+            Constraint::Length(snap.last_visible_height),
+            Constraint::Length(2), // hints bar (fixed height, not expandable)
+        ]
     }
 }
 

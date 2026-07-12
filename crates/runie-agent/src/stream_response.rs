@@ -83,6 +83,7 @@ impl StreamState {
     fn on_text_delta(&mut self, delta: String) -> ControlFlow<Result<()>> {
         // Accumulate text in shared state; emit ResponseDelta directly.
         self.shared.push_text(&delta);
+
         (self.emit)(runie_core::Event::ResponseDelta {
             id: self.command_id.clone(),
             content: delta,

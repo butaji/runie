@@ -219,7 +219,10 @@ impl AppState {
     /// This is called by ensure_fresh and snapshot methods.
     fn build_view_cache(&mut self) -> ViewCache {
         let feed = crate::view::LazyCache::feed(self);
-        let width = self.view().last_content_width.max(1);
+        // `last_content_width` is the area width (from `f.area().inner(margin)`).
+        // Rendering computes `content_width = area.width.saturating_sub(2)` for glyph
+        // margins, so we use the same value here to keep cached line counts in sync.
+        let width = self.view().last_content_width.saturating_sub(2).max(1);
         let line_counts: Vec<usize> = feed
             .elements
             .iter()

@@ -133,7 +133,7 @@ impl Default for ViewState {
             animation_frame: 0,
             all_collapsed: false,
             last_visible_height: 20,
-            last_content_width: 80,
+            last_content_width: 82, // area width; rendering subtracts 2 for glyph margins
             selected_post: None,
             total_lines: 0,
             line_counts: Arc::new([]),

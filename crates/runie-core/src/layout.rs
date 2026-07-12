@@ -12,9 +12,9 @@ use unicode_width::UnicodeWidthStr;
 /// User message prefix glyph (must match `runie_tui::theme::GLYPH_USER`).
 pub const GLYPH_USER: &str = "❯ ";
 /// Agent message prefix glyph (must match `runie_tui::theme::GLYPH_AGENT`).
-pub const GLYPH_AGENT: &str = "→ ";
+pub const GLYPH_AGENT: &str = "◆ ";
 /// Indented continuation glyph (must match `runie_tui::theme::GLYPH_INDENT`).
-pub const GLYPH_INDENT: &str = "  ";
+pub const GLYPH_INDENT: &str = "     ";
 
 /// Number of terminal rows an element renders to at the given viewport
 /// width. This uses the same wrapping rules as `runie_tui::ui::messages::to_lines`,
@@ -104,12 +104,12 @@ fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
         content_lines += word_wrap(line, w, rest_w).len().max(1);
     }
 
-    // Top and bottom margin lines, plus at least one content line.
-    2 + content_lines.max(1)
+    content_lines.max(1)
 }
 
 fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
-    let inner_width = width.saturating_sub(2);
+    // Subtract 8 for left/right margins (4 spaces each).
+    let inner_width = width.saturating_sub(8);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }
@@ -194,7 +194,8 @@ fn text_block_line_count(
 }
 
 fn thought_marker_line_count(content: &str, width: u16) -> usize {
-    let inner_width = width.saturating_sub(2);
+    // Subtract 8 for left/right margins (4 spaces each).
+    let inner_width = width.saturating_sub(8);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }
@@ -376,16 +377,16 @@ mod tests {
     #[test]
     fn user_message_line_count_matches_wide_viewport() {
         let msg = Element::user("hello").at(0.0);
-        // Margins (2) + one content line (1) = 3.
-        assert_eq!(element_line_count(&msg, 80), 3);
+        // One content line (no vertical margins for user messages).
+        assert_eq!(element_line_count(&msg, 80), 1);
     }
 
     #[test]
     fn user_message_wraps_narrow_viewport() {
         let msg = Element::user("hello world from runie").at(0.0);
         let count = element_line_count(&msg, 20);
-        // Width 20 forces wrapping; should be > 3.
-        assert!(count > 3, "expected wrapping, got {count}");
+        // Width 20 forces wrapping; should be > 1.
+        assert!(count > 1, "expected wrapping, got {count}");
     }
 
     #[test]

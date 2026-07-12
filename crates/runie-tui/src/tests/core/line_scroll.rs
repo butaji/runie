@@ -52,8 +52,8 @@ fn user_message_is_one_line() {
     state.refresh_after_message_change();
 
     assert_eq!(
-        state.view.total_lines, 4,
-        "UserMessage (3: margins+content) + Spacer (1) = 4 lines"
+        state.view.total_lines, 2,
+        "UserMessage (1: content) + Spacer (1) = 2 lines"
     );
 }
 
@@ -179,9 +179,9 @@ fn scroll_up_shows_older_content() {
     }
     state.refresh_after_message_change();
 
-    // 5 messages = 20 lines total (5*3 messages + 5 spacers). Viewport of 3 lines.
-    // scroll=8: viewport [9, 12) — msg2 visible, msg4 hidden
-    state.view.scroll = 8;
+    // 5 messages = 10 lines total (5*1 messages + 5 spacers). Viewport of 3 lines.
+    // scroll=3: viewport [3, 6) — msg2 visible, msg4 hidden
+    state.view.scroll = 3;
     let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 3);
     assert!(
         region
@@ -263,10 +263,10 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     state.view.scroll = 0;
 
     let (_thumb, offset) = state.snapshot().scrollbar_metrics(10);
-    // 80 lines total (20 msgs × 4), viewport 10, position = 70
-    // thumb_start = round(70 * 10 / 80) = 9, thumb_end = round(80 * 10 / 80) = 10
-    // thumb = 1, offset = 9 (bottom of 10-row track)
-    assert_eq!(offset, 9, "Thumb at bottom track edge when scroll=0");
+    // 40 lines total (20 msgs × 2), viewport 10, position = 30
+    // thumb_start = round(30 * 10 / 40) = 8, thumb_end = round(40 * 10 / 40) = 10
+    // thumb = 2, offset = 8 (bottom of 10-row track)
+    assert_eq!(offset, 8, "Thumb at bottom track edge when scroll=0");
 }
 
 #[test]

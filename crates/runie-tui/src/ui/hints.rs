@@ -77,7 +77,7 @@ fn transient_style(snap: &runie_core::Snapshot) -> (&'static str, ratatui::style
 
 pub(crate) fn parse_hint_spans(text: &str) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
-    let segments: Vec<&str> = text.split(" · ").collect();
+    let segments: Vec<&str> = text.split("  │  ").collect();
     for (i, segment) in segments.iter().enumerate() {
         if let Some(space_idx) = segment.find(' ') {
             let key = &segment[..space_idx];
@@ -88,7 +88,7 @@ pub(crate) fn parse_hint_spans(text: &str) -> Vec<Span<'static>> {
             spans.push(Span::styled(segment.to_string(), style_hint()));
         }
         if i + 1 < segments.len() {
-            spans.push(Span::styled(" · ".to_owned(), style_hint()));
+            spans.push(Span::styled("  │  ".to_owned(), style_hint()));
         }
     }
     spans

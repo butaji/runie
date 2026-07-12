@@ -69,40 +69,40 @@ pub fn find_word_boundary_right(s: &str, pos: usize) -> usize {
 
 pub fn vim_nav_hints() -> Vec<String> {
     vec![
-        "j/k".to_owned(),
-        "g/G".to_owned(),
-        "enter expand".to_owned(),
-        "q quit".to_owned(),
-        "space/i".to_owned(),
-        "esc".to_owned(),
+        "J/K".to_owned(),
+        "G/Shift+G".to_owned(),
+        "Enter expand".to_owned(),
+        "Q quit".to_owned(),
+        "Space/I".to_owned(),
+        "Esc".to_owned(),
     ]
 }
 
 pub fn at_suggestion_hints() -> Vec<String> {
     vec![
-        "tab cycle".to_owned(),
-        "enter insert".to_owned(),
-        "esc close".to_owned(),
+        "Tab cycle".to_owned(),
+        "Enter insert".to_owned(),
+        "Esc close".to_owned(),
     ]
 }
 
 pub fn input_active_hints() -> Vec<String> {
     vec![
-        "enter send".to_owned(),
-        "alt+enter follow-up".to_owned(),
-        "esc clear".to_owned(),
+        "Enter send".to_owned(),
+        "Alt+Enter follow-up".to_owned(),
+        "Esc clear".to_owned(),
     ]
 }
 
 pub fn empty_input_hints() -> Vec<String> {
-    vec!["alt+enter follow-up".to_owned(), "esc clear".to_owned()]
+    vec!["Alt+Enter follow-up".to_owned(), "Esc clear".to_owned()]
 }
 
 /// Modal navigation hints (command palette, model selector, settings, etc.).
 pub fn modal_hints() -> Vec<String> {
     vec![
         "↑/↓ select".to_owned(),
-        "enter confirm".to_owned(),
-        "esc close".to_owned(),
+        "Enter confirm".to_owned(),
+        "Esc close".to_owned(),
     ]
 }

@@ -210,6 +210,9 @@ fn handle_escape(state: &mut AppState) {
     {
         let view = state.view_mut();
         view.vim_nav_mode = entering;
+        if !entering {
+            view.selected_post = None;
+        }
         view.dirty = true;
     }
     if entering {
@@ -240,6 +243,7 @@ fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
                 // Left-click in input area: focus the prompt, exit vim nav mode.
                 if state.view_mut().vim_nav_mode {
                     state.view_mut().vim_nav_mode = false;
+                    state.view_mut().selected_post = None;
                 }
                 state.view_mut().dirty = true;
             }

@@ -2,12 +2,11 @@
 //!
 //! Design system (colors, glyphs, borders) lives in runie-tui::theme.
 
-/// Format timestamp from f64 (unix seconds) to HH:MM (UTC).
+/// Format timestamp from f64 (unix seconds) to H:MM AM/PM (local time).
 pub fn format_timestamp(unix_secs: f64) -> String {
-    let secs = unix_secs as i64;
-    let hours = (secs / 3600) % 24;
-    let mins = (secs / 60) % 60;
-    format!("{:02}:{:02}", hours, mins)
+    let datetime = chrono::DateTime::from_timestamp(unix_secs as i64, 0)
+        .unwrap_or_else(|| chrono::DateTime::from_timestamp(0, 0).unwrap());
+    datetime.format("%-I:%M %p").to_string()
 }
 
 // Legacy labels (deprecated)
@@ -37,7 +36,7 @@ pub fn thinking_with_time(seconds: f64) -> String {
 
 /// tui1-style thought indicator
 pub fn thought_with_time(seconds: f64) -> String {
-    format!("◆ Thought {:.1}s", seconds)
+    format!("◆ Thought for {:.1}s", seconds)
 }
 
 /// tui1-style tool running

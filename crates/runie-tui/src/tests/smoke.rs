@@ -110,7 +110,7 @@ fn agent_response_renders() {
         provider: String::new(),
     });
     let content = draw_state(&mut state);
-    assert!(content.contains("→ Hello"), "Should render agent prefix");
+    assert!(content.contains("◆ Hello"), "Should render agent prefix");
 }
 
 #[test]
@@ -231,9 +231,14 @@ fn empty_state_shows_hint() {
                 .collect::<String>()
         })
         .collect();
+    // The empty state shows the input prompt without placeholder text (matching grok).
     assert!(
-        content.contains("Type a message"),
-        "Empty state should show hint text"
+        content.contains("❯ "),
+        "Empty state should show input prompt"
+    );
+    assert!(
+        !content.contains("Type a message"),
+        "Empty state should not show placeholder text"
     );
 }
 
@@ -241,17 +246,17 @@ fn empty_state_shows_hint() {
 //
 // `scripts/tmxtest.sh` was deleted. It verified three startup behaviors:
 //   1. Binary starts — covered by `cargo build` passing in CI.
-//   2. "Type a message" placeholder — already covered by `empty_state_shows_hint`.
+//   2. Input prompt renders (no placeholder text) — covered by `empty_state_shows_hint`.
 //   3. Help/keybinding hints render — covered by the two tests below.
 
 /// Layer 3: verify the hint bar renders keybinding hints in the startup buffer.
-/// Replaces: "tmux capture-pane" grep for "ctrl+o" in `scripts/tmux-test.sh`.
+/// Replaces: "tmux capture-pane" grep for "Ctrl+O" in `scripts/tmux-test.sh`.
 #[test]
 fn startup_render_contains_keybinding_hints() {
     let mut state = AppState::default();
     connect_model(&mut state);
     state.config.vim_mode = false;
-    // hint_text() produces "ctrl+o expand/collapse · [mode hints] · ctrl+c quit"
+    // hint_text() produces "Ctrl+O expand/collapse · [mode hints] · Ctrl+C quit"
     // Render at a wide size so the hint bar is not truncated.
     let backend = TestBackend::new(100, 24);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -265,18 +270,18 @@ fn startup_render_contains_keybinding_hints() {
         })
         .collect();
     assert!(
-        content.contains("ctrl+o"),
-        "Hint bar should contain ctrl+o hint: {}",
+        content.contains("Ctrl+O"),
+        "Hint bar should contain Ctrl+O hint: {}",
         content
     );
     assert!(
-        content.contains("ctrl+c quit"),
-        "Hint bar should contain ctrl+c quit: {}",
+        content.contains("Ctrl+C quit"),
+        "Hint bar should contain Ctrl+C quit: {}",
         content
     );
 }
 
-/// Layer 3: verify the startup render buffer contains both the input placeholder
+/// Layer 3: verify the startup render buffer contains the input prompt
 /// and the hint bar. This catches rendering regressions without needing tmux.
 #[test]
 fn startup_render_buffer_has_placeholder_and_hints() {
@@ -293,14 +298,16 @@ fn startup_render_buffer_has_placeholder_and_hints() {
                 .collect::<String>()
         })
         .collect();
+    // The input box shows the prompt without placeholder text (matching grok).
     assert!(
-        all_content.contains("Type a message"),
-        "Startup render must show placeholder text"
+        all_content.contains("❯ "),
+        "Startup render must show input prompt: {}",
+        all_content
     );
-    // The hint bar always shows ctrl+o (expand/collapse).
+    // The hint bar always shows Ctrl+O (expand/collapse).
     assert!(
-        all_content.contains("ctrl+o"),
-        "Startup render must show ctrl+o hint: {}",
+        all_content.contains("Ctrl+O"),
+        "Startup render must show Ctrl+O hint: {}",
         all_content
     );
 }

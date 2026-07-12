@@ -18,11 +18,12 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
     let accent = theme.color("accent.primary");
     let fg = theme.color("text.primary");
     let dim = theme.color("text.dim");
+    let secondary = theme.color("text.secondary");
     theme.register_default_style("runie.user", opaline::OpalineStyle::fg(accent).bold());
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
-    theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(secondary).italic());
+    theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(secondary));
+    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(secondary));
     theme.register_default_style("runie.empty", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.timestamp", opaline::OpalineStyle::fg(dim));
 }
@@ -30,10 +31,12 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
 fn register_tool_styles(theme: &mut opaline::Theme) {
     let dim = theme.color("text.dim");
     let fg = theme.color("text.primary");
-    theme.register_default_style("runie.tool.running", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.tool.header", opaline::OpalineStyle::fg(dim));
+    let secondary = theme.color("text.secondary");
+    let success = theme.color("success");
+    theme.register_default_style("runie.tool.running", opaline::OpalineStyle::fg(secondary));
+    theme.register_default_style("runie.tool.header", opaline::OpalineStyle::fg(secondary));
     theme.register_default_style("runie.tool.output", opaline::OpalineStyle::fg(fg));
-    theme.register_default_style("runie.tool.summary", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.tool.summary", opaline::OpalineStyle::fg(success));
     theme.register_default_style("runie.turn.complete", opaline::OpalineStyle::fg(dim));
 }
 

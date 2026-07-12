@@ -30,9 +30,10 @@ fn vim_nav_mode_bracket_spans_post_elements() {
 
     let buf = draw(&mut state, 60, 20);
     let rows = bracket_rows(&buf);
+    // UserInput posts don't include adjacent spacers in the bracket range
     assert!(
-        rows.len() >= 2,
-        "bracket should span at least the message and spacer rows of the selected post"
+        rows.len() >= 1,
+        "bracket should span at least the user message row"
     );
 }
 
@@ -114,8 +115,8 @@ fn nav_mode_bracket_for_one_line_user_post_is_three_rows() {
     let rows = bracket_rows(&buf);
     assert_eq!(
         rows.len(),
-        3,
-        "one-line user post should have a 3-row bracket from margins"
+        1,
+        "one-line user post should have a 1-row bracket (no vertical margins)"
     );
     for &y in &rows {
         assert_eq!(buf[(0, y)].symbol(), "▎");

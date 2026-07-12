@@ -22,13 +22,15 @@ pub fn to_lines_internal(elem: &Element, content_width: u16) -> Vec<Line<'static
 }
 
 /// Render an element and return both the lines and the number of terminal
-/// rows Ratatui will use after its wrap pass.
+/// rows those lines occupy. The lines are already pre-wrapped during rendering,
+/// so the count is simply the number of lines returned.
 pub fn to_lines_and_count(elem: &Element, content_width: u16) -> (Vec<Line<'static>>, usize) {
     let lines = render_element(elem, content_width);
-    let count = wrapped_row_count(&lines, content_width);
+    let count = lines.len();
     (lines, count)
 }
 
+#[allow(dead_code)]
 fn wrapped_row_count(lines: &[Line<'_>], width: u16) -> usize {
     Paragraph::new(lines)
         .wrap(Wrap { trim: false })

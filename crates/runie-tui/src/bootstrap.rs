@@ -543,7 +543,12 @@ impl TuiRuntime {
 /// Initialize terminal state from actual terminal size.
 fn init_terminal_state(state: &mut AppState) {
     if let Ok((width, height)) = crossterm::terminal::size() {
-        state.set_last_content_width(width);
+        // Use area width (terminal width minus left/right margins) so the value
+        // matches what render uses: `content_width = area.width.saturating_sub(2)`.
+        // Previously we passed the raw terminal width, causing a double-subtract
+        // that made content_width = 76 instead of 78 in an 80-wide terminal.
+        let area_width = width.saturating_sub(2);
+        state.set_last_content_width(area_width);
         state.set_last_visible_height(height);
     }
 }

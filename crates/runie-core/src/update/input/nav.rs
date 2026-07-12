@@ -185,11 +185,13 @@ impl AppState {
     pub(crate) fn handle_vim_nav_char(&mut self, c: char) {
         if c == ' ' {
             self.view_mut().vim_nav_mode = false;
+            self.view_mut().selected_post = None;
             self.insert_char(' ');
             return;
         }
         if c == 'i' || c == 'I' {
             self.view_mut().vim_nav_mode = false;
+            self.view_mut().selected_post = None;
             self.view_mut().dirty = true;
             return;
         }
@@ -203,6 +205,7 @@ impl AppState {
             return;
         }
         self.view_mut().vim_nav_mode = false;
+        self.view_mut().selected_post = None;
         self.insert_char(c);
     }
 
@@ -228,6 +231,7 @@ impl AppState {
     fn handle_vim_jump_down(&mut self, last: usize) -> bool {
         if self.view_mut().selected_post.unwrap_or(0) >= last {
             self.view_mut().vim_nav_mode = false;
+            self.view_mut().selected_post = None;
             self.view_mut().dirty = true;
             true
         } else {
@@ -250,6 +254,7 @@ impl AppState {
     fn handle_vim_copy(&mut self, evt: crate::Event) -> bool {
         self.update(evt);
         self.view_mut().vim_nav_mode = false;
+        self.view_mut().selected_post = None;
         self.view_mut().dirty = true;
         true
     }
@@ -278,6 +283,11 @@ impl AppState {
                 );
                 Some(false)
             }
+            // Enter in vim nav mode toggles expand/collapse (same as Ctrl+O).
+            crate::Event::Submit => {
+                self.update(crate::Event::ToggleExpand);
+                Some(true)
+            }
             _ => Some(true),
         }
     }
@@ -295,6 +305,7 @@ impl AppState {
         let last = self.snapshot().posts.len().saturating_sub(1);
         if self.view_mut().selected_post.unwrap_or(0) >= last {
             self.view_mut().vim_nav_mode = false;
+            self.view_mut().selected_post = None;
             self.view_mut().dirty = true;
             false
         } else {

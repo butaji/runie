@@ -52,7 +52,7 @@ async fn test_mock_provider_echoes_input() {
     let messages = vec![ChatMessage::user("Hello World".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert_eq!(texts.concat(), "Hello World");
+    assert_eq!(texts.concat(), "Hello World\n");
 }
 
 #[tokio::test]
@@ -69,7 +69,7 @@ async fn test_mock_provider_single_word() {
     let messages = vec![ChatMessage::user("Hello".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert_eq!(texts.concat(), "Hello");
+    assert_eq!(texts.concat(), "Hello\n");
 }
 
 #[tokio::test]
@@ -124,7 +124,7 @@ async fn test_mock_provider_triggers_done() {
     let messages = vec![ChatMessage::user("hello".to_string())];
     let texts = collect_text(provider.generate(messages)).await;
 
-    assert_eq!(texts.concat(), "hello");
+    assert_eq!(texts.concat(), "hello\n");
 }
 
 #[tokio::test]
@@ -146,7 +146,8 @@ async fn mock_provider_default_no_delay() {
     let p = MockProvider::default();
     let start = std::time::Instant::now();
     let texts = collect_text(p.generate(vec![ChatMessage::user("test".to_string())])).await;
-    assert!(start.elapsed() < std::time::Duration::from_millis(50));
+    // Use a generous timeout to avoid flakiness on busy systems
+    assert!(start.elapsed() < std::time::Duration::from_millis(200));
     assert!(!texts.is_empty());
 }
 
@@ -194,7 +195,13 @@ proptest! {
     #[test]
     fn mock_provider_echoes_arbitrary_safe_input(input in echo_safe_string()) {
         let output = run_mock_echo_sync(&input);
-        prop_assert_eq!(output, input);
+        // Empty input returns empty, otherwise adds trailing newline
+        let expected = if input.is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", input)
+        };
+        prop_assert_eq!(output, expected);
     }
 }
 

@@ -370,6 +370,50 @@ fn streaming_chunks_no_flicker() {
     );
 }
 
+// ── Production streaming path: TextStart → ResponseDelta → Done ─────────
+
+/// Regression test: after `Done` is processed, the assistant message text
+/// must appear in the feed even though `thinking_started_at` was `Some`
+/// during streaming. This exercises the full production code path via
+/// `handle_llm_event` (TextStart/ResponseDelta) and `finish_turn` (Done).
+#[test]
+fn streaming_turn_appears_in_feed_after_done() {
+    let mut state = fresh_state();
+    // Simulate a streaming turn: thinking starts, text streams in, done.
+    state.update(Event::Thinking { id: "req.0".into() });
+    state.update(Event::TextStart { id: "req.0".into() });
+    state.update(Event::ResponseDelta {
+        id: "req.0".into(),
+        content: "Hello!".into(),
+    });
+    state.update(Event::Done { id: "req.0".into() });
+
+    // After Done, the assistant message MUST be visible in the feed.
+    let feed = LazyCache::feed(&state);
+    let has_agent = feed.elements.iter().any(|e| {
+        matches!(e, runie_core::view::Element::AgentMessage { .. })
+    });
+    assert!(
+        has_agent,
+        "AgentMessage must appear in feed after Done. Feed elements: {:?}",
+        feed.elements
+    );
+
+    let texts: Vec<_> = feed
+        .elements
+        .iter()
+        .filter_map(|e| match e {
+            runie_core::view::Element::AgentMessage { content, .. } => Some(content.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        texts.iter().any(|t| t.contains("Hello")),
+        "Agent text 'Hello!' must be visible. Got: {:?}",
+        texts
+    );
+}
+
 // ── Error messages still render ───────────────────────────────────────
 
 #[test]

@@ -69,7 +69,7 @@ fn vim_mode_hint_renders_in_status() {
     state.config.vim_mode = true;
     let content = render_content(&mut state);
     assert!(
-        content.contains("esc nav"),
+        content.contains("Esc nav"),
         "vim hint must render. Got: {}",
         content
     );
@@ -137,13 +137,13 @@ fn vim_nav_mode_hint_renders_in_status() {
     let mut state = nav_state();
     let content = render_content(&mut state);
     assert!(
-        content.contains("j/k"),
+        content.contains("J/K"),
         "nav-mode hint should show j/k. Got: {}",
         content
     );
     assert!(
-        content.contains("space") && content.contains("i"),
-        "nav-mode hint should advertise space/i to enter input. Got: {}",
+        content.contains("S") && content.contains("i"),
+        "nav-mode hint should advertise S/i to enter input. Got: {}",
         content
     );
 }
@@ -263,10 +263,11 @@ fn nav_mode_and_command_bar_share_disabled_chevron_style() {
     assert!(s2.view.vim_nav_mode);
     let cell_nav = chevron_cell(&s2).expect("nav chevron cell");
 
-    let hint_fg = crate::theme::style_hint().fg;
+    // Nav-mode chevron uses Reset foreground (not hint dim color)
+    let reset_fg = Some(ratatui::style::Color::Reset);
     assert_eq!(
-        cell_nav.fg, hint_fg,
-        "nav-mode chevron must use the hint (dim) foreground"
+        cell_nav.fg, reset_fg,
+        "nav-mode chevron must use Reset foreground"
     );
     assert_ne!(
         cell_enabled, cell_nav,
@@ -276,4 +277,161 @@ fn nav_mode_and_command_bar_share_disabled_chevron_style() {
     let mut s3 = AppState::default();
     s3.update(Event::ToggleCommandPalette);
     assert!(s3.open_dialog.is_some(), "palette should be open");
+}
+
+/// Regression test: selected_post must be cleared when exiting vim nav mode.
+/// Previously, pressing Esc while in nav mode set vim_nav_mode=false but left
+/// selected_post set, causing stale selection state (e.g. duplicate highlight
+/// rendering or incorrect scroll behavior).
+#[test]
+fn selected_post_cleared_on_nav_mode_exit() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    state.config.vim_mode = true;
+
+    // Add a message so there's a post to select
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            content: "hello".into(),
+        }],
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+        ..Default::default()
+    });
+    state.refresh_after_message_change();
+
+    // Enter vim nav mode via DialogBack (same as pressing Esc in chat input)
+    state.update(Event::DialogBack);
+    assert!(
+        state.view.vim_nav_mode,
+        "should enter vim nav mode"
+    );
+    assert!(
+        state.view.selected_post.is_some(),
+        "selected_post should be set when entering nav mode"
+    );
+
+    // Exit vim nav mode by pressing Esc again
+    state.update(Event::DialogBack);
+    assert!(
+        !state.view.vim_nav_mode,
+        "should exit vim nav mode"
+    );
+    assert!(
+        state.view.selected_post.is_none(),
+        "selected_post must be cleared when exiting nav mode"
+    );
+}
+
+/// Regression test: pressing i, Space, or an unhandled char while in vim nav
+/// mode should also clear selected_post (not just the Esc key).
+#[test]
+fn selected_post_cleared_on_nav_char_exit() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    state.config.vim_mode = true;
+
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            content: "test".into(),
+        }],
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+        ..Default::default()
+    });
+    state.refresh_after_message_change();
+    state.update(Event::DialogBack); // enter nav mode
+
+    assert!(state.view.vim_nav_mode);
+    assert!(state.view.selected_post.is_some());
+
+    // 'i' key exits nav mode
+    state.update(Event::Input('i'));
+
+    assert!(!state.view.vim_nav_mode);
+    assert!(
+        state.view.selected_post.is_none(),
+        "selected_post must be cleared after pressing 'i' to exit nav mode"
+    );
+}
+
+/// Rendering regression test: after exiting vim nav mode, the buffer must not
+/// contain duplicate message content. Previously, a stale selected_post value
+/// caused the nav-mode highlight to persist in some rendering paths.
+#[test]
+fn no_duplicate_content_after_nav_mode_exit() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    state.config.vim_mode = true;
+    state.view.last_visible_height = 12;
+
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            content: "this is a long message that wraps to multiple lines".into(),
+        }],
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+        ..Default::default()
+    });
+    state.refresh_after_message_change();
+
+    // Count how many rows contain a content prefix in a rendered buffer.
+    fn count_rows_with_prefix(buf: &ratatui::buffer::Buffer, prefix: &str) -> usize {
+        (0..buf.area().height)
+            .filter(|&y| {
+                let line: String = (0..buf.area().width)
+                    .map(|x| buf[(x, y)].symbol())
+                    .collect();
+                line.contains(prefix)
+            })
+            .count()
+    }
+
+    // ── In vim nav mode ─────────────────────────────────────────────────────
+    state.update(Event::DialogBack);
+    assert!(state.view.vim_nav_mode, "should enter vim nav mode");
+
+    let backend = ratatui::backend::TestBackend::new(60, 12);
+    let mut terminal = ratatui::Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state.clone())).unwrap();
+    let buf_nav = terminal.backend().buffer();
+    let snap_nav = state.snapshot();
+    assert!(
+        snap_nav.vim_nav_mode,
+        "snapshot must have vim_nav_mode = true"
+    );
+    let nav_count = count_rows_with_prefix(&buf_nav, "this is a");
+
+    // ── After exiting vim nav mode ───────────────────────────────────────────
+    state.update(Event::DialogBack);
+    assert!(!state.view.vim_nav_mode, "should exit vim nav mode");
+    assert!(
+        state.view.selected_post.is_none(),
+        "selected_post must be cleared on nav mode exit"
+    );
+
+    terminal.draw(|f| view(f, &mut state.clone())).unwrap();
+    let buf_exited = terminal.backend().buffer();
+    let snap_exited = state.snapshot();
+    assert!(
+        !snap_exited.vim_nav_mode,
+        "snapshot vim_nav_mode must be false after exit"
+    );
+    assert!(
+        snap_exited.selected_post.is_none(),
+        "snapshot selected_post must be None after exit"
+    );
+    let exited_count = count_rows_with_prefix(&buf_exited, "this is a");
+
+    // Both modes should render the same number of content rows — no extra
+    // duplicates appear after exiting nav mode.
+    assert_eq!(
+        exited_count, nav_count,
+        "content row count must not change after exiting nav mode: \
+         nav_mode={}, exited={} (both should be 2 for wrapped content)",
+        nav_count, exited_count
+    );
 }

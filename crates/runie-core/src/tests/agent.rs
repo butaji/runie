@@ -231,6 +231,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
             _ => "?",
         })
         .collect();
+    // ThoughtSummary now always shows (like Grok), so we get ThoughtSummary after the response
     assert_eq!(kinds, vec!["S", "A", "S", "T", "S"]);
 }
 

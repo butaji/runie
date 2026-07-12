@@ -189,13 +189,13 @@ fn toggle_vim_mode_flips_flag() {
 fn hint_text_shows_esc_nav_when_vim_enabled_and_idle() {
     let state = state_with_vim();
     // When idle and empty, the hint advertises Esc to enter nav mode.
-    assert!(state.hint_text().contains("esc nav"));
+    assert!(state.hint_text().contains("Esc nav"));
 }
 
 #[test]
 fn hint_text_does_not_show_vim_scroll_when_disabled() {
     let state = fresh_state();
-    assert!(!state.hint_text().contains("j/k scroll"));
+    assert!(!state.hint_text().contains("J/K scroll"));
 }
 
 // =========================================================================
@@ -301,13 +301,13 @@ fn hint_text_in_nav_mode_shows_nav_hotkeys() {
     let mut state = state_with_vim();
     state.update(crate::Event::DialogBack); // enter nav
     let hint = state.hint_text();
-    assert!(hint.contains("j/k"), "hint should advertise j/k: {hint}");
+    assert!(hint.contains("J/K"), "hint should advertise J/K: {hint}");
     assert!(
-        hint.contains("space") && hint.contains("i"),
-        "hint missing space/i hint: {hint}"
+        hint.contains("Space") && hint.contains("I"),
+        "hint missing Space/I hint: {hint}"
     );
     assert!(
-        hint.contains("esc"),
+        hint.contains("Esc"),
         "hint should advertise Esc to return: {hint}"
     );
 }
@@ -317,8 +317,8 @@ fn hint_text_idle_no_turn_mentions_esc_nav() {
     let state = state_with_vim();
     let hint = state.hint_text();
     assert!(
-        hint.contains("esc nav"),
-        "idle vim-mode hint should advertise esc nav: {hint}"
+        hint.contains("Esc nav"),
+        "idle vim-mode hint should advertise Esc nav: {hint}"
     );
 }
 
@@ -414,8 +414,8 @@ fn hint_text_in_nav_mode_advertises_i_and_space() {
     state.update(crate::Event::DialogBack);
     let hint = state.hint_text();
     assert!(
-        hint.contains("space/i"),
-        "nav hint should advertise space/i to enter input mode: {hint}"
+        hint.contains("Space/I"),
+        "nav hint should advertise Space/I to enter input mode: {hint}"
     );
 }
 
@@ -539,5 +539,66 @@ fn y_on_empty_selection_does_not_crash() {
     assert!(
         !state.view.vim_nav_mode,
         "y should still exit nav mode even with no selection"
+    );
+}
+
+// =========================================================================
+// Enter key in vim nav mode toggles expand/collapse (same as Ctrl+O)
+// =========================================================================
+
+#[test]
+fn enter_in_vim_nav_toggles_expand() {
+    let mut state = state_for_nav_copy();
+    enter_nav(&mut state);
+    assert!(state.view.vim_nav_mode);
+
+    // Initial state: not all collapsed
+    let initially_collapsed = state.view.all_collapsed;
+
+    // Enter should toggle expand/collapse without exiting nav mode
+    state.update(crate::Event::Submit);
+
+    assert_eq!(
+        state.view.all_collapsed,
+        !initially_collapsed,
+        "Enter in nav mode should toggle all_collapsed"
+    );
+    assert!(
+        state.view.vim_nav_mode,
+        "Enter in nav mode should NOT exit vim nav mode"
+    );
+}
+
+#[test]
+fn enter_in_vim_nav_toggles_expand_twice() {
+    let mut state = state_for_nav_copy();
+    enter_nav(&mut state);
+    assert!(state.view.vim_nav_mode);
+
+    let initial = state.view.all_collapsed;
+
+    // First Enter: toggle on
+    state.update(crate::Event::Submit);
+    assert_eq!(state.view.all_collapsed, !initial);
+
+    // Second Enter: toggle off
+    state.update(crate::Event::Submit);
+    assert_eq!(
+        state.view.all_collapsed, initial,
+        "second Enter should restore original state"
+    );
+}
+
+#[test]
+fn enter_outside_vim_nav_submits() {
+    let mut state = state_with_vim();
+    // Outside vim nav mode, Enter should submit
+    state.input.input = "test".to_string();
+    state.update(crate::Event::Submit);
+
+    // Message should be submitted (input cleared)
+    assert!(
+        state.input.input.is_empty(),
+        "Enter outside nav mode should submit"
     );
 }

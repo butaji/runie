@@ -446,15 +446,15 @@ fn contains_activation_opener(s: &str) -> bool {
 fn trailing_partial_opener_len(s: &str) -> usize {
     let max = ACTIVATION_OPENERS
         .iter()
-        .map(|o| o.len().saturating_sub(1))
+        .map(|o| o.chars().count().saturating_sub(1))
         .max()
         .unwrap_or(0)
-        .min(s.len());
+        .min(s.chars().count());
     for len in (1..=max).rev() {
-        let suffix = &s[s.len() - len..];
+        let suffix: String = s.chars().rev().take(len).collect::<String>().chars().rev().collect();
         if ACTIVATION_OPENERS
             .iter()
-            .any(|o| o.len() > suffix.len() && o.starts_with(suffix))
+            .any(|o| o.chars().count() > suffix.chars().count() && o.starts_with(&suffix))
         {
             return len;
         }

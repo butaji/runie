@@ -2,5 +2,4 @@
 source: crates/runie-tui/src/tests/snapshot.rs
 expression: output
 ---
-                                        
- ❯ Hello, world!                  00:00
+❯ Hello, world!                 12:00 AM

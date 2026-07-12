@@ -148,7 +148,7 @@ fn render_actor_does_not_need_mutable_state() {
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        out.contains("→ Hello"),
+        out.contains("◆ Hello"),
         "Render actor should draw from immutable snapshot"
     );
 }
@@ -212,5 +212,203 @@ fn ui_actor_snapshot_after_events() {
     assert!(
         !snap.turn_active || snap.turn_elapsed_secs.is_some(),
         "Should have turn state"
+    );
+}
+
+/// Integration test: ResponseDelta events (streaming) must produce visible text in the rendered feed.
+/// This is the core regression test for the "agent message not showing" bug.
+#[test]
+fn response_delta_renders_in_feed() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+
+    // Simulate a streaming response: "hello\n"
+    // newline makes the line "stable" in the streaming buffer
+    state.update(Event::ResponseDelta {
+        id: "req.0".to_string(),
+        content: "hello\n".to_string(),
+    });
+
+    // Done flushes any remaining tail
+    state.update(Event::Done {
+        id: "req.0".to_string(),
+    });
+
+    state.ensure_fresh();
+    let snap = state.snapshot();
+
+    // Verify snapshot has an agent message with "hello"
+    let has_hello = snap.elements.iter().any(|e| has_content(e, "hello"));
+    assert!(
+        has_hello,
+        "Snapshot should contain 'hello' in AgentMessage. Elements: {:?}",
+        snap.elements.iter().map(|e| format!("{:?}", e)).collect::<Vec<_>>()
+    );
+
+    // Render and verify "hello" appears in the terminal output
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
+    terminal
+        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .unwrap();
+
+    let buf = terminal.backend().buffer();
+    let out: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(
+        out.contains("hello"),
+        "Rendered output should contain 'hello'. Got: {}",
+        out
+    );
+}
+
+/// Integration test: ResponseDelta WITHOUT trailing newline (buffered until Done) must render.
+#[test]
+fn response_delta_without_trailing_newline_renders_after_done() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+
+    // Send content WITHOUT trailing newline - debounce would prevent flush
+    state.update(Event::ResponseDelta {
+        id: "req.0".to_string(),
+        content: "hello".to_string(),
+    });
+
+    // Done calls force_flush which should push remaining tail
+    state.update(Event::Done {
+        id: "req.0".to_string(),
+    });
+
+    state.ensure_fresh();
+    let snap = state.snapshot();
+
+    let has_hello = snap.elements.iter().any(|e| has_content(e, "hello"));
+    assert!(
+        has_hello,
+        "Snapshot should contain 'hello' after Done. Elements: {:?}",
+        snap.elements.iter().map(|e| format!("{:?}", e)).collect::<Vec<_>>()
+    );
+
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
+    terminal
+        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .unwrap();
+
+    let buf = terminal.backend().buffer();
+    let out: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(
+        out.contains("hello"),
+        "Rendered output should contain 'hello'. Got: {}",
+        out
+    );
+}
+
+/// Integration test: production-style event flow with TextStart + ResponseDelta + Done.
+/// Uses empty id (matching production where TurnActor emits id:"").
+#[test]
+fn text_start_response_delta_done_renders_agent_text() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+
+    // Simulate the exact production event sequence:
+    // 1. TextStart begins a new Part::Text (no id in production)
+    state.update(Event::TextStart { id: String::new() });
+    // 2. ResponseDelta streams content (empty id from TurnActor in production)
+    state.update(Event::ResponseDelta {
+        id: String::new(),
+        content: "hello world\n".to_string(),
+    });
+    // 3. Done finalizes (empty id from TurnActor in production)
+    state.update(Event::Done { id: String::new() });
+
+    state.ensure_fresh();
+    let snap = state.snapshot();
+
+    // Verify assistant message exists
+    let has_hello = snap.elements.iter().any(|e| has_content(e, "hello"));
+    let agent_elems: Vec<_> = snap
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::AgentMessage { .. }))
+        .collect();
+    assert!(
+        has_hello,
+        "Snapshot should contain 'hello' after TextStart→ResponseDelta→Done. \
+         Agent elements: {:?}",
+        agent_elems
+    );
+
+    // Render and verify
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
+    terminal
+        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .unwrap();
+
+    let buf = terminal.backend().buffer();
+    let out: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(
+        out.contains("hello"),
+        "Rendered output should contain 'hello'. Got: {}",
+        out
+    );
+}
+
+/// Diagnostic test: check exactly what elements exist in state after event sequence.
+/// This reproduces the production flow step by step with detailed inspection.
+#[test]
+fn diagnostic_production_flow_elements() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+
+    // Step 1: TextStart
+    state.update(Event::TextStart { id: String::new() });
+    state.ensure_fresh();
+    let snap1 = state.snapshot();
+    eprintln!("After TextStart: elements={:?}", snap1.elements);
+    eprintln!("  messages count: {}", state.session().messages.len());
+    for (i, m) in state.session().messages.iter().enumerate() {
+        eprintln!("  msg[{}]: role={:?} id={:?} content={:?} parts={:?}", i, m.role, m.id, m.content(), m.parts);
+    }
+
+    // Step 2: ResponseDelta
+    state.update(Event::ResponseDelta {
+        id: String::new(),
+        content: "hello world\n".to_string(),
+    });
+    state.ensure_fresh();
+    let snap2 = state.snapshot();
+    eprintln!("After ResponseDelta: elements={:?}", snap2.elements);
+    for (i, m) in state.session().messages.iter().enumerate() {
+        eprintln!("  msg[{}]: role={:?} id={:?} content={:?} parts={:?}", i, m.role, m.id, m.content(), m.parts);
+    }
+
+    // Step 3: Done
+    state.update(Event::Done { id: String::new() });
+    state.ensure_fresh();
+    let snap3 = state.snapshot();
+    eprintln!("After Done: elements={:?}", snap3.elements);
+    for (i, m) in state.session().messages.iter().enumerate() {
+        eprintln!("  msg[{}]: role={:?} id={:?} content={:?} parts={:?}", i, m.role, m.id, m.content(), m.parts);
+    }
+
+    // Check total_lines and content_width
+    eprintln!("total_lines={} content_width={}", snap3.total_lines, snap3.content_width);
+
+    // Render
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut throbber = throbber_widgets_tui::ThrobberState::default();
+    terminal.draw(|f| draw_snapshot(f, &snap3, &mut throbber)).unwrap();
+    let buf = terminal.backend().buffer();
+    let out: String = buf.content.iter().map(|c| c.symbol()).collect();
+    eprintln!("RENDERED OUTPUT:\n{}", out);
+
+    assert!(
+        snap3.elements.iter().any(|e| matches!(e, Element::AgentMessage { .. })),
+        "Must have AgentMessage element"
     );
 }

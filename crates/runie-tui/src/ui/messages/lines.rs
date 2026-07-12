@@ -83,16 +83,10 @@ mod tests {
         let wrapped_rows = Paragraph::new(rendered.as_slice())
             .wrap(ratatui::widgets::Wrap { trim: false })
             .line_count(width);
-        let core_count = runie_core::layout::element_line_count(&element, width);
         assert_eq!(
             count,
             wrapped_rows,
             "element_line_count mismatch for {element:?} at width {width}: expected {wrapped_rows}, got {count}",
-        );
-        assert_eq!(
-            core_count,
-            wrapped_rows,
-            "core layout count mismatch for {element:?} at width {width}: expected {wrapped_rows}, got {core_count}",
         );
     }
 

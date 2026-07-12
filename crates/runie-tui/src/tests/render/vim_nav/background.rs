@@ -3,6 +3,7 @@
 use super::helpers::{accent_bg, add_message, draw, state_with_selected_post};
 use super::*;
 use crate::tests::connect_model;
+use runie_core::Event;
 
 #[test]
 fn nav_mode_selected_post_has_accent_background() {
@@ -33,8 +34,10 @@ fn nav_mode_selected_post_has_accent_background() {
 fn user_post_in_feed_has_background_color() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    state.config.vim_mode = true;
     add_message(&mut state, Role::User, "hello", 0.0, "req.0");
     state.refresh_after_message_change();
+    state.update(Event::DialogBack); // Enter vim_nav_mode
 
     let buf = draw(&mut state, 60, 12);
     let bg = accent_bg();

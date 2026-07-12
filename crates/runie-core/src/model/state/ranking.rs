@@ -48,20 +48,17 @@ pub fn has_provider_credentials(_config: &crate::config::Config, provider: &str)
     if provider == "mock" && crate::provider::is_mock_enabled() {
         return true;
     }
-    // Check env var first (takes priority in the credential resolution chain)
-    let env_key = format!("{}_API_KEY", provider.to_uppercase());
-    if let Ok(val) = std::env::var(&env_key) {
-        if !val.is_empty() {
-            return true;
-        }
-    }
-    // Then keyring
-    // Check keyring first
-    if crate::auth::AuthStorage::get_keyring_token(provider).is_some() {
-        return true;
-    }
-    // API keys are no longer stored in config - only keyring/env
-    false
+    // Use the same resolution chain as CredentialResolver so auth.json and all
+    // other sources are consistently detected. This fixes the bug where a provider
+    // with valid credentials in auth.json was not detected during startup.
+    let resolver = crate::auth::CredentialResolver::new();
+    let has = resolver.resolve_api_key(provider).is_some();
+    tracing::debug!(
+        provider,
+        has_credentials = has,
+        "has_provider_credentials"
+    );
+    has
 }
 
 #[cfg(test)]
@@ -69,13 +66,20 @@ mod ranking_tests {
     use super::*;
 
     #[test]
-    fn test_has_provider_credentials_checks_keyring() {
-        // has_provider_credentials checks keyring first
-        // Config no longer stores api_key - only keyring/env
+    fn test_has_provider_credentials_auth_json_priority() {
+        // has_provider_credentials uses CredentialResolver which checks auth.json.
+        // Use RUNIE_AUTH_FILE to isolate from real auth.json on this machine.
+        let dir = tempfile::tempdir().unwrap();
+        let fake_auth = dir.path().join("auth.json");
+        std::fs::write(&fake_auth, r#"{"other": {"token": "sk-other"}}"#).unwrap();
+        std::env::set_var("RUNIE_AUTH_FILE", &fake_auth);
+
         let config = crate::config::Config::default();
-        // Without keyring, should return false
-        let has = has_provider_credentials(&config, "nonexistent");
-        assert!(!has, "should not find credentials without keyring");
+        // "minimax" is not in the fake auth file, so should return false.
+        let has = has_provider_credentials(&config, "minimax");
+        assert!(!has, "minimax should not have credentials in isolated test auth file");
+
+        std::env::remove_var("RUNIE_AUTH_FILE");
     }
 
     #[test]

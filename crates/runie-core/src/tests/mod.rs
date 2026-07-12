@@ -91,6 +91,8 @@ mod model_cycle;
 #[cfg(test)]
 mod model_selector;
 #[cfg(test)]
+mod paced_turn_completed;
+#[cfg(test)]
 mod paste;
 #[cfg(test)]
 mod placeholder;
@@ -138,3 +140,9 @@ mod vim_mode;
 mod vim_nav_history;
 #[cfg(test)]
 pub(crate) mod visible_helper;
+
+#[cfg(test)]
+mod user_message_duplicate;
+
+#[cfg(test)]
+mod no_ghost_agent;

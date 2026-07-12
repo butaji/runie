@@ -315,6 +315,7 @@ impl AppState {
             return;
         }
         self.agent_state_mut().streaming_buffer.push_delta(&content);
+        // Try flush first (fast path for chunked text with newlines).
         let stable = self.agent_state_mut().streaming_buffer.flush().join("");
         if !stable.is_empty() {
             if let Some(idx) = self.find_cached_assistant_index(&id) {
@@ -325,6 +326,19 @@ impl AppState {
             } else {
                 self.create_assistant_message(id.clone(), stable);
             }
+            return;
+        }
+        // Flush returned empty: either (a) debounce hasn't elapsed, or (b) the
+        // text hasn't ended with a stable delimiter yet.  Force-flush the tail
+        // and create the assistant message so the content is never lost.
+        // This is the normal path for mock/echo which emits a single chunk.
+        let tail = self
+            .agent_state_mut()
+            .streaming_buffer
+            .force_flush()
+            .join("");
+        if !tail.is_empty() {
+            self.create_assistant_message(id.clone(), tail);
         }
     }
 }

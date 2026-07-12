@@ -17,7 +17,7 @@ fn transient_success_renders_green_background_with_ok_prefix() {
     let content = flatten_buffer(buf);
     assert!(content.contains("\\ok\\ "));
     assert!(content.contains("Theme switched"));
-    assert!(!content.contains("ctrl+o"));
+    assert!(!content.contains("Ctrl+O"));
 
     let green = crate::theme::color_success();
     let mut found = false;
@@ -118,7 +118,7 @@ fn default_hints_render_when_no_transient() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    assert!(flatten_buffer(buf).contains("ctrl+o"));
+    assert!(flatten_buffer(buf).contains("Ctrl+O"));
 }
 
 #[test]

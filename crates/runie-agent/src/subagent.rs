@@ -197,47 +197,51 @@ async fn run_subagent_turn_with_gate(
         let mut responses = Vec::<String>::new();
         loop {
             match event_rx.recv().await {
-                Some(runie_core::Event::ResponseDelta { content, .. })
-                | Some(runie_core::Event::Response { content, .. }) => {
-                    responses.push(content);
-                }
-                Some(runie_core::Event::Error { message, .. }) => {
-                    let mut guard = result_tx_clone.lock();
-                    if let Some(tx) = guard.take() {
-                        let _ = tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
+                Some(evt) => {
+                    match evt {
+                        runie_core::Event::ResponseDelta { content, .. }
+                        | runie_core::Event::Response { content, .. } => {
+                            responses.push(content);
+                        }
+                        runie_core::Event::Error { message, .. } => {
+                            let mut guard = result_tx_clone.lock();
+                            if let Some(tx) = guard.take() {
+                                let _ = tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
+                            }
+                            return;
+                        }
+                        runie_core::Event::Done { .. } => {
+                            let text = responses.join("");
+                            let mut guard = result_tx_clone.lock();
+                            if let Some(tx) = guard.take() {
+                                let _ = tx.send(Ok(text));
+                            }
+                            return;
+                        }
+                        // Ignore intermediate/thinking events, continue collecting.
+                        runie_core::Event::Thinking { .. }
+                        | runie_core::Event::ThoughtDone { .. }
+                        | runie_core::Event::ToolStart { .. }
+                        | runie_core::Event::ToolInputDelta { .. }
+                        | runie_core::Event::ToolEnd { .. }
+                        | runie_core::Event::ThinkingDelta { .. }
+                        | runie_core::Event::TurnComplete { .. }
+                        | runie_core::Event::TextStart { .. }
+                        | runie_core::Event::TextEnd { .. }
+                        | runie_core::Event::ThinkingStart { .. }
+                        | runie_core::Event::ThinkingEnd { .. }
+                        | runie_core::Event::ToolConstraintError { .. } => {
+                            continue;
+                        }
+                        // Unhandled events: log and continue.
+                        _ => {
+                            continue;
+                        }
                     }
-                    return;
-                }
-                Some(runie_core::Event::Done { .. }) => {
-                    let text = responses.join("");
-                    let mut guard = result_tx_clone.lock();
-                    if let Some(tx) = guard.take() {
-                        let _ = tx.send(Ok(text));
-                    }
-                    return;
-                }
-                // Ignore intermediate/thinking events, continue collecting.
-                Some(runie_core::Event::Thinking { .. })
-                | Some(runie_core::Event::ThoughtDone { .. })
-                | Some(runie_core::Event::ToolStart { .. })
-                | Some(runie_core::Event::ToolInputDelta { .. })
-                | Some(runie_core::Event::ToolEnd { .. })
-                | Some(runie_core::Event::ThinkingDelta { .. })
-                | Some(runie_core::Event::TurnComplete { .. })
-                | Some(runie_core::Event::TextStart { .. })
-                | Some(runie_core::Event::TextEnd { .. })
-                | Some(runie_core::Event::ThinkingStart { .. })
-                | Some(runie_core::Event::ThinkingEnd { .. })
-                | Some(runie_core::Event::ToolConstraintError { .. }) => {
-                    continue;
                 }
                 // Channel closed without Done.
                 None => {
                     return;
-                }
-                // Unhandled events: log and continue.
-                Some(_) => {
-                    continue;
                 }
             }
         }

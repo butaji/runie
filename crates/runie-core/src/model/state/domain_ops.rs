@@ -321,8 +321,16 @@ impl AppState {
     }
 
     /// Record the width of the message content area.
+    ///
+    /// The caller must pass the already-margined content width — i.e. the
+    /// `area.width` value from `f.area().inner(margin)` in ui.rs. This function
+    /// stores it as-is; the rendering path (`render_message_content`) subtracts
+    /// the remaining 2 cells for left/right glyph margins.
+    ///
+    /// This ensures the cached line counts and the live render use the same
+    /// `content_width` value, avoiding double-subtraction bugs.
     pub fn set_last_content_width(&mut self, width: u16) {
-        self.view_mut().last_content_width = width;
+        self.view_mut().last_content_width = width.max(1);
     }
 
     pub fn cache_generation(&self) -> u64 {

@@ -8,6 +8,7 @@ use runie_core::Part;
 fn user_message_has_border_bg_color() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    state.config.vim_mode = true;
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
         parts: vec![Part::Text {
@@ -18,12 +19,14 @@ fn user_message_has_border_bg_color() {
         ..Default::default()
     });
     state.messages_changed();
+    state.update(runie_core::Event::DialogBack); // Enter vim_nav_mode
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let expected_bg = crate::theme::color_accent_bg();
 
+    // With vim_nav_mode enabled, the selected post should have accent background
     let mut found = false;
     for y in 0..buf.area().height {
         for x in 0..buf.area().width {
@@ -32,7 +35,7 @@ fn user_message_has_border_bg_color() {
             }
         }
     }
-    assert!(found);
+    assert!(found, "user message content should render on the vim-nav selection accent background");
 }
 
 #[test]

@@ -153,7 +153,9 @@ impl Default for ConfigState {
             current_provider: provider,
             current_model: model,
             keybindings: default_keybindings(),
-            theme_name: "runie".into(),
+            theme_name: crate::theme_detection::detect_system_appearance()
+                .default_theme_name()
+                .into(),
             thinking_level: ThinkingLevel::Off,
             read_only: false,
             scoped_models: Vec::new(),
