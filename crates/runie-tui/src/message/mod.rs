@@ -82,10 +82,8 @@ fn build_user_body(
 ) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling (applies inline styles + base color).
     let spans = apply_color_to_inlines(content, color_fg_bright());
-    let first_w = params
-        .inner_width
-        .saturating_sub(prefix_width)
-        .saturating_sub(params.ts_width);
+    // Wrap to full width - timestamp will be added after wrapping
+    let first_w = params.inner_width.saturating_sub(prefix_width);
     let rest_w = params.inner_width.saturating_sub(indent_width);
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
@@ -198,9 +196,8 @@ fn render_agent_text_block(
     let prefix_width = str_width(GLYPH_AGENT);
     let indent_width = str_width(GLYPH_INDENT);
     let ts_width = str_width(ts_str) + 1;
-    let first_w = inner_width
-        .saturating_sub(prefix_width)
-        .saturating_sub(ts_width);
+    // Wrap to full width - timestamp will be added after wrapping
+    let first_w = inner_width.saturating_sub(prefix_width);
     let rest_w = inner_width.saturating_sub(indent_width);
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
