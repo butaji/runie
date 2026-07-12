@@ -259,7 +259,8 @@ pub fn style_scrollbar() -> Style {
     Style::default().fg(crate::theme::color_dim())
 }
 
-/// Chevron style: orange when input holds the token, gray when released.
+/// Chevron style for input box: orange when input holds the token, gray when released.
+/// Uses style_user for active state (with bg.user), style_hint for disabled.
 pub fn style_chevron(token_held: bool) -> Style {
     if token_held {
         style_user()
@@ -282,7 +283,6 @@ pub fn block_input(title: &str, flash: bool) -> Block<'_> {
         .title_position(TitlePosition::Bottom)
         .title(Line::from(title).alignment(Alignment::Right))
         .border_style(border_style)
-        .style(Style::default().bg(crate::theme::color_bg()))
 }
 
 /// Build a popup dialog block with rounded borders.

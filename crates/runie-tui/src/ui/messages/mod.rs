@@ -36,10 +36,8 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 
-    // Draw user message backgrounds first (full-line backgrounds)
-    draw_user_message_backgrounds(f, snap, area, &row_to_element, offset);
-
-    render_paragraph(f, area, lines, offset);
+    // Render lines with user message backgrounds applied directly to lines
+    render_paragraph_with_user_backgrounds(f, snap, area, lines, offset, &row_to_element);
 
     if snap.vim_nav_mode {
         nav::highlight_selected_post(f, snap, area, &row_to_element, offset);
@@ -48,48 +46,74 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height);
 }
 
-/// Draw full-line backgrounds for user messages, including their trailing spacers
-/// and one line above (previous spacer or top) and one line below.
-fn draw_user_message_backgrounds(
+/// Render lines with user message backgrounds applied directly.
+/// User messages and their adjacent spacers get full-width backgrounds.
+fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
     snap: &Snapshot,
     area: Rect,
-    row_to_element: &[usize],
+    lines: Vec<Line<'_>>,
     offset: u16,
+    row_to_element: &[usize],
 ) {
+    let height = area.height as usize;
+    let start = offset as usize;
     let bg = crate::theme::color_bg_user();
-    let full_width = f.area().width;
     let visible_start = offset as usize;
     let visible_end = (offset as usize + area.height as usize).min(row_to_element.len());
 
-    for row in visible_start..visible_end {
-        let elem_idx = *row_to_element.get(row).unwrap_or(&usize::MAX);
+    for (row_offset, line) in lines.iter().skip(start).take(height).enumerate() {
+        let row = area.y + row_offset as u16;
+        let abs_row = visible_start + row_offset;
 
-        let is_user_message = snap.elements.get(elem_idx).map_or(false, |e| {
-            matches!(e, Element::UserMessage { .. })
-        });
-        let is_trailing_spacer = snap.elements.get(elem_idx).map_or(false, |e| {
-            matches!(e, Element::Spacer { .. })
-        }) && snap.elements.get(elem_idx.saturating_sub(1)).map_or(false, |e| {
-            matches!(e, Element::UserMessage { .. })
-        });
-        let is_leading_spacer = (elem_idx == 0 && !row_to_element.is_empty()) ||
-            snap.elements.get(elem_idx.saturating_sub(1)).map_or(false, |prev| {
-                snap.elements.get(elem_idx).map_or(false, |curr| {
-                    matches!(curr, Element::Spacer { .. }) &&
-                    matches!(prev, Element::UserMessage { .. })
-                })
-            });
+        // Check if this row should have user background
+        let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
+        let is_user_related = is_user_related_row(snap, elem_idx);
 
-        if is_user_message || is_trailing_spacer || is_leading_spacer {
-            let y = area.y + (row - visible_start) as u16;
-            // Draw full-width background from x=0 to terminal edge
-            for x in 0..full_width {
-                let cell = &mut f.buffer_mut()[(x, y)];
+        // Draw full-width background first for user-related rows
+        if is_user_related {
+            for x in 0..f.area().width {
+                let cell = &mut f.buffer_mut()[(x, row)];
                 let _ = cell.set_bg(bg);
             }
         }
+
+        // Render the line content on top of the background
+        f.render_widget(
+            ratatui::widgets::Paragraph::new(line.clone()),
+            Rect::new(area.x, row, area.width, 1),
+        );
     }
+}
+
+/// Check if a row is related to a user message (message itself or adjacent spacers).
+fn is_user_related_row(snap: &Snapshot, elem_idx: usize) -> bool {
+    if elem_idx == usize::MAX {
+        return false;
+    }
+
+    let elem = snap.elements.get(elem_idx);
+    let is_user = matches!(elem, Some(Element::UserMessage { .. }));
+
+    // Check if it's a spacer adjacent to a user message
+    if !is_user && matches!(elem, Some(Element::Spacer { .. })) {
+        // Check previous element
+        if let Some(prev_idx) = elem_idx.checked_sub(1) {
+            if let Some(prev) = snap.elements.get(prev_idx) {
+                if matches!(prev, Element::UserMessage { .. }) {
+                    return true;
+                }
+            }
+        }
+        // Check next element
+        if let Some(next) = snap.elements.get(elem_idx + 1) {
+            if matches!(next, Element::UserMessage { .. }) {
+                return true;
+            }
+        }
+    }
+
+    is_user
 }
 
 fn render_paragraph(f: &mut Frame, area: Rect, lines: Vec<Line<'_>>, offset: u16) {
