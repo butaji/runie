@@ -2,7 +2,7 @@
 
 use ratatui::{
     layout::Rect,
-    text::Line,
+    text::{Line, Span},
     widgets::Paragraph,
     Frame,
 };
@@ -46,7 +46,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height);
 }
 
-/// Render lines with user message backgrounds applied after rendering.
+/// Render lines with user message backgrounds applied to the lines.
 /// User messages and their adjacent spacers get full-width backgrounds.
 fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
@@ -62,35 +62,76 @@ fn render_paragraph_with_user_backgrounds(
     let visible_start = offset as usize;
     let full_width = f.area().width;
 
-    // First render all lines normally
-    for (row_offset, line) in lines.iter().skip(start).take(height).enumerate() {
+    // Build modified lines with user background applied
+    let modified_lines: Vec<Line<'static>> = lines
+        .iter()
+        .skip(start)
+        .take(height)
+        .enumerate()
+        .map(|(row_offset, line)| {
+            let abs_row = visible_start + row_offset;
+            let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
+            let is_user_related = is_user_related_row(snap, elem_idx);
+
+            if is_user_related {
+                // Convert to owned line with background applied
+                line_to_owned_with_bg(line, bg)
+            } else {
+                line_to_owned(line)
+            }
+        })
+        .collect();
+
+    // FIRST: Draw full-width backgrounds for user-related rows (for margins)
+    for row_offset in 0..height {
+        let row = area.y + row_offset as u16;
+        let abs_row = visible_start + row_offset;
+        let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
+        let is_user_related = is_user_related_row(snap, elem_idx);
+
+        if is_user_related {
+            // Fill FULL width background from x=0 to terminal edge
+            for x in 0..full_width {
+                let cell = &mut f.buffer_mut()[(x, row)];
+                let _ = cell.set_bg(bg);
+            }
+        }
+    }
+
+    // THEN: Render text on top of the backgrounds
+    for (row_offset, line) in modified_lines.iter().enumerate() {
         let row = area.y + row_offset as u16;
         f.render_widget(
             ratatui::widgets::Paragraph::new(line.clone()),
             Rect::new(area.x, row, area.width, 1),
         );
     }
+}
 
-    // Then fill in backgrounds for user-related rows (preserving text)
-    for row_offset in 0..height {
-        let row = area.y + row_offset as u16;
-        let abs_row = visible_start + row_offset;
-
-        // Check if this row should have user background
-        let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
-        let is_user_related = is_user_related_row(snap, elem_idx);
-
-        if is_user_related {
-            // Fill full-width background, preserving text characters
-            for x in 0..full_width {
-                let cell = &mut f.buffer_mut()[(x, row)];
-                // Only set background if the cell doesn't already have one
-                if cell.style().bg.is_none() {
-                    let _ = cell.set_bg(bg);
-                }
+/// Convert a line to owned with background applied to all spans.
+fn line_to_owned_with_bg(line: &Line<'_>, bg: ratatui::style::Color) -> Line<'static> {
+    let spans: Vec<Span<'static>> = line
+        .spans
+        .iter()
+        .map(|s| {
+            let mut style = s.style;
+            if style.bg.is_none() {
+                style = style.bg(bg);
             }
-        }
-    }
+            Span::styled(s.content.to_string(), style)
+        })
+        .collect();
+    Line::from(spans)
+}
+
+/// Convert a line to owned.
+fn line_to_owned(line: &Line<'_>) -> Line<'static> {
+    let spans: Vec<Span<'static>> = line
+        .spans
+        .iter()
+        .map(|s| Span::styled(s.content.to_string(), s.style))
+        .collect();
+    Line::from(spans)
 }
 
 /// Check if a row is related to a user message (message itself or adjacent spacers).

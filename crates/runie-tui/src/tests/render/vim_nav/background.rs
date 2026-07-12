@@ -118,3 +118,30 @@ fn user_message_has_bg_user_background() {
         "user message should have bg.user background color"
     );
 }
+
+#[test]
+fn user_message_background_spans_full_width() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    add_message(&mut state, Role::User, "hello", 0.0, "req.0");
+    state.refresh_after_message_change();
+
+    let buf = draw(&mut state, 60, 12);
+    let bg = crate::theme::color_bg_user();
+    let width = buf.area().width;
+
+    // Find rows that have user background
+    for y in 0..buf.area().height {
+        let first_cell = &buf[(0, y)];
+        if first_cell.style().bg == Some(bg) {
+            // This row has user background - check it spans full width
+            let last_cell = &buf[(width - 1, y)];
+            assert_eq!(
+                last_cell.style().bg,
+                Some(bg),
+                "user message background must span full width at row {}",
+                y
+            );
+        }
+    }
+}
