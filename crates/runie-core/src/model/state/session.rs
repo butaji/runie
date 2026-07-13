@@ -109,6 +109,10 @@ pub struct ConfigState {
     pub keybindings: std::collections::HashMap<String, String>,
     pub theme_name: String,
     pub thinking_level: ThinkingLevel,
+    /// Per-model thinking level overrides (`"provider/model"` → level),
+    /// loaded from `[models.thinking]` in config.toml. Models without an
+    /// entry inherit the global `thinking_level`.
+    pub model_thinking: std::collections::HashMap<String, ThinkingLevel>,
     pub read_only: bool,
     pub scoped_models: Vec<ScopedModel>,
     pub scoped_index: usize,
@@ -157,6 +161,7 @@ impl Default for ConfigState {
                 .default_theme_name()
                 .into(),
             thinking_level: ThinkingLevel::Off,
+            model_thinking: std::collections::HashMap::new(),
             read_only: false,
             scoped_models: Vec::new(),
             scoped_index: 0,

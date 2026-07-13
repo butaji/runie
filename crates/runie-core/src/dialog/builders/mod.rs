@@ -16,7 +16,7 @@ mod tests;
 pub use crate::dialog::{ItemAction, Panel, PanelItem, PanelStack};
 
 pub use model::scoped_models;
-pub use palette::{command_palette, model_selector};
+pub use palette::{command_palette, model_reasoning_panel, model_selector};
 pub use picker::{file_picker, theme_picker};
 pub use session::{session_list, session_tree, SessionRow};
 pub use settings::settings;

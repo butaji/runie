@@ -41,6 +41,11 @@ pub struct ModelsSection {
     /// Scoped models list (for model selector UI).
     #[serde(default)]
     pub scoped: Option<Vec<String>>,
+    /// Per-model thinking (reasoning) level overrides, keyed
+    /// `"provider/model"`. Models without an entry inherit the global
+    /// `thinking_level`.
+    #[serde(default)]
+    pub thinking: HashMap<String, crate::model::ThinkingLevel>,
 }
 
 // ============================================================================

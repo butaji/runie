@@ -121,6 +121,10 @@ fn select_emits_switch_model() {
     state.update(crate::Event::ToggleModelSelector);
     assert!(selector_state(&state).is_some());
     state.update(crate::Event::ModelSelectorSelect);
+    // Selecting a model opens the per-model reasoning panel; accepting the
+    // default level (first row) switches and closes the dialog.
+    assert!(state.open_dialog.is_some());
+    state.update(crate::Event::ModelSelectorSelect);
     assert!(state.open_dialog.is_none());
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");

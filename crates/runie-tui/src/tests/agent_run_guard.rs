@@ -139,6 +139,42 @@ async fn second_turn_started_blocked_by_guard() {
     );
 }
 
+/// Layer 2: AgentCommand carries the EFFECTIVE thinking level — the
+/// per-model override when one is set for the active model, otherwise the
+/// global level.
+#[tokio::test]
+async fn agent_command_uses_effective_thinking_level() {
+    let (mut ui, agent) = make_ui_with_test_agent();
+    let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
+
+    ui.state.config_mut().current_provider = "openai".into();
+    ui.state.config_mut().current_model = "gpt-4o".into();
+    ui.state.config_mut().thinking_level = runie_core::model::ThinkingLevel::Low;
+    ui.state.set_model_thinking_level(
+        "openai",
+        "gpt-4o",
+        Some(runie_core::model::ThinkingLevel::High),
+    );
+
+    ui.handle_event(
+        Event::TurnStarted {
+            request_id: "req.0".into(),
+            content: "hello".into(),
+            id: "req.0".into(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    let cmds = agent.commands.lock();
+    assert_eq!(cmds.len(), 1, "agent should run once");
+    assert_eq!(
+        cmds[0].thinking_level,
+        runie_core::model::ThinkingLevel::High,
+        "AgentCommand must carry the per-model override"
+    );
+}
+
 /// Layer 2: Done does NOT clear the guard (only TurnCompleted does).
 /// This prevents a queued TurnStarted from bypassing the guard after Done.
 #[tokio::test]

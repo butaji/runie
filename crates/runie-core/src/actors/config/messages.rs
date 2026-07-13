@@ -37,6 +37,13 @@ pub enum ConfigMsg {
     SetTruncation { limits: TruncationSection },
     /// Set thinking level.
     SetThinkingLevel { level: ThinkingLevel },
+    /// Set (or clear, with `None`) the per-model thinking level override for
+    /// `provider/model`.
+    SetModelThinking {
+        provider: String,
+        model: String,
+        level: Option<ThinkingLevel>,
+    },
     /// Request the current in-memory config.
     GetConfig(RpcReplyPort<Config>),
     /// Request the list of configured providers.
@@ -99,6 +106,15 @@ impl Clone for ConfigMsg {
                 limits: limits.clone(),
             },
             ConfigMsg::SetThinkingLevel { level } => ConfigMsg::SetThinkingLevel { level: *level },
+            ConfigMsg::SetModelThinking {
+                provider,
+                model,
+                level,
+            } => ConfigMsg::SetModelThinking {
+                provider: provider.clone(),
+                model: model.clone(),
+                level: *level,
+            },
             ConfigMsg::GetConfig(_) => ConfigMsg::Load,
             ConfigMsg::GetConfiguredProviders(_) => ConfigMsg::Reload,
             ConfigMsg::LoadLayers(_) => ConfigMsg::Load,

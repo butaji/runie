@@ -60,6 +60,11 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         ConfigMsg::SetTelemetry { enabled } => set_telemetry(state, enabled).await,
         ConfigMsg::SetTruncation { limits } => set_truncation(state, &limits).await,
         ConfigMsg::SetThinkingLevel { level } => set_thinking_level(state, &level).await,
+        ConfigMsg::SetModelThinking {
+            provider,
+            model,
+            level,
+        } => set_model_thinking(state, &provider, &model, level).await,
         ConfigMsg::GetConfig(reply) => {
             let cfg = state.cfg.clone();
             let _ = reply.send(cfg);
@@ -251,6 +256,23 @@ pub(super) async fn set_thinking_level(state: &mut ConfigActorState, level: &Thi
     let result =
         tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level))
             .await;
+    handle_write_result(state, result).await;
+}
+
+/// Set or clear a per-model thinking level override.
+pub(super) async fn set_model_thinking(
+    state: &mut ConfigActorState,
+    provider: &str,
+    model: &str,
+    level: Option<ThinkingLevel>,
+) {
+    let path = state.path.clone();
+    let provider = provider.to_owned();
+    let model = model.to_owned();
+    let result = tokio::task::spawn_blocking(move || {
+        file_helpers::set_model_thinking_at_path(&path, &provider, &model, level)
+    })
+    .await;
     handle_write_result(state, result).await;
 }
 

@@ -93,6 +93,8 @@ mod plan_mode;
 #[cfg(test)]
 mod model_selector;
 #[cfg(test)]
+mod model_thinking;
+#[cfg(test)]
 mod paced_turn_completed;
 #[cfg(test)]
 mod paste;

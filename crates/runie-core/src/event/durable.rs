@@ -115,6 +115,13 @@ impl DurableCoreEvent {
                 provider: provider.clone(),
                 model: model.clone(),
             }),
+            // Durable: the per-model reasoning flow's switch is also a model
+            // switch for session replay (the level override lives in config,
+            // not in the session journal).
+            Event::SwitchModelWithLevel { provider, model, .. } => Some(D::ModelSwitched {
+                provider: provider.clone(),
+                model: model.clone(),
+            }),
             // Durable: session config
             Event::RunNameCommand { name } => Some(D::SessionRenamed { name: name.clone() }),
             Event::SwitchTheme { name } => Some(D::ThemeSwitched { name: name.clone() }),
@@ -323,6 +330,7 @@ impl DurableCoreEvent {
             | Event::ScopedModelEnableAll
             | Event::ScopedModelDisableAll
             | Event::ScopedModelToggleProvider { .. }
+            | Event::SelectModel { .. }
             | Event::ToggleSettingsDialog
             | Event::SettingsUp
             | Event::SettingsDown

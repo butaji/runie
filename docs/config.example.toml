@@ -10,6 +10,12 @@ provider = "anthropic"
 # Default model (legacy, use [models].default instead)
 model = "claude-sonnet-4-6"
 
+# ── Thinking Level ──────────────────────────────────────────────────────────────
+# Global thinking level for reasoning-intensive tasks: Off, Low, Medium, High.
+# Must stay at root level (before any [section]); per-model overrides live in
+# [models.thinking] below.
+thinking_level = "Off"
+
 # ── Model Providers ──────────────────────────────────────────────────────────────
 
 [model_providers.anthropic]
@@ -56,6 +62,13 @@ scoped = [
     "deepseek/deepseek-chat",
 ]
 
+# Per-model thinking-level overrides, keyed "provider/model". Models without
+# an entry inherit the global `thinking_level`. Set from the /model selector:
+# Enter on a model row opens its reasoning panel.
+[models.thinking]
+# "anthropic/claude-sonnet-4-6" = "High"
+# "openai/gpt-4o" = "Low"
+
 # ── Truncation ─────────────────────────────────────────────────────────────────
 
 [truncation]
@@ -85,10 +98,6 @@ mode = "default"
 [ui]
 # Enable Vim keybindings
 vim_mode = true
-
-# ── Thinking Level ──────────────────────────────────────────────────────────────
-# Thinking level for reasoning-intensive tasks: Off, Low, Medium, High
-thinking_level = "Off"
 
 # ── Telemetry ─────────────────────────────────────────────────────────────────
 

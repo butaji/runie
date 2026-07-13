@@ -446,6 +446,21 @@ pub enum Event {
         model: String,
         explicit: bool,
     },
+    /// Model row picked in the `/model` selector: opens the per-model
+    /// reasoning-level panel for this model (the switch itself happens via
+    /// `SwitchModelWithLevel` once a level is chosen).
+    SelectModel {
+        provider: String,
+        model: String,
+    },
+    /// Reasoning level chosen for a model in the selector: stores the
+    /// per-model thinking override (`None` = inherit the global level) and
+    /// switches to the model.
+    SwitchModelWithLevel {
+        provider: String,
+        model: String,
+        level: Option<ThinkingLevel>,
+    },
     SwitchTheme {
         name: String,
     },

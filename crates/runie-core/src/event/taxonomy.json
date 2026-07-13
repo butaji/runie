@@ -95,6 +95,8 @@
     "RenameSession": "{ id: String, name: String }",
     "DeleteSession": "{ id: String }",
     "SwitchModel": "{ provider: String, model: String, explicit: bool }",
+    "SelectModel": "{ provider: String, model: String }",
+    "SwitchModelWithLevel": "{ provider: String, model: String, level: Option<ThinkingLevel> }",
     "SwitchTheme": "{ name: String }",
     "ScopedModelToggle": "{ provider: String, name: String }",
     "ScopedModelToggleProvider": "{ provider: String }",
@@ -208,7 +210,7 @@
     "ModelConfig": {
       "kind": "Intent",
       "intent_variants": [
-        "SwitchModel", "SwitchTheme", "CycleModelNext", "CycleModelPrev",
+        "SwitchModel", "SelectModel", "SwitchModelWithLevel", "SwitchTheme", "CycleModelNext", "CycleModelPrev",
         "ToggleScopedModelsDialog", "ScopedModelToggle", "ScopedModelEnableAll",
         "ScopedModelDisableAll", "ScopedModelToggleProvider", "ToggleSettingsDialog",
         "SettingsUp", "SettingsDown", "SettingsLeft", "SettingsRight",

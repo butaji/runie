@@ -409,7 +409,7 @@ impl UiActor {
                     id: request_id.clone(),
                     provider,
                     model,
-                    thinking_level: self.state.config().thinking_level,
+                    thinking_level: self.state.effective_thinking_level(),
                     read_only: false,
                     skills_context: String::new(),
                     system_prompt: String::new(),

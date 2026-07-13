@@ -225,6 +225,7 @@ fn registry_validation_accepts_known_provider_and_model() {
         models: crate::config::ModelsSection {
             default: Some("gpt-4o".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -262,6 +263,7 @@ fn registry_validation_accepts_unlisted_model_for_known_provider() {
         models: crate::config::ModelsSection {
             default: Some("nonexistent-model".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -281,6 +283,7 @@ fn registry_validation_rejects_wrong_provider_prefix() {
         models: crate::config::ModelsSection {
             default: Some("anthropic/claude-3".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -320,6 +323,7 @@ fn registry_validation_accepts_minimax_provider() {
         models: crate::config::ModelsSection {
             default: Some("MiniMax-M3".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -334,6 +338,7 @@ fn registry_validation_accepts_full_model_format() {
         models: crate::config::ModelsSection {
             default: Some("openai/gpt-4o".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -354,6 +359,7 @@ fn registry_validation_accepts_minimax_prefixed_model() {
         models: crate::config::ModelsSection {
             default: Some("minimax/MiniMax-M3".to_string()),
             scoped: Some(vec!["minimax/MiniMax-M3".to_string()]),
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -373,6 +379,7 @@ fn registry_validation_accepts_mock_prefixed_model_when_mock_enabled() {
         models: crate::config::ModelsSection {
             default: Some("mock/echo".to_string()),
             scoped: Some(vec!["mock/echo".to_string()]),
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -393,6 +400,7 @@ fn registry_validation_accepts_unlisted_prefixed_model_for_known_provider() {
         models: crate::config::ModelsSection {
             default: Some("minimax/not-a-real-model".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };
@@ -414,6 +422,7 @@ fn registry_validation_accepts_minimax_highspeed_default_model() {
         models: crate::config::ModelsSection {
             default: Some("MiniMax-M2.7-highspeed".to_string()),
             scoped: None,
+            thinking: Default::default(),
         },
         ..Config::default()
     };

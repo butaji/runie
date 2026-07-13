@@ -44,6 +44,7 @@ fn model_selector_groups_by_provider() {
             ("anthropic".into(), vec![("claude-3".into(), dummy_evt())]),
         ],
         "gpt-4o",
+        &std::collections::HashMap::new(),
     );
     let panel = stack.current().unwrap();
     // Has headers for both providers

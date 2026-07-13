@@ -200,6 +200,24 @@ pub fn set_thinking_level_at_path(path: &Path, level: ThinkingLevel) -> anyhow::
     })
 }
 
+/// Set or clear the per-model thinking level override (`provider/model`).
+pub fn set_model_thinking_at_path(
+    path: &Path,
+    provider: &str,
+    model: &str,
+    level: Option<ThinkingLevel>,
+) -> anyhow::Result<()> {
+    let key = format!("{provider}/{model}");
+    with_exclusive_lock(path, move |config| match level {
+        Some(l) => {
+            config.models.thinking.insert(key.clone(), l);
+        }
+        None => {
+            config.models.thinking.remove(&key);
+        }
+    })
+}
+
 /// Add or update an MCP server in the config file.
 pub fn add_mcp_server_to_path(path: &Path, name: &str, server: &McpServer) -> anyhow::Result<()> {
     let n = name.to_owned();
@@ -228,6 +246,40 @@ fn default_empty_provider() -> ModelProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Per-model thinking overrides persist under `[models.thinking]` and a
+    /// `None` level removes the entry again.
+    #[test]
+    fn set_model_thinking_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+
+        set_model_thinking_at_path(
+            &path,
+            "openai",
+            "gpt-4o",
+            Some(crate::model::ThinkingLevel::High),
+        )
+        .expect("write override");
+
+        let content = std::fs::read_to_string(&path).unwrap();
+        let parsed: crate::config::Config =
+            toml::from_str(&content).expect("config must parse");
+        assert_eq!(
+            parsed.models.thinking.get("openai/gpt-4o"),
+            Some(&crate::model::ThinkingLevel::High),
+            "override must persist under [models.thinking]: {content}"
+        );
+
+        set_model_thinking_at_path(&path, "openai", "gpt-4o", None).expect("clear override");
+        let content = std::fs::read_to_string(&path).unwrap();
+        let parsed: crate::config::Config =
+            toml::from_str(&content).expect("config must parse");
+        assert!(
+            !parsed.models.thinking.contains_key("openai/gpt-4o"),
+            "None must remove the override: {content}"
+        );
+    }
 
     /// First-run onboarding writes config before `~/.runie/` exists. The write
     /// must create the missing parent directory instead of failing with

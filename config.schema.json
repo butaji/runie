@@ -63,7 +63,8 @@
       "$ref": "#/$defs/ModelsSection",
       "default": {
         "default": null,
-        "scoped": null
+        "scoped": null,
+        "thinking": {}
       }
     },
     "permissions": {
@@ -346,6 +347,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "thinking": {
+          "description": "Per-model thinking (reasoning) level overrides, keyed\n`\"provider/model\"`. Models without an entry inherit the global\n`thinking_level`.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ThinkingLevel"
+          },
+          "default": {}
         }
       }
     },

@@ -51,6 +51,7 @@ VARIANTS_WITH_FIELDS = {
     "ProvidersEditModels", "CopyToClipboard", "InsertAtRef", "PendingEdit",
     "Paste",
     "TerminalSize", "SelectProvider", "SubmitKey", "ToggleModel", "SwitchModel",
+    "SelectModel", "SwitchModelWithLevel",
     "SwitchTheme", "ScopedModelToggle", "ScopedModelToggleProvider",
     "SettingsSwitchCategory", "SetThinkingLevel", "ForkSession", "SessionTreeSelect",
     "SessionLoaded", "SessionImported", "SessionList", "SessionOperationFailed",

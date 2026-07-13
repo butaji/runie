@@ -89,7 +89,7 @@ pub fn open_model_selector(state: &mut AppState) {
     v.dirty = true;
     *state.open_dialog_mut() = Some(DialogState::Active {
         kind: DialogKind::ModelSelector,
-        panels: model_selector(recent, groups, &current),
+        panels: model_selector(recent, groups, &current, &state.config().model_thinking),
     });
 }
 

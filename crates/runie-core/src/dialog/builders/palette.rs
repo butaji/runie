@@ -32,10 +32,13 @@ pub fn command_palette(items: Vec<crate::commands::CommandRow>) -> PanelStack {
 /// Build a model selector panel with provider-grouped items.
 ///
 /// `groups` is a list of `(provider_name, [(model_name, event_to_emit_on_select)])`.
+/// `thinking` holds per-model thinking-level overrides keyed `"provider/model"`;
+/// models with an override show the level as a dim suffix on their row.
 pub fn model_selector(
     recent: Vec<String>,
     groups: Vec<(String, Vec<(String, Event)>)>,
     current: &str,
+    thinking: &std::collections::HashMap<String, crate::model::ThinkingLevel>,
 ) -> PanelStack {
     let mut panel = Panel::new("model", " Select Model ").with_filter();
 
@@ -43,16 +46,18 @@ pub fn model_selector(
         panel = panel.header("Recent");
         for model in recent {
             let (provider, model_name) = model.split_once('/').unwrap_or(("", &model));
-            let evt = Event::SwitchModel {
+            let evt = Event::SelectModel {
                 provider: provider.into(),
                 model: model_name.into(),
-                explicit: true,
             };
-            let label = if model == current {
+            let mut label = if model == current {
                 format!("★ {}", model)
             } else {
-                model
+                model.clone()
             };
+            if let Some(level) = thinking.get(&model) {
+                label.push_str(&format!("  · {}", level.as_str()));
+            }
             panel = panel.item(label, ItemAction::Emit(evt));
         }
         panel = panel.separator();
@@ -61,14 +66,78 @@ pub fn model_selector(
     for (provider, models) in groups {
         panel = panel.header(provider);
         for (name, evt) in models {
-            let label = if name == current {
+            let mut label = if name == current {
                 format!("★ {}", name)
             } else {
-                name
+                name.clone()
             };
+            if let Some(level) = thinking.get(&name) {
+                label.push_str(&format!("  · {}", level.as_str()));
+            }
             panel = panel.item(label, ItemAction::Emit(evt));
         }
     }
+    PanelStack::new(panel)
+}
+
+/// Build the per-model reasoning-level panel shown after picking a model in
+/// the selector.
+///
+/// `global` is the global thinking level; `override_level` is the stored
+/// per-model choice (if any). The effective choice — the override when set,
+/// otherwise the "default" row — is marked `(current)`.
+pub fn model_reasoning_panel(
+    provider: &str,
+    model: &str,
+    global: crate::model::ThinkingLevel,
+    override_level: Option<crate::model::ThinkingLevel>,
+) -> PanelStack {
+    let title = format!(" Reasoning · {provider}/{model} ");
+    let mut panel = Panel::new("model-reasoning", title)
+        .header("Thinking level for this model");
+
+    let default_label = if override_level.is_none() {
+        format!("default (global: {}) (current)", global.as_str())
+    } else {
+        format!("default (global: {})", global.as_str())
+    };
+    panel = panel.item(
+        default_label,
+        ItemAction::Emit(Event::SwitchModelWithLevel {
+            provider: provider.into(),
+            model: model.into(),
+            level: None,
+        }),
+    );
+
+    for &level in crate::model::ThinkingLevel::all() {
+        let label = if override_level == Some(level) {
+            format!("{} (current)", level.as_str())
+        } else {
+            level.as_str().to_owned()
+        };
+        panel = panel.item(
+            label,
+            ItemAction::Emit(Event::SwitchModelWithLevel {
+                provider: provider.into(),
+                model: model.into(),
+                level: Some(level),
+            }),
+        );
+    }
+    // Pre-select the effective choice so accepting with Enter is a no-op:
+    // the override row when set, otherwise the "default" row.
+    let selected = match override_level {
+        None => 0,
+        Some(level) => {
+            crate::model::ThinkingLevel::all()
+                .iter()
+                .position(|&l| l == level)
+                .unwrap_or(0)
+                + 1
+        }
+    };
+    panel.selected = selected;
     PanelStack::new(panel)
 }
 
@@ -78,7 +147,12 @@ mod tests {
     use crate::dialog::PanelItem;
     #[test]
     fn recent_model_event_splits_provider_and_model() {
-        let stack = model_selector(vec!["minimax/M3".into()], vec![], "minimax/M3");
+        let stack = model_selector(
+            vec!["minimax/M3".into()],
+            vec![],
+            "minimax/M3",
+            &std::collections::HashMap::new(),
+        );
         let panel = stack.current().unwrap();
         let action = panel
             .items
@@ -94,10 +168,9 @@ mod tests {
         };
         assert_eq!(
             evt,
-            Event::SwitchModel {
+            Event::SelectModel {
                 provider: "minimax".into(),
                 model: "M3".into(),
-                explicit: true,
             },
         );
     }

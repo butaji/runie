@@ -115,6 +115,8 @@ fn dispatcher_handles_all_variants() {
 
             // ModelConfig
             Event::SwitchModel { .. }
+            | Event::SelectModel { .. }
+            | Event::SwitchModelWithLevel { .. }
             | Event::SwitchTheme { .. }
             | Event::CycleModelNext
             | Event::CycleModelPrev

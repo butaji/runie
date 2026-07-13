@@ -185,6 +185,7 @@ impl AppState {
         }
         self.config_mut().truncation = config.truncation.clone();
         self.config_mut().thinking_level = config.thinking_level;
+        self.config_mut().model_thinking = config.models.thinking.clone();
         self.config_mut().vim_mode = config.vim_mode();
         let prompts_section = config.prompts();
         *self.prompts_mut() = crate::prompts::load_prompts(
@@ -444,6 +445,52 @@ impl AppState {
             ),
             TransientLevel::Info,
         );
+    }
+
+    /// Set or clear the per-model thinking level override (`provider/model`).
+    /// Persists to `[models.thinking]` in config.toml via ConfigActor.
+    pub fn set_model_thinking_level(
+        &mut self,
+        provider: &str,
+        model: &str,
+        level: Option<crate::model::ThinkingLevel>,
+    ) {
+        let key = format!("{provider}/{model}");
+        let current = self.config().model_thinking.get(&key).copied();
+        if current == level {
+            return;
+        }
+        match level {
+            Some(l) => {
+                self.config_mut().model_thinking.insert(key, l);
+            }
+            None => {
+                self.config_mut().model_thinking.remove(&key);
+            }
+        }
+        // Fire-and-forget persist.  In tests without handles, mutation is already applied.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.config.try_send(ConfigMsg::SetModelThinking {
+                provider: provider.to_string(),
+                model: model.to_string(),
+                level,
+            });
+        }
+    }
+
+    /// The thinking level that applies to the currently active model: the
+    /// per-model override when set, otherwise the global level.
+    pub fn effective_thinking_level(&self) -> crate::model::ThinkingLevel {
+        let key = format!(
+            "{}/{}",
+            self.config().current_provider,
+            self.config().current_model
+        );
+        self.config()
+            .model_thinking
+            .get(&key)
+            .copied()
+            .unwrap_or(self.config().thinking_level)
     }
 
     /// Returns whether the app is in read-only mode.

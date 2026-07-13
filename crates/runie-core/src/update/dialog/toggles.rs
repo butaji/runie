@@ -303,10 +303,9 @@ pub fn partition_model_items(
             last_header = header.clone();
         }
         if let Some((provider, model)) = name.split_once('/') {
-            let evt = crate::Event::SwitchModel {
+            let evt = crate::Event::SelectModel {
                 provider: provider.to_owned(),
                 model: model.to_owned(),
-                explicit: true,
             };
             current_group.push((name, evt));
         }

@@ -27,6 +27,36 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             }
             true
         }
+        crate::Event::SelectModel { provider, model } => {
+            // Model picked in the `/model` selector: open the per-model
+            // reasoning-level panel. The emitted SwitchModelWithLevel performs
+            // the actual switch once a level is chosen.
+            let key = format!("{provider}/{model}");
+            let global = state.config().thinking_level;
+            let override_level = state.config().model_thinking.get(&key).copied();
+            let v = state.view_mut();
+            v.input_receiver = crate::model::InputReceiver::Dialog;
+            v.dirty = true;
+            *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+                kind: crate::commands::DialogKind::ModelSelector,
+                panels: crate::dialog::builders::model_reasoning_panel(
+                    provider,
+                    model,
+                    global,
+                    override_level,
+                ),
+            });
+            true
+        }
+        crate::Event::SwitchModelWithLevel {
+            provider,
+            model,
+            level,
+        } => {
+            state.set_model_thinking_level(provider, model, *level);
+            state.switch_model(provider.clone(), model.clone(), true);
+            true
+        }
         crate::Event::SwitchTheme { name } => {
             state.switch_theme(name.clone());
             true
