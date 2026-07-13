@@ -11,7 +11,9 @@
 //! text selection, so capture would force users to hold a
 //! terminal-specific modifier (Shift/Option/Fn) to copy feed text.
 //! Leaving the mouse to the terminal gives plain click-drag selection;
-//! feed scrolling is keyboard-only (PgUp/PgDn, nav mode).
+//! feed scrolling is keyboard-driven (PgUp/PgDn, nav mode, and ↑/↓ on an
+//! empty input — which is also what mouse wheels send in terminals with
+//! alternate scroll).
 
 use crate::terminal::caps;
 use crossterm::{
@@ -180,7 +182,8 @@ mod tests {
         // terminal send mouse events to the app instead of performing native
         // text selection. Runie leaves the mouse to the terminal so users can
         // click-drag to select and copy feed text. Feed scrolling is
-        // keyboard-only (PgUp/PgDn, nav mode).
+        // keyboard-driven (PgUp/PgDn, nav mode, ↑/↓ on an empty input — also
+        // what mouse wheels send in alternate-scroll terminals).
         for mouse in [
             caps::MouseCapability::None,
             caps::MouseCapability::Legacy,

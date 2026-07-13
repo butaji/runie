@@ -138,13 +138,16 @@ fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
 
 /// Navigation mode selected by history/preview key bindings.
 ///
-/// The three input modes that affect history navigation are:
+/// The four input modes that affect history navigation are:
 /// - Path-completion suggestions open → navigate those
 /// - Multi-line input active → move cursor vertically
+/// - Empty input → scroll the feed (mouse wheels arrive as ↑/↓ in
+///   terminals with alternate scroll, and must scroll the feed)
 /// - Otherwise → navigate session history
 pub(crate) enum HistoryNavMode {
     PathComplete,
     Cursor,
+    Scroll,
     History,
 }
 
@@ -157,6 +160,8 @@ pub(crate) fn get_history_nav_mode(state: &mut AppState) -> HistoryNavMode {
         HistoryNavMode::PathComplete
     } else if state.input().input.contains('\n') {
         HistoryNavMode::Cursor
+    } else if state.input().input.is_empty() {
+        HistoryNavMode::Scroll
     } else {
         HistoryNavMode::History
     }
@@ -166,6 +171,7 @@ fn handle_history_prev(state: &mut AppState) {
     match get_history_nav_mode(state) {
         HistoryNavMode::PathComplete => state.path_completion_up(),
         HistoryNavMode::Cursor => state.move_cursor_up(),
+        HistoryNavMode::Scroll => scroll_event(state, crate::Event::Up),
         HistoryNavMode::History => state.history_prev(),
     }
 }
@@ -174,6 +180,7 @@ fn handle_history_next(state: &mut AppState) {
     match get_history_nav_mode(state) {
         HistoryNavMode::PathComplete => state.path_completion_down(),
         HistoryNavMode::Cursor => state.move_cursor_down(),
+        HistoryNavMode::Scroll => scroll_event(state, crate::Event::Down),
         HistoryNavMode::History => state.history_next(),
     }
 }

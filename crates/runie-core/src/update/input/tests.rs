@@ -15,8 +15,10 @@ fn history_prev_moves_up() {
     state.update(crate::Event::Input('b'));
     state.update(Event::submit());
 
-    // Clear input then go back in history
-    state.update(crate::Event::Backspace);
+    // History navigation requires a non-empty input: on an empty input
+    // Up/Down scroll the feed (mouse wheels arrive as arrow keys in
+    // terminals with alternate scroll, and must scroll the feed).
+    state.update(crate::Event::Input('x'));
     state.update(crate::Event::HistoryPrev);
     assert_eq!(state.input.input, "b");
 
@@ -33,7 +35,8 @@ fn history_next_moves_down() {
     state.update(crate::Event::Input('b'));
     state.update(Event::submit());
 
-    // Navigate back
+    // Navigate back (non-empty input opts into history navigation)
+    state.update(crate::Event::Input('x'));
     state.update(crate::Event::HistoryPrev);
     assert_eq!(state.input.input, "b");
     state.update(crate::Event::HistoryPrev);
@@ -43,6 +46,47 @@ fn history_next_moves_down() {
     state.update(crate::Event::HistoryNext);
     assert_eq!(state.input.input, "b");
     state.update(crate::Event::HistoryNext);
+    assert!(state.input.input.is_empty());
+}
+
+/// Up on an empty input scrolls the feed up instead of recalling history.
+///
+/// Terminals with "alternate scroll" (iTerm2, kitty, WezTerm) translate
+/// mouse-wheel ticks into ↑/↓ key presses when the app does not capture the
+/// mouse. Runie keeps native text selection by not capturing the mouse, so
+/// those wheel events are byte-identical to arrow keys — when the input box
+/// is empty they must scroll the feed, not cycle prompt history.
+#[test]
+fn up_on_empty_input_scrolls_feed() {
+    let mut state = AppState::default();
+    state.push_to_input_history("some command");
+    state.submit_user_message("hello".to_string());
+    assert_eq!(state.view().scroll, 0);
+
+    state.update(crate::Event::HistoryPrev);
+
+    assert_eq!(state.view().scroll, 1, "Up on empty input must scroll up");
+    assert!(
+        state.input.input.is_empty(),
+        "Up on empty input must not recall history, got {:?}",
+        state.input.input
+    );
+}
+
+/// Down on an empty input scrolls the feed toward newer content.
+#[test]
+fn down_on_empty_input_scrolls_feed_down() {
+    let mut state = AppState::default();
+    state.push_to_input_history("some command");
+    state.submit_user_message("hello".to_string());
+    state.view_mut().scroll = 3;
+
+    state.update(crate::Event::HistoryNext);
+
+    assert_eq!(
+        state.view().scroll, 2,
+        "Down on empty input must scroll down"
+    );
     assert!(state.input.input.is_empty());
 }
 
@@ -83,9 +127,21 @@ fn history_nav_mode_selects_cursor_when_multiline_input() {
 #[test]
 fn history_nav_mode_selects_history_when_plain_input() {
     let mut state = AppState::default();
+    state.input.input = "partial".to_string();
 
     let mode = get_history_nav_mode(&mut state);
     assert!(matches!(mode, HistoryNavMode::History));
+}
+
+/// Empty single-line input selects scroll mode: Up/Down then scroll the
+/// feed (this is also what mouse wheels send in alternate-scroll terminals).
+#[test]
+fn history_nav_mode_selects_scroll_when_input_empty() {
+    let mut state = AppState::default();
+    assert!(state.input.input.is_empty());
+
+    let mode = get_history_nav_mode(&mut state);
+    assert!(matches!(mode, HistoryNavMode::Scroll));
 }
 
 // ============================================================================

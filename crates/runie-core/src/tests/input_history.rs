@@ -27,6 +27,9 @@ mod tests {
         state.update(crate::Event::Input('h'));
         state.update(crate::Event::Input('i'));
         state.update(Event::submit());
+        // Up on an empty input scrolls the feed; history recall starts from
+        // a non-empty input.
+        state.update(crate::Event::Input('x'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "hi");
     }
@@ -37,6 +40,7 @@ mod tests {
         state.update(crate::Event::Input('h'));
         state.update(crate::Event::Input('i'));
         state.update(Event::submit());
+        state.update(crate::Event::Input('x'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "hi");
         state.update(crate::Event::HistoryNext);
@@ -62,6 +66,7 @@ mod tests {
         }
         state.update(Event::submit());
 
+        state.update(crate::Event::Input('x'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "third");
         state.update(crate::Event::HistoryPrev);
@@ -80,11 +85,12 @@ mod tests {
             state.update(crate::Event::Input(c));
         }
         state.update(Event::submit());
+        state.update(crate::Event::Input('x'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "test");
         state.update(crate::Event::HistoryNext);
         assert!(state.input.input.is_empty());
-        // Stays empty
+        // Stays empty (further Down on empty input scrolls the feed)
         state.update(crate::Event::HistoryNext);
         assert!(state.input.input.is_empty());
     }
@@ -96,6 +102,7 @@ mod tests {
             state.update(crate::Event::Input(c));
         }
         state.update(Event::submit());
+        state.update(crate::Event::Input('y'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "hello");
         // Type something new

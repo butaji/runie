@@ -655,6 +655,115 @@ async fn submit_after_fast_typing_keeps_full_content() {
     leader.shutdown().await;
 }
 
+/// Regression: Up on an EMPTY chat input must scroll the feed in production
+/// routing too, not only in the core `update` path.
+///
+/// UiActor routes HistoryPrev/HistoryNext straight to the InputActor
+/// (`route_to_input_actor`), bypassing the core history-nav mode dispatch.
+/// Terminals with "alternate scroll" (iTerm2, kitty, WezTerm) translate
+/// mouse-wheel ticks into arrow keys when the app does not capture the mouse
+/// (runie keeps native selection), so empty-input arrows must scroll the
+/// feed instead of cycling prompt history.
+#[tokio::test]
+async fn up_on_empty_input_scrolls_feed_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+
+    // Seed a message so the feed has scrollback.
+    ui.state.submit_user_message("hello".to_string());
+    assert_eq!(ui.state.view().scroll, 0);
+
+    ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
+
+    assert_eq!(
+        ui.state.view().scroll, 1,
+        "Up on empty input must scroll the feed in production routing"
+    );
+    assert!(
+        ui.state.input().input.is_empty(),
+        "Up on empty input must not recall history into the input box"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Down on an EMPTY chat input scrolls the feed toward newer content.
+#[tokio::test]
+async fn down_on_empty_input_scrolls_feed_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+
+    ui.state.submit_user_message("hello".to_string());
+    ui.state.view_mut().scroll = 3;
+
+    ui.handle_event(Event::HistoryNext, effect_tx.clone()).await;
+
+    assert_eq!(
+        ui.state.view().scroll, 2,
+        "Down on empty input must scroll the feed down in production routing"
+    );
+
+    leader.shutdown().await;
+}
+
+/// With text in the input, Up keeps history routing (no feed scroll) — the
+/// scroll interception must only fire for an empty input box.
+#[tokio::test]
+async fn up_with_text_does_not_scroll_feed_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+
+    ui.state.submit_user_message("hello".to_string());
+    assert_eq!(ui.state.view().scroll, 0);
+
+    // Type 'x' and deliver its InputChanged echo so the projection is fresh.
+    ui.handle_event(Event::Input('x'), effect_tx.clone()).await;
+    let mut istate = runie_core::InputState::default();
+    istate.input = "x".to_string();
+    istate.cursor_pos = 1;
+    ui.handle_event(
+        Event::InputChanged {
+            state: Box::new(istate),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
+
+    assert_eq!(
+        ui.state.view().scroll, 0,
+        "Up with text in the input must not scroll the feed"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Race guard: fast typing whose InputChanged echo has not been processed
+/// yet leaves the AppState projection empty while the optimistic pending
+/// mirror holds the text. Up in that window must still route to the
+/// InputActor (history), not scroll the feed.
+#[tokio::test]
+async fn up_after_fast_typing_does_not_scroll_feed_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+
+    ui.state.submit_user_message("hello".to_string());
+    assert_eq!(ui.state.view().scroll, 0);
+
+    // No InputChanged events pumped: projection stays empty, pending mirror
+    // holds the typed text.
+    for c in "src".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+    }
+    assert!(ui.state.input().input.is_empty());
+
+    ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
+
+    assert_eq!(
+        ui.state.view().scroll, 0,
+        "Up after fast-typed (pending) text must route to history, not scroll"
+    );
+
+    leader.shutdown().await;
+}
+
 /// Regression: typing `/model` as a continuous sequence must open the model
 /// selector, even when no InputChanged round-trips have been processed.
 #[tokio::test]

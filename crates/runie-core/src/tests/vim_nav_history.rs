@@ -18,6 +18,9 @@ mod tests {
         state.update(Event::submit());
 
         // Baseline: HistoryPrev recalls history when not in nav mode.
+        // (History recall starts from a non-empty input; Up on an empty
+        // input scrolls the feed instead.)
+        state.update(crate::Event::Input('x'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "b");
         assert!(!state.view.vim_nav_mode);
@@ -50,8 +53,10 @@ mod tests {
         assert!(state.view.vim_nav_mode);
 
         // Exit nav mode and verify history navigation still works.
+        // (Recall starts from a non-empty input: Up on empty input scrolls.)
         state.update(crate::Event::DialogBack);
         assert!(!state.view.vim_nav_mode);
+        state.update(crate::Event::Input('x'));
         state.update(crate::Event::HistoryPrev);
         assert_eq!(state.input.input, "a");
     }

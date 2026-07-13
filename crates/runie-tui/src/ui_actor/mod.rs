@@ -564,6 +564,22 @@ impl UiActor {
             }
         }
 
+        // Empty-input ↑/↓ scroll the feed instead of cycling prompt history.
+        // The canonical router would send these straight to the InputActor,
+        // bypassing the core history-nav mode dispatch (HistoryNavMode::Scroll).
+        // Terminals with "alternate scroll" (iTerm2, kitty, WezTerm) translate
+        // mouse-wheel ticks into arrow keys when the app does not capture the
+        // mouse (runie keeps native selection), so wheel events arrive as
+        // HistoryPrev/HistoryNext and must scroll, not recall history.
+        // `effective_input_content` includes the optimistic pending mirror so
+        // fast typing (echo not yet processed) still counts as non-empty.
+        if matches!(evt, Event::HistoryPrev | Event::HistoryNext)
+            && self.effective_input_content().is_empty()
+        {
+            self.apply_event(evt.clone());
+            return;
+        }
+
         // Canonical routing via the shared helper (one place to maintain the mapping).
         if let Some(ref handle) = self.input_handle {
             if crate::input_mapping::route_to_input_actor(handle, evt).await {
