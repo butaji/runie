@@ -319,6 +319,33 @@ mod tests {
     }
 
     #[test]
+    fn provider_registry_opencode_uses_zen_endpoint() {
+        let p = find_provider("opencode").expect("opencode should exist");
+        assert_eq!(p.display_name, "OpenCode Zen");
+        assert_eq!(p.base_url, "https://opencode.ai/zen/v1");
+        assert_eq!(p.env_var, "OPENCODE_API_KEY");
+        let names: Vec<&str> = p.models.iter().map(|m| m.name.as_str()).collect();
+        // The free tier served by zen/v1 must be selectable.
+        for free in [
+            "big-pickle",
+            "deepseek-v4-flash-free",
+            "mimo-v2.5-free",
+            "hy3-free",
+            "nemotron-3-ultra-free",
+            "north-mini-code-free",
+        ] {
+            assert!(names.contains(&free), "free model missing: {free}");
+        }
+        for m in &p.models {
+            assert!(
+                m.context_window.is_some(),
+                "opencode model {} needs context window",
+                m.name
+            );
+        }
+    }
+
+    #[test]
     fn provider_registry_find_missing_returns_none() {
         assert!(find_provider("nonexistent").is_none());
     }

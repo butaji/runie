@@ -1,0 +1,61 @@
+# OpenCode Zen provider metadata (OpenAI-compatible endpoint).
+# Model list and limits mirror https://opencode.ai/zen/v1/models and
+# https://models.dev (opencode provider). Models suffixed `-free` (plus
+# `big-pickle`) are the free tier.
+key: opencode
+display_name: OpenCode Zen
+base_url: https://opencode.ai/zen/v1
+env_var: OPENCODE_API_KEY
+models:
+  # Free tier
+  - name: big-pickle
+    context_window: 200000
+  - name: deepseek-v4-flash-free
+    context_window: 200000
+  - name: mimo-v2.5-free
+    context_window: 200000
+  - name: hy3-free
+    context_window: 190000
+  - name: nemotron-3-ultra-free
+    context_window: 1000000
+  - name: north-mini-code-free
+    context_window: 256000
+  # Paid tier
+  - name: claude-fable-5
+    context_window: 1000000
+  - name: claude-opus-4-8
+    context_window: 1000000
+  - name: claude-sonnet-5
+    context_window: 1000000
+  - name: gemini-3.5-flash
+    context_window: 1048576
+  - name: gemini-3.1-pro
+    context_window: 1048576
+  - name: gemini-3-flash
+    context_window: 1048576
+  - name: gpt-5.6-sol
+    context_window: 1050000
+  - name: gpt-5.6-terra
+    context_window: 1050000
+  - name: gpt-5.6-luna
+    context_window: 1050000
+  - name: gpt-5.5
+    context_window: 1050000
+  - name: grok-build-0.1
+    context_window: 256000
+  - name: grok-4.5
+    context_window: 500000
+  - name: deepseek-v4-pro
+    context_window: 1000000
+  - name: deepseek-v4-flash
+    context_window: 1000000
+  - name: glm-5.2
+    context_window: 1000000
+  - name: minimax-m3
+    context_window: 512000
+  - name: minimax-m2.7
+    context_window: 204800
+  - name: kimi-k2.7-code
+    context_window: 262144
+  - name: qwen3.6-plus
+    context_window: 262144
