@@ -113,8 +113,8 @@ fn user_card_chevron_matches_input_box_accent_inside_band() {
         Some(USER_BG),
         "chevron must sit inside the card band"
     );
-    // Geometry: 1-col terminal margin + 2-space feed indent → chevron at col 3.
-    assert_eq!(x, 3, "chevron must sit at column 3");
+    // Geometry: 1-col terminal margin + 1-space feed indent → chevron at col 2.
+    assert_eq!(x, 2, "chevron must sit at column 2");
 }
 
 #[test]
@@ -162,8 +162,8 @@ fn user_text_is_light_gray_normal_weight() {
     );
     assert!(!is_bold(&buf, x, row), "user text must be normal weight");
     assert_eq!(cell.style().bg, Some(USER_BG), "user text sits in the band");
-    // 1-col margin + 2-space feed indent + "❯ " → text at col 5.
-    assert_eq!(x, 5, "user text must start at column 5");
+    // 1-col margin + 1-space feed indent + "❯ " → text at col 4.
+    assert_eq!(x, 4, "user text must start at column 4");
 }
 
 #[test]
@@ -211,7 +211,7 @@ fn thought_summary_is_dim_bold_thought_without_affordance() {
 
     let row = find_row(&buf, "Thought for").expect("thought summary row");
     let diamond = find_col(&buf, row, "◆").expect("thought diamond");
-    assert_eq!(diamond, 3, "thought glyph must sit at column 3");
+    assert_eq!(diamond, 2, "thought glyph must sit at column 2");
     assert_eq!(
         buf[(diamond, row)].style().fg,
         Some(FEED_DIM),
@@ -292,7 +292,7 @@ fn tool_done_post_is_dim_diamond_bold_name_no_duration() {
     );
 
     let diamond = find_col(&buf, row, "◆").expect("tool diamond");
-    assert_eq!(diamond, 3, "tool glyph must sit at column 3");
+    assert_eq!(diamond, 2, "tool glyph must sit at column 2");
     assert_eq!(
         buf[(diamond, row)].style().fg,
         Some(FEED_DIM),
@@ -328,7 +328,7 @@ fn tool_output_lines_are_dim_and_indented() {
     let buf = draw(&mut state, 60, 20);
     let row = find_row(&buf, "file1").expect("tool output row");
     let x = find_col(&buf, row, "f").expect("output text");
-    assert_eq!(x, 3, "tool output must align under the post at column 3");
+    assert_eq!(x, 2, "tool output must align under the post at column 2");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),
@@ -363,7 +363,7 @@ fn assistant_text_has_no_glyph_feed_indent_and_neutral_gray() {
         "plain answer lines must not render the ◆ prefix: {text:?}"
     );
     let x = find_col(&buf, row, "H").expect("answer text");
-    assert_eq!(x, 3, "assistant text must start at column 3");
+    assert_eq!(x, 2, "assistant text must start at column 2");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(AGENT_FG),
@@ -405,7 +405,7 @@ fn turn_completed_line_is_dim_with_trailing_period() {
         "turn line must end with a period: {text:?}"
     );
     let x = find_col(&buf, row, "T").expect("turn text");
-    assert_eq!(x, 3, "turn line must start at column 3");
+    assert_eq!(x, 2, "turn line must start at column 2");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),

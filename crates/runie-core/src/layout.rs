@@ -17,8 +17,8 @@ pub const GLYPH_AGENT: &str = "◆ ";
 pub const GLYPH_INDENT: &str = "     ";
 /// Leading indent prepended to every feed line by the TUI feed renderer
 /// (must match `runie_tui::theme::FEED_INDENT`). Combined with the 1-column
-/// terminal margin this places post content at column 3 (0-indexed).
-pub const FEED_INDENT: &str = "  ";
+/// terminal margin this places post content at column 2 (0-indexed).
+pub const FEED_INDENT: &str = " ";
 
 /// Number of terminal rows an element renders to at the given viewport
 /// width. This uses the same wrapping rules as `runie_tui::ui::messages::to_lines`,
