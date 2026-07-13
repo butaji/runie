@@ -148,7 +148,7 @@ fn render_actor_does_not_need_mutable_state() {
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(
-        out.contains("◆ Hello"),
+        out.contains("Hello"),
         "Render actor should draw from immutable snapshot"
     );
 }

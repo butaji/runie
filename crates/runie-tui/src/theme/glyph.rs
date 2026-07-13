@@ -15,9 +15,14 @@ pub const GLYPH_THINKING: char = '◐';
 pub const GLYPH_FILTER: char = '❯'; // filter input prompt indicator
 
 // Tool / status glyphs
-pub const GLYPH_TOOL: &str = "✓ ";
+pub const GLYPH_TOOL: &str = "◆ ";
 pub const GLYPH_BULLET: &str = "•";
 pub const GLYPH_DOWNLOAD: &str = "⇣"; // bytes transferred indicator
+
+/// Leading indent prepended to every feed line by the feed renderer.
+/// Combined with the 1-column terminal margin this places post content
+/// (glyphs and text) at column 5, matching the grok CLI feed layout.
+pub const FEED_INDENT: &str = "    ";
 
 // Spinner and indicator glyphs
 // throbber BRAILLE_SIX[5] = '⠋' — first frame of the braille spinner.
@@ -66,18 +71,15 @@ pub fn tool_done_header(name: &str, duration_secs: f64) -> String {
 
 /// Tool summary line.
 pub fn tool_summary_line(name: &str, duration_secs: f64) -> String {
-    format!(
-        "{}{} {:.1}s{}",
-        GLYPH_TOOL, name, duration_secs, INDICATOR_COLLAPSED
-    )
+    format!("{}{} {:.1}s", GLYPH_TOOL, name, duration_secs)
 }
 
 /// Turn complete line.
 pub fn turn_complete_line(duration_secs: f64) -> String {
-    format!("Turn completed in {:.1}s", duration_secs)
+    format!("Turn completed in {:.1}s.", duration_secs)
 }
 
 /// Thought summary line.
 pub fn thought_summary_line(first_line: &str) -> String {
-    format!("{}{}", first_line, INDICATOR_COLLAPSED)
+    first_line.to_string()
 }

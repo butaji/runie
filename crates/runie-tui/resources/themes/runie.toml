@@ -23,11 +23,18 @@ bg_highlight = "#2A202E"
 bg_elevated = "#201820"
 bg_active = "#302830"
 bg_selection = "#3A2E38"
+bg_user = "#242424"
 
 text_primary = "#EDE8E3"
 text_secondary = "#C4BEB7"
 text_muted = "#8A8580"
 text_dim = "#5C5854"
+
+# Feed palette — grok CLI parity (verified SGR captures, dark mode).
+feed_dim = "#6C6C6C"
+feed_chevron = "#585858"
+feed_user_fg = "#E1E1E1"
+feed_agent_fg = "#C8C8C8"
 
 [tokens]
 "text.primary" = "text_primary"
@@ -40,7 +47,14 @@ text_dim = "#5C5854"
 "bg.elevated" = "bg_elevated"
 "bg.active" = "bg_active"
 "bg.selection" = "bg_selection"
-"bg.user" = "bg_elevated"
+"bg.user" = "bg_user"
+
+# Feed tokens — grok CLI parity. Themes that lack these fall back to
+# their own dim/muted equivalents (see theme::styles).
+"feed.dim" = "feed_dim"
+"feed.chevron" = "feed_chevron"
+"feed.user.fg" = "feed_user_fg"
+"feed.agent.fg" = "feed_agent_fg"
 
 "accent.primary" = "orange_500"
 "accent.secondary" = "amber_400"

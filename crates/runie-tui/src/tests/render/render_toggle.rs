@@ -18,14 +18,18 @@ fn test_expand_thought_post_changes_rendered_output() {
         ..Default::default()
     });
 
-    // Default (grok parity): the thought renders as a one-line summary —
-    // [+] affordance, reasoning body hidden.
+    // Default (grok parity): the thought renders as a one-line dim summary —
+    // no expand affordance, reasoning body hidden.
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_collapsed = terminal.backend().buffer().clone();
     let collapsed_text: String = buf_collapsed.content().iter().map(|c| c.symbol()).collect();
     assert!(
-        collapsed_text.contains("[+]"),
-        "Collapsed thought should show [+] indicator"
+        collapsed_text.contains("Thought"),
+        "Collapsed thought should show the summary line"
+    );
+    assert!(
+        !collapsed_text.contains("[+]"),
+        "Collapsed thought should not show the retired [+] indicator"
     );
     assert!(
         !collapsed_text.contains("I'll list the files"),
@@ -79,8 +83,12 @@ fn test_toggle_expand_changes_tool_render() {
     let buf_collapsed = terminal.backend().buffer().clone();
     let collapsed_text: String = buf_collapsed.content().iter().map(|c| c.symbol()).collect();
     assert!(
-        collapsed_text.contains("[+]"),
-        "Collapsed tool should show [+] indicator"
+        collapsed_text.contains("Ran list_files") || collapsed_text.contains("Run Ran"),
+        "Collapsed tool should show the one-line summary"
+    );
+    assert!(
+        !collapsed_text.contains("[+]"),
+        "Collapsed tool should not show the retired [+] indicator"
     );
     assert!(
         !collapsed_text.contains("file1"),

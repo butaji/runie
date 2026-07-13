@@ -66,6 +66,18 @@ pub fn color_fg_bright() -> Color {
     Color::Rgb(c.r, c.g, c.b)
 }
 
+/// User message text color (grok parity: neutral light gray).
+/// Themes without `feed.user.fg` keep the legacy bright primary.
+pub fn color_user_text() -> Color {
+    theme_color_fallback("feed.user.fg", color_fg_bright())
+}
+
+/// Assistant answer text color (grok parity: neutral gray).
+/// Themes without `feed.agent.fg` keep the primary text color.
+pub fn color_agent_text() -> Color {
+    theme_color_fallback("feed.agent.fg", color_fg())
+}
+
 /// Diff gutter insert background: subtle green tint over base bg.
 pub fn color_diff_insert_bg() -> Color {
     let bg = color_bg();
@@ -186,6 +198,8 @@ mod tests {
         assert_rgb(color_code());
         assert_rgb_or_reset(color_code_bg());
         assert_rgb(color_fg_bright());
+        assert_rgb(color_user_text());
+        assert_rgb(color_agent_text());
         assert_rgb(color_diff_insert_bg());
         assert_rgb(color_diff_remove_bg());
         assert_rgb_or_reset(color_user_bg());

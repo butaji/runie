@@ -4,7 +4,7 @@ use ratatui::text::{Line, Span};
 
 use crate::syntax::highlight_code;
 use crate::theme::{
-    code_header_label, style_code_header, style_timestamp, GLYPH_AGENT, GLYPH_INDENT,
+    code_header_label, style_code_header, style_feed_timestamp, GLYPH_AGENT, GLYPH_INDENT,
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -26,7 +26,10 @@ pub(super) fn render_code_header(
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        spans.push(Span::styled(
+            format!(" {}", ts_str),
+            style_feed_timestamp(),
+        ));
     }
     Line::from(spans).style(style_code_header())
 }

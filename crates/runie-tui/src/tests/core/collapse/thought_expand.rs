@@ -2,7 +2,7 @@
 //!
 //! Regression tests for the live MiniMax bug: reasoning streams as native
 //! `ThinkingDelta` parts (never as `<think>` tags in content), so the thought
-//! item rendered as a dead "◆ Thought for 2.3s [+]" — Enter and Ctrl+O did
+//! item rendered as a dead "◆ Thought for 2.3s" — Enter and Ctrl+O did
 //! nothing to it, and on reasoning-only turns the reasoning was deleted
 //! together with the empty assistant message.
 
@@ -107,7 +107,7 @@ fn nav_enter_expands_collapsed_native_reasoning_thought() {
         "Enter on the selected thought must reveal the reasoning inline"
     );
 
-    // Enter again collapses it back to the summary affordance.
+    // Enter again collapses it back to the one-line summary.
     state.update(Event::Submit);
     let recollapsed = render_with_size(&mut state, WIDTH, 24);
     assert!(
@@ -115,8 +115,12 @@ fn nav_enter_expands_collapsed_native_reasoning_thought() {
         "second Enter must collapse the thought again"
     );
     assert!(
-        recollapsed.contains("[+]"),
-        "collapsed thought with a body must show the [+] affordance"
+        recollapsed.contains("Thought for"),
+        "collapsed thought with a body must render its summary line"
+    );
+    assert!(
+        !recollapsed.contains("[+]"),
+        "collapsed thoughts no longer render the retired [+] affordance"
     );
 }
 
@@ -201,8 +205,8 @@ fn duration_only_thought_renders_without_expand_affordance() {
     state.update(Event::ThoughtDone { id: REQ.into() });
     state.update(Event::Done { id: REQ.into() });
 
-    // Even in the collapsed view, a thought with no body must not promise
-    // expansion — the [+] would be dead.
+    // Even in the collapsed view, a thought with no body must still render
+    // its summary line — and never an expand affordance.
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
     let rendered = render_with_size(&mut state, WIDTH, 24);
@@ -216,6 +220,6 @@ fn duration_only_thought_renders_without_expand_affordance() {
     );
     assert!(
         !thought_line.contains("[+]"),
-        "duration-only thought must not render a dead [+] affordance, got line: {thought_line:?}"
+        "thought summaries must not render the retired [+] affordance, got line: {thought_line:?}"
     );
 }

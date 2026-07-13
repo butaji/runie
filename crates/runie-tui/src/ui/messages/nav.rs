@@ -57,15 +57,19 @@ fn draw_post_background(
     let first_visible = start.max(visible_start);
     let last_visible = end.min(visible_end);
 
+    // Paint the band over the same columns as the user-card band
+    // (2..width-2), leaving a two-column feed-background margin on each
+    // side. Painting to the last column leaves the terminal in the
+    // deferred-wrap state, and tmux then drops the following row's
+    // background attributes (reproduced against tmux 3.7b).
+    let full_width = f.area().width;
+    let band_end = full_width.saturating_sub(2);
     for row in first_visible..last_visible {
         let y = area.y + (row - visible_start) as u16;
         if y >= area.y + area.height {
             break;
         }
-        // Fill the whole available terminal line, including outer margins,
-        // so the selection highlight spans the full width with no gaps.
-        let full_width = f.area().width;
-        for x in 0..full_width {
+        for x in 2..band_end {
             let cell = &mut f.buffer_mut()[(x, y)];
             let _ = cell.set_bg(bg);
         }

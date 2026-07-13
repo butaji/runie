@@ -93,11 +93,22 @@ pub(crate) fn truncate_args(args: &str) -> String {
 /// - `format_tool_label("ls", "")` → `"Run ls"`
 /// - `format_tool_label("bash", "a very long command...")` → `"Run bash 'a very long comma…'"`
 pub fn format_tool_label(name: &str, args: &str) -> String {
+    let (verb, args_part) = format_tool_label_parts(name, args);
+    format!("{verb}{args_part}")
+}
+
+/// Split a tool label into the verb/name portion (rendered bold in the TUI)
+/// and the plain args portion.
+///
+/// Examples:
+/// - `format_tool_label_parts("bash", "echo hi")` → `("Run bash", " 'echo hi'")`
+/// - `format_tool_label_parts("ls", "")` → `("Run ls", "")`
+pub fn format_tool_label_parts(name: &str, args: &str) -> (String, String) {
     let args = truncate_args(args);
     if args.is_empty() {
-        format!("Run {}", name)
+        (format!("Run {}", name), String::new())
     } else {
-        format!("Run {} '{}'", name, args)
+        (format!("Run {}", name), format!(" '{}'", args))
     }
 }
 

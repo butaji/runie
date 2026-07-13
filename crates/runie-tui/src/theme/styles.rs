@@ -18,28 +18,38 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
     let accent = theme.color("accent.primary");
     let fg = theme.color("text.primary");
     let dim = theme.color("text.dim");
-    let secondary = theme.color("text.secondary");
     let bg_user = theme.color("bg.user");
-    theme.register_default_style("runie.user", opaline::OpalineStyle::fg(accent).with_bg(bg_user).bold());
+    // Feed tokens (grok parity): present in the dark runie theme; other
+    // themes fall back to their own dim/muted equivalents so light mode
+    // keeps its hues while sharing the same structural roles.
+    let feed_dim = theme.try_color("feed.dim").unwrap_or(dim);
+    let feed_chevron = theme
+        .try_color("feed.chevron")
+        .unwrap_or_else(|| theme.color("text.muted"));
+    theme.register_default_style(
+        "runie.user",
+        opaline::OpalineStyle::fg(feed_chevron).with_bg(bg_user),
+    );
     theme.register_default_style("runie.user.chevron", opaline::OpalineStyle::fg(accent).bold());
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
-    theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(secondary).italic());
-    theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(secondary));
-    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(secondary));
+    theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(feed_dim));
     theme.register_default_style("runie.empty", opaline::OpalineStyle::fg(dim));
+    // Status-bar timestamp (out of feed scope) keeps the legacy dim shade;
+    // feed timestamps use the grok-parity dim.
     theme.register_default_style("runie.timestamp", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.feed.timestamp", opaline::OpalineStyle::fg(feed_dim));
 }
 
 fn register_tool_styles(theme: &mut opaline::Theme) {
     let dim = theme.color("text.dim");
-    let fg = theme.color("text.primary");
-    let secondary = theme.color("text.secondary");
-    let success = theme.color("success");
-    theme.register_default_style("runie.tool.running", opaline::OpalineStyle::fg(secondary));
-    theme.register_default_style("runie.tool.header", opaline::OpalineStyle::fg(secondary));
-    theme.register_default_style("runie.tool.output", opaline::OpalineStyle::fg(fg));
-    theme.register_default_style("runie.tool.summary", opaline::OpalineStyle::fg(success));
-    theme.register_default_style("runie.turn.complete", opaline::OpalineStyle::fg(dim));
+    let feed_dim = theme.try_color("feed.dim").unwrap_or(dim);
+    theme.register_default_style("runie.tool.running", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style("runie.tool.header", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style("runie.tool.output", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style("runie.tool.summary", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style("runie.turn.complete", opaline::OpalineStyle::fg(feed_dim));
 }
 
 fn register_status_styles(theme: &mut opaline::Theme) {
@@ -192,6 +202,11 @@ pub fn style_empty_state() -> Style {
 }
 pub fn style_timestamp() -> Style {
     style_fn("runie.timestamp")
+}
+/// Feed timestamp style (grok parity dim) — distinct from the status-bar
+/// timestamp, which keeps the legacy `text.dim` shade.
+pub fn style_feed_timestamp() -> Style {
+    style_fn("runie.feed.timestamp")
 }
 pub fn style_status_idle() -> Style {
     style_fn("runie.status.idle")

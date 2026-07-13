@@ -19,8 +19,8 @@ use runie_core::markdown::{extract_code_blocks, inlines_to_text, CodeBlock};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
-    GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
+    color_agent_text, color_user_text, style_agent, style_feed_timestamp, style_user, GLYPH_INDENT,
+    GLYPH_USER,
 };
 
 mod code;
@@ -67,8 +67,6 @@ pub fn render_user_message(
     lines.push(Line::from(""));
     lines.extend(build_user_body(
         content,
-        prefix_width,
-        indent_width,
         first_w,
         rest_w,
         &UserLineParams {
@@ -92,8 +90,6 @@ struct UserLineParams {
 
 fn build_user_body(
     content: &str,
-    prefix_width: u16,
-    indent_width: u16,
     first_w: u16,
     rest_w: u16,
     params: &UserLineParams,
@@ -103,7 +99,7 @@ fn build_user_body(
     // would vanish; escape '<' to keep user content verbatim (pulldown
     // resolves the entity back to '<' in text events).
     let escaped = content.replace('<', "&lt;");
-    let spans = apply_color_to_inlines(&escaped, color_fg_bright());
+    let spans = apply_color_to_inlines(&escaped, color_user_text());
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
     rows.iter()
@@ -141,7 +137,7 @@ fn build_user_line_from_spans(
         }
         line_spans.push(Span::styled(
             format!(" {}", params.ts_str),
-            style_timestamp(),
+            style_feed_timestamp(),
         ));
     }
 
@@ -158,13 +154,11 @@ pub fn render_agent_message(
     let ts_width = str_width(&ts_str) + 1;
     let inner_width = content_width;
 
-    // Reserve space for timestamp on first line
-    let prefix_width = str_width(GLYPH_AGENT);
-    let first_w = inner_width
-        .saturating_sub(prefix_width)
-        .saturating_sub(ts_width)
-        .max(10);
-    let rest_w = inner_width.saturating_sub(str_width(GLYPH_INDENT));
+    // Plain answer lines carry no leading glyph (grok parity): text starts
+    // at the feed indent on every line, so wrapping uses the full width.
+    // Reserve space for the timestamp on the first line only.
+    let first_w = inner_width.saturating_sub(ts_width).max(10);
+    let rest_w = inner_width;
 
     let mut lines = build_agent_body(&blocks, &ts_str, inner_width, first_w, rest_w);
 
@@ -205,7 +199,7 @@ fn render_agent_block(
         }
         CodeBlock::Blockquote(inlines) => {
             let text = inlines_to_text(inlines);
-            lines.extend(support::render_blockquote_from_spans(&text, color_fg()));
+            lines.extend(support::render_blockquote_from_spans(&text, color_agent_text()));
             false
         }
     }
@@ -225,18 +219,14 @@ fn render_agent_text_block(
     }
     // Convert MdInline[] to plain text, then style with tui_markdown.
     let text = inlines_to_text(inlines);
-    let spans = apply_color_to_inlines(&text, color_fg());
-    let prefix_width = str_width(GLYPH_AGENT);
+    let spans = apply_color_to_inlines(&text, color_agent_text());
     let ts_width = str_width(ts_str) + 1;
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
     for (i, row) in rows.iter().enumerate() {
         let with_ts = is_first && i == 0;
-        let prefix = if with_ts { GLYPH_AGENT } else { GLYPH_INDENT };
         lines.push(build_agent_line_from_spans(
             row,
-            prefix,
-            prefix_width,
             inner_width,
             ts_str,
             ts_width,
@@ -248,26 +238,25 @@ fn render_agent_text_block(
 
 fn build_agent_line_from_spans(
     spans: &[MdSpan],
-    prefix: &'static str,
-    prefix_width: u16,
     content_width: u16,
     ts_str: &str,
     ts_width: u16,
     with_ts: bool,
 ) -> Line<'static> {
-    let mut line_spans = vec![Span::styled(prefix.to_owned(), style_agent())];
-    line_spans.extend(md_to_spans(spans));
+    let mut line_spans = md_to_spans(spans);
 
     if with_ts && content_width > 0 {
-        let text_width = span_width(&line_spans[1..]);
+        let text_width = span_width(&line_spans);
         let padding = content_width
-            .saturating_sub(prefix_width)
             .saturating_sub(text_width)
             .saturating_sub(ts_width);
         if padding > 0 {
             line_spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        line_spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        line_spans.push(Span::styled(
+            format!(" {}", ts_str),
+            style_feed_timestamp(),
+        ));
     }
     Line::from(line_spans)
 }
@@ -307,16 +296,14 @@ fn render_agent_list_block(
         }
         // Convert MdInline[] to plain text, then style with tui_markdown.
         let item_text = inlines_to_text(item);
-        let spans = apply_color_to_inlines(&item_text, color_fg());
-        let prefix_width = str_width(GLYPH_AGENT);
+        let spans = apply_color_to_inlines(&item_text, color_agent_text());
         let ts_width = str_width(ts_str) + 1;
         let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
         for (j, row) in rows.iter().enumerate() {
             let with_ts = first_item && j == 0;
-            let prefix = if with_ts { GLYPH_AGENT } else { GLYPH_INDENT };
             lines.push(support::render_list_item_from_spans(
-                row, ordered, i, with_ts, prefix, ts_str, ts_width, inner_width,
+                row, ordered, i, with_ts, "", ts_str, ts_width, inner_width,
             ));
         }
         first_item = false;
@@ -325,17 +312,17 @@ fn render_agent_list_block(
 }
 
 fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
-    let prefix = GLYPH_AGENT;
-    let mut spans = vec![Span::styled(prefix, style_agent())];
+    let mut spans: Vec<Span<'static>> = Vec::new();
     if content_width > 0 {
         let ts_width = str_width(ts_str) + 1;
-        let padding = content_width
-            .saturating_sub(str_width(prefix))
-            .saturating_sub(ts_width);
+        let padding = content_width.saturating_sub(ts_width);
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        spans.push(Span::styled(
+            format!(" {}", ts_str),
+            style_feed_timestamp(),
+        ));
     }
     Line::from(spans).style(style_agent())
 }

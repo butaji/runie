@@ -54,8 +54,8 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("◆ Hello"),
-        "Must render '◆ Hello' for agent. Got: {}",
+        content.contains("Hello"),
+        "Must render agent response text. Got: {}",
         content
     );
 }
@@ -92,7 +92,7 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(content.contains("❯ A"), "Must show user prefix");
-    assert!(content.contains("◆ Response 1"), "Must show ◆ agent prefix");
+    assert!(content.contains("Response 1"), "Must show agent response text");
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn test_render_agent_response() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("◆ Hello"));
+    assert!(content.contains("Hello"));
 }
 
 #[test]

@@ -82,7 +82,9 @@ fn fallback_line_count(element: &Element) -> usize {
 }
 
 fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
-    let inner_width = width.saturating_sub(2);
+    // Matches the TUI render: 2 columns of right-side slack plus the
+    // 4-column feed indent prepend (see ui::messages::render_message_content).
+    let inner_width = width.saturating_sub(4);
     if inner_width == 0 {
         return content.lines().count().max(1) + 2;
     }
@@ -110,14 +112,16 @@ fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
 }
 
 fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
-    // Subtract 8 for left/right margins (4 spaces each).
-    let inner_width = width.saturating_sub(8);
+    // Matches the TUI render: 2 columns of right-side slack plus the
+    // 4-column feed indent prepend. Plain answer lines carry no leading
+    // glyph, so prefix and continuation indents are zero.
+    let inner_width = width.saturating_sub(4);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }
 
-    let prefix_width = glyph_width(GLYPH_AGENT);
-    let indent_width = glyph_width(GLYPH_INDENT);
+    let prefix_width = 0;
+    let indent_width = 0;
     let ts_str = crate::labels::format_timestamp(timestamp);
     let ts_width = ts_str.len() as u16 + 1;
 
@@ -196,8 +200,9 @@ fn text_block_line_count(
 }
 
 fn thought_marker_line_count(content: &str, width: u16) -> usize {
-    // Subtract 8 for left/right margins (4 spaces each).
-    let inner_width = width.saturating_sub(8);
+    // Matches the TUI render: 2 columns of right-side slack plus the
+    // 4-column feed indent prepend.
+    let inner_width = width.saturating_sub(4);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }

@@ -78,12 +78,17 @@ fn render_tool_running_shows_duration() {
 // ─── render_tool_done ───────────────────────────────────────────────────────
 
 #[test]
-fn render_tool_done_shows_checkmark() {
+fn render_tool_done_shows_diamond() {
     let lines = render_tool_done("ls", ".", 2.5, "file1\nfile2", None, false);
     let output = render_to_string(lines, 80, 5);
     assert!(
-        output.contains("✓"),
-        "Output should contain checkmark: {}",
+        output.contains("◆"),
+        "Output should contain the tool diamond: {}",
+        output
+    );
+    assert!(
+        !output.contains("✓"),
+        "Output should not contain the old checkmark: {}",
         output
     );
 }
@@ -122,12 +127,12 @@ fn render_tool_done_shows_error_icon() {
 }
 
 #[test]
-fn render_tool_done_shows_duration() {
+fn render_tool_done_hides_duration() {
     let lines = render_tool_done("ls", ".", 5.7, "file1\nfile2", None, false);
     let output = render_to_string(lines, 80, 5);
     assert!(
-        output.contains("5.7s"),
-        "Output should contain duration: {}",
+        !output.contains("5.7s"),
+        "Done tool post should not render a duration (grok parity): {}",
         output
     );
 }
@@ -170,19 +175,24 @@ fn render_tool_summary_is_one_line() {
     // Check that the content contains the expected text (first line)
     let output = lines[0].to_string();
     assert!(
-        output.contains("✓") && output.contains("Run ls"),
+        output.contains("◆") && output.contains("Run ls"),
         "Should show summary: {}",
         output
     );
 }
 
 #[test]
-fn render_tool_summary_shows_checkmark() {
+fn render_tool_summary_shows_diamond() {
     let lines = render_tool_summary("ls", ".", 2.5);
     let output = render_to_string(lines, 80, 3);
     assert!(
-        output.contains("✓"),
-        "Output should contain checkmark: {}",
+        output.contains("◆"),
+        "Output should contain the tool diamond: {}",
+        output
+    );
+    assert!(
+        !output.contains("✓"),
+        "Output should not contain the old checkmark: {}",
         output
     );
 }
@@ -199,12 +209,12 @@ fn render_tool_summary_shows_label() {
 }
 
 #[test]
-fn render_tool_summary_shows_duration() {
+fn render_tool_summary_hides_duration() {
     let lines = render_tool_summary("ls", ".", 65.0); // > 60s
     let output = render_to_string(lines, 80, 3);
     assert!(
-        output.contains("1m"),
-        "Output should contain minutes for long duration: {}",
+        !output.contains("1m") && !output.contains("65"),
+        "Tool summary should not render a duration (grok parity): {}",
         output
     );
 }

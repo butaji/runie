@@ -215,7 +215,7 @@ fn glyph_selection_constants_are_correct() {
 /// Verifies that tool and status glyphs have correct values.
 #[test]
 fn glyph_tool_constants_are_correct() {
-    assert_eq!(GLYPH_TOOL, "✓ ");
+    assert_eq!(GLYPH_TOOL, "◆ ");
     assert_eq!(GLYPH_BULLET, "•");
 }
 

@@ -110,7 +110,7 @@ fn agent_response_renders() {
         provider: String::new(),
     });
     let content = draw_state(&mut state);
-    assert!(content.contains("◆ Hello"), "Should render agent prefix");
+    assert!(content.contains("Hello"), "Should render agent response");
 }
 
 #[test]
@@ -129,7 +129,7 @@ fn tool_done_renders() {
         output: String::new(),
     });
     let content = draw_state(&mut state);
-    assert!(content.contains("✓"), "Should render tool done");
+    assert!(content.contains("◆"), "Should render tool done diamond");
     assert!(content.contains("list_files"), "Should show tool name");
 }
 

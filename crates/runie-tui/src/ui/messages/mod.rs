@@ -32,7 +32,12 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
         return;
     }
 
-    let content_width = area.width.saturating_sub(2);
+    // Reserve 2 columns of right-side slack plus the leading feed indent
+    // (FEED_INDENT, prepended at render time) so post content lands at
+    // column 5 while timestamps keep their right edge.
+    let content_width = area
+        .width
+        .saturating_sub(2 + crate::theme::FEED_INDENT.len() as u16);
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 
@@ -47,7 +52,11 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 /// Render lines with user message backgrounds applied to the lines.
-/// User messages and their adjacent spacers get full-width backgrounds.
+///
+/// Every line gets the leading feed indent (FEED_INDENT) prepended, so post
+/// content starts at column 5. User message rows additionally get the card
+/// band: the bg.user background painted from column 2 to width-2, leaving a
+/// two-column feed-background margin on each side (grok parity).
 fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
     snap: &Snapshot,
@@ -62,7 +71,10 @@ fn render_paragraph_with_user_backgrounds(
     let visible_start = offset as usize;
     let full_width = f.area().width;
 
-    // Build modified lines with user background applied
+    // Build modified lines with user background applied, then prepend the
+    // feed indent. The indent span carries no background, so for user rows
+    // its cells show whatever was painted into the buffer (feed background
+    // in the margin, card band inside the band).
     let modified_lines: Vec<Line<'static>> = lines
         .iter()
         .skip(start)
@@ -73,16 +85,21 @@ fn render_paragraph_with_user_backgrounds(
             let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
             let is_user_related = is_user_related_row(snap, elem_idx);
 
-            if is_user_related {
+            let owned = if is_user_related {
                 // Convert to owned line with background applied
                 line_to_owned_with_bg(line, bg)
             } else {
                 line_to_owned(line)
-            }
+            };
+            let mut spans = vec![Span::raw(crate::theme::FEED_INDENT)];
+            spans.extend(owned.spans);
+            Line::from(spans).style(owned.style)
         })
         .collect();
 
-    // FIRST: Draw full-width backgrounds for user-related rows (for margins)
+    // FIRST: Draw the card band for user-related rows, keeping a two-column
+    // feed-background margin on each side.
+    let band_end = full_width.saturating_sub(2);
     for row_offset in 0..height {
         let row = area.y + row_offset as u16;
         let abs_row = visible_start + row_offset;
@@ -90,8 +107,7 @@ fn render_paragraph_with_user_backgrounds(
         let is_user_related = is_user_related_row(snap, elem_idx);
 
         if is_user_related {
-            // Fill FULL width background from x=0 to terminal edge
-            for x in 0..full_width {
+            for x in 2..band_end {
                 let cell = &mut f.buffer_mut()[(x, row)];
                 let _ = cell.set_bg(bg);
             }
@@ -121,17 +137,17 @@ fn line_to_owned_with_bg(line: &Line<'_>, bg: ratatui::style::Color) -> Line<'st
             Span::styled(s.content.to_string(), style)
         })
         .collect();
-    Line::from(spans)
+    Line::from(spans).style(line.style)
 }
 
-/// Convert a line to owned.
+/// Convert a line to owned, preserving its line-level style.
 fn line_to_owned(line: &Line<'_>) -> Line<'static> {
     let spans: Vec<Span<'static>> = line
         .spans
         .iter()
         .map(|s| Span::styled(s.content.to_string(), s.style))
         .collect();
-    Line::from(spans)
+    Line::from(spans).style(line.style)
 }
 
 /// Check if a row belongs to a user message card.
@@ -145,19 +161,6 @@ fn is_user_related_row(snap: &Snapshot, elem_idx: usize) -> bool {
         return false;
     }
     matches!(snap.elements.get(elem_idx), Some(Element::UserMessage { .. }))
-}
-
-fn render_paragraph(f: &mut Frame, area: Rect, lines: Vec<Line<'_>>, offset: u16) {
-    let height = area.height as usize;
-    let start = offset as usize;
-    // Render lines directly into the buffer — skip Paragraph to avoid re-wrapping.
-    for (row_offset, line) in lines.iter().skip(start).take(height).enumerate() {
-        let row = area.y + row_offset as u16;
-        f.render_widget(
-            ratatui::widgets::Paragraph::new(line.clone()),
-            Rect::new(area.x, row, area.width, 1),
-        );
-    }
 }
 
 fn render_scrollbar_if_needed(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {

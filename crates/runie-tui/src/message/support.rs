@@ -5,11 +5,11 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
-    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_BULLET,
-    GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_COLLAPSED,
+    style_agent, style_thinking, style_thought, style_feed_timestamp, style_tool_header,
+    style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_AGENT,
+    GLYPH_BULLET, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X,
 };
-use runie_core::tool::{format_bytes, format_duration, format_tool_label};
+use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
 
 /// Display-cell width for any `AsRef<str>` type.
@@ -42,46 +42,65 @@ pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
         .style(style_thinking())]
 }
 
-pub fn render_thought_summary(
-    content: &str,
-    _duration_secs: f64,
-    expandable: bool,
-) -> Vec<Line<'static>> {
+pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
+    let style = style_thought();
     let first_line = content.lines().next().unwrap_or(content);
-    // The [+] affordance promises an expandable body; duration-only
-    // thoughts have none and must not render it (dead affordance).
-    let marker = if expandable { " [+]" } else { "" };
-    vec![Line::from(format!("{}{}", first_line, marker)).style(style_thought())]
+    // Grok-style summary: `◆ ` + bold "Thought" + plain " for Xs", all dim.
+    // No [+] affordance — expandability is advertised in the hint bar.
+    match first_line.strip_prefix("◆ ") {
+        Some(rest) => match rest.split_once(' ') {
+            Some((word, tail)) => vec![Line::from(vec![
+                Span::styled(GLYPH_AGENT, style),
+                Span::styled(word.to_owned(), style.bold()),
+                Span::styled(format!(" {tail}"), style),
+            ])],
+            None => vec![Line::from(vec![
+                Span::styled(GLYPH_AGENT, style),
+                Span::styled(rest.to_owned(), style.bold()),
+            ])],
+        },
+        None => vec![Line::from(first_line.to_owned()).style(style)],
+    }
 }
 
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
-    let label = format_tool_label(name, args);
-    vec![Line::from(format!("{} {} {:.1}s", GLYPH_SPINNER, label, duration_secs))
-        .style(style_tool_running())]
+    let (verb, args_part) = format_tool_label_parts(name, args);
+    vec![Line::from(format!(
+        "{} {}{} {:.1}s",
+        GLYPH_SPINNER, verb, args_part, duration_secs
+    ))
+    .style(style_tool_running())]
 }
 
 pub fn render_tool_done(
     name: &str,
     args: &str,
-    duration_secs: f64,
+    _duration_secs: f64,
     output: &str,
     bytes_transferred: Option<u64>,
     error: bool,
 ) -> Vec<Line<'static>> {
-    let label = format_tool_label(name, args);
-    let status_icon = if error { GLYPH_X } else { GLYPH_CHECK };
-    let duration = format_duration(duration_secs);
+    let (verb, args_part) = format_tool_label_parts(name, args);
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
-    let header = format!(
-        "{} {} {}{}",
-        status_icon,
-        label,
-        duration,
-        bytes_str,
-    );
-    let mut lines = vec![Line::from(header).style(style_tool_header())];
+    let style = style_tool_header();
+    // Grok-style done post: `◆ ` + bold verb/name + plain args, all dim.
+    // No ✓, no trailing duration. Errors keep the ✗ marker.
+    let glyph = if error {
+        format!("{GLYPH_X} ")
+    } else {
+        GLYPH_AGENT.to_string()
+    };
+    let mut spans = vec![
+        Span::styled(glyph, style),
+        Span::styled(verb, style.bold()),
+    ];
+    let tail = format!("{args_part}{bytes_str}");
+    if !tail.is_empty() {
+        spans.push(Span::styled(tail, style));
+    }
+    let mut lines = vec![Line::from(spans)];
     if !output.is_empty() {
         if runie_core::diff::Diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
@@ -94,14 +113,21 @@ pub fn render_tool_done(
     lines
 }
 
-pub fn render_tool_summary(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
-    let label = format_tool_label(name, args);
-    let duration = format_duration(duration_secs);
-    vec![Line::from(format!("✓ {} {} [+]", label, duration)).style(style_tool_summary())]
+pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<Line<'static>> {
+    let (verb, args_part) = format_tool_label_parts(name, args);
+    let style = style_tool_summary();
+    let mut spans = vec![
+        Span::styled(GLYPH_AGENT, style),
+        Span::styled(verb, style.bold()),
+    ];
+    if !args_part.is_empty() {
+        spans.push(Span::styled(args_part, style));
+    }
+    vec![Line::from(spans)]
 }
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    vec![Line::from(format!("Turn completed in {:.1}s", duration_secs))
+    vec![Line::from(format!("Turn completed in {:.1}s.", duration_secs))
         .style(style_turn_complete())]
 }
 
@@ -286,7 +312,11 @@ pub fn render_list_item_from_spans(
     } else {
         GLYPH_BULLET.to_owned()
     };
-    let bullet_prefix = format!("{} {}", prefix, bullet);
+    let bullet_prefix = if prefix.is_empty() {
+        bullet
+    } else {
+        format!("{} {}", prefix, bullet)
+    };
     let bullet_width = str_width(&bullet_prefix);
 
     let mut result_spans = vec![Span::styled(bullet_prefix, style_agent())];
@@ -305,7 +335,7 @@ pub fn render_list_item_from_spans(
         if padding > 0 {
             result_spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        result_spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        result_spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
     }
 
     Line::from(result_spans).style(style_agent())

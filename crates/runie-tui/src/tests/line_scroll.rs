@@ -147,7 +147,7 @@ fn tool_output_latest_lines_visible() {
         out.contains("file10"),
         "Latest tool output (file10) must be visible"
     );
-    assert!(out.contains("✓ Run ls"), "Tool header must be visible");
+    assert!(out.contains("◆ Run ls"), "Tool header must be visible");
 }
 
 #[test]

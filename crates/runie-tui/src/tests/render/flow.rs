@@ -24,10 +24,9 @@ fn assert_tool_flow_renders(state: &mut AppState) {
         "Should contain 'list_files': {}",
         content
     );
-    assert!(content.contains("✓"), "Should contain '✓': {}", content);
     assert!(
         content.contains("◆"),
-        "Should contain agent arrow '◆': {}",
+        "Should contain the tool post diamond '◆': {}",
         content
     );
 }
@@ -67,15 +66,16 @@ fn test_formatted_labels_short_names() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("✓"), "Missing '✓' in: {}", content);
     assert!(
-        content.contains("0.3s") || content.contains("0.3"),
-        "Missing duration in: {}",
+        content.contains("◆ Run list_files"),
+        "Missing tool post in: {}",
         content
     );
+    // The turn-completed line carries the turn duration (tool posts no
+    // longer render their own duration).
     assert!(
-        content.contains("Turn completed") || content.contains("Turn"),
-        "Missing 'Turn completed' in: {}",
+        content.contains("Turn completed in 5.1s."),
+        "Missing turn duration in: {}",
         content
     );
 }

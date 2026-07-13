@@ -2,6 +2,6 @@
 source: crates/runie-tui/src/tests/snapshot.rs
 expression: output
 ---
-✓ Run list_files 1.2s                   
+◆ Run list_files                        
 src/main.rs                             
 lib.rs

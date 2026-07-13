@@ -5,6 +5,7 @@ pub use super::{
     AppState, ChatMessage, DialogKind, Event, Part, Role, ScopedModel, Snapshot, view,
 };
 
+mod feed_style;
 mod render_at;
 mod render_basic;
 mod render_model_selector;
