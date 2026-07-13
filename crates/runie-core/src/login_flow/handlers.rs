@@ -36,6 +36,13 @@ pub fn login_flow_start(state: &mut crate::model::AppState) {
 
 fn login_flow_select_provider(state: &mut crate::model::AppState, provider: String) {
     if let Some(flow) = state.login_flow_mut() {
+        // Switching to a different provider must not carry the previous
+        // provider's key into the new login form — submitting it would leak
+        // the credential to the wrong service. Re-selecting the same
+        // provider (back navigation) keeps the typed key.
+        if flow.provider != provider {
+            flow.key.clear();
+        }
         flow.provider = provider.clone();
         flow.validated = false;
         // The mock provider is dev-only and does not need a real key; prefill it

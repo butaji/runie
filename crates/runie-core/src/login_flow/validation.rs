@@ -115,6 +115,51 @@ mod tests {
     }
 
     #[test]
+    fn login_switching_providers_clears_previous_key() {
+        let mut state = AppState::default();
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
+            provider: "moonshotai".into(),
+        });
+        state.update(Event::SubmitKey {
+            provider: "moonshotai".into(),
+            key: "sk-secret".into(),
+        });
+        assert_eq!(state.login_flow().unwrap().key, "sk-secret");
+
+        state.update(Event::SelectProvider {
+            provider: "deepseek".into(),
+        });
+        assert!(
+            state.login_flow().unwrap().key.is_empty(),
+            "switching providers must not carry the previous provider's key \
+             into the new login form (leaked credentials across services)"
+        );
+    }
+
+    #[test]
+    fn login_reselecting_same_provider_keeps_key() {
+        let mut state = AppState::default();
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
+            provider: "moonshotai".into(),
+        });
+        state.update(Event::SubmitKey {
+            provider: "moonshotai".into(),
+            key: "sk-secret".into(),
+        });
+
+        state.update(Event::SelectProvider {
+            provider: "moonshotai".into(),
+        });
+        assert_eq!(
+            state.login_flow().unwrap().key,
+            "sk-secret",
+            "re-selecting the same provider (back navigation) should keep the typed key"
+        );
+    }
+
+    #[test]
     fn login_submit_key_goes_to_validating() {
         let mut state = AppState::default();
         state.update(Event::Start);
