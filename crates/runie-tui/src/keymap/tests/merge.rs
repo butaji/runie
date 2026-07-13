@@ -43,9 +43,11 @@ fn keymap_forward_paste() {
     assert!(result.is_some(), "Paste events should be forwarded");
 }
 
-/// Verify mouse scroll events are forwarded.
+/// Wheel events are dropped: runie never enables mouse capture, so no mouse
+/// event should convert to a core event. Native terminal selection takes
+/// precedence over wheel scrolling (keyboard scrolls the feed instead).
 #[test]
-fn keymap_forward_scroll() {
+fn keymap_mouse_scroll_is_dropped() {
     let bindings = std::collections::HashMap::new();
     let event = Event::Mouse(MouseEvent {
         kind: MouseEventKind::ScrollUp,
@@ -54,7 +56,7 @@ fn keymap_forward_scroll() {
         modifiers: KeyModifiers::empty(),
     });
     let result = crate::keymap::convert_event(&event, &bindings);
-    assert!(result.is_some(), "Scroll events should be forwarded");
+    assert_eq!(result, None, "mouse wheel should not convert to a core event");
 }
 
 /// Click (button down) is not a supported mouse interaction; it must be

@@ -1,16 +1,25 @@
 //! Terminal setup and progressive keyboard enhancement helpers.
 //!
 //! Uses `crossterm` commands for standard terminal sequences.
-//! Non-standard sequences (xterm modifyOtherKeys, extended mouse modes,
-//! synchronized update) are kept as raw bytes.
+//! Non-standard sequences (xterm modifyOtherKeys, synchronized update)
+//! are kept as raw bytes.
+//!
+//! ## Mouse policy
+//!
+//! Runie NEVER enables mouse capture. Any mouse-reporting mode makes the
+//! terminal deliver mouse events to the app instead of performing native
+//! text selection, so capture would force users to hold a
+//! terminal-specific modifier (Shift/Option/Fn) to copy feed text.
+//! Leaving the mouse to the terminal gives plain click-drag selection;
+//! feed scrolling is keyboard-only (PgUp/PgDn, nav mode).
 
 use crate::terminal::caps;
 use crossterm::{
     cursor::{Hide, SetCursorStyle, Show},
     event::{
         DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
-        EnableFocusChange, EnableMouseCapture, KeyboardEnhancementFlags,
-        PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+        EnableFocusChange, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags,
     },
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     QueueableCommand,
@@ -29,9 +38,9 @@ pub fn setup_terminal() -> io::Result<(Terminal<CrosstermBackend<std::io::Stdout
 
     crossterm::terminal::enable_raw_mode()?;
     let mut stdout = std::io::stdout();
-    // Grok-style init: mouse capture (kept for wheel scrolling) + focus +
-    // bracketed paste + sync update + cursor
-    enable_mouse_grok_style(&mut stdout, &capabilities)?;
+    // Alternate screen + focus + bracketed paste + cursor. Mouse capture is
+    // deliberately NOT enabled (native terminal selection, see module docs).
+    enter_tui_mode(&mut stdout, &capabilities)?;
     // Progressive enhancement: ask the terminal to report modified keys.
     // We send both the kitty keyboard protocol and the xterm
     // modifyOtherKeys sequence so Shift+Enter is reported on the widest
@@ -79,22 +88,9 @@ pub fn restore_terminal_graphics<W: io::Write>(
     writer: &mut W,
     capabilities: caps::TermCaps,
 ) -> io::Result<()> {
-    enable_mouse_grok_style(writer, &capabilities)?;
+    enter_tui_mode(writer, &capabilities)?;
     let _ = push_keyboard_enhancement_flags(writer);
     Ok(())
-}
-
-/// Write the mouse mode enable escape sequence for the given capability level.
-pub fn enable_mouse<W: io::Write>(writer: &mut W, caps: caps::MouseCapability) -> io::Result<()> {
-    match caps {
-        caps::MouseCapability::None => Ok(()),
-        caps::MouseCapability::Legacy
-        | caps::MouseCapability::Sgr
-        | caps::MouseCapability::SgrExtended => {
-            writer.queue(EnableMouseCapture)?;
-            writer.flush()
-        }
-    }
 }
 
 fn enable_focus_tracking<W: io::Write>(writer: &mut W, caps: &caps::TermCaps) -> io::Result<()> {
@@ -115,22 +111,14 @@ fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
     Ok(())
 }
 
-/// Write the Grok-style mouse + terminal init sequence.
-/// Mouse capture is enabled (gated on `caps.mouse != None`) solely so the
-/// terminal reports wheel-scroll events; runie does not handle click, drag,
-/// or move. Focus tracking, bracketed paste, and cursor setup are emitted
-/// unconditionally (unsupported terminals ignore them). Synchronized updates
-/// are NOT enabled here: they are bracketed per frame by the render loop (see
+/// Write the TUI-mode init sequence: alternate screen, focus tracking,
+/// bracketed paste, cursor setup. Mouse capture is intentionally absent —
+/// see the module-level mouse policy. Synchronized updates are NOT enabled
+/// here: they are bracketed per frame by the render loop (see
 /// `begin_frame_sync`/`end_frame_sync`), because a session-long BSU makes
 /// 2026-aware terminals buffer grid updates indefinitely.
-pub fn enable_mouse_grok_style<W: io::Write>(
-    writer: &mut W,
-    caps: &caps::TermCaps,
-) -> io::Result<()> {
+pub fn enter_tui_mode<W: io::Write>(writer: &mut W, caps: &caps::TermCaps) -> io::Result<()> {
     writer.queue(EnterAlternateScreen)?;
-    if caps.mouse != caps::MouseCapability::None {
-        writer.queue(EnableMouseCapture)?;
-    }
     enable_focus_tracking(writer, caps)?;
     enable_bracketed_paste(writer)?;
     hide_cursor_and_set_block(writer)?;
@@ -158,6 +146,8 @@ fn disable_focus_tracking<W: io::Write>(writer: &mut W) -> io::Result<()> {
 }
 
 fn disable_all_mouse_modes<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    // Defensive: runie never enables mouse capture, but releasing it on exit
+    // restores native selection if a crash or an older version left it on.
     writer.queue(DisableMouseCapture)?;
     Ok(())
 }
@@ -167,8 +157,8 @@ fn leave_alternate_screen<W: io::Write>(writer: &mut W) -> io::Result<()> {
     Ok(())
 }
 
-/// Disable all Grok-style terminal modes.
-pub fn disable_mouse_grok_style<W: io::Write>(writer: &mut W) -> io::Result<()> {
+/// Disable all TUI terminal modes.
+pub fn leave_tui_mode<W: io::Write>(writer: &mut W) -> io::Result<()> {
     end_sync_update(writer)?;
     show_cursor(writer)?;
     disable_bracketed_paste(writer)?;
@@ -182,64 +172,52 @@ pub fn disable_mouse_grok_style<W: io::Write>(writer: &mut W) -> io::Result<()> 
 mod tests {
     use super::*;
 
+    // ── TUI-mode init tests ──────────────────────────────────────────────
+
     #[test]
-    fn enable_mouse_none_writes_nothing() {
-        let mut buf = Vec::new();
-        enable_mouse(&mut buf, caps::MouseCapability::None).unwrap();
-        assert!(buf.is_empty(), "None mode should write no bytes");
+    fn init_sequence_enables_no_mouse_capture() {
+        // Mouse capture is NEVER enabled — any mouse-reporting mode makes the
+        // terminal send mouse events to the app instead of performing native
+        // text selection. Runie leaves the mouse to the terminal so users can
+        // click-drag to select and copy feed text. Feed scrolling is
+        // keyboard-only (PgUp/PgDn, nav mode).
+        for mouse in [
+            caps::MouseCapability::None,
+            caps::MouseCapability::Legacy,
+            caps::MouseCapability::Sgr,
+            caps::MouseCapability::SgrExtended,
+        ] {
+            let mut buf = Vec::new();
+            let caps = caps::TermCaps {
+                mouse,
+                focus_tracking: true,
+                ..Default::default()
+            };
+            enter_tui_mode(&mut buf, &caps).unwrap();
+            let s = String::from_utf8(buf).unwrap();
+            for mode in ["?1000h", "?1002h", "?1003h", "?1006h", "?1015h"] {
+                assert!(
+                    !s.contains(mode),
+                    "mouse capture mode {mode} must not be emitted (caps {mouse:?}): {s:?}"
+                );
+            }
+        }
     }
 
     #[test]
-    fn enable_mouse_legacy_enables_mouse_capture() {
-        let mut buf = Vec::new();
-        enable_mouse(&mut buf, caps::MouseCapability::Legacy).unwrap();
-        let s = String::from_utf8(buf).unwrap();
-        // EnableMouseCapture enables all grok mouse modes (1000, 1002, 1003, 1015, 1006).
-        assert!(s.contains("?1000h"), "missing ?1000h: {s}");
-        assert!(s.contains("?1002h"), "missing ?1002h: {s}");
-        assert!(s.contains("?1003h"), "missing ?1003h: {s}");
-    }
-
-    #[test]
-    fn enable_mouse_sgr_also_enables_mouse_capture() {
-        let mut buf = Vec::new();
-        enable_mouse(&mut buf, caps::MouseCapability::Sgr).unwrap();
-        let s = String::from_utf8(buf).unwrap();
-        // EnableMouseCapture enables all grok mouse modes.
-        assert!(s.contains("?1000h"), "missing ?1000h: {s}");
-    }
-
-    #[test]
-    fn enable_mouse_sgr_extended_also_enables_mouse_capture() {
-        let mut buf = Vec::new();
-        enable_mouse(&mut buf, caps::MouseCapability::SgrExtended).unwrap();
-        let s = String::from_utf8(buf).unwrap();
-        // EnableMouseCapture enables all grok mouse modes.
-        assert!(s.contains("?1000h"), "missing ?1000h: {s}");
-    }
-
-    // ── Grok-style init tests ──────────────────────────────────────────────
-
-    #[test]
-    fn mouse_init_sequence_includes_all_grok_modes() {
+    fn init_sequence_keeps_terminal_modes() {
         let mut buf = Vec::new();
         let caps = caps::TermCaps {
             mouse: caps::MouseCapability::Sgr,
             focus_tracking: true,
             ..Default::default()
         };
-        enable_mouse_grok_style(&mut buf, &caps).unwrap();
+        enter_tui_mode(&mut buf, &caps).unwrap();
         let s = String::from_utf8(buf).unwrap();
         assert!(
             s.contains("\x1b[?1049h"),
             "missing ?1049h (alternate screen)"
         );
-        // EnableMouseCapture enables 1000, 1002, 1003, 1015, 1006.
-        assert!(s.contains("\x1b[?1000h"), "missing ?1000h");
-        assert!(s.contains("\x1b[?1002h"), "missing ?1002h");
-        assert!(s.contains("\x1b[?1003h"), "missing ?1003h");
-        assert!(s.contains("\x1b[?1015h"), "missing ?1015h");
-        assert!(s.contains("\x1b[?1006h"), "missing ?1006h");
         assert!(s.contains("\x1b[?1004h"), "missing ?1004h (focus)");
         assert!(
             s.contains("\x1b[?2004h"),
@@ -266,7 +244,7 @@ mod tests {
         // diff-based flush already prevents tearing without 2026.
         let mut buf = Vec::new();
         let caps = caps::TermCaps::default();
-        enable_mouse_grok_style(&mut buf, &caps).unwrap();
+        enter_tui_mode(&mut buf, &caps).unwrap();
         let s = String::from_utf8(buf).unwrap();
         assert!(
             !s.contains("\x1b[?2026"),
@@ -275,29 +253,9 @@ mod tests {
     }
 
     #[test]
-    fn mouse_init_omits_mouse_when_capability_is_none() {
-        let mut buf = Vec::new();
-        let caps = caps::TermCaps {
-            mouse: caps::MouseCapability::None,
-            focus_tracking: false,
-            ..Default::default()
-        };
-        enable_mouse_grok_style(&mut buf, &caps).unwrap();
-        let s = String::from_utf8(buf).unwrap();
-        // Only alternate screen + focus (false) + bracketed + sync + cursor (always emitted)
-        assert!(
-            s.contains("\x1b[?1049h"),
-            "should still have alternate screen"
-        );
-        assert!(!s.contains("?1000"), "should not emit mouse modes");
-        assert!(!s.contains("?1002"), "should not emit mouse modes");
-        assert!(!s.contains("?1003"), "should not emit mouse modes");
-    }
-
-    #[test]
     fn cleanup_sequence_disables_all_modes() {
         let mut buf = Vec::new();
-        disable_mouse_grok_style(&mut buf).unwrap();
+        leave_tui_mode(&mut buf).unwrap();
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("\x1b[?2026l"), "missing ?2026l (sync end)");
         assert!(s.contains("\x1b[?25h"), "missing ?25h (show cursor)");
@@ -306,6 +264,9 @@ mod tests {
             "missing ?2004l (bracketed paste)"
         );
         assert!(s.contains("\x1b[?1004l"), "missing ?1004l (focus)");
+        // Defensive: always release mouse capture on exit so a terminal left
+        // captured by a crash (or an older runie version) gets native
+        // selection back.
         assert!(s.contains("\x1b[?1000l"), "missing ?1000l");
         assert!(s.contains("\x1b[?1049l"), "missing ?1049l (exit alternate)");
     }

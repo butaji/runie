@@ -5,9 +5,7 @@
 
 use crokey::KeyCombination;
 use crokey::KeyCombinationFormat;
-use crossterm::event::{
-    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
-};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -42,7 +40,9 @@ pub fn convert_event(event: &Event, user_bindings: &HashMap<String, String>) -> 
     log_key_event(event);
     match event {
         Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
-        Event::Mouse(mouse) => convert_mouse_event(mouse),
+        // Mouse capture is never enabled, so these events cannot arrive;
+        // drop them defensively (native terminal selection owns the mouse).
+        Event::Mouse(_) => None,
         Event::FocusGained => Some(CoreEvent::FocusGained),
         Event::FocusLost => Some(CoreEvent::FocusLost),
         Event::Resize(width, height) => Some(CoreEvent::TerminalSize {
@@ -173,19 +173,6 @@ fn map_plain_key(code: &KeyCode) -> Option<CoreEvent> {
     }
 }
 
-/// Convert mouse events to CoreEvent.
-///
-/// Only wheel scrolling is supported: scroll up/down map to `CoreEvent::Up` /
-/// `CoreEvent::Down`. All other mouse interactions (click, release, drag,
-/// move) are intentionally dropped — they convert to `None`.
-fn convert_mouse_event(mouse: &MouseEvent) -> Option<CoreEvent> {
-    match mouse.kind {
-        MouseEventKind::ScrollDown => Some(CoreEvent::Down),
-        MouseEventKind::ScrollUp => Some(CoreEvent::Up),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,7 +265,7 @@ mod tests {
 
 // The `keymap/tests/` directory was previously orphaned: this file declares an
 // inline `mod tests`, which shadows the directory and left `merge.rs` (mouse
-// scroll / terminal-caps merge coverage) uncompiled. Mount it explicitly so
+// drop / terminal-caps merge coverage) uncompiled. Mount it explicitly so
 // those tests actually run.
 #[cfg(test)]
 #[path = "keymap/tests/merge.rs"]

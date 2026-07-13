@@ -46,6 +46,9 @@ impl Drop for Cleanup {
         let _ = crossterm::execute!(
             std::io::stdout(),
             crossterm::event::DisableFocusChange,
+            // Defensive release: restores native terminal selection if mouse
+            // capture was ever enabled (crash, older runie version).
+            crossterm::event::DisableMouseCapture,
             crossterm::terminal::LeaveAlternateScreen,
         );
         let _ = runie_tui::terminal_setup::reset_keyboard_enhancements(&mut std::io::stdout());

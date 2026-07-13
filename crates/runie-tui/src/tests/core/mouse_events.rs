@@ -1,7 +1,9 @@
-//! Tests for mouse wheel scrolling in the AppState.
+//! Tests for the `MouseScrollUp`/`MouseScrollDown` core events in AppState.
 //!
-//! The only mouse interaction runie keeps is wheel scroll up/down in the feed.
-//! Click, release, drag, and move are not handled.
+//! These events remain in the core event taxonomy, but runie no longer
+//! enables terminal mouse capture, so terminal input never produces them
+//! (native selection owns the mouse). They stay handled so replayed event
+//! logs keep working.
 
 use runie_core::AppState;
 use runie_core::Event;
