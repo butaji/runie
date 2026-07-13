@@ -94,6 +94,15 @@ fn apply_config_ignores_stale_top_level_provider() {
         .unwrap_or_else(|e| e.into_inner());
     let prev_key = std::env::var("OPENAI_API_KEY").ok();
     std::env::remove_var("OPENAI_API_KEY");
+    // Force deterministic, empty credential state: without this the auth
+    // store reads the host's real auth.json (it holds an openai token on
+    // dev machines) and the model wrongly restores.
+    let prev_auth_file = std::env::var("RUNIE_AUTH_FILE").ok();
+    let empty_auth = std::env::temp_dir().join(format!(
+        "runie_no_model_test_{}.json",
+        std::process::id()
+    ));
+    std::env::set_var("RUNIE_AUTH_FILE", &empty_auth);
 
     let _path = clean_config();
     let config = r#"provider = "openai"
@@ -120,6 +129,11 @@ model = "gpt-4o"
         Some(v) => std::env::set_var("OPENAI_API_KEY", v),
         None => std::env::remove_var("OPENAI_API_KEY"),
     }
+    match prev_auth_file {
+        Some(v) => std::env::set_var("RUNIE_AUTH_FILE", v),
+        None => std::env::remove_var("RUNIE_AUTH_FILE"),
+    }
+    let _ = std::fs::remove_file(&empty_auth);
 }
 
 #[test]

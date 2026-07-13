@@ -13,10 +13,12 @@ impl UiActor {
     /// processing the key event.
     pub(crate) async fn open_autocomplete_if_trigger(&mut self, c: char) -> bool {
         let input = self.state.input();
-        let is_empty_or_space =
-            input.input.is_empty() || input.input.ends_with(' ') || input.input.ends_with('\n');
-        if !is_empty_or_space
-            || self.state.completion().at_suggestions.is_some()
+        // The projection lags real typing by one InputChanged round-trip;
+        // include optimistically-routed characters so the trigger-position
+        // check sees the text the user actually typed.
+        let pending: String = self.pending_input_chars.iter().collect();
+        let effective = format!("{}{}", input.input, pending);
+        if self.state.completion().at_suggestions.is_some()
             || input.cursor_pos != input.input.len()
         {
             return false;
@@ -24,21 +26,36 @@ impl UiActor {
 
         match c {
             '@' => {
-                let new_input = format!("{}@", input.input);
+                // Mentions trigger at the start of a token: empty input or
+                // right after whitespace.
+                if !(effective.is_empty() || effective.ends_with(' ') || effective.ends_with('\n'))
+                {
+                    return false;
+                }
+                let new_input = format!("{}@", effective);
                 let new_cursor = new_input.len();
                 self.state.input_mut().file_picker_backup =
                     Some((new_input, new_cursor, new_cursor, false));
+                self.pending_input_chars.clear();
                 self.send_input_msg(InputMsg::Clear).await;
                 self.apply_event(runie_core::Event::AtFilePicker);
                 true
             }
             '/' => {
-                let new_input = format!("{}/", input.input);
+                // Commands only make sense as the whole input: trigger only
+                // when nothing (but whitespace) has been typed. A '/' after
+                // any content — including after a space, as in "check /tmp" —
+                // is a path separator and must insert literally.
+                if !effective.trim().is_empty() {
+                    return false;
+                }
+                let new_input = format!("{}/", effective);
                 if matches!(new_input.trim(), "/q" | "/quit" | "/exit") {
                     return false;
                 }
                 self.state.input_mut().input = String::new();
                 self.state.input_mut().cursor_pos = 0;
+                self.pending_input_chars.clear();
                 self.send_input_msg(InputMsg::Clear).await;
                 self.apply_event(runie_core::Event::ToggleCommandPalette);
                 // Palette opened from the chat-input "/" autocomplete: it is
@@ -65,16 +82,19 @@ impl UiActor {
         new_cursor: usize,
     ) {
         // Detect '@' or '/' typed at end of input (not inside existing autocomplete).
+        // '@' uses token-start semantics (after whitespace); '/' only triggers
+        // when the whole input is whitespace — mid-message slashes are paths.
         let was_empty_or_space =
             prev_input.is_empty() || prev_input.ends_with(' ') || prev_input.ends_with('\n');
+        let slash_may_trigger = prev_input.trim().is_empty();
 
-        if was_empty_or_space
+        if (was_empty_or_space || slash_may_trigger)
             && !new_input.is_empty()
             && new_cursor == new_input.len()
             && self.state.completion().at_suggestions.is_none()
         {
             let last_char = new_input.chars().last().unwrap();
-            if last_char == '@' {
+            if last_char == '@' && was_empty_or_space {
                 // Open file picker via event.
                 // UiActor-specific: save input state before picker opens (projection state).
                 let (input_text, cursor) = (new_input.to_owned(), new_cursor);
@@ -86,7 +106,10 @@ impl UiActor {
                 // Route through event: UiActor's apply_event will call
                 // dialog_toggle_event which calls open_at_file_picker_all.
                 self.apply_event(runie_core::Event::AtFilePicker);
-            } else if last_char == '/' && !matches!(new_input.trim(), "/q" | "/quit" | "/exit") {
+            } else if last_char == '/'
+                && slash_may_trigger
+                && !matches!(new_input.trim(), "/q" | "/quit" | "/exit")
+            {
                 // Open command palette via event.
                 // UiActor-specific: clear input projection before palette opens.
                 self.state.input_mut().input = String::new();

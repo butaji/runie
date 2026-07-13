@@ -7,7 +7,7 @@ use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
     style_agent, style_thinking, style_thought, style_timestamp, style_tool_header,
     style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_BULLET,
-    GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X,
+    GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_X, INDICATOR_COLLAPSED,
 };
 use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 use unicode_width::UnicodeWidthStr;
@@ -42,9 +42,16 @@ pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
         .style(style_thinking())]
 }
 
-pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
+pub fn render_thought_summary(
+    content: &str,
+    _duration_secs: f64,
+    expandable: bool,
+) -> Vec<Line<'static>> {
     let first_line = content.lines().next().unwrap_or(content);
-    vec![Line::from(format!("{} [+]", first_line)).style(style_thought())]
+    // The [+] affordance promises an expandable body; duration-only
+    // thoughts have none and must not render it (dead affordance).
+    let marker = if expandable { " [+]" } else { "" };
+    vec![Line::from(format!("{}{}", first_line, marker)).style(style_thought())]
 }
 
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {

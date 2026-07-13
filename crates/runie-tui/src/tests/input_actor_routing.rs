@@ -481,6 +481,180 @@ async fn slash_opens_command_palette_synchronously() {
     leader.shutdown().await;
 }
 
+/// Regression: '/' typed after existing text must NOT open the command
+/// palette or destroy the typed text. The UiActor caches a `prev_input`
+/// snapshot for the asynchronous autocomplete trigger; when that snapshot
+/// goes stale (stays empty), `detect_autocomplete_trigger` fires on any '/'
+/// at end of input — opening the palette and clearing the input box, which
+/// makes it impossible to type paths like `src/main.rs`.
+#[tokio::test]
+async fn slash_after_text_does_not_open_palette() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    assert!(ui.state.open_dialog().is_none());
+
+    // Simulate realistic typing: each key goes to the InputActor and its
+    // InputChanged round-trip updates the UiActor's input projection.
+    let mut typed = String::new();
+    for c in "src".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+        typed.push(c);
+        let mut istate = runie_core::InputState::default();
+        istate.input = typed.clone();
+        istate.cursor_pos = typed.len();
+        ui.handle_event(
+            Event::InputChanged {
+                state: Box::new(istate),
+            },
+            effect_tx.clone(),
+        )
+        .await;
+    }
+    assert_eq!(ui.state.input().input, "src");
+
+    // Now type '/' at the end of non-empty input.
+    ui.handle_event(Event::Input('/'), effect_tx.clone()).await;
+    typed.push('/');
+    let mut istate = runie_core::InputState::default();
+    istate.input = typed.clone();
+    istate.cursor_pos = typed.len();
+    ui.handle_event(
+        Event::InputChanged {
+            state: Box::new(istate),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    assert!(
+        ui.state.open_dialog().is_none(),
+        "'/' after text must not open the command palette"
+    );
+    assert_eq!(
+        ui.state.input().input, "src/",
+        "'/' must be inserted literally, input must not be cleared"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Regression: '/' typed after a space inside a message (e.g. "check /tmp")
+/// must NOT open the command palette or eat the typed text. Commands only
+/// make sense as the whole input; a slash after any typed content is a path
+/// separator, not a command trigger.
+#[tokio::test]
+async fn slash_after_space_mid_input_does_not_open_palette() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    assert!(ui.state.open_dialog().is_none());
+
+    // Realistic typing with InputChanged round-trips, ending in a space.
+    let mut typed = String::new();
+    for c in "check ".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+        typed.push(c);
+        let mut istate = runie_core::InputState::default();
+        istate.input = typed.clone();
+        istate.cursor_pos = typed.len();
+        ui.handle_event(
+            Event::InputChanged {
+                state: Box::new(istate),
+            },
+            effect_tx.clone(),
+        )
+        .await;
+    }
+    assert_eq!(ui.state.input().input, "check ");
+
+    // Now type '/' — with the trailing space the old trigger treated this as
+    // a fresh command token and opened the palette, destroying "check ".
+    ui.handle_event(Event::Input('/'), effect_tx.clone()).await;
+    typed.push('/');
+    let mut istate = runie_core::InputState::default();
+    istate.input = typed.clone();
+    istate.cursor_pos = typed.len();
+    ui.handle_event(
+        Event::InputChanged {
+            state: Box::new(istate),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    assert!(
+        ui.state.open_dialog().is_none(),
+        "'/' after a space mid-input must not open the command palette"
+    );
+    assert_eq!(
+        ui.state.input().input, "check /",
+        "'/' must be inserted literally after a space"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Regression: '/' typed immediately after fast-entered text (no InputChanged
+/// round-trips processed yet, as happens with paste-speed typing) must NOT
+/// open the command palette. The AppState projection lags the InputActor by
+/// one round-trip, so the trigger check must use the optimistic pending
+/// character mirror instead of the projection alone.
+#[tokio::test]
+async fn slash_after_fast_typed_text_does_not_open_palette() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    assert!(ui.state.open_dialog().is_none());
+
+    // No InputChanged events pumped: the projection stays empty while the
+    // InputActor (and the UiActor's pending mirror) hold the real text.
+    for c in "src".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+    }
+    ui.handle_event(Event::Input('/'), effect_tx.clone()).await;
+
+    assert!(
+        ui.state.open_dialog().is_none(),
+        "'/' after fast-typed text must not open the command palette"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Regression: submitting immediately after fast typing must not lose the
+/// characters whose InputChanged echo has not been processed yet. Submit
+/// used to read only the (lagging) AppState projection, so a rapid
+/// "quickbrownfox"+Enter submitted just "quickb".
+#[tokio::test]
+async fn submit_after_fast_typing_keeps_full_content() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+
+    for c in "quickbrownfox".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+    }
+    ui.handle_event(Event::Submit, effect_tx.clone()).await;
+    // Deliver the cleared-input echo the InputActor emits on submit; this
+    // triggers dispatch of the pending submit content.
+    ui.handle_event(
+        Event::InputChanged {
+            state: Box::new(runie_core::InputState::default()),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    // Dispatch routes user messages through the async TurnActor (unobservable
+    // in this manual harness), but it synchronously records the submitted
+    // content in the input history — so a complete entry here proves the
+    // full fast-typed text reached the submit path.
+    assert!(
+        ui.state
+            .input()
+            .input_history
+            .iter()
+            .any(|h| h == "quickbrownfox"),
+        "full fast-typed content must be submitted, history: {:?}",
+        ui.state.input().input_history
+    );
+
+    leader.shutdown().await;
+}
+
 /// Regression: typing `/model` as a continuous sequence must open the model
 /// selector, even when no InputChanged round-trips have been processed.
 #[tokio::test]

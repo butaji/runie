@@ -62,6 +62,9 @@ fn thought_line_count_matches_content() {
     let mut state = fresh_state();
     // header + 5 lines = 6 lines of content, + 1 spacer = 7 total element lines
     state.session.messages.push(thought_msg("t1", 5));
+    // Thoughts are summarized by default; expand the post (Enter in feed
+    // nav) so the full body participates in the line count.
+    state.view.expanded_posts.insert(0);
     state.refresh_after_message_change();
 
     let total = state.view.total_lines;
@@ -139,6 +142,9 @@ fn visible_skips_lines_from_first_element_when_overflow() {
         id: "u2".into(),
         ..Default::default()
     });
+    // Expand the thought post (posts: user 0, thought 1, user 2) — thoughts
+    // are summarized by default, and this test exercises the full body.
+    state.view.expanded_posts.insert(1);
     state.refresh_after_message_change();
 
     state.view.scroll = 0;
@@ -315,6 +321,10 @@ fn large_thought_overflows_viewport() {
         id: "u2".into(),
         ..Default::default()
     });
+    // Expand the thought post (posts: user 0, thought 1, user 2) — thoughts
+    // are summarized by default, and this test exercises the overflow of
+    // the full body.
+    state.view.expanded_posts.insert(1);
     state.refresh_after_message_change();
 
     state.view.scroll = 0;

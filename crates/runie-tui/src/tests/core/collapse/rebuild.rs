@@ -36,7 +36,7 @@ fn toggle_expand_affects_all_items() {
 }
 
 #[test]
-fn toggle_thought_rebuilds_cache() {
+fn expand_thought_post_rebuilds_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
@@ -48,25 +48,29 @@ fn toggle_thought_rebuilds_cache() {
         ..Default::default()
     });
     state.ensure_fresh();
+    // Thoughts are collapsed to a one-line summary by default (grok parity).
     // View cache is now built into Snapshot, not stored in ViewState
     let before = state.snapshot().elements.to_vec();
     assert!(before
         .iter()
-        .any(|e| matches!(e, Element::ThoughtMarker { .. })));
+        .any(|e| matches!(e, Element::ThoughtSummary { .. })));
 
-    state.update(Event::ToggleExpand);
+    // Individually expanding the post (Enter in feed nav) must rebuild the
+    // cache back to the full thought body.
+    state.view.expanded_posts.insert(0);
+    state.messages_changed();
     state.ensure_fresh();
     let after = state.snapshot().elements.to_vec();
     assert!(
         after
             .iter()
-            .any(|e| matches!(e, Element::ThoughtSummary { .. })),
-        "Cache should rebuild to ThoughtSummary after toggle"
+            .any(|e| matches!(e, Element::ThoughtMarker { .. })),
+        "Cache should rebuild to ThoughtMarker when the post is expanded"
     );
 }
 
 #[test]
-fn toggle_thought_twice_restores_cache() {
+fn collapse_thought_post_restores_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
@@ -77,6 +81,42 @@ fn toggle_thought_twice_restores_cache() {
         id: "t1".into(),
         ..Default::default()
     });
+    // Expand the post individually, then collapse it again: the cache must
+    // rebuild back to the one-line summary.
+    state.view.expanded_posts.insert(0);
+    state.messages_changed();
+    state.ensure_fresh();
+    let expanded = state.snapshot().elements.to_vec();
+    assert!(expanded
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { .. })));
+
+    state.view.expanded_posts.remove(&0);
+    state.messages_changed();
+    state.ensure_fresh();
+    let cache = state.snapshot().elements.to_vec();
+    assert!(
+        cache
+            .iter()
+            .any(|e| matches!(e, Element::ThoughtSummary { .. })),
+        "Cache should restore ThoughtSummary after collapsing the post again"
+    );
+}
+
+#[test]
+fn global_toggle_leaves_thought_summarized() {
+    let mut state = fresh_state();
+    state.session.messages.push(ChatMessage {
+        role: Role::Thought,
+        parts: vec![Part::Text {
+            content: "Deep reasoning".into(),
+        }],
+        timestamp: 0.0,
+        id: "t1".into(),
+        ..Default::default()
+    });
+    // Ctrl+O governs tool posts only: thoughts stay summarized in both
+    // global modes (grok's per-item model — Enter expands a thought).
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
@@ -85,8 +125,8 @@ fn toggle_thought_twice_restores_cache() {
     assert!(
         cache
             .iter()
-            .any(|e| matches!(e, Element::ThoughtMarker { .. })),
-        "Cache should restore ThoughtMarker after second toggle"
+            .any(|e| matches!(e, Element::ThoughtSummary { .. })),
+        "Thought should stay summarized after two global toggles"
     );
 }
 
@@ -286,6 +326,10 @@ fn expanded_thought_shows_reasoning() {
         id: "t1".into(),
         ..Default::default()
     });
+    // Thoughts are summarized by default; expand the post individually
+    // (Enter in feed nav) to reveal the reasoning body.
+    state.view.expanded_posts.insert(0);
+    state.messages_changed();
     let feed = LazyCache::feed(&state);
 
     let marker = feed.elements.iter().find_map(|e| match e {

@@ -54,7 +54,15 @@ fn thought_pos(state: &AppState) -> Option<usize> {
     runie_core::view::LazyCache::feed(state)
         .elements
         .iter()
-        .position(|e| matches!(e, runie_core::view::Element::ThoughtMarker { .. }))
+        // The thought renders as a summary by default; both render forms
+        // are the same post for ordering.
+        .position(|e| {
+            matches!(
+                e,
+                runie_core::view::Element::ThoughtMarker { .. }
+                    | runie_core::view::Element::ThoughtSummary { .. }
+            )
+        })
 }
 
 fn agent_turn_complete_kinds(state: &AppState) -> Vec<&'static str> {

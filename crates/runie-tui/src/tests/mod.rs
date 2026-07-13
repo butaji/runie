@@ -68,6 +68,9 @@ mod uiactor_init;
 #[cfg(test)]
 mod vim_mode;
 
+#[cfg(test)]
+mod vim_nav_enter_routing;
+
 /// Helper: give a default state a connected model so input/status render.
 pub fn connect_model(state: &mut AppState) {
     state.config.current_provider = "openai".to_string();

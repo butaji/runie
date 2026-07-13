@@ -158,10 +158,15 @@ fn thought_renders_after_thought_done() {
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
-    let has_thought = feed
-        .elements
-        .iter()
-        .any(|e| matches!(e, runie_core::view::Element::ThoughtMarker { .. }));
+    // The thought renders as a one-line summary by default (grok parity);
+    // either render form proves the thought post exists.
+    let has_thought = feed.elements.iter().any(|e| {
+        matches!(
+            e,
+            runie_core::view::Element::ThoughtMarker { .. }
+                | runie_core::view::Element::ThoughtSummary { .. }
+        )
+    });
     assert!(has_thought, "Thought must render after AgentThoughtDone");
     assert!(
         !has_agent_message(&state),

@@ -47,11 +47,11 @@ pub struct UiActor {
     shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
     caps: TermCaps,
     pub(crate) paced: PacedRenderer,
-    /// Previous input text (snapshot before last InputChanged application).
-    /// Used to detect autocomplete trigger characters.
-    prev_input: String,
-    /// Previous cursor position (snapshot before last InputChanged application).
-    prev_cursor_pos: usize,
+    /// Characters routed to the InputActor whose `InputChanged` echo has not
+    /// been processed yet. The input projection lags one round-trip behind
+    /// real typing; autocomplete trigger checks must include these pending
+    /// characters or they read a stale (shorter) input.
+    pending_input_chars: Vec<char>,
     /// Pending submit content captured before sending InputMsg::Submit.
     /// Dispatched after InputChanged is applied so state is clean.
     pending_submit: Option<String>,
@@ -120,8 +120,6 @@ impl UiActor {
         caps: TermCaps,
     ) -> Self {
         let (render_tx, render_rx) = tokio::sync::watch::channel(state.snapshot());
-        let prev_input = state.input().input.clone();
-        let prev_cursor_pos = state.input().cursor_pos;
         let state_bus = bus.clone();
         let mut this = Self {
             state,
@@ -133,8 +131,7 @@ impl UiActor {
             shutdown_tx: Some(shutdown_tx),
             caps,
             paced: PacedRenderer::new(),
-            prev_input,
-            prev_cursor_pos,
+            pending_input_chars: Vec::new(),
             pending_submit: None,
             turn_was_active: false,
             pending_queued_turn: false,
@@ -162,8 +159,6 @@ impl UiActor {
         caps: TermCaps,
     ) -> Self {
         let (render_tx, render_rx) = tokio::sync::watch::channel(state.snapshot());
-        let prev_input = state.input().input.clone();
-        let prev_cursor_pos = state.input().cursor_pos;
         let state_bus = bus.clone();
         let mut this = Self {
             state,
@@ -175,8 +170,7 @@ impl UiActor {
             shutdown_tx: Some(shutdown_tx),
             caps,
             paced: PacedRenderer::new(),
-            prev_input,
-            prev_cursor_pos,
+            pending_input_chars: Vec::new(),
             pending_submit: None,
             turn_was_active: false,
             pending_queued_turn: false,
@@ -522,12 +516,22 @@ impl UiActor {
         // a race where the dialog opens asynchronously after subsequent key events
         // have already been routed to the chat input, leaving the palette filter
         // empty and causing Enter to run the first item (/approve).
+        //
+        // The AppState input projection lags the InputActor by one InputChanged
+        // round-trip, so the trigger check must also consider characters we
+        // have already routed but not yet seen echoed back
+        // (`pending_input_chars`); otherwise '/' typed right after text (e.g.
+        // a path like `src/main.rs`) sees a stale-empty input and opens the
+        // palette, swallowing the text.
         if let Event::Input(c) = evt {
-            if self.state.open_dialog().is_none()
-                && !self.state.view().vim_nav_mode
-                && self.open_autocomplete_if_trigger(*c).await
-            {
-                return;
+            if self.state.open_dialog().is_none() && !self.state.view().vim_nav_mode {
+                if self.open_autocomplete_if_trigger(*c).await {
+                    return;
+                }
+                // No dialog and no vim nav: this character will be routed to
+                // the InputActor below. Mirror it optimistically so the next
+                // keystroke's trigger check sees it.
+                self.pending_input_chars.push(*c);
             }
         }
 
@@ -543,10 +547,13 @@ impl UiActor {
 
         // Vim nav mode intercepts keys that would otherwise edit the chat input.
         // Route them through the canonical state update so j/k/i/I/space/arrows
-        // move the feed selection or return to the input box.
+        // move the feed selection or return to the input box. Enter (Submit) is
+        // included: in nav mode it expands/collapses the selected post (or keeps
+        // its legacy global-toggle fallback) — it must NOT submit the chat input.
         if self.state.view().vim_nav_mode {
             match evt {
                 Event::Input(_)
+                | Event::Submit
                 | Event::HistoryPrev
                 | Event::HistoryNext
                 | Event::Backspace => {
@@ -574,8 +581,8 @@ impl UiActor {
             Event::Submit => {
                 // Quit commands must exit immediately, without waiting for the
                 // InputActor round-trip that normal submit flow requires.
-                let content = self.state.input().input().trim();
-                if runie_core::update::input::is_quit_command(content) {
+                let content = self.effective_input_content();
+                if runie_core::update::input::is_quit_command(content.trim()) {
                     // Abort the background file-index scan so the process exits
                     // immediately instead of waiting for the initial walk.
                     runie_core::actors::fff_indexer::cancel_indexer_scan();
@@ -598,14 +605,26 @@ impl UiActor {
     /// Dialog forms and palettes receive Enter via `is_dialog_input_event`, so
     /// this path only submits the chat input box.
     async fn handle_submit_event(&mut self) {
-        let content = self.state.input().input().trim().to_owned();
+        let content = self.effective_input_content().trim().to_owned();
         self.pending_submit = if content.is_empty() {
             None
         } else {
             Some(content.clone())
         };
+        // The submit flow clears the input box; the optimistic mirror resets too.
+        self.pending_input_chars.clear();
         self.send_input_msg(runie_core::actors::InputMsg::Submit { content })
             .await;
+    }
+
+    /// The full chat input content: the AppState projection plus characters
+    /// routed to the InputActor whose `InputChanged` echo has not been
+    /// processed yet. The projection alone lags real typing by one
+    /// round-trip, so submit/quit checks must include the pending mirror or
+    /// fast typing loses its trailing characters.
+    fn effective_input_content(&self) -> String {
+        let pending: String = self.pending_input_chars.iter().collect();
+        format!("{}{}", self.state.input().input(), pending)
     }
 
     /// Handle InputChanged: route through apply_event so all state mutations
@@ -613,10 +632,20 @@ impl UiActor {
     /// UiActor must NEVER mutate AppState.input directly — only through apply_event.
     async fn handle_input_changed(&mut self, state: &runie_core::InputState) {
         // Capture prev_input BEFORE apply_event changes self.state.input.
-        let prev_input = self.prev_input.clone();
-        let prev_cursor_pos = self.prev_cursor_pos;
+        // The projection still holds the pre-change content at this point;
+        // reading it here keeps the autocomplete trigger in sync with what
+        // the user actually typed (a cached field would go stale).
+        let prev_input = self.state.input().input.clone();
+        let prev_cursor_pos = self.state.input().cursor_pos;
         let new_input = state.input().to_owned();
         let new_cursor_pos = state.cursor_pos;
+
+        // Each routed character produces exactly one InputChanged echo; drop
+        // it from the optimistic pending mirror. Clears/pastes leave the
+        // queue untouched because those paths reset it themselves.
+        if !self.pending_input_chars.is_empty() {
+            self.pending_input_chars.remove(0);
+        }
 
         // Route through apply_event — the single source of truth for state mutations.
         // UiActor must NOT mutate AppState.input directly.

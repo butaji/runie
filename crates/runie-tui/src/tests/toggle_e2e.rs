@@ -63,14 +63,10 @@ fn assert_collapsed(content: &str, label: &str) {
     );
 }
 
-fn assert_expanded(content: &str) {
+fn assert_tools_expanded(content: &str) {
     assert!(
         content.contains("file1") && content.contains("file2"),
         "Tool should be expanded"
-    );
-    assert!(
-        content.contains("I'll list files"),
-        "Thought should also be expanded"
     );
 }
 
@@ -94,13 +90,21 @@ fn finish_turn(state: &mut AppState) {
 fn e2e_toggle_collapses_all_thoughts_and_tools() {
     let mut state = AppState::default();
     setup_thought_and_tool(&mut state);
+    run_tool(&mut state, "file1\nfile2");
 
+    // New default (grok parity): the thought renders as a one-line summary
+    // (reasoning hidden) while tool output is fully expanded.
     let before = render_content(&mut state);
     assert!(
-        before.contains("I'll list files"),
-        "Should show reasoning before toggle"
+        !before.contains("I'll list files"),
+        "Thought reasoning should be hidden by default"
+    );
+    assert!(
+        before.contains("file1"),
+        "Tool output should be expanded by default"
     );
 
+    // Ctrl+O collapses the tools globally; the thought stays summarized.
     state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
@@ -109,24 +113,39 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
 
     let after = render_content(&mut state);
     assert_collapsed(&after, "after toggle");
+    assert!(
+        !after.contains("file1"),
+        "Tool output should collapse on global toggle"
+    );
 }
 
 #[test]
-fn e2e_toggle_expands_back_on_second_press() {
+fn e2e_enter_expands_thought_and_collapses_again() {
     let mut state = AppState::default();
     setup_thought_and_tool(&mut state);
 
-    state.update(Event::ToggleExpand);
+    // Default: the thought is summarized (Ctrl+O no longer expands
+    // thoughts — grok's per-item model uses Enter in feed nav).
     let collapsed = render_content(&mut state);
-    assert_collapsed(&collapsed, "collapsed thought");
+    assert_collapsed(&collapsed, "default summary");
 
-    state.update(Event::ToggleExpand);
+    // Esc enters feed nav (the first Esc aborts the in-flight turn, the
+    // second enters nav and selects the bottom post — the thought);
+    // Enter expands it individually.
+    state.update(Event::DialogBack);
+    state.update(Event::DialogBack);
+    assert!(state.view.vim_nav_mode, "Esc should enter feed navigation");
+    state.update(Event::Submit);
     let expanded = render_content(&mut state);
-    assert!(!state.view.all_collapsed, "Second toggle should expand all");
     assert!(
         expanded.contains("I'll list files"),
-        "Expanded thought should show reasoning"
+        "Enter should expand the thought and show its reasoning"
     );
+
+    // A second Enter collapses the thought back to its summary.
+    state.update(Event::Submit);
+    let recollapsed = render_content(&mut state);
+    assert_collapsed(&recollapsed, "thought re-collapsed by second Enter");
 }
 
 #[test]
@@ -220,8 +239,14 @@ fn e2e_new_thought_respects_global_collapse() {
     let marker_count = after.matches("Thought").count();
     let summary_count = after.matches("[+]").count();
     assert!(
-        summary_count >= 2 || marker_count < 2,
-        "Both thoughts should be collapsed with global flag"
+        marker_count >= 2,
+        "Both thoughts should still render their summary lines when collapsed"
+    );
+    // These thoughts are duration-only (no reasoning body): the collapsed
+    // view must NOT render the [+] affordance for them — it would be dead.
+    assert_eq!(
+        summary_count, 0,
+        "duration-only thoughts must not show the [+] expand affordance"
     );
 }
 
@@ -295,31 +320,50 @@ fn e2e_full_turn_with_global_toggle() {
     let mut state = AppState::default();
     setup_thought_and_tool(&mut state);
 
+    // Default (grok parity): the thought renders as a one-line summary.
     let r1 = render_content(&mut state);
     assert!(
-        r1.contains("I'll list files"),
-        "Should show reasoning in thought"
+        !r1.contains("I'll list files"),
+        "Thought should be summarized by default"
     );
 
-    state.update(Event::ToggleExpand);
-    assert_collapsed(&render_content(&mut state), "thought should collapse");
+    // Per-post expansion (Enter in feed nav) reveals the reasoning. The
+    // first Esc aborts the in-flight turn, the second enters feed nav and
+    // selects the bottom post (the thought).
+    state.update(Event::DialogBack);
+    state.update(Event::DialogBack);
+    state.update(Event::Submit);
+    let r2 = render_content(&mut state);
+    assert!(
+        r2.contains("I'll list files"),
+        "Enter should expand the thought body"
+    );
 
+    // Ctrl+O collapses tools globally and clears per-post expansions.
+    state.update(Event::ToggleExpand);
     run_tool(&mut state, "file1\nfile2");
     let r3 = render_content(&mut state);
     assert!(
         !r3.contains("file1"),
         "Tool should be collapsed with global flag"
     );
+    assert!(
+        !r3.contains("I'll list files"),
+        "Ctrl+O should clear the per-post thought expansion"
+    );
 
+    // Second Ctrl+O restores tool output; the thought stays summarized —
+    // Ctrl+O no longer expands thoughts.
     state.update(Event::ToggleExpand);
-    assert_expanded(&render_content(&mut state));
+    assert!(!state.view.all_collapsed, "Second toggle should expand tools");
+    assert_tools_expanded(&render_content(&mut state));
 
     finish_turn(&mut state);
     let r5 = render_content(&mut state);
     assert!(r5.contains("Done."), "Agent response should be visible");
-    assert!(
-        r5.contains("I'll list files"),
-        "Thought stays expanded after done"
-    );
     assert!(r5.contains("file1"), "Tool stays expanded after done");
+    assert!(
+        !r5.contains("I'll list files"),
+        "Thought stays summarized after done"
+    );
 }

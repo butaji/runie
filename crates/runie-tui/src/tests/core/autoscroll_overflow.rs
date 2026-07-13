@@ -44,10 +44,11 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
 
     let region = crate::tests::core::visible_helper::compute_viewport(state, height);
     assert!(
-        region
-            .elements
-            .iter()
-            .any(|e| matches!(e, runie_core::view::Element::ThoughtMarker { .. })),
+        region.elements.iter().any(|e| matches!(
+            e,
+            runie_core::view::Element::ThoughtMarker { .. }
+                | runie_core::view::Element::ThoughtSummary { .. }
+        )),
         "Thought must be visible"
     );
 }
@@ -121,6 +122,9 @@ fn large_thought_bottom_lines_visible() {
         id: "t1".into(),
         ..Default::default()
     });
+    // Thoughts are summarized by default; expand the post (Enter in feed
+    // nav) so the full body participates in the viewport math.
+    state.view.expanded_posts.insert(0);
     state.refresh_after_message_change();
 
     state.view.scroll = 0;

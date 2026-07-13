@@ -51,8 +51,9 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
         ThoughtSummary {
             content,
             duration_secs,
+            expandable,
             ..
-        } => msg::render_thought_summary(content, *duration_secs),
+        } => msg::render_thought_summary(content, *duration_secs, *expandable),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
         ContextGroup {
             tools, collapsed, ..

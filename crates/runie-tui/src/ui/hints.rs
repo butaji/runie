@@ -68,9 +68,9 @@ fn sanitize_transient_text(msg: &str) -> String {
 
 fn transient_style(snap: &runie_core::Snapshot) -> (&'static str, ratatui::style::Color) {
     match snap.transient_level {
-        Some(runie_core::event::TransientLevel::Success) => ("\\ok\\", color_success()),
-        Some(runie_core::event::TransientLevel::Warning) => ("\\warn\\", color_warning()),
-        Some(runie_core::event::TransientLevel::Error) => ("\\err\\", color_error()),
+        Some(runie_core::event::TransientLevel::Success) => ("✓", color_success()),
+        Some(runie_core::event::TransientLevel::Warning) => ("⚠", color_warning()),
+        Some(runie_core::event::TransientLevel::Error) => ("✗", color_error()),
         _ => ("", color_bg_panel()),
     }
 }

@@ -218,6 +218,39 @@ fn fff_picker_status_labels_in_render_order() {
     );
 }
 
+/// L3: Duplicate basenames render with their relative path so every row is
+/// distinguishable (e.g. the many Cargo.toml files of a workspace).
+#[test]
+fn fff_picker_disambiguates_duplicate_basenames_in_render() {
+    let _lock = crate::theme::test_lock();
+
+    let mut state = AppState::default();
+    state.fff_file_results = vec![
+        runie_core::model::FffFileEntry {
+            name: "Cargo.toml".into(),
+            path: "Cargo.toml".into(),
+            is_dir: false,
+            score: 1.0,
+            git_status: None,
+        },
+        runie_core::model::FffFileEntry {
+            name: "Cargo.toml".into(),
+            path: "crates/runie-core/Cargo.toml".into(),
+            is_dir: false,
+            score: 0.9,
+            git_status: None,
+        },
+    ];
+    state.update(runie_core::Event::Input('@'));
+
+    let buf = render_to_buffer(&mut state);
+    assert!(
+        find_line(&buf, "crates/runie-core/Cargo.toml").is_some(),
+        "duplicate basename should render with relative path, content: {:?}",
+        extract_panel_content(&buf)
+    );
+}
+
 /// Helper: extract all non-empty lines from the buffer for debugging.
 fn extract_panel_content(buf: &ratatui::buffer::Buffer) -> Vec<String> {
     let mut lines = Vec::new();

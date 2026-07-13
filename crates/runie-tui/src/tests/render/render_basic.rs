@@ -225,6 +225,80 @@ fn test_render_thinking_indicator() {
     );
 }
 
+/// User card renders multi-line content verbatim: each newline becomes a row
+/// break, nothing is squashed together.
+#[test]
+fn test_render_user_message_preserves_newlines() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            content: "the problem\nthe answer".into(),
+        }],
+        timestamp: 0.0,
+        id: "req.0".into(),
+        ..Default::default()
+    });
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let rows: Vec<String> = (0..buf.area().height)
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
+        .collect();
+
+    let problem_row = rows
+        .iter()
+        .find(|r| r.contains("the problem"))
+        .expect("user card must render 'the problem'");
+    assert!(
+        !problem_row.contains("the answer"),
+        "newline was squashed: {}",
+        problem_row
+    );
+    assert!(
+        rows.iter().any(|r| r.contains("the answer")),
+        "user card must render 'the answer' on its own row"
+    );
+}
+
+/// User card renders "<think>"-like text verbatim — no tag stripping applies
+/// to user content.
+#[test]
+fn test_render_user_message_keeps_think_like_text_verbatim() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            content: "use <think> tags\nfor reasoning".into(),
+        }],
+        timestamp: 0.0,
+        id: "req.0".into(),
+        ..Default::default()
+    });
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content().iter().map(|c| c.symbol()).collect();
+    assert!(
+        content.contains("use <think> tags"),
+        "user card mangled think-like text. Got: {}",
+        content
+    );
+    assert!(
+        content.contains("for reasoning"),
+        "user card lost second line. Got: {}",
+        content
+    );
+}
+
 #[test]
 fn test_render_performance_1000_messages() {
     let backend = TestBackend::new(80, 40);

@@ -108,11 +108,6 @@ fn enable_bracketed_paste<W: io::Write>(writer: &mut W) -> io::Result<()> {
     Ok(())
 }
 
-fn begin_sync_update<W: io::Write>(writer: &mut W) -> io::Result<()> {
-    writer.write_all(b"\x1b[?2026h")?;
-    Ok(())
-}
-
 fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
     writer.queue(Hide)?;
     writer.queue(SetCursorStyle::BlinkingBlock)?;
@@ -121,8 +116,11 @@ fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
 
 /// Write the full Grok-style mouse + terminal init sequence.
 /// Only the mouse modes are gated on `caps.mouse != None`; focus tracking,
-/// bracketed paste, and synchronized updates are emitted unconditionally
-/// (unsupported terminals ignore them).
+/// bracketed paste, and cursor setup are emitted unconditionally
+/// (unsupported terminals ignore them). Synchronized updates are NOT enabled
+/// here: they are bracketed per frame by the render loop (see
+/// `begin_frame_sync`/`end_frame_sync`), because a session-long BSU makes
+/// 2026-aware terminals buffer grid updates indefinitely.
 pub fn enable_mouse_grok_style<W: io::Write>(
     writer: &mut W,
     caps: &caps::TermCaps,
@@ -133,7 +131,6 @@ pub fn enable_mouse_grok_style<W: io::Write>(
     }
     enable_focus_tracking(writer, caps)?;
     enable_bracketed_paste(writer)?;
-    begin_sync_update(writer)?;
     hide_cursor_and_set_block(writer)?;
     writer.flush()
 }
@@ -246,9 +243,33 @@ mod tests {
             s.contains("\x1b[?2004h"),
             "missing ?2004h (bracketed paste)"
         );
-        assert!(s.contains("\x1b[?2026h"), "missing ?2026h (sync update)");
+        // Synchronized updates MUST NOT be enabled for the whole session:
+        // holding BSU across frames makes 2026-aware terminals (tmux >= 3.2)
+        // buffer grid updates indefinitely, so small diffs (short feeds)
+        // never reach the screen. Sync is bracketed PER FRAME instead.
+        assert!(
+            !s.contains("\x1b[?2026h"),
+            "startup must not enable sync updates for the whole session"
+        );
         assert!(s.contains("\x1b[?25l"), "missing ?25l (hide cursor)");
         assert!(s.contains("\x1b[1 q"), "missing block cursor");
+    }
+
+    #[test]
+    fn init_and_runtime_emit_no_sync_markers() {
+        // 2026 synchronized updates are DISABLED entirely: tmux 3.7b (and
+        // other 2026-aware terminals) buffer grid updates while BSU is
+        // active, and runie renders continuously — buffered frames lose
+        // small diffs, so short feeds render blank. ratatui's own
+        // diff-based flush already prevents tearing without 2026.
+        let mut buf = Vec::new();
+        let caps = caps::TermCaps::default();
+        enable_mouse_grok_style(&mut buf, &caps).unwrap();
+        let s = String::from_utf8(buf).unwrap();
+        assert!(
+            !s.contains("\x1b[?2026"),
+            "init must not touch sync-update mode: {s:?}"
+        );
     }
 
     #[test]

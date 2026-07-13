@@ -99,7 +99,11 @@ fn build_user_body(
     params: &UserLineParams,
 ) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling (applies inline styles + base color).
-    let spans = apply_color_to_inlines(content, color_fg_bright());
+    // tui_markdown drops inline HTML entirely, so "<think>"-like user text
+    // would vanish; escape '<' to keep user content verbatim (pulldown
+    // resolves the entity back to '<' in text events).
+    let escaped = content.replace('<', "&lt;");
+    let spans = apply_color_to_inlines(&escaped, color_fg_bright());
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
     rows.iter()

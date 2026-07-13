@@ -3,7 +3,7 @@ use runie_core::Event;
 use runie_core::Part;
 
 #[test]
-fn test_toggle_expand_changes_rendered_output() {
+fn test_expand_thought_post_changes_rendered_output() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -18,19 +18,8 @@ fn test_toggle_expand_changes_rendered_output() {
         ..Default::default()
     });
 
-    // Render expanded
-    terminal.draw(|f| view(f, &mut state)).expect("draw");
-    let buf_expanded = terminal.backend().buffer().clone();
-    let expanded_text: String = buf_expanded.content().iter().map(|c| c.symbol()).collect();
-    assert!(
-        expanded_text.contains("I'll list the files"),
-        "Expanded thought should show reasoning"
-    );
-
-    // Toggle collapse
-    state.update(Event::ToggleExpand);
-
-    // Render collapsed
+    // Default (grok parity): the thought renders as a one-line summary —
+    // [+] affordance, reasoning body hidden.
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_collapsed = terminal.backend().buffer().clone();
     let collapsed_text: String = buf_collapsed.content().iter().map(|c| c.symbol()).collect();
@@ -41,6 +30,19 @@ fn test_toggle_expand_changes_rendered_output() {
     assert!(
         !collapsed_text.contains("I'll list the files"),
         "Collapsed thought should hide reasoning"
+    );
+
+    // Per-item expansion (Enter in feed nav) reveals the body — Ctrl+O no
+    // longer expands thoughts.
+    state.view.expanded_posts.insert(0);
+    state.messages_changed();
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf_expanded = terminal.backend().buffer().clone();
+    let expanded_text: String = buf_expanded.content().iter().map(|c| c.symbol()).collect();
+    assert!(
+        expanded_text.contains("I'll list the files"),
+        "Expanded thought should show reasoning"
     );
 }
 

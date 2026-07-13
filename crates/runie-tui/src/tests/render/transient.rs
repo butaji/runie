@@ -15,7 +15,7 @@ fn transient_success_renders_green_background_with_ok_prefix() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("\\ok\\ "));
+    assert!(content.contains("✓ "));
     assert!(content.contains("Theme switched"));
     assert!(!content.contains("Ctrl+O"));
 
@@ -79,7 +79,7 @@ fn transient_warning_renders_amber_background_with_warn_prefix() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("\\warn\\ "));
+    assert!(content.contains("⚠ "));
     assert!(content.contains("Read-only on"));
 }
 
@@ -95,7 +95,7 @@ fn transient_error_renders_red_background_with_error_prefix() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("\\err\\ "));
+    assert!(content.contains("✗ "));
     assert!(content.contains("Failed"));
 }
 

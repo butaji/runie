@@ -1,8 +1,8 @@
-//! Rendering tests for global expand/collapse (Ctrl+O).
+//! Rendering tests for expand/collapse of feed posts.
 //!
-//! Ctrl+O toggles the global collapsed state. Thought and tool posts in the
-//! feed render as one-line summaries when collapsed and expand back when
-//! toggled again.
+//! Ctrl+O toggles the global collapsed state of TOOL posts. Thought posts
+//! render as one-line summaries by default (grok parity) and are expanded
+//! individually with Enter in feed navigation (Esc, then Enter on the post).
 
 use super::*;
 use crate::ui::view;
@@ -25,7 +25,7 @@ fn count_matching_lines(state: &AppState, markers: &[&str]) -> usize {
 }
 
 #[test]
-fn ctrl_shift_e_collapses_thought_post_in_feed() {
+fn enter_expands_thought_post_in_feed() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
 
@@ -49,19 +49,24 @@ fn ctrl_shift_e_collapses_thought_post_in_feed() {
     });
     state.refresh_after_message_change();
 
-    let before = count_matching_lines(&state, &["line1", "line2", "line3"]);
+    // Thoughts are summarized by default: only the first line shows.
+    let collapsed = count_matching_lines(&state, &["line1", "line2", "line3"]);
     assert!(
-        before >= 2,
-        "expanded thought post should show content lines, got {before}"
+        collapsed <= 1,
+        "thought post should be summarized by default, got {collapsed}"
     );
 
-    state.update(Event::ToggleExpand);
+    // Per-item expansion: Esc enters feed nav and selects the bottom post
+    // (the thought); Enter expands it.
+    state.update(Event::DialogBack);
+    assert!(state.view.vim_nav_mode, "Esc should enter feed navigation");
+    state.update(Event::Submit);
     state.ensure_fresh();
 
-    let after = count_matching_lines(&state, &["line1", "line2", "line3"]);
+    let expanded = count_matching_lines(&state, &["line1", "line2", "line3"]);
     assert!(
-        after < before,
-        "Ctrl+O should collapse thought post lines: before={before}, after={after}"
+        expanded >= 2,
+        "Enter should expand the thought post lines: collapsed={collapsed}, expanded={expanded}"
     );
 }
 
@@ -107,7 +112,7 @@ fn ctrl_shift_e_collapses_tool_post_in_feed() {
 }
 
 #[test]
-fn ctrl_shift_e_twice_restores_post_lines() {
+fn enter_twice_restores_thought_summary() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
 
@@ -122,18 +127,21 @@ fn ctrl_shift_e_twice_restores_post_lines() {
     });
     state.refresh_after_message_change();
 
-    let original = count_matching_lines(&state, &["alpha", "beta"]);
+    let summary = count_matching_lines(&state, &["alpha", "beta"]);
 
-    state.update(Event::ToggleExpand);
+    // Esc enters feed nav (selects the thought, the only post); Enter
+    // expands it, a second Enter collapses it back to the summary.
+    state.update(Event::DialogBack);
+    state.update(Event::Submit);
     state.ensure_fresh();
-    let collapsed = count_matching_lines(&state, &["alpha", "beta"]);
-    assert!(collapsed < original, "thought post should collapse");
+    let expanded = count_matching_lines(&state, &["alpha", "beta"]);
+    assert!(expanded > summary, "Enter should expand the thought post");
 
-    state.update(Event::ToggleExpand);
+    state.update(Event::Submit);
     state.ensure_fresh();
     let restored = count_matching_lines(&state, &["alpha", "beta"]);
     assert_eq!(
-        restored, original,
-        "second Ctrl+O should restore thought post lines"
+        restored, summary,
+        "second Enter should collapse the thought back to its summary"
     );
 }

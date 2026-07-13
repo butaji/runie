@@ -28,8 +28,8 @@ fn thought_marker_builder() {
 fn thought_summary_builder() {
     let e = Element::thought_summary("sum", 1.5).at(4.0);
     assert!(
-        matches!(e, Element::ThoughtSummary { content, duration_secs, timestamp }
-        if content == "sum" && duration_secs == 1.5 && timestamp == 4.0)
+        matches!(e, Element::ThoughtSummary { content, duration_secs, timestamp, expandable }
+        if content == "sum" && duration_secs == 1.5 && timestamp == 4.0 && expandable)
     );
 }
 

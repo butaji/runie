@@ -84,6 +84,11 @@ fn latest_thought_visible_when_at_bottom() {
     state.update(Event::ThoughtDone {
         id: "req.0".to_string(),
     });
+    // Thoughts are summarized by default; expand the thought post (the
+    // latest, bottom post) so its reasoning participates in sticky-bottom.
+    let thought_idx = state.snapshot().posts.len() - 1;
+    state.view.expanded_posts.insert(thought_idx);
+    state.messages_changed();
     state.ensure_fresh();
 
     let out = render_content(&mut state);
@@ -137,6 +142,11 @@ fn sticky_bottom_clips_top_not_bottom() {
     state.update(Event::ThoughtDone {
         id: "req.99".to_string(),
     });
+    // Thoughts are summarized by default; expand the thought post (the
+    // latest, bottom post) so its body overflows the viewport.
+    let thought_idx = state.snapshot().posts.len() - 1;
+    state.view.expanded_posts.insert(thought_idx);
+    state.messages_changed();
     state.ensure_fresh();
     state.view.scroll = 0;
 

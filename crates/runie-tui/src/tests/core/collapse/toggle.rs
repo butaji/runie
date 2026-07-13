@@ -109,7 +109,7 @@ fn toggle_expand_collapses_all_tools() {
 }
 
 #[test]
-fn thought_expanded_by_default() {
+fn thought_summarized_by_default_and_expandable() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
@@ -120,12 +120,34 @@ fn thought_expanded_by_default() {
         id: "t1".into(),
         ..Default::default()
     });
+    // Grok parity: a thought renders as a one-line summary by default.
+    let feed = LazyCache::feed(&state);
+    let summary = feed.elements.iter().find_map(|e| match e {
+        Element::ThoughtSummary {
+            content, expandable, ..
+        } => Some((content.as_str(), *expandable)),
+        _ => None,
+    });
+    assert_eq!(
+        summary,
+        Some(("Thinking...", true)),
+        "Thought should render as an expandable one-line summary by default"
+    );
+    let has_full = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { .. }));
+    assert!(!has_full, "Thought body should be hidden by default");
+
+    // Individually expanding the post (Enter in feed nav) reveals the body.
+    state.view.expanded_posts.insert(0);
+    state.messages_changed();
     let feed = LazyCache::feed(&state);
     let has_full = feed
         .elements
         .iter()
         .any(|e| matches!(e, Element::ThoughtMarker { .. }));
-    assert!(has_full, "Thought should render by default");
+    assert!(has_full, "Expanded post should render the full thought");
 }
 
 #[test]

@@ -11,8 +11,10 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::UserMessage { .. } => "User".to_string(),
             runie_core::view::Element::AgentMessage { .. } => "Agent".to_string(),
             runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
-            runie_core::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
-            runie_core::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
+            // A thought post renders as a full marker or (by default) a
+            // one-line summary — both are the same post for ordering.
+            runie_core::view::Element::ThoughtMarker { .. }
+            | runie_core::view::Element::ThoughtSummary { .. } => "Thought".to_string(),
             runie_core::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
             runie_core::view::Element::ToolDone { .. } => "ToolDone".to_string(),
             runie_core::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
