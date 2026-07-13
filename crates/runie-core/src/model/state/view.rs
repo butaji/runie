@@ -31,6 +31,11 @@ pub struct ViewState {
     /// thought, a tool call). Independent of scroll; used to highlight
     /// the selected post and to drive post-level navigation.
     pub selected_post: Option<usize>,
+    /// Posts individually expanded with Enter in feed navigation. Thoughts
+    /// are collapsed to one-line summaries by default (grok parity), so this
+    /// set applies in both global modes. Ephemeral UI state — cleared
+    /// whenever the global collapse flag is toggled.
+    pub expanded_posts: std::collections::HashSet<usize>,
     /// Total rendered lines in the feed. Updated when feed cache rebuilds.
     /// Used for scroll bound calculations.
     pub total_lines: usize,
@@ -84,6 +89,7 @@ impl PartialEq for ViewState {
             && self.last_visible_height == other.last_visible_height
             && self.last_content_width == other.last_content_width
             && self.selected_post == other.selected_post
+            && self.expanded_posts == other.expanded_posts
             && self.mouse_position == other.mouse_position
             && self.vim_nav_mode == other.vim_nav_mode
     }
@@ -135,6 +141,7 @@ impl Default for ViewState {
             last_visible_height: 20,
             last_content_width: 82, // area width; rendering subtracts 2 for glyph margins
             selected_post: None,
+            expanded_posts: std::collections::HashSet::new(),
             total_lines: 0,
             line_counts: Arc::new([]),
             cached_palette_items: Arc::new([]),

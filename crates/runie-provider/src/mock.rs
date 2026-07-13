@@ -176,6 +176,39 @@ mod fixtures {
     }
 }
 
+/// MiniMax-shaped reasoning stream: native `ThinkingStart`/`ThinkingDelta`/
+/// `ThinkingEnd` events (no `<think>` markup in content), a tool call in the
+/// first iteration, and fresh reasoning plus the final answer in the second.
+/// Regression fixture for the live bug where iteration-2 reasoning rendered
+/// as a bare fragment that looked like a duplicated assistant post.
+fn thinking_tool_stream(
+    delay_ms: Option<Duration>,
+    second_iteration: bool,
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+    Box::pin(async_stream::stream! {
+        if !second_iteration {
+            yield Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() });
+            yield Ok(ProviderEvent::ThinkingDelta("Deciding to run a check.".into()));
+            yield Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() });
+            if let Some(d) = delay_ms {
+                tokio::time::sleep(d).await;
+            }
+            yield Ok(ProviderEvent::TextDelta("I'll verify this with a quick check.\n".into()));
+            yield Ok(ProviderEvent::TextDelta("TOOL:list_dir:.".into()));
+            yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+        } else {
+            yield Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() });
+            yield Ok(ProviderEvent::ThinkingDelta("The check confirmed it.".into()));
+            yield Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() });
+            if let Some(d) = delay_ms {
+                tokio::time::sleep(d).await;
+            }
+            yield Ok(ProviderEvent::TextDelta("Yes, verified.\n".into()));
+            yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+        }
+    })
+}
+
 // ─── MockProvider ─────────────────────────────────────────────────────────────
 
 /// Mock provider with configurable fixture-based responses.
@@ -422,6 +455,11 @@ impl Provider for MockProvider {
         let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = last_user_content(&messages).unwrap_or_default();
+
+        // MiniMax-shaped reasoning+tool scenario (regression fixture).
+        if user_input.contains("think tool") {
+            return thinking_tool_stream(delay_ms, is_after_tool_result(last));
+        }
 
         // Check for completion after tool result
         if is_after_tool_result(last) {

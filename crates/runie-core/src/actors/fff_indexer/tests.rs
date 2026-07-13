@@ -223,6 +223,53 @@ async fn search_request_event_returns_results() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// .git exclusion tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The scan walks with `hidden(false)` so dotfiles like `.env.example` are
+/// indexed, but VCS internals must never surface: `.git` directories at any
+/// depth are always skipped, ripgrep-style (honor .gitignore, skip `.git`).
+#[test]
+fn index_build_excludes_git_internals() {
+    let _lock = TEST_MUTEX.lock().unwrap();
+    FffSearchState::reset_for_test();
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+
+    std::fs::create_dir_all(root.join(".git/hooks")).unwrap();
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::create_dir_all(root.join("crates/sub/.git")).unwrap();
+    std::fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").unwrap();
+    std::fs::write(root.join(".git/COMMIT_EDITMSG"), "wip\n").unwrap();
+    std::fs::write(root.join(".git/config"), "[core]\n").unwrap();
+    std::fs::write(root.join(".git/hooks/pre-commit.sample"), "#!/bin/sh\n").unwrap();
+    std::fs::write(root.join("crates/sub/.git/HEAD"), "ref: refs/heads/main\n").unwrap();
+    std::fs::write(root.join("crates/sub/lib.rs"), "// sub\n").unwrap();
+    std::fs::write(root.join("src/lib.rs"), "// lib\n").unwrap();
+    std::fs::write(root.join(".env.example"), "API_KEY=\n").unwrap();
+
+    let index = SearchIndex::new();
+    index.build(root);
+    let results = index.fuzzy_search("", 1000);
+    let paths: Vec<&str> = results.iter().map(|r| r.relative_path.as_str()).collect();
+
+    assert!(
+        paths.iter().all(|p| !p.split('/').any(|seg| seg == ".git")),
+        "index must not contain .git internals, got: {paths:?}"
+    );
+    // Dotfiles outside .git stay indexed — that is why the walker includes
+    // hidden files in the first place.
+    assert!(
+        paths.contains(&".env.example"),
+        "hidden files outside .git should stay indexed, got: {paths:?}"
+    );
+    assert!(
+        paths.contains(&"src/lib.rs") && paths.contains(&"crates/sub/lib.rs"),
+        "regular files should stay indexed, got: {paths:?}"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Git status formatting tests (requires `git` feature)
 // ─────────────────────────────────────────────────────────────────────────────
 

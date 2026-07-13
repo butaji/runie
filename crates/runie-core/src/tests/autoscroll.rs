@@ -167,13 +167,23 @@ fn at_bottom_shows_new_thought() {
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
+    // The new thought must be visible at the bottom after ThoughtDone.
+    // Grok order (verified live): the thought sorts ABOVE the answer, so the
+    // last element is the AgentMessage and the ThoughtSummary precedes it.
     let last = visible.elements.last().unwrap();
-    // ThoughtSummary now always shows (like Grok), so the last element after ThoughtDone
-    // is the ThoughtSummary
     assert!(
-        matches!(last, crate::view::elements::Element::ThoughtSummary { .. }),
-        "New thought response should end with ThoughtSummary: {:?}",
+        matches!(last, crate::view::elements::Element::AgentMessage { .. }),
+        "answer should be the last element after the thought: {:?}",
         last
+    );
+    assert!(
+        visible.elements.iter().any(|e| matches!(
+            e,
+            crate::view::elements::Element::ThoughtSummary { .. }
+                | crate::view::elements::Element::ThoughtMarker { .. }
+        )),
+        "new thought must be visible at bottom: {:?}",
+        visible.elements
     );
 }
 

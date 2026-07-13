@@ -17,6 +17,25 @@ fn clear_matching_request(state: &mut AppState, request_id: &str) {
         .unwrap_or(false)
     {
         *state.permission_request_mut() = None;
+        close_permission_dialog(state);
+        state.view_mut().dirty = true;
+    }
+}
+
+/// Close the permission dialog if it is currently open, returning focus to
+/// the chat input. Resolution can arrive without a user choice (timeout,
+/// cancellation, turn abort), in which case the form machinery never runs
+/// and the dialog would stay open otherwise.
+fn close_permission_dialog(state: &mut AppState) {
+    let is_permission = state
+        .open_dialog()
+        .and_then(|d| d.panel_stack())
+        .and_then(|s| s.current())
+        .map(|p| p.id == "permission")
+        .unwrap_or(false);
+    if is_permission {
+        *state.open_dialog_mut() = None;
+        state.view_mut().input_receiver = InputReceiver::ChatInput;
         state.view_mut().dirty = true;
     }
 }
@@ -53,6 +72,7 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
         }
         Event::PermissionRequestDismissed => {
             *state.permission_request_mut() = None;
+            close_permission_dialog(state);
             state.view_mut().dirty = true;
         }
         Event::PermissionAllow { request_id } => {
@@ -110,7 +130,9 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::AppState;
+    use crate::commands::{DialogKind, DialogState};
+    use crate::dialog::{Panel, PanelStack};
+    use crate::model::{AppState, InputReceiver};
 
     fn open_sample_permission_dialog(state: &mut AppState) {
         state.update(Event::PermissionRequest {
@@ -214,5 +236,73 @@ mod tests {
         });
 
         assert!(state.permission_request_opt().is_none());
+    }
+
+    #[test]
+    fn permission_request_dismissed_closes_dialog_and_restores_focus() {
+        // Timeout / cancellation path: the actor emits PermissionRequestDismissed
+        // when the pending request is cancelled without a user choice.
+        let mut state = AppState::default();
+        open_sample_permission_dialog(&mut state);
+        assert!(state.open_dialog().is_some());
+        assert_eq!(state.view().input_receiver, InputReceiver::Dialog);
+
+        state.update(Event::PermissionRequestDismissed);
+
+        assert!(state.permission_request_opt().is_none());
+        assert!(
+            state.open_dialog().is_none(),
+            "dialog must close when the request is dismissed"
+        );
+        assert_eq!(
+            state.view().input_receiver,
+            InputReceiver::ChatInput,
+            "focus must return to the chat input"
+        );
+    }
+
+    #[test]
+    fn permission_response_closes_dialog_and_restores_focus() {
+        // Resolution observed via the actor's PermissionResponse event (e.g. the
+        // request was resolved from another path while the dialog was open).
+        let mut state = AppState::default();
+        open_sample_permission_dialog(&mut state);
+        assert!(state.open_dialog().is_some());
+
+        state.update(Event::PermissionResponse {
+            request_id: "req-1".into(),
+            action: PermissionAction::Deny,
+        });
+
+        assert!(state.permission_request_opt().is_none());
+        assert!(
+            state.open_dialog().is_none(),
+            "dialog must close when the request is resolved"
+        );
+        assert_eq!(
+            state.view().input_receiver,
+            InputReceiver::ChatInput,
+            "focus must return to the chat input"
+        );
+    }
+
+    #[test]
+    fn permission_dismissal_leaves_unrelated_dialog_open() {
+        // Edge: a dismissal that arrives after the permission dialog already
+        // closed (or for a different dialog) must not clobber an unrelated dialog.
+        let mut state = AppState::default();
+        *state.open_dialog_mut() = Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels: PanelStack::new(Panel::new("settings", "Settings")),
+        });
+        state.view_mut().input_receiver = InputReceiver::Dialog;
+
+        state.update(Event::PermissionRequestDismissed);
+
+        assert!(
+            state.open_dialog().is_some(),
+            "unrelated dialog must stay open"
+        );
+        assert_eq!(state.view().input_receiver, InputReceiver::Dialog);
     }
 }

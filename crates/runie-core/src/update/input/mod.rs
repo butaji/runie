@@ -103,6 +103,13 @@ fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
             state.view_mut().dirty = true;
             state.add_system_msg("Plan approved. Write tools unblocked.".to_string());
         }
+        // Esc cancels plan mode, as advertised by the plan panel
+        // ("[Esc] /plan off"). Plain Esc keypresses arrive as DialogBack and
+        // are handled in handle_dialog_back_no_dialog; this covers the
+        // Event::Escape path (tests, keystroke DSL).
+        crate::Event::Escape => {
+            state.update(crate::Event::PlanModeDisabled);
+        }
         // Navigation and editing: consume silently (plan editing via panel)
         crate::Event::Backspace
         | crate::Event::DeleteWord

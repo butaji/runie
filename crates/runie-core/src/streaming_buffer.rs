@@ -71,7 +71,7 @@ impl StreamingBuffer {
         self.stable
             .drain(..)
             .filter(|l| !l.is_empty())
-            .map(|l| heal_markdown(&l))
+            .map(|l| heal_line(&l))
             .collect()
     }
 
@@ -79,7 +79,7 @@ impl StreamingBuffer {
     /// Does not clear fence/table state - use reset() to clear everything.
     pub fn force_flush(&mut self) -> Vec<String> {
         self.last_flush = Some(Instant::now());
-        let mut lines: Vec<String> = self.stable.drain(..).map(|l| heal_markdown(&l)).collect();
+        let mut lines: Vec<String> = self.stable.drain(..).map(|l| heal_line(&l)).collect();
         if !self.tail.is_empty() {
             lines.push(heal_markdown(&self.tail));
             self.tail.clear();
@@ -133,10 +133,17 @@ impl StreamingBuffer {
         self.in_open_fence = in_fence;
         self.in_open_table = in_table;
 
-        // Move stable lines to the stable buffer.
+        // Move stable lines to the stable buffer. `split('\n')` drops the
+        // delimiter, so re-attach it: flushed pieces are joined with ""
+        // downstream and must carry their own newlines. Every line except a
+        // final split artifact was followed by '\n' in the original text.
         if stable_count > 0 {
-            for &line in lines.iter().take(stable_count) {
-                self.stable.push(line.to_owned());
+            for (i, &line) in lines.iter().take(stable_count).enumerate() {
+                if i + 1 < n {
+                    self.stable.push(format!("{line}\n"));
+                } else {
+                    self.stable.push(line.to_owned());
+                }
             }
         }
 
@@ -145,6 +152,19 @@ impl StreamingBuffer {
             let remaining = &lines[stable_count..];
             self.tail = remaining.join("\n");
         }
+    }
+}
+
+/// Heal a stable piece, keeping a trailing newline (if any) at the very end
+/// so healed closers are not appended past the line break.
+fn heal_line(line: &str) -> String {
+    match line.strip_suffix('\n') {
+        Some(body) => {
+            let mut healed = heal_markdown(body);
+            healed.push('\n');
+            healed
+        }
+        None => heal_markdown(line),
     }
 }
 
@@ -282,7 +302,7 @@ mod tests {
         let mut buf = StreamingBuffer::new();
         buf.push_delta("hello **world\n");
         let lines = buf.flush();
-        assert_eq!(lines, vec!["hello **world**"]);
+        assert_eq!(lines, vec!["hello **world**\n"]);
     }
 
     #[test]
@@ -299,6 +319,17 @@ mod tests {
         buf.push_delta("hello **world\n");
         let lines = buf.flush();
         assert!(lines.iter().any(|l| l.contains("hello **world**")));
+    }
+
+    /// Stable pieces must retain their trailing newline: `resolve()` splits on
+    /// '\n' and downstream joins flushed pieces with "", so dropping the
+    /// delimiter here squashes lines together in the stored message.
+    #[test]
+    fn streaming_buffer_flush_preserves_newlines() {
+        let mut buf = StreamingBuffer::new();
+        buf.push_delta("first line\nsecond line\n");
+        let joined = buf.force_flush().join("");
+        assert_eq!(joined, "first line\nsecond line\n");
     }
 
     #[test]

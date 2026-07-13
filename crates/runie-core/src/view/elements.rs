@@ -25,6 +25,10 @@ pub enum Element {
     ThoughtSummary {
         content: String,
         duration_secs: f64,
+        /// Whether the summary hides an expandable body. Duration-only
+        /// thoughts have no body, so they render without the `[+]`
+        /// affordance (expanding would reveal nothing).
+        expandable: bool,
         timestamp: f64,
     },
     ToolRunning {
@@ -111,6 +115,18 @@ impl Element {
         ElementBuilder(Element::ThoughtSummary {
             content: content.into(),
             duration_secs,
+            expandable: true,
+            timestamp: 0.0,
+        })
+    }
+    /// A thought summary with no hidden body — renders without the `[+]`
+    /// expand affordance. Used for duration-only thoughts ("◆ Thought for
+    /// 2.3s") where there is nothing to expand.
+    pub fn thought_summary_static(content: impl Into<String>, duration_secs: f64) -> ElementBuilder {
+        ElementBuilder(Element::ThoughtSummary {
+            content: content.into(),
+            duration_secs,
+            expandable: false,
             timestamp: 0.0,
         })
     }

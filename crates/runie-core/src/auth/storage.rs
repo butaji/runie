@@ -70,21 +70,52 @@ impl AuthStorage {
             return Self::load_from(&path);
         }
 
-        let mut storage = Self::new();
-
         #[cfg(feature = "keyring")]
         {
-            // Try keyring first
-            if let Ok(tokens) = super::keyring::load_all_from_keyring() {
-                storage.tokens = tokens;
-                storage.keyring_available = true;
-                return storage;
-            }
+            return Self::load_merged(&super::store_trait::OsKeyringStore::new());
         }
 
-        // Fall back to file
-        storage.keyring_available = false;
+        #[cfg(not(feature = "keyring"))]
+        {
+            let mut storage = Self::new();
+            storage.keyring_available = false;
+            storage.load_from_file();
+            storage
+        }
+    }
+
+    /// Load keyring tokens, then merge in providers that exist only in the
+    /// legacy file (keyring wins per provider). An empty or partial keyring
+    /// map must not hide file-stored credentials — e.g. a MiniMax key saved
+    /// to the file on a headless host where keyring writes fail.
+    #[cfg(feature = "keyring")]
+    fn load_merged(store: &dyn super::store_trait::KeyringStore) -> Self {
+        let path = default_auth_path().unwrap_or_else(|| PathBuf::from("/tmp/runie_auth.json"));
+        Self::load_merged_from(store, &path)
+    }
+
+    /// `load_merged` with an explicit file path — the seam used by tests.
+    #[cfg(feature = "keyring")]
+    fn load_merged_from(store: &dyn super::store_trait::KeyringStore, fallback: &Path) -> Self {
+        let mut storage = Self {
+            tokens: HashMap::new(),
+            fallback_path: fallback.to_path_buf(),
+            keyring_available: true,
+        };
+        // File first, then overlay keyring so keyring wins per provider.
         storage.load_from_file();
+        match super::keyring::load_all_from_keyring_with(store) {
+            Ok(tokens) => {
+                for (provider, tok) in tokens {
+                    storage.tokens.insert(provider, tok);
+                }
+                storage.keyring_available = true;
+            }
+            Err(e) => {
+                tracing::warn!("keyring load failed, using auth file only: {e}");
+                storage.keyring_available = false;
+            }
+        }
         storage
     }
 
@@ -326,6 +357,42 @@ mod tests {
             loaded.tokens.get("openai").unwrap().token.expose_secret(),
             "sk-test"
         );
+    }
+
+    /// Keyring load must merge in providers that exist only in the legacy
+    /// file (keyring wins per provider). Regression: a partial keyring map
+    /// short-circuited the file fallback, so a MiniMax key saved to the file
+    /// on a headless host never loaded and the user was bounced to Login on
+    /// every launch.
+    #[cfg(feature = "keyring")]
+    #[test]
+    fn auth_storage_load_merges_keyring_and_file() {
+        use crate::auth::store_trait::{KeyringStore, MockKeyringStore};
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        std::fs::write(
+            &path,
+            r#"{"minimax":{"token":"sk-file-mm"},"openai":{"token":"sk-file-oi"}}"#,
+        )
+        .unwrap();
+
+        let store = MockKeyringStore::new();
+        store.set("openai", "sk-keyring-oi").unwrap();
+
+        let loaded = AuthStorage::load_merged_from(&store, &path);
+
+        assert_eq!(
+            loaded.get("minimax").unwrap().token.expose_secret(),
+            "sk-file-mm",
+            "file-only provider must merge in"
+        );
+        assert_eq!(
+            loaded.get("openai").unwrap().token.expose_secret(),
+            "sk-keyring-oi",
+            "keyring wins per provider"
+        );
+        assert!(loaded.keyring_available);
     }
 
     #[test]

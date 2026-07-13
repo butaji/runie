@@ -12,9 +12,6 @@ expression: events
     ThinkingDelta(
         " current directory. I'll use the list_dir tool.",
     ),
-    ThinkingDelta(
-        "\nThe user wants to list files in the current directory. I'll use the list_dir tool.\n",
-    ),
     TextStart {
         id: "text",
     },

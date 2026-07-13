@@ -138,9 +138,11 @@ impl AppState {
     }
 
     pub(crate) fn paste(&mut self, text: &str) {
+        // Flatten line breaks to spaces (not "") so pasted multi-line text
+        // stays readable: "a\nb" must not become "ab".
         let clean = text
-            .replace("\r\n", "")
-            .replace(['\r', '\n'], "")
+            .replace("\r\n", " ")
+            .replace(['\r', '\n'], " ")
             .replace('\t', "    ");
         if clean.is_empty() {
             return;

@@ -241,6 +241,39 @@ fn finish_turn_fallback_creates_text_part_when_empty() {
     );
 }
 
+/// ResponseDelta without TextStart goes through the streaming buffer path.
+/// Newlines inside the streamed content must survive into the stored
+/// message (live MiniMax bug: "Reasoning\nMethod" rendered as
+/// "ReasoningMethod").
+#[test]
+fn response_delta_buffered_path_preserves_newlines() {
+    let mut state = make_app_state();
+    let id = "req-nl-1".to_string();
+
+    feed_events(
+        &mut state,
+        [
+            Event::ResponseDelta {
+                id: id.clone(),
+                content: "first line\nsecond line\nthird line\n".to_string(),
+            },
+            Event::ResponseDelta {
+                id: id.clone(),
+                content: "      indented tail".to_string(),
+            },
+            Event::Done { id },
+        ],
+    );
+
+    let msg = last_assistant(&state).expect("assistant message should exist");
+    assert_eq!(
+        msg.content(),
+        "first line\nsecond line\nthird line\n      indented tail",
+        "stored message lost newlines: {:?}",
+        msg.content()
+    );
+}
+
 /// build_assistant_message appends a ToolCall to existing parts without
 /// overwriting the text and reasoning parts already streamed in.
 #[test]

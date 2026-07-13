@@ -112,6 +112,92 @@ fn at_ref_select_inserts_file_path() {
     );
 }
 
+/// Create a mock file entry whose display name differs from its relative path
+/// (duplicate basenames in different directories).
+fn mock_file_entry_at(name: &str, path: &str) -> FffFileEntry {
+    FffFileEntry {
+        name: name.to_owned(),
+        path: path.to_owned(),
+        is_dir: false,
+        score: 1.0,
+        git_status: None,
+    }
+}
+
+/// Inject entries with duplicate basenames, like a workspace full of Cargo.tomls.
+fn inject_duplicate_basename_files(state: &mut AppState) {
+    state.fff_file_results = vec![
+        mock_file_entry_at("Cargo.toml", "Cargo.toml"),
+        mock_file_entry_at("Cargo.toml", "crates/runie-core/Cargo.toml"),
+        mock_file_entry_at("Cargo.toml", "crates/runie-tui/Cargo.toml"),
+    ];
+}
+
+/// Collect the Action labels of the currently open picker panel.
+fn picker_action_labels(state: &AppState) -> Vec<String> {
+    match &state.open_dialog {
+        Some(DialogState::Active {
+            kind: DialogKind::Generic,
+            panels,
+        }) => panels
+            .current()
+            .expect("Picker panel should exist")
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                crate::dialog::PanelItem::Action { label, .. } => Some(label.clone()),
+                _ => None,
+            })
+            .collect(),
+        _ => panic!("Expected file picker dialog"),
+    }
+}
+
+/// Picker rows for duplicate basenames must carry path context so the rows
+/// are distinguishable (a workspace can have many Cargo.toml files).
+#[test]
+fn at_ref_picker_disambiguates_duplicate_basenames() {
+    let mut state = AppState::default();
+    inject_duplicate_basename_files(&mut state);
+    state.update(crate::Event::Input('@'));
+    let labels = picker_action_labels(&state);
+    assert!(
+        labels
+            .iter()
+            .any(|l| l.contains("crates/runie-core/Cargo.toml")),
+        "duplicate basenames should display their relative path, got: {labels:?}"
+    );
+    let mut unique = labels.clone();
+    unique.sort();
+    unique.dedup();
+    assert_eq!(
+        unique.len(),
+        labels.len(),
+        "picker labels must be unique, got: {labels:?}"
+    );
+}
+
+/// Selecting a duplicate-basename row inserts the disambiguated relative path,
+/// not the bare basename.
+#[test]
+fn at_ref_select_inserts_relative_path() {
+    let mut state = AppState::default();
+    inject_duplicate_basename_files(&mut state);
+    state.update(crate::Event::Input('@'));
+    for c in "runie-core".chars() {
+        state.update(crate::Event::Input(c));
+    }
+    state.update(crate::Event::Submit);
+    assert_eq!(
+        state.input.input, "crates/runie-core/Cargo.toml",
+        "selection should insert the full relative path"
+    );
+    assert!(
+        state.open_dialog.is_none(),
+        "Dialog should close after selection"
+    );
+}
+
 #[test]
 fn at_ref_escape_closes_dialog() {
     let mut state = AppState::default();

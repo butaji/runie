@@ -170,6 +170,31 @@ mod tests {
         drop(handle);
     }
 
+    /// Pasted multi-line text must flatten line breaks to spaces, never
+    /// delete them: "a\nb" must become "a b", not "ab". Regression: the
+    /// actor's Paste handler stripped newlines while AppState::paste
+    /// (the other entry point) flattened them to spaces.
+    #[tokio::test]
+    async fn paste_flattens_newlines_to_spaces() {
+        let bus = EventBus::<Event>::new(16);
+        let mut sub = bus.subscribe();
+
+        let (handle, _cell, _) = InputActor::spawn(bus.clone()).await.unwrap();
+        let _ = handle.send_message(InputMsg::Paste("first\nsecond\r\nthird".into()));
+
+        let found = wait_for_event(
+            &mut sub,
+            |e| matches!(e, Event::InputChanged { state } if state.input == "first second third"),
+        )
+        .await;
+        assert!(
+            found,
+            "pasted newlines must become spaces: expected 'first second third'"
+        );
+
+        drop(handle);
+    }
+
     #[tokio::test]
     async fn clear_resets_everything() {
         let bus = EventBus::<Event>::new(16);
@@ -179,6 +204,47 @@ mod tests {
         let _ = handle.send_message(InputMsg::InsertChar('e'));
         let _ = handle.send_message(InputMsg::InsertChar('s'));
         let _ = handle.send_message(InputMsg::Clear);
+        drop(handle);
+    }
+
+    /// Regression: submitting a message must append it to the input history so
+    /// HistoryPrev (Up arrow) can recall it in the same session. Previously
+    /// only `HistoryLoaded` (disk load at startup) populated the history, so
+    /// messages sent in the current session were not recallable.
+    #[tokio::test]
+    async fn submit_appends_to_history() {
+        let bus = EventBus::<Event>::new(16);
+        let mut sub = bus.subscribe();
+        let (handle, _cell, _) = InputActor::spawn(bus.clone()).await.unwrap();
+
+        // Type and submit a message.
+        for c in "hello".chars() {
+            let _ = handle.send_message(InputMsg::InsertChar(c));
+        }
+        let _ = handle.send_message(InputMsg::Submit {
+            content: "hello".into(),
+        });
+
+        // Wait for the submit's InputChanged (cleared input).
+        let cleared = wait_for_event(
+            &mut sub,
+            |e| matches!(e, Event::InputChanged { state } if state.input.is_empty()),
+        )
+        .await;
+        assert!(cleared, "Expected cleared input after submit");
+
+        // Up arrow must recall the just-submitted message.
+        let _ = handle.send_message(InputMsg::HistoryPrev);
+        let recalled = wait_for_event(
+            &mut sub,
+            |e| matches!(e, Event::InputChanged { state } if state.input == "hello"),
+        )
+        .await;
+        assert!(
+            recalled,
+            "HistoryPrev after submit should recall 'hello' in the same session"
+        );
+
         drop(handle);
     }
 }

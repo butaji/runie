@@ -99,6 +99,14 @@ impl AppState {
     pub(crate) fn finish_turn(&mut self, id: String) {
         // Read from AgentState (the projection target).
         let assistant_idx = self.agent_state().last_assistant_index;
+        // Release any partial-tag tail still held by the think filter, so a
+        // turn that ends without a ThoughtDone event does not lose text.
+        let think_tail = self.agent_state_mut().think_filter.finish();
+        if !think_tail.visible.is_empty() {
+            self.agent_state_mut()
+                .streaming_buffer
+                .push_delta(&think_tail.visible);
+        }
         let remaining_tail = self
             .agent_state_mut()
             .streaming_buffer
@@ -110,6 +118,7 @@ impl AppState {
             }
         }
         self.agent_state_mut().streaming_buffer.reset();
+        self.agent_state_mut().think_filter.reset();
         self.close_open_parts(assistant_idx, &remaining_tail);
         self.strip_tools_from_assistant();
         self.remove_empty_assistant();
@@ -154,9 +163,23 @@ impl AppState {
     fn strip_tools_from_assistant(&mut self) {
         for msg in self.session_mut().messages.iter_mut() {
             if msg.role == Role::Assistant {
-                let stripped = strip_tool_markers(&msg.content());
-                let visible = crate::update::strip_thinking_tags(&stripped);
-                msg.set_text_part(visible);
+                // Strip per Text part, never on the joined content: parts are
+                // concatenated without a separator by `content()`, so a tool
+                // marker ending one part would swallow the next part's text
+                // during whole-string stripping, and writing the stripped
+                // result back into only the last part left earlier parts
+                // (with the marker) untouched — the feed then hid the whole
+                // message via `should_skip_msg`.
+                for part in msg.parts.iter_mut() {
+                    if let Part::Text { content } = part {
+                        let stripped = strip_tool_markers(content);
+                        *content = crate::update::strip_thinking_tags(&stripped);
+                    }
+                }
+                // A marker-only part strips to empty: drop it so it cannot
+                // render as an empty assistant post.
+                msg.parts
+                    .retain(|p| !matches!(p, Part::Text { content } if content.is_empty()));
             }
         }
     }
@@ -290,6 +313,7 @@ impl AppState {
         agent.thought_seq = 0;
         agent.last_assistant_index = None;
         agent.streaming_buffer.reset();
+        agent.think_filter.reset();
         self.view_mut().vim_nav_pending = false;
     }
 }

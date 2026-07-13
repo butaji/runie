@@ -90,6 +90,8 @@ impl AppState {
     // === View Helpers ===
     pub(crate) fn toggle_expand_all(&mut self) {
         self.view_mut().all_collapsed = !self.view_mut().all_collapsed;
+        // Per-post expansions only make sense while globally collapsed.
+        self.view_mut().expanded_posts.clear();
         self.messages_changed();
     }
 

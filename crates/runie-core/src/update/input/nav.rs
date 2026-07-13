@@ -283,8 +283,27 @@ impl AppState {
                 );
                 Some(false)
             }
-            // Enter in vim nav mode toggles expand/collapse (same as Ctrl+O).
+            // Enter in vim nav mode: on a collapsible (summarized) post — or
+            // one the user already expanded individually — toggle that post
+            // only (the "Enter expand" hint, grok's per-item Ctrl+E). Works
+            // in both global modes: thoughts are collapsed by default, so
+            // per-item expansion must not require global collapse first.
+            // On any other post it keeps the legacy behavior: toggle global
+            // expand/collapse (same as Ctrl+O).
             crate::Event::Submit => {
+                if let Some(sel) = self.view().selected_post {
+                    let snap = self.snapshot();
+                    let collapsible = snap.posts.get(sel).is_some_and(|p| !p.expanded);
+                    let individually_expanded = self.view().expanded_posts.contains(&sel);
+                    if collapsible || individually_expanded {
+                        let set = &mut self.view_mut().expanded_posts;
+                        if !set.remove(&sel) {
+                            set.insert(sel);
+                        }
+                        self.messages_changed();
+                        return Some(true);
+                    }
+                }
                 self.update(crate::Event::ToggleExpand);
                 Some(true)
             }

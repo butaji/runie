@@ -442,3 +442,100 @@ async fn contract_duplicate_request_id_idempotent() {
         "both messages with same ID should be processed"
     );
 }
+
+/// Contract: the actor's request queue drains across sequential turns, and
+/// each TurnStarted carries the content of its own submission (never a stale
+/// earlier message). A final RunIfQueued must NOT start a third turn.
+#[tokio::test]
+async fn sequential_turns_drain_queue_with_correct_attribution() {
+    let bus = EventBus::<Event>::new(16);
+    let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
+    let mut sub = bus.subscribe();
+
+    // Turn 1: submit and start.
+    handle
+        .send(crate::actors::turn::TurnMsg::SubmitUserMessage {
+            content: "first".into(),
+            id: "req.0".into(),
+            source: MessageSource::Fresh,
+        })
+        .await;
+    handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
+
+    let started = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while let Ok(evt) = sub.recv().await {
+            if let Event::TurnStarted { id, content, .. } = evt {
+                return Some((id, content));
+            }
+        }
+        None
+    })
+    .await
+    .unwrap_or(None)
+    .expect("first turn should start");
+    assert_eq!(started, ("req.0".to_string(), "first".to_string()));
+
+    // Turn 1 completes (Done then TurnComplete, mirroring the agent driver).
+    handle
+        .send(crate::actors::turn::TurnMsg::Done { id: "req.0".into() })
+        .await;
+    handle
+        .send(crate::actors::turn::TurnMsg::TurnComplete {
+            id: "req.0".into(),
+            duration_secs: 0.1,
+        })
+        .await;
+
+    // Turn 2: submit and start — content must be "second", not stale "first".
+    handle
+        .send(crate::actors::turn::TurnMsg::SubmitUserMessage {
+            content: "second".into(),
+            id: "req.1".into(),
+            source: MessageSource::Fresh,
+        })
+        .await;
+    handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
+
+    let started = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while let Ok(evt) = sub.recv().await {
+            if let Event::TurnStarted { id, content, .. } = evt {
+                return Some((id, content));
+            }
+        }
+        None
+    })
+    .await
+    .unwrap_or(None)
+    .expect("second turn should start");
+    assert_eq!(
+        started,
+        ("req.1".to_string(), "second".to_string()),
+        "second turn must carry its own content, not a stale earlier message"
+    );
+
+    // Turn 2 completes; the queue must now be fully drained.
+    handle
+        .send(crate::actors::turn::TurnMsg::Done { id: "req.1".into() })
+        .await;
+    handle
+        .send(crate::actors::turn::TurnMsg::TurnComplete {
+            id: "req.1".into(),
+            duration_secs: 0.1,
+        })
+        .await;
+
+    // Drain events emitted so far, then poke the actor: no third turn may start.
+    while sub.try_recv().is_ok() {}
+    handle.send(crate::actors::turn::TurnMsg::RunIfQueued).await;
+    let extra = tokio::time::timeout(std::time::Duration::from_millis(300), async {
+        while let Ok(evt) = sub.recv().await {
+            if matches!(evt, Event::TurnStarted { .. }) {
+                return true;
+            }
+        }
+        false
+    })
+    .await
+    .unwrap_or(false);
+    assert!(!extra, "queue must be drained: no third turn may start");
+}

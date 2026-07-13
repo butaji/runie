@@ -7,8 +7,9 @@ fn buffer_flushes_complete_paragraph() {
     let mut buf = StreamingBuffer::new();
     buf.push_delta("Hello, world!\n\n");
     let flushed = buf.force_flush();
-    // Split on \n gives ["Hello, world!", "", ""]
-    assert_eq!(flushed, vec!["Hello, world!", "", ""]);
+    // Split on \n gives ["Hello, world!", "", ""]; stable pieces keep their
+    // trailing newline (the final "" artifact had none).
+    assert_eq!(flushed, vec!["Hello, world!\n", "\n", ""]);
     assert!(buf.tail().is_empty());
     assert!(buf.is_stable());
 }
@@ -19,7 +20,7 @@ fn buffer_holds_incomplete_code_fence() {
     buf.push_delta("Some text.\n```python\nprint('hello')");
     let flushed = buf.force_flush();
     // force_flush heals the tail before returning it; tail is now empty
-    assert_eq!(flushed, vec!["Some text.", "```python\nprint('hello')"]);
+    assert_eq!(flushed, vec!["Some text.\n", "```python\nprint('hello')"]);
     assert!(buf.tail().is_empty());
     // Fence is still open (never closed), so buffer is not fully stable
     assert!(!buf.is_stable());
@@ -32,7 +33,7 @@ fn buffer_completes_code_fence() {
     let flushed = buf.force_flush();
     assert_eq!(
         flushed,
-        vec!["Some text.", "```python", "print('hello')", "```"]
+        vec!["Some text.\n", "```python\n", "print('hello')\n", "```"]
     );
     assert!(buf.tail().is_empty());
     assert!(buf.is_stable());

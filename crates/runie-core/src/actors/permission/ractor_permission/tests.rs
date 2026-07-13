@@ -268,6 +268,32 @@ async fn cancel_permission_sends_deny() {
     assert_eq!(result.unwrap(), Ok(PermissionAction::Deny));
 }
 
+/// Test that canceling the current request emits PermissionRequestDismissed so
+/// the UI can close the permission dialog (timeout / abort path).
+#[tokio::test]
+async fn cancel_permission_emits_dismissed_event() {
+    let bus = EventBus::<Event>::new(16);
+    let mut sub = bus.subscribe();
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
+
+    let _rx = handle
+        .ask_permission("req-cancel-2".into(), "bash".into(), serde_json::json!({}))
+        .await;
+
+    handle.cancel_permission("req-cancel-2".into()).await;
+
+    let found = wait_for_event(&mut sub, |e| {
+        matches!(e, Event::PermissionRequestDismissed)
+    })
+    .await;
+    assert!(
+        found,
+        "Expected PermissionRequestDismissed event on cancel"
+    );
+}
+
 /// Test that resolving an unknown request does nothing (no panic).
 #[tokio::test]
 async fn resolve_unknown_request_is_noop() {

@@ -89,6 +89,8 @@ mod misc;
 #[cfg(test)]
 mod model_cycle;
 #[cfg(test)]
+mod plan_mode;
+#[cfg(test)]
 mod model_selector;
 #[cfg(test)]
 mod paced_turn_completed;
@@ -98,6 +100,8 @@ mod paste;
 mod placeholder;
 #[cfg(test)]
 mod queue;
+#[cfg(test)]
+mod queue_drain;
 #[cfg(test)]
 mod rapid_submit;
 #[cfg(test)]
@@ -146,3 +150,6 @@ mod user_message_duplicate;
 
 #[cfg(test)]
 mod no_ghost_agent;
+
+#[cfg(test)]
+mod thought_reasoning;

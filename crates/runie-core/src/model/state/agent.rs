@@ -48,6 +48,10 @@ pub struct AgentState {
     // ── Streaming (mirrors TurnState) ───────────────────────────────────────────
     pub streaming: bool,
     pub streaming_buffer: StreamingBuffer,
+    /// Incremental `<think>` splitter applied to streamed deltas so raw think
+    /// tags never reach the visible assistant text mid-stream. UI-projection
+    /// state only — TurnActor never touches it.
+    pub think_filter: crate::update::agent::thought::ThinkStreamFilter,
 
     // ── IDs and counters (mirrors TurnState) ──────────────────────────────────
     pub next_id: u64,
@@ -90,6 +94,7 @@ impl From<&TurnState> for AgentState {
             tokens_at_last_speed: ts.tokens_at_last_speed,
             streaming: ts.streaming,
             streaming_buffer: ts.streaming_buffer.clone(),
+            think_filter: crate::update::agent::thought::ThinkStreamFilter::new(),
             next_id: ts.next_id,
             current_action: ts.current_action.clone(),
             thought_seq: ts.thought_seq,

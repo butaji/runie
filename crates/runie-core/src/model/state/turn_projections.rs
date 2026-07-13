@@ -281,6 +281,12 @@ impl AppState {
         agent.inflight += 1;
         agent.streaming = true;
         agent.turn_started_at = Some(std::time::Instant::now());
+        // Mirror the TurnActor: it pops its request_queue in handle_run_if_queued
+        // before emitting TurnStarted. Without this pop the projection's
+        // request_queue grew by one every turn and never drained, showing a
+        // phantom "(N queued)" count in the status bar. Popping an empty queue
+        // is a no-op, so TurnStarted facts without a preceding submit are safe.
+        agent.request_queue.pop_front();
     }
 
     /// Project TurnCompleted fact into AppState's AgentState.

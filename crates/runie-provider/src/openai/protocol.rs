@@ -494,6 +494,10 @@ fn finalize_content(state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let segs = state.content_filter.flush(suppress);
     let mut events = Vec::new();
     for seg in segs {
+        // See process_openai_chunk: native reasoning wins over inline markup.
+        if state.native_reasoning_seen && matches!(seg, ContentSegment::Thinking(_)) {
+            continue;
+        }
         events.extend(segment_to_events(seg, state));
     }
     events
@@ -570,6 +574,12 @@ pub struct OpenAiState {
     /// Whether the stream emitted any structured `tool_calls` (so redundant
     /// in-content tool-call markup is suppressed rather than duplicated).
     has_structured_tools: bool,
+    /// Whether any chunk carried a native `reasoning`/`reasoning_content`
+    /// field. MiniMax sends the same reasoning text twice per chunk — inline
+    /// in `content` wrapped in `<think>` tags and in the native field — so
+    /// once the native field appears, content-derived thinking segments are
+    /// dropped to avoid duplicated reasoning.
+    native_reasoning_seen: bool,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -703,11 +713,19 @@ fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEv
         let suppress = state.has_structured_tools;
         let segs = state.content_filter.feed(&text, suppress);
         for seg in segs {
+            // MiniMax duplicates reasoning: inline `<think>` markup in content
+            // AND the native `reasoning` field. Once the native field has been
+            // seen, drop content-derived thinking segments (still consumed by
+            // the filter, so the markup never reaches the visible text).
+            if state.native_reasoning_seen && matches!(seg, ContentSegment::Thinking(_)) {
+                continue;
+            }
             events.extend(segment_to_events(seg, state));
         }
     }
 
     if let Some(reasoning) = chunk.delta.reasoning {
+        state.native_reasoning_seen = true;
         events.extend(state.lifecycle.thinking_delta("reasoning", &reasoning));
     }
 
@@ -952,6 +970,69 @@ mod tests {
         assert!(events.iter().any(|e| matches!(
             e, ProviderEvent::ThinkingStart { id } if id == "reasoning"
         )));
+    }
+
+    /// MiniMax-shaped chunk: the same reasoning text arrives twice — inline in
+    /// `content` wrapped in `<think>` tags, and in the native `reasoning`
+    /// field. The protocol must emit it exactly once (native field wins) while
+    /// still stripping the markup from the visible text.
+    fn minimax_dual_chunk(content: &str, reasoning: Option<&str>) -> OpenAiFrame {
+        let mut delta = serde_json::json!({ "content": content });
+        if let Some(r) = reasoning {
+            delta["reasoning"] = serde_json::Value::String(r.to_owned());
+        }
+        let json = serde_json::json!({ "choices": [{ "delta": delta }] });
+        OpenAiFrame::Chunk(parse_chunk(&json).unwrap())
+    }
+
+    #[test]
+    fn minimax_dual_source_reasoning_emitted_exactly_once() {
+        let protocol = OpenAiProtocol::new();
+        let state = OpenAiState::default();
+        let mut all = Vec::new();
+        let (state, ev) = protocol.step(
+            state,
+            minimax_dual_chunk("<think>\nLet me think", Some("Let me think")),
+        );
+        all.extend(ev);
+        let (state, ev) = protocol.step(
+            state,
+            minimax_dual_chunk(" about this.", Some(" about this.")),
+        );
+        all.extend(ev);
+        let (state, ev) =
+            protocol.step(state, minimax_dual_chunk("\n</think>\n\nThe answer", None));
+        all.extend(ev);
+        let (_state, ev) = protocol.step(state, chunk_with_finish("stop"));
+        all.extend(ev);
+
+        let thinking: String = all
+            .iter()
+            .filter_map(|e| match e {
+                ProviderEvent::ThinkingDelta(t) => Some(t.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            thinking.trim(),
+            "Let me think about this.",
+            "reasoning must appear exactly once, without the <think> markup"
+        );
+        let visible: String = all
+            .iter()
+            .filter_map(|e| match e {
+                ProviderEvent::TextDelta(t) => Some(t.clone()),
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !visible.contains("<think>") && !visible.contains("</think>"),
+            "think markup must never reach the visible text: {visible:?}"
+        );
+        assert!(
+            visible.contains("The answer"),
+            "answer text must be visible: {visible:?}"
+        );
     }
 
     #[test]

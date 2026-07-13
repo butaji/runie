@@ -141,6 +141,24 @@ fn submit_while_turn_active_queues_message() {
     assert!(state.input().input.is_empty());
 }
 
+// ============================================================================
+// Layer 1 — State/Logic: paste sanitization
+// ============================================================================
+
+/// Pasted multi-line text must not squash lines together: newlines are
+/// replaced with a space so "the problem\nthe answer" stays readable in the
+/// user card instead of rendering as "the problemthe answer".
+#[test]
+fn paste_replaces_newlines_with_spaces() {
+    let mut state = AppState::default();
+    state.update(Event::Paste("the problem\nthe answer".to_string()));
+    assert_eq!(state.input.input, "the problem the answer");
+
+    let mut state = AppState::default();
+    state.update(Event::Paste("line one\r\nline two\rline three".to_string()));
+    assert_eq!(state.input.input, "line one line two line three");
+}
+
 /// Multiple submissions while turn is active should queue all messages.
 #[test]
 fn multiple_submits_while_turn_active_queue_all() {

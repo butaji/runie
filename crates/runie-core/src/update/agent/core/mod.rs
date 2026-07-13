@@ -2,7 +2,7 @@ use crate::labels::{tool_done, tool_running};
 use crate::message::{now, Part};
 use crate::metrics;
 use crate::model::{AppState, ChatMessage, Role};
-use crate::update::agent::thought::{plan_thought, ThoughtPlan};
+use crate::update::agent::thought::{plan_thought, take_reasoning_parts, ThoughtPlan};
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
@@ -24,6 +24,8 @@ impl AppState {
             .get_or_insert_with(std::time::Instant::now);
         // Reset streaming buffer for new turn
         agent.streaming_buffer.reset();
+        // Reset the streaming think filter for new turn
+        agent.think_filter.reset();
         // Init speed tracking for this turn
         agent.turn_tokens_out = 0;
         agent.last_speed_update = Some(std::time::Instant::now());
@@ -56,13 +58,59 @@ impl AppState {
         }
 
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
+        // Anchor the thought's sort timestamp to when thinking STARTED, not
+        // to ThoughtDone time: the answer text streams (and bumps the
+        // assistant message timestamp) before ThoughtDone fires, so a
+        // ThoughtDone-time timestamp would sort the thought BELOW the answer
+        // in the timestamp-ordered feed. Grok renders the thought above the
+        // answer.
+        let thought_ts = self
+            .agent_state()
+            .thinking_started_at
+            .map(|started| crate::message::now() - started.elapsed().as_secs_f64())
+            .unwrap_or_else(crate::message::now);
         // Clear thinking state on AgentState.
         self.agent_state_mut().current_action = None;
         self.agent_state_mut().thinking_started_at = None;
+        // Resolve any partial-tag tail held back by the streaming think
+        // filter, then flush remaining buffered text before planning.
+        let think_tail = self.agent_state_mut().think_filter.finish();
+        if !think_tail.visible.is_empty() {
+            self.agent_state_mut()
+                .streaming_buffer
+                .push_delta(&think_tail.visible);
+        }
         self.flush_buffered_response(&id);
+        // Reasoning split out of streamed deltas (empty when the stream
+        // contained no `<think>` markup, e.g. the Event::Response path).
+        // Taken (not copied) so multi-cycle turns don't repeat reasoning.
+        let streamed_reasoning = self.agent_state_mut().think_filter.take_reasoning();
 
         let (insert_idx, plan) = if let Some(idx) = self.find_assistant_by_id(&id) {
-            let plan = plan_thought(&self.session_mut().messages[idx].content(), duration);
+            // Providers that stream native reasoning (ThinkingDelta /
+            // reasoning_content) accumulate it in Part::Reasoning, which
+            // ChatMessage::content() ignores. Without this fallback the
+            // thought would be duration-only — rendering a dead `[+]` — and
+            // the reasoning would be lost when an otherwise-empty assistant
+            // message is cleaned up. Move the parts into the thought so the
+            // reasoning renders exactly once, from the thought.
+            let part_reasoning = if streamed_reasoning.is_empty() {
+                take_reasoning_parts(&mut self.session_mut().messages[idx])
+            } else {
+                String::new()
+            };
+            let plan = if !streamed_reasoning.is_empty() {
+                // Deltas were split mid-stream: the message already holds
+                // only visible text, so keep it and report the reasoning.
+                let visible_empty = self.session().messages[idx].content().trim().is_empty();
+                ThoughtPlan::streamed(duration, &streamed_reasoning, visible_empty)
+            } else if !part_reasoning.is_empty() {
+                // Native reasoning parts: same shape as the streamed path.
+                let visible_empty = self.session().messages[idx].content().trim().is_empty();
+                ThoughtPlan::streamed(duration, &part_reasoning, visible_empty)
+            } else {
+                plan_thought(&self.session_mut().messages[idx].content(), duration)
+            };
             if plan.remove_assistant {
                 self.session_mut().messages.remove(idx);
                 self.agent_state_mut().last_assistant_index = None;
@@ -71,10 +119,12 @@ impl AppState {
             }
             (idx, plan)
         } else {
-            (
-                self.session_mut().messages.len(),
-                ThoughtPlan::plain(duration),
-            )
+            let plan = if streamed_reasoning.is_empty() {
+                ThoughtPlan::plain(duration)
+            } else {
+                ThoughtPlan::streamed(duration, &streamed_reasoning, true)
+            };
+            (self.session_mut().messages.len(), plan)
         };
 
         // Increment thought_seq.
@@ -85,7 +135,7 @@ impl AppState {
             insert_idx,
             ChatMessage {
                 role: Role::Thought,
-                timestamp: now(),
+                timestamp: thought_ts,
                 id: thought_id,
                 parts: vec![Part::Text {
                     content: plan.thought_content,
@@ -307,14 +357,21 @@ impl AppState {
 
     fn on_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
+        // Split `<think>` reasoning out before text reaches the visible
+        // message; partial-tag tails stay buffered in the filter until later
+        // deltas (or turn finish) resolve them.
+        let visible = self.agent_state_mut().think_filter.push_delta(&content).visible;
+        if visible.is_empty() {
+            return;
+        }
         let has_open_text = self
             .current_assistant_message_mut()
             .is_some_and(|msg| matches!(msg.parts.last(), Some(Part::Text { .. })));
         if has_open_text {
-            self.append_delta_to_text_part(&content);
+            self.append_delta_to_text_part(&visible);
             return;
         }
-        self.agent_state_mut().streaming_buffer.push_delta(&content);
+        self.agent_state_mut().streaming_buffer.push_delta(&visible);
         // Try flush first (fast path for chunked text with newlines).
         let stable = self.agent_state_mut().streaming_buffer.flush().join("");
         if !stable.is_empty() {
@@ -329,16 +386,25 @@ impl AppState {
             return;
         }
         // Flush returned empty: either (a) debounce hasn't elapsed, or (b) the
-        // text hasn't ended with a stable delimiter yet.  Force-flush the tail
-        // and create the assistant message so the content is never lost.
-        // This is the normal path for mock/echo which emits a single chunk.
+        // text hasn't ended with a stable delimiter yet. Force-flush the tail
+        // and route it exactly like stable content: append to the existing
+        // assistant message for this request when there is one (a second
+        // iteration of the same turn must not spawn a duplicate message),
+        // create only when no message exists yet.
         let tail = self
             .agent_state_mut()
             .streaming_buffer
             .force_flush()
             .join("");
         if !tail.is_empty() {
-            self.create_assistant_message(id.clone(), tail);
+            if let Some(idx) = self.find_cached_assistant_index(&id) {
+                self.append_to_message(idx, &tail);
+            } else if let Some(idx) = self.find_assistant_by_id(&id) {
+                self.agent_state_mut().last_assistant_index = Some(idx);
+                self.append_to_message(idx, &tail);
+            } else {
+                self.create_assistant_message(id.clone(), tail);
+            }
         }
     }
 }

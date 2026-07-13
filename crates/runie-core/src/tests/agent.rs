@@ -231,8 +231,10 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
             _ => "?",
         })
         .collect();
-    // ThoughtSummary now always shows (like Grok), so we get ThoughtSummary after the response
-    assert_eq!(kinds, vec!["S", "A", "S", "T", "S"]);
+    // Grok renders the thought ABOVE the answer (verified live against the
+    // grok TUI): the thought's timestamp is anchored to thinking start, so
+    // it sorts before the response.
+    assert_eq!(kinds, vec!["S", "T", "S", "A", "S"]);
 }
 
 #[test]

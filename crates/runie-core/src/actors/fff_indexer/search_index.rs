@@ -77,7 +77,9 @@ impl SearchIndex {
 
         let mut inner = self.inner.write();
 
-        // Walk the directory tree with gitignore support.
+        // Walk the directory tree with gitignore support. `.hidden(false)`
+        // includes dotfiles, so `.git` must be pruned explicitly — VCS
+        // internals are never useful as picker candidates.
         for entry in WalkBuilder::new(root)
             .hidden(false) // Include hidden files but respect .gitignore
             .follow_links(false)
@@ -85,6 +87,7 @@ impl SearchIndex {
             .git_ignore(true)
             .git_global(true)
             .git_exclude(true)
+            .filter_entry(|e| e.file_name() != ".git")
             .build()
         {
             if super::is_indexer_scan_cancelled() {

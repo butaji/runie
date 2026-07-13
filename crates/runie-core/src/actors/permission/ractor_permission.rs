@@ -248,6 +248,8 @@ impl RactorPermissionActor {
             .unwrap_or(false)
         {
             state.current_request = None;
+            // Notify the UI so the permission dialog closes (timeout / abort path).
+            state.emit(Event::PermissionRequestDismissed);
         }
     }
 

@@ -71,22 +71,41 @@ pub fn delete_keyring(provider: &str) -> anyhow::Result<()> {
 
 /// Load all known provider tokens from the keyring.
 pub fn load_all_from_keyring() -> anyhow::Result<HashMap<String, AuthToken>> {
+    load_all_from_keyring_with(&OsKeyringStore::new())
+}
+
+/// Every provider that takes an API key. Must cover all `key:` values in
+/// `runie-provider/resources/models/*.yaml` — a provider missing here
+/// never gets its token loaded at startup, bouncing the user back to the
+/// Login dialog on every launch.
+const KEYRING_PROVIDERS: &[&str] = &[
+    "anthropic",
+    "cohere",
+    "deepseek",
+    "fireworks",
+    "google",
+    "groq",
+    "minimax",
+    "mistral",
+    "moonshotai",
+    "openai",
+    "openrouter",
+    "together",
+    "xai",
+];
+
+/// Load all known provider tokens from the given keyring store.
+/// Exposed for tests (with `MockKeyringStore`).
+pub fn load_all_from_keyring_with(
+    store: &dyn KeyringStore,
+) -> anyhow::Result<HashMap<String, AuthToken>> {
     let mut tokens = HashMap::new();
-    let common_providers = [
-        "openai",
-        "anthropic",
-        "google",
-        "groq",
-        "mistral",
-        "cohere",
-        "xai",
-    ];
-    for provider in common_providers {
-        if let Some(token) = OsKeyringStore::new().get(provider)? {
+    for provider in KEYRING_PROVIDERS {
+        if let Some(token) = store.get(provider)? {
             tokens.insert(
-                provider.to_owned(),
+                provider.to_string(),
                 AuthToken {
-                    provider: provider.to_owned(),
+                    provider: provider.to_string(),
                     token,
                     expires_at: None,
                 },
@@ -116,10 +135,20 @@ pub fn migrate_legacy_auth() -> anyhow::Result<()> {
 /// Migrate a specific legacy `auth.json` file to the keyring, then rename it to
 /// `auth.json.bak` so the plaintext secret is no longer at the well-known path.
 ///
-/// Keyring writes are best-effort (a headless/CI host may have no keyring); the
-/// rename away from the plaintext path happens regardless, so a partially-
-/// migrated host still stops leaving secrets on disk. Exposed for tests.
+/// The rename happens only when every token in the file was successfully
+/// written to the keyring (or the file held no tokens): on a headless/CI host
+/// where the keyring write fails, the file is the last copy of the credential
+/// and renaming it away would silently destroy the user's API key. Exposed
+/// for tests.
 pub fn migrate_legacy_auth_from(path: &std::path::Path) -> anyhow::Result<()> {
+    migrate_legacy_auth_with(path, &OsKeyringStore::new())
+}
+
+/// Migration with an explicit store — the seam used by tests.
+pub fn migrate_legacy_auth_with(
+    path: &std::path::Path,
+    store: &dyn KeyringStore,
+) -> anyhow::Result<()> {
     if !path.exists() {
         return Ok(());
     }
@@ -127,21 +156,41 @@ pub fn migrate_legacy_auth_from(path: &std::path::Path) -> anyhow::Result<()> {
     let json = std::fs::read_to_string(path)?;
     let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
 
+    let mut all_migrated = true;
     if let Some(obj) = raw.as_object() {
         for (provider, val) in obj {
             if let Some(token_str) = val.get("token").and_then(|v| v.as_str()) {
                 if !token_str.is_empty() {
-                    if let Err(e) = set_keyring(provider, token_str) {
-                        tracing::warn!("failed to migrate token for {}: {}", provider, e);
+                    // Verify the write: some keychain backends (e.g. macOS with a
+                    // misconfigured default keychain) report success on set but
+                    // return nothing on get. Renaming the file away in that case
+                    // would destroy the only retrievable copy of the credential.
+                    let migrated = store.set(provider, token_str).is_ok()
+                        && store
+                            .get(provider)
+                            .map(|stored| {
+                                stored
+                                    .map(|s| s.expose_secret() == token_str)
+                                    .unwrap_or(false)
+                            })
+                            .unwrap_or(false);
+                    if !migrated {
+                        tracing::warn!(
+                            "keyring write for {} could not be verified; keeping auth.json",
+                            provider
+                        );
+                        all_migrated = false;
                     }
                 }
             }
         }
     }
 
-    let backup = path.with_extension("json.bak");
-    if let Err(e) = std::fs::rename(path, &backup) {
-        tracing::debug!("could not rename legacy auth file: {}", e);
+    if all_migrated {
+        let backup = path.with_extension("json.bak");
+        if let Err(e) = std::fs::rename(path, &backup) {
+            tracing::debug!("could not rename legacy auth file: {}", e);
+        }
     }
 
     Ok(())
@@ -150,6 +199,8 @@ pub fn migrate_legacy_auth_from(path: &std::path::Path) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::store_trait::MockKeyringStore;
+    use secrecy::SecretString;
 
     #[test]
     fn mismatch_message_contains_only_lengths() {
@@ -174,11 +225,10 @@ mod tests {
         assert!(!msg.contains("preview"), "{msg}");
     }
 
-    /// Migrating a legacy `auth.json` must always rename it to `auth.json.bak`
-    /// so the plaintext secret no longer sits at the well-known path — even
-    /// when the keyring write fails (headless/CI host).
+    /// Migrating a legacy `auth.json` renames it to `auth.json.bak` once
+    /// every token landed in the keyring.
     #[test]
-    fn migrate_legacy_auth_from_renames_plaintext_file() {
+    fn migrate_legacy_auth_renames_file_after_successful_keyring_write() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("auth.json");
         std::fs::write(
@@ -187,11 +237,123 @@ mod tests {
         )
         .unwrap();
 
-        migrate_legacy_auth_from(&path).unwrap();
+        let store = MockKeyringStore::new();
+        migrate_legacy_auth_with(&path, &store).unwrap();
 
         assert!(!path.exists(), "plaintext auth.json must be moved away");
         let backup = path.with_extension("json.bak");
         assert!(backup.exists(), "backup at auth.json.bak must exist");
+        assert!(
+            store.get("openai").unwrap().is_some(),
+            "token must land in the keyring"
+        );
+        assert!(
+            store.get("anthropic").unwrap().is_none(),
+            "empty tokens are not migrated"
+        );
+    }
+
+    /// When the keyring write fails (headless/CI host), the plaintext file
+    /// must stay in place — it is the last copy of the credential, and
+    /// renaming it away would silently destroy the user's API key.
+    #[test]
+    fn migrate_legacy_auth_keeps_file_when_keyring_write_fails() {
+        struct FailingStore;
+        impl KeyringStore for FailingStore {
+            fn set(&self, _provider: &str, _token: &str) -> anyhow::Result<()> {
+                anyhow::bail!("keyring unavailable")
+            }
+            fn get(&self, _provider: &str) -> anyhow::Result<Option<SecretString>> {
+                Ok(None)
+            }
+            fn delete(&self, _provider: &str) -> anyhow::Result<()> {
+                Ok(())
+            }
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        std::fs::write(&path, r#"{"minimax":{"token":"sk-FAKEFAKEFAKEFAKE"}}"#).unwrap();
+
+        migrate_legacy_auth_with(&path, &FailingStore).unwrap();
+
+        assert!(
+            path.exists(),
+            "auth.json must stay when the keyring write failed"
+        );
+        assert!(
+            !path.with_extension("json.bak").exists(),
+            "no backup may be created on failed migration"
+        );
+    }
+
+    /// A keychain that accepts writes but silently loses them (set returns
+    /// Ok, get returns None — observed on macOS with a misconfigured default
+    /// keychain) must NOT trigger the rename: the plaintext file is the only
+    /// retrievable copy of the credential.
+    #[test]
+    fn migrate_legacy_auth_keeps_file_when_keyring_silently_loses_writes() {
+        struct SilentLossStore;
+        impl KeyringStore for SilentLossStore {
+            fn set(&self, _provider: &str, _token: &str) -> anyhow::Result<()> {
+                Ok(()) // write "succeeds"...
+            }
+            fn get(&self, _provider: &str) -> anyhow::Result<Option<SecretString>> {
+                Ok(None) // ...but nothing is retrievable
+            }
+            fn delete(&self, _provider: &str) -> anyhow::Result<()> {
+                Ok(())
+            }
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("auth.json");
+        std::fs::write(&path, r#"{"minimax":{"token":"sk-FAKEFAKEFAKEFAKE"}}"#).unwrap();
+
+        migrate_legacy_auth_with(&path, &SilentLossStore).unwrap();
+
+        assert!(
+            path.exists(),
+            "auth.json must stay when the keyring write cannot be verified"
+        );
+        assert!(
+            !path.with_extension("json.bak").exists(),
+            "no backup may be created when the keyring silently loses writes"
+        );
+    }
+
+    /// Every key-taking provider (per resources/models/*.yaml) must load —
+    /// a provider missing from the list bounces the user to Login on every
+    /// launch even though the token is stored.
+    #[test]
+    fn load_all_from_keyring_with_loads_all_supported_providers() {
+        let store = MockKeyringStore::new();
+        for provider in [
+            "deepseek",
+            "fireworks",
+            "minimax",
+            "moonshotai",
+            "openrouter",
+            "together",
+        ] {
+            store.set(provider, "sk-FAKE").unwrap();
+        }
+
+        let tokens = load_all_from_keyring_with(&store).unwrap();
+
+        for provider in [
+            "deepseek",
+            "fireworks",
+            "minimax",
+            "moonshotai",
+            "openrouter",
+            "together",
+        ] {
+            assert!(
+                tokens.contains_key(provider),
+                "{provider} must load from the keyring"
+            );
+        }
     }
 
     /// No legacy file is a clean no-op (no error, no backup created).

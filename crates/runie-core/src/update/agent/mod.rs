@@ -6,7 +6,7 @@ mod core;
 mod core_messages;
 mod model_config;
 mod scoped_models;
-mod thought;
+pub mod thought;
 
 pub use model_config::model_config_event;
 

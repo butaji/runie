@@ -68,7 +68,23 @@ impl StreamState {
     fn handle_event(&mut self, event: ProviderEvent) -> ControlFlow<Result<()>> {
         match event {
             ProviderEvent::TextDelta(delta) => self.on_text_delta(delta),
+            ProviderEvent::ThinkingStart { .. } => {
+                // Forward to the TUI: runie-core opens a Reasoning part on the
+                // assistant message, which later becomes the expandable
+                // thought post. Without these events the thought renders
+                // duration-only and the reasoning is lost.
+                (self.emit)(runie_core::Event::ThinkingStart {
+                    id: self.command_id.clone(),
+                });
+                ControlFlow::Continue(())
+            }
             ProviderEvent::ThinkingDelta(delta) => self.on_thinking_delta(delta),
+            ProviderEvent::ThinkingEnd { .. } => {
+                (self.emit)(runie_core::Event::ThinkingEnd {
+                    id: self.command_id.clone(),
+                });
+                ControlFlow::Continue(())
+            }
             ProviderEvent::ToolCallStart { id, name } => self.on_tool_start(id, name),
             ProviderEvent::ToolCallInputDelta { id, delta } => self.on_tool_input(id, delta),
             ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
@@ -95,6 +111,10 @@ impl StreamState {
         self.reasoning
             .get_or_insert_with(String::new)
             .push_str(&delta);
+        (self.emit)(runie_core::Event::ThinkingDelta {
+            id: self.command_id.clone(),
+            content: delta,
+        });
         ControlFlow::Continue(())
     }
 
@@ -394,6 +414,64 @@ mod tests {
 
         // Structured thinking should not appear in text output
         assert!(!result.text.contains("reasoning"));
+    }
+
+    /// Structured thinking must reach the TUI: runie-core turns
+    /// ThinkingStart/Delta/End events into the expandable thought post.
+    /// Swallowing them here (previously the case) left the thought
+    /// duration-only — a dead `[+]` affordance and lost reasoning.
+    #[tokio::test]
+    async fn thinking_events_are_forwarded_to_the_tui() {
+        let provider = TestProvider {
+            events: vec![
+                ProviderEvent::ThinkingStart { id: "reasoning".into() },
+                ProviderEvent::ThinkingDelta("Let me think".into()),
+                ProviderEvent::ThinkingDelta(" about this.".into()),
+                ProviderEvent::ThinkingEnd { id: "reasoning".into() },
+                ProviderEvent::TextDelta("The answer".into()),
+                ProviderEvent::Finish {
+                    reason: StopReason::Stop,
+                },
+            ],
+        };
+        let emitted: Arc<std::sync::Mutex<Vec<runie_core::Event>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let cap = emitted.clone();
+        let emit: EmitFn = Arc::new(move |e| cap.lock().unwrap().push(e));
+        let result = stream_response(
+            &provider,
+            "cmd",
+            &[],
+            vec![],
+            emit,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+        let events = emitted.lock().unwrap();
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, runie_core::Event::ThinkingStart { .. })),
+            "ThinkingStart must be forwarded: {events:?}"
+        );
+        let thinking: String = events
+            .iter()
+            .filter_map(|e| match e {
+                runie_core::Event::ThinkingDelta { content, .. } => Some(content.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(thinking, "Let me think about this.");
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, runie_core::Event::ThinkingEnd { .. })),
+            "ThinkingEnd must be forwarded: {events:?}"
+        );
+        // Reasoning still accumulates for the message history.
+        assert_eq!(result.reasoning.as_deref(), Some("Let me think about this."));
     }
 
     /// Layer 2: ThinkFilter flush at stream end handles unclosed block.

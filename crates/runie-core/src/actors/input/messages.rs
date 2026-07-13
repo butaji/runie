@@ -153,9 +153,11 @@ impl InputMsg {
                 }
             }
             InputMsg::Paste(text) => {
+                // Flatten line breaks to spaces (not "") so pasted multi-line
+                // text stays readable — mirrors AppState::paste.
                 let clean = text
-                    .replace("\r\n", "")
-                    .replace(['\r', '\n'], "")
+                    .replace("\r\n", " ")
+                    .replace(['\r', '\n'], " ")
                     .replace('\t', "    ");
                 if clean.is_empty() {
                     return;
@@ -244,12 +246,23 @@ impl InputMsg {
                     state.cursor_pos = pos;
                 }
             }
-            InputMsg::Submit { .. }
-            | InputMsg::SetText { .. }
-            | InputMsg::SetPrompt { .. }
-            | InputMsg::Clear => {
-                // These all clear input state. For Submit, the content is
-                // dispatched by UiActor directly (captured before sending).
+            InputMsg::Submit { content } => {
+                // The content is dispatched by UiActor directly (captured
+                // before sending); here we record it in the input history so
+                // HistoryPrev can recall messages sent in this session, then
+                // clear the input box like the other reset variants.
+                if !content.is_empty() && state.input_history.last() != Some(content) {
+                    state.input_history.push(content.clone());
+                }
+                state.input.clear();
+                state.cursor_pos = 0;
+                state.history_pos = None;
+                state.undo_stack.clear();
+                state.redo_stack.clear();
+                state.input_scroll = 0;
+            }
+            InputMsg::SetText { .. } | InputMsg::SetPrompt { .. } | InputMsg::Clear => {
+                // These all clear input state.
                 state.input.clear();
                 state.cursor_pos = 0;
                 state.history_pos = None;

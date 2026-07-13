@@ -17,14 +17,23 @@ impl LazyCache {
         let entries = Self::collect_entries(state);
         let mut entries = Self::group_context_tools(entries, state.view().all_collapsed);
         entries.sort_by(|a, b| {
-            a.timestamp()
-                .partial_cmp(&b.timestamp())
+            a.0.timestamp()
+                .partial_cmp(&b.0.timestamp())
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let mut feed = Feed::new();
-        for elem in entries.into_iter() {
+        for (elem, collapsible) in entries.into_iter() {
             let ts = elem.timestamp();
+            // Only agent thoughts/reasoning collapse to one-line summaries
+            // (grok parity). System messages (trust banner, /sessions,
+            // compaction summaries) reuse the thought element for styling
+            // but must always render in full.
+            let elem = if collapsible {
+                Self::maybe_collapse_thought(elem, state, feed.post_count())
+            } else {
+                elem
+            };
             let kind = Self::post_kind(&elem);
             let expanded = !matches!(
                 elem,
@@ -86,8 +95,11 @@ impl LazyCache {
             .unwrap_or_else(|| turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6))
     }
 
-    fn collect_entries(state: &AppState) -> Vec<Element> {
-        let mut entries: Vec<Element> = Vec::new();
+    /// Collect renderable entries. Each element carries a `collapsible`
+    /// flag: true only for agent thoughts and streamed reasoning (the
+    /// grok-style one-line summary applies to them exclusively).
+    fn collect_entries(state: &AppState) -> Vec<(Element, bool)> {
+        let mut entries: Vec<(Element, bool)> = Vec::new();
 
         for msg in state.session().messages.iter() {
             if Self::should_skip_msg(msg, state) {
@@ -98,42 +110,45 @@ impl LazyCache {
         }
 
         if let Some(started) = state.agent_state().thinking_started_at {
-            entries.push(Element::thinking(started).at(Self::thinking_timestamp(state)));
+            entries.push((
+                Element::thinking(started).at(Self::thinking_timestamp(state)),
+                false,
+            ));
         }
 
         entries
     }
 
-    fn group_context_tools(entries: Vec<Element>, collapsed: bool) -> Vec<Element> {
+    fn group_context_tools(entries: Vec<(Element, bool)>, collapsed: bool) -> Vec<(Element, bool)> {
         const CONTEXT_TOOLS: &[&str] = &["read_file", "list_dir", "grep", "find", "fetch_docs"];
         let mut out = Vec::with_capacity(entries.len());
         let mut group: Vec<Element> = Vec::new();
 
-        for elem in entries {
+        for (elem, collapsible) in entries {
             if Self::is_context_tool(&elem, CONTEXT_TOOLS) {
                 group.push(elem);
                 continue;
             }
             if !group.is_empty() {
-                out.extend(Self::flush_context_group(
-                    std::mem::take(&mut group),
-                    collapsed,
+                out.push((
+                    Self::flush_context_group(std::mem::take(&mut group), collapsed),
+                    false,
                 ));
             }
-            out.push(elem);
+            out.push((elem, collapsible));
         }
         if !group.is_empty() {
-            out.extend(Self::flush_context_group(group, collapsed));
+            out.push((Self::flush_context_group(group, collapsed), false));
         }
         out
     }
 
-    fn flush_context_group(group: Vec<Element>, collapsed: bool) -> Vec<Element> {
+    fn flush_context_group(group: Vec<Element>, collapsed: bool) -> Element {
         if group.len() > 1 {
             let ts = group.iter().map(|e| e.timestamp()).fold(0.0, f64::max);
-            vec![Element::context_group(group, collapsed).at(ts)]
+            Element::context_group(group, collapsed).at(ts)
         } else {
-            group
+            group.into_iter().next().unwrap()
         }
     }
 
@@ -169,27 +184,29 @@ impl LazyCache {
         &cache[start..end]
     }
 
-    fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Vec<Element> {
+    fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Vec<(Element, bool)> {
         let ts = msg.timestamp;
         match msg.role {
-            Role::User => vec![Element::user(msg.content()).at(ts)],
-            Role::Thought => vec![Self::thought_elem(msg, state, ts)],
+            Role::User => vec![(Element::user(msg.content()).at(ts), false)],
+            Role::Thought => vec![(Self::thought_elem(msg, state, ts), true)],
             Role::Assistant => Self::assistant_elems(msg, state, ts),
-            Role::Tool => vec![Self::tool_elem(msg, state, ts)],
+            Role::Tool => vec![(Self::tool_elem(msg, state, ts), false)],
             Role::TurnComplete => {
-                vec![Element::turn_complete(Self::parse_dur(&msg.content())).at(ts)]
+                vec![(Element::turn_complete(Self::parse_dur(&msg.content())).at(ts), false)]
             } // filtered in collect_entries
-            Role::System => vec![Element::thought(msg.content()).at(ts)],
+            // System messages (trust banner, /sessions, compaction summary)
+            // reuse the thought element for styling but are never collapsed.
+            Role::System => vec![(Element::thought(msg.content()).at(ts), false)],
         }
     }
 
-    fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<Element> {
+    fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<(Element, bool)> {
         if msg.parts.is_empty() {
-            return vec![Element::AgentMessage {
+            return vec![(Element::AgentMessage {
                 content: crate::update::strip_tool_markers(&msg.content()),
                 timestamp: ts,
                 provider: msg.provider.clone(),
-            }];
+            }, false)];
         }
 
         msg.parts
@@ -198,12 +215,12 @@ impl LazyCache {
             .collect()
     }
 
-    fn part_to_element(part: &Part, state: &AppState, ts: f64, provider: &str) -> Option<Element> {
+    fn part_to_element(part: &Part, state: &AppState, ts: f64, provider: &str) -> Option<(Element, bool)> {
         match part {
-            Part::Text { content } => Some(Self::text_elem(content, ts, provider)),
-            Part::Reasoning { content } => Some(Self::reasoning_elem(content, state, ts)),
-            Part::ToolCall { name, args, .. } => Some(Self::tool_call_elem(name, args, ts)),
-            Part::ToolResult { output, .. } => Some(Self::tool_result_elem(output, ts)),
+            Part::Text { content } => Some((Self::text_elem(content, ts, provider), false)),
+            Part::Reasoning { content } => Some((Self::reasoning_elem(content, state, ts), true)),
+            Part::ToolCall { name, args, .. } => Some((Self::tool_call_elem(name, args, ts), false)),
+            Part::ToolResult { output, .. } => Some((Self::tool_result_elem(output, ts), false)),
         }
     }
 
@@ -215,13 +232,11 @@ impl LazyCache {
         }
     }
 
-    fn reasoning_elem(content: &str, state: &AppState, ts: f64) -> Element {
-        if state.view().all_collapsed {
-            let first_line = content.lines().next().unwrap_or(content).to_owned();
-            Element::thought_summary(first_line, 0.0).at(ts)
-        } else {
-            Element::thought(content.to_owned()).at(ts)
-        }
+    fn reasoning_elem(content: &str, _state: &AppState, ts: f64) -> Element {
+        // Always emit the full body here; collapsing to a one-line summary
+        // happens per-post in `build()` so individually expanded posts can
+        // keep their reasoning visible.
+        Element::thought(content.to_owned()).at(ts)
     }
 
     fn tool_call_elem(name: &str, args: &serde_json::Value, ts: f64) -> Element {
@@ -233,23 +248,36 @@ impl LazyCache {
         Element::tool_done("tool", String::new(), 0.0, output, None, false).at(ts)
     }
 
-    fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
+    fn thought_elem(msg: &ChatMessage, _state: &AppState, ts: f64) -> Element {
         let content = msg.content();
         // Show "Thought for Xs" as a summary (like Grok does)
         if Self::is_duration_only_thought(&content) {
-            // Always show as summary, even when collapsed
-            return Element::thought_summary(
+            // Duration-only thoughts have no body: show the summary line
+            // without a (dead) expand affordance, even when collapsed.
+            return Element::thought_summary_static(
                 content.clone(),
                 Self::parse_thought_dur(&content),
             )
             .at(ts);
         }
-        if state.view().all_collapsed {
-            let first_line = content.lines().next().unwrap_or(&content).to_owned();
-            Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(ts)
-        } else {
-            Element::thought(content).at(ts)
+        // Full body here; `build()` collapses per-post as needed.
+        Element::thought(content).at(ts)
+    }
+
+    /// Collapse a full thought element to its one-line summary. Thoughts are
+    /// collapsed BY DEFAULT (grok parity: "Thinking Block — collapsed by
+    /// default, toggle with Ctrl+E"); a post individually expanded with
+    /// Enter in feed navigation keeps its full body.
+    fn maybe_collapse_thought(elem: Element, state: &AppState, post_index: usize) -> Element {
+        if state.view().expanded_posts.contains(&post_index) {
+            return elem;
         }
+        if let Element::ThoughtMarker { content, timestamp } = elem {
+            let first_line = content.lines().next().unwrap_or(&content).to_owned();
+            return Element::thought_summary(first_line, Self::parse_thought_dur(&content))
+                .at(timestamp);
+        }
+        elem
     }
 
     /// Check if the thought is just a duration marker like "Thought for 0.2s"

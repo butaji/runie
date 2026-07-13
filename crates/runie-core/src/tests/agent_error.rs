@@ -2,6 +2,23 @@
 //! turn so the UI does not show a stuck "Working..." status.
 
 use crate::model::{AppState, QueuedMessage, QueuedMessageKind};
+use crate::view::{Element, LazyCache};
+
+fn feed_elements(state: &AppState) -> Vec<Element> {
+    LazyCache::feed(state).elements
+}
+
+fn feed_has_error(state: &AppState, needle: &str) -> bool {
+    feed_elements(state).iter().any(|e| {
+        matches!(e, Element::AgentMessage { content, .. } if content.contains(needle))
+    })
+}
+
+fn feed_has_turn_complete(state: &AppState) -> bool {
+    feed_elements(state)
+        .iter()
+        .any(|e| matches!(e, Element::TurnComplete { .. }))
+}
 
 #[test]
 fn agent_error_clears_turn_active() {
@@ -134,5 +151,73 @@ fn agent_error_delivers_queued_messages() {
     assert_eq!(
         state.agent.request_queue.front().map(|(c, _)| c),
         Some(&"follow up".to_string())
+    );
+}
+
+/// Regression for the live MiniMax bug: a turn streamed reasoning (rendered
+/// as "◆ Thought for 2.2s"), the provider stream then failed, and the feed
+/// showed NOTHING afterwards — no error element, no completion marker —
+/// even though the turn was over (input box back, status idle).
+///
+/// The error must survive the full [reasoning → thought → error → done]
+/// event sequence as a visible feed element.
+#[test]
+fn agent_error_after_streamed_reasoning_stays_in_feed() {
+    let mut state = AppState::default();
+    state.apply_config(&crate::config::Config::default());
+    let id = "req.0".to_string();
+
+    // MiniMax-style turn: reasoning streams inside content deltas (the
+    // think filter holds it back, so no assistant message exists yet),
+    // then the stream fails — e.g. a 429 surfaced after reasoning.
+    state.update(crate::Event::Thinking { id: id.clone() });
+    state.update(crate::Event::ResponseDelta {
+        id: id.clone(),
+        content: "<think>analyzing the request".into(),
+    });
+    state.update(crate::Event::ThoughtDone { id: id.clone() });
+    state.update(crate::Event::Error {
+        id: id.clone(),
+        message: "Agent error: Rate limited".into(),
+    });
+    state.update(crate::Event::Done { id: id.clone() });
+
+    assert!(
+        feed_has_error(&state, "Error: Agent error: Rate limited"),
+        "error element must be visible in the feed; elements: {:?}",
+        feed_elements(&state)
+    );
+    // The turn is over: terminal state must reflect that.
+    assert!(!state.agent_state().streaming, "streaming must be cleared");
+    assert!(!state.agent_state().turn_active, "turn_active must be cleared");
+}
+
+/// Any turn that ends — success OR error — must leave a visible terminal
+/// marker in the feed: an error element and/or a "Turn completed" marker.
+#[test]
+fn errored_turn_leaves_terminal_marker_in_feed() {
+    let mut state = AppState::default();
+    state.apply_config(&crate::config::Config::default());
+    let id = "req.0".to_string();
+
+    state.update(crate::Event::Thinking { id: id.clone() });
+    state.update(crate::Event::Error {
+        id: id.clone(),
+        message: "Agent error: Rate limited".into(),
+    });
+    state.update(crate::Event::Done { id: id.clone() });
+
+    let has_error = feed_has_error(&state, "Error: Agent error: Rate limited");
+    let has_turn_complete = feed_has_turn_complete(&state);
+    assert!(
+        has_error || has_turn_complete,
+        "errored turn must leave a terminal marker (error element or Turn \
+         completed); elements: {:?}",
+        feed_elements(&state)
+    );
+    assert!(
+        has_error,
+        "the error itself must render as a feed element; elements: {:?}",
+        feed_elements(&state)
     );
 }

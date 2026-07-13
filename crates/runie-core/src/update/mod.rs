@@ -92,7 +92,7 @@ mod tests {
     }
 }
 
-mod agent;
+pub mod agent;
 pub(crate) mod command;
 pub mod dialog;
 pub(crate) mod dialog_input;

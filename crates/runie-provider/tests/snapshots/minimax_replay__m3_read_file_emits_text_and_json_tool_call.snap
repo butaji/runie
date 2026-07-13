@@ -15,9 +15,6 @@ expression: events
     ThinkingDelta(
         ". Looking at my tools, I have \"read_file\" available.\n\nLet me read the file.",
     ),
-    ThinkingDelta(
-        "\nThe user is asking me to read a file and quote its exact contents. I should use the read_file tool to do this. However, I notice the user mentioned a tool name \"read_file\" - I should use the correct tool name from my available tools. Looking at my tools, I have \"read_file\" available.\n\nLet me read the file.\n",
-    ),
     TextStart {
         id: "text",
     },

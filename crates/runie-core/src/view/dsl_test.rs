@@ -143,7 +143,9 @@ mod tests {
         match e {
             Element::UserMessage { .. } => "U",
             Element::AgentMessage { .. } => "A",
-            Element::ThoughtMarker { .. } => "T",
+            // Both thought forms (full marker and default one-line summary)
+            // are thought posts for ordering purposes.
+            Element::ThoughtMarker { .. } | Element::ThoughtSummary { .. } => "T",
             Element::Thinking { .. } => "I",
             Element::Spacer { .. } => "S",
             _ => "?",
@@ -389,7 +391,9 @@ mod tests {
         }
     }
 
-    /// `element_from_thought_chat_message` — ChatMessage with Role::Thought produces Element::ThoughtMarker.
+    /// `element_from_thought_chat_message` — ChatMessage with Role::Thought produces a
+    /// thought element: a one-line ThoughtSummary by default (grok parity),
+    /// expanding to the full ThoughtMarker when individually expanded.
     #[test]
     fn element_from_thought_chat_message() {
         let thought_msg = ChatMessage {
@@ -405,23 +409,27 @@ mod tests {
         let mut state = AppState::default();
         state.session.messages.push(thought_msg);
 
+        // Default: collapsed one-line summary carrying the first line and ts.
         let elements = LazyCache::rebuild(&state);
-
-        let thought_elements: Vec<_> = elements
+        let summaries: Vec<_> = elements
             .iter()
-            .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
+            .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
             .collect();
-
-        assert_eq!(
-            thought_elements.len(),
-            1,
-            "Expected exactly one ThoughtMarker element"
-        );
-        if let Element::ThoughtMarker { content, timestamp } = thought_elements[0] {
+        assert_eq!(summaries.len(), 1, "Expected exactly one ThoughtSummary");
+        if let Element::ThoughtSummary { content, timestamp, .. } = summaries[0] {
             assert_eq!(content, "Let me think about this 2.0s");
             assert_eq!(*timestamp, 4.0);
         } else {
-            panic!("Expected ThoughtMarker element");
+            panic!("Expected ThoughtSummary element");
         }
+
+        // Individually expanded: full marker with the complete body.
+        state.view_mut().expanded_posts.insert(0);
+        let elements = LazyCache::rebuild(&state);
+        let markers: Vec<_> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
+            .collect();
+        assert_eq!(markers.len(), 1, "expanded thought must render full body");
     }
 }

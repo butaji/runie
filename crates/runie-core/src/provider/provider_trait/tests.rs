@@ -25,6 +25,32 @@ fn typed_error_display_rate_limit() {
     assert!(!err.is_fatal());
 }
 
+/// Live-verified bug: a MiniMax HTTP 429 rendered as
+/// "Rate limited (retry after Nones)" — the `Option` debug format leaked
+/// into user-facing text. Without a retry-after hint the parenthetical
+/// must be omitted entirely; the error kind/severity must stay intact.
+#[test]
+fn rate_limit_display_without_retry_after_omits_parenthetical() {
+    let err = ProviderError::RateLimit {
+        retry_after_secs: None,
+    };
+    let msg = err.to_string();
+    assert_eq!(msg, "Rate limited", "unexpected rendering: {msg}");
+    assert!(!msg.contains("None"), "Option debug leaked into display: {msg}");
+    assert!(err.is_retryable(), "error kind must stay retryable");
+    assert!(!err.is_fatal());
+}
+
+#[test]
+fn rate_limit_display_with_retry_after_shows_seconds() {
+    let err = ProviderError::RateLimit {
+        retry_after_secs: Some(5),
+    };
+    let msg = err.to_string();
+    assert_eq!(msg, "Rate limited (retry after 5s)", "{msg}");
+    assert!(err.is_retryable());
+}
+
 #[test]
 fn typed_error_display_network() {
     let err = ProviderError::Network("connection refused".to_string());

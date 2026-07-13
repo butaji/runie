@@ -20,9 +20,6 @@ expression: events
         id: "call_def456",
         delta: "{\"path\": \"README.md\"}",
     },
-    ThinkingDelta(
-        "\nThe user wants me to list project files and then read the README.md file. I've already listed the directory. Now I need to read the README.md file.\n",
-    ),
     ToolCallEnd {
         id: "call_def456",
     },

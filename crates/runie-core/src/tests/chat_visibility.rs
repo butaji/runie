@@ -250,10 +250,15 @@ fn add_huge_thought(state: &mut AppState) {
 
 fn verify_thought_visible(state: &mut AppState, height: usize) {
     let region = crate::tests::visible_helper::compute_viewport(state, height);
-    let has_thought = region
-        .elements
-        .iter()
-        .any(|e| matches!(e, crate::view::Element::ThoughtMarker { .. }));
+    // A thought renders as a one-line summary by default (grok parity);
+    // either form counts as visible.
+    let has_thought = region.elements.iter().any(|e| {
+        matches!(
+            e,
+            crate::view::Element::ThoughtMarker { .. }
+                | crate::view::Element::ThoughtSummary { .. }
+        )
+    });
     assert!(has_thought, "Thought must be visible after overflow");
 
     let thought_texts: Vec<String> = region

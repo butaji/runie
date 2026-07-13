@@ -78,10 +78,20 @@ impl AppState {
     ///
     /// This counter is separate from TurnActor's `next_id` to avoid double-increment.
     /// AppState generates IDs for session messages; TurnActor generates IDs for
-    /// request queue messages. These are independent.
+    /// request queue messages. These are independent — so delivered
+    /// steering/follow-up messages (ids from the TurnActor's counter) and
+    /// replayed sessions can leave the session holding ids this counter has not
+    /// reached yet. Skip any id already present in the session: reissuing one
+    /// makes `apply_user_message_submitted` drop the new message as a
+    /// "duplicate" and routes the turn's response to the older message.
     pub fn next_id(&mut self) -> String {
-        let id = format!("req.{}", self.session_msg_id);
-        self.session_msg_id += 1;
+        let mut n = self.session_msg_id;
+        let mut id = format!("req.{n}");
+        while self.session().messages.iter().any(|m| m.id == id) {
+            n += 1;
+            id = format!("req.{n}");
+        }
+        self.session_msg_id = n + 1;
         id
     }
 

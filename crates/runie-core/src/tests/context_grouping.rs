@@ -150,9 +150,13 @@ fn assistant_parts_render_into_elements() {
     assert!(elems.iter().any(
         |e| matches!(e, Element::AgentMessage { content, .. } if content == "Let me search.")
     ));
-    assert!(elems.iter().any(
-        |e| matches!(e, Element::ThoughtMarker { content, .. } if content == "I need files first.")
-    ));
+    // Reasoning renders as a thought element: a one-line summary by default
+    // (grok parity); single-line reasoning keeps its full text in the summary.
+    assert!(elems.iter().any(|e| matches!(
+        e,
+        Element::ThoughtSummary { content, .. } | Element::ThoughtMarker { content, .. }
+        if content == "I need files first."
+    )));
     assert!(elems
         .iter()
         .any(|e| matches!(e, Element::ToolDone { name, .. } if name == "list_dir")));

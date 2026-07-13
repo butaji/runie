@@ -54,7 +54,10 @@ pub enum ProviderError {
     #[error("Configuration not loaded")]
     ConfigNotLoaded,
     /// Rate limit hit — retry info available via struct fields.
-    #[error("Rate limited (retry after {retry_after_secs:?}s)")]
+    #[error(
+        "Rate limited{}",
+        .retry_after_secs.map(|s| format!(" (retry after {s}s)")).unwrap_or_default()
+    )]
     RateLimit { retry_after_secs: Option<u32> },
     /// Network connectivity error (connection refused, DNS failure, etc.).
     #[error("Network error: {0}")]
