@@ -139,12 +139,20 @@ impl AppState {
 
     /// Braille spinner frame (6-frame cycle) using throbber BRAILLE_SIX symbols
     /// from `crate::labels::BRAILLE_SIX`.
-    /// Uses forward indexing matching the Throbber widget.
+    ///
+    /// Wall-clock driven when the turn has a start time (~120ms per frame,
+    /// grok cadence — GROK.md §24): the frame derives from elapsed time so the
+    /// cadence is independent of the render rate. Falls back to the animation
+    /// tick counter when no turn is running (tests, idle previews).
     pub fn spinner_frame(&self) -> char {
         use crate::labels::BRAILLE_SIX;
-        const FRAMES: u32 = 6;
-        let m = self.view().animation_frame % FRAMES;
-        BRAILLE_SIX[m as usize]
+        const FRAMES: u64 = 6;
+        const FRAME_MS: f64 = 120.0;
+        let idx = match self.turn_elapsed_secs() {
+            Some(elapsed) => ((elapsed * 1000.0 / FRAME_MS) as u64) % FRAMES,
+            None => u64::from(self.view().animation_frame % FRAMES as u32),
+        };
+        BRAILLE_SIX[idx as usize]
     }
 
     // ── Session reset ──────────────────────────────────────────────────────

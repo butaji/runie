@@ -1,20 +1,21 @@
-//! Status bar rendering — left ( git/folder · Working... ) and right ( ↑1.2k ↓4.8k 42/s 12k/128k 12% ⛀ )
+//! Status bar rendering — left ( ⠋ · Working… 1.2s ) and right ( ↑1.2k ↓4.8k 42/s 12k/128k 12% ⛀ )
 
 use ratatui::{
     layout::{Constraint, Rect},
     widgets::Paragraph,
     Frame,
 };
-use throbber_widgets_tui::{symbols::throbber::BRAILLE_SIX, Throbber, ThrobberState};
 
 use crate::theme::{style_status_idle, style_timestamp};
 use crate::ui::{estimate_element_tokens, hstack};
+use runie_core::labels::format_elapsed_secs;
 use runie_core::Snapshot;
 use unicode_width::UnicodeWidthStr;
 
-/// Render the status bar. The spinner is rendered as a throbber widget overlay
-/// at the start of the left area, driven by the provided `ThrobberState`.
-pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect, throbber: &mut ThrobberState) {
+/// Render the status bar. The spinner comes from the snapshot (wall-clock
+/// driven in core), so it animates at a steady cadence regardless of render
+/// rate — the previous ThrobberState widget never advanced in production.
+pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     if !snap.has_models {
         return;
     }
@@ -23,25 +24,17 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect, throbber: &mut Throbbe
 
     let h = hstack(area, &[Constraint::Min(0), Constraint::Length(right_width)]);
 
-    render_left_with_throbber(f, snap, h[0], throbber);
+    render_left(f, snap, h[0]);
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
 }
 
-/// Render the left side of the status bar. The spinner uses the Throbber
-/// widget directly from throbber-widgets-tui, replacing the hand-rolled
-/// symbol-overlay approach. The spinner is only shown while a turn is active;
-/// when idle the left area shows only the git/folder status and badges.
-fn render_left_with_throbber(
-    f: &mut Frame,
-    snap: &Snapshot,
-    area: Rect,
-    throbber: &mut ThrobberState,
-) {
-    // Build text parts.
+/// Render the left side of the status bar. The spinner frame is taken from
+/// the snapshot and only shown while a turn is active; when idle the left
+/// area shows only the git/folder status and badges.
+fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let text_parts = build_left_text_parts(snap);
 
     if !snap.turn_active {
-        // Idle: no spinner, just the status text.
         let left_text = text_parts.join(" · ");
         f.render_widget(
             Paragraph::new(left_text).style(style_status_idle()),
@@ -50,28 +43,10 @@ fn render_left_with_throbber(
         return;
     }
 
-    // Split area: [spinner][status_text]
-    // Spinner takes 2 cells (symbol + trailing space), rest is text.
-    let spinner_width = 2;
-    let (spinner_area, text_area) = {
-        let splits = ratatui::layout::Layout::default()
-            .direction(ratatui::layout::Direction::Horizontal)
-            .constraints([Constraint::Length(spinner_width), Constraint::Min(0)])
-            .split(area);
-        (splits[0], splits[1])
-    };
-
-    // Render the throbber widget directly (no manual symbol extraction).
-    let throbber_widget = Throbber::default()
-        .throbber_set(BRAILLE_SIX)
-        .style(style_status_idle());
-    f.render_stateful_widget(throbber_widget, spinner_area, throbber);
-
-    // Render status text after the spinner.
-    let left_text = format!(" · {}", text_parts.join(" · "));
+    let left_text = format!("{} · {}", snap.spinner_frame, text_parts.join(" · "));
     f.render_widget(
         Paragraph::new(left_text).style(style_status_idle()),
-        text_area,
+        area,
     );
 }
 
@@ -107,20 +82,15 @@ fn push_git_or_folder(parts: &mut Vec<String>, snap: &Snapshot) {
     parts.push(git_or_folder);
 }
 
-/// Build the "Working..." status text without the spinner char (throbber overlays it).
+/// Build the "Working…" status text (spinner char comes from the snapshot).
 fn push_turn_status_text(parts: &mut Vec<String>, snap: &Snapshot) {
     if !snap.turn_active {
         return;
     }
     let text = if let Some(elapsed) = snap.turn_elapsed_secs {
-        // No spinner char — it's rendered by the throbber overlay.
-        if "Working".ends_with("ing") {
-            format!("Working... {:.1}s", elapsed)
-        } else {
-            format!("Working {:.1}s", elapsed)
-        }
+        format!("Working… {}", format_elapsed_secs(elapsed))
     } else {
-        "Working...".to_owned()
+        "Working…".to_owned()
     };
     let mut full = text;
     if snap.queue_count > 0 {

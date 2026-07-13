@@ -499,12 +499,7 @@ impl TuiRuntime {
         }));
 
         // Spawn test render loop
-        let throbber = std::sync::Arc::new(parking_lot::Mutex::new(
-            throbber_widgets_tui::ThrobberState::default(),
-        ));
-        handles.spawn(tokio::spawn(test_render_loop(
-            terminal, render_rx, throbber,
-        )));
+        handles.spawn(tokio::spawn(test_render_loop(terminal, render_rx)));
 
         // Feed keystrokes - convert to runie_core events and send to input forwarder
         let user_bindings = state_for_keys.config().keybindings().clone();
@@ -643,9 +638,6 @@ async fn async_render_loop(
     caps: terminal::caps::TermCaps,
 ) {
     let mut last_size: Option<(u16, u16)> = None;
-    let throbber = std::sync::Arc::new(parking_lot::Mutex::new(
-        throbber_widgets_tui::ThrobberState::default(),
-    ));
     let term = std::sync::Arc::new(parking_lot::Mutex::new(RenderTerminal { inner: terminal }));
 
     loop {
@@ -679,12 +671,10 @@ async fn async_render_loop(
         theme::set_current_theme_with_caps(&snap.theme_name, caps);
 
         let term_clone = Arc::clone(&term);
-        let throbber_clone = Arc::clone(&throbber);
         let snap = snap;
         let _ = tokio::task::spawn_blocking(move || {
             let mut term_guard = term_clone.lock();
-            let mut throbber_guard = throbber_clone.lock();
-            term_guard.draw(|f| ui::draw_snapshot(f, &snap, &mut throbber_guard))
+            term_guard.draw(|f| ui::draw_snapshot(f, &snap))
         })
         .await;
     }
@@ -694,12 +684,11 @@ async fn async_render_loop(
 async fn test_render_loop(
     mut terminal: ratatui::Terminal<TestBackend>,
     mut render_rx: watch::Receiver<Snapshot>,
-    throbber: Arc<parking_lot::Mutex<throbber_widgets_tui::ThrobberState>>,
 ) {
     while let Ok(()) = render_rx.changed().await {
         let snap = render_rx.borrow().clone();
         let _ = terminal.draw(|f| {
-            ui::draw_snapshot(f, &snap, &mut throbber.lock());
+            ui::draw_snapshot(f, &snap);
         });
     }
 }

@@ -219,8 +219,13 @@ fn test_render_thinking_indicator() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("◐"),
-        "Thinking should show spinner ◐. Got: {}",
+        content.contains("Waiting for response…"),
+        "Thinking should show the grok waiting wording. Got: {}",
+        content
+    );
+    assert!(
+        runie_core::labels::BRAILLE_SIX.iter().any(|g| content.contains(*g)),
+        "Thinking should show an animated braille spinner frame. Got: {}",
         content
     );
 }

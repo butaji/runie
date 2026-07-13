@@ -16,17 +16,11 @@ fn has_content(elem: &Element, text: &str) -> bool {
     }
 }
 
-fn render_snapshot(snap: &Snapshot, animation_frame: u32) -> String {
+fn render_snapshot(snap: &Snapshot, _animation_frame: u32) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
-    // Sync throbber index to the animation frame from AppState.
-    let frame_idx = (animation_frame % 6) as i8;
-    if frame_idx != 0 {
-        throbber.calc_step(frame_idx);
-    }
     terminal
-        .draw(|f| draw_snapshot(f, snap, &mut throbber))
+        .draw(|f| draw_snapshot(f, snap))
         .unwrap();
     terminal
         .backend()
@@ -140,9 +134,8 @@ fn render_actor_does_not_need_mutable_state() {
     // draw_snapshot takes &Snapshot + &mut ThrobberState
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .draw(|f| draw_snapshot(f, &snap))
         .unwrap();
 
     let buf = terminal.backend().buffer();
@@ -248,9 +241,8 @@ fn response_delta_renders_in_feed() {
     // Render and verify "hello" appears in the terminal output
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .draw(|f| draw_snapshot(f, &snap))
         .unwrap();
 
     let buf = terminal.backend().buffer();
@@ -291,9 +283,8 @@ fn response_delta_without_trailing_newline_renders_after_done() {
 
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .draw(|f| draw_snapshot(f, &snap))
         .unwrap();
 
     let buf = terminal.backend().buffer();
@@ -343,9 +334,8 @@ fn text_start_response_delta_done_renders_agent_text() {
     // Render and verify
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| draw_snapshot(f, &snap, &mut throbber))
+        .draw(|f| draw_snapshot(f, &snap))
         .unwrap();
 
     let buf = terminal.backend().buffer();
@@ -401,8 +391,7 @@ fn diagnostic_production_flow_elements() {
     // Render
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
-    terminal.draw(|f| draw_snapshot(f, &snap3, &mut throbber)).unwrap();
+    terminal.draw(|f| draw_snapshot(f, &snap3)).unwrap();
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
     eprintln!("RENDERED OUTPUT:\n{}", out);

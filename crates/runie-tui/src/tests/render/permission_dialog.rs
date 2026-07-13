@@ -86,9 +86,8 @@ fn renders_hosted_permission_panel() {
         ..Default::default()
     };
 
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| crate::ui::draw_snapshot(f, &snap, &mut throbber))
+        .draw(|f| crate::ui::draw_snapshot(f, &snap))
         .unwrap();
 
     let text = buffer_text(terminal.backend().buffer());
@@ -124,9 +123,8 @@ fn permission_dialog_buttons_never_wrap_mid_label() {
             ..Default::default()
         };
 
-        let mut throbber = throbber_widgets_tui::ThrobberState::default();
         terminal
-            .draw(|f| crate::ui::draw_snapshot(f, &snap, &mut throbber))
+            .draw(|f| crate::ui::draw_snapshot(f, &snap))
             .unwrap();
 
         let buf = terminal.backend().buffer();
@@ -165,9 +163,8 @@ fn fieldless_form_does_not_show_fill_in_hint() {
         ..Default::default()
     };
 
-    let mut throbber = throbber_widgets_tui::ThrobberState::default();
     terminal
-        .draw(|f| crate::ui::draw_snapshot(f, &snap, &mut throbber))
+        .draw(|f| crate::ui::draw_snapshot(f, &snap))
         .unwrap();
 
     let text = buffer_text(terminal.backend().buffer());

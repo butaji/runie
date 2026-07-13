@@ -96,6 +96,67 @@ fn status_timer_updates_over_time() {
 }
 
 #[test]
+fn status_bar_renders_snapshot_spinner_frame_directly() {
+    // Regression: the production draw path rendered a frozen ThrobberState
+    // (calc_next was never called). The status bar must render the snapshot's
+    // wall-clock spinner frame instead.
+    let snap = runie_core::Snapshot {
+        has_models: true,
+        turn_active: true,
+        provider: "mock".into(),
+        model: "echo".into(),
+        spinner_frame: '⠟',
+        ..Default::default()
+    };
+    let backend = TestBackend::new(60, 12);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    terminal
+        .draw(|f| crate::ui::draw_snapshot(f, &snap))
+        .expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(
+        content.contains('⠟'),
+        "status bar must render the snapshot spinner frame, got: {content}"
+    );
+}
+
+#[test]
+fn status_line_uses_single_ellipsis_glyph() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
+    state.ensure_fresh();
+
+    let out = render_status(&mut state);
+    assert!(
+        out.contains("Working…"),
+        "Status must use the single … glyph (grok parity), got: {out}"
+    );
+    assert!(
+        !out.contains("Working..."),
+        "Status must not use three ASCII dots, got: {out}"
+    );
+}
+
+#[test]
+fn status_line_timer_drops_decimals_at_ten_seconds() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    state.agent.turn_active = true;
+    state.agent.turn_started_at =
+        Some(std::time::Instant::now() - std::time::Duration::from_secs(24));
+    state.ensure_fresh();
+
+    let out = render_status(&mut state);
+    assert!(
+        out.contains("24s") && !out.contains("24.0"),
+        "≥10s timer must drop the decimal (grok parity), got: {out}"
+    );
+}
+
+#[test]
 fn status_line_hides_working_after_provider_error() {
     let mut state = AppState::default();
     connect_model(&mut state);

@@ -264,6 +264,49 @@ fn glyph_download_is_correct() {
     assert_eq!(GLYPH_DOWNLOAD, "⇣");
 }
 
+/// The thinking/waiting line must use an animated braille spinner (not the
+/// static ◐), the grok wording with a single `…` glyph, and grok's timer
+/// format: one decimal below 10s, integer at ≥10s. See GROK.md §24.
+#[test]
+fn thinking_line_matches_grok_waiting_row() {
+    let line = crate::theme::thinking_line(0.4);
+    assert!(
+        runie_core::labels::BRAILLE_SIX.iter().any(|g| line.contains(*g)),
+        "thinking line must carry a braille spinner frame, got: {line}"
+    );
+    assert!(
+        line.contains("Waiting for response…"),
+        "thinking line must use grok wording, got: {line}"
+    );
+    assert!(line.contains("0.4s"), "sub-10s timer keeps a decimal: {line}");
+    assert!(!line.contains('◐'), "static ◐ is gone: {line}");
+    assert!(
+        line.starts_with(runie_core::layout::GLYPH_AGENT),
+        "feed row keeps the agent glyph prefix: {line}"
+    );
+    assert!(
+        !line.contains("  "),
+        "no double space after the agent glyph (GLYPH_AGENT includes its own): {line}"
+    );
+
+    let line = crate::theme::thinking_line(24.0);
+    assert!(
+        line.contains("24s") && !line.contains("24.0"),
+        "≥10s timer drops the decimal: {line}"
+    );
+}
+
+/// The waiting-row spinner is wall-clock driven: different elapsed buckets
+/// yield different braille frames (~120ms per frame).
+#[test]
+fn thinking_line_spinner_advances_with_elapsed() {
+    let early = crate::theme::thinking_line(0.3); // bucket 2
+    let late = crate::theme::thinking_line(1.26); // bucket 10 → 10 % 6 = 4
+    assert_ne!(early, late);
+    assert!(early.contains(runie_core::labels::BRAILLE_SIX[2]));
+    assert!(late.contains(runie_core::labels::BRAILLE_SIX[4]));
+}
+
 /// Verifies that all box drawing glyphs have correct values.
 #[test]
 fn glyph_box_drawing_constants_are_correct() {

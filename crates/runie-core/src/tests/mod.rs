@@ -139,6 +139,8 @@ mod tool_truncation;
 #[cfg(test)]
 mod transient;
 #[cfg(test)]
+mod turn_animation;
+#[cfg(test)]
 mod turn_complete_order;
 #[cfg(test)]
 mod turn_complete_visibility;

@@ -9,6 +9,16 @@ pub fn format_timestamp(unix_secs: f64) -> String {
     datetime.format("%-I:%M %p").to_string()
 }
 
+/// Format an elapsed duration the way grok does (GROK.md §24): one decimal
+/// below 10 seconds (`0.4s`, `9.9s`), integer seconds at ≥10s (`24s`).
+pub fn format_elapsed_secs(secs: f64) -> String {
+    if secs < 10.0 {
+        format!("{:.1}s", secs)
+    } else {
+        format!("{:.0}s", secs)
+    }
+}
+
 // Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
 

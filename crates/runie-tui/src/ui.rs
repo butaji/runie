@@ -13,7 +13,6 @@ use ratatui::{
     Frame,
 };
 use runie_core::Snapshot;
-use throbber_widgets_tui::ThrobberState;
 
 use crate::theme::color_bg;
 
@@ -33,9 +32,7 @@ pub(crate) use layout::hstack;
 pub(crate) use messages::estimate_element_tokens;
 
 /// Draw a Snapshot to the terminal.
-/// The throbber state drives the animated spinner; pass a mutable ThrobberState
-/// that is advanced on each call.
-pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot, throbber: &mut ThrobberState) {
+pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let full_area = f.area();
     f.buffer_mut()
         .set_style(full_area, Style::default().bg(color_bg()));
@@ -51,7 +48,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot, throbber: &mut ThrobberStat
     messages::render_messages(f, snap, c[0]);
     if snap.has_models {
         // c[1] is the empty margin line — no rendering needed
-        crate::status_bar::render(f, snap, c[2], throbber);
+        crate::status_bar::render(f, snap, c[2]);
         input::input(f, snap, c[3]);
     }
     if snap.has_models {
@@ -92,12 +89,5 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
 pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
     state.ensure_fresh();
     let snap = state.snapshot();
-    // Initialize throbber state from the view animation frame.
-    // ThrobberState uses i8 index that wraps within the symbol set size.
-    let mut throbber = ThrobberState::default();
-    let raw_idx = (state.view().animation_frame % 6) as i8;
-    if raw_idx != 0 {
-        throbber.calc_step(raw_idx);
-    }
-    draw_snapshot(f, &snap, &mut throbber);
+    draw_snapshot(f, &snap);
 }

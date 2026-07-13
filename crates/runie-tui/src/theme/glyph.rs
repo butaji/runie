@@ -49,9 +49,22 @@ pub fn code_header_label(prefix: &str, lang: &str) -> String {
     }
 }
 
-/// Thinking indicator line.
+/// Thinking/waiting indicator line (grok parity — GROK.md §24).
+///
+/// `◆ ⠋ Waiting for response… 0.4s` — the braille frame is derived from the
+/// elapsed wall time (~120ms per frame), so the row animates at a steady
+/// cadence regardless of render rate. Timer: one decimal below 10s, integer
+/// at ≥10s.
 pub fn thinking_line(elapsed_secs: f64) -> String {
-    format!("{} {} {:.1}s", GLYPH_AGENT, GLYPH_THINKING, elapsed_secs)
+    use runie_core::labels::{format_elapsed_secs, BRAILLE_SIX};
+    const FRAME_MS: f64 = 120.0;
+    let idx = ((elapsed_secs * 1000.0 / FRAME_MS) as usize) % BRAILLE_SIX.len();
+    format!(
+        "{}{} Waiting for response… {}",
+        GLYPH_AGENT,
+        BRAILLE_SIX[idx],
+        format_elapsed_secs(elapsed_secs)
+    )
 }
 
 /// Tool running line.
