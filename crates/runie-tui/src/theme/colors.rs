@@ -25,7 +25,9 @@ pub fn color_bg_panel() -> Color {
     theme_color_fallback("bg.panel", Color::Reset)
 }
 pub fn color_bg_user() -> Color {
-    theme_color_fallback("bg.user", Color::Reset)
+    Color::from(crate::theme::styles::bg_user_color(
+        &crate::theme::current_theme(),
+    ))
 }
 pub fn color_fg() -> Color {
     theme_color("text.primary")
@@ -67,9 +69,30 @@ pub fn color_fg_bright() -> Color {
 }
 
 /// User message text color (grok parity: neutral light gray).
-/// Themes without `feed.user.fg` keep the legacy bright primary.
+/// Themes without `feed.user.fg` keep the legacy bright primary on dark
+/// themes; light themes use the plain primary so text keeps full contrast
+/// on the light card band.
 pub fn color_user_text() -> Color {
-    theme_color_fallback("feed.user.fg", color_fg_bright())
+    theme_color_fallback("feed.user.fg", default_user_text_color())
+}
+
+/// User text fallback: brightened primary on dark themes, plain primary on
+/// light themes (brightening would wash out contrast on a light card).
+fn default_user_text_color() -> Color {
+    let theme = crate::theme::current_theme();
+    let primary = theme.color("text.primary");
+    let is_light = theme
+        .try_color("bg.base")
+        .map(|b| {
+            0.299 * f32::from(b.r) + 0.587 * f32::from(b.g) + 0.114 * f32::from(b.b) > 128.0
+        })
+        .unwrap_or(false);
+    let c = if is_light {
+        primary
+    } else {
+        primary.lighten(0.3)
+    };
+    Color::Rgb(c.r, c.g, c.b)
 }
 
 /// Assistant answer text color (grok parity: neutral gray).

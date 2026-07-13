@@ -14,21 +14,41 @@ pub(crate) fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme
     theme
 }
 
+/// Resolve the user-card band color: the theme's `bg.user` token when it
+/// exists, otherwise a shade derived from `bg.base` — slightly darker on
+/// light themes, slightly lighter on dark themes — so builtin themes
+/// without the token get a visible, theme-appropriate band instead of the
+/// opaline missing-token fallback gray.
+pub(crate) fn bg_user_color(theme: &opaline::Theme) -> opaline::OpalineColor {
+    if let Some(c) = theme.try_color("bg.user") {
+        return c;
+    }
+    let base = theme
+        .try_color("bg.base")
+        .unwrap_or(opaline::OpalineColor::FALLBACK);
+    let lum =
+        0.299 * f32::from(base.r) + 0.587 * f32::from(base.g) + 0.114 * f32::from(base.b);
+    if lum > 128.0 {
+        base.darken(0.06)
+    } else {
+        base.lighten(0.06)
+    }
+}
+
 fn register_chat_styles(theme: &mut opaline::Theme) {
     let accent = theme.color("accent.primary");
     let fg = theme.color("text.primary");
     let dim = theme.color("text.dim");
-    let bg_user = theme.color("bg.user");
+    let bg_user = bg_user_color(theme);
     // Feed tokens (grok parity): present in the dark runie theme; other
     // themes fall back to their own dim/muted equivalents so light mode
     // keeps its hues while sharing the same structural roles.
     let feed_dim = theme.try_color("feed.dim").unwrap_or(dim);
-    let feed_chevron = theme
-        .try_color("feed.chevron")
-        .unwrap_or_else(|| theme.color("text.muted"));
+    // The feed chevron uses the accent color, matching the input-box
+    // chevron; weight stays normal so the feed reads calmer than the prompt.
     theme.register_default_style(
         "runie.user",
-        opaline::OpalineStyle::fg(feed_chevron).with_bg(bg_user),
+        opaline::OpalineStyle::fg(accent).with_bg(bg_user),
     );
     theme.register_default_style("runie.user.chevron", opaline::OpalineStyle::fg(accent).bold());
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));

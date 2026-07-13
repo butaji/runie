@@ -15,6 +15,10 @@ pub const GLYPH_USER: &str = "❯ ";
 pub const GLYPH_AGENT: &str = "◆ ";
 /// Indented continuation glyph (must match `runie_tui::theme::GLYPH_INDENT`).
 pub const GLYPH_INDENT: &str = "     ";
+/// Leading indent prepended to every feed line by the TUI feed renderer
+/// (must match `runie_tui::theme::FEED_INDENT`). Combined with the 1-column
+/// terminal margin this places post content at column 3 (0-indexed).
+pub const FEED_INDENT: &str = "  ";
 
 /// Number of terminal rows an element renders to at the given viewport
 /// width. This uses the same wrapping rules as `runie_tui::ui::messages::to_lines`,
@@ -82,9 +86,10 @@ fn fallback_line_count(element: &Element) -> usize {
 }
 
 fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
-    // Matches the TUI render: 2 columns of right-side slack plus the
-    // 4-column feed indent prepend (see ui::messages::render_message_content).
-    let inner_width = width.saturating_sub(4);
+    // The caller passes area_width - 2 (right-side slack); subtract the
+    // leading feed indent the TUI prepends at render time (see
+    // ui::messages::render_message_content).
+    let inner_width = width.saturating_sub(FEED_INDENT.len() as u16);
     if inner_width == 0 {
         return content.lines().count().max(1) + 2;
     }
@@ -112,10 +117,10 @@ fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
 }
 
 fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
-    // Matches the TUI render: 2 columns of right-side slack plus the
-    // 4-column feed indent prepend. Plain answer lines carry no leading
-    // glyph, so prefix and continuation indents are zero.
-    let inner_width = width.saturating_sub(4);
+    // The caller passes area_width - 2 (right-side slack); subtract the
+    // leading feed indent. Plain answer lines carry no leading glyph, so
+    // prefix and continuation indents are zero.
+    let inner_width = width.saturating_sub(FEED_INDENT.len() as u16);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }
@@ -200,9 +205,9 @@ fn text_block_line_count(
 }
 
 fn thought_marker_line_count(content: &str, width: u16) -> usize {
-    // Matches the TUI render: 2 columns of right-side slack plus the
-    // 4-column feed indent prepend.
-    let inner_width = width.saturating_sub(4);
+    // The caller passes area_width - 2 (right-side slack); subtract the
+    // leading feed indent.
+    let inner_width = width.saturating_sub(FEED_INDENT.len() as u16);
     if inner_width == 0 {
         return content.lines().count().max(1);
     }

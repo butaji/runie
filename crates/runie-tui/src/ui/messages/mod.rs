@@ -34,7 +34,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
     // Reserve 2 columns of right-side slack plus the leading feed indent
     // (FEED_INDENT, prepended at render time) so post content lands at
-    // column 5 while timestamps keep their right edge.
+    // column 3 while timestamps keep their right edge.
     let content_width = area
         .width
         .saturating_sub(2 + crate::theme::FEED_INDENT.len() as u16);
@@ -54,7 +54,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 /// Render lines with user message backgrounds applied to the lines.
 ///
 /// Every line gets the leading feed indent (FEED_INDENT) prepended, so post
-/// content starts at column 5. User message rows additionally get the card
+/// content starts at column 3. User message rows additionally get the card
 /// band: the bg.user background painted from column 2 to width-2, leaving a
 /// two-column feed-background margin on each side (grok parity).
 fn render_paragraph_with_user_backgrounds(

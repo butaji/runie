@@ -1,6 +1,6 @@
 // Re-export from core so the layout helper and renderer always agree on
-// prefix widths.
-pub use runie_core::layout::{GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER};
+// prefix widths and the feed indent.
+pub use runie_core::layout::{FEED_INDENT, GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER};
 
 // Checkbox glyphs
 pub const GLYPH_CHECKED: &str = "[x]";
@@ -18,11 +18,6 @@ pub const GLYPH_FILTER: char = '❯'; // filter input prompt indicator
 pub const GLYPH_TOOL: &str = "◆ ";
 pub const GLYPH_BULLET: &str = "•";
 pub const GLYPH_DOWNLOAD: &str = "⇣"; // bytes transferred indicator
-
-/// Leading indent prepended to every feed line by the feed renderer.
-/// Combined with the 1-column terminal margin this places post content
-/// (glyphs and text) at column 5, matching the grok CLI feed layout.
-pub const FEED_INDENT: &str = "    ";
 
 // Spinner and indicator glyphs
 // throbber BRAILLE_SIX[5] = '⠋' — first frame of the braille spinner.

@@ -1,9 +1,11 @@
-//! Feed styling contract — 1:1 grok CLI parity (dark theme, SGR-verified).
+//! Feed styling contract — grok CLI-derived look (dark theme, SGR-verified).
 //!
 //! Pins the exact look of feed elements per the verified grok 0.2.87 dark-mode
 //! captures: user card (chevron, band, margins, text), thought/tool posts,
-//! assistant text, the turn-completed line, timestamps, 5-space indentation,
-//! and the (unchanged) orange selection gutter.
+//! assistant text, the turn-completed line, timestamps, 3-column content
+//! indent, and the (unchanged) orange selection gutter. Deviations from grok
+//! by explicit request: the feed chevron uses the accent color (matching the
+//! input-box chevron) and content sits 2 columns further left.
 
 use super::*;
 use crate::terminal::caps::{MouseCapability, TermCaps};
@@ -16,7 +18,6 @@ const FEED_DIM: Color = Color::Rgb(108, 108, 108);
 const USER_BG: Color = Color::Rgb(36, 36, 36);
 const USER_FG: Color = Color::Rgb(225, 225, 225);
 const AGENT_FG: Color = Color::Rgb(200, 200, 200);
-const CHEVRON_FG: Color = Color::Rgb(88, 88, 88);
 const ACCENT: Color = Color::Rgb(238, 105, 2);
 
 /// Pin the dark runie theme at truecolor so Rgb assertions are exact.
@@ -88,7 +89,7 @@ fn is_bold(buf: &ratatui::buffer::Buffer, x: u16, y: u16) -> bool {
 // ── User card ────────────────────────────────────────────────────────────────
 
 #[test]
-fn user_card_chevron_is_neutral_gray_normal_weight_inside_band() {
+fn user_card_chevron_matches_input_box_accent_inside_band() {
     let _guard = dark_theme();
     let mut state = AppState::default();
     add_message(&mut state, Role::User, "hello", 0.0, "req.0");
@@ -99,8 +100,8 @@ fn user_card_chevron_is_neutral_gray_normal_weight_inside_band() {
     let cell = &buf[(x, row)];
     assert_eq!(
         cell.style().fg,
-        Some(CHEVRON_FG),
-        "chevron must be neutral gray Rgb(88,88,88), got {:?}",
+        Some(ACCENT),
+        "chevron must use the accent color (same as the input-box chevron), got {:?}",
         cell.style().fg
     );
     assert!(
@@ -112,8 +113,8 @@ fn user_card_chevron_is_neutral_gray_normal_weight_inside_band() {
         Some(USER_BG),
         "chevron must sit inside the card band"
     );
-    // Grok geometry: 2-col margin + 3-space inner indent → chevron at col 5.
-    assert_eq!(x, 5, "chevron must sit at column 5");
+    // Geometry: 1-col terminal margin + 2-space feed indent → chevron at col 3.
+    assert_eq!(x, 3, "chevron must sit at column 3");
 }
 
 #[test]
@@ -175,8 +176,8 @@ fn user_text_is_light_gray_normal_weight() {
     );
     assert!(!is_bold(&buf, x, row), "user text must be normal weight");
     assert_eq!(cell.style().bg, Some(USER_BG), "user text sits in the band");
-    // Band starts col 2 + 3-space inner indent + "❯ " → text at col 7.
-    assert_eq!(x, 7, "user text must start at column 7");
+    // 1-col margin + 2-space feed indent + "❯ " → text at col 5.
+    assert_eq!(x, 5, "user text must start at column 5");
 }
 
 #[test]
@@ -224,7 +225,7 @@ fn thought_summary_is_dim_bold_thought_without_affordance() {
 
     let row = find_row(&buf, "Thought for").expect("thought summary row");
     let diamond = find_col(&buf, row, "◆").expect("thought diamond");
-    assert_eq!(diamond, 5, "thought glyph must sit at column 5");
+    assert_eq!(diamond, 3, "thought glyph must sit at column 3");
     assert_eq!(
         buf[(diamond, row)].style().fg,
         Some(FEED_DIM),
@@ -305,7 +306,7 @@ fn tool_done_post_is_dim_diamond_bold_name_no_duration() {
     );
 
     let diamond = find_col(&buf, row, "◆").expect("tool diamond");
-    assert_eq!(diamond, 5, "tool glyph must sit at column 5");
+    assert_eq!(diamond, 3, "tool glyph must sit at column 3");
     assert_eq!(
         buf[(diamond, row)].style().fg,
         Some(FEED_DIM),
@@ -341,7 +342,7 @@ fn tool_output_lines_are_dim_and_indented() {
     let buf = draw(&mut state, 60, 20);
     let row = find_row(&buf, "file1").expect("tool output row");
     let x = find_col(&buf, row, "f").expect("output text");
-    assert_eq!(x, 5, "tool output must align under the post at column 5");
+    assert_eq!(x, 3, "tool output must align under the post at column 3");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),
@@ -352,7 +353,7 @@ fn tool_output_lines_are_dim_and_indented() {
 // ── Assistant text ───────────────────────────────────────────────────────────
 
 #[test]
-fn assistant_text_has_no_glyph_five_space_indent_and_neutral_gray() {
+fn assistant_text_has_no_glyph_feed_indent_and_neutral_gray() {
     let _guard = dark_theme();
     let mut state = AppState::default();
     let mut msg = ChatMessage {
@@ -376,7 +377,7 @@ fn assistant_text_has_no_glyph_five_space_indent_and_neutral_gray() {
         "plain answer lines must not render the ◆ prefix: {text:?}"
     );
     let x = find_col(&buf, row, "H").expect("answer text");
-    assert_eq!(x, 5, "assistant text must start at column 5");
+    assert_eq!(x, 3, "assistant text must start at column 3");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(AGENT_FG),
@@ -418,11 +419,64 @@ fn turn_completed_line_is_dim_with_trailing_period() {
         "turn line must end with a period: {text:?}"
     );
     let x = find_col(&buf, row, "T").expect("turn text");
-    assert_eq!(x, 5, "turn line must start at column 5");
+    assert_eq!(x, 3, "turn line must start at column 3");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),
         "turn line must be dim Rgb(108,108,108)"
+    );
+}
+
+// ── Light theme ──────────────────────────────────────────────────────────────
+
+/// Pin a light builtin theme (catppuccin-latte) at truecolor so Rgb
+/// assertions are exact. Serializes via the global theme test lock.
+fn light_theme() -> std::sync::MutexGuard<'static, ()> {
+    let guard = crate::theme::test_lock();
+    crate::theme::set_current_theme_with_caps(
+        "catppuccin-latte",
+        TermCaps {
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
+    );
+    guard
+}
+
+#[test]
+fn light_theme_user_card_uses_derived_band_and_readable_text() {
+    let _guard = light_theme();
+    let mut state = AppState::default();
+    add_message(&mut state, Role::User, "hello", 0.0, "req.0");
+
+    let buf = draw(&mut state, 60, 20);
+    let row = find_row(&buf, "hello").expect("user row");
+    let x = find_col(&buf, row, "❯").expect("chevron cell");
+    let cell = &buf[(x, row)];
+
+    // Card band: derived from the light base (#eff1f5 darkened 0.06) — never
+    // the opaline missing-token fallback gray (128,128,128) and never Reset.
+    assert_eq!(
+        cell.style().bg,
+        Some(Color::Rgb(225, 227, 230)),
+        "light-theme card band must be the derived shade Rgb(225,227,230), got {:?}",
+        cell.style().bg
+    );
+    // Chevron matches the input-box chevron: the theme accent (latte mauve).
+    assert_eq!(
+        cell.style().fg,
+        Some(Color::Rgb(136, 57, 239)),
+        "light-theme chevron must be the latte accent #8839ef, got {:?}",
+        cell.style().fg
+    );
+    // User text keeps full contrast on the light card (unlightened primary).
+    let tx = find_col(&buf, row, "h").expect("text cell");
+    assert_eq!(
+        buf[(tx, row)].style().fg,
+        Some(Color::Rgb(76, 79, 105)),
+        "light-theme user text must be latte text.primary #4c4f69, got {:?}",
+        buf[(tx, row)].style().fg
     );
 }
 
