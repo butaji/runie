@@ -133,6 +133,21 @@ mod tests {
     }
 
     #[test]
+    fn parse_kimi_code_yaml() {
+        let yaml = include_str!("../../resources/models/kimi-code.yaml");
+        let provider: ProviderYaml = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(provider.key, "kimi-code");
+        assert_eq!(provider.base_url, "https://api.kimi.com/coding/v1");
+        assert_eq!(provider.env_var, "KIMI_API_KEY");
+        let names: Vec<&str> = provider.models.iter().map(|m| m.name.as_str()).collect();
+        assert_eq!(names, ["kimi-for-coding", "kimi-for-coding-highspeed"]);
+        for m in &provider.models {
+            assert_eq!(m.context_window, Some(262144));
+            assert!(m.supports_thinking, "{} is always-thinking", m.name);
+        }
+    }
+
+    #[test]
     fn all_provider_yaml_files_parse() {
         for (key, yaml) in provider_yaml_files() {
             let provider: ProviderYaml = serde_yaml::from_str(yaml).unwrap();

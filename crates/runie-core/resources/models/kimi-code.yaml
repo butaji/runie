@@ -1,0 +1,24 @@
+# Kimi Code (coding subscription) provider metadata.
+#
+# This is the Kimi coding-subscription endpoint used by Kimi Code CLI
+# (https://www.kimi.com/code/console), NOT the Moonshot platform API
+# (api.moonshot.cn — see moonshotai.yaml). Subscription keys (sk-k…) do
+# not work on the platform endpoint and platform keys do not work here.
+#
+# runie speaks OpenAI-compatible wire protocol: chat completions with
+# Bearer auth and an OpenAI-shaped /models listing. Both models are
+# always-thinking (the endpoint reports supports_thinking_type: "only");
+# reasoning streams via the reasoning_content delta field.
+key: kimi-code
+display_name: Kimi Code
+base_url: https://api.kimi.com/coding/v1
+env_var: KIMI_API_KEY
+models:
+  - name: kimi-for-coding
+    supports_thinking: true
+    supports_vision: true
+    context_window: 262144
+  - name: kimi-for-coding-highspeed
+    supports_thinking: true
+    supports_vision: true
+    context_window: 262144
