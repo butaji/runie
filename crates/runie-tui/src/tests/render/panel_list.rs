@@ -329,6 +329,40 @@ fn space_toggles_checkbox_render_state() {
 }
 
 #[test]
+fn filter_chevron_is_accent_without_user_card_background() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let panel = Panel::new("cmds", "Commands").item(
+        "quit Quit application",
+        runie_core::dialog::ItemAction::Close,
+    );
+    open_panel(&mut state, panel);
+
+    let buf = render(&mut state);
+    let r = content_rect();
+    let y = (r.y..r.y + r.height)
+        .find(|&y| (r.x..r.x + r.width).any(|x| buf[(x, y)].symbol() == "❯"))
+        .expect("filter prompt row");
+    let chevron_x = find_symbol_x(&buf, y, '❯').expect("filter chevron");
+    let card_bg = crate::theme::color_bg_user();
+
+    // No cell on the filter row may wear the user-card background.
+    for cx in r.x..r.x + r.width {
+        assert_ne!(
+            buf[(cx, y)].style().bg,
+            Some(card_bg),
+            "filter row must not wear the user-card background (col {cx})"
+        );
+    }
+    // The chevron itself uses the accent color, same as the input box.
+    assert_eq!(
+        buf[(chevron_x, y)].style().fg,
+        Some(color_accent()),
+        "filter chevron must use the accent color (same as the input box)"
+    );
+}
+
+#[test]
 fn popup_list_renders_selection() {
     // Verifies that the popup list renders the selected item with highlight style.
     // This produces the same visual output as a `List` widget with highlight style:

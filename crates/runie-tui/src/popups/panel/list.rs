@@ -10,9 +10,9 @@ use ratatui::{
 use runie_core::dialog::{Panel, PanelItem};
 
 use crate::theme::{
-    color_accent, color_bg, color_bg_panel, color_dim, style_hint, style_popup_unselected,
-    style_thinking, style_user, BOX_HORIZONTAL, GLYPH_CHECKED, GLYPH_FILTER, GLYPH_SELECTED,
-    GLYPH_UNCHECKED, GLYPH_UNSELECTED,
+    color_accent, color_bg, color_bg_panel, color_dim, style_chevron, style_hint,
+    style_popup_unselected, style_thinking, BOX_HORIZONTAL, GLYPH_CHECKED, GLYPH_FILTER,
+    GLYPH_SELECTED, GLYPH_UNCHECKED, GLYPH_UNSELECTED,
 };
 use crate::ui::{parse_hint_spans, render_scrollbar};
 
@@ -125,7 +125,12 @@ fn render_hotkeys(
 fn build_header(panel: &Panel, inner_w: usize) -> (Vec<Line<'_>>, u16) {
     let mut lines: Vec<Line> = Vec::new();
     if panel.filterable {
-        lines.push(Line::from(format!("{} {}", GLYPH_FILTER, panel.filter)).style(style_user()));
+        // Filter prompt: accent chevron matching the input box, filter text
+        // in the popup's normal style — never the user-card background here.
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} ", GLYPH_FILTER), style_chevron(true)),
+            Span::styled(panel.filter.clone(), style_popup_unselected()),
+        ]));
     }
     lines.push(Line::from(BOX_HORIZONTAL.to_string().repeat(inner_w)).style(style_hint()));
     let h = lines.len() as u16;
