@@ -73,6 +73,8 @@ mod input_multiline;
 #[cfg(test)]
 mod input_paste;
 #[cfg(test)]
+mod input_chips;
+#[cfg(test)]
 mod input_receiver;
 #[cfg(test)]
 mod input_scroll;

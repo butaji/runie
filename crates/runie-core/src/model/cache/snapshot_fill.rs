@@ -20,6 +20,9 @@ pub(crate) fn fill_snapshot_input(s: &mut Snapshot, state: &AppState) {
     let completion = state.completion();
     s.input = input.input.clone();
     s.cursor_pos = input.cursor_pos;
+    let (display, display_cursor) = input.display_view();
+    s.input_display = display;
+    s.cursor_display = display_cursor;
     s.hint_text = state.hint_text();
     s.placeholder = input.placeholder.clone();
     s.ghost_completion = input.ghost_completion.clone();

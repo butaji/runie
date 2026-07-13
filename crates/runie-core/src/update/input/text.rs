@@ -138,16 +138,14 @@ impl AppState {
     }
 
     pub(crate) fn paste(&mut self, text: &str) {
-        // Flatten line breaks to spaces (not "") so pasted multi-line text
-        // stays readable: "a\nb" must not become "ab".
-        let clean = text
-            .replace("\r\n", " ")
-            .replace(['\r', '\n'], " ")
-            .replace('\t', "    ");
-        if clean.is_empty() {
+        // Forward the raw text: the input actor normalizes CRLF/CR to LF and
+        // tabs to 4 spaces, keeps newlines (multi-line input), and records a
+        // `[Pasted: N lines]` chip for pastes of more than 3 lines (grok
+        // parity).
+        if text.is_empty() {
             return;
         }
-        try_send_input(self, crate::actors::InputMsg::Paste(clean));
+        try_send_input(self, crate::actors::InputMsg::Paste(text.to_owned()));
         self.handle_at_trigger();
         self.view_mut().dirty = true;
     }
@@ -206,7 +204,13 @@ impl AppState {
             let input = self.input();
             (input.input.clone(), input.cursor_pos)
         };
-        self.input_mut().file_picker_backup = Some((input_text, cursor, cursor, false));
+        // Match the UiActor trigger: the '@' is part of the backup text
+        // (production inserts it into the actor before the picker opens), so
+        // a pick yields "prefix @path" and Esc restores the typed "@".
+        let _ = cursor;
+        let new_input = format!("{}@", input_text);
+        let new_cursor = new_input.len();
+        self.input_mut().file_picker_backup = Some((new_input, new_cursor, new_cursor, false));
         crate::update::dialog::open_at_file_picker_all(self);
     }
 }

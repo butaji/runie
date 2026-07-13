@@ -44,6 +44,12 @@ pub struct Snapshot {
     pub total_lines: usize,
     pub input: String,
     pub cursor_pos: usize,
+    /// Rendered input text: labeled chips (e.g. `[Pasted: 4 lines]`) are
+    /// substituted for their buffer span. Falls back to `input` when no
+    /// labeled chips exist.
+    pub input_display: String,
+    /// Cursor position in `input_display` coordinates.
+    pub cursor_display: usize,
     pub hint_text: String,
     pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
     pub path_selected: Option<usize>,

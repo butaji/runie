@@ -72,10 +72,11 @@ fn restore_file_picker_backup(state: &mut AppState) {
     if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
         state.input_mut().input = input.clone();
         state.input_mut().cursor_pos = state.input().input.len();
+        let chips = state.input().chips.clone();
         if let Some(handles) = state.actor_handles() {
             let _ = handles
                 .input
-                .send_message(crate::actors::InputMsg::SetText { text: input });
+                .send_message(crate::actors::InputMsg::SetText { text: input, chips });
         }
     }
     state.input_mut().file_picker_range_suffix = None;

@@ -13,20 +13,20 @@ mod tests {
     }
 
     #[test]
-    fn paste_replaces_newlines_with_spaces() {
+    fn paste_preserves_newlines() {
         let mut state = AppState::default();
         state.update(crate::Event::Paste("line1\nline2".into()));
         assert_eq!(
-            state.input.input, "line1 line2",
-            "Newlines should be replaced with a space (not stripped) from paste"
+            state.input.input, "line1\nline2",
+            "Pasted newlines must be preserved (multi-line input), not flattened"
         );
     }
 
     #[test]
-    fn paste_replaces_carriage_returns_with_spaces() {
+    fn paste_normalizes_carriage_returns_to_newlines() {
         let mut state = AppState::default();
-        state.update(crate::Event::Paste("a\r\nb".into()));
-        assert_eq!(state.input.input, "a b", "CRLF should become a space");
+        state.update(crate::Event::Paste("a\r\nb\rc".into()));
+        assert_eq!(state.input.input, "a\nb\nc", "CRLF/CR should normalize to LF");
     }
 
     #[test]

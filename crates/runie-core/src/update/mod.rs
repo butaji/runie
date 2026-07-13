@@ -116,15 +116,23 @@ impl AppState {
     pub fn update(&mut self, event: Event) {
         if let Event::InputChanged { state } = event {
             // The InputActor owns text/cursor/history, but the file-picker
-            // backup and range suffix are projection-only dialog state the
-            // actor never sees. Preserve them across the wholesale replace,
-            // or the Clear echo (sent when the picker opens) wipes the typed
-            // prefix and the pick rewrites the whole input.
+            // backup, range suffix, and chips are projection-only dialog
+            // state the actor never sees. Preserve them across the wholesale
+            // replace, or the Clear echo (sent when the picker opens) wipes
+            // the typed prefix and the pick rewrites the whole input.
+            // Chips are only preserved while the picker window is open
+            // (backup present): outside it the actor is authoritative and
+            // its echoed chips (e.g. a fresh paste chip) must win.
             let picker_backup = self.input().file_picker_backup.clone();
             let range_suffix = self.input().file_picker_range_suffix.clone();
+            let chips = self.input().chips.clone();
+            let picker_open = picker_backup.is_some();
             *self.input_mut() = *state;
             self.input_mut().file_picker_backup = picker_backup;
             self.input_mut().file_picker_range_suffix = range_suffix;
+            if picker_open {
+                self.input_mut().chips = chips;
+            }
             return;
         }
         if let Event::ViewChanged { state } = event {

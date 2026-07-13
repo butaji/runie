@@ -189,8 +189,8 @@ fn at_ref_select_inserts_relative_path() {
     }
     state.update(crate::Event::Submit);
     assert_eq!(
-        state.input.input, "crates/runie-core/Cargo.toml",
-        "selection should insert the full relative path"
+        state.input.input, "@crates/runie-core/Cargo.toml ",
+        "selection should insert the full relative path with '@' and trailing space"
     );
     assert!(
         state.open_dialog.is_none(),

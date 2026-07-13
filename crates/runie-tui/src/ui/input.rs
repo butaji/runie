@@ -39,8 +39,10 @@ pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let title = format!(" {}/{} ", snap.provider, snap.model);
     let block = block_input(&title, snap.input_flash > 0);
 
-    // Build the input content based on whether it's empty or has content
-    if snap.input.is_empty() {
+    // Build the input content based on whether it's empty or has content.
+    // `input_display` is the render view: labeled chips (e.g.
+    // `[Pasted: 4 lines]`) replace their buffer span here.
+    if snap.input_display.is_empty() {
         // Empty input: show placeholder
         render_empty_input(f, snap, area, &block, token_held);
     } else {
@@ -105,7 +107,7 @@ fn render_input_content(
 
     // Build lines with chevron prefix for first line, indentation for others
     let lines: Vec<Line<'static>> = snap
-        .input
+        .input_display
         .lines()
         .enumerate()
         .map(|(idx, line_content)| {
@@ -120,7 +122,7 @@ fn render_input_content(
                 build_line_with_cursor_and_ghost_owned(
                     line_content,
                     prefix,
-                    snap.cursor_pos,
+                    snap.cursor_display,
                     snap.ghost_completion.clone().unwrap_or_default(),
                     chevron_style,
                     text_style,
@@ -148,11 +150,11 @@ fn render_input_content(
     // Add trailing cursor line if cursor is after last newline
     let mut all_lines = lines;
     let cursor_line_idx = input_cursor_line(snap);
-    let total_input_lines = snap.input.lines().count();
+    let total_input_lines = snap.input_display.lines().count();
     if cursor_line_idx >= total_input_lines {
         all_lines.push(build_trailing_cursor_line(
             &chevron_style,
-            snap.input.is_empty(),
+            snap.input_display.is_empty(),
             token_held,
         ));
     }
@@ -252,16 +254,19 @@ fn build_trailing_cursor_line(
 
 /// Calculate the line index where the cursor is positioned.
 fn input_cursor_line(snap: &Snapshot) -> usize {
-    let pos = snap.cursor_pos.min(snap.input.len());
-    snap.input[..pos].chars().filter(|&c| c == '\n').count()
+    let pos = snap.cursor_display.min(snap.input_display.len());
+    snap.input_display[..pos]
+        .chars()
+        .filter(|&c| c == '\n')
+        .count()
 }
 
 /// Calculate the column position within the current line.
 fn input_cursor_col_in_line(snap: &Snapshot) -> usize {
-    let pos = snap.cursor_pos.min(snap.input.len());
+    let pos = snap.cursor_display.min(snap.input_display.len());
     let line_idx = input_cursor_line(snap);
     pos - snap
-        .input
+        .input_display
         .lines()
         .take(line_idx)
         .map(|l| l.len() + 1)
@@ -308,31 +313,44 @@ mod tests {
     #[test]
     fn cursor_line_calculation() {
         let mut snap = Snapshot::default();
-        snap.input = "hello".to_string();
-        snap.cursor_pos = 2;
+        snap.input_display = "hello".to_string();
+        snap.cursor_display = 2;
         assert_eq!(input_cursor_line(&snap), 0);
 
-        snap.input = "line1\nline2".to_string();
-        snap.cursor_pos = 6; // at 'l' of line2
+        snap.input_display = "line1\nline2".to_string();
+        snap.cursor_display = 6; // at 'l' of line2
         assert_eq!(input_cursor_line(&snap), 1);
 
-        snap.cursor_pos = 7; // at 'i' of line2
+        snap.cursor_display = 7; // at 'i' of line2
         assert_eq!(input_cursor_line(&snap), 1);
     }
 
     #[test]
     fn cursor_col_in_line() {
         let mut snap = Snapshot::default();
-        snap.input = "hello".to_string();
-        snap.cursor_pos = 2;
+        snap.input_display = "hello".to_string();
+        snap.cursor_display = 2;
         assert_eq!(input_cursor_col_in_line(&snap), 2);
 
-        snap.input = "line1\nline2".to_string();
-        snap.cursor_pos = 6; // at 'l' of line2
+        snap.input_display = "line1\nline2".to_string();
+        snap.cursor_display = 6; // at 'l' of line2
         assert_eq!(input_cursor_col_in_line(&snap), 0);
 
-        snap.cursor_pos = 7; // at 'i' of line2
+        snap.cursor_display = 7; // at 'i' of line2
         assert_eq!(input_cursor_col_in_line(&snap), 1);
+    }
+
+    #[test]
+    fn cursor_helpers_use_display_coordinates() {
+        // A labeled chip shrinks the rendered text: cursor mapping must use
+        // display coordinates, not buffer coordinates.
+        let mut snap = Snapshot::default();
+        snap.input = "xa\nb\nc\nd".to_string();
+        snap.cursor_pos = 9;
+        snap.input_display = "x[Pasted: 4 lines]".to_string();
+        snap.cursor_display = "x[Pasted: 4 lines]".len();
+        assert_eq!(input_cursor_line(&snap), 0);
+        assert_eq!(input_cursor_col_in_line(&snap), 18);
     }
 
     #[test]

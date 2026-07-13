@@ -170,12 +170,10 @@ mod tests {
         drop(handle);
     }
 
-    /// Pasted multi-line text must flatten line breaks to spaces, never
-    /// delete them: "a\nb" must become "a b", not "ab". Regression: the
-    /// actor's Paste handler stripped newlines while AppState::paste
-    /// (the other entry point) flattened them to spaces.
+    /// Pasted multi-line text must preserve line breaks (multi-line input,
+    /// grok parity): "a\nb" stays "a\nb". CRLF normalizes to LF.
     #[tokio::test]
-    async fn paste_flattens_newlines_to_spaces() {
+    async fn paste_preserves_newlines() {
         let bus = EventBus::<Event>::new(16);
         let mut sub = bus.subscribe();
 
@@ -184,12 +182,12 @@ mod tests {
 
         let found = wait_for_event(
             &mut sub,
-            |e| matches!(e, Event::InputChanged { state } if state.input == "first second third"),
+            |e| matches!(e, Event::InputChanged { state } if state.input == "first\nsecond\nthird"),
         )
         .await;
         assert!(
             found,
-            "pasted newlines must become spaces: expected 'first second third'"
+            "pasted newlines must be preserved: expected 'first\\nsecond\\nthird'"
         );
 
         drop(handle);

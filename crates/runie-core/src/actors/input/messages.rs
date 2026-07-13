@@ -63,7 +63,10 @@ pub enum InputMsg {
     /// Submit content — clears input and publishes InputChanged.
     Submit { content: String },
     /// Replace all input text and reset cursor.
-    SetText { text: String },
+    SetText {
+        text: String,
+        chips: Vec<crate::model::InputChip>,
+    },
     /// Set the current prompt name.
     SetPrompt { name: String },
     /// Clear the input (reset text, cursor, undo/redo).
@@ -92,6 +95,7 @@ impl InputMsg {
         match self {
             InputMsg::InsertChar(c) => {
                 state.push_undo();
+                state.adjust_chips_for_replace(state.cursor_pos, state.cursor_pos, c.len_utf8());
                 if state.cursor_pos == state.input.len() {
                     state.input.push(*c);
                 } else {
@@ -103,14 +107,23 @@ impl InputMsg {
             InputMsg::Backspace => {
                 if state.cursor_pos > 0 {
                     state.push_undo();
-                    let new_pos = prev_grapheme_boundary(&state.input, state.cursor_pos);
-                    state.input.drain(new_pos..state.cursor_pos);
-                    state.cursor_pos = new_pos;
+                    if let Some(chip) = state.chip_at_cursor_end() {
+                        // Atomic delete: the whole chip goes in one press.
+                        state.input.drain(chip.start..chip.end);
+                        state.cursor_pos = chip.start;
+                        state.adjust_chips_for_replace(chip.start, chip.end, 0);
+                    } else {
+                        let new_pos = prev_grapheme_boundary(&state.input, state.cursor_pos);
+                        state.input.drain(new_pos..state.cursor_pos);
+                        state.adjust_chips_for_replace(new_pos, state.cursor_pos, 0);
+                        state.cursor_pos = new_pos;
+                    }
                     state.redo_stack.clear();
                 }
             }
             InputMsg::Newline => {
                 state.push_undo();
+                state.adjust_chips_for_replace(state.cursor_pos, state.cursor_pos, 1);
                 if state.cursor_pos == state.input.len() {
                     state.input.push('\n');
                 } else {
@@ -126,13 +139,16 @@ impl InputMsg {
                 let start = find_word_boundary_left(&state.input, state.cursor_pos);
                 state.push_undo();
                 state.input.drain(start..state.cursor_pos);
+                state.adjust_chips_for_replace(start, state.cursor_pos, 0);
                 state.cursor_pos = start;
                 state.redo_stack.clear();
             }
             InputMsg::DeleteToEnd => {
                 if state.cursor_pos < state.input.len() {
                     state.push_undo();
+                    let end = state.input.len();
                     state.input.truncate(state.cursor_pos);
+                    state.adjust_chips_for_replace(state.cursor_pos, end, 0);
                     state.redo_stack.clear();
                 }
             }
@@ -140,6 +156,7 @@ impl InputMsg {
                 if state.cursor_pos > 0 {
                     state.push_undo();
                     state.input.drain(..state.cursor_pos);
+                    state.adjust_chips_for_replace(0, state.cursor_pos, 0);
                     state.cursor_pos = 0;
                     state.redo_stack.clear();
                 }
@@ -149,23 +166,14 @@ impl InputMsg {
                     let end = next_grapheme_boundary(&state.input, state.cursor_pos);
                     state.push_undo();
                     state.input.drain(state.cursor_pos..end);
+                    state.adjust_chips_for_replace(state.cursor_pos, end, 0);
                     state.redo_stack.clear();
                 }
             }
             InputMsg::Paste(text) => {
-                // Flatten line breaks to spaces (not "") so pasted multi-line
-                // text stays readable — mirrors AppState::paste.
-                let clean = text
-                    .replace("\r\n", " ")
-                    .replace(['\r', '\n'], " ")
-                    .replace('\t', "    ");
-                if clean.is_empty() {
-                    return;
-                }
-                state.push_undo();
-                state.input.insert_str(state.cursor_pos, &clean);
-                state.cursor_pos += clean.len();
-                state.redo_stack.clear();
+                // Preserves newlines (multi-line input); >3 lines becomes a
+                // `[Pasted: N lines]` chip — grok parity.
+                state.insert_paste(text);
             }
             InputMsg::PasteImage => {
                 state.input_flash = 3;
@@ -212,6 +220,7 @@ impl InputMsg {
                 state.history_pos = Some(pos);
                 state.input = state.input_history[pos].clone();
                 state.cursor_pos = state.input.len();
+                state.chips.clear();
             }
             InputMsg::HistoryNext => {
                 let pos = match state.history_pos {
@@ -227,6 +236,7 @@ impl InputMsg {
                     state.input = state.input_history[pos].clone();
                     state.cursor_pos = state.input.len();
                 }
+                state.chips.clear();
             }
             InputMsg::Undo => {
                 if let Some((text, pos)) = state.undo_stack.pop() {
@@ -235,6 +245,7 @@ impl InputMsg {
                         .push((state.input.clone(), state.cursor_pos));
                     state.input = text;
                     state.cursor_pos = pos;
+                    state.chips.clear();
                 }
             }
             InputMsg::Redo => {
@@ -244,6 +255,7 @@ impl InputMsg {
                         .push((state.input.clone(), state.cursor_pos));
                     state.input = text;
                     state.cursor_pos = pos;
+                    state.chips.clear();
                 }
             }
             InputMsg::Submit { content } => {
@@ -260,8 +272,9 @@ impl InputMsg {
                 state.undo_stack.clear();
                 state.redo_stack.clear();
                 state.input_scroll = 0;
+                state.chips.clear();
             }
-            InputMsg::SetText { text } => {
+            InputMsg::SetText { text, chips } => {
                 // Full-content sync (e.g. after an @-ref pick): replace the
                 // text wholesale and put the cursor at the end.
                 state.input = text.clone();
@@ -270,6 +283,7 @@ impl InputMsg {
                 state.undo_stack.clear();
                 state.redo_stack.clear();
                 state.input_scroll = 0;
+                state.chips = chips.clone();
             }
             InputMsg::SetPrompt { .. } | InputMsg::Clear => {
                 // These all clear input state.
@@ -279,6 +293,7 @@ impl InputMsg {
                 state.undo_stack.clear();
                 state.redo_stack.clear();
                 state.input_scroll = 0;
+                state.chips.clear();
             }
             InputMsg::HistoryLoaded { entries } => {
                 state.input_history = entries.clone();
@@ -293,16 +308,24 @@ impl InputMsg {
                 }
                 if !combined.is_empty() {
                     state.push_undo();
+                    let append_at = state.input.len()
+                        + usize::from(!state.input.is_empty() && !state.input.ends_with('\n'));
                     if !state.input.is_empty() && !state.input.ends_with('\n') {
                         state.input.push('\n');
                     }
                     state.input.push_str(&combined);
+                    state.adjust_chips_for_replace(
+                        append_at,
+                        append_at,
+                        state.input.len() - append_at,
+                    );
                     state.cursor_pos = state.input.len();
                     state.redo_stack.clear();
                 }
             }
             InputMsg::InsertAtRef { text } => {
                 state.push_undo();
+                state.adjust_chips_for_replace(state.cursor_pos, state.cursor_pos, text.len());
                 state.input.insert_str(state.cursor_pos, text);
                 state.cursor_pos += text.len();
                 state.redo_stack.clear();
@@ -311,6 +334,7 @@ impl InputMsg {
                 if let Some((input, cursor, _, _)) = state.file_picker_backup.take() {
                     state.input = input;
                     state.cursor_pos = cursor;
+                    state.chips.clear();
                 }
             }
         }
@@ -331,6 +355,7 @@ mod tests {
         InputMsg::apply_to(
             &InputMsg::SetText {
                 text: "read @a.rs".to_owned(),
+                chips: Vec::new(),
             },
             &mut state,
         );
@@ -347,10 +372,62 @@ mod tests {
         InputMsg::apply_to(
             &InputMsg::SetText {
                 text: "new".to_owned(),
+                chips: Vec::new(),
             },
             &mut state,
         );
         assert_eq!(state.input, "new");
         assert_eq!(state.cursor_pos, 3);
+    }
+
+    /// `SetText` installs the carried chip spans (picked @-mentions sync
+    /// their atomic region to the actor this way).
+    #[test]
+    fn set_text_installs_chips() {
+        let mut state = crate::model::InputState::default();
+        let chip = crate::model::InputChip {
+            start: 5,
+            end: 10,
+            label: None,
+        };
+        InputMsg::apply_to(
+            &InputMsg::SetText {
+                text: "read @a.rs ".to_owned(),
+                chips: vec![chip.clone()],
+            },
+            &mut state,
+        );
+        assert_eq!(state.chips, vec![chip]);
+    }
+
+    /// Backspace exactly at a chip's end deletes the whole chip atomically;
+    /// anywhere else it is a normal char-wise delete.
+    #[test]
+    fn backspace_at_chip_end_is_atomic() {
+        let mut state = crate::model::InputState::default();
+        InputMsg::apply_to(
+            &InputMsg::Paste("l1\nl2\nl3\nl4".to_owned()),
+            &mut state,
+        );
+        assert_eq!(state.chips.len(), 1);
+        InputMsg::apply_to(&InputMsg::Backspace, &mut state);
+        assert_eq!(state.input, "");
+        assert!(state.chips.is_empty());
+        assert_eq!(state.cursor_pos, 0);
+    }
+
+    /// Editing inside a chip dissolves it: the delete is char-wise and the
+    /// remaining text is no longer atomic.
+    #[test]
+    fn backspace_inside_chip_dissolves_it() {
+        let mut state = crate::model::InputState::default();
+        InputMsg::apply_to(
+            &InputMsg::Paste("l1\nl2\nl3\nl4".to_owned()),
+            &mut state,
+        );
+        InputMsg::apply_to(&InputMsg::MoveCursor { pos: 2 }, &mut state);
+        InputMsg::apply_to(&InputMsg::Backspace, &mut state);
+        assert_eq!(state.input, "l\nl2\nl3\nl4");
+        assert!(state.chips.is_empty());
     }
 }

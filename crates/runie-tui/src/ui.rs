@@ -66,7 +66,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot, throbber: &mut ThrobberStat
 
 fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
     if snap.has_models {
-        let input_lines = count_input_lines(&snap.input);
+        let input_lines = count_input_lines(&snap.input_display);
         let input_height = (input_lines + 2).min(10) as u16;
         vec![
             Constraint::Min(3),

@@ -21,10 +21,10 @@ fn paste_at_end_appends_and_moves_cursor() {
 }
 
 #[test]
-fn paste_replaces_newlines_and_carriage_returns_with_spaces() {
+fn paste_preserves_newlines_and_normalizes_crlf() {
     let mut state = AppState::default();
     state.update(crate::Event::Paste("line1\r\nline2\nline3".into()));
-    assert_eq!(state.input.input, "line1 line2 line3");
+    assert_eq!(state.input.input, "line1\nline2\nline3");
 }
 
 #[test]
