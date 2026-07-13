@@ -39,6 +39,8 @@ pub struct SpawnedAgent {
     pub handle: Arc<dyn LeaderAgentHandle>,
     /// Join handle for the agent actor task.
     pub join: ractor::concurrency::JoinHandle<()>,
+    /// Actor cell, used to signal the agent to stop during leader shutdown.
+    pub cell: ractor::ActorCell,
 }
 
 /// Command passed from the leader to the agent actor.

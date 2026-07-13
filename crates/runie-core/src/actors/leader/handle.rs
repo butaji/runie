@@ -50,6 +50,7 @@ pub struct LeaderHandle {
     turn_cell: ractor::ActorCell,
     input_cell: ractor::ActorCell,
     fff_cell: ractor::ActorCell,
+    agent_cell: Option<ractor::ActorCell>,
     /// All actor join handles wrapped in Option so LeaderHandle can be Clone.
     /// Taken at shutdown time via mem::take.
     joins: Option<Vec<tokio::task::JoinHandle<()>>>,
@@ -88,6 +89,7 @@ impl LeaderHandle {
             turn_cell: handles.turn_cell,
             input_cell: handles.input_cell,
             fff_cell: handles.fff_cell,
+            agent_cell: handles.agent_cell,
             joins: Some(handles.all_joins),
             coordinator_join,
             tcp_join,
@@ -122,7 +124,12 @@ impl LeaderHandle {
         let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await;
         self.event_bus.publish(CoreEvent::Quit);
 
-        // Stop all actors (reverse spawn order: least dependent first).
+        // Stop all actors (reverse spawn order: least dependent first). The
+        // agent is stopped first: it depends on provider + permission and, if
+        // left running, its join handle blocks shutdown until the timeout.
+        if let Some(cell) = &self.agent_cell {
+            cell.stop(None);
+        }
         self.input_cell.stop(None);
         self.session_cell.stop(None);
         self.turn_cell.stop(None);
@@ -204,6 +211,7 @@ impl Clone for LeaderHandle {
             turn_cell: self.turn_cell.clone(),
             input_cell: self.input_cell.clone(),
             fff_cell: self.fff_cell.clone(),
+            agent_cell: self.agent_cell.clone(),
             joins: None,
             coordinator_join: None,
             tcp_join: None,

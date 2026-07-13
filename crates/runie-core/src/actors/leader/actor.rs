@@ -175,6 +175,7 @@ impl Leader {
         let SpawnedAgent {
             handle: agent_handle,
             join: agent_join,
+            cell: agent_cell,
         } = agent_factory
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
@@ -206,6 +207,7 @@ impl Leader {
             input: input_h,
             input_cell,
             agent: agent_handle,
+            agent_cell: Some(agent_cell),
             fff_indexer: fff_h,
             fff_cell,
             all_joins,
@@ -314,6 +316,9 @@ pub struct SpawnedHandles {
     pub input: RactorInputHandle,
     pub input_cell: ractor::ActorCell,
     pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
+    /// Agent actor cell. `Some` in production; `None` in the test helper, which
+    /// substitutes a no-op agent with no real actor to stop.
+    pub agent_cell: Option<ractor::ActorCell>,
     pub fff_indexer: RactorFffIndexerHandle,
     pub fff_cell: ractor::ActorCell,
     /// All actor join handles, collected for batch await during shutdown.

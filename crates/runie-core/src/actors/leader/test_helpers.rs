@@ -130,6 +130,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
             turn: turn_h,
             input: input_h,
             agent,
+            agent_cell: None,
             fff_indexer: fff_h,
             config_cell,
             provider_cell,

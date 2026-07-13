@@ -94,12 +94,13 @@ impl runie_core::actors::leader::AgentActorFactory for AgentActorFactoryImpl {
         >,
     > {
         Box::pin(async move {
-            let (handle, join, _cell) =
+            let (handle, join, cell) =
                 spawn_ractor_agent(bus, provider_handle, permission_handle).await?;
             Ok(runie_core::actors::leader::SpawnedAgent {
                 handle: std::sync::Arc::new(LeaderAgentHandleImpl::new(handle))
                     as std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle>,
                 join,
+                cell,
             })
         })
     }
