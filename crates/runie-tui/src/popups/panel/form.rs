@@ -41,11 +41,11 @@ pub(super) fn render_form(f: &mut Frame, panel: &Panel, root_closable: bool) {
     let inner_w = inner.width as usize;
 
     let hint_lines = hint_lines(panel, root_closable);
-    let button_line = build_button_line(panel, inner_w);
+    let button_lines = build_button_lines(panel, inner_w);
     let mut body = build_body(panel, inner_w);
 
-    // Reserve 1 line for buttons + 2 lines for hints
-    let body_h = inner_h.saturating_sub(3);
+    // Reserve lines for buttons + 2 lines for hints
+    let body_h = inner_h.saturating_sub(button_lines.len() + 2);
     if body.len() > body_h {
         body.truncate(body_h);
     }
@@ -53,7 +53,7 @@ pub(super) fn render_form(f: &mut Frame, panel: &Panel, root_closable: bool) {
         body.push(Line::from(""));
     }
 
-    body.push(button_line);
+    body.extend(button_lines);
     body.extend(hint_lines);
     let _bg = Style::default().bg(crate::theme::color_bg_panel());
     f.render_widget(
@@ -80,9 +80,9 @@ fn hint_lines(panel: &Panel, root_closable: bool) -> Vec<Line<'_>> {
 
 fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
     let mut body: Vec<Line> = Vec::new();
-    push_header(&mut body, inner_w);
-    let mut nav_idx = 0usize;
     let field_indices: Vec<usize> = field_indices(panel);
+    push_header(&mut body, inner_w, !field_indices.is_empty());
+    let mut nav_idx = 0usize;
     let field_count = field_indices.len();
     for (raw_i, item) in panel.items.iter().enumerate() {
         push_body_item(
@@ -235,9 +235,14 @@ fn make_button_spans(label: &str, is_active: bool) -> Vec<Span<'_>> {
     spans
 }
 
-/// Build a single right-aligned line containing all form buttons.
-fn build_button_line(panel: &Panel, inner_w: usize) -> Line<'_> {
-    let mut button_spans: Vec<Span> = Vec::new();
+/// Build right-aligned button lines containing all form buttons.
+///
+/// Buttons are packed greedily: as many as fit on one line, wrapping to the
+/// next line BETWEEN buttons so a label is never split across lines (the
+/// permission dialog's four options overflowed a single row at common
+/// terminal widths and wrapped mid-label).
+fn build_button_lines(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
+    let mut buttons: Vec<Vec<Span>> = Vec::new();
     let mut nav_idx = 0usize;
 
     for item in panel.items.iter() {
@@ -259,22 +264,52 @@ fn build_button_line(panel: &Panel, inner_w: usize) -> Line<'_> {
             _ => continue,
         };
         let Some(label) = label else { continue };
-        button_spans.extend(make_button_spans(label, is_active));
+        buttons.push(make_button_spans(label, is_active));
     }
 
-    // Trim trailing gap and right-align
-    while button_spans.last().is_some_and(|s| s.content == "  ") {
-        button_spans.pop();
+    let mut lines: Vec<Line> = Vec::new();
+    let mut current: Vec<Span> = Vec::new();
+    let mut current_w = 0usize;
+    for btn in buttons {
+        let w: usize = btn.iter().map(|s| s.content.chars().count()).sum();
+        if !current.is_empty() && current_w + w > inner_w {
+            lines.push(right_aligned_line(std::mem::take(&mut current), current_w, inner_w));
+            current_w = 0;
+        }
+        current_w += w;
+        current.extend(btn);
     }
-    let total_chars: usize = button_spans.iter().map(|s| s.content.chars().count()).sum();
-    let pad = inner_w.saturating_sub(total_chars);
-    let mut spans = vec![Span::styled(" ".repeat(pad), Style::default())];
-    spans.extend(button_spans);
-    Line::from(spans)
+    if !current.is_empty() {
+        lines.push(right_aligned_line(current, current_w, inner_w));
+    }
+    if lines.is_empty() {
+        lines.push(Line::from(""));
+    }
+    lines
 }
 
-fn push_header(lines: &mut Vec<Line>, inner_w: usize) {
-    lines.push(Line::from("  Fill in the form and press Enter to submit").style(style_hint()));
+/// Right-align a packed row of button spans within `inner_w`.
+fn right_aligned_line(mut spans: Vec<Span>, width: usize, inner_w: usize) -> Line<'static> {
+    // Drop trailing whitespace-only gap spans so the row ends at the button.
+    while spans.last().is_some_and(|s| s.content.trim().is_empty()) {
+        spans.pop();
+    }
+    let width = width.min(inner_w);
+    let pad = inner_w.saturating_sub(width);
+    let mut line_spans = vec![Span::styled(" ".repeat(pad), Style::default())];
+    line_spans.extend(spans.into_iter().map(|s| {
+        Span::styled(s.content.into_owned(), s.style)
+    }));
+    Line::from(line_spans)
+}
+
+fn push_header(lines: &mut Vec<Line>, inner_w: usize, has_fields: bool) {
+    let hint = if has_fields {
+        "  Fill in the form and press Enter to submit"
+    } else {
+        "  Select an option and press Enter"
+    };
+    lines.push(Line::from(hint).style(style_hint()));
     lines.push(Line::from(BOX_HORIZONTAL.to_string().repeat(inner_w)).style(style_hint()));
     lines.push(Line::from(""));
 }
