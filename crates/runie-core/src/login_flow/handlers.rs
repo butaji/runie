@@ -100,6 +100,7 @@ fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec
         return;
     }
 
+    let models = filter_validated_models(state, models);
     let selected_models: std::collections::HashSet<String> = models.iter().cloned().collect();
     if let Some(flow) = state.login_flow_mut() {
         flow.step = LoginStep::ModelSelect;
@@ -109,6 +110,43 @@ fn login_flow_validation_success(state: &mut crate::model::AppState, models: Vec
     }
 
     transition_to_model_selector(state);
+}
+
+/// Filter the models returned by key validation down to the registry's
+/// curated list for the provider, in registry order.
+///
+/// Gemini's `/models` endpoint returns the whole Google model zoo — video,
+/// image, embedding, robotics, TTS — most of which cannot chat, and the
+/// first entry (`gemini-2.5-flash`) is retired for new users. Without
+/// filtering, onboarding pre-selects dozens of non-chat models and defaults
+/// to a dead one. Only applied to `google`: other providers' registries are
+/// not exhaustive, so their fetched lists pass through unchanged.
+///
+/// Falls back to the raw fetched list when nothing matches, so registry
+/// drift cannot brick onboarding.
+fn filter_validated_models(state: &crate::model::AppState, models: Vec<String>) -> Vec<String> {
+    let provider = state
+        .login_flow()
+        .map(|f| f.provider.clone())
+        .unwrap_or_default();
+    if provider != "google" {
+        return models;
+    }
+    let Some(meta) = crate::provider::registry::find_provider(&provider) else {
+        return models;
+    };
+    let filtered: Vec<String> = meta
+        .models
+        .iter()
+        .map(|m| m.name.as_str())
+        .filter(|name| models.iter().any(|m| m == name))
+        .map(str::to_owned)
+        .collect();
+    if filtered.is_empty() {
+        models
+    } else {
+        filtered
+    }
 }
 
 fn transition_to_model_selector(state: &mut crate::model::AppState) {

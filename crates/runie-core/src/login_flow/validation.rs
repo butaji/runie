@@ -359,6 +359,62 @@ mod tests {
     }
 
     #[test]
+    fn google_models_fetched_filters_to_curated_chat_models() {
+        // Gemini's /models endpoint returns the whole Google model zoo —
+        // video, image, embedding, robotics, TTS — most of which cannot chat.
+        // Onboarding must offer only the curated chat models from the
+        // registry, in registry order, so the default lands on a live model.
+        let mut state = AppState::default();
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
+            provider: "google".into(),
+        });
+        state.update(Event::SubmitKey {
+            provider: "google".into(),
+            key: "test".into(),
+        });
+        state.update(Event::ModelsFetched {
+            provider: "google".into(),
+            key: "test".into(),
+            models: vec![
+                "veo-3.1-fast-generate-preview".into(),
+                "gemini-3.1-pro-preview".into(),
+                "imagen-4.0-generate-001".into(),
+                "gemini-3.1-flash-lite".into(),
+            ],
+        });
+        let flow = state.login_flow().unwrap();
+        assert_eq!(
+            flow.available_models,
+            vec!["gemini-3.1-flash-lite", "gemini-3.1-pro-preview"]
+        );
+        assert!(!flow.selected_models.contains("veo-3.1-fast-generate-preview"));
+        assert!(!flow.selected_models.contains("imagen-4.0-generate-001"));
+    }
+
+    #[test]
+    fn google_models_fetched_keeps_raw_list_when_no_registry_match() {
+        // Registry drift must not brick onboarding: when none of the fetched
+        // models are in the curated list, show the raw fetched list.
+        let mut state = AppState::default();
+        state.update(Event::Start);
+        state.update(Event::SelectProvider {
+            provider: "google".into(),
+        });
+        state.update(Event::SubmitKey {
+            provider: "google".into(),
+            key: "test".into(),
+        });
+        state.update(Event::ModelsFetched {
+            provider: "google".into(),
+            key: "test".into(),
+            models: vec!["future-gemini-9".into()],
+        });
+        let flow = state.login_flow().unwrap();
+        assert_eq!(flow.available_models, vec!["future-gemini-9"]);
+    }
+
+    #[test]
     fn s8_empty_fetch_reaches_model_select_with_no_models() {
         let mut state = AppState::default();
         state.update(Event::Start);
