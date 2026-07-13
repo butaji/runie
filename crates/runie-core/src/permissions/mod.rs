@@ -23,6 +23,7 @@ use rmcp::model::ToolAnnotations;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub mod auto_approve;
 pub mod default_tool_approve;
 pub mod file_access_ask;
 pub mod format;
@@ -32,6 +33,7 @@ pub mod git_tracked_write;
 pub mod rules;
 mod sink;
 
+pub use auto_approve::AutoApprove;
 #[cfg(feature = "mcp")]
 pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;

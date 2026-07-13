@@ -161,6 +161,64 @@ fn read_only_tool_classification() {
     assert!(!super::is_read_only_tool("write_file"));
 }
 
+// ── AutoApprove policy (auto-approve mode) ───────────────────────────────────
+
+#[tokio::test]
+async fn auto_approve_allows_read_only_tools() {
+    let policy = super::AutoApprove::new();
+    for tool in ["read_file", "grep", "find", "list_dir", "fetch_docs"] {
+        let context = ctx(tool, None, None);
+        assert!(policy.matches(&context), "{tool} should match");
+        assert_eq!(
+            policy.evaluate(&context).await,
+            Some(PermissionResult::Allow),
+            "{tool} should be auto-approved"
+        );
+    }
+}
+
+#[tokio::test]
+async fn auto_approve_allows_edit_and_shell_tools() {
+    let policy = super::AutoApprove::new();
+    for tool in ["write_file", "edit_file", "bash"] {
+        let context = ctx(tool, None, None);
+        assert!(policy.matches(&context), "{tool} should match");
+        assert_eq!(
+            policy.evaluate(&context).await,
+            Some(PermissionResult::Allow),
+            "{tool} should be auto-approved"
+        );
+    }
+}
+
+#[tokio::test]
+async fn auto_approve_asks_for_sensitive_paths() {
+    let policy = super::AutoApprove::new();
+    let env = Path::new("/project/.env");
+    for tool in ["read_file", "write_file", "edit_file", "bash"] {
+        let context = ctx(tool, Some(env), None);
+        assert_eq!(
+            policy.evaluate(&context).await,
+            Some(PermissionResult::Ask),
+            "{tool} on a sensitive path must still ask"
+        );
+    }
+    // Non-sensitive paths stay auto-approved.
+    let inside = Path::new("/project/src/main.rs");
+    let context = ctx("write_file", Some(inside), None);
+    assert_eq!(policy.evaluate(&context).await, Some(PermissionResult::Allow));
+}
+
+#[tokio::test]
+async fn auto_approve_ignores_unknown_tools() {
+    let policy = super::AutoApprove::new();
+    let context = ctx("delete_file", None, None);
+    assert!(
+        !policy.matches(&context),
+        "unknown tools must fall through to the rest of the chain"
+    );
+}
+
 #[tokio::test]
 async fn auto_allow_sink_always_allows() {
     let sink = AutoAllowSink;

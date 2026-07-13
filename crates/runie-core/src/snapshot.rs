@@ -159,6 +159,9 @@ pub struct Snapshot {
     pub has_models: bool,
     /// Plan mode active — write tools blocked until plan is approved.
     pub plan_mode: bool,
+    /// Auto-approve mode active — read, edit and shell tools run without
+    /// confirmation. Session-scoped (never persisted).
+    pub auto_mode: bool,
     /// Content of the active plan (markdown).
     pub active_plan_content: String,
     /// ID of the active plan file.

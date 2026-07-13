@@ -2,7 +2,7 @@
 
 pub mod run;
 
-pub use run::{run_compact, run_fork, run_name, run_plan};
+pub use run::{run_auto, run_compact, run_fork, run_name, run_plan};
 
 use crate::actors::{PermissionMsg, SessionMsg};
 use crate::commands::dsl::handlers::NamedHandler;
@@ -108,6 +108,7 @@ fn register_session_simple_handlers(
     registry.register("share", NamedHandler::Handler(handle_share));
     registry.register("resume", NamedHandler::Handler(handle_resume));
     registry.register("plan", NamedHandler::Handler(run_plan));
+    registry.register("auto", NamedHandler::Handler(run_auto));
 }
 
 pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
@@ -362,5 +363,86 @@ mod tests {
 
         let status = project_trust_status(&state);
         assert_eq!(status, "untrusted");
+    }
+
+    fn mark_current_dir(state: &mut AppState, decision: TrustDecision) {
+        let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
+            .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
+        state.trust_decisions = indexmap! { cwd_utf8 => decision };
+    }
+
+    #[test]
+    fn run_auto_toggles_on_and_off() {
+        let mut state = AppState::default();
+        assert!(!state.view().auto_mode);
+
+        let result = run::run_auto(&mut state, "");
+        assert!(state.view().auto_mode, "auto mode should be enabled");
+        match result {
+            CommandResult::Message(msg) => assert!(msg.contains("enabled"), "got: {msg}"),
+            other => panic!("expected Message, got {other:?}"),
+        }
+
+        let result = run::run_auto(&mut state, "");
+        assert!(!state.view().auto_mode, "auto mode should be disabled");
+        match result {
+            CommandResult::Message(msg) => assert!(msg.contains("disabled"), "got: {msg}"),
+            other => panic!("expected Message, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn run_auto_explicit_on_off_args() {
+        let mut state = AppState::default();
+        let _ = run::run_auto(&mut state, "on");
+        assert!(state.view().auto_mode);
+        // Re-enabling while enabled stays enabled.
+        let _ = run::run_auto(&mut state, "enable");
+        assert!(state.view().auto_mode);
+        let _ = run::run_auto(&mut state, "off");
+        assert!(!state.view().auto_mode);
+        let _ = run::run_auto(&mut state, "disable");
+        assert!(!state.view().auto_mode);
+    }
+
+    #[test]
+    fn run_auto_refuses_in_untrusted_project() {
+        let mut state = AppState::default();
+        mark_current_dir(&mut state, TrustDecision::Untrusted);
+
+        let result = run::run_auto(&mut state, "");
+        assert!(
+            !state.view().auto_mode,
+            "untrusted project must stay manual"
+        );
+        match result {
+            CommandResult::Message(msg) => {
+                assert!(msg.contains("trusted project"), "got: {msg}");
+                assert!(msg.contains("/trust"), "should hint at /trust, got: {msg}");
+            }
+            other => panic!("expected Message, got {other:?}"),
+        }
+
+        // Explicit "on" is refused as well.
+        let result = run::run_auto(&mut state, "on");
+        assert!(!state.view().auto_mode);
+        assert!(matches!(result, CommandResult::Message(_)));
+
+        // Disabling is always allowed, even when untrusted.
+        let result = run::run_auto(&mut state, "off");
+        assert!(!state.view().auto_mode);
+        match result {
+            CommandResult::Message(msg) => assert!(msg.contains("disabled"), "got: {msg}"),
+            other => panic!("expected Message, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn run_auto_allowed_in_trusted_project() {
+        let mut state = AppState::default();
+        mark_current_dir(&mut state, TrustDecision::Trusted);
+        let _ = run::run_auto(&mut state, "");
+        assert!(state.view().auto_mode);
     }
 }

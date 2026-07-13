@@ -1,6 +1,6 @@
 //! Messages for `PermissionActor`.
 
-use crate::permissions::{PermissionAction, PermissionSet};
+use crate::permissions::{PermissionAction, PermissionMode, PermissionSet};
 use ractor::RpcReplyPort;
 use tokio::sync::oneshot;
 
@@ -45,6 +45,10 @@ pub enum PermissionMsg {
         tool: String,
         action: PermissionAction,
     },
+    /// Set the session permission mode (e.g. auto-approve). Session-scoped only.
+    SetMode { mode: PermissionMode },
+    /// Query the current permission mode.
+    GetMode(Option<RpcReplyPort<PermissionMode>>),
 }
 
 impl Clone for PermissionMsg {
@@ -86,6 +90,8 @@ impl Clone for PermissionMsg {
                 tool: tool.clone(),
                 action: *action,
             },
+            PermissionMsg::SetMode { mode } => PermissionMsg::SetMode { mode: *mode },
+            PermissionMsg::GetMode(_reply) => PermissionMsg::GetMode(None), // Fire-and-forget.
         }
     }
 }

@@ -86,4 +86,6 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.plan_mode = state.view().plan_mode;
     s.active_plan_content = state.view().active_plan_content.clone();
     s.active_plan_id = state.view().active_plan_id.clone();
+    // Auto-approve mode projection
+    s.auto_mode = state.view().auto_mode;
 }

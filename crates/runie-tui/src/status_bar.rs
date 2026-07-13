@@ -84,6 +84,7 @@ pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<String> {
     push_thinking(&mut parts, snap);
     push_pending_edits(&mut parts, snap);
     push_read_only(&mut parts, snap);
+    push_auto_mode(&mut parts, snap);
     parts
 }
 
@@ -145,6 +146,12 @@ fn push_pending_edits(parts: &mut Vec<String>, snap: &Snapshot) {
 fn push_read_only(parts: &mut Vec<String>, snap: &Snapshot) {
     if snap.read_only {
         parts.push("🔒 RO".to_owned());
+    }
+}
+
+fn push_auto_mode(parts: &mut Vec<String>, snap: &Snapshot) {
+    if snap.auto_mode {
+        parts.push("⚡ Auto".to_owned());
     }
 }
 
@@ -280,6 +287,29 @@ mod tests {
     #[test]
     fn status_bar_context_window_falls_back_to_default() {
         assert_eq!(context_window_for("unknown", "model"), DEFAULT_CONTEXT_WINDOW);
+    }
+
+    #[test]
+    fn status_bar_shows_auto_badge_when_enabled() {
+        let snap = runie_core::Snapshot {
+            auto_mode: true,
+            ..Default::default()
+        };
+        let left = super::build_left_text(&snap);
+        assert!(
+            left.contains("⚡ Auto"),
+            "left text should contain the auto badge: {left}"
+        );
+    }
+
+    #[test]
+    fn status_bar_hides_auto_badge_when_disabled() {
+        let snap = runie_core::Snapshot::default();
+        let left = super::build_left_text(&snap);
+        assert!(
+            !left.contains("⚡ Auto"),
+            "left text should not contain the auto badge: {left}"
+        );
     }
 
     #[test]

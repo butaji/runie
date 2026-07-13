@@ -13,7 +13,7 @@ use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
 use crate::model::PermissionRequestState;
-use crate::permissions::{PermissionAction, PermissionSet};
+use crate::permissions::{PermissionAction, PermissionMode, PermissionSet};
 
 use super::messages::PermissionMsg;
 
@@ -129,6 +129,23 @@ impl RactorPermissionHandle {
         }
     }
 
+    /// Set the session permission mode (fire-and-forget).
+    pub fn set_mode(&self, mode: PermissionMode) {
+        let _ = self.inner.send_message(PermissionMsg::SetMode { mode });
+    }
+
+    /// Query the current permission mode.
+    pub async fn get_mode(&self) -> PermissionMode {
+        match self
+            .inner
+            .call(|tx| PermissionMsg::GetMode(Some(tx)), None)
+            .await
+        {
+            Ok(ractor::rpc::CallResult::Success(mode)) => mode,
+            _ => PermissionMode::default(),
+        }
+    }
+
     /// Mark the current project as trusted.
     pub async fn trust_project(&self) {
         let _ = self.inner.send_message(PermissionMsg::TrustProject);
@@ -160,6 +177,9 @@ pub struct PermissionActorState {
     pub bus: EventBus<Event>,
     /// Declarative permission rules loaded from config.toml.
     rules: PermissionSet,
+    /// Session permission mode (manual / auto-approve). Session-scoped:
+    /// every fresh actor starts in `Default` (manual) mode.
+    mode: PermissionMode,
 }
 
 impl PermissionActorState {
@@ -267,6 +287,19 @@ impl RactorPermissionActor {
         }
     }
 
+    fn handle_set_mode(state: &mut PermissionActorState, mode: PermissionMode) {
+        state.mode = mode;
+    }
+
+    fn handle_get_mode(
+        state: &PermissionActorState,
+        reply: Option<ractor::RpcReplyPort<PermissionMode>>,
+    ) {
+        if let Some(reply) = reply {
+            let _ = reply.send(state.mode);
+        }
+    }
+
     fn handle_load_rules(_state: &mut PermissionActorState) {
         // Rules are loaded from ConfigLoaded events; this is a no-op trigger
         // for the actor's own re-evaluation. The actual loading happens in
@@ -364,6 +397,7 @@ impl Actor for RactorPermissionActor {
             current_request: None,
             bus: args.bus,
             rules,
+            mode: PermissionMode::default(),
         })
     }
 
@@ -412,6 +446,12 @@ impl Actor for RactorPermissionActor {
             }
             PermissionMsg::UpsertSessionRule { tool, action } => {
                 Self::handle_upsert_session_rule(state, tool, action);
+            }
+            PermissionMsg::SetMode { mode } => {
+                Self::handle_set_mode(state, mode);
+            }
+            PermissionMsg::GetMode(reply) => {
+                Self::handle_get_mode(state, reply);
             }
         }
         Ok(())

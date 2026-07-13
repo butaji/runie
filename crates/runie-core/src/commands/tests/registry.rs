@@ -27,6 +27,18 @@ fn registry_get_provider_alias() {
 }
 
 #[test]
+fn registry_contains_auto_command() {
+    let state = AppState::default();
+    let cmd = state
+        .registry
+        .get("auto")
+        .expect("/auto command should be registered");
+    assert_eq!(cmd.name, "auto");
+    // Auto-approve is a Safety command, like /readonly.
+    assert_eq!(cmd.category, crate::commands::CommandCategory::Safety);
+}
+
+#[test]
 fn registry_does_not_include_clone() {
     let state = AppState::default();
     assert!(

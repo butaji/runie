@@ -1,0 +1,8 @@
+name: auto
+description: Toggle auto-approve mode — read, edit and shell tools run without confirmation
+category: Safety
+sub: false
+triggers:
+  - /auto
+type: handler
+handler: auto

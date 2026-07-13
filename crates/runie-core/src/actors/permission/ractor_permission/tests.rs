@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::bus::Receiver;
+use crate::permissions::PermissionMode;
 
 /// Wait for an event matching a predicate with a deterministic timeout.
 async fn wait_for_event<F>(sub: &mut Receiver<Event>, pred: F) -> bool
@@ -21,6 +22,30 @@ where
         }
     }
     false
+}
+
+// ── Layer 1: Permission mode (auto-approve) ─────────────────────────────────
+
+/// SetMode/GetMode roundtrip: the actor defaults to `Default` (manual) and
+/// reflects `SetMode` changes. Session-scoped — a fresh actor starts manual.
+#[tokio::test]
+async fn permission_mode_set_get_roundtrip() {
+    let bus = EventBus::<Event>::new(16);
+    let (handle, _cell, _join) = RactorPermissionActor::spawn_for_testing(bus.clone())
+        .await
+        .unwrap();
+
+    assert_eq!(
+        handle.get_mode().await,
+        PermissionMode::Default,
+        "fresh actor should start in manual (Default) mode"
+    );
+
+    handle.set_mode(PermissionMode::Auto);
+    assert_eq!(handle.get_mode().await, PermissionMode::Auto);
+
+    handle.set_mode(PermissionMode::Default);
+    assert_eq!(handle.get_mode().await, PermissionMode::Default);
 }
 
 // ── Layer 1: State/Logic tests ──────────────────────────────────────────

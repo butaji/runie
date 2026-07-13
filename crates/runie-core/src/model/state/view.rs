@@ -73,6 +73,10 @@ pub struct ViewState {
     pub input_receiver: InputReceiver,
     /// Plan mode active — blocks write tools until plan is approved.
     pub plan_mode: bool,
+    /// Auto-approve mode active — read, edit and shell tools run without
+    /// confirmation (sensitive paths still ask). Session-scoped; never
+    /// persisted across restarts.
+    pub auto_mode: bool,
     /// Content of the active plan (markdown).
     pub active_plan_content: String,
     /// ID of the active plan file.
@@ -121,6 +125,10 @@ impl ViewState {
         &mut self.plan_mode
     }
 
+    pub fn auto_mode_mut(&mut self) -> &mut bool {
+        &mut self.auto_mode
+    }
+
     pub fn active_plan_content_mut(&mut self) -> &mut String {
         &mut self.active_plan_content
     }
@@ -160,6 +168,7 @@ impl Default for ViewState {
             vim_nav_pending: false,
             input_receiver: InputReceiver::default(),
             plan_mode: false,
+            auto_mode: false,
             active_plan_content: String::new(),
             active_plan_id: None,
         }

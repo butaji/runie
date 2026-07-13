@@ -8,7 +8,7 @@
 //! in `handle_command_event` to avoid circular event loops.
 
 use super::COMPACT_DEFAULT_KEEP_TOKENS;
-use crate::actors::SessionMsg;
+use crate::actors::{PermissionMsg, SessionMsg};
 use crate::commands::CommandResult;
 use crate::model::AppState;
 
@@ -83,6 +83,59 @@ pub fn run_plan(state: &mut AppState, args: &str) -> CommandResult {
     // Build initial plan content from the session
     let content = build_plan_content(state);
     CommandResult::Event(crate::Event::PlanModeEnabled { content })
+}
+
+/// Toggle auto-approve mode. Args: empty (toggle), "on"/"enable", "off"/"disable".
+///
+/// Auto-approve lets read, edit and shell tools run without confirmation
+/// (sensitive paths still ask). The mode is session-scoped only — it is never
+/// persisted to config. Untrusted projects force manual mode: enabling is
+/// refused with an inline message.
+pub fn run_auto(state: &mut AppState, args: &str) -> CommandResult {
+    let args = args.trim();
+    let enable = if args.eq_ignore_ascii_case("off") || args.eq_ignore_ascii_case("disable") {
+        false
+    } else if args.eq_ignore_ascii_case("on") || args.eq_ignore_ascii_case("enable") {
+        true
+    } else {
+        !state.view().auto_mode
+    };
+
+    if enable && current_project_untrusted(state) {
+        return CommandResult::Message(
+            "Auto-approve requires a trusted project — run /trust first.".into(),
+        );
+    }
+
+    *state.view_mut().auto_mode_mut() = enable;
+    let mode = if enable {
+        crate::permissions::PermissionMode::Auto
+    } else {
+        crate::permissions::PermissionMode::Default
+    };
+    if let Some(handles) = state.actor_handles() {
+        let _ = handles.permission.try_send(PermissionMsg::SetMode { mode });
+    }
+    if enable {
+        CommandResult::Message(
+            "Auto-approve mode enabled — read, edit and shell tools run without confirmation."
+                .into(),
+        )
+    } else {
+        CommandResult::Message("Auto-approve mode disabled (manual approvals).".into())
+    }
+}
+
+/// True when the current project has an explicit `Untrusted` trust decision.
+/// No decision (`None`) and `Trusted` both allow enabling auto-approve.
+fn current_project_untrusted(state: &AppState) -> bool {
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let cwd_utf8 =
+        camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    matches!(
+        state.trust_decisions().get(&cwd_utf8),
+        Some(crate::trust::TrustDecision::Untrusted)
+    )
 }
 
 /// Build initial plan markdown from the session context.
