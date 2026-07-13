@@ -207,6 +207,86 @@ fn at_ref_escape_closes_dialog() {
     assert!(state.open_dialog.is_none(), "Escape should close dialog");
 }
 
+/// Regression (production desync): when '@' opens the picker, the UiActor
+/// clears the authoritative InputActor, whose `InputChanged` echo then
+/// wholesale-replaces the projection `InputState`. The file-picker backup
+/// and range suffix are projection-only — the echo must not wipe them, or
+/// picking a file rewrites the whole input with the bare filename.
+#[test]
+fn input_changed_preserves_file_picker_backup() {
+    let mut state = AppState::default();
+    inject_mock_files(&mut state);
+    // UiActor '@' trigger state: typed prefix + '@', backup saved, picker open.
+    state.input.input = "read @".to_string();
+    state.input.cursor_pos = 6;
+    state.input.file_picker_backup = Some(("read @".to_string(), 6, 6, false));
+    state.update(crate::Event::AtFilePicker);
+    assert!(state.open_dialog.is_some());
+
+    // The InputActor's Clear echo: an empty InputState with no backup.
+    state.update(crate::Event::InputChanged {
+        state: Box::new(crate::model::InputState::default()),
+    });
+
+    // The backup must survive the echo; picking keeps the typed prefix.
+    assert_eq!(
+        state.input.file_picker_backup,
+        Some(("read @".to_string(), 6, 6, false)),
+        "InputChanged must not wipe the file-picker backup"
+    );
+    state.update(crate::Event::Submit);
+    assert!(
+        state.input.input.starts_with("read @"),
+        "pick must preserve the typed prefix, got: {:?}",
+        state.input.input
+    );
+    assert!(state.open_dialog.is_none());
+}
+
+/// The range suffix (`@path:10-50`) is projection-only too: it must survive
+/// the InputActor's InputChanged echo while the picker is open.
+#[test]
+fn input_changed_preserves_file_picker_range_suffix() {
+    let mut state = AppState::default();
+    state.input.file_picker_backup = Some(("read @".to_string(), 6, 6, false));
+    state.input.file_picker_range_suffix = Some(":10-50".to_string());
+
+    state.update(crate::Event::InputChanged {
+        state: Box::new(crate::model::InputState::default()),
+    });
+
+    assert_eq!(
+        state.input.file_picker_range_suffix,
+        Some(":10-50".to_string()),
+        "InputChanged must not wipe the range suffix"
+    );
+    assert!(state.input.file_picker_backup.is_some());
+}
+
+/// Esc maps to `DialogBack` (not `Abort`): closing the picker with Esc must
+/// restore the typed prefix from the backup exactly like Abort does.
+#[test]
+fn dialog_back_restores_file_picker_backup() {
+    let mut state = AppState::default();
+    inject_mock_files(&mut state);
+    // UiActor '@' trigger: backup holds the typed prefix; the InputActor's
+    // Clear echo then empties the projection input (production ordering).
+    state.input.file_picker_backup = Some(("read @".to_string(), 6, 6, false));
+    state.update(crate::Event::AtFilePicker);
+    assert!(state.open_dialog.is_some());
+    state.update(crate::Event::InputChanged {
+        state: Box::new(crate::model::InputState::default()),
+    });
+    assert!(state.input.input.is_empty());
+
+    state.update(crate::Event::DialogBack);
+    assert!(state.open_dialog.is_none(), "Esc should close the picker");
+    assert_eq!(
+        state.input.input, "read @",
+        "Esc must restore the typed prefix from the picker backup"
+    );
+}
+
 #[test]
 fn no_at_ref_no_dialog() {
     let state = AppState::default();

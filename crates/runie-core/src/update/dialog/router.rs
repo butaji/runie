@@ -46,6 +46,9 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     restore_or_pop_dialog(state, dialog, result, is_palette_activation);
 
     if is_dialog_back && state.open_dialog().is_none() {
+        // Esc (DialogBack) closing the file picker must restore the typed
+        // prefix from the picker backup, exactly like Abort does.
+        restore_file_picker_backup(state);
         // Closing a hosted permission dialog without resolving it (e.g. pressing
         // Escape) must cancel the underlying request so the agent is not left
         // blocked indefinitely.
@@ -61,6 +64,23 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     state.view_mut().dirty = true;
 }
 
+/// Restore the chat input from the file-picker backup (Esc/Abort closing the
+/// @ picker) and re-sync the authoritative InputActor, which was cleared
+/// when the picker opened — without the sync its next InputChanged echo
+/// clobbers the restored text on the following keystroke.
+fn restore_file_picker_backup(state: &mut AppState) {
+    if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
+        state.input_mut().input = input.clone();
+        state.input_mut().cursor_pos = state.input().input.len();
+        if let Some(handles) = state.actor_handles() {
+            let _ = handles
+                .input
+                .send_message(crate::actors::InputMsg::SetText { text: input });
+        }
+    }
+    state.input_mut().file_picker_range_suffix = None;
+}
+
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, crate::Event::Abort) {
         // Abort must never close the onboarding/login flow.
@@ -68,11 +88,7 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
             crate::login_flow::login_flow_cancel(state);
             return true;
         }
-        if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
-            state.input_mut().input = input;
-            state.input_mut().cursor_pos = state.input().input.len();
-        }
-        state.input_mut().file_picker_range_suffix = None;
+        restore_file_picker_backup(state);
         *state.open_dialog_mut() = None;
         state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
         state.view_mut().dirty = true;

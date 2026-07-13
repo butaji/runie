@@ -115,7 +115,16 @@ impl AppState {
     /// Main event dispatcher — merged from update() and dispatch_event().
     pub fn update(&mut self, event: Event) {
         if let Event::InputChanged { state } = event {
+            // The InputActor owns text/cursor/history, but the file-picker
+            // backup and range suffix are projection-only dialog state the
+            // actor never sees. Preserve them across the wholesale replace,
+            // or the Clear echo (sent when the picker opens) wipes the typed
+            // prefix and the pick rewrites the whole input.
+            let picker_backup = self.input().file_picker_backup.clone();
+            let range_suffix = self.input().file_picker_range_suffix.clone();
             *self.input_mut() = *state;
+            self.input_mut().file_picker_backup = picker_backup;
+            self.input_mut().file_picker_range_suffix = range_suffix;
             return;
         }
         if let Event::ViewChanged { state } = event {

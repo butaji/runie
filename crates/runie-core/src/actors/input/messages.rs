@@ -261,7 +261,17 @@ impl InputMsg {
                 state.redo_stack.clear();
                 state.input_scroll = 0;
             }
-            InputMsg::SetText { .. } | InputMsg::SetPrompt { .. } | InputMsg::Clear => {
+            InputMsg::SetText { text } => {
+                // Full-content sync (e.g. after an @-ref pick): replace the
+                // text wholesale and put the cursor at the end.
+                state.input = text.clone();
+                state.cursor_pos = state.input.len();
+                state.history_pos = None;
+                state.undo_stack.clear();
+                state.redo_stack.clear();
+                state.input_scroll = 0;
+            }
+            InputMsg::SetPrompt { .. } | InputMsg::Clear => {
                 // These all clear input state.
                 state.input.clear();
                 state.cursor_pos = 0;
@@ -304,5 +314,43 @@ impl InputMsg {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `SetText` must replace the input with the given text (its documented
+    /// contract: "Replace all input text and reset cursor"). Regression: the
+    /// implementation ignored `text` and cleared the input, so syncing the
+    /// picked @-ref to the InputActor wiped the box instead of filling it.
+    #[test]
+    fn set_text_replaces_input_content() {
+        let mut state = crate::model::InputState::default();
+        InputMsg::apply_to(
+            &InputMsg::SetText {
+                text: "read @a.rs".to_owned(),
+            },
+            &mut state,
+        );
+        assert_eq!(state.input, "read @a.rs");
+        assert_eq!(state.cursor_pos, "read @a.rs".len());
+    }
+
+    /// `SetText` replaces whatever was there before (it is a full sync, not
+    /// an append).
+    #[test]
+    fn set_text_replaces_existing_content() {
+        let mut state = crate::model::InputState::default();
+        InputMsg::apply_to(&InputMsg::InsertChar('x'), &mut state);
+        InputMsg::apply_to(
+            &InputMsg::SetText {
+                text: "new".to_owned(),
+            },
+            &mut state,
+        );
+        assert_eq!(state.input, "new");
+        assert_eq!(state.cursor_pos, 3);
     }
 }

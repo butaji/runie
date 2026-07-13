@@ -42,8 +42,17 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
     if let Some(fff_state) = crate::actors::FffSearchState::get() {
         fff_state.record_file_access(std::path::Path::new(path));
     }
-    state.input_mut().input = build_insert_text(state, path);
+    let final_text = build_insert_text(state, path);
+    state.input_mut().input = final_text.clone();
     state.input_mut().cursor_pos = state.input_mut().input.len();
+    // Sync the authoritative InputActor: it was cleared when the picker
+    // opened, so without this its next InputChanged echo clobbers the picked
+    // text on the following keystroke.
+    if let Some(handles) = state.actor_handles() {
+        let _ = handles
+            .input
+            .send_message(crate::actors::InputMsg::SetText { text: final_text });
+    }
     *state.open_dialog_mut() = None;
     state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
     state.view_mut().dirty = true;

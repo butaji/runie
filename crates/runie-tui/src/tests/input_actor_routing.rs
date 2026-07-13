@@ -803,3 +803,66 @@ async fn slash_model_selects_model_synchronously() {
 
     leader.shutdown().await;
 }
+
+/// Regression: typing a prefix, then '@', and picking a file must keep the
+/// typed prefix ("read @path") — and the authoritative InputActor must hold
+/// the same text so the next keystroke does not clobber the box.
+///
+/// Production bug: the picker opens with a Clear to the InputActor; the
+/// resulting InputChanged echo wholesale-replaces the projection InputState
+/// and wiped the projection-only file-picker backup, so the pick inserted
+/// the bare filename over the whole input.
+#[tokio::test]
+async fn at_file_pick_preserves_prefix_and_syncs_input_actor() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    crate::tests::core::inject_mock_file_entries(&mut ui.state);
+    let mut sub = leader.event_bus().subscribe();
+
+    // Type "read " (routed to the InputActor), then '@' — the trigger opens
+    // the picker synchronously and clears the InputActor.
+    for c in "read ".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+    }
+    ui.handle_event(Event::Input('@'), effect_tx.clone()).await;
+    assert!(ui.state.open_dialog().is_some(), "picker should open");
+
+    // Production ordering: the Clear echo arrives AFTER the picker opened.
+    ui.handle_event(
+        Event::InputChanged {
+            state: Box::default(),
+        },
+        effect_tx.clone(),
+    )
+    .await;
+
+    // Pick the first entry.
+    ui.handle_event(Event::Submit, effect_tx.clone()).await;
+    assert!(ui.state.open_dialog().is_none(), "picker should close");
+    let final_text = ui.state.input().input.clone();
+    assert!(
+        final_text.starts_with("read @"),
+        "pick must preserve the typed prefix, got: {final_text:?}"
+    );
+
+    // The authoritative InputActor must hold the same text; its InputChanged
+    // echo proves the sync (without it, the next keystroke clobbers the box).
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+    let mut synced = false;
+    while tokio::time::Instant::now() < deadline {
+        let rem = deadline - tokio::time::Instant::now();
+        match tokio::time::timeout(rem, sub.recv()).await {
+            Ok(Ok(Event::InputChanged { state })) if state.input == final_text => {
+                synced = true;
+                break;
+            }
+            Ok(Ok(_)) => {}
+            Ok(Err(_)) | Err(_) => break,
+        }
+    }
+    assert!(
+        synced,
+        "InputActor should echo the picked text {final_text:?} (input sync)"
+    );
+
+    leader.shutdown().await;
+}
