@@ -21,20 +21,11 @@ fn nav_mode_selected_post_has_accent_background() {
     );
     let width = buf.area().width;
     for y in line_rows {
-        // The selection band aligns with the user-card band: it covers
-        // columns 2..width-2 and leaves a two-column feed-background margin
-        // on each side. Painting to the last column would leave the
-        // terminal in the deferred-wrap state, and tmux then drops the next
-        // row's background attributes (verified against tmux 3.7b).
-        let left_margin_clear = buf[(0, y)].style().bg != Some(bg)
-            && buf[(1, y)].style().bg != Some(bg);
-        let band_start = buf[(2, y)].style().bg == Some(bg);
-        let band_end = buf[(width - 3, y)].style().bg == Some(bg);
-        let right_margin_clear = buf[(width - 2, y)].style().bg != Some(bg)
-            && buf[(width - 1, y)].style().bg != Some(bg);
+        // The selection band spans the full app width, edge to edge.
+        let band_full = (0..width).all(|x| buf[(x, y)].style().bg == Some(bg));
         assert!(
-            left_margin_clear && band_start && band_end && right_margin_clear,
-            "row {y} selection band must span cols 2..width-2 with clear margins"
+            band_full,
+            "row {y} selection band must span the full app width (0..{width})"
         );
     }
 }
@@ -129,11 +120,11 @@ fn user_message_has_bg_user_background() {
 }
 
 /// Spec for a user message card (per design):
-///   -- one bg-banded line ABOVE the content (cols 2..width-2)
+///   -- one bg-banded line ABOVE the content
 ///   -- content line(s) with bg band
 ///   -- one bg-banded line BELOW the content
 ///   -- one normal (feed-bg) margin line after that
-/// The band keeps a two-column feed-background margin on each side.
+/// The band spans the full app width, edge to edge.
 /// The card structure must hold when the user message is followed by an agent
 /// response: bg-above, content, bg-below, then a normal margin line before the
 /// next post's content.
@@ -259,7 +250,7 @@ fn first_user_message_card_has_bg_line_above() {
 }
 
 #[test]
-fn user_message_background_spans_band_with_two_column_margins() {
+fn user_message_background_spans_full_app_width() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     add_message(&mut state, Role::User, "hello", 0.0, "req.0");
@@ -269,31 +260,17 @@ fn user_message_background_spans_band_with_two_column_margins() {
     let bg = crate::theme::color_bg_user();
     let width = buf.area().width;
 
-    // Find banded rows and check the band spans cols 2..width-2 with the
-    // two-column margins on each side staying on the feed background.
+    // Every banded row must carry bg.user on every column, edge to edge —
+    // no feed-background margins on either side.
     let mut banded = 0;
     for y in 0..buf.area().height {
         if buf[(2, y)].style().bg == Some(bg) {
             banded += 1;
-            for x in 0..2 {
-                assert_ne!(
-                    buf[(x, y)].style().bg,
-                    Some(bg),
-                    "left margin col {x} must stay on the feed background at row {y}"
-                );
-            }
-            for x in 2..width - 2 {
+            for x in 0..width {
                 assert_eq!(
                     buf[(x, y)].style().bg,
                     Some(bg),
-                    "band col {x} must carry bg.user at row {y}"
-                );
-            }
-            for x in width - 2..width {
-                assert_ne!(
-                    buf[(x, y)].style().bg,
-                    Some(bg),
-                    "right margin col {x} must stay on the feed background at row {y}"
+                    "col {x} must carry bg.user at full-width band row {y}"
                 );
             }
         }

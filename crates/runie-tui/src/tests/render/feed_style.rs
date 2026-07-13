@@ -118,7 +118,7 @@ fn user_card_chevron_matches_input_box_accent_inside_band() {
 }
 
 #[test]
-fn user_card_band_spans_cols_2_to_width_minus_2() {
+fn user_card_band_spans_full_app_width() {
     let _guard = dark_theme();
     let mut state = AppState::default();
     add_message(&mut state, Role::User, "hello", 0.0, "req.0");
@@ -128,25 +128,11 @@ fn user_card_band_spans_cols_2_to_width_minus_2() {
     let content_row = find_row(&buf, "hello").expect("user row");
 
     for y in [content_row - 1, content_row, content_row + 1] {
-        for x in 0..2 {
-            assert_ne!(
-                buf[(x, y)].style().bg,
-                Some(USER_BG),
-                "left margin col {x} row {y} must show the feed background, not the band"
-            );
-        }
-        for x in 2..w - 2 {
+        for x in 0..w {
             assert_eq!(
                 buf[(x, y)].style().bg,
                 Some(USER_BG),
-                "band col {x} row {y} must be Rgb(36,36,36)"
-            );
-        }
-        for x in w - 2..w {
-            assert_ne!(
-                buf[(x, y)].style().bg,
-                Some(USER_BG),
-                "right margin col {x} row {y} must show the feed background, not the band"
+                "band col {x} row {y} must be Rgb(36,36,36) (full app width)"
             );
         }
     }

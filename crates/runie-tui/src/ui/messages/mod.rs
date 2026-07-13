@@ -55,8 +55,8 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 ///
 /// Every line gets the leading feed indent (FEED_INDENT) prepended, so post
 /// content starts at column 3. User message rows additionally get the card
-/// band: the bg.user background painted from column 2 to width-2, leaving a
-/// two-column feed-background margin on each side (grok parity).
+/// band: the bg.user background painted across the full app width, edge to
+/// edge.
 fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
     snap: &Snapshot,
@@ -72,9 +72,8 @@ fn render_paragraph_with_user_backgrounds(
     let full_width = f.area().width;
 
     // Build modified lines with user background applied, then prepend the
-    // feed indent. The indent span carries no background, so for user rows
-    // its cells show whatever was painted into the buffer (feed background
-    // in the margin, card band inside the band).
+    // feed indent. The indent span carries no background of its own, so for
+    // user rows its cells show the card band painted into the buffer below.
     let modified_lines: Vec<Line<'static>> = lines
         .iter()
         .skip(start)
@@ -97,9 +96,8 @@ fn render_paragraph_with_user_backgrounds(
         })
         .collect();
 
-    // FIRST: Draw the card band for user-related rows, keeping a two-column
-    // feed-background margin on each side.
-    let band_end = full_width.saturating_sub(2);
+    // FIRST: Draw the card band for user-related rows across the full app
+    // width, edge to edge.
     for row_offset in 0..height {
         let row = area.y + row_offset as u16;
         let abs_row = visible_start + row_offset;
@@ -107,7 +105,7 @@ fn render_paragraph_with_user_backgrounds(
         let is_user_related = is_user_related_row(snap, elem_idx);
 
         if is_user_related {
-            for x in 2..band_end {
+            for x in 0..full_width {
                 let cell = &mut f.buffer_mut()[(x, row)];
                 let _ = cell.set_bg(bg);
             }
