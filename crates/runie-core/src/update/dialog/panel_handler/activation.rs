@@ -122,14 +122,16 @@ pub fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: Eve
 }
 
 /// Extract args from panel filter for RunPaletteCommand.
+///
+/// Only an exact `"<name> <args>"` filter — the user typing the full command
+/// line into the palette — yields args. A fuzzy search fragment that merely
+/// matches the command (e.g. "the" matching "theme") is a search query,
+/// never an argument.
 pub fn extract_palette_args(name: &str, filter: &str) -> String {
     let filter = filter.trim();
-    if filter == name {
-        String::new()
-    } else if let Some(rest) = filter.strip_prefix(name) {
-        rest.trim().to_owned()
-    } else {
-        filter.to_owned()
+    match filter.strip_prefix(name) {
+        Some(rest) if rest.is_empty() || rest.starts_with(' ') => rest.trim().to_owned(),
+        _ => String::new(),
     }
 }
 

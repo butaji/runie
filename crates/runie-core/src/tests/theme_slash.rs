@@ -93,6 +93,40 @@ fn theme_no_args_opens_selector_dialog() {
 }
 
 #[test]
+fn palette_fuzzy_filter_fragment_does_not_leak_as_args() {
+    let mut state = fresh_state();
+    // Filter the palette with a fragment that fuzzy-matches `theme`...
+    state.update(crate::Event::Input('/'));
+    for c in "the".chars() {
+        state.update(crate::Event::PaletteFilter(c));
+    }
+    state.update(crate::Event::PaletteSelect);
+
+    // ...the fragment is a search query, not a theme name: bare /theme runs.
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
+    assert_eq!(
+        sys_msgs.len(),
+        0,
+        "fuzzy filter fragment must not become command args: {:?}",
+        sys_msgs.iter().map(|m| m.content()).collect::<Vec<_>>()
+    );
+
+    let dialog = state
+        .open_dialog
+        .as_ref()
+        .expect("theme selector dialog should be open");
+    assert!(
+        matches!(dialog, crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack } if stack.current().unwrap().id == "theme"),
+        "should open theme panel dialog"
+    );
+}
+
+#[test]
 fn theme_persisted_in_session() {
     with_env(|env| {
         let store = tmp_store();

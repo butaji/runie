@@ -176,3 +176,24 @@ fn enter_on_cycle_row_cycles_and_keeps_dialog_open() {
         "the setting should have advanced Off -> Low and been applied"
     );
 }
+
+#[test]
+fn palette_args_only_from_exact_command_prefix() {
+    // Exact command name typed in full -> no args.
+    assert_eq!(activation::extract_palette_args("theme", "theme"), "");
+    // Full command line typed into the palette -> args after the space.
+    assert_eq!(
+        activation::extract_palette_args("theme", "theme nord"),
+        "nord"
+    );
+    assert_eq!(
+        activation::extract_palette_args("theme", "theme  nord  "),
+        "nord"
+    );
+    // Fuzzy search fragments are queries, never arguments — even when they
+    // merely prefix-match the command name.
+    assert_eq!(activation::extract_palette_args("theme", "the"), "");
+    assert_eq!(activation::extract_palette_args("theme", "themes"), "");
+    assert_eq!(activation::extract_palette_args("theme", "the nord"), "");
+    assert_eq!(activation::extract_palette_args("theme", ""), "");
+}
