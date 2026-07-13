@@ -288,6 +288,37 @@ mod tests {
     }
 
     #[test]
+    fn provider_registry_google_uses_openai_compat_endpoint() {
+        let p = find_provider("google").expect("google should exist");
+        assert_eq!(p.display_name, "Google Gemini");
+        // Gemini's native chat endpoint is not OpenAI-shaped; the
+        // OpenAI-compatible surface under /v1beta/openai is what runie speaks.
+        assert_eq!(
+            p.base_url,
+            "https://generativelanguage.googleapis.com/v1beta/openai"
+        );
+        assert_eq!(p.env_var, "GEMINI_API_KEY");
+    }
+
+    #[test]
+    fn provider_registry_google_lists_only_live_models() {
+        let p = find_provider("google").expect("google should exist");
+        let names: Vec<&str> = p.models.iter().map(|m| m.name.as_str()).collect();
+        // Retired models (2.x) must not be offered: Google rejects them with
+        // 404 "no longer available" for new users.
+        for name in &names {
+            assert!(
+                !name.starts_with("gemini-2."),
+                "retired model still in registry: {name}"
+            );
+        }
+        assert!(
+            names.contains(&"gemini-3.1-flash-lite"),
+            "default model missing: {names:?}"
+        );
+    }
+
+    #[test]
     fn provider_registry_find_missing_returns_none() {
         assert!(find_provider("nonexistent").is_none());
     }

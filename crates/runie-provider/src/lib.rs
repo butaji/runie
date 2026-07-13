@@ -328,6 +328,9 @@ async fn fetch_models(
             .map(|arr| {
                 arr.iter()
                     .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
+                    // Gemini's OpenAI-compatible /models endpoint prefixes ids
+                    // with "models/"; the registry stores bare names.
+                    .map(|id| id.strip_prefix("models/").unwrap_or(&id).to_owned())
                     .collect()
             })
             .unwrap_or_default())

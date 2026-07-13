@@ -59,6 +59,10 @@ where
 /// A tool call delta inside a delta.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ToolCallJson {
+    /// Index of the tool call within the turn. OpenAI always sends it;
+    /// Gemini's OpenAI-compatible stream omits it, so default to 0 (a
+    /// missing index can only mean the first/only call).
+    #[serde(default)]
     pub index: usize,
     #[serde(default)]
     pub id: Option<String>,

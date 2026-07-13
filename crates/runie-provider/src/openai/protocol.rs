@@ -904,6 +904,46 @@ mod tests {
     }
 
     #[test]
+    fn gemini_tool_call_chunk_without_index_parses_and_completes() {
+        // Gemini's OpenAI-compatible stream sends the whole tool call in one
+        // delta, omits the `index` field, adds `extra_content.google.
+        // thought_signature`, and ends tool turns with finish_reason "stop".
+        let protocol = OpenAiProtocol::new();
+        let state = OpenAiState::default();
+        let json = serde_json::json!({
+            "choices": [{
+                "delta": {
+                    "role": "assistant",
+                    "tool_calls": [{
+                        "extra_content": {"google": {"thought_signature": "sig"}},
+                        "function": {"arguments": "{\"city\":\"Paris\"}", "name": "get_weather"},
+                        "id": "call_1",
+                        "type": "function"
+                    }]
+                },
+                "index": 0
+            }]
+        });
+        let frame =
+            OpenAiFrame::Chunk(parse_chunk(&json).expect("gemini tool-call chunk must parse"));
+        let (state, events) = protocol.step(state, frame);
+        assert!(
+            events.iter().any(
+                |e| matches!(e, ProviderEvent::ToolCallStart { name, .. } if name == "get_weather")
+            ),
+            "ToolCallStart missing: {events:?}"
+        );
+        // finish_reason "stop" must still flush the pending tool call.
+        let (_state, events) = protocol.step(state, chunk_with_finish("stop"));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::ToolCallEnd { .. })),
+            "ToolCallEnd missing: {events:?}"
+        );
+    }
+
+    #[test]
     fn openai_protocol_step_text_delta() {
         let protocol = OpenAiProtocol::new();
         let state = OpenAiState::default();

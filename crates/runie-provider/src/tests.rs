@@ -456,6 +456,40 @@ async fn test_validate_api_key_parses_minimax_models_and_trims_key() {
     assert_eq!(models, vec!["MiniMax-M3", "MiniMax-M2.7"]);
 }
 
+#[tokio::test]
+async fn test_validate_api_key_strips_gemini_models_prefix() {
+    use std::time::Duration;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let mock_server = MockServer::start().await;
+
+    // Gemini's OpenAI-compatible /models endpoint prefixes ids with "models/".
+    // The registry stores bare names, so validation must strip the prefix or
+    // no validated model ever matches the catalog.
+    Mock::given(method("GET"))
+        .and(path("/v1beta/openai/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "object": "list",
+            "data": [
+                {"id": "models/gemini-3.1-flash-lite", "object": "model"},
+                {"id": "models/gemini-3.5-flash", "object": "model"}
+            ]
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let models = crate::validate_api_key_with_timeout(
+        &format!("{}/v1beta/openai", mock_server.uri()),
+        "test-key",
+        Duration::from_secs(2),
+    )
+    .await
+    .expect("Gemini-style response should succeed");
+
+    assert_eq!(models, vec!["gemini-3.1-flash-lite", "gemini-3.5-flash"]);
+}
+
 #[test]
 fn test_built_provider_trims_whitespace_api_key_from_env() {
     with_env_lock("OPENAI_API_KEY", "  sk-with-space\n ", || {

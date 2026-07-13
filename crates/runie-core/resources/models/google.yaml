@@ -1,23 +1,26 @@
-# Google Gemini provider metadata
+# Google Gemini provider metadata.
+#
+# runie speaks OpenAI-compatible wire protocol, so the base URL points at
+# Gemini's OpenAI-compatible surface (chat completions, Bearer auth, /models
+# listing). The native generateContent API lives one level up at /v1beta.
+#
+# Model list: Gemini 2.x ids are retired ("no longer available" 404s), so only
+# live Gemini 3 models are offered. Costs omitted — not yet published for the
+# 3.x line; the fields are optional.
 key: google
 display_name: Google Gemini
-base_url: https://generativelanguage.googleapis.com/v1beta
+base_url: https://generativelanguage.googleapis.com/v1beta/openai
 env_var: GEMINI_API_KEY
 models:
-  - name: gemini-2.5-pro
-    cost_prompt: 1.25
-    cost_completion: 10.0
+  - name: gemini-3.1-flash-lite
     supports_thinking: true
     supports_vision: true
     context_window: 1000000
-  - name: gemini-2.5-flash
-    cost_prompt: 0.15
-    cost_completion: 0.6
+  - name: gemini-3.5-flash
     supports_thinking: true
     supports_vision: true
     context_window: 1000000
-  - name: gemini-2.0-flash
-    cost_prompt: 0.1
-    cost_completion: 0.4
+  - name: gemini-3.1-pro-preview
+    supports_thinking: true
     supports_vision: true
     context_window: 1000000

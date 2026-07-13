@@ -273,7 +273,7 @@ mod tests {
             context_window_for("anthropic", "claude-sonnet-4-6"),
             200_000
         );
-        assert_eq!(context_window_for("google", "gemini-2.5-pro"), 1_000_000);
+        assert_eq!(context_window_for("google", "gemini-3.5-flash"), 1_000_000);
     }
 
     #[test]
