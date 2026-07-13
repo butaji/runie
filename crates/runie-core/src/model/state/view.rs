@@ -57,9 +57,6 @@ pub struct ViewState {
     // Cached auth provider names
     pub cached_auth_providers: Arc<[String]>,
     pub cached_auth_valid: bool,
-    /// Last known mouse position from `MouseMove` events. Used by the TUI
-    /// to compute `MouseTarget` for hover styling and click routing.
-    pub mouse_position: Option<(u16, u16)>,
     /// Vim-style scrollback navigation active.
     pub vim_nav_mode: bool,
     /// Reusable feed cache. Populated by `ensure_fresh()`; reused by
@@ -94,7 +91,6 @@ impl PartialEq for ViewState {
             && self.last_content_width == other.last_content_width
             && self.selected_post == other.selected_post
             && self.expanded_posts == other.expanded_posts
-            && self.mouse_position == other.mouse_position
             && self.vim_nav_mode == other.vim_nav_mode
     }
 }
@@ -162,7 +158,6 @@ impl Default for ViewState {
             cached_session_tree_valid: false,
             cached_auth_providers: Arc::new([]),
             cached_auth_valid: false,
-            mouse_position: None,
             vim_nav_mode: false,
             cached_feed: None,
             vim_nav_pending: false,

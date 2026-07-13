@@ -59,20 +59,12 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
         crate::Event::HistoryNext => handle_history_next(state),
         crate::Event::MouseScrollUp => scroll_event(state, crate::Event::Up),
         crate::Event::MouseScrollDown => scroll_event(state, crate::Event::Down),
-        crate::Event::MouseClick { row, col, button } => {
-            handle_mouse_click_event(state, row, col, &button);
-        }
-        crate::Event::MouseMove { row, col } => handle_mouse_move(state, row, col),
         crate::Event::TerminalSize { width, height } => {
             handle_terminal_resize(state, width, height);
         }
         // intentionally ignored: other input events fall through
         _ => {}
     }
-}
-
-fn handle_mouse_move(state: &mut AppState, row: u16, col: u16) {
-    state.view_mut().mouse_position = Some((row, col));
 }
 
 fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
@@ -130,12 +122,8 @@ fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
         | crate::Event::PageDown
         | crate::Event::GoToTop
         | crate::Event::GoToBottom
-        | crate::Event::MouseClick { .. }
-        | crate::Event::MouseMove { .. }
         | crate::Event::MouseScrollUp
         | crate::Event::MouseScrollDown
-        | crate::Event::MouseDrag { .. }
-        | crate::Event::MouseRelease { .. }
         | crate::Event::FocusGained
         | crate::Event::FocusLost
         | crate::Event::TerminalSize { .. } => {
@@ -146,11 +134,6 @@ fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
             apply_input_event(state, event);
         }
     }
-}
-
-fn handle_mouse_click_event(state: &mut AppState, row: u16, col: u16, button: &str) {
-    state.view_mut().mouse_position = Some((row, col));
-    handle_mouse_click(state, row, col, button);
 }
 
 /// Navigation mode selected by history/preview key bindings.
@@ -226,44 +209,6 @@ fn handle_escape(state: &mut AppState) {
         let selected = state.current_bottom_post_index();
         state.view_mut().selected_post = selected;
     }
-}
-
-fn handle_mouse_click(state: &mut AppState, row: u16, col: u16, button: &str) {
-    use crate::snapshot::compute_mouse_target;
-
-    let last_content_width = state.view().last_content_width;
-    let last_visible_height = state.view().last_visible_height;
-    let has_models = state.has_models();
-    let input = state.input().input.clone();
-
-    let target = compute_mouse_target(
-        Some((row, col)),
-        last_content_width,
-        last_visible_height,
-        &input,
-        has_models,
-    );
-
-    if button == "left" {
-        match target {
-            crate::snapshot::MouseTarget::Input => {
-                // Left-click in input area: focus the prompt, exit vim nav mode.
-                if state.view_mut().vim_nav_mode {
-                    state.view_mut().vim_nav_mode = false;
-                    state.view_mut().selected_post = None;
-                }
-                state.view_mut().dirty = true;
-            }
-            crate::snapshot::MouseTarget::Feed => {
-                // Left-click in feed: toggle collapse-all (same as Ctrl+O).
-                state.toggle_expand_all();
-            }
-            // intentionally ignored: other targets fall through
-            _ => {}
-        }
-    }
-    // Middle-click and right-click are intentionally ignored here;
-    // middle-click paste is future work.
 }
 
 #[cfg(test)]

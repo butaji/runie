@@ -51,10 +51,6 @@
     "_note": "Field definitions for Event variants. Null means unit variant.",
     "Input": "char",
     "Paste": "String",
-    "MouseClick": "{ row: u16, col: u16, button: String }",
-    "MouseRelease": "{ row: u16, col: u16, button: String }",
-    "MouseDrag": "{ row: u16, col: u16, button: String }",
-    "MouseMove": "{ row: u16, col: u16 }",
     "TerminalSize": "{ width: u16, height: u16 }",
     "Thinking": "{ id: String }",
     "ThoughtDone": "{ id: String }",
@@ -173,8 +169,7 @@
         "CursorStart", "CursorEnd", "DeleteWord", "DeleteToEnd", "DeleteToStart",
         "KillChar", "HistoryPrev", "HistoryNext", "Undo", "Redo", "CursorWordLeft",
         "CursorWordRight", "PageUp", "PageDown", "GoToTop", "GoToBottom",
-        "Paste", "PasteImage", "MouseClick", "MouseRelease", "MouseDrag",
-        "MouseMove", "MouseScrollUp", "MouseScrollDown", "FocusGained", "FocusLost",
+        "Paste", "PasteImage", "MouseScrollUp", "MouseScrollDown", "FocusGained", "FocusLost",
         "TerminalSize"
       ]
     },

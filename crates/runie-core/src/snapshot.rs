@@ -37,24 +37,6 @@ impl GitInfo {
 
 }
 
-/// Which region of the TUI the mouse is currently over.
-/// Computed by the TUI layer from the last known mouse position and the
-/// current layout. Used for hover hints and click routing.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub enum MouseTarget {
-    /// Mouse is over the scrollable message feed.
-    Feed,
-    /// Mouse is over the input box area.
-    Input,
-    /// Mouse is over the status bar.
-    StatusBar,
-    /// Mouse is over the hints line.
-    Hints,
-    /// No known position (never tracked or terminal does not support it).
-    #[default]
-    Unknown,
-}
-
 #[derive(Clone, Default)]
 pub struct Snapshot {
     pub elements: Arc<[Element]>,
@@ -145,14 +127,6 @@ pub struct Snapshot {
     pub selected_post: Option<usize>,
     /// Incomplete streaming content (mutable tail) — rendered in the active cell.
     pub streaming_tail: String,
-    /// Region the mouse is over (computed by the TUI before snapshot is sent
-    /// to the render actor). Used for hover styling and click routing.
-    pub mouse_target: MouseTarget,
-    /// Element index under the mouse cursor, if the mouse is in the feed area
-    /// and over a known element. `None` if mouse is elsewhere or unknown.
-    pub hovered_element: Option<usize>,
-    /// Last known mouse position in terminal coordinates.
-    pub mouse_position: Option<(u16, u16)>,
     /// Input box title: `provider/model · read-only` when read-only.
     pub input_title: String,
     /// True when a provider and model are connected.
@@ -282,119 +256,4 @@ pub fn scrollbar_metrics(
         .clamp(0.0, track) as usize;
     let thumb = thumb_end.saturating_sub(thumb_start).max(1);
     (thumb, thumb_start)
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public mouse-target helpers (pure functions, no state needed).
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Derive which UI region the mouse is over from raw coordinates + layout.
-pub fn compute_mouse_target(
-    mouse_pos: Option<(u16, u16)>,
-    width: u16,
-    height: u16,
-    input: &str,
-    has_models: bool,
-) -> MouseTarget {
-    let (row, col) = match mouse_pos {
-        Some(pos) => pos,
-        None => return MouseTarget::Unknown,
-    };
-    if width == 0 || height == 0 {
-        return MouseTarget::Unknown;
-    }
-    let layout = compute_layout(width, height, input, has_models);
-    target_from_row(row, col, &layout)
-}
-
-struct MouseLayout {
-    width: u16,
-    margin: u16,
-    feed_end: u16,
-    input_height: u16,
-}
-
-fn compute_layout(width: u16, height: u16, input: &str, has_models: bool) -> MouseLayout {
-    let margin = if width > 20 && height > 10 { 1 } else { 0 };
-    let area_height = height.saturating_sub(margin * 2);
-    let input_lines = if input.is_empty() {
-        1
-    } else {
-        input.lines().count().max(1)
-    };
-    let input_height = (input_lines + 2).min(10) as u16;
-    let feed_end = if has_models {
-        margin + area_height.saturating_sub(input_height + 4)
-    } else {
-        margin + area_height.saturating_sub(1)
-    };
-    MouseLayout {
-        width,
-        margin,
-        feed_end,
-        input_height,
-    }
-}
-
-fn target_from_row(row: u16, col: u16, layout: &MouseLayout) -> MouseTarget {
-    if col > layout.width || row < layout.margin {
-        return MouseTarget::Unknown;
-    }
-    if row < layout.feed_end {
-        return MouseTarget::Feed;
-    }
-    let mut y = layout.feed_end + layout.margin + 1; // status bar
-    if row < y {
-        return MouseTarget::StatusBar;
-    }
-    y += layout.input_height;
-    if row < y {
-        MouseTarget::Input
-    } else {
-        MouseTarget::Hints
-    }
-}
-
-/// Compute which element is under the mouse cursor in the feed area.
-/// Returns the element index, or None if the mouse is not in the feed.
-// allow: all args are orthogonal (mouse pos, dimensions, content) — refactoring would hurt clarity
-#[allow(clippy::too_many_arguments)]
-pub fn compute_hovered_element(
-    mouse_pos: Option<(u16, u16)>,
-    width: u16,
-    height: u16,
-    input: &str,
-    elements: &[crate::view::elements::Element],
-    line_counts: &[usize],
-    total_lines: usize,
-    has_models: bool,
-) -> Option<usize> {
-    if compute_mouse_target(mouse_pos, width, height, input, has_models) != MouseTarget::Feed {
-        return None;
-    }
-
-    let (row, _) = mouse_pos?;
-    let margin = if width > 20 && height > 10 { 1 } else { 0 };
-
-    if elements.is_empty() || total_lines == 0 {
-        return None;
-    }
-
-    let feed_top = margin;
-    let content_row = row.saturating_sub(feed_top) as usize;
-    let visible_height = (height.saturating_sub(margin * 2)).max(3) as usize;
-    let max_scroll = total_lines.saturating_sub(visible_height);
-    let top_line = max_scroll.saturating_sub(max_scroll); // feed top = 0 when scroll=0
-    let target_line = top_line
-        .saturating_add(content_row)
-        .min(total_lines.saturating_sub(1));
-
-    let mut cum = 0usize;
-    for (i, &c) in line_counts.iter().enumerate() {
-        cum += c;
-        if cum > target_line {
-            return Some(i);
-        }
-    }
-    None
 }

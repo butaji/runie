@@ -155,38 +155,6 @@ fn event_name_roundtrip() {
 }
 
 #[test]
-fn mouse_events_have_no_name() {
-    assert_eq!(
-        crate::Event::MouseClick {
-            row: 0,
-            col: 0,
-            button: "left".into()
-        }
-        .name(),
-        None
-    );
-    assert_eq!(
-        crate::Event::MouseRelease {
-            row: 0,
-            col: 0,
-            button: "left".into()
-        }
-        .name(),
-        None
-    );
-    assert_eq!(
-        crate::Event::MouseDrag {
-            row: 0,
-            col: 0,
-            button: "left".into()
-        }
-        .name(),
-        None
-    );
-    assert_eq!(crate::Event::MouseMove { row: 0, col: 0 }.name(), None);
-}
-
-#[test]
 fn event_from_name_all_named_variants() {
     for (name, ctor) in crate::event::EVENT_NAMES {
         let expected = ctor();

@@ -11,50 +11,17 @@ use crate::model::state::AppState;
 use crate::model::view_cache::ViewCache;
 use crate::model::{build_model_selector_items, ModelSelectorItem};
 use crate::model_catalog::configured_models_catalog;
-use crate::snapshot::{
-    compute_current_top_element, compute_hovered_element, compute_mouse_target, Snapshot,
-};
+use crate::snapshot::{compute_current_top_element, Snapshot};
 
 mod animation;
 mod snapshot_fill;
 
 /// Extracted view values to avoid borrow conflicts.
 struct ViewValues {
-    mouse_position: Option<(u16, u16)>,
     last_content_width: u16,
     last_visible_height: u16,
     scroll: usize,
     selected_post: Option<usize>,
-}
-
-/// Pure computation of mouse targeting without needing AppState borrow.
-fn snapshot_mouse_impl(
-    elements: &[crate::view::Element],
-    line_counts: &[usize],
-    total_lines: usize,
-    view: &ViewValues,
-    input: &str,
-    has_models: bool,
-) -> (crate::snapshot::MouseTarget, Option<usize>) {
-    let mouse_pos = view.mouse_position;
-    let target = compute_mouse_target(
-        mouse_pos,
-        view.last_content_width,
-        view.last_visible_height,
-        input,
-        has_models,
-    );
-    let hovered = compute_hovered_element(
-        mouse_pos,
-        view.last_content_width,
-        view.last_visible_height,
-        input,
-        elements,
-        line_counts,
-        total_lines,
-        has_models,
-    );
-    (target, hovered)
 }
 
 impl AppState {
@@ -311,14 +278,6 @@ impl AppState {
                     .expect("cached_feed must be set after ensure_fresh")
             }
         };
-        let (mouse_target, hovered_element) = snapshot_mouse_impl(
-            &cache.elements,
-            &cache.line_counts,
-            cache.total_lines,
-            &view_values,
-            &self.input().input,
-            self.has_models(),
-        );
         let current_top = compute_current_top_element(
             &cache.elements,
             &cache.line_counts,
@@ -337,9 +296,6 @@ impl AppState {
             posts: cache.posts,
             selected_post: view_values.selected_post,
             last_visible_height: view_values.last_visible_height,
-            mouse_target,
-            hovered_element,
-            mouse_position: view_values.mouse_position,
             ..Default::default()
         }
     }
@@ -347,7 +303,6 @@ impl AppState {
     fn extract_view_values(&self) -> ViewValues {
         let view = self.view();
         ViewValues {
-            mouse_position: view.mouse_position,
             last_content_width: view.last_content_width,
             last_visible_height: view.last_visible_height,
             scroll: view.scroll,

@@ -29,7 +29,8 @@ pub fn setup_terminal() -> io::Result<(Terminal<CrosstermBackend<std::io::Stdout
 
     crossterm::terminal::enable_raw_mode()?;
     let mut stdout = std::io::stdout();
-    // Grok-style init: full mouse + focus + bracketed paste + sync update + cursor
+    // Grok-style init: mouse capture (kept for wheel scrolling) + focus +
+    // bracketed paste + sync update + cursor
     enable_mouse_grok_style(&mut stdout, &capabilities)?;
     // Progressive enhancement: ask the terminal to report modified keys.
     // We send both the kitty keyboard protocol and the xterm
@@ -114,11 +115,12 @@ fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
     Ok(())
 }
 
-/// Write the full Grok-style mouse + terminal init sequence.
-/// Only the mouse modes are gated on `caps.mouse != None`; focus tracking,
-/// bracketed paste, and cursor setup are emitted unconditionally
-/// (unsupported terminals ignore them). Synchronized updates are NOT enabled
-/// here: they are bracketed per frame by the render loop (see
+/// Write the Grok-style mouse + terminal init sequence.
+/// Mouse capture is enabled (gated on `caps.mouse != None`) solely so the
+/// terminal reports wheel-scroll events; runie does not handle click, drag,
+/// or move. Focus tracking, bracketed paste, and cursor setup are emitted
+/// unconditionally (unsupported terminals ignore them). Synchronized updates
+/// are NOT enabled here: they are bracketed per frame by the render loop (see
 /// `begin_frame_sync`/`end_frame_sync`), because a session-long BSU makes
 /// 2026-aware terminals buffer grid updates indefinitely.
 pub fn enable_mouse_grok_style<W: io::Write>(

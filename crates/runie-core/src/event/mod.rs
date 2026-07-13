@@ -406,25 +406,6 @@ pub enum Event {
     GoToBottom,
     Paste(String),
     PasteImage,
-    MouseClick {
-        row: u16,
-        col: u16,
-        button: String,
-    },
-    MouseRelease {
-        row: u16,
-        col: u16,
-        button: String,
-    },
-    MouseDrag {
-        row: u16,
-        col: u16,
-        button: String,
-    },
-    MouseMove {
-        row: u16,
-        col: u16,
-    },
     MouseScrollUp,
     MouseScrollDown,
     FocusGained,

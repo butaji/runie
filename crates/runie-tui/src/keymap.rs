@@ -6,7 +6,7 @@
 use crokey::KeyCombination;
 use crokey::KeyCombinationFormat;
 use crossterm::event::{
-    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
 };
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
@@ -174,34 +174,15 @@ fn map_plain_key(code: &KeyCode) -> Option<CoreEvent> {
 }
 
 /// Convert mouse events to CoreEvent.
+///
+/// Only wheel scrolling is supported: scroll up/down map to `CoreEvent::Up` /
+/// `CoreEvent::Down`. All other mouse interactions (click, release, drag,
+/// move) are intentionally dropped — they convert to `None`.
 fn convert_mouse_event(mouse: &MouseEvent) -> Option<CoreEvent> {
     match mouse.kind {
         MouseEventKind::ScrollDown => Some(CoreEvent::Down),
         MouseEventKind::ScrollUp => Some(CoreEvent::Up),
-        MouseEventKind::Down(btn) => Some(CoreEvent::MouseClick {
-            row: mouse.row,
-            col: mouse.column,
-            button: mouse_button_to_string(btn),
-        }),
-        MouseEventKind::Up(btn) => Some(CoreEvent::MouseRelease {
-            row: mouse.row,
-            col: mouse.column,
-            button: mouse_button_to_string(btn),
-        }),
-        MouseEventKind::Drag(btn) => Some(CoreEvent::MouseDrag {
-            row: mouse.row,
-            col: mouse.column,
-            button: mouse_button_to_string(btn),
-        }),
         _ => None,
-    }
-}
-
-fn mouse_button_to_string(button: MouseButton) -> String {
-    match button {
-        MouseButton::Left => "left".to_owned(),
-        MouseButton::Right => "right".to_owned(),
-        MouseButton::Middle => "middle".to_owned(),
     }
 }
 
@@ -294,3 +275,11 @@ mod tests {
         assert_eq!(result, Some(CoreEvent::KillChar));
     }
 }
+
+// The `keymap/tests/` directory was previously orphaned: this file declares an
+// inline `mod tests`, which shadows the directory and left `merge.rs` (mouse
+// scroll / terminal-caps merge coverage) uncompiled. Mount it explicitly so
+// those tests actually run.
+#[cfg(test)]
+#[path = "keymap/tests/merge.rs"]
+mod keymap_merge_tests;

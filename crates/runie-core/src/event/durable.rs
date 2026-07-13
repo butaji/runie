@@ -174,10 +174,6 @@ impl DurableCoreEvent {
             | Event::GoToBottom
             | Event::Paste(_)
             | Event::PasteImage
-            | Event::MouseClick { .. }
-            | Event::MouseRelease { .. }
-            | Event::MouseDrag { .. }
-            | Event::MouseMove { .. }
             | Event::MouseScrollUp
             | Event::MouseScrollDown
             | Event::FocusGained

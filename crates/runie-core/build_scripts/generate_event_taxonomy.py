@@ -49,7 +49,7 @@ VARIANTS_WITH_FIELDS = {
     "PlanModeEnabled", "ExternalEditorDone", "SelectSession", "StarSession",
     "RenameSession", "DeleteSession", "ProvidersSelectModel", "ProvidersDisconnect",
     "ProvidersEditModels", "CopyToClipboard", "InsertAtRef", "PendingEdit",
-    "Paste", "MouseClick", "MouseRelease", "MouseDrag", "MouseMove",
+    "Paste",
     "TerminalSize", "SelectProvider", "SubmitKey", "ToggleModel", "SwitchModel",
     "SwitchTheme", "ScopedModelToggle", "ScopedModelToggleProvider",
     "SettingsSwitchCategory", "SetThinkingLevel", "ForkSession", "SessionTreeSelect",
