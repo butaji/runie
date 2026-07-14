@@ -4216,6 +4216,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures",
+ "serde_json",
  "tokio",
  "tokio-util",
 ]
