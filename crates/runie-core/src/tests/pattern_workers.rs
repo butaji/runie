@@ -49,7 +49,10 @@ fn pattern_worker_events_are_agent_facts() {
     for e in [spawned, finished] {
         assert_eq!(e.kind(), EventKind::Fact, "{e:?} kind");
         assert_eq!(e.category(), EventCategory::Agent, "{e:?} category");
-        assert!(e.clone().into_intent().is_none(), "{e:?} must not be an intent");
+        assert!(
+            e.clone().into_intent().is_none(),
+            "{e:?} must not be an intent"
+        );
     }
 }
 

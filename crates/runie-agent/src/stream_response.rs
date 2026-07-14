@@ -424,10 +424,14 @@ mod tests {
     async fn thinking_events_are_forwarded_to_the_tui() {
         let provider = TestProvider {
             events: vec![
-                ProviderEvent::ThinkingStart { id: "reasoning".into() },
+                ProviderEvent::ThinkingStart {
+                    id: "reasoning".into(),
+                },
                 ProviderEvent::ThinkingDelta("Let me think".into()),
                 ProviderEvent::ThinkingDelta(" about this.".into()),
-                ProviderEvent::ThinkingEnd { id: "reasoning".into() },
+                ProviderEvent::ThinkingEnd {
+                    id: "reasoning".into(),
+                },
                 ProviderEvent::TextDelta("The answer".into()),
                 ProviderEvent::Finish {
                     reason: StopReason::Stop,
@@ -471,7 +475,10 @@ mod tests {
             "ThinkingEnd must be forwarded: {events:?}"
         );
         // Reasoning still accumulates for the message history.
-        assert_eq!(result.reasoning.as_deref(), Some("Let me think about this."));
+        assert_eq!(
+            result.reasoning.as_deref(),
+            Some("Let me think about this.")
+        );
     }
 
     /// Layer 2: ThinkFilter flush at stream end handles unclosed block.
@@ -630,12 +637,9 @@ mod tests {
 
     /// Drive an SSE fixture through the full provider→agent streaming path and
     /// return every `Event` emitted to the live feed plus the final response.
-    async fn drive_minimax_fixture(
-        name: &str,
-    ) -> (Vec<runie_core::Event>, StreamedResponse) {
+    async fn drive_minimax_fixture(name: &str) -> (Vec<runie_core::Event>, StreamedResponse) {
         use runie_provider::openai::stream::replay_sse;
-        let events =
-            replay_sse(&runie_testing::fixtures::minimax::fixture(name));
+        let events = replay_sse(&runie_testing::fixtures::minimax::fixture(name));
         let provider = TestProvider { events };
         let captured: Arc<std::sync::Mutex<Vec<runie_core::Event>>> =
             Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -659,9 +663,7 @@ mod tests {
         emitted
             .iter()
             .filter_map(|e| match e {
-                runie_core::Event::ResponseDelta { content, .. } => {
-                    Some(content.as_str())
-                }
+                runie_core::Event::ResponseDelta { content, .. } => Some(content.as_str()),
                 _ => None,
             })
             .collect::<Vec<_>>()
@@ -687,8 +689,7 @@ mod tests {
 
     #[tokio::test]
     async fn minimax_m27_content_does_not_leak_tags_into_live_feed() {
-        let (emitted, result) =
-            drive_minimax_fixture("m27_multi_tool_readme.sse").await;
+        let (emitted, result) = drive_minimax_fixture("m27_multi_tool_readme.sse").await;
         let joined = joined_response_deltas(&emitted);
         assert_no_live_leak(&joined);
 
@@ -712,8 +713,7 @@ mod tests {
 
     #[tokio::test]
     async fn minimax_m3_inline_json_tool_call_does_not_leak_into_live_feed() {
-        let (emitted, result) =
-            drive_minimax_fixture("m3_list_files_call.sse").await;
+        let (emitted, result) = drive_minimax_fixture("m3_list_files_call.sse").await;
         let joined = joined_response_deltas(&emitted);
         assert_no_live_leak(&joined);
 

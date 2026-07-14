@@ -149,8 +149,12 @@ fn parse_fixture(content: &str, protocol: Protocol) -> Vec<ProviderEvent> {
 
             let model_err = match code {
                 401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
-                429 => ModelError::RateLimit { retry_after_secs: None },
-                529 => ModelError::Overloaded { retry_after_secs: None },
+                429 => ModelError::RateLimit {
+                    retry_after_secs: None,
+                },
+                529 => ModelError::Overloaded {
+                    retry_after_secs: None,
+                },
                 500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
                 _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
             };
@@ -178,7 +182,10 @@ mod tests {
     #[test]
     fn infer_protocol_anthropic() {
         let fixtures = vec![r#"data: {"type":"message_start","message":{}}"#.to_string()];
-        assert_eq!(ReplayProvider::infer_protocol(&fixtures), Protocol::Anthropic);
+        assert_eq!(
+            ReplayProvider::infer_protocol(&fixtures),
+            Protocol::Anthropic
+        );
     }
 
     #[test]
@@ -216,10 +223,9 @@ mod tests {
             Protocol::OpenAi,
         );
         let events = collect(&provider);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Error(ModelError::Overloaded { .. })
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Error(ModelError::Overloaded { .. }))));
     }
 
     #[test]
@@ -242,9 +248,7 @@ mod tests {
             "expected retried content, got: {events:?}"
         );
         assert!(
-            !events
-                .iter()
-                .any(|e| matches!(e, ProviderEvent::Error(_))),
+            !events.iter().any(|e| matches!(e, ProviderEvent::Error(_))),
             "the exhausted overload error must not surface when retry succeeds: {events:?}"
         );
     }
@@ -256,10 +260,9 @@ mod tests {
             Protocol::OpenAi,
         );
         let events = collect(&provider);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Error(ModelError::Overloaded { .. })
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Error(ModelError::Overloaded { .. }))));
     }
 
     #[test]

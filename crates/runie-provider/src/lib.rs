@@ -27,6 +27,7 @@ pub mod replay;
 pub use replay::{Protocol as ReplayProtocol, ReplayProvider};
 
 use crate::retry::{is_retryable, with_retry};
+use std::collections::HashMap;
 
 // ---------------------------------------------------------------------------
 // Re-exports from runie-core
@@ -39,7 +40,9 @@ pub use runie_core::provider::registry::{
     ModelMetaBuilder, ProviderMeta, ProviderMetaBuilder,
 };
 pub use runie_core::provider::ProviderError;
-pub use runie_core::provider::{Provider, ProviderMetadata, ResponseChunk, RetryConfig};
+pub use runie_core::provider::{
+    Provider, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy,
+};
 
 // Model catalog types.
 pub use runie_core::model_catalog::configured::configured_models_catalog;
@@ -84,32 +87,34 @@ pub fn is_known(key: &str) -> bool {
     is_known_provider(key)
 }
 
-/// Resolve API key and base URL for a provider.
+/// Resolve API key, base URL, and custom headers for a provider.
 ///
-/// Returns `(api_key, base_url)` where api_key is a `SecretString`.
+/// Returns `(api_key, base_url, headers)` where api_key is a `SecretString`.
 fn resolve_credentials(
     key: &str,
     meta: &ProviderMeta,
     config: Option<Arc<dyn ProviderConfig>>,
-) -> (secrecy::SecretString, String) {
-    let (api_key, base_url) = if let Some(cfg) = config {
+) -> (secrecy::SecretString, String, HashMap<String, String>) {
+    let (api_key, base_url, headers) = if let Some(cfg) = config {
         let resolver = config::ProviderConfigResolver::new(cfg);
         (
             resolver.resolve_api_key(key),
             resolver
                 .resolve_base_url(key)
                 .unwrap_or_else(|| meta.base_url.to_owned()),
+            resolver.resolve_headers(key).unwrap_or_default(),
         )
     } else {
         // When no config is provided, use CredentialResolver for unified priority:
         // env var → dotenv → keyring → config
         let resolver = runie_core::auth::CredentialResolver::new();
         let api_key = resolver.resolve_api_key(key);
-        (api_key, meta.base_url.to_owned())
+        (api_key, meta.base_url.to_owned(), HashMap::new())
     };
     (
         api_key.unwrap_or_else(|| secrecy::SecretString::from(String::new())),
         http::normalize_base_url(&base_url),
+        headers,
     )
 }
 
@@ -134,7 +139,14 @@ pub fn build_provider(
 
     let meta = find_provider(key).ok_or_else(|| ProviderError::UnknownProvider(key.to_owned()))?;
 
-    let (api_key, base_url) = resolve_credentials(key, &meta, config);
+    // Resolve retry policy from config before the config Arc is consumed by credential
+    // resolution; fall back to the provider default when no config is supplied.
+    let retry_config = config
+        .as_ref()
+        .and_then(|c| c.retry_config())
+        .unwrap_or_default();
+
+    let (api_key, base_url, headers) = resolve_credentials(key, &meta, config);
     if api_key.expose_secret().is_empty() && !is_mock_enabled() {
         return Err(ProviderError::MissingApiKey(meta.env_var.to_owned().into()));
     }
@@ -146,16 +158,24 @@ pub fn build_provider(
 
     #[cfg(feature = "openai")]
     {
-        let provider = build_openai_provider(api_key, bare_model, &base_url, key, model);
-        Ok(BuiltProvider::new(
-            provider,
-            key.to_owned(),
-            model.to_owned(),
-        ))
+        let provider = build_openai_provider(
+            api_key,
+            bare_model,
+            &base_url,
+            key,
+            model,
+            headers,
+            retry_config,
+        );
+        let mut built = BuiltProvider::new(provider, key.to_owned(), model.to_owned());
+        if let Some(meta) = find_model_for_provider(key, model) {
+            built = built.with_model_info(model_info_from_meta(key, model, &meta));
+        }
+        Ok(built)
     }
     #[cfg(not(feature = "openai"))]
     {
-        let _ = (api_key, model, base_url);
+        let _ = (api_key, model, base_url, headers);
         Err(ProviderError::UnknownProvider(key.to_owned()))
     }
 }
@@ -181,7 +201,31 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
         "markup" => Box::new(base.markup().build()),
         _ => Box::new(base.build()),
     };
-    BuiltProvider::new(provider, key.to_owned(), model.to_owned())
+    let metadata = provider.metadata();
+    BuiltProvider::with_metadata(provider, key.to_owned(), model.to_owned(), metadata)
+}
+
+/// Build a [`ModelInfo`] from registry [`ModelMeta`] so `BuiltProvider` metadata
+/// reflects the actual model capabilities (streaming, tool support, etc.).
+fn model_info_from_meta(provider: &str, model: &str, meta: &ModelMeta) -> crate::ModelInfo {
+    let mut info = crate::ModelInfo::new(provider, model);
+    info.display_name = meta.name.clone();
+    info.cost_prompt = meta.cost_prompt;
+    info.cost_completion = meta.cost_completion;
+    info.supports_thinking = meta.supports_thinking;
+    info.supports_vision = meta.supports_vision;
+    info.tokenizer = meta.tokenizer.clone();
+    info.context_window = meta.context_window;
+    info.capabilities = crate::ModelCapabilities {
+        streaming: meta.streaming,
+        supports_vision: meta.supports_vision,
+        supports_tools: meta.supports_tools,
+        supports_reasoning: meta.supports_reasoning,
+        max_context_tokens: meta.context_window.unwrap_or(0),
+        max_output_tokens: meta.max_output_tokens,
+        cache_control: meta.cache_control,
+    };
+    info
 }
 
 #[cfg(feature = "openai")]
@@ -191,12 +235,17 @@ fn build_openai_provider(
     base_url: &str,
     provider_key: &str,
     original_model: &str,
+    headers: HashMap<String, String>,
+    retry_config: crate::RetryConfig,
 ) -> Box<dyn Provider> {
     // Use the cached HTTP client so TCP connections are reused across turns.
     let client = BuiltProvider::cached_http_client("openai", base_url);
     // Convert SecretString to String for OpenAiProvider (normalization happens inside)
     let api_key_str = api_key.expose_secret().to_string();
-    let p = OpenAiProvider::from_http_client(client, api_key_str, model).with_base_url(base_url);
+    let p = OpenAiProvider::from_http_client(client, api_key_str, model)
+        .with_base_url(base_url)
+        .with_headers(headers)
+        .with_retry_config(retry_config);
     // Look up model metadata from the intended provider. The original model name
     // may be provider-prefixed ("openai/gpt-4o"); find_model_for_provider strips
     // the prefix when it matches the provider key.

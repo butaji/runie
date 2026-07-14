@@ -206,7 +206,9 @@ fn thought_appears_before_agent_even_when_agent_updated_later() {
         .filter(|k| k != "Spacer")
         .collect();
     // Duration-only thoughts are now ThoughtSummary (Grok-style)
-    let thought_pos = kinds.iter().position(|k| k == "Thought" || k == "ThoughtSum");
+    let thought_pos = kinds
+        .iter()
+        .position(|k| k == "Thought" || k == "ThoughtSum");
     let agent_pos = kinds.iter().position(|k| k == "Agent");
     assert!(thought_pos.is_some(), "Thought should exist: {:?}", kinds);
     assert!(agent_pos.is_some(), "Agent should exist");

@@ -68,7 +68,10 @@ mod tests {
         let _guard = runie_testing::ENV_LOCK.lock().unwrap();
         reset_mock_state();
         assert!(!is_mock_enabled(), "mock should start disabled");
-        assert!(!is_mock_onboarding(), "mock-onboarding should start disabled");
+        assert!(
+            !is_mock_onboarding(),
+            "mock-onboarding should start disabled"
+        );
 
         enable_mock_if_requested(false, true, None);
         assert!(

@@ -62,8 +62,9 @@ pub fn load_prompts(default: Option<&str>, custom_path: Option<&str>) -> Vec<Pro
 }
 
 /// Build the system prompt string for the agent.
-/// If a custom prompt is active, it replaces the base personality text
-/// but tool instructions and thinking suffix are still appended.
+/// If a custom prompt is active, it replaces the base personality text.
+/// Tool instructions are appended only when `tools_list` is non-empty, and the
+/// thinking suffix is always appended when provided.
 pub fn build_system_prompt(
     base_prompt: &str,
     tools_list: &str,
@@ -71,19 +72,21 @@ pub fn build_system_prompt(
     thinking_suffix: &str,
 ) -> String {
     let mut system = base_prompt.to_owned();
-    system.push_str(&format!(
-        " Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
-            Available tools: {}. \
-            When a task can be satisfied with a tool, prefer the tool over answering from memory.",
-        tools_list
-    ));
-    if !read_only {
+    if !tools_list.is_empty() {
+        system.push_str(&format!(
+            " Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
+                Available tools: {}. \
+                When a task can be satisfied with a tool, prefer the tool over answering from memory.",
+            tools_list
+        ));
+        if !read_only {
+            system.push_str(" \
+                Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.");
+        }
         system.push_str(" \
-            Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.");
+            Use grep to search file contents: {\"name\": \"grep\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}. \
+            Use find to list files by pattern: {\"name\": \"find\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}.");
     }
-    system.push_str(" \
-        Use grep to search file contents: {\"name\": \"grep\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}. \
-        Use find to list files by pattern: {\"name\": \"find\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}.");
     if !thinking_suffix.is_empty() {
         system.push_str(thinking_suffix);
     }
@@ -138,5 +141,23 @@ mod tests {
     fn build_system_prompt_prefers_tools() {
         let prompt = build_system_prompt("Hi.", "read_file, bash", false, "");
         assert!(prompt.contains("prefer the tool over answering from memory"));
+    }
+
+    #[test]
+    fn build_system_prompt_omits_tools_when_list_empty() {
+        let prompt = build_system_prompt("Be helpful.", "", false, "");
+        assert!(prompt.contains("Be helpful."));
+        assert!(!prompt.contains("Available tools"));
+        assert!(!prompt.contains("Use structured JSON format"));
+        assert!(!prompt.contains("edit_file"));
+        assert!(!prompt.contains("grep"));
+    }
+
+    #[test]
+    fn build_system_prompt_appends_thinking_without_tools() {
+        let prompt = build_system_prompt("Hi.", "", false, " Think deeply.");
+        assert!(prompt.contains("Hi."));
+        assert!(prompt.contains("Think deeply."));
+        assert!(!prompt.contains("Available tools"));
     }
 }

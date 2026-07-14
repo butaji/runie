@@ -47,11 +47,17 @@ impl Pattern for EvalOptimizerPattern {
                 RoundVerdict::Approved(final_draft) => {
                     return Ok(finish(traces, final_draft, TerminationReason::Approved));
                 }
-                RoundVerdict::Revise { draft: new_draft, feedback: new_feedback } => {
+                RoundVerdict::Revise {
+                    draft: new_draft,
+                    feedback: new_feedback,
+                } => {
                     draft = new_draft;
                     feedback = new_feedback;
                 }
-                RoundVerdict::Stop { draft: partial, reason } => {
+                RoundVerdict::Stop {
+                    draft: partial,
+                    reason,
+                } => {
                     return Ok(finish(traces, partial, reason));
                 }
             }
@@ -67,7 +73,10 @@ enum RoundVerdict {
     /// Reviewer gave feedback; carries the new draft and the feedback.
     Revise { draft: String, feedback: String },
     /// Fatal: the pattern terminates with this reason and partial draft.
-    Stop { draft: String, reason: TerminationReason },
+    Stop {
+        draft: String,
+        reason: TerminationReason,
+    },
 }
 
 /// Whether the draft step of a round generates or revises.
@@ -87,7 +96,11 @@ fn aborted() -> TerminationReason {
     TerminationReason::Error("aborted".into())
 }
 
-fn finish(traces: Vec<AgentTrace>, result: String, termination: TerminationReason) -> PatternOutput {
+fn finish(
+    traces: Vec<AgentTrace>,
+    result: String,
+    termination: TerminationReason,
+) -> PatternOutput {
     PatternOutput {
         result,
         termination,
@@ -133,7 +146,15 @@ async fn eval_round(
     }
     let id = format!("eval-review-{round}");
     let description = format!("review round {round}");
-    match call_eval(ctx, &id, &description, build_review_prompt(input, &draft), traces).await {
+    match call_eval(
+        ctx,
+        &id,
+        &description,
+        build_review_prompt(input, &draft),
+        traces,
+    )
+    .await
+    {
         EvalCall::Text(text) if approved(&text) => RoundVerdict::Approved(draft),
         EvalCall::Text(feedback) => RoundVerdict::Revise { draft, feedback },
         EvalCall::Failed(message) => RoundVerdict::Stop {
@@ -250,7 +271,9 @@ fn approved(response: &str) -> bool {
 }
 
 fn build_generate_prompt(input: &str) -> String {
-    format!("[eval-generate]\nProduce the best possible answer to the task below.\n\nTask:\n{input}")
+    format!(
+        "[eval-generate]\nProduce the best possible answer to the task below.\n\nTask:\n{input}"
+    )
 }
 
 fn build_revise_prompt(input: &str, draft: &str, feedback: &str) -> String {

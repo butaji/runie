@@ -15,7 +15,9 @@ use super::store_trait::{KeyringStore, OsKeyringStore};
 /// stored token is never sliced or interpolated, so a mismatch cannot leak part
 /// of the secret into logs or crash reports.
 fn format_keyring_mismatch(stored_len: usize, expected_len: usize) -> String {
-    format!("keyring returned a different token (stored len={stored_len}, expected len={expected_len})")
+    format!(
+        "keyring returned a different token (stored len={stored_len}, expected len={expected_len})"
+    )
 }
 
 /// Set a provider token directly in the keyring (no instance state needed).

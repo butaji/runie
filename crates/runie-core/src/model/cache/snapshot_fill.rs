@@ -7,7 +7,12 @@ use crate::snapshot::Snapshot;
 /// Build the input box title string.
 /// Format: `mode · provider/model · read-only` when non-single mode and read-only,
 /// `mode · provider/model` when non-single mode, and `provider/model` otherwise.
-pub(crate) fn build_input_title(provider: &str, model: &str, read_only: bool, mode_active: &str) -> String {
+pub(crate) fn build_input_title(
+    provider: &str,
+    model: &str,
+    read_only: bool,
+    mode_active: &str,
+) -> String {
     let base = format!("{}/{}", provider, model);
     let with_mode = if mode_active == "single" {
         base

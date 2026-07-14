@@ -207,7 +207,11 @@ fn picked_mention_gets_trailing_space_and_chip() {
         state.input.input.len(),
         "cursor must land after the trailing space"
     );
-    assert_eq!(state.input.chips.len(), 1, "pick must record a mention chip");
+    assert_eq!(
+        state.input.chips.len(),
+        1,
+        "pick must record a mention chip"
+    );
     let chip = &state.input.chips[0];
     assert_eq!(
         chip.label, None,
@@ -253,7 +257,10 @@ fn two_picked_mentions_have_independent_chips() {
     for c in "and @".chars() {
         state.update(crate::Event::Input(c));
     }
-    assert!(state.open_dialog.is_some(), "second @ must reopen the picker");
+    assert!(
+        state.open_dialog.is_some(),
+        "second @ must reopen the picker"
+    );
     state.update(crate::Event::Submit);
     assert_eq!(
         state.input.chips.len(),

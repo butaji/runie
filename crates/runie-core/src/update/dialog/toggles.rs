@@ -264,6 +264,7 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
             provider_type: None,
             base_url,
             models: vec![],
+            headers: std::collections::HashMap::new(),
         })
         .models = models.to_vec();
     // Persist to config.toml via ConfigActor (fire-and-forget).

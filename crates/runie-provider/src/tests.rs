@@ -286,6 +286,265 @@ fn test_built_provider_known_with_key_succeeds() {
 }
 
 #[test]
+fn test_built_provider_reads_retry_config_from_config() {
+    with_env_lock("OPENAI_API_KEY", "test-key-123", || {
+        let mut config = Config::default();
+        config.retry.max_attempts = 1;
+        config.retry.initial_delay_ms = 250;
+        config.retry.max_delay_ms = 1000;
+        config.retry.multiplier = 1.5;
+
+        let provider = build_provider_with_config("openai", "gpt-4o", &config)
+            .expect("should build with custom retry config");
+
+        let retry = provider.metadata().retry_config.clone();
+        assert_eq!(
+            retry.max_attempts, 1,
+            "retry.max_attempts from config.toml must be used"
+        );
+        assert_eq!(retry.initial_delay, std::time::Duration::from_millis(250));
+        assert_eq!(retry.max_delay, std::time::Duration::from_millis(1000));
+        assert!((retry.multiplier - 1.5).abs() < f64::EPSILON);
+    });
+}
+
+#[tokio::test]
+async fn test_built_provider_sends_config_headers_to_mock_server() {
+    use futures::StreamExt;
+    use std::sync::{Arc, Mutex};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base_url = format!("http://{}", listener.local_addr().unwrap());
+    let captured: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let captured_for = captured.clone();
+
+    tokio::spawn(async move {
+        let Ok((mut sock, _)) = listener.accept().await else {
+            return;
+        };
+        let mut buf = Vec::new();
+        let mut tmp = [0u8; 1024];
+        loop {
+            match sock.read(&mut tmp).await {
+                Ok(0) | Err(_) => break,
+                Ok(k) => {
+                    buf.extend_from_slice(&tmp[..k]);
+                    if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                        break;
+                    }
+                }
+            }
+        }
+        let header_str = String::from_utf8_lossy(&buf);
+        *captured_for.lock().unwrap() = header_str.to_string();
+
+        let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n\
+             data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n\
+             data: [DONE]\n\n";
+        let _ = sock.write_all(resp.as_bytes()).await;
+        let _ = sock.flush().await;
+    });
+
+    let mut config = Config::default();
+    config.model_providers.insert(
+        "openai".to_string(),
+        runie_core::config::ModelProvider {
+            provider_type: Some("openai".to_string()),
+            base_url: base_url.clone(),
+            models: vec!["gpt-4o".to_string()],
+            headers: {
+                let mut h = std::collections::HashMap::new();
+                h.insert("x-mock-scenario".to_string(), "tool_call".to_string());
+                h.insert("x-mock-latency-ms".to_string(), "500".to_string());
+                h
+            },
+        },
+    );
+
+    let _guard = runie_testing::ENV_LOCK.lock().unwrap();
+    std::env::set_var("OPENAI_API_KEY", "test-key-123");
+    let provider = build_provider_with_config("openai", "gpt-4o", &config)
+        .expect("should build with custom headers");
+
+    let mut stream = provider.generate(vec![ChatMessage::user("hello".to_string())]);
+    let mut items = Vec::new();
+    while let Some(item) = stream.next().await {
+        items.push(item);
+    }
+
+    assert!(
+        items
+            .iter()
+            .any(|i| matches!(i, Ok(ProviderEvent::TextDelta(d)) if d == "hi")),
+        "expected the request with config headers to succeed, got: {items:?}"
+    );
+
+    let headers = captured.lock().unwrap().clone();
+    assert!(
+        headers
+            .to_lowercase()
+            .contains("x-mock-scenario: tool_call"),
+        "config header x-mock-scenario must be sent, got headers:\n{headers}"
+    );
+    assert!(
+        headers.to_lowercase().contains("x-mock-latency-ms: 500"),
+        "config header x-mock-latency-ms must be sent, got headers:\n{headers}"
+    );
+}
+
+#[tokio::test]
+async fn openai_stream_sends_configured_headers_raw_tcp() {
+    use futures::StreamExt;
+    use runie_core::proto::message::ChatMessage;
+    use runie_core::Provider as _;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base_url = format!("http://{}", listener.local_addr().unwrap());
+    let captured: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let captured_for = captured.clone();
+
+    tokio::spawn(async move {
+        let Ok((mut sock, _)) = listener.accept().await else {
+            return;
+        };
+        let mut buf = Vec::new();
+        let mut tmp = [0u8; 1024];
+        loop {
+            match sock.read(&mut tmp).await {
+                Ok(0) | Err(_) => break,
+                Ok(k) => {
+                    buf.extend_from_slice(&tmp[..k]);
+                    if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                        break;
+                    }
+                }
+            }
+        }
+        let header_str = String::from_utf8_lossy(&buf);
+        *captured_for.lock().unwrap() = header_str.to_string();
+
+        let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n\
+             data: {\"choices\":[{\"delta\":{\"content\":\"delta-one\"}}]}\n\n\
+             data: [DONE]\n\n";
+        let _ = sock.write_all(resp.as_bytes()).await;
+        let _ = sock.flush().await;
+    });
+
+    let mut headers = HashMap::new();
+    headers.insert("x-mock-scenario".to_string(), "tool_call".to_string());
+    headers.insert("x-mock-latency-ms".to_string(), "500".to_string());
+
+    let provider = crate::openai::OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
+        .with_base_url(base_url)
+        .with_headers(headers);
+
+    let mut items = Vec::new();
+    let mut stream = provider.generate(vec![ChatMessage::user("hello".to_string())]);
+    while let Some(item) = stream.next().await {
+        items.push(item);
+    }
+
+    assert!(
+        items
+            .iter()
+            .any(|i| matches!(i, Ok(ProviderEvent::TextDelta(d)) if d == "delta-one")),
+        "expected the request with custom headers to succeed, got: {items:?}"
+    );
+
+    let headers = captured.lock().unwrap().clone();
+    let headers_lower = headers.to_lowercase();
+    assert!(
+        headers_lower.contains("x-mock-scenario: tool_call"),
+        "config header x-mock-scenario must be sent, got headers:\n{headers}"
+    );
+    assert!(
+        headers_lower.contains("x-mock-latency-ms: 500"),
+        "config header x-mock-latency-ms must be sent, got headers:\n{headers}"
+    );
+}
+
+#[tokio::test]
+async fn openai_stream_essential_headers_override_custom_headers_raw_tcp() {
+    use futures::StreamExt;
+    use runie_core::proto::message::ChatMessage;
+    use runie_core::Provider as _;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base_url = format!("http://{}", listener.local_addr().unwrap());
+    let captured: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let captured_for = captured.clone();
+
+    tokio::spawn(async move {
+        let Ok((mut sock, _)) = listener.accept().await else {
+            return;
+        };
+        let mut buf = Vec::new();
+        let mut tmp = [0u8; 1024];
+        loop {
+            match sock.read(&mut tmp).await {
+                Ok(0) | Err(_) => break,
+                Ok(k) => {
+                    buf.extend_from_slice(&tmp[..k]);
+                    if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                        break;
+                    }
+                }
+            }
+        }
+        let header_str = String::from_utf8_lossy(&buf);
+        *captured_for.lock().unwrap() = header_str.to_string();
+
+        let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n\
+             data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n\
+             data: [DONE]\n\n";
+        let _ = sock.write_all(resp.as_bytes()).await;
+        let _ = sock.flush().await;
+    });
+
+    let mut headers = HashMap::new();
+    headers.insert("Authorization".to_string(), "Bearer attacker".to_string());
+    headers.insert("Content-Type".to_string(), "text/plain".to_string());
+
+    let provider = crate::openai::OpenAiProvider::new("real-key".to_string(), "gpt-4o")
+        .with_base_url(base_url)
+        .with_headers(headers);
+
+    let mut items = Vec::new();
+    let mut stream = provider.generate(vec![ChatMessage::user("hello".to_string())]);
+    while let Some(item) = stream.next().await {
+        items.push(item);
+    }
+
+    assert!(
+        items
+            .iter()
+            .any(|i| matches!(i, Ok(ProviderEvent::TextDelta(d)) if d == "ok")),
+        "expected essential headers to win, got: {items:?}"
+    );
+
+    let headers = captured.lock().unwrap().clone();
+    let headers_lower = headers.to_lowercase();
+    assert!(
+        headers_lower.contains("authorization: bearer real-key"),
+        "essential Authorization header must override custom header, got headers:\n{headers}"
+    );
+    assert!(
+        headers_lower.contains("content-type: application/json"),
+        "essential Content-Type header must override custom header, got headers:\n{headers}"
+    );
+}
+
+#[test]
 fn test_built_provider_key_and_model_accessors() {
     with_env_lock("OPENAI_API_KEY", "sk-test", || {
         let provider = build_provider_with_config("openai", "gpt-4o", &Config::default()).unwrap();
@@ -670,6 +929,7 @@ async fn prefixed_model_name_is_stripped_in_api_request() {
             provider_type: Some("openai-compatible".to_string()),
             base_url: format!("{base_url}/v1"),
             models: vec!["MiniMax-M3".to_string()],
+            headers: std::collections::HashMap::new(),
         },
     );
 

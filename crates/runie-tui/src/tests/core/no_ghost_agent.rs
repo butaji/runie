@@ -395,9 +395,10 @@ fn streaming_turn_appears_in_feed_after_done() {
 
     // After Done, the assistant message MUST be visible in the feed.
     let feed = LazyCache::feed(&state);
-    let has_agent = feed.elements.iter().any(|e| {
-        matches!(e, runie_core::view::Element::AgentMessage { .. })
-    });
+    let has_agent = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, runie_core::view::Element::AgentMessage { .. }));
     assert!(
         has_agent,
         "AgentMessage must appear in feed after Done. Feed elements: {:?}",

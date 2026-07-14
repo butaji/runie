@@ -26,7 +26,9 @@ fn minimax_m3_simple_emits_text() {
         return;
     };
     let events = replay_anthropic_sse(&text);
-    assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
     assert!(events.iter().any(|e| matches!(
         e,
         ProviderEvent::Finish {
@@ -76,7 +78,9 @@ fn qwen3_7_max_simple_emits_text() {
         return;
     };
     let events = replay_anthropic_sse(&text);
-    assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
 }
 
 #[test]
@@ -85,5 +89,7 @@ fn qwen3_7_max_reasoning_emits_text() {
         return;
     };
     let events = replay_anthropic_sse(&text);
-    assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
 }

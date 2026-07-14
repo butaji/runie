@@ -38,6 +38,8 @@ mod agent_run_guard;
 #[cfg(test)]
 mod bootstrap_e2e;
 #[cfg(test)]
+mod frame_rate;
+#[cfg(test)]
 mod input_actor_routing;
 #[cfg(test)]
 mod login_flow_e2e;
@@ -61,8 +63,6 @@ mod provider_config_e2e;
 mod providers_e2e;
 #[cfg(test)]
 mod quit_shortcut;
-#[cfg(test)]
-mod frame_rate;
 #[cfg(test)]
 mod toggle_e2e;
 #[cfg(test)]

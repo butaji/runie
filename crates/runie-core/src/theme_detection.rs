@@ -105,7 +105,10 @@ mod tests {
     #[test]
     fn test_default_theme_names() {
         assert_eq!(SystemAppearance::Dark.default_theme_name(), "runie");
-        assert_eq!(SystemAppearance::Light.default_theme_name(), "catppuccin-latte");
+        assert_eq!(
+            SystemAppearance::Light.default_theme_name(),
+            "catppuccin-latte"
+        );
     }
 
     #[test]
@@ -119,16 +122,16 @@ mod tests {
     fn test_apple_interface_style_detection() {
         // Test with mocked environment
         let original = env::var("AppleInterfaceStyle").ok();
-        
+
         env::set_var("AppleInterfaceStyle", "Dark");
         assert_eq!(detect_system_appearance(), SystemAppearance::Dark);
-        
+
         env::set_var("AppleInterfaceStyle", "dark");
         assert_eq!(detect_system_appearance(), SystemAppearance::Dark);
-        
+
         env::set_var("AppleInterfaceStyle", "Light");
         assert_eq!(detect_system_appearance(), SystemAppearance::Light);
-        
+
         // Restore original
         match original {
             Some(v) => env::set_var("AppleInterfaceStyle", v),
@@ -139,10 +142,10 @@ mod tests {
     #[test]
     fn test_term_color_detection() {
         let original = env::var("TERMCLICOLOR").ok();
-        
+
         env::set_var("TERMCLICOLOR", "truecolor");
         assert_eq!(detect_system_appearance(), SystemAppearance::Dark);
-        
+
         // Restore original
         match original {
             Some(v) => env::set_var("TERMCLICOLOR", v),

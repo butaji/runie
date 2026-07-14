@@ -28,8 +28,5 @@ fn turn_completed_keeps_turn_active_for_snapshot() {
         state.agent_state().turn_active,
         "turn_active must stay true after TurnCompleted for final snapshot"
     );
-    assert!(
-        !state.agent_state().streaming,
-        "streaming should be false"
-    );
+    assert!(!state.agent_state().streaming, "streaming should be false");
 }

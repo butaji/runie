@@ -61,6 +61,8 @@ mod harness_skills;
 #[cfg(test)]
 mod hashline_edit_apply;
 #[cfg(test)]
+mod input_chips;
+#[cfg(test)]
 mod input_cursor;
 #[cfg(test)]
 mod input_flash;
@@ -72,8 +74,6 @@ mod input_history;
 mod input_multiline;
 #[cfg(test)]
 mod input_paste;
-#[cfg(test)]
-mod input_chips;
 #[cfg(test)]
 mod input_receiver;
 #[cfg(test)]
@@ -91,8 +91,6 @@ mod misc;
 #[cfg(test)]
 mod model_cycle;
 #[cfg(test)]
-mod plan_mode;
-#[cfg(test)]
 mod model_selector;
 #[cfg(test)]
 mod model_thinking;
@@ -104,6 +102,8 @@ mod paste;
 mod pattern_workers;
 #[cfg(test)]
 mod placeholder;
+#[cfg(test)]
+mod plan_mode;
 #[cfg(test)]
 mod queue;
 #[cfg(test)]

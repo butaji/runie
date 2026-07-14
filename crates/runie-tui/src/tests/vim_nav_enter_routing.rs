@@ -33,9 +33,8 @@ impl LeaderAgentHandle for MockAgentHandle {
 }
 
 fn make_ui_actor() -> UiActor {
-    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(
-        MockAgentHandle,
-    ));
+    let agent_handle =
+        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(MockAgentHandle));
     let state = AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
     let bus = runie_core::bus::EventBus::<Event>::new(16);
@@ -88,7 +87,10 @@ async fn enter_in_feed_nav_expands_thought_via_production_routing() {
     // as in production.
     ui.handle_event_inner(Event::DialogBack, effect_tx.clone())
         .await;
-    assert!(ui.state.view().vim_nav_mode, "Esc should enter feed navigation");
+    assert!(
+        ui.state.view().vim_nav_mode,
+        "Esc should enter feed navigation"
+    );
     assert_eq!(
         ui.state.view().selected_post,
         Some(thought_idx),
@@ -96,7 +98,8 @@ async fn enter_in_feed_nav_expands_thought_via_production_routing() {
     );
 
     // Enter via the PRODUCTION routing must expand the selected thought post.
-    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Submit, effect_tx.clone())
+        .await;
     assert!(
         ui.state.view().expanded_posts.contains(&thought_idx),
         "Enter in feed nav must expand the selected thought post through the \
@@ -108,7 +111,8 @@ async fn enter_in_feed_nav_expands_thought_via_production_routing() {
     );
 
     // A second Enter collapses the thought back to its one-line summary.
-    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Submit, effect_tx.clone())
+        .await;
     assert!(
         !ui.state.view().expanded_posts.contains(&thought_idx),
         "second Enter should collapse the thought back to its summary"
@@ -130,7 +134,8 @@ async fn enter_on_non_collapsible_post_keeps_global_toggle_fallback() {
     // Legacy behavior: Enter on a non-collapsible post toggles the global
     // expand/collapse flag (same as Ctrl+O) — now through production routing.
     assert!(!ui.state.view().all_collapsed);
-    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Submit, effect_tx.clone())
+        .await;
     assert!(
         ui.state.view().all_collapsed,
         "Enter on a non-collapsible post should toggle global collapse"

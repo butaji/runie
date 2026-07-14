@@ -167,7 +167,7 @@ async fn test_agent_loop_events_have_correct_id() {
 #[test]
 fn read_only_excludes_write_tools() {
     let cmd = agent_cmd("test").read_only(true).build();
-    let msgs = build_initial_messages(&cmd);
+    let msgs = build_initial_messages(&cmd, true);
     let system = match &msgs[0].role {
         runie_core::message::Role::System => msgs[0].content().clone(),
         _ => panic!("expected system message"),
@@ -190,7 +190,7 @@ fn read_only_excludes_write_tools() {
 #[test]
 fn read_write_includes_all_tools() {
     let cmd = agent_cmd("test").id("req.1").build();
-    let msgs = build_initial_messages(&cmd);
+    let msgs = build_initial_messages(&cmd, true);
     let system = match &msgs[0].role {
         runie_core::message::Role::System => msgs[0].content().clone(),
         _ => panic!("expected system message"),
@@ -204,6 +204,51 @@ fn read_write_includes_all_tools() {
         "read-write includes edit_file"
     );
     assert!(system.contains("bash"), "read-write includes bash");
+}
+
+#[test]
+fn non_tool_model_omits_tool_instructions() {
+    let cmd = agent_cmd("hello").build();
+    let msgs = build_initial_messages(&cmd, false);
+    let system = match &msgs[0].role {
+        runie_core::message::Role::System => msgs[0].content().clone(),
+        _ => panic!("expected system message"),
+    };
+    assert!(
+        system.contains("You are a helpful assistant"),
+        "base personality should be preserved"
+    );
+    assert!(
+        !system.contains("Available tools"),
+        "non-tool model must not include Available tools"
+    );
+    assert!(
+        !system.contains("Use structured JSON format"),
+        "non-tool model must not include tool JSON format"
+    );
+    assert!(
+        !system.contains("bash"),
+        "non-tool model must not list tools"
+    );
+}
+
+#[test]
+fn tool_model_includes_tool_instructions() {
+    let cmd = agent_cmd("hello").build();
+    let msgs = build_initial_messages(&cmd, true);
+    let system = match &msgs[0].role {
+        runie_core::message::Role::System => msgs[0].content().clone(),
+        _ => panic!("expected system message"),
+    };
+    assert!(
+        system.contains("Available tools"),
+        "tool model must include Available tools"
+    );
+    assert!(
+        system.contains("Use structured JSON format"),
+        "tool model must include tool JSON format"
+    );
+    assert!(system.contains("bash"), "tool model must list tools");
 }
 
 #[tokio::test]
@@ -409,9 +454,10 @@ async fn denied_tool_does_not_loop_in_turn() {
         .await
         .unwrap();
 
-    let bash_starts = count_events(&events, |e| {
-        matches!(e, Event::ToolStart { name, .. } if name == "bash")
-    });
+    let bash_starts = count_events(
+        &events,
+        |e| matches!(e, Event::ToolStart { name, .. } if name == "bash"),
+    );
     assert_eq!(
         bash_starts, 1,
         "denied bash tool must execute exactly once (no re-issue), got {bash_starts}"
@@ -467,9 +513,10 @@ async fn repeated_tool_call_does_not_loop_in_turn() {
         .await
         .unwrap();
 
-    let bash_starts = count_events(&events, |e| {
-        matches!(e, Event::ToolStart { name, .. } if name == "bash")
-    });
+    let bash_starts = count_events(
+        &events,
+        |e| matches!(e, Event::ToolStart { name, .. } if name == "bash"),
+    );
     assert_eq!(
         bash_starts, 1,
         "identical re-issued bash call must run once then be stopped by the repeat guard, got {bash_starts}"

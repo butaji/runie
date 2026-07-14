@@ -6,8 +6,8 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
-use runie_core::Snapshot;
 use runie_core::Element;
+use runie_core::Snapshot;
 
 pub(crate) mod lines;
 pub(crate) mod nav;
@@ -158,7 +158,10 @@ fn is_user_related_row(snap: &Snapshot, elem_idx: usize) -> bool {
     if elem_idx == usize::MAX {
         return false;
     }
-    matches!(snap.elements.get(elem_idx), Some(Element::UserMessage { .. }))
+    matches!(
+        snap.elements.get(elem_idx),
+        Some(Element::UserMessage { .. })
+    )
 }
 
 fn render_scrollbar_if_needed(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {

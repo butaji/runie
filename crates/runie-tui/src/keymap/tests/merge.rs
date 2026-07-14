@@ -56,7 +56,10 @@ fn keymap_mouse_scroll_is_dropped() {
         modifiers: KeyModifiers::empty(),
     });
     let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(result, None, "mouse wheel should not convert to a core event");
+    assert_eq!(
+        result, None,
+        "mouse wheel should not convert to a core event"
+    );
 }
 
 /// Click (button down) is not a supported mouse interaction; it must be
@@ -71,7 +74,10 @@ fn keymap_mouse_click_is_dropped() {
         modifiers: KeyModifiers::empty(),
     });
     let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(result, None, "mouse click should not convert to a core event");
+    assert_eq!(
+        result, None,
+        "mouse click should not convert to a core event"
+    );
 }
 
 /// Button release is not a supported mouse interaction; it must be dropped.
@@ -102,5 +108,8 @@ fn keymap_mouse_drag_is_dropped() {
         modifiers: KeyModifiers::empty(),
     });
     let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(result, None, "mouse drag should not convert to a core event");
+    assert_eq!(
+        result, None,
+        "mouse drag should not convert to a core event"
+    );
 }

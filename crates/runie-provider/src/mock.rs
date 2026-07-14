@@ -329,9 +329,7 @@ impl Default for MockProvider {
     fn default() -> Self {
         // Delay by default so streaming is visible and events are processed in order.
         // Tests that need zero delay can use `MockProviderBuilder::new().with_echo_fallback(true).build()`.
-        MockProviderBuilder::new()
-            .with_delay(100, 200)
-            .build()
+        MockProviderBuilder::new().with_delay(100, 200).build()
     }
 }
 
@@ -463,11 +461,17 @@ fn swarm_marker_response(user_input: &str) -> Option<Vec<String>> {
             "[\"Summarize the task\", \"Draft an implementation outline\"]".to_owned(),
         ])
     } else if user_input.starts_with("[swarm-synthesize") {
-        Some(vec!["Swarm complete: all workers finished successfully.".to_owned()])
+        Some(vec![
+            "Swarm complete: all workers finished successfully.".to_owned()
+        ])
     } else if user_input.starts_with("[eval-generate]") {
-        Some(vec!["Draft: here is the best answer to your task.".to_owned()])
+        Some(vec![
+            "Draft: here is the best answer to your task.".to_owned()
+        ])
     } else if user_input.starts_with("[eval-revise]") {
-        Some(vec!["Revised draft addressing all reviewer feedback.".to_owned()])
+        Some(vec![
+            "Revised draft addressing all reviewer feedback.".to_owned()
+        ])
     } else if user_input.starts_with("[eval-review]") {
         Some(vec!["APPROVED".to_owned()])
     } else {
@@ -742,8 +746,14 @@ mod tests {
 
     #[test]
     fn echo_preserves_exact_input() {
-        assert_eq!(fixtures::echo("Hello World"), vec!["Hello World\n".to_owned()]);
-        assert_eq!(fixtures::echo("  spaced  "), vec!["  spaced  \n".to_owned()]);
+        assert_eq!(
+            fixtures::echo("Hello World"),
+            vec!["Hello World\n".to_owned()]
+        );
+        assert_eq!(
+            fixtures::echo("  spaced  "),
+            vec!["  spaced  \n".to_owned()]
+        );
         assert_eq!(
             fixtures::echo("multi\nline\ttext"),
             vec!["multi\nline\ttext\n".to_owned()]
@@ -794,7 +804,11 @@ mod tests {
     fn detect_fixture_returns_none_for_unknown_input() {
         // A truly unknown input should NOT match any fixture
         let result = detect_fixture("xyzabc123 what is 2+2");
-        assert!(result.is_none(), "Unexpected fixture detected: {:?}", result);
+        assert!(
+            result.is_none(),
+            "Unexpected fixture detected: {:?}",
+            result
+        );
     }
 
     /// Collect all streamed text from a mock `generate` call.

@@ -8,6 +8,7 @@ use std::sync::{Arc, OnceLock};
 use crate::config::Config;
 use crate::message::ChatMessage;
 use crate::model_catalog::ModelInfo;
+use crate::provider::routing::{route_model, select_context_fallback};
 use crate::provider_event::ProviderEvent;
 
 // `Provider` and `ProviderError` are defined in `runie-provider` and re-exported here.
@@ -62,11 +63,12 @@ pub struct BuiltProvider {
 impl BuiltProvider {
     /// Create a new `BuiltProvider` from a boxed provider.
     pub fn new(provider: Box<dyn Provider>, key: String, model: String) -> Self {
+        let metadata = provider.metadata();
         Self {
             provider: Arc::from(provider),
             key,
             model,
-            metadata: ProviderMetadata::default(),
+            metadata,
         }
     }
 
@@ -88,11 +90,12 @@ impl BuiltProvider {
     /// Wrap a provider implementation.
     #[doc(hidden)]
     pub fn from_provider(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
+        let metadata = provider.metadata();
         Self {
             provider: Arc::from(provider),
             key: key.to_owned(),
             model: model.to_owned(),
-            metadata: ProviderMetadata::default(),
+            metadata,
         }
     }
 
@@ -128,6 +131,58 @@ impl BuiltProvider {
     /// Set a custom retry config.
     pub fn with_retry_config(mut self, config: RetryConfig) -> Self {
         self.metadata.retry_config = config;
+        self
+    }
+
+    /// Select the best model based on the config's routing strategy.
+    ///
+    /// Returns a new BuiltProvider with the routed model name.
+    /// Falls back to the requested model if routing doesn't apply.
+    pub fn with_routing(mut self, models: &[crate::provider::ModelMeta], config: &Config) -> Self {
+        let routing = &config.models.routing_strategy;
+        let request_size = self
+            .metadata
+            .model_info
+            .as_ref()
+            .and_then(|info| info.context_window);
+
+        if let Some(selected) = route_model(routing, models, request_size) {
+            self.model = selected.name.clone();
+        }
+        self
+    }
+
+    /// Check if a context fallback is needed and select one.
+    ///
+    /// Returns a new BuiltProvider with the fallback model if the current
+    /// model has limited context window.
+    pub fn with_context_fallback(
+        self,
+        models: &[crate::provider::ModelMeta],
+        config: &Config,
+    ) -> Self {
+        let fallback_list = &config.models.context_window_fallback;
+        if fallback_list.is_empty() {
+            return self;
+        }
+
+        if let Some(current_info) = &self.metadata.model_info {
+            let current_window = current_info.context_window.unwrap_or(usize::MAX);
+            // If current model has limited context, try fallback
+            if current_window < 128_000 {
+                if let Some(fallback) = select_context_fallback(fallback_list, models) {
+                    let mut new_provider = self;
+                    new_provider.model = fallback.name.clone();
+                    let mut info = crate::model_catalog::ModelInfo::new(
+                        &new_provider.key,
+                        fallback.name.clone(),
+                    );
+                    info.context_window = fallback.context_window;
+                    new_provider.metadata = new_provider.metadata.with_model_info(info);
+                    return new_provider;
+                }
+            }
+        }
         self
     }
 }

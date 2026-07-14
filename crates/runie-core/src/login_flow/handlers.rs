@@ -6,12 +6,12 @@
 
 use super::panels::{build_key_input, build_model_selector, build_validating_panel};
 use super::state::{LoginFlowState, LoginStep};
-use crate::Event;
 use crate::actors::ConfigMsg;
 use crate::login_flow::panel_ops::{
     pop_login_panel, pop_login_panel_or_close, push_login_panel, rebuild_login_dialog,
     replace_top_login_panel_with,
 };
+use crate::Event;
 
 /// Top-level login flow dispatcher.
 pub fn login_flow_event(state: &mut crate::model::AppState, event: Event) {
@@ -350,6 +350,10 @@ fn sync_config_cache(
     }
 
     let providers = state.config_mut().model_providers_mut();
+    let existing_headers = providers
+        .get(provider)
+        .map(|p| p.headers.clone())
+        .unwrap_or_default();
     providers.insert(
         provider.into(),
         crate::config::ModelProvider {
@@ -358,6 +362,7 @@ fn sync_config_cache(
                 .and_then(|p| p.provider_type.clone()),
             base_url: base_url.into(),
             models: models.into(),
+            headers: existing_headers,
         },
     );
 }

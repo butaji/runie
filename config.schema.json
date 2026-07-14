@@ -74,7 +74,9 @@
       "description": "Model configurations.",
       "$ref": "#/$defs/ModelsSection",
       "default": {
+        "context_window_fallback": [],
         "default": null,
+        "routing_strategy": "simple-shuffle",
         "scoped": null,
         "thinking": {}
       }
@@ -367,6 +369,12 @@
         "base_url": {
           "type": "string"
         },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "models": {
           "type": "array",
           "items": {
@@ -384,16 +392,49 @@
         "base_url"
       ]
     },
+    "ModelRoutingStrategy": {
+      "description": "Strategy for routing between multiple model deployments.",
+      "oneOf": [
+        {
+          "description": "Round-robin through available deployments.",
+          "type": "string",
+          "const": "simple-shuffle"
+        },
+        {
+          "description": "Route to the lowest-latency deployment.",
+          "type": "string",
+          "const": "latency-based"
+        },
+        {
+          "description": "Route to the cheapest deployment for the task.",
+          "type": "string",
+          "const": "cost-based"
+        }
+      ]
+    },
     "ModelsSection": {
       "description": "Models configuration section.",
       "type": "object",
       "properties": {
+        "context_window_fallback": {
+          "description": "Fallback models to use when context window is exceeded.\nListed in order of preference (first available is used).",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
         "default": {
           "description": "The default model to use when no model is specified.",
           "type": [
             "string",
             "null"
           ]
+        },
+        "routing_strategy": {
+          "description": "Routing strategy for multi-deployment providers.",
+          "$ref": "#/$defs/ModelRoutingStrategy",
+          "default": "simple-shuffle"
         },
         "scoped": {
           "description": "Scoped models list (for model selector UI).",

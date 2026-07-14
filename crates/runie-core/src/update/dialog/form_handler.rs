@@ -76,7 +76,10 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
     state.view_mut().dirty = true;
 }
 
-fn build_insert_text(state: &mut AppState, path: &str) -> (String, Option<crate::model::InputChip>) {
+fn build_insert_text(
+    state: &mut AppState,
+    path: &str,
+) -> (String, Option<crate::model::InputChip>) {
     let Some((original_input, insert_pos, cursor, _)) = state.input_mut().file_picker_backup.take()
     else {
         return (path.to_owned(), None);

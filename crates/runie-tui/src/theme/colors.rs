@@ -83,9 +83,7 @@ fn default_user_text_color() -> Color {
     let primary = theme.color("text.primary");
     let is_light = theme
         .try_color("bg.base")
-        .map(|b| {
-            0.299 * f32::from(b.r) + 0.587 * f32::from(b.g) + 0.114 * f32::from(b.b) > 128.0
-        })
+        .map(|b| 0.299 * f32::from(b.r) + 0.587 * f32::from(b.g) + 0.114 * f32::from(b.b) > 128.0)
         .unwrap_or(false);
     let c = if is_light {
         primary

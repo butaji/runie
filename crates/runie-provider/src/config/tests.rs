@@ -57,10 +57,12 @@ fn config_round_trip() {
     providers.insert(
         "local".to_string(),
         ModelProvider {
+
             provider_type: None,
             base_url: "http://localhost:11434/v1".to_string(),
             api_key: "ollama".to_string(),
             models: Vec::new(),
+                    headers: std::collections::HashMap::new(),
         },
     );
     cfg.model_providers = providers;
@@ -142,10 +144,12 @@ fn built_provider_reads_api_key_from_config() {
     cfg.model_providers.insert(
         "openai".to_string(),
         ModelProvider {
+
             provider_type: None,
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: "sk-from-config".to_string(),
             models: Vec::new(),
+                    headers: std::collections::HashMap::new(),
         },
     );
 
@@ -169,10 +173,12 @@ fn built_provider_prefers_env_over_config() {
     cfg.model_providers.insert(
         "openai".to_string(),
         ModelProvider {
+
             provider_type: None,
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: "sk-from-config".to_string(),
             models: Vec::new(),
+                    headers: std::collections::HashMap::new(),
         },
     );
 
@@ -200,10 +206,12 @@ fn fallback_uses_config_api_key() {
     cfg.model_providers.insert(
         "openai".to_string(),
         ModelProvider {
+
             provider_type: None,
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: "sk-fallback".to_string(),
             models: Vec::new(),
+                    headers: std::collections::HashMap::new(),
         },
     );
 

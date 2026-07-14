@@ -53,11 +53,7 @@ pub fn has_provider_credentials(_config: &crate::config::Config, provider: &str)
     // with valid credentials in auth.json was not detected during startup.
     let resolver = crate::auth::CredentialResolver::new();
     let has = resolver.resolve_api_key(provider).is_some();
-    tracing::debug!(
-        provider,
-        has_credentials = has,
-        "has_provider_credentials"
-    );
+    tracing::debug!(provider, has_credentials = has, "has_provider_credentials");
     has
 }
 
@@ -77,7 +73,10 @@ mod ranking_tests {
         let config = crate::config::Config::default();
         // "minimax" is not in the fake auth file, so should return false.
         let has = has_provider_credentials(&config, "minimax");
-        assert!(!has, "minimax should not have credentials in isolated test auth file");
+        assert!(
+            !has,
+            "minimax should not have credentials in isolated test auth file"
+        );
 
         std::env::remove_var("RUNIE_AUTH_FILE");
     }

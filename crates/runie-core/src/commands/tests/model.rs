@@ -19,6 +19,7 @@ fn make_config(providers: &[(String, Vec<String>)]) -> Config {
                 provider_type: None,
                 base_url: format!("https://{}.example.com", name),
                 models: models.clone(),
+                headers: std::collections::HashMap::new(),
             },
         );
     }

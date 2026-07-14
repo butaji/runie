@@ -26,7 +26,10 @@ mod tests {
     fn paste_normalizes_carriage_returns_to_newlines() {
         let mut state = AppState::default();
         state.update(crate::Event::Paste("a\r\nb\rc".into()));
-        assert_eq!(state.input.input, "a\nb\nc", "CRLF/CR should normalize to LF");
+        assert_eq!(
+            state.input.input, "a\nb\nc",
+            "CRLF/CR should normalize to LF"
+        );
     }
 
     #[test]

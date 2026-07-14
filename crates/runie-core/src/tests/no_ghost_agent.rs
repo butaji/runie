@@ -6,8 +6,8 @@
 
 use crate::event::Event;
 use crate::tests::fresh_state;
-use crate::view::LazyCache;
 use crate::view::elements::Element;
+use crate::view::LazyCache;
 
 /// Verify the assistant message appears in the feed after `Event::TurnCompleted`
 /// (the production path via TurnActor).
@@ -47,7 +47,10 @@ fn no_ghost_agent_after_turn_completed() {
             "Thinking marker must be shown during streaming. Feed: {:?}",
             feed.elements
         );
-        let has_agent = feed.elements.iter().any(|e| matches!(e, Element::AgentMessage { .. }));
+        let has_agent = feed
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::AgentMessage { .. }));
         assert!(
             !has_agent,
             "AgentMessage must be hidden during thinking phase. Feed: {:?}",
@@ -60,7 +63,10 @@ fn no_ghost_agent_after_turn_completed() {
 
     // After TurnCompleted, assistant MUST be visible (ghost agent bug is fixed).
     let feed = LazyCache::feed(&state);
-    let has_agent = feed.elements.iter().any(|e| matches!(e, Element::AgentMessage { .. }));
+    let has_agent = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::AgentMessage { .. }));
     let texts: Vec<_> = feed
         .elements
         .iter()
@@ -105,7 +111,10 @@ fn no_ghost_agent_after_turn_completed_no_text_start() {
     // During streaming with thinking: assistant is hidden
     {
         let feed = LazyCache::feed(&state);
-        let has_agent = feed.elements.iter().any(|e| matches!(e, Element::AgentMessage { .. }));
+        let has_agent = feed
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::AgentMessage { .. }));
         assert!(
             !has_agent,
             "AgentMessage must be hidden during thinking (no TextStart path). \
@@ -117,7 +126,10 @@ fn no_ghost_agent_after_turn_completed_no_text_start() {
     state.update(Event::TurnCompleted);
 
     let feed = LazyCache::feed(&state);
-    let has_agent = feed.elements.iter().any(|e| matches!(e, Element::AgentMessage { .. }));
+    let has_agent = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::AgentMessage { .. }));
     let texts: Vec<_> = feed
         .elements
         .iter()

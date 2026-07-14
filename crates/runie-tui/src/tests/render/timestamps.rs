@@ -35,7 +35,10 @@ fn user_message_has_border_bg_color() {
             }
         }
     }
-    assert!(found, "user message content should render on the vim-nav selection accent background");
+    assert!(
+        found,
+        "user message content should render on the vim-nav selection accent background"
+    );
 }
 
 #[test]

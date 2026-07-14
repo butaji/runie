@@ -179,7 +179,8 @@ mod tests {
 
     #[test]
     fn test_edit_file_formatting() {
-        let input = serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
+        let input =
+            serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
         let result = format_tool_input("edit_file", &input);
         assert!(result.contains("File: /tmp/test.rs"));
     }

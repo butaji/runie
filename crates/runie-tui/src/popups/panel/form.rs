@@ -273,7 +273,11 @@ fn build_button_lines(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
     for btn in buttons {
         let w: usize = btn.iter().map(|s| s.content.chars().count()).sum();
         if !current.is_empty() && current_w + w > inner_w {
-            lines.push(right_aligned_line(std::mem::take(&mut current), current_w, inner_w));
+            lines.push(right_aligned_line(
+                std::mem::take(&mut current),
+                current_w,
+                inner_w,
+            ));
             current_w = 0;
         }
         current_w += w;
@@ -297,9 +301,11 @@ fn right_aligned_line(mut spans: Vec<Span>, width: usize, inner_w: usize) -> Lin
     let width = width.min(inner_w);
     let pad = inner_w.saturating_sub(width);
     let mut line_spans = vec![Span::styled(" ".repeat(pad), Style::default())];
-    line_spans.extend(spans.into_iter().map(|s| {
-        Span::styled(s.content.into_owned(), s.style)
-    }));
+    line_spans.extend(
+        spans
+            .into_iter()
+            .map(|s| Span::styled(s.content.into_owned(), s.style)),
+    );
     Line::from(line_spans)
 }
 

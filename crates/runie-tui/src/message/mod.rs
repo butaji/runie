@@ -40,8 +40,6 @@ fn span_width(spans: &[Span<'_>]) -> u16 {
     spans.iter().map(|s| str_width(&s.content)).sum()
 }
 
-
-
 pub fn render_user_message(
     content: &str,
     timestamp: f64,
@@ -169,12 +167,26 @@ pub fn render_agent_message(
     lines
 }
 
-fn build_agent_body(blocks: &[CodeBlock], ts_str: &str, inner_width: u16, first_w: u16, rest_w: u16) -> Vec<Line<'static>> {
+fn build_agent_body(
+    blocks: &[CodeBlock],
+    ts_str: &str,
+    inner_width: u16,
+    first_w: u16,
+    rest_w: u16,
+) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let mut is_first = true;
 
     for block in blocks {
-        is_first = render_agent_block(block, ts_str, inner_width, first_w, rest_w, is_first, &mut lines);
+        is_first = render_agent_block(
+            block,
+            ts_str,
+            inner_width,
+            first_w,
+            rest_w,
+            is_first,
+            &mut lines,
+        );
     }
     lines
 }
@@ -189,18 +201,34 @@ fn render_agent_block(
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
     match block {
-        CodeBlock::Text { inlines, .. } => {
-            render_agent_text_block(inlines, ts_str, inner_width, first_w, rest_w, is_first, lines)
-        }
+        CodeBlock::Text { inlines, .. } => render_agent_text_block(
+            inlines,
+            ts_str,
+            inner_width,
+            first_w,
+            rest_w,
+            is_first,
+            lines,
+        ),
         CodeBlock::Code { lang, content } => {
             render_agent_code_block(lang, content, ts_str, inner_width, is_first, lines)
         }
-        CodeBlock::List { ordered, items } => {
-            render_agent_list_block(items, *ordered, ts_str, inner_width, first_w, rest_w, is_first, lines)
-        }
+        CodeBlock::List { ordered, items } => render_agent_list_block(
+            items,
+            *ordered,
+            ts_str,
+            inner_width,
+            first_w,
+            rest_w,
+            is_first,
+            lines,
+        ),
         CodeBlock::Blockquote(inlines) => {
             let text = inlines_to_text(inlines);
-            lines.extend(support::render_blockquote_from_spans(&text, color_agent_text()));
+            lines.extend(support::render_blockquote_from_spans(
+                &text,
+                color_agent_text(),
+            ));
             false
         }
     }
@@ -254,10 +282,7 @@ fn build_agent_line_from_spans(
         if padding > 0 {
             line_spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        line_spans.push(Span::styled(
-            format!(" {}", ts_str),
-            style_feed_timestamp(),
-        ));
+        line_spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
     }
     Line::from(line_spans)
 }
@@ -304,7 +329,14 @@ fn render_agent_list_block(
         for (j, row) in rows.iter().enumerate() {
             let with_ts = first_item && j == 0;
             lines.push(support::render_list_item_from_spans(
-                row, ordered, i, with_ts, "", ts_str, ts_width, inner_width,
+                row,
+                ordered,
+                i,
+                with_ts,
+                "",
+                ts_str,
+                ts_width,
+                inner_width,
             ));
         }
         first_item = false;
@@ -320,10 +352,7 @@ fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        spans.push(Span::styled(
-            format!(" {}", ts_str),
-            style_feed_timestamp(),
-        ));
+        spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
     }
     Line::from(spans).style(style_agent())
 }

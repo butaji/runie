@@ -271,14 +271,19 @@ fn glyph_download_is_correct() {
 fn thinking_line_matches_grok_waiting_row() {
     let line = crate::theme::thinking_line(0.4);
     assert!(
-        runie_core::labels::BRAILLE_SIX.iter().any(|g| line.contains(*g)),
+        runie_core::labels::BRAILLE_SIX
+            .iter()
+            .any(|g| line.contains(*g)),
         "thinking line must carry a braille spinner frame, got: {line}"
     );
     assert!(
         line.contains("Waiting for response…"),
         "thinking line must use grok wording, got: {line}"
     );
-    assert!(line.contains("0.4s"), "sub-10s timer keeps a decimal: {line}");
+    assert!(
+        line.contains("0.4s"),
+        "sub-10s timer keeps a decimal: {line}"
+    );
     assert!(!line.contains('◐'), "static ◐ is gone: {line}");
     assert!(
         line.starts_with(runie_core::layout::GLYPH_AGENT),

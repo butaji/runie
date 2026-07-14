@@ -43,9 +43,7 @@ impl LazyCache {
                 // post was individually expanded.
                 Element::SubagentRow {
                     status, expanded, ..
-                } => {
-                    *expanded || matches!(status, crate::model::PatternWorkerStatus::Running)
-                }
+                } => *expanded || matches!(status, crate::model::PatternWorkerStatus::Running),
                 _ => true,
             };
             feed.push_post(
@@ -222,7 +220,10 @@ impl LazyCache {
             Role::Assistant => Self::assistant_elems(msg, state, ts),
             Role::Tool => vec![(Self::tool_elem(msg, state, ts), false)],
             Role::TurnComplete => {
-                vec![(Element::turn_complete(Self::parse_dur(&msg.content())).at(ts), false)]
+                vec![(
+                    Element::turn_complete(Self::parse_dur(&msg.content())).at(ts),
+                    false,
+                )]
             } // filtered in collect_entries
             // System messages (trust banner, /sessions, compaction summary)
             // reuse the thought element for styling but are never collapsed.
@@ -232,11 +233,14 @@ impl LazyCache {
 
     fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<(Element, bool)> {
         if msg.parts.is_empty() {
-            return vec![(Element::AgentMessage {
-                content: crate::update::strip_tool_markers(&msg.content()),
-                timestamp: ts,
-                provider: msg.provider.clone(),
-            }, false)];
+            return vec![(
+                Element::AgentMessage {
+                    content: crate::update::strip_tool_markers(&msg.content()),
+                    timestamp: ts,
+                    provider: msg.provider.clone(),
+                },
+                false,
+            )];
         }
 
         msg.parts
@@ -245,11 +249,18 @@ impl LazyCache {
             .collect()
     }
 
-    fn part_to_element(part: &Part, state: &AppState, ts: f64, provider: &str) -> Option<(Element, bool)> {
+    fn part_to_element(
+        part: &Part,
+        state: &AppState,
+        ts: f64,
+        provider: &str,
+    ) -> Option<(Element, bool)> {
         match part {
             Part::Text { content } => Some((Self::text_elem(content, ts, provider), false)),
             Part::Reasoning { content } => Some((Self::reasoning_elem(content, state, ts), true)),
-            Part::ToolCall { name, args, .. } => Some((Self::tool_call_elem(name, args, ts), false)),
+            Part::ToolCall { name, args, .. } => {
+                Some((Self::tool_call_elem(name, args, ts), false))
+            }
             Part::ToolResult { output, .. } => Some((Self::tool_result_elem(output, ts), false)),
         }
     }

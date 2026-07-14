@@ -139,7 +139,10 @@ async fn swarm_parallel_happy_path() -> Result<()> {
         "worker-1-2",
         "leader-synthesize",
     ] {
-        assert!(ids.contains(&expected.to_string()), "missing trace {expected} in {ids:?}");
+        assert!(
+            ids.contains(&expected.to_string()),
+            "missing trace {expected} in {ids:?}"
+        );
     }
 
     // Workers received the planned task texts; the plan prompt carries the input.
@@ -166,7 +169,9 @@ async fn swarm_plan_parse_failure_falls_back_to_single_task() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = SwarmPattern::parallel().execute(&ctx, "the original task").await?;
+    let out = SwarmPattern::parallel()
+        .execute(&ctx, "the original task")
+        .await?;
 
     assert_eq!(out.result, "final");
     assert_eq!(out.termination, TerminationReason::Completed);
@@ -252,7 +257,10 @@ async fn swarm_circuit_breaker_stops_dispatch() -> Result<()> {
         "synthesis must be skipped when the circuit breaker trips"
     );
     let attempts = runner.calls_with_prefix("worker-").len();
-    assert!(attempts < 15, "dispatch should stop early, got {attempts} attempts");
+    assert!(
+        attempts < 15,
+        "dispatch should stop early, got {attempts} attempts"
+    );
     Ok(())
 }
 
@@ -272,12 +280,19 @@ async fn swarm_worker_timeout_counts_as_failure() -> Result<()> {
 
     let out = SwarmPattern::parallel().execute(&ctx, "slow").await?;
 
-    assert!(start.elapsed() < Duration::from_secs(2), "test must stay fast");
+    assert!(
+        start.elapsed() < Duration::from_secs(2),
+        "test must stay fast"
+    );
     match &out.termination {
         TerminationReason::Error(msg) => assert!(msg.contains("timed out"), "got {msg}"),
         other => panic!("expected error termination, got {other:?}"),
     }
-    assert_eq!(runner.calls_with_prefix("worker-").len(), 2, "1 attempt + 1 retry");
+    assert_eq!(
+        runner.calls_with_prefix("worker-").len(),
+        2,
+        "1 attempt + 1 retry"
+    );
     let worker_trace = out
         .traces
         .iter()
@@ -307,7 +322,10 @@ async fn swarm_abort_mid_execute() -> Result<()> {
     let out = SwarmPattern::parallel().execute(&ctx, "abort me").await?;
 
     assert_eq!(out.termination, TerminationReason::Error("aborted".into()));
-    assert!(start.elapsed() < Duration::from_secs(2), "abort must be fast");
+    assert!(
+        start.elapsed() < Duration::from_secs(2),
+        "abort must be fast"
+    );
     Ok(())
 }
 
@@ -322,7 +340,9 @@ async fn swarm_delegation_early_finish_on_empty_plan() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = SwarmPattern::delegation().execute(&ctx, "delegate this").await?;
+    let out = SwarmPattern::delegation()
+        .execute(&ctx, "delegate this")
+        .await?;
 
     assert_eq!(out.result, "final");
     assert_eq!(out.termination, TerminationReason::Completed);
@@ -428,7 +448,9 @@ async fn swarm_dag_two_waves_dependency_context() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = SwarmPattern::dag().execute(&ctx, "research async Rust").await?;
+    let out = SwarmPattern::dag()
+        .execute(&ctx, "research async Rust")
+        .await?;
 
     assert_eq!(out.result, "final");
     assert_eq!(out.termination, TerminationReason::Completed);
@@ -439,13 +461,19 @@ async fn swarm_dag_two_waves_dependency_context() -> Result<()> {
         "worker-2-1",
         "leader-synthesize",
     ] {
-        assert!(ids.contains(&expected.to_string()), "missing trace {expected} in {ids:?}");
+        assert!(
+            ids.contains(&expected.to_string()),
+            "missing trace {expected} in {ids:?}"
+        );
     }
 
     let workers = runner.calls_with_prefix("worker-");
     assert_eq!(workers.len(), 2, "one worker per wave");
     assert_eq!(workers[0].id, "worker-1-0");
-    assert_eq!(workers[0].prompt, "research", "root task has no dependency context");
+    assert_eq!(
+        workers[0].prompt, "research",
+        "root task has no dependency context"
+    );
     assert_eq!(workers[1].id, "worker-2-1");
     assert!(workers[1].prompt.contains("summarize"));
     assert!(
@@ -474,7 +502,10 @@ async fn swarm_dag_two_waves_dependency_context() -> Result<()> {
         Some("[swarm-plan dag]"),
         "plan prompt starts with the dag marker"
     );
-    assert!(plan_calls[0].prompt.contains("\"deps\""), "plan prompt documents the deps schema");
+    assert!(
+        plan_calls[0].prompt.contains("\"deps\""),
+        "plan prompt documents the deps schema"
+    );
     Ok(())
 }
 
@@ -510,10 +541,9 @@ async fn swarm_dag_skips_dependent_on_failed_dependency() -> Result<()> {
         .find(|t| t.agent_id == "worker-2-1")
         .expect("skipped task still gets a trace");
     assert!(
-        skipped
-            .events
-            .iter()
-            .any(|e| matches!(e, TraceEvent::Error { error } if error == "skipped: dependency failed")),
+        skipped.events.iter().any(
+            |e| matches!(e, TraceEvent::Error { error } if error == "skipped: dependency failed")
+        ),
         "skip is traced with an Error event: {:?}",
         skipped.events
     );
@@ -551,7 +581,9 @@ async fn swarm_dag_plan_parse_failure_falls_back_to_single_task() -> Result<()> 
     ]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = SwarmPattern::dag().execute(&ctx, "the original task").await?;
+    let out = SwarmPattern::dag()
+        .execute(&ctx, "the original task")
+        .await?;
 
     assert_eq!(out.result, "final");
     assert_eq!(out.termination, TerminationReason::Completed);
@@ -578,10 +610,11 @@ async fn swarm_dag_out_of_range_dependency_dropped_not_failed() -> Result<()> {
     assert_eq!(workers.len(), 1);
     assert_eq!(workers[0].prompt, "solo", "dropped dep adds no context");
     assert!(
-        out.traces.iter().any(|t| t
-            .events
+        out.traces
             .iter()
-            .any(|e| matches!(e, TraceEvent::Error { error } if error.contains("out-of-range")))),
+            .any(|t| t.events.iter().any(
+                |e| matches!(e, TraceEvent::Error { error } if error.contains("out-of-range"))
+            )),
         "dropped dependency is logged via a trace Error event"
     );
     Ok(())

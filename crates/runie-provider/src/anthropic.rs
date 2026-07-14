@@ -232,14 +232,16 @@ struct ErrorEvent {
 /// Classify an Anthropic error type into a `ModelError` variant.
 fn classify_error(error_type: &str, message: &str) -> ModelError {
     match error_type {
-        "rate_limit" => ModelError::RateLimit { retry_after_secs: None },
-        "overloaded_error" => ModelError::Overloaded { retry_after_secs: None },
+        "rate_limit" => ModelError::RateLimit {
+            retry_after_secs: None,
+        },
+        "overloaded_error" => ModelError::Overloaded {
+            retry_after_secs: None,
+        },
         "invalid_request" if message.to_lowercase().contains("context") => {
             ModelError::ContextLength { limit: 0, used: 0 }
         }
-        "authentication_error" => {
-            ModelError::Other(format!("authentication error: {}", message))
-        }
+        "authentication_error" => ModelError::Other(format!("authentication error: {}", message)),
         "server_error" => ModelError::Other(format!("server error: {}", message)),
         _ => ModelError::Other(message.to_string()),
     }
@@ -267,8 +269,12 @@ mod tests {
             return;
         };
         let events = replay_anthropic_sse(&text);
-        assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
-        assert!(events.iter().any(|e| matches!(e, ProviderEvent::Finish { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Finish { .. })));
     }
 
     #[test]
@@ -291,10 +297,9 @@ event: error
 data: {"type":"rate_limit","message":"Rate limit exceeded. Try again in 30s."}
 "#;
         let events = replay_anthropic_sse(text);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Error(ModelError::RateLimit { .. })
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Error(ModelError::RateLimit { .. }))));
     }
 
     #[test]
@@ -306,10 +311,9 @@ event: error
 data: {"type":"overloaded_error","message":"The server cluster is currently under high load. Please retry after a short wait and thank you for your patience. (2064) (529)"}
 "#;
         let events = replay_anthropic_sse(text);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Error(ModelError::Overloaded { .. })
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Error(ModelError::Overloaded { .. }))));
         let err = events
             .iter()
             .find_map(|e| match e {
@@ -328,10 +332,9 @@ event: error
 data: {"type":"server_error","message":"Internal server error."}
 "#;
         let events = replay_anthropic_sse(text);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Error(ModelError::Other(_))
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Error(ModelError::Other(_)))));
     }
 
     #[test]
@@ -342,10 +345,9 @@ event: error
 data: {"type":"invalid_request","message":"Context length exceeded."}
 "#;
         let events = replay_anthropic_sse(text);
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Error(ModelError::ContextLength { .. })
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Error(ModelError::ContextLength { .. }))));
     }
 
     #[test]

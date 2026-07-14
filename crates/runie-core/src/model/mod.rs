@@ -7,6 +7,7 @@ pub use crate::model::state::types::ThinkingLevel;
 pub use crate::model::state::AppState;
 // Re-export state types as pub for external crates.
 pub use crate::actors::turn::SpeedWindow;
+pub use crate::model::pattern_worker::{PatternWorkerRow, PatternWorkerStatus};
 pub use crate::model::state::agent::AgentState;
 pub use crate::model::state::input::{InputChip, InputState};
 pub use crate::model::state::session::{CompletionState, ConfigState, SessionState};
@@ -15,7 +16,6 @@ pub(crate) use crate::model::state::types::InputReceiver;
 pub use crate::model::state::types::PermissionRequestState;
 pub use crate::model::state::types::{QueuedMessage, QueuedMessageKind};
 pub use crate::model::state::view::ViewState;
-pub use crate::model::pattern_worker::{PatternWorkerRow, PatternWorkerStatus};
 pub use crate::model::state::FffFileEntry;
 pub use crate::model::state::ModelSource;
 pub use crate::model_catalog::{

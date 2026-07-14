@@ -36,18 +36,12 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
     if !snap.turn_active {
         let left_text = text_parts.join(" · ");
-        f.render_widget(
-            Paragraph::new(left_text).style(style_status_idle()),
-            area,
-        );
+        f.render_widget(Paragraph::new(left_text).style(style_status_idle()), area);
         return;
     }
 
     let left_text = format!("{} · {}", snap.spinner_frame, text_parts.join(" · "));
-    f.render_widget(
-        Paragraph::new(left_text).style(style_status_idle()),
-        area,
-    );
+    f.render_widget(Paragraph::new(left_text).style(style_status_idle()), area);
 }
 
 /// Build status bar text parts without the spinner char.
@@ -256,7 +250,10 @@ mod tests {
 
     #[test]
     fn status_bar_context_window_falls_back_to_default() {
-        assert_eq!(context_window_for("unknown", "model"), DEFAULT_CONTEXT_WINDOW);
+        assert_eq!(
+            context_window_for("unknown", "model"),
+            DEFAULT_CONTEXT_WINDOW
+        );
     }
 
     #[test]

@@ -113,10 +113,7 @@ fn user_message_has_bg_user_background() {
             break;
         }
     }
-    assert!(
-        found,
-        "user message should have bg.user background color"
-    );
+    assert!(found, "user message should have bg.user background color");
 }
 
 /// Spec for a user message card (per design):
@@ -184,15 +181,11 @@ fn user_message_card_has_bg_padding_and_margin() {
     // Locate the content row (the one containing the user text "hello").
     let content_row = (0..buf.area().height)
         .find(|&y| {
-            (0..width).any(|x| {
-                buf[(x, y)].symbol() == "h" && buf[(x, y)].style().bg == Some(bg)
-            })
+            (0..width).any(|x| buf[(x, y)].symbol() == "h" && buf[(x, y)].style().bg == Some(bg))
         })
         .expect("user content row with bg not found");
 
-    let row_bg = |y: u16| -> bool {
-        (2..width - 2).all(|x| buf[(x, y)].style().bg == Some(bg))
-    };
+    let row_bg = |y: u16| -> bool { (2..width - 2).all(|x| buf[(x, y)].style().bg == Some(bg)) };
 
     assert!(
         content_row >= 1,
@@ -240,8 +233,7 @@ fn first_user_message_card_has_bg_line_above() {
         content_row >= 1,
         "first user message must still have a bg line above its content"
     );
-    let above_is_bg =
-        (2..width - 2).all(|x| buf[(x, content_row - 1)].style().bg == Some(bg));
+    let above_is_bg = (2..width - 2).all(|x| buf[(x, content_row - 1)].style().bg == Some(bg));
     assert!(
         above_is_bg,
         "row above the first user message (row {}) must be a bg-banded line",

@@ -56,14 +56,26 @@ fn collapsed_feed_shows_expandable_thought_summary() {
     drive_reasoning_turn(&mut state, "Let me think about this.", "The answer");
 
     let has_expandable = feed_elements(&state).iter().any(|e| {
-        matches!(e, Element::ThoughtSummary { expandable: true, .. })
+        matches!(
+            e,
+            Element::ThoughtSummary {
+                expandable: true,
+                ..
+            }
+        )
     });
     assert!(
         has_expandable,
         "collapsed feed must show an EXPANDABLE thought summary when reasoning exists"
     );
     let has_dead_summary = feed_elements(&state).iter().any(|e| {
-        matches!(e, Element::ThoughtSummary { expandable: false, .. })
+        matches!(
+            e,
+            Element::ThoughtSummary {
+                expandable: false,
+                ..
+            }
+        )
     });
     assert!(
         !has_dead_summary,
@@ -166,7 +178,9 @@ fn multi_iteration_turn_gives_each_reasoning_its_own_thought_message() {
         );
     }
     assert!(
-        thoughts[1].content().contains("I'll verify this with a quick check."),
+        thoughts[1]
+            .content()
+            .contains("I'll verify this with a quick check."),
         "iteration-2 reasoning must live in the second thought: {:?}",
         thoughts[1].content()
     );
@@ -196,16 +210,22 @@ fn thought_is_collapsed_by_default_and_expands_individually() {
 
     // Default: one-line expandable summary, body hidden.
     let has_summary = feed_elements(&state).iter().any(|e| {
-        matches!(e, Element::ThoughtSummary { expandable: true, .. })
+        matches!(
+            e,
+            Element::ThoughtSummary {
+                expandable: true,
+                ..
+            }
+        )
     });
     assert!(
         has_summary,
         "thought must default to an expandable one-line summary (grok parity), got: {:?}",
         feed_elements(&state)
     );
-    let body_visible = feed_elements(&state).iter().any(|e| {
-        matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think"))
-    });
+    let body_visible = feed_elements(&state).iter().any(
+        |e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think")),
+    );
     assert!(
         !body_visible,
         "thought body must be hidden by default, got: {:?}",
@@ -221,9 +241,9 @@ fn thought_is_collapsed_by_default_and_expands_individually() {
         .expect("thought post must exist");
     state.view_mut().expanded_posts.insert(thought_post);
 
-    let body_visible = feed_elements(&state).iter().any(|e| {
-        matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think"))
-    });
+    let body_visible = feed_elements(&state).iter().any(
+        |e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think")),
+    );
     assert!(
         body_visible,
         "individually expanded thought must show its body, got: {:?}",
@@ -264,7 +284,12 @@ fn thought_sorts_before_the_answer_like_grok() {
     let elements = feed_elements(&state);
     let thought_pos = elements
         .iter()
-        .position(|e| matches!(e, Element::ThoughtMarker { .. } | Element::ThoughtSummary { .. }))
+        .position(|e| {
+            matches!(
+                e,
+                Element::ThoughtMarker { .. } | Element::ThoughtSummary { .. }
+            )
+        })
         .expect("thought element must exist");
     let answer_pos = elements
         .iter()

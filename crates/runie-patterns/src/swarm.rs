@@ -166,7 +166,11 @@ impl Pattern for SwarmPattern {
                 "circuit breaker tripped after {} consecutive failures",
                 ctx.config.circuit_breaker
             );
-            return Ok(finish(&state, rounds.errors.join("\n"), TerminationReason::Error(message)));
+            return Ok(finish(
+                &state,
+                rounds.errors.join("\n"),
+                TerminationReason::Error(message),
+            ));
         }
         if rounds.successes.is_empty() {
             let joined = rounds.errors.join("\n");
@@ -384,7 +388,9 @@ async fn execute_round(
     let handles: Vec<_> = tasks
         .into_iter()
         .enumerate()
-        .map(|(index, task_text)| tokio::spawn(run_worker(env.clone(), round, index, task_text, None)))
+        .map(|(index, task_text)| {
+            tokio::spawn(run_worker(env.clone(), round, index, task_text, None))
+        })
         .collect();
 
     // On abort the join is dropped, detaching in-flight worker spawns; their
@@ -513,7 +519,13 @@ async fn synthesize(
     input: &str,
     successes: &[(String, String)],
 ) -> LeaderCall {
-    call_leader(ctx, state, "leader-synthesize", build_synthesis_prompt(input, successes)).await
+    call_leader(
+        ctx,
+        state,
+        "leader-synthesize",
+        build_synthesis_prompt(input, successes),
+    )
+    .await
 }
 
 /// Extract a JSON array of task strings from a leader response.
@@ -574,9 +586,11 @@ fn build_plan_prompt(
         ),
     };
     let format_instruction = match variant {
-        SwarmVariant::Dag => "Reply ONLY with a JSON array of objects, one per task, each \
+        SwarmVariant::Dag => {
+            "Reply ONLY with a JSON array of objects, one per task, each \
              {\"task\": \"...\", \"deps\": [<zero-based indices of earlier tasks it depends on>]}. \
-             No prose, no markdown fences.",
+             No prose, no markdown fences."
+        }
         SwarmVariant::Parallel | SwarmVariant::Delegation => {
             "Reply ONLY with a JSON array of strings, one per task. No prose, no markdown fences."
         }
@@ -825,11 +839,15 @@ async fn run_wave(
             ));
             continue;
         }
-        let prompt = build_dag_task_prompt(&run.tasks[node], &run.deps[node], &run.tasks, &run.outputs);
+        let prompt =
+            build_dag_task_prompt(&run.tasks[node], &run.deps[node], &run.tasks, &run.outputs);
         let worker_env = env.clone();
         let bare_task = run.tasks[node].clone();
         handles.push(tokio::spawn(async move {
-            (node, run_worker(worker_env, wave_number, node, prompt, Some(bare_task)).await)
+            (
+                node,
+                run_worker(worker_env, wave_number, node, prompt, Some(bare_task)).await,
+            )
         }));
     }
 
@@ -897,7 +915,9 @@ fn collect_wave_results(
                 outcome.errors.push(error);
             }
             Err(join_error) => {
-                outcome.errors.push(format!("worker task failed to join: {join_error}"));
+                outcome
+                    .errors
+                    .push(format!("worker task failed to join: {join_error}"));
             }
         }
     }

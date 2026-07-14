@@ -62,7 +62,7 @@ fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
         .tools
         .as_ref()
         .map(|t| t.join(", "))
-        .unwrap_or_else(|| runie_core::prompts::DEFAULT_TOOLS.to_owned());
+        .unwrap_or_else(|| default_tools_list_for_model(req.model.as_deref()));
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
@@ -75,6 +75,21 @@ fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
         ChatMessage::system(system),
         ChatMessage::user(req.prompt.clone()),
     ]
+}
+
+/// Return the default tool list only when the requested model is known to
+/// support tools. Unknown models default to no tools so the system prompt
+/// stays small and models that do not support tools are not confused.
+fn default_tools_list_for_model(model: Option<&str>) -> String {
+    let supports_tools = model
+        .and_then(runie_core::provider::find_model)
+        .map(|m| m.supports_tools)
+        .unwrap_or(false);
+    if supports_tools {
+        runie_core::prompts::DEFAULT_TOOLS.to_owned()
+    } else {
+        String::new()
+    }
 }
 
 async fn run_json_turn(
@@ -134,5 +149,54 @@ mod tests {
         let s = serde_json::to_string(&resp).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&s).unwrap();
         assert_eq!(parsed["content"], "hi");
+    }
+
+    #[test]
+    fn json_mode_skips_default_tools_for_unknown_model() {
+        let req = JsonRequest {
+            prompt: "hello".into(),
+            model: Some("unknown-model-xyz".into()),
+            provider: None,
+            tools: None,
+        };
+        let msgs = build_json_messages(&req);
+        let system = &msgs[0];
+        assert!(system.content().contains("You are a helpful assistant"));
+        assert!(
+            !system.content().contains("Available tools"),
+            "unknown model must not get default tools"
+        );
+    }
+
+    #[test]
+    fn json_mode_includes_default_tools_for_tool_model() {
+        let req = JsonRequest {
+            prompt: "hello".into(),
+            model: Some("gpt-4o".into()),
+            provider: None,
+            tools: None,
+        };
+        let msgs = build_json_messages(&req);
+        let system = &msgs[0];
+        assert!(
+            system.content().contains("Available tools"),
+            "tool-supported model must get default tools"
+        );
+    }
+
+    #[test]
+    fn json_mode_honors_explicit_tools_even_for_unknown_model() {
+        let req = JsonRequest {
+            prompt: "hello".into(),
+            model: Some("unknown-model-xyz".into()),
+            provider: None,
+            tools: Some(vec!["bash".into()]),
+        };
+        let msgs = build_json_messages(&req);
+        let system = &msgs[0];
+        assert!(
+            system.content().contains("bash"),
+            "explicit tools list must be honored"
+        );
     }
 }

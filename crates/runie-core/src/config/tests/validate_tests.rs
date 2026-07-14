@@ -226,6 +226,8 @@ fn registry_validation_accepts_known_provider_and_model() {
             default: Some("gpt-4o".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -264,6 +266,8 @@ fn registry_validation_accepts_unlisted_model_for_known_provider() {
             default: Some("nonexistent-model".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -284,6 +288,8 @@ fn registry_validation_rejects_wrong_provider_prefix() {
             default: Some("anthropic/claude-3".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -300,6 +306,7 @@ fn registry_validation_rejects_unknown_configured_provider() {
             provider_type: Some("fake".to_string()),
             base_url: "https://fake.example.com".to_string(),
             models: vec![],
+            headers: std::collections::HashMap::new(),
         },
     );
     let errors = validate_registry(&config);
@@ -324,6 +331,8 @@ fn registry_validation_accepts_minimax_provider() {
             default: Some("MiniMax-M3".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -339,6 +348,8 @@ fn registry_validation_accepts_full_model_format() {
             default: Some("openai/gpt-4o".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -360,6 +371,8 @@ fn registry_validation_accepts_minimax_prefixed_model() {
             default: Some("minimax/MiniMax-M3".to_string()),
             scoped: Some(vec!["minimax/MiniMax-M3".to_string()]),
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -380,6 +393,8 @@ fn registry_validation_accepts_mock_prefixed_model_when_mock_enabled() {
             default: Some("mock/echo".to_string()),
             scoped: Some(vec!["mock/echo".to_string()]),
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -401,6 +416,8 @@ fn registry_validation_accepts_unlisted_prefixed_model_for_known_provider() {
             default: Some("minimax/not-a-real-model".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -423,6 +440,8 @@ fn registry_validation_accepts_minimax_highspeed_default_model() {
             default: Some("MiniMax-M2.7-highspeed".to_string()),
             scoped: None,
             thinking: Default::default(),
+            routing_strategy: Default::default(),
+            context_window_fallback: vec![],
         },
         ..Config::default()
     };
@@ -465,4 +484,73 @@ fn config_validate_full_method() {
     };
     let result = bad_config.validate_full();
     assert!(result.is_err());
+}
+
+// ============================================================================
+// Routing strategy and context fallback tests
+// ============================================================================
+
+#[test]
+fn routing_strategy_serializes_as_kebab_case() {
+    use crate::config::ModelRoutingStrategy;
+    let json = serde_json::to_string(&ModelRoutingStrategy::SimpleShuffle).unwrap();
+    assert_eq!(json, "\"simple-shuffle\"");
+
+    let json = serde_json::to_string(&ModelRoutingStrategy::LatencyBased).unwrap();
+    assert_eq!(json, "\"latency-based\"");
+
+    let json = serde_json::to_string(&ModelRoutingStrategy::CostBased).unwrap();
+    assert_eq!(json, "\"cost-based\"");
+}
+
+#[test]
+fn routing_strategy_deserializes_from_toml() {
+    use crate::config::ModelRoutingStrategy;
+
+    let simple: ModelRoutingStrategy = serde_json::from_str("\"simple-shuffle\"").unwrap();
+    assert!(matches!(simple, ModelRoutingStrategy::SimpleShuffle));
+
+    let latency: ModelRoutingStrategy = serde_json::from_str("\"latency-based\"").unwrap();
+    assert!(matches!(latency, ModelRoutingStrategy::LatencyBased));
+
+    let cost: ModelRoutingStrategy = serde_json::from_str("\"cost-based\"").unwrap();
+    assert!(matches!(cost, ModelRoutingStrategy::CostBased));
+}
+
+#[test]
+fn context_window_fallback_deserializes_from_config() {
+    let toml_text = r#"
+[models]
+default = "gpt-4o"
+context_window_fallback = ["gpt-4o-mini", "gpt-3.5-turbo"]
+"#;
+    let config: Config = toml::from_str(toml_text).unwrap();
+    assert_eq!(
+        config.models.context_window_fallback,
+        vec!["gpt-4o-mini", "gpt-3.5-turbo"]
+    );
+}
+
+#[test]
+fn routing_strategy_in_config() {
+    let toml_text = r#"
+[models]
+default = "gpt-4o"
+routing_strategy = "cost-based"
+"#;
+    let config: Config = toml::from_str(toml_text).unwrap();
+    assert!(matches!(
+        config.models.routing_strategy,
+        crate::config::ModelRoutingStrategy::CostBased
+    ));
+}
+
+#[test]
+fn models_section_default_has_empty_fallback() {
+    let section = crate::config::ModelsSection::default();
+    assert!(section.context_window_fallback.is_empty());
+    assert!(matches!(
+        section.routing_strategy,
+        crate::config::ModelRoutingStrategy::SimpleShuffle
+    ));
 }

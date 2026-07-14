@@ -530,7 +530,8 @@ async fn slash_after_text_does_not_open_palette() {
         "'/' after text must not open the command palette"
     );
     assert_eq!(
-        ui.state.input().input, "src/",
+        ui.state.input().input,
+        "src/",
         "'/' must be inserted literally, input must not be cleared"
     );
 
@@ -584,7 +585,8 @@ async fn slash_after_space_mid_input_does_not_open_palette() {
         "'/' after a space mid-input must not open the command palette"
     );
     assert_eq!(
-        ui.state.input().input, "check /",
+        ui.state.input().input,
+        "check /",
         "'/' must be inserted literally after a space"
     );
 
@@ -707,7 +709,8 @@ async fn up_on_empty_input_recalls_history_in_production() {
     );
     assert_eq!(echoed.history_pos, Some(1));
     assert_eq!(
-        ui.state.view().scroll, 0,
+        ui.state.view().scroll,
+        0,
         "Up on empty input must not scroll the feed"
     );
 
@@ -727,10 +730,14 @@ async fn down_on_empty_input_does_not_scroll_in_production() {
     ui.handle_event(Event::HistoryNext, effect_tx.clone()).await;
 
     let echoed = next_input_changed(&mut sub).await;
-    assert!(echoed.input.is_empty(), "Down on empty input recalls nothing");
+    assert!(
+        echoed.input.is_empty(),
+        "Down on empty input recalls nothing"
+    );
     assert!(echoed.input_flash > 0, "Down on empty input flashes");
     assert_eq!(
-        ui.state.view().scroll, 3,
+        ui.state.view().scroll,
+        3,
         "Down on empty input must not scroll the feed"
     );
 
@@ -843,7 +850,8 @@ async fn up_with_text_does_not_scroll_feed_in_production() {
     ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
 
     assert_eq!(
-        ui.state.view().scroll, 0,
+        ui.state.view().scroll,
+        0,
         "Up with text in the input must not scroll the feed"
     );
 
@@ -871,7 +879,8 @@ async fn up_after_fast_typing_does_not_scroll_feed_in_production() {
     ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
 
     assert_eq!(
-        ui.state.view().scroll, 0,
+        ui.state.view().scroll,
+        0,
         "Up after fast-typed (pending) text must route to history, not scroll"
     );
 
@@ -897,9 +906,17 @@ async fn slash_model_selects_model_synchronously() {
 
     runie_core::provider::set_mock_enabled(false);
 
-    let msgs: Vec<String> = ui.state.session().messages.iter().map(|m| m.content()).collect();
+    let msgs: Vec<String> = ui
+        .state
+        .session()
+        .messages
+        .iter()
+        .map(|m| m.content())
+        .collect();
     assert!(
-        !msgs.iter().any(|m| m.contains("No pending edits to approve")),
+        !msgs
+            .iter()
+            .any(|m| m.contains("No pending edits to approve")),
         "/model must not run /approve, messages: {:?}",
         msgs
     );

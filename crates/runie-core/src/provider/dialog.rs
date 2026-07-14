@@ -22,8 +22,7 @@ pub fn build_providers_dialog(state: &AppState) -> PanelStack {
     let current_model = &state.config().current_model;
     let has_providers = !configured.is_empty();
 
-    let mut panel = Panel::new("providers", "Providers")
-        .header(providers_header(has_providers));
+    let mut panel = Panel::new("providers", "Providers").header(providers_header(has_providers));
 
     if has_providers {
         for (provider_name, _, models) in &configured {

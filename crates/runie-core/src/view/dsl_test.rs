@@ -416,7 +416,10 @@ mod tests {
             .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
             .collect();
         assert_eq!(summaries.len(), 1, "Expected exactly one ThoughtSummary");
-        if let Element::ThoughtSummary { content, timestamp, .. } = summaries[0] {
+        if let Element::ThoughtSummary {
+            content, timestamp, ..
+        } = summaries[0]
+        {
             assert_eq!(content, "Let me think about this 2.0s");
             assert_eq!(*timestamp, 4.0);
         } else {

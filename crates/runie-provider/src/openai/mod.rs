@@ -3,10 +3,12 @@
 mod normalize;
 pub mod protocol;
 mod request;
+pub mod sse;
 pub mod stream;
 pub mod types;
 
 use secrecy::SecretString;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// OpenAI-compatible provider.
@@ -30,6 +32,8 @@ pub struct OpenAiProvider {
     retry_config: Option<crate::RetryConfig>,
     /// Per-read idle timeout for the SSE stream. `None` => use the default.
     idle_timeout: Option<std::time::Duration>,
+    /// Custom HTTP headers from the provider config, added to every request.
+    headers: HashMap<String, String>,
 }
 
 impl OpenAiProvider {
@@ -45,6 +49,7 @@ impl OpenAiProvider {
             tool_choice: None,
             retry_config: None,
             idle_timeout: None,
+            headers: HashMap::new(),
         }
     }
 
@@ -64,6 +69,7 @@ impl OpenAiProvider {
             tool_choice: None,
             retry_config: None,
             idle_timeout: None,
+            headers: HashMap::new(),
         }
     }
 
@@ -97,6 +103,11 @@ impl OpenAiProvider {
         self
     }
 
+    pub fn with_headers(mut self, headers: HashMap<String, String>) -> Self {
+        self.headers = headers;
+        self
+    }
+
     pub fn model(&self) -> &str {
         &self.model
     }
@@ -120,9 +131,18 @@ impl OpenAiProvider {
     pub fn idle_timeout(&self) -> Option<std::time::Duration> {
         self.idle_timeout
     }
+
+    pub fn headers(&self) -> &HashMap<String, String> {
+        &self.headers
+    }
 }
 
 impl crate::Provider for OpenAiProvider {
+    fn metadata(&self) -> crate::ProviderMetadata {
+        crate::ProviderMetadata::default()
+            .with_retry_config(self.retry_config.clone().unwrap_or_default())
+    }
+
     fn generate(
         &self,
         messages: Vec<runie_core::proto::message::ChatMessage>,

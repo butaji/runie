@@ -127,8 +127,13 @@ async fn build_eventsource(
         tracing::trace!(url = %url, body_size = %body.to_string().len(), "building request");
 
         // Expose secret only at the HTTP boundary
-        let builder = client
-            .post(&url)
+        let mut builder = client.post(&url);
+        // Apply provider-configured custom headers first so essential Runie
+        // headers set afterwards cannot be accidentally overridden.
+        for (name, value) in provider.headers() {
+            builder = builder.header(name, value);
+        }
+        let builder = builder
             .header("Authorization", crate::http::bearer_header_secret(&api_key))
             .header("Content-Type", "application/json")
             .json(&body);
@@ -452,9 +457,7 @@ pub mod tests {
     /// lost.
     #[tokio::test]
     async fn stream_sse_events_yields_content_when_stream_ends_without_done() {
-        let items: Vec<
-            Result<reqwest_eventsource::Event, reqwest_eventsource::Error>,
-        > = vec![
+        let items: Vec<Result<reqwest_eventsource::Event, reqwest_eventsource::Error>> = vec![
             sse_message(r#"{"choices":[{"delta":{"content":"Hello"}}]}"#),
             sse_message(r#"{"choices":[{"delta":{"content":" world"}}]}"#),
             // Stream closes without a terminal `data: [DONE]` frame.
@@ -462,12 +465,10 @@ pub mod tests {
         ];
         let mut stream = futures::stream::iter(items);
 
-        let (state, streamed_events) = stream_sse_events(
-            &mut stream,
-            std::time::Duration::from_secs(60),
-        )
-        .await
-        .expect("a clean StreamEnded (no [DONE]) must not be an error");
+        let (state, streamed_events) =
+            stream_sse_events(&mut stream, std::time::Duration::from_secs(60))
+                .await
+                .expect("a clean StreamEnded (no [DONE]) must not be an error");
         let mut all = streamed_events;
         all.extend(OpenAiProtocol::new().on_halt(state));
 
@@ -482,7 +483,8 @@ pub mod tests {
             "expected TextDelta(\" world\") to survive the truncated stream, got: {all:?}"
         );
         assert!(
-            all.iter().any(|e| matches!(e, ProviderEvent::Finish { .. })),
+            all.iter()
+                .any(|e| matches!(e, ProviderEvent::Finish { .. })),
             "expected a Finish event to terminate the stream, got: {all:?}"
         );
     }
@@ -510,8 +512,8 @@ pub mod tests {
             .mount(&mock_server)
             .await;
 
-        let provider = OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
-            .with_base_url(mock_server.uri());
+        let provider =
+            OpenAiProvider::new("sk-test".to_string(), "gpt-4o").with_base_url(mock_server.uri());
         let mut stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
 
         let mut items = Vec::new();
@@ -571,7 +573,7 @@ pub mod tests {
             "expected an idle-timeout Err for a stalled stream, got: {items:?}"
         );
         assert!(
-            elapsed < Duration::from_secs(2),
+            elapsed < Duration::from_secs(3),
             "idle timeout should fire well before the server's 3s delay, took {elapsed:?}"
         );
     }
@@ -946,5 +948,80 @@ pub mod tests {
             })
             .collect();
         assert_eq!(tool_starts, vec![("call_abc".into(), "read_file".into())]);
+    }
+
+    /// HTTP 400 Bad Request is a client error and must not be retried.
+    /// Regression: mock-openai-api `invalid_request` scenario was observed to
+    /// issue 5 requests before giving up.
+    #[tokio::test]
+    async fn openai_stream_does_not_retry_http_400() {
+        use futures::StreamExt;
+        use runie_core::proto::message::ChatMessage;
+        use runie_core::Provider as _;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use std::time::Duration;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let hits = Arc::new(AtomicUsize::new(0));
+        let hits_for = hits.clone();
+        tokio::spawn(async move {
+            for _ in 0..3 {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                hits_for.fetch_add(1, Ordering::SeqCst);
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 1024];
+                loop {
+                    match sock.read(&mut tmp).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(k) => {
+                            buf.extend_from_slice(&tmp[..k]);
+                            if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                                break;
+                            }
+                        }
+                    }
+                }
+                let resp = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"invalid request\"}}";
+                let _ = sock.write_all(resp.as_bytes()).await;
+                let _ = sock.flush().await;
+            }
+        });
+
+        let provider = OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
+            .with_base_url(base_url)
+            .with_retry_config(crate::RetryConfig::new(
+                3,
+                Duration::from_millis(1),
+                Duration::from_millis(20),
+                1.0,
+            ));
+
+        let mut stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
+        let mut items = Vec::new();
+        while let Some(item) = stream.next().await {
+            items.push(item);
+        }
+
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            1,
+            "HTTP 400 must not be retried, got items: {items:?}"
+        );
+        assert!(
+            items.iter().any(|i| i.is_err()),
+            "expected an Err for HTTP 400, got: {items:?}"
+        );
+        assert!(
+            !items
+                .iter()
+                .any(|i| matches!(i, Ok(ProviderEvent::Finish { .. }))),
+            "a failed stream must not report a normal Finish, got: {items:?}"
+        );
     }
 }

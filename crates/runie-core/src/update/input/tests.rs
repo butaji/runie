@@ -56,7 +56,10 @@ fn history_prev_at_oldest_stays_and_flashes() {
     state.input.input_flash = 0;
 
     state.update(crate::Event::HistoryPrev);
-    assert_eq!(state.input.input, "a", "must not wrap past the oldest entry");
+    assert_eq!(
+        state.input.input, "a",
+        "must not wrap past the oldest entry"
+    );
     assert!(state.input.input_flash > 0, "oldest boundary should flash");
 }
 
@@ -72,7 +75,8 @@ fn history_next_on_empty_input_flashes() {
 
     assert!(state.input.input.is_empty());
     assert_eq!(
-        state.view().scroll, 0,
+        state.view().scroll,
+        0,
         "Down on empty input must not scroll the feed"
     );
     assert!(state.input.input_flash > 0);
@@ -99,7 +103,10 @@ fn editing_recalled_entry_exits_history_mode() {
     // a draft; with text in the box Up moves the cursor to the start.
     state.update(crate::Event::HistoryPrev);
     assert_eq!(state.input.input, "b!", "edit must survive Up");
-    assert_eq!(state.input.cursor_pos, 0, "Up with text moves cursor to start");
+    assert_eq!(
+        state.input.cursor_pos, 0,
+        "Up with text moves cursor to start"
+    );
 }
 
 // ============================================================================
@@ -165,7 +172,10 @@ fn multiline_up_on_first_line_goes_to_input_start() {
     state.update(crate::Event::HistoryPrev);
 
     assert_eq!(state.input.input, "line1\nline2");
-    assert_eq!(state.input.cursor_pos, 0, "Up on first line → start of input");
+    assert_eq!(
+        state.input.cursor_pos, 0,
+        "Up on first line → start of input"
+    );
     assert_eq!(state.input.input_flash, 0, "no flash on first-line Up");
 }
 

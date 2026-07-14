@@ -206,7 +206,8 @@ async fn run_subagent_turn_with_gate(
                         runie_core::Event::Error { message, .. } => {
                             let mut guard = result_tx_clone.lock();
                             if let Some(tx) = guard.take() {
-                                let _ = tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
+                                let _ =
+                                    tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
                             }
                             return;
                         }

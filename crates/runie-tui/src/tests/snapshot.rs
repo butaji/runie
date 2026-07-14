@@ -68,7 +68,11 @@ fn test_render_agent_shows_full_content() {
     let content = "xyzabc123 what is 2+2";
     let lines = render_agent_message(content, 1000.0, 80);
     let full_text: String = lines.iter().map(|l| l.to_string()).collect();
-    assert!(full_text.contains("xyzabc123"), "Full text should appear, got: {}", full_text);
+    assert!(
+        full_text.contains("xyzabc123"),
+        "Full text should appear, got: {}",
+        full_text
+    );
 }
 
 #[test]

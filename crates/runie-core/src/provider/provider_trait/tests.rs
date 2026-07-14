@@ -36,7 +36,10 @@ fn rate_limit_display_without_retry_after_omits_parenthetical() {
     };
     let msg = err.to_string();
     assert_eq!(msg, "Rate limited", "unexpected rendering: {msg}");
-    assert!(!msg.contains("None"), "Option debug leaked into display: {msg}");
+    assert!(
+        !msg.contains("None"),
+        "Option debug leaked into display: {msg}"
+    );
     assert!(err.is_retryable(), "error kind must stay retryable");
     assert!(!err.is_fatal());
 }
@@ -346,4 +349,124 @@ fn provider_metadata_derive_builder() {
     assert!(meta.capabilities.streaming);
     assert!(meta.capabilities.supports_vision);
     assert!(meta.capabilities.supports_tools);
+}
+
+// ─── RetryPolicy tests ─────────────────────────────────────────────────────────
+
+#[test]
+fn retry_policy_default() {
+    let policy = RetryPolicy::default();
+    let base = RetryConfig::default();
+    assert_eq!(policy.base, base);
+    assert!(policy.rate_limit_retries.is_none());
+    assert!(policy.timeout_retries.is_none());
+    assert!(policy.context_window_retries.is_none());
+    assert!(policy.bad_request_retries.is_none());
+}
+
+#[test]
+fn retry_policy_max_attempts_for_rate_limit() {
+    let base = RetryConfig::new(3, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+    let policy = RetryPolicy::new(base, Some(10), None, None, None);
+
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::RateLimit {
+            retry_after_secs: None
+        }),
+        10
+    );
+    // Other errors use base config
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::Timeout),
+        3
+    );
+}
+
+#[test]
+fn retry_policy_max_attempts_for_timeout() {
+    let base = RetryConfig::new(2, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+    let policy = RetryPolicy::new(base, None, Some(7), None, None);
+
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::Timeout),
+        7
+    );
+    // Other errors use base config
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::RateLimit {
+            retry_after_secs: None
+        }),
+        2
+    );
+}
+
+#[test]
+fn retry_policy_max_attempts_for_context_window() {
+    let base = RetryConfig::new(5, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+    let policy = RetryPolicy::new(base, None, None, Some(3), None);
+
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::ContextLength(128000)),
+        3
+    );
+    // Fatal errors still use override if set (though they won't be retried anyway due to is_retryable)
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::BadRequest(400, "bad".to_string())),
+        5 // Uses base config when bad_request_retries is None
+    );
+}
+
+#[test]
+fn retry_policy_max_attempts_for_bad_request() {
+    let base = RetryConfig::new(5, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+    let policy = RetryPolicy::new(base, None, None, None, Some(4));
+
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::BadRequest(400, "bad".to_string())),
+        4
+    );
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::BadRequest(422, "unprocessable".to_string())),
+        4
+    );
+}
+
+#[test]
+fn retry_policy_max_attempts_for_server_error() {
+    let base = RetryConfig::new(4, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+    let policy = RetryPolicy::new(base, Some(10), Some(10), Some(10), Some(10));
+
+    // Server errors use base config (no per-error-type override applies)
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::Server(500, "error".to_string())),
+        4
+    );
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::Server(503, "overloaded".to_string())),
+        4
+    );
+}
+
+#[test]
+fn retry_policy_max_attempts_for_network_error() {
+    let base = RetryConfig::new(3, Duration::from_secs(1), Duration::from_secs(30), 2.0);
+    let policy = RetryPolicy::new(base, Some(10), Some(10), None, None);
+
+    // Network errors use base config
+    assert_eq!(
+        policy.max_attempts_for_error(&ProviderError::Network("connection refused".to_string())),
+        3
+    );
+}
+
+#[test]
+fn retry_config_into_policy() {
+    let config = RetryConfig::new(5, Duration::from_secs(2), Duration::from_secs(60), 3.0);
+    let policy = config.clone().into_policy();
+
+    assert_eq!(policy.base, config);
+    assert!(policy.rate_limit_retries.is_none());
+    assert!(policy.timeout_retries.is_none());
+    assert!(policy.context_window_retries.is_none());
+    assert!(policy.bad_request_retries.is_none());
 }

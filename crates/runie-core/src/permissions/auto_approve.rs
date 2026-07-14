@@ -35,9 +35,7 @@ impl PermissionPolicy for AutoApprove {
     }
 
     fn matches(&self, ctx: &PermissionContext<'_>) -> bool {
-        is_read_only_tool(ctx.tool)
-            || Self::is_edit_tool(ctx.tool)
-            || Self::is_shell_tool(ctx.tool)
+        is_read_only_tool(ctx.tool) || Self::is_edit_tool(ctx.tool) || Self::is_shell_tool(ctx.tool)
     }
 
     async fn evaluate(&self, ctx: &PermissionContext<'_>) -> Option<PermissionResult> {

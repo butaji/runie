@@ -33,7 +33,11 @@ fn mode_empty_shows_current_pattern_and_config() {
         assert!(msg.contains("workers: 3"), "missing workers: {}", msg);
         assert!(msg.contains("max_rounds: 5"), "missing max_rounds: {}", msg);
         assert!(msg.contains("timeout: 120s"), "missing timeout: {}", msg);
-        assert!(msg.contains("max_retries: 2"), "missing max_retries: {}", msg);
+        assert!(
+            msg.contains("max_retries: 2"),
+            "missing max_retries: {}",
+            msg
+        );
         assert!(
             msg.contains("circuit_breaker: 3"),
             "missing circuit_breaker: {}",
@@ -188,7 +192,8 @@ fn mode_swarm_bogus_variant_warns() {
         result
     );
     assert_eq!(
-        state.config().swarm_variant, None,
+        state.config().swarm_variant,
+        None,
         "swarm_variant must stay unset after a rejected variant"
     );
 }
@@ -203,7 +208,8 @@ fn mode_switch_to_single_clears_swarm_variant() {
     let result = handle(&mut state, "single");
     state.apply_command_result(result);
     assert_eq!(
-        state.config().swarm_variant, None,
+        state.config().swarm_variant,
+        None,
         "switching to single must clear swarm_variant"
     );
     assert_eq!(state.config().mode.active, "single");
@@ -233,7 +239,8 @@ fn set_mode_event_updates_state_via_model_config_event() {
     assert_eq!(state.config().mode.active, "eval-optimizer");
     assert_eq!(state.config().mode.workers, 7);
     assert_eq!(
-        state.config().swarm_variant, None,
+        state.config().swarm_variant,
+        None,
         "non-swarm pattern must clear swarm_variant"
     );
 }

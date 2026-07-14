@@ -179,7 +179,10 @@ pub mod mode {
 
     /// Unknown pattern name.
     pub fn unknown_pattern(name: &str) -> String {
-        format!("Unknown pattern '{}'. Valid patterns: {}", name, VALID_PATTERNS)
+        format!(
+            "Unknown pattern '{}'. Valid patterns: {}",
+            name, VALID_PATTERNS
+        )
     }
 
     /// Invalid workers value.

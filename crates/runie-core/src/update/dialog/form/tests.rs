@@ -175,7 +175,10 @@ fn shift_tab_navigates_backward_between_buttons() {
 
     let action = form_panel_action(&mut state, &mut panel, Event::CycleThinkingLevel);
     assert!(matches!(action, FormAction::KeepOpen));
-    assert_eq!(panel.selected, 2, "shift+tab from first button should wrap to last");
+    assert_eq!(
+        panel.selected, 2,
+        "shift+tab from first button should wrap to last"
+    );
 }
 
 #[test]

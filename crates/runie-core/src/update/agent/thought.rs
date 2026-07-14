@@ -403,7 +403,10 @@ mod tests {
 
         feed_delta(&mut state, id, "wer is 42");
         assert_no_tag_leak(&state);
-        assert_eq!(assistant_texts(&state), vec!["The answer is 42".to_string()]);
+        assert_eq!(
+            assistant_texts(&state),
+            vec!["The answer is 42".to_string()]
+        );
 
         state.update(crate::Event::ThoughtDone { id: id.into() });
         state.update(crate::Event::Done { id: id.into() });
@@ -412,7 +415,10 @@ mod tests {
         assert_eq!(thoughts.len(), 1, "expected one thought, got {thoughts:?}");
         assert!(thoughts[0].contains("let me calculate"));
         assert!(!thoughts[0].contains("<think>"));
-        assert_eq!(assistant_texts(&state), vec!["The answer is 42".to_string()]);
+        assert_eq!(
+            assistant_texts(&state),
+            vec!["The answer is 42".to_string()]
+        );
     }
 
     /// The closing tag itself is split across two deltas.

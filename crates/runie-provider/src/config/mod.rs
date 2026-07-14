@@ -92,6 +92,17 @@ impl ProviderConfigResolver {
         // Fall back to config
         self.fallback.as_ref()?.resolve_base_url(provider)
     }
+
+    /// Resolve custom HTTP headers for a provider from config.
+    ///
+    /// Environment variables are not supported for headers; they come from the
+    /// config file only.
+    pub fn resolve_headers(
+        &self,
+        provider: &str,
+    ) -> Option<std::collections::HashMap<String, String>> {
+        self.fallback.as_ref()?.resolve_headers(provider)
+    }
 }
 
 #[cfg(test)]
@@ -122,6 +133,13 @@ mod tests {
 
         fn resolve_base_url(&self, _provider: &str) -> Option<String> {
             self.base_url.clone()
+        }
+
+        fn resolve_headers(
+            &self,
+            _provider: &str,
+        ) -> Option<std::collections::HashMap<String, String>> {
+            None
         }
     }
 

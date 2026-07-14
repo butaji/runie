@@ -92,7 +92,10 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(content.contains("❯ A"), "Must show user prefix");
-    assert!(content.contains("Response 1"), "Must show agent response text");
+    assert!(
+        content.contains("Response 1"),
+        "Must show agent response text"
+    );
 }
 
 #[test]
@@ -224,7 +227,9 @@ fn test_render_thinking_indicator() {
         content
     );
     assert!(
-        runie_core::labels::BRAILLE_SIX.iter().any(|g| content.contains(*g)),
+        runie_core::labels::BRAILLE_SIX
+            .iter()
+            .any(|g| content.contains(*g)),
         "Thinking should show an animated braille spinner frame. Got: {}",
         content
     );

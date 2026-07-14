@@ -23,7 +23,9 @@ async fn config_actor_loads_and_emits_config_loaded() {
     let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None)
+        .await
+        .unwrap();
 
     let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
         .await
@@ -303,7 +305,9 @@ async fn tracing_event_emitted_on_config_load() {
     let (_dir, path) = temp_config_path();
     let bus = EventBus::<Event>::new(10);
     let mut sub = bus.subscribe();
-    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None).await.unwrap();
+    let (_handle, _actor, _join) = RactorConfigActor::spawn(bus, Some(path), None)
+        .await
+        .unwrap();
 
     // Verify ConfigLoaded fact is emitted.
     let event = tokio::time::timeout(std::time::Duration::from_secs(2), sub.recv())
@@ -411,6 +415,7 @@ async fn save_provider_that_fails_validation_does_not_clobber_projection() {
             provider_type: None,
             base_url: "http://localhost:11434/v1".into(),
             models: vec!["foo-model".into(), "bar-model".into()],
+            headers: std::collections::HashMap::new(),
         },
     );
     state.config.current_provider = "my-custom-llm".into();

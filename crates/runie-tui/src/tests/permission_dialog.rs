@@ -204,7 +204,10 @@ async fn hosted_permission_dialog_opens_on_request() {
     open_permission_request(&mut ui, &effect_tx).await;
 
     assert!(ui.state.permission_request_opt().is_some());
-    assert!(ui.state.open_dialog().is_some(), "hosted dialog should be open");
+    assert!(
+        ui.state.open_dialog().is_some(),
+        "hosted dialog should be open"
+    );
 }
 
 #[tokio::test]
@@ -216,10 +219,12 @@ async fn hosted_permission_dialog_arrow_keys_navigate() {
 
     assert_eq!({ selected_index(&ui.state) }, 0);
 
-    ui.handle_event_inner(Event::HistoryNext, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::HistoryNext, effect_tx.clone())
+        .await;
     assert_eq!({ selected_index(&ui.state) }, 1);
 
-    ui.handle_event_inner(Event::HistoryPrev, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::HistoryPrev, effect_tx.clone())
+        .await;
     assert_eq!({ selected_index(&ui.state) }, 0);
 }
 
@@ -230,7 +235,8 @@ async fn hosted_permission_dialog_enter_activates_allow() {
 
     open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Submit, effect_tx.clone())
+        .await;
 
     assert!(ui.state.open_dialog().is_none(), "dialog should close");
     assert!(
@@ -246,8 +252,10 @@ async fn hosted_permission_dialog_down_enter_activates_deny() {
 
     open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::HistoryNext, effect_tx.clone()).await;
-    ui.handle_event_inner(Event::Submit, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::HistoryNext, effect_tx.clone())
+        .await;
+    ui.handle_event_inner(Event::Submit, effect_tx.clone())
+        .await;
 
     assert!(ui.state.open_dialog().is_none(), "dialog should close");
     assert!(
@@ -263,7 +271,8 @@ async fn hosted_permission_dialog_esc_keeps_dialog_open() {
 
     open_permission_request(&mut ui, &effect_tx).await;
 
-    ui.handle_event_inner(Event::Escape, effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Escape, effect_tx.clone())
+        .await;
 
     assert!(ui.state.open_dialog().is_some(), "dialog should stay open");
     assert!(
@@ -282,16 +291,20 @@ async fn hosted_permission_dialog_tab_navigates_buttons() {
     // The hosted permission dialog has 4 options: Always, This session, Once, Deny.
     assert_eq!({ selected_index(&ui.state) }, 0);
 
-    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone())
+        .await;
     assert_eq!({ selected_index(&ui.state) }, 1);
 
-    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone())
+        .await;
     assert_eq!({ selected_index(&ui.state) }, 2);
 
-    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone())
+        .await;
     assert_eq!({ selected_index(&ui.state) }, 3);
 
-    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone()).await;
+    ui.handle_event_inner(Event::Input('\t'), effect_tx.clone())
+        .await;
     assert_eq!({ selected_index(&ui.state) }, 0);
 }
 

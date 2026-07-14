@@ -67,7 +67,9 @@ fn parse_fixture(content: &str) -> Vec<ProviderEvent> {
 
             let model_err = match code {
                 401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
-                429 => ModelError::RateLimit { retry_after_secs: None },
+                429 => ModelError::RateLimit {
+                    retry_after_secs: None,
+                },
                 500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
                 _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
             };

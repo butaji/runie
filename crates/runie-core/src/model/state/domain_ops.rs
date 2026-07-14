@@ -593,6 +593,7 @@ mod tests {
                     provider_type: Some("minimax".to_string()),
                     base_url: "https://api.minimaxi.chat/v1".to_string(),
                     models: vec!["MiniMax-M2".to_string(), "MiniMax-M2.7".to_string()],
+                    headers: std::collections::HashMap::new(),
                 },
             );
         }

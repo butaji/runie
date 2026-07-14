@@ -10,6 +10,7 @@ fn seed_provider(state: &mut AppState, name: &str, models: Vec<String>) {
             provider_type: None,
             base_url: String::new(),
             models,
+            headers: std::collections::HashMap::new(),
         },
     );
 }

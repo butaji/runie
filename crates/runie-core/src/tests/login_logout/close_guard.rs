@@ -73,7 +73,9 @@ fn slash_quit_closes_even_during_onboarding() {
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
 
-    let result = state.handle_slash("/quit").expect("/quit should be a command");
+    let result = state
+        .handle_slash("/quit")
+        .expect("/quit should be a command");
     state.apply_command_result(result);
 
     assert!(

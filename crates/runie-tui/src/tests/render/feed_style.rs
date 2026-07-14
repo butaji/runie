@@ -219,10 +219,7 @@ fn thought_summary_is_dim_bold_thought_without_affordance() {
     );
 
     let t_col = col_of(&row_text(&buf, row), "Thought").expect("Thought word");
-    assert!(
-        is_bold(&buf, t_col, row),
-        "the word 'Thought' must be bold"
-    );
+    assert!(is_bold(&buf, t_col, row), "the word 'Thought' must be bold");
     assert_eq!(
         buf[(t_col, row)].style().fg,
         Some(FEED_DIM),

@@ -317,12 +317,9 @@ impl ContentFilter {
                 Marker::Minimax => {
                     self.consume_xml_tool(OPEN_MINIMAX, CLOSE_MINIMAX, suppress_tools, &mut out)
                 }
-                Marker::ToolCall => self.consume_xml_tool(
-                    OPEN_TOOL_CALL,
-                    CLOSE_TOOL_CALL,
-                    suppress_tools,
-                    &mut out,
-                ),
+                Marker::ToolCall => {
+                    self.consume_xml_tool(OPEN_TOOL_CALL, CLOSE_TOOL_CALL, suppress_tools, &mut out)
+                }
                 Marker::Json => self.consume_json_tool(suppress_tools, &mut out),
             };
             if !consumed {
@@ -398,11 +395,7 @@ impl ContentFilter {
 
     /// Consume an inline `{...}` JSON object at the front of the buffer. Returns
     /// false if the object is incomplete.
-    fn consume_json_tool(
-        &mut self,
-        suppress_tools: bool,
-        out: &mut Vec<ContentSegment>,
-    ) -> bool {
+    fn consume_json_tool(&mut self, suppress_tools: bool, out: &mut Vec<ContentSegment>) -> bool {
         let Some(obj_end) = find_object_end(self.buffer.as_bytes(), 0) else {
             return false;
         };
@@ -451,7 +444,14 @@ fn trailing_partial_opener_len(s: &str) -> usize {
         .unwrap_or(0)
         .min(s.chars().count());
     for len in (1..=max).rev() {
-        let suffix: String = s.chars().rev().take(len).collect::<String>().chars().rev().collect();
+        let suffix: String = s
+            .chars()
+            .rev()
+            .take(len)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect();
         if ACTIVATION_OPENERS
             .iter()
             .any(|o| o.chars().count() > suffix.chars().count() && o.starts_with(&suffix))
@@ -630,9 +630,9 @@ impl OpenAiFrame {
         let is_error = json.get("type").and_then(|t| t.as_str()) == Some("error")
             || (json.get("error").is_some() && json.get("choices").is_none());
         if is_error {
-            return Some(OpenAiFrame::Error(
-                super::stream::classify_error_value(&json),
-            ));
+            return Some(OpenAiFrame::Error(super::stream::classify_error_value(
+                &json,
+            )));
         }
         parse_chunk(&json).map(OpenAiFrame::Chunk)
     }

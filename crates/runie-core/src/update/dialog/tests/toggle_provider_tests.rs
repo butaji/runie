@@ -57,6 +57,7 @@ fn toggle_provider_model_disables_model_and_switches_active() {
                 provider_type: None,
                 base_url: "https://api.openai.com/v1".into(),
                 models: vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+                headers: std::collections::HashMap::new(),
             }),
     );
 
@@ -95,6 +96,7 @@ fn toggle_provider_model_enables_missing_model() {
             provider_type: None,
             base_url: "https://api.openai.com/v1".into(),
             models: vec!["gpt-4o".into()],
+            headers: std::collections::HashMap::new(),
         },
     );
 

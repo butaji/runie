@@ -33,8 +33,6 @@ impl GitInfo {
         }
         base
     }
-
-
 }
 
 #[derive(Clone, Default)]

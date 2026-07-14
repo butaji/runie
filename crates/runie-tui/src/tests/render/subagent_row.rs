@@ -60,7 +60,9 @@ fn running_row_shows_braille_spinner_and_format() {
     );
     let output = render_to_string(render_subagent_row(&elem), 100, 3);
     assert!(
-        runie_core::labels::BRAILLE_SIX.iter().any(|c| output.contains(*c)),
+        runie_core::labels::BRAILLE_SIX
+            .iter()
+            .any(|c| output.contains(*c)),
         "running row should show a braille spinner frame: {output}"
     );
     assert!(
@@ -73,7 +75,13 @@ fn running_row_shows_braille_spinner_and_format() {
 
 #[test]
 fn completed_row_shows_check_and_duration() {
-    let elem = subagent_row(PatternWorkerStatus::Completed, None, Some(2500), "out", false);
+    let elem = subagent_row(
+        PatternWorkerStatus::Completed,
+        None,
+        Some(2500),
+        "out",
+        false,
+    );
     let output = render_to_string(render_subagent_row(&elem), 100, 3);
     assert!(
         output.contains("✓ Subagent completed in 2.5s: \"find callers\""),

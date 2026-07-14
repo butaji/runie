@@ -26,8 +26,7 @@ pub(crate) fn bg_user_color(theme: &opaline::Theme) -> opaline::OpalineColor {
     let base = theme
         .try_color("bg.base")
         .unwrap_or(opaline::OpalineColor::FALLBACK);
-    let lum =
-        0.299 * f32::from(base.r) + 0.587 * f32::from(base.g) + 0.114 * f32::from(base.b);
+    let lum = 0.299 * f32::from(base.r) + 0.587 * f32::from(base.g) + 0.114 * f32::from(base.b);
     if lum > 128.0 {
         base.darken(0.06)
     } else {
@@ -50,7 +49,10 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
         "runie.user",
         opaline::OpalineStyle::fg(accent).with_bg(bg_user),
     );
-    theme.register_default_style("runie.user.chevron", opaline::OpalineStyle::fg(accent).bold());
+    theme.register_default_style(
+        "runie.user.chevron",
+        opaline::OpalineStyle::fg(accent).bold(),
+    );
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
     theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(feed_dim));
     theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(feed_dim));

@@ -4,10 +4,14 @@
 //! decision. The registry calls all handlers registered for an event; the first
 //! deny wins, otherwise the last modification wins.
 
+use crate::message::ChatMessage;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 use strum::EnumString;
+
+/// A sequence of chat messages.
+pub type Messages = Vec<ChatMessage>;
 
 /// Lifecycle events that can be hooked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
@@ -32,6 +36,15 @@ pub enum HookEvent {
     SubagentStop,
     #[strum(serialize = "stop")]
     Stop,
+    /// Fires before an API call is made. Supports async message transformation.
+    #[strum(serialize = "preapicall", serialize = "pre_api_call")]
+    PreApiCall,
+    /// Fires after an API call completes. Supports async processing.
+    #[strum(serialize = "postapicall", serialize = "post_api_call")]
+    PostApiCall,
+    /// Fires for each streaming event from the API. Supports async processing.
+    #[strum(serialize = "streamevent", serialize = "stream_event")]
+    StreamEvent,
 }
 
 /// Decision returned by a hook handler.
@@ -71,10 +84,51 @@ where
     }
 }
 
+/// A handler that participates in async hook events.
+#[async_trait::async_trait]
+pub trait AsyncHookHandler: Send + Sync {
+    /// Transform messages before an API call is made.
+    ///
+    /// Return `Some(transformed_messages)` to replace the messages,
+    /// or `None` to leave them unchanged.
+    async fn async_pre_request_hook(
+        &self,
+        model: &str,
+        messages: &Messages,
+    ) -> Option<Messages>;
+
+    /// Process the payload after an API call completes.
+    async fn async_post_request_hook(&self, model: &str, payload: &Value) -> Value {
+        payload.clone()
+    }
+
+    /// Process a streaming event.
+    async fn async_stream_event_hook(&self, model: &str, event: &Value) -> Option<Value> {
+        let _ = (model, event);
+        None
+    }
+}
+
+#[async_trait::async_trait]
+impl<F, Fut> AsyncHookHandler for F
+where
+    F: Fn(&str, &Messages) -> Fut + Send + Sync,
+    Fut: std::future::Future<Output = Option<Messages>> + Send,
+{
+    async fn async_pre_request_hook(
+        &self,
+        model: &str,
+        messages: &Messages,
+    ) -> Option<Messages> {
+        (self)(model, messages).await
+    }
+}
+
 /// Registry of hook handlers keyed by event.
 #[derive(Default)]
 pub struct HookRegistry {
     handlers: HashMap<HookEvent, Vec<Box<dyn HookHandler>>>,
+    async_handlers: HashMap<HookEvent, Vec<Box<dyn AsyncHookHandler>>>,
 }
 
 impl HookRegistry {
@@ -83,9 +137,14 @@ impl HookRegistry {
         Self::default()
     }
 
-    /// Register a handler for an event.
+    /// Register a sync handler for an event.
     pub fn register(&mut self, event: HookEvent, handler: Box<dyn HookHandler>) {
         self.handlers.entry(event).or_default().push(handler);
+    }
+
+    /// Register an async handler for an event.
+    pub fn register_async(&mut self, event: HookEvent, handler: Box<dyn AsyncHookHandler>) {
+        self.async_handlers.entry(event).or_default().push(handler);
     }
 
     /// Emit an event to all registered handlers.
@@ -109,6 +168,54 @@ impl HookRegistry {
         decision
     }
 
+    /// Emit an async event to all registered async handlers.
+    ///
+    /// For `PreApiCall`, calls `async_pre_request_hook` on each handler and
+    /// returns the last modification if any handler modified the messages.
+    pub async fn async_emit(&self, event: HookEvent, model: &str, messages: &Messages) -> Option<Messages> {
+        let handlers = match self.async_handlers.get(&event) {
+            Some(h) => h,
+            None => return None,
+        };
+
+        let mut result: Option<Messages> = None;
+        for handler in handlers {
+            if let Some(modified) = handler.async_pre_request_hook(model, messages).await {
+                result = Some(modified);
+            }
+        }
+        result
+    }
+
+    /// Emit an async event with a value payload.
+    ///
+    /// Calls `async_post_request_hook` or `async_stream_event_hook` on handlers.
+    pub async fn async_emit_value(&self, event: HookEvent, model: &str, payload: &Value) -> Option<Value> {
+        let handlers = match self.async_handlers.get(&event) {
+            Some(h) => h,
+            None => return None,
+        };
+
+        let mut result: Option<Value> = None;
+        for handler in handlers {
+            match event {
+                HookEvent::PostApiCall => {
+                    let modified = handler.async_post_request_hook(model, payload).await;
+                    if !modified.is_null() {
+                        result = Some(modified);
+                    }
+                }
+                HookEvent::StreamEvent => {
+                    if let Some(modified) = handler.async_stream_event_hook(model, payload).await {
+                        result = Some(modified);
+                    }
+                }
+                _ => {}
+            }
+        }
+        result
+    }
+
     /// Load hooks declared in config.
     ///
     /// Each configured command receives the JSON payload on stdin and must print
@@ -123,6 +230,27 @@ impl HookRegistry {
             }
         }
         registry
+    }
+}
+
+#[async_trait::async_trait]
+impl AsyncHookHandler for HookRegistry {
+    async fn async_pre_request_hook(
+        &self,
+        model: &str,
+        messages: &Messages,
+    ) -> Option<Messages> {
+        self.async_emit(HookEvent::PreApiCall, model, messages).await
+    }
+
+    async fn async_post_request_hook(&self, model: &str, payload: &Value) -> Value {
+        self.async_emit_value(HookEvent::PostApiCall, model, payload)
+            .await
+            .unwrap_or_else(|| payload.clone())
+    }
+
+    async fn async_stream_event_hook(&self, model: &str, event: &Value) -> Option<Value> {
+        self.async_emit_value(HookEvent::StreamEvent, model, event).await
     }
 }
 
@@ -223,6 +351,7 @@ impl HookHandler for CompactionHook {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::message::Role;
 
     #[test]
     fn hook_registry_calls_handler_on_event() {
@@ -348,5 +477,218 @@ mod tests {
             Some(HookEvent::Stop)
         );
         assert_eq!(HookEvent::from_str("unknown").ok(), None);
+    }
+
+    #[tokio::test]
+    async fn async_hook_registry_transforms_messages() {
+        let mut registry = HookRegistry::new();
+
+        // Register an async handler that adds a system message
+        registry.register_async(
+            HookEvent::PreApiCall,
+            Box::new(|_model: &str, messages: &Messages| {
+                let mut modified = messages.clone();
+                modified.insert(
+                    0,
+                    ChatMessage::new(Role::System, "injected system prompt"),
+                );
+                async { Some(modified) }
+            }),
+        );
+
+        let messages = vec![ChatMessage::new(Role::User, "hello")];
+        let result = registry.async_emit(HookEvent::PreApiCall, "gpt-4", &messages).await;
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].content(), "injected system prompt");
+        assert_eq!(result[1].content(), "hello");
+    }
+
+    #[tokio::test]
+    async fn async_hook_registry_returns_none_when_no_handlers() {
+        let registry = HookRegistry::new();
+        let messages = vec![ChatMessage::new(Role::User, "hello")];
+        let result = registry.async_emit(HookEvent::PreApiCall, "gpt-4", &messages).await;
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn async_hook_registry_last_modification_wins() {
+        let mut registry = HookRegistry::new();
+
+        // First handler adds "first"
+        registry.register_async(
+            HookEvent::PreApiCall,
+            Box::new(|_model: &str, messages: &Messages| {
+                let mut modified = messages.clone();
+                modified.insert(0, ChatMessage::new(Role::System, "first"));
+                async { Some(modified) }
+            }),
+        );
+
+        // Second handler adds "second"
+        registry.register_async(
+            HookEvent::PreApiCall,
+            Box::new(|_model: &str, messages: &Messages| {
+                let mut modified = messages.clone();
+                modified.insert(0, ChatMessage::new(Role::System, "second"));
+                async { Some(modified) }
+            }),
+        );
+
+        let messages = vec![ChatMessage::new(Role::User, "hello")];
+        let result = registry.async_emit(HookEvent::PreApiCall, "gpt-4", &messages).await;
+        assert!(result.is_some());
+        let result = result.unwrap();
+        // Last modification wins
+        assert_eq!(result[0].content(), "second");
+    }
+
+    #[tokio::test]
+    async fn async_hook_registry_composition_with_trait_impl() {
+        let mut registry = HookRegistry::new();
+
+        registry.register_async(
+            HookEvent::PreApiCall,
+            Box::new(|_model: &str, messages: &Messages| {
+                let mut modified = messages.clone();
+                modified.push(ChatMessage::new(Role::System, "appended"));
+                async { Some(modified) }
+            }),
+        );
+
+        // Use the AsyncHookHandler trait impl
+        let messages = vec![ChatMessage::new(Role::User, "test")];
+        let result = registry.async_pre_request_hook("claude-3", &messages).await;
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().len(), 2);
+    }
+
+    /// Test helper that implements async post-request hook processing.
+    struct PostApiCallTestHandler;
+
+    #[async_trait::async_trait]
+    impl AsyncHookHandler for PostApiCallTestHandler {
+        async fn async_pre_request_hook(
+            &self,
+            _model: &str,
+            _messages: &Messages,
+        ) -> Option<Messages> {
+            None
+        }
+
+        async fn async_post_request_hook(&self, _model: &str, payload: &Value) -> Value {
+            let mut modified = payload.clone();
+            if let Some(obj) = modified.as_object_mut() {
+                obj.insert("processed".into(), serde_json::json!(true));
+            }
+            modified
+        }
+    }
+
+    #[tokio::test]
+    async fn async_hook_registry_post_api_call() {
+        let mut registry = HookRegistry::new();
+
+        registry.register_async(
+            HookEvent::PostApiCall,
+            Box::new(PostApiCallTestHandler),
+        );
+
+        let payload = serde_json::json!({"response": "hello"});
+        let result = registry.async_emit_value(HookEvent::PostApiCall, "gpt-4", &payload).await;
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["processed"], serde_json::json!(true));
+    }
+
+    /// Test helper that implements async stream-event hook processing.
+    struct StreamEventTestHandler;
+
+    #[async_trait::async_trait]
+    impl AsyncHookHandler for StreamEventTestHandler {
+        async fn async_pre_request_hook(
+            &self,
+            _model: &str,
+            _messages: &Messages,
+        ) -> Option<Messages> {
+            None
+        }
+
+        async fn async_stream_event_hook(
+            &self,
+            _model: &str,
+            event: &Value,
+        ) -> Option<Value> {
+            let mut modified = event.clone();
+            if let Some(obj) = modified.as_object_mut() {
+                obj.insert("logged".into(), serde_json::json!(true));
+            }
+            Some(modified)
+        }
+    }
+
+    #[tokio::test]
+    async fn async_hook_registry_stream_event() {
+        let mut registry = HookRegistry::new();
+
+        registry.register_async(
+            HookEvent::StreamEvent,
+            Box::new(StreamEventTestHandler),
+        );
+
+        let event = serde_json::json!({"type": "chunk", "content": "hello"});
+        let result = registry.async_emit_value(HookEvent::StreamEvent, "gpt-4", &event).await;
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()["logged"], serde_json::json!(true));
+    }
+
+    #[test]
+    fn hook_event_parses_async_events() {
+        assert_eq!(
+            HookEvent::from_str("pre_api_call").ok(),
+            Some(HookEvent::PreApiCall)
+        );
+        assert_eq!(
+            HookEvent::from_str("post_api_call").ok(),
+            Some(HookEvent::PostApiCall)
+        );
+        assert_eq!(
+            HookEvent::from_str("stream_event").ok(),
+            Some(HookEvent::StreamEvent)
+        );
+        // Also test alternative serializations
+        assert_eq!(
+            HookEvent::from_str("preapicall").ok(),
+            Some(HookEvent::PreApiCall)
+        );
+        assert_eq!(
+            HookEvent::from_str("postapicall").ok(),
+            Some(HookEvent::PostApiCall)
+        );
+        assert_eq!(
+            HookEvent::from_str("streamevent").ok(),
+            Some(HookEvent::StreamEvent)
+        );
+    }
+
+    #[tokio::test]
+    async fn async_hook_handler_trait_closure_impl() {
+        // Test the blanket impl for Fn closures
+        let handler: Box<dyn AsyncHookHandler> = Box::new(
+            |model: &str, messages: &Messages| {
+                let model = model.to_string();
+                let mut msgs = messages.clone();
+                async move {
+                    msgs.insert(0, ChatMessage::new(Role::System, format!("model: {}", model)));
+                    Some(msgs)
+                }
+            },
+        );
+
+        let messages = vec![ChatMessage::new(Role::User, "test")];
+        let result = handler.async_pre_request_hook("gpt-4", &messages).await;
+        assert!(result.is_some());
+        assert_eq!(result.unwrap()[0].content(), "model: gpt-4");
     }
 }

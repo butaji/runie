@@ -1,6 +1,7 @@
 //! ProviderConfig implementation for `crate::proto::provider::ProviderConfig`.
 
 use secrecy::SecretString;
+use std::time::Duration;
 
 impl crate::proto::provider::ProviderConfig for crate::config::Config {
     fn resolve_api_key(&self, provider: &str) -> Option<SecretString> {
@@ -20,6 +21,25 @@ impl crate::proto::provider::ProviderConfig for crate::config::Config {
             resolver.set_config(name, None, non_empty(&p.base_url));
         }
         resolver.resolve_base_url(provider)
+    }
+
+    fn retry_config(&self) -> Option<crate::provider::RetryConfig> {
+        Some(crate::provider::RetryConfig::new(
+            self.retry.max_attempts,
+            Duration::from_millis(self.retry.initial_delay_ms),
+            Duration::from_millis(self.retry.max_delay_ms),
+            self.retry.multiplier,
+        ))
+    }
+
+    fn resolve_headers(
+        &self,
+        provider: &str,
+    ) -> Option<std::collections::HashMap<String, String>> {
+        self.model_providers
+            .get(provider)
+            .map(|p| p.headers.clone())
+            .filter(|h| !h.is_empty())
     }
 }
 

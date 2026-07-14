@@ -127,7 +127,10 @@ async fn eval_optimizer_approved_on_first_review() -> Result<()> {
     assert_eq!(calls[1].prompt.lines().next(), Some("[eval-review]"));
     assert!(calls[1].prompt.contains("write a poem"));
     assert!(calls[1].prompt.contains("draft v1"));
-    assert!(calls.iter().all(|t| t.read_only), "eval calls are read-only");
+    assert!(
+        calls.iter().all(|t| t.read_only),
+        "eval calls are read-only"
+    );
     assert!(
         calls
             .iter()
@@ -153,7 +156,12 @@ async fn eval_optimizer_feedback_then_approval() -> Result<()> {
     assert_eq!(out.termination, TerminationReason::Approved);
     assert_eq!(
         trace_ids(&out),
-        vec!["eval-generate-1", "eval-review-1", "eval-revise-2", "eval-review-2"]
+        vec![
+            "eval-generate-1",
+            "eval-review-1",
+            "eval-revise-2",
+            "eval-review-2"
+        ]
     );
     assert_eq!(out.traces[2].description, "revise round 2");
 
@@ -163,7 +171,10 @@ async fn eval_optimizer_feedback_then_approval() -> Result<()> {
     assert_eq!(revise.id, "eval-revise-2");
     assert_eq!(revise.prompt.lines().next(), Some("[eval-revise]"));
     assert!(revise.prompt.contains("the task"));
-    assert!(revise.prompt.contains("draft v1"), "revise prompt carries the current draft");
+    assert!(
+        revise.prompt.contains("draft v1"),
+        "revise prompt carries the current draft"
+    );
     assert!(
         revise.prompt.contains("add more detail"),
         "revise prompt carries the reviewer feedback"
@@ -185,13 +196,20 @@ async fn eval_optimizer_max_rounds_without_approval() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
 
-    let out = EvalOptimizerPattern.execute(&ctx, "never good enough").await?;
+    let out = EvalOptimizerPattern
+        .execute(&ctx, "never good enough")
+        .await?;
 
     assert_eq!(out.termination, TerminationReason::MaxRoundsReached);
     assert_eq!(out.result, "draft v2", "result is the last draft");
     assert_eq!(
         trace_ids(&out),
-        vec!["eval-generate-1", "eval-review-1", "eval-revise-2", "eval-review-2"]
+        vec![
+            "eval-generate-1",
+            "eval-review-1",
+            "eval-revise-2",
+            "eval-review-2"
+        ]
     );
     assert_eq!(runner.calls().len(), 4, "2 rounds x (draft + review)");
     Ok(())
@@ -211,7 +229,10 @@ async fn eval_optimizer_abort_during_call() -> Result<()> {
     let out = EvalOptimizerPattern.execute(&ctx, "abort me").await?;
 
     assert_eq!(out.termination, TerminationReason::Error("aborted".into()));
-    assert!(start.elapsed() < Duration::from_secs(2), "abort must be fast");
+    assert!(
+        start.elapsed() < Duration::from_secs(2),
+        "abort must be fast"
+    );
     Ok(())
 }
 
@@ -234,7 +255,9 @@ async fn eval_optimizer_generator_error_returns_empty_result() -> Result<()> {
 #[test]
 fn eval_optimizer_registry_metadata() {
     let registry = PatternRegistry::default();
-    let pattern = registry.get("eval-optimizer").expect("eval-optimizer registered");
+    let pattern = registry
+        .get("eval-optimizer")
+        .expect("eval-optimizer registered");
     assert_eq!(pattern.name(), "eval-optimizer");
     assert_eq!(
         pattern.description(),
@@ -242,10 +265,16 @@ fn eval_optimizer_registry_metadata() {
     );
 
     let names = registry.names();
-    let swarm_pos = names.iter().position(|n| *n == "swarm").expect("swarm registered");
+    let swarm_pos = names
+        .iter()
+        .position(|n| *n == "swarm")
+        .expect("swarm registered");
     let eval_pos = names
         .iter()
         .position(|n| *n == "eval-optimizer")
         .expect("eval-optimizer registered");
-    assert!(eval_pos > swarm_pos, "eval-optimizer is registered after swarm");
+    assert!(
+        eval_pos > swarm_pos,
+        "eval-optimizer is registered after swarm"
+    );
 }

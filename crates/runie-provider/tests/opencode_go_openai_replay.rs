@@ -26,7 +26,9 @@ fn deepseek_v4_flash_simple_emits_text() {
         return;
     };
     let events = replay_sse(&text);
-    assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
     assert!(events.iter().any(|e| matches!(
         e,
         ProviderEvent::Finish {
@@ -76,8 +78,12 @@ fn deepseek_v4_flash_reasoning_emits_thinking() {
         return;
     };
     let events = replay_sse(&text);
-    assert!(events.iter().any(|e| matches!(e, ProviderEvent::ThinkingDelta(_))));
-    assert!(events.iter().any(|e| matches!(e, ProviderEvent::TextDelta(_))));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::ThinkingDelta(_))));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
 }
 
 #[test]
@@ -87,8 +93,7 @@ fn kimi_k2_6_simple_emits_content() {
     };
     let events = replay_sse(&text);
     assert!(events.iter().any(|e| {
-        matches!(e, ProviderEvent::TextDelta(_))
-            || matches!(e, ProviderEvent::ThinkingDelta(_))
+        matches!(e, ProviderEvent::TextDelta(_)) || matches!(e, ProviderEvent::ThinkingDelta(_))
     }));
 }
 
@@ -99,7 +104,6 @@ fn glm_5_2_simple_emits_content() {
     };
     let events = replay_sse(&text);
     assert!(events.iter().any(|e| {
-        matches!(e, ProviderEvent::TextDelta(_))
-            || matches!(e, ProviderEvent::ThinkingDelta(_))
+        matches!(e, ProviderEvent::TextDelta(_)) || matches!(e, ProviderEvent::ThinkingDelta(_))
     }));
 }

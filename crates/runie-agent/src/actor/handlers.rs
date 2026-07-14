@@ -105,10 +105,8 @@ mod tests {
     /// `Allow` proves the policy chain approved without consulting the user.
     fn gate_for_mode(mode: PermissionMode) -> PermissionGate {
         PermissionGate::new(
-            PermissionManager::default().with_policies(policies_for_mode(
-                mode,
-                PermissionSet::default(),
-            )),
+            PermissionManager::default()
+                .with_policies(policies_for_mode(mode, PermissionSet::default())),
             Arc::new(DenyAllSink),
         )
     }

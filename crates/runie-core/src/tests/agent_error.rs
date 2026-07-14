@@ -9,9 +9,9 @@ fn feed_elements(state: &AppState) -> Vec<Element> {
 }
 
 fn feed_has_error(state: &AppState, needle: &str) -> bool {
-    feed_elements(state).iter().any(|e| {
-        matches!(e, Element::AgentMessage { content, .. } if content.contains(needle))
-    })
+    feed_elements(state)
+        .iter()
+        .any(|e| matches!(e, Element::AgentMessage { content, .. } if content.contains(needle)))
 }
 
 fn feed_has_turn_complete(state: &AppState) -> bool {
@@ -189,7 +189,10 @@ fn agent_error_after_streamed_reasoning_stays_in_feed() {
     );
     // The turn is over: terminal state must reflect that.
     assert!(!state.agent_state().streaming, "streaming must be cleared");
-    assert!(!state.agent_state().turn_active, "turn_active must be cleared");
+    assert!(
+        !state.agent_state().turn_active,
+        "turn_active must be cleared"
+    );
 }
 
 /// Any turn that ends — success OR error — must leave a visible terminal

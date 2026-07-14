@@ -45,7 +45,8 @@ pub async fn run_agent_turn_with_skills(
     skills: Option<&SkillRegistry>,
     gate: PermissionGate,
 ) -> Result<()> {
-    let mut messages = build_initial_messages(command);
+    let supports_tools = provider.metadata().supports_tools;
+    let mut messages = build_initial_messages(command, supports_tools);
     let turn_start = Instant::now();
     let mut tool_call_count = 0;
     if let Some(skills) = skills {
@@ -295,8 +296,15 @@ fn build_tools_list(read_only: bool) -> String {
         .join(", ")
 }
 
-pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<ChatMessage> {
-    let tools_list = build_tools_list(command.read_only);
+pub(crate) fn build_initial_messages(
+    command: &AgentCommand,
+    supports_tools: bool,
+) -> Vec<ChatMessage> {
+    let tools_list = if supports_tools {
+        build_tools_list(command.read_only)
+    } else {
+        String::new()
+    };
     let base = if command.system_prompt.is_empty() {
         runie_core::prompts::DEFAULT_PROMPT
     } else {

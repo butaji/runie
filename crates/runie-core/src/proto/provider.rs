@@ -3,6 +3,7 @@
 //! This trait provides credential resolution for LLM providers without requiring
 //! either crate to depend on the other's configuration types.
 
+use std::collections::HashMap;
 use std::fmt;
 
 use secrecy::SecretString;
@@ -22,4 +23,17 @@ pub trait ProviderConfig: Send + Sync + fmt::Debug {
 
     /// Resolve the base URL for a provider.
     fn resolve_base_url(&self, provider: &str) -> Option<String>;
+
+    /// Resolve the retry policy for provider requests.
+    ///
+    /// Returns `None` when the implementation has no retry configuration;
+    /// callers should use a default policy in that case.
+    fn retry_config(&self) -> Option<crate::provider::RetryConfig> {
+        None
+    }
+
+    /// Resolve custom HTTP headers for a provider from config.
+    fn resolve_headers(&self, _provider: &str) -> Option<HashMap<String, String>> {
+        None
+    }
 }

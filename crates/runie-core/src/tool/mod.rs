@@ -13,6 +13,7 @@
 #[cfg(feature = "mcp")]
 pub mod annotations;
 pub mod cache;
+pub mod circuit_breaker;
 mod constraints;
 mod context;
 mod format;
@@ -27,6 +28,7 @@ mod tests;
 pub mod types;
 
 pub use cache::{is_cacheable_tool, CacheEntry, ToolResultCache, CACHEABLE_TOOL_NAMES};
+pub use circuit_breaker::{CircuitBreaker, CircuitBreakerRegistry, CircuitState};
 pub use constraints::{
     validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation,
     ValidationResult,
@@ -34,8 +36,7 @@ pub use constraints::{
 pub use context::{ToolContext, ToolOutput, ToolStatus};
 pub use format::{
     compact_json_args, format_bytes, format_duration, format_tool_label, format_tool_label_parts,
-    tool_error,
-    tool_status_line, truncate_output, which_tool, which_tool_async,
+    tool_error, tool_status_line, truncate_output, which_tool, which_tool_async,
 };
 // Path resolution utilities — expand ~ and absolutize.
 use path_absolutize::Absolutize;

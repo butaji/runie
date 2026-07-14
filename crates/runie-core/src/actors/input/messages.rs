@@ -280,7 +280,10 @@ impl InputMsg {
                     state.cursor_pos = 0;
                     return;
                 }
-                let prev_ls = input[..cur_start - 1].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                let prev_ls = input[..cur_start - 1]
+                    .rfind('\n')
+                    .map(|i| i + 1)
+                    .unwrap_or(0);
                 // Previous line spans [prev_ls, cur_start - 1); clamp the column
                 // to its length (not to prev_ls — wrong from line 3 onward).
                 let prev_line_len = cur_start - 1 - prev_ls;
@@ -478,10 +481,7 @@ mod tests {
     #[test]
     fn backspace_at_chip_end_is_atomic() {
         let mut state = crate::model::InputState::default();
-        InputMsg::apply_to(
-            &InputMsg::Paste("l1\nl2\nl3\nl4".to_owned()),
-            &mut state,
-        );
+        InputMsg::apply_to(&InputMsg::Paste("l1\nl2\nl3\nl4".to_owned()), &mut state);
         assert_eq!(state.chips.len(), 1);
         InputMsg::apply_to(&InputMsg::Backspace, &mut state);
         assert_eq!(state.input, "");
@@ -494,10 +494,7 @@ mod tests {
     #[test]
     fn backspace_inside_chip_dissolves_it() {
         let mut state = crate::model::InputState::default();
-        InputMsg::apply_to(
-            &InputMsg::Paste("l1\nl2\nl3\nl4".to_owned()),
-            &mut state,
-        );
+        InputMsg::apply_to(&InputMsg::Paste("l1\nl2\nl3\nl4".to_owned()), &mut state);
         InputMsg::apply_to(&InputMsg::MoveCursor { pos: 2 }, &mut state);
         InputMsg::apply_to(&InputMsg::Backspace, &mut state);
         assert_eq!(state.input, "l\nl2\nl3\nl4");

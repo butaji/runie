@@ -50,9 +50,7 @@ pub fn build_permission_dialog(req: &PermissionRequestState) -> PanelStack {
         // Deny (4) — reject
         .item(
             "_4. Deny",
-            ItemAction::Emit(Event::PermissionDeny {
-                request_id,
-            }),
+            ItemAction::Emit(Event::PermissionDeny { request_id }),
         );
 
     PanelStack::new(panel)

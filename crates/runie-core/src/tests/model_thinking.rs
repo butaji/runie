@@ -18,6 +18,7 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
                 provider_type: None,
                 base_url: String::new(),
                 models: models.clone(),
+                headers: std::collections::HashMap::new(),
             },
         );
     }
@@ -92,7 +93,10 @@ fn reasoning_panel_pick_switches_model_and_sets_override() {
     }
     state.update(crate::Event::ModelSelectorSelect);
 
-    assert!(state.open_dialog.is_none(), "dialog should close after pick");
+    assert!(
+        state.open_dialog.is_none(),
+        "dialog should close after pick"
+    );
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert_eq!(

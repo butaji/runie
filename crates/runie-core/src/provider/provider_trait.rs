@@ -74,6 +74,9 @@ pub enum ProviderError {
     /// Context length limit exceeded.
     #[error("Context length exceeded: {0} tokens")]
     ContextLength(usize),
+    /// Client error (HTTP 4xx other than auth/rate-limit) with status and message.
+    #[error("Bad request {0}{1}")]
+    BadRequest(u16, String),
     /// An underlying error that does not fit a typed variant.
     /// `#[transparent]` forwards `Display` and `Error::source()` to the inner `anyhow::Error`.
     #[error(transparent)]
@@ -95,6 +98,7 @@ impl Clone for ProviderError {
             Server(code, msg) => Server(*code, msg.clone()),
             Auth(code) => Auth(*code),
             ContextLength(n) => ContextLength(*n),
+            BadRequest(code, msg) => BadRequest(*code, msg.clone()),
             // anyhow::Error is not Clone — store formatted message as a new error
             Source(e) => Source(anyhow::anyhow!("{e}")),
         }
@@ -107,12 +111,18 @@ impl ProviderError {
     pub fn classify_http_status(code: u16) -> Option<Self> {
         if code == 401 || code == 403 {
             Some(ProviderError::Auth(code))
+        } else if code == 408 {
+            // HTTP 408 Request Timeout is transient — retry.
+            Some(ProviderError::Server(code, Default::default()))
         } else if code == 429 {
             Some(ProviderError::RateLimit {
                 retry_after_secs: None,
             })
         } else if code >= 500 {
             Some(ProviderError::Server(code, Default::default()))
+        } else if code >= 400 {
+            // All other 4xx client errors (including 400 Bad Request) are fatal.
+            Some(ProviderError::BadRequest(code, Default::default()))
         } else {
             None
         }
@@ -128,6 +138,8 @@ impl ProviderError {
             ProviderError::ConfigNotLoaded => false,
             // Fatal — prompt is too long
             ProviderError::ContextLength(_) => false,
+            // Fatal — client error (e.g. 400 Bad Request)
+            ProviderError::BadRequest(_, _) => false,
             // Transient — retry
             ProviderError::RateLimit { .. } => true,
             ProviderError::Network(_) => true,
@@ -147,10 +159,16 @@ impl ProviderError {
     pub fn from_reqwest(err: &reqwest::Error) -> Self {
         if let Some(status) = err.status() {
             let code = status.as_u16();
-            if let Some(typed) = ProviderError::classify_http_status(code) {
+            if let Some(mut typed) = ProviderError::classify_http_status(code) {
+                // Preserve the original error message on variants that carry one.
+                if let ProviderError::Server(_, ref mut msg) = typed {
+                    *msg = err.to_string();
+                } else if let ProviderError::BadRequest(_, ref mut msg) = typed {
+                    *msg = err.to_string();
+                }
                 return typed;
             }
-            // 4xx other than 401/403/429 — wrap as source error
+            // Non-error status codes should not reach here, but keep a fallback.
             return ProviderError::Source(anyhow::anyhow!("{}", err));
         }
         if err.is_timeout() {
@@ -303,6 +321,83 @@ impl RetryConfig {
             initial_delay: Duration::from_secs(0),
             max_delay: Duration::from_secs(0),
             multiplier: 1.0,
+        }
+    }
+
+    /// Create a RetryPolicy from this RetryConfig with no per-error-type overrides.
+    pub fn into_policy(self) -> RetryPolicy {
+        RetryPolicy {
+            base: self,
+            rate_limit_retries: None,
+            timeout_retries: None,
+            context_window_retries: None,
+            bad_request_retries: None,
+        }
+    }
+}
+
+/// Per-error-type retry policy overrides.
+///
+/// When a specific retry count is set for an error type, it overrides
+/// the base `RetryConfig.max_attempts` for that error type.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RetryPolicy {
+    /// Base retry configuration.
+    pub base: RetryConfig,
+    /// Override retry count for rate limit errors (429).
+    pub rate_limit_retries: Option<u32>,
+    /// Override retry count for timeout errors.
+    pub timeout_retries: Option<u32>,
+    /// Override retry count for context window exceeded errors.
+    /// Note: ContextLength errors are fatal (non-retryable) by default.
+    pub context_window_retries: Option<u32>,
+    /// Override retry count for bad request errors.
+    /// Note: BadRequest errors are fatal (non-retryable) by default.
+    pub bad_request_retries: Option<u32>,
+}
+
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        RetryConfig::default().into_policy()
+    }
+}
+
+impl RetryPolicy {
+    /// Create a new retry policy with default settings and per-error-type overrides.
+    pub fn new(
+        base: RetryConfig,
+        rate_limit_retries: Option<u32>,
+        timeout_retries: Option<u32>,
+        context_window_retries: Option<u32>,
+        bad_request_retries: Option<u32>,
+    ) -> Self {
+        Self {
+            base,
+            rate_limit_retries,
+            timeout_retries,
+            context_window_retries,
+            bad_request_retries,
+        }
+    }
+
+    /// Get the retry count for a typed ProviderError.
+    /// Returns the base config's max_attempts if no override is set.
+    pub fn max_attempts_for_error(&self, error: &ProviderError) -> u32 {
+        match error {
+            ProviderError::RateLimit { .. } => {
+                self.rate_limit_retries.unwrap_or(self.base.max_attempts)
+            }
+            ProviderError::Timeout => self.timeout_retries.unwrap_or(self.base.max_attempts),
+            ProviderError::ContextLength(_) => {
+                self.context_window_retries.unwrap_or(self.base.max_attempts)
+            }
+            ProviderError::BadRequest(_, _) => {
+                self.bad_request_retries.unwrap_or(self.base.max_attempts)
+            }
+            // For other retryable errors (Server, Network, Source), use base config
+            _ if error.is_retryable() => self.base.max_attempts,
+            // Fatal errors use base config (though they won't be retried anyway)
+            _ => self.base.max_attempts,
         }
     }
 }

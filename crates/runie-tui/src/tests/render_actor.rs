@@ -19,9 +19,7 @@ fn has_content(elem: &Element, text: &str) -> bool {
 fn render_snapshot(snap: &Snapshot, _animation_frame: u32) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal
-        .draw(|f| draw_snapshot(f, snap))
-        .unwrap();
+    terminal.draw(|f| draw_snapshot(f, snap)).unwrap();
     terminal
         .backend()
         .buffer()
@@ -134,9 +132,7 @@ fn render_actor_does_not_need_mutable_state() {
     // draw_snapshot takes &Snapshot + &mut ThrobberState
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal
-        .draw(|f| draw_snapshot(f, &snap))
-        .unwrap();
+    terminal.draw(|f| draw_snapshot(f, &snap)).unwrap();
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -235,15 +231,16 @@ fn response_delta_renders_in_feed() {
     assert!(
         has_hello,
         "Snapshot should contain 'hello' in AgentMessage. Elements: {:?}",
-        snap.elements.iter().map(|e| format!("{:?}", e)).collect::<Vec<_>>()
+        snap.elements
+            .iter()
+            .map(|e| format!("{:?}", e))
+            .collect::<Vec<_>>()
     );
 
     // Render and verify "hello" appears in the terminal output
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal
-        .draw(|f| draw_snapshot(f, &snap))
-        .unwrap();
+    terminal.draw(|f| draw_snapshot(f, &snap)).unwrap();
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -278,14 +275,15 @@ fn response_delta_without_trailing_newline_renders_after_done() {
     assert!(
         has_hello,
         "Snapshot should contain 'hello' after Done. Elements: {:?}",
-        snap.elements.iter().map(|e| format!("{:?}", e)).collect::<Vec<_>>()
+        snap.elements
+            .iter()
+            .map(|e| format!("{:?}", e))
+            .collect::<Vec<_>>()
     );
 
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal
-        .draw(|f| draw_snapshot(f, &snap))
-        .unwrap();
+    terminal.draw(|f| draw_snapshot(f, &snap)).unwrap();
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -334,9 +332,7 @@ fn text_start_response_delta_done_renders_agent_text() {
     // Render and verify
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal
-        .draw(|f| draw_snapshot(f, &snap))
-        .unwrap();
+    terminal.draw(|f| draw_snapshot(f, &snap)).unwrap();
 
     let buf = terminal.backend().buffer();
     let out: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -361,7 +357,14 @@ fn diagnostic_production_flow_elements() {
     eprintln!("After TextStart: elements={:?}", snap1.elements);
     eprintln!("  messages count: {}", state.session().messages.len());
     for (i, m) in state.session().messages.iter().enumerate() {
-        eprintln!("  msg[{}]: role={:?} id={:?} content={:?} parts={:?}", i, m.role, m.id, m.content(), m.parts);
+        eprintln!(
+            "  msg[{}]: role={:?} id={:?} content={:?} parts={:?}",
+            i,
+            m.role,
+            m.id,
+            m.content(),
+            m.parts
+        );
     }
 
     // Step 2: ResponseDelta
@@ -373,7 +376,14 @@ fn diagnostic_production_flow_elements() {
     let snap2 = state.snapshot();
     eprintln!("After ResponseDelta: elements={:?}", snap2.elements);
     for (i, m) in state.session().messages.iter().enumerate() {
-        eprintln!("  msg[{}]: role={:?} id={:?} content={:?} parts={:?}", i, m.role, m.id, m.content(), m.parts);
+        eprintln!(
+            "  msg[{}]: role={:?} id={:?} content={:?} parts={:?}",
+            i,
+            m.role,
+            m.id,
+            m.content(),
+            m.parts
+        );
     }
 
     // Step 3: Done
@@ -382,11 +392,21 @@ fn diagnostic_production_flow_elements() {
     let snap3 = state.snapshot();
     eprintln!("After Done: elements={:?}", snap3.elements);
     for (i, m) in state.session().messages.iter().enumerate() {
-        eprintln!("  msg[{}]: role={:?} id={:?} content={:?} parts={:?}", i, m.role, m.id, m.content(), m.parts);
+        eprintln!(
+            "  msg[{}]: role={:?} id={:?} content={:?} parts={:?}",
+            i,
+            m.role,
+            m.id,
+            m.content(),
+            m.parts
+        );
     }
 
     // Check total_lines and content_width
-    eprintln!("total_lines={} content_width={}", snap3.total_lines, snap3.content_width);
+    eprintln!(
+        "total_lines={} content_width={}",
+        snap3.total_lines, snap3.content_width
+    );
 
     // Render
     let backend = TestBackend::new(60, 20);
@@ -397,7 +417,10 @@ fn diagnostic_production_flow_elements() {
     eprintln!("RENDERED OUTPUT:\n{}", out);
 
     assert!(
-        snap3.elements.iter().any(|e| matches!(e, Element::AgentMessage { .. })),
+        snap3
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::AgentMessage { .. })),
         "Must have AgentMessage element"
     );
 }

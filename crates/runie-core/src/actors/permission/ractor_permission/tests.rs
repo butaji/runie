@@ -309,14 +309,8 @@ async fn cancel_permission_emits_dismissed_event() {
 
     handle.cancel_permission("req-cancel-2".into()).await;
 
-    let found = wait_for_event(&mut sub, |e| {
-        matches!(e, Event::PermissionRequestDismissed)
-    })
-    .await;
-    assert!(
-        found,
-        "Expected PermissionRequestDismissed event on cancel"
-    );
+    let found = wait_for_event(&mut sub, |e| matches!(e, Event::PermissionRequestDismissed)).await;
+    assert!(found, "Expected PermissionRequestDismissed event on cancel");
 }
 
 /// Test that resolving an unknown request does nothing (no panic).

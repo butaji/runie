@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_error, color_success, style_agent, style_thinking, style_thought, style_feed_timestamp,
+    color_error, color_success, style_agent, style_feed_timestamp, style_thinking, style_thought,
     style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
     style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER,
     GLYPH_X,
@@ -39,8 +39,10 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    vec![Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64()))
-        .style(style_thinking())]
+    vec![
+        Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64()))
+            .style(style_thinking()),
+    ]
 }
 
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
@@ -93,10 +95,7 @@ pub fn render_tool_done(
     } else {
         GLYPH_AGENT.to_string()
     };
-    let mut spans = vec![
-        Span::styled(glyph, style),
-        Span::styled(verb, style.bold()),
-    ];
+    let mut spans = vec![Span::styled(glyph, style), Span::styled(verb, style.bold())];
     let tail = format!("{args_part}{bytes_str}");
     if !tail.is_empty() {
         spans.push(Span::styled(tail, style));
@@ -128,8 +127,10 @@ pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<L
 }
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    vec![Line::from(format!("Turn completed in {:.1}s.", duration_secs))
-        .style(style_turn_complete())]
+    vec![
+        Line::from(format!("Turn completed in {:.1}s.", duration_secs))
+            .style(style_turn_complete()),
+    ]
 }
 
 /// Render a swarm subagent lifecycle row (GROK.md §26).
@@ -161,12 +162,10 @@ pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
         S::Running => {
             let elapsed = started.map(|s| s.elapsed().as_secs_f64()).unwrap_or(0.0);
             let frame = braille_frame(elapsed);
-            return vec![
-                Line::from(format!(
-                    "{frame} Subagent running: \"{description}\" ({model}) — Running"
-                ))
-                .style(style_tool_running()),
-            ];
+            return vec![Line::from(format!(
+                "{frame} Subagent running: \"{description}\" ({model}) — Running"
+            ))
+            .style(style_tool_running())];
         }
         S::Completed => Line::from(format!(
             "{GLYPH_CHECK} Subagent completed in {}: \"{description}\"",

@@ -69,6 +69,8 @@ pub mod notification;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
+pub mod result;
+pub use result::{RunieContext, RunieResult};
 pub mod sandbox;
 pub mod sanitize;
 pub mod scoped_model;
@@ -88,8 +90,8 @@ pub mod tracing_init;
 /// Centralized user-facing strings (errors, warnings, info, help).
 pub mod ui_strings;
 
-pub mod theme_tokens;
 pub mod theme_detection;
+pub mod theme_tokens;
 
 pub mod tokens;
 pub mod tool;
@@ -164,7 +166,7 @@ pub use prompts::{
 pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
     known_providers, Provider, ProviderError, ProviderMeta, ProviderMetadata, ResponseChunk,
-    RetryConfig,
+    RetryConfig, RetryPolicy,
 };
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use resource_loader::{

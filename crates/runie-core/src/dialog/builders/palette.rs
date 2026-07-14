@@ -93,8 +93,7 @@ pub fn model_reasoning_panel(
     override_level: Option<crate::model::ThinkingLevel>,
 ) -> PanelStack {
     let title = format!(" Reasoning · {provider}/{model} ");
-    let mut panel = Panel::new("model-reasoning", title)
-        .header("Thinking level for this model");
+    let mut panel = Panel::new("model-reasoning", title).header("Thinking level for this model");
 
     let default_label = if override_level.is_none() {
         format!("default (global: {}) (current)", global.as_str())

@@ -29,7 +29,11 @@ fn dag_diamond_two_roots_join() {
 
     let waves = dag.topological_waves().expect("diamond has no cycle");
     assert_eq!(waves.len(), 3, "roots together, then mid, then join");
-    assert_eq!(waves[0], vec![root_a, root_b], "both roots run in the first wave");
+    assert_eq!(
+        waves[0],
+        vec![root_a, root_b],
+        "both roots run in the first wave"
+    );
     assert_eq!(waves[1], vec![mid]);
     assert_eq!(waves[2], vec![join]);
 }

@@ -303,10 +303,7 @@ fn selected_post_cleared_on_nav_mode_exit() {
 
     // Enter vim nav mode via DialogBack (same as pressing Esc in chat input)
     state.update(Event::DialogBack);
-    assert!(
-        state.view.vim_nav_mode,
-        "should enter vim nav mode"
-    );
+    assert!(state.view.vim_nav_mode, "should enter vim nav mode");
     assert!(
         state.view.selected_post.is_some(),
         "selected_post should be set when entering nav mode"
@@ -314,10 +311,7 @@ fn selected_post_cleared_on_nav_mode_exit() {
 
     // Exit vim nav mode by pressing Esc again
     state.update(Event::DialogBack);
-    assert!(
-        !state.view.vim_nav_mode,
-        "should exit vim nav mode"
-    );
+    assert!(!state.view.vim_nav_mode, "should exit vim nav mode");
     assert!(
         state.view.selected_post.is_none(),
         "selected_post must be cleared when exiting nav mode"

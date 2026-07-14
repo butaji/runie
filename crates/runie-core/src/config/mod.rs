@@ -33,6 +33,19 @@ pub use config_impl::config_path;
 // Models Section
 // ============================================================================
 
+/// Strategy for routing between multiple model deployments.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ModelRoutingStrategy {
+    /// Round-robin through available deployments.
+    #[default]
+    SimpleShuffle,
+    /// Route to the lowest-latency deployment.
+    LatencyBased,
+    /// Route to the cheapest deployment for the task.
+    CostBased,
+}
+
 /// Models configuration section.
 #[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct ModelsSection {
@@ -46,6 +59,13 @@ pub struct ModelsSection {
     /// `thinking_level`.
     #[serde(default)]
     pub thinking: HashMap<String, crate::model::ThinkingLevel>,
+    /// Routing strategy for multi-deployment providers.
+    #[serde(default)]
+    pub routing_strategy: ModelRoutingStrategy,
+    /// Fallback models to use when context window is exceeded.
+    /// Listed in order of preference (first available is used).
+    #[serde(default)]
+    pub context_window_fallback: Vec<String>,
 }
 
 // ============================================================================
@@ -61,6 +81,8 @@ pub struct ModelProvider {
     pub base_url: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub models: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub headers: std::collections::HashMap<String, String>,
 }
 
 // ============================================================================

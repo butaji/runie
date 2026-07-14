@@ -48,10 +48,15 @@ fn skill_form_panel_carries_command_name_and_keys() {
         let panel = stack.current().unwrap();
         assert_eq!(panel.cmd_name.as_deref(), Some("skill"));
         assert_eq!(panel.field_keys, vec!["name".to_string()]);
-        let has_name_field = panel.items.iter().any(|it| matches!(it,
-            PanelItem::FormField { placeholder, .. } if placeholder == "skill-name"
-        ));
-        assert!(has_name_field, "skill form should show the skill-name placeholder");
+        let has_name_field = panel.items.iter().any(|it| {
+            matches!(it,
+                PanelItem::FormField { placeholder, .. } if placeholder == "skill-name"
+            )
+        });
+        assert!(
+            has_name_field,
+            "skill form should show the skill-name placeholder"
+        );
     } else {
         panic!("expected panel stack");
     }

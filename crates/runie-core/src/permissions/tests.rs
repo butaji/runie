@@ -206,7 +206,10 @@ async fn auto_approve_asks_for_sensitive_paths() {
     // Non-sensitive paths stay auto-approved.
     let inside = Path::new("/project/src/main.rs");
     let context = ctx("write_file", Some(inside), None);
-    assert_eq!(policy.evaluate(&context).await, Some(PermissionResult::Allow));
+    assert_eq!(
+        policy.evaluate(&context).await,
+        Some(PermissionResult::Allow)
+    );
 }
 
 #[tokio::test]

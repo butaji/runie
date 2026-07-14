@@ -281,6 +281,66 @@ fn tunable_values_match_previous_constants() {
     assert_eq!(UiSection::default().page_size, 5);
 }
 
+#[test]
+fn config_load_parses_provider_headers() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[model_providers.openai]
+type = "openai"
+base_url = "http://localhost:3000/v1"
+models = ["mock-gpt-thinking"]
+[model_providers.openai.headers]
+x-mock-scenario = "tool_call"
+x-mock-latency-ms = "500"
+"#,
+    );
+    let config = Config::load(Some(&path));
+    let provider = config
+        .provider_for_model("openai/mock-gpt-thinking")
+        .unwrap();
+    assert_eq!(
+        provider.headers.get("x-mock-scenario"),
+        Some(&"tool_call".to_string())
+    );
+    assert_eq!(
+        provider.headers.get("x-mock-latency-ms"),
+        Some(&"500".to_string())
+    );
+}
+
+#[test]
+fn config_resolve_headers_returns_provider_headers() {
+    use crate::proto::ProviderConfig;
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[model_providers.openai]
+type = "openai"
+base_url = "http://localhost:3000/v1"
+models = ["mock-gpt-thinking"]
+[model_providers.openai.headers]
+x-mock-scenario = "tool_call"
+x-mock-latency-ms = "500"
+"#,
+    );
+    let config = Config::load(Some(&path));
+    let headers = config
+        .resolve_headers("openai")
+        .expect("resolve_headers must return headers from config");
+    assert_eq!(
+        headers.get("x-mock-scenario"),
+        Some(&"tool_call".to_string())
+    );
+    assert_eq!(
+        headers.get("x-mock-latency-ms"),
+        Some(&"500".to_string())
+    );
+}
+
 fn make_test_config(dir: &tempfile::TempDir, content: &str) -> std::path::PathBuf {
     let path = dir.path().join("config.toml");
     fs::write(&path, content).unwrap();
@@ -533,6 +593,7 @@ fn resolve_default_model_prefers_explicit_default_over_first_model() {
             base_url: "https://api.minimaxi.chat/v1".to_string(),
             // Deliberately ordered so "MiniMax-M2" is models[0].
             models: vec!["MiniMax-M2".to_string(), "MiniMax-M2.7".to_string()],
+            headers: std::collections::HashMap::new(),
         },
     );
 

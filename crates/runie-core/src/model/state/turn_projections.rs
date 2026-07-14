@@ -40,7 +40,10 @@ mod tests {
         // Note: turn_active is intentionally NOT cleared by apply_turn_completed.
         // The UiActor's clear_turn_state handles that transition after the final
         // snapshot is rendered, so streaming text appears in the feed.
-        assert!(state.agent_state().turn_active, "turn_active stays true until UiActor clears it");
+        assert!(
+            state.agent_state().turn_active,
+            "turn_active stays true until UiActor clears it"
+        );
         assert!(!state.agent_state().streaming);
         assert_eq!(state.agent_state().inflight, 0);
         assert!(state.agent_state().current_tool_name.is_none());

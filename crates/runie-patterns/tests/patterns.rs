@@ -115,7 +115,10 @@ fn model_for_leader_and_worker_fallback() {
         model_for(&models, 1),
         ("openai".to_string(), "gpt".to_string())
     );
-    assert_eq!(model_for(&models, 2), ("mock".to_string(), "echo".to_string()));
+    assert_eq!(
+        model_for(&models, 2),
+        ("mock".to_string(), "echo".to_string())
+    );
     // Fewer models than workers: workers reuse the leader model.
     assert_eq!(
         model_for(&models, 3),

@@ -168,8 +168,7 @@ impl CredentialResolver {
         let Ok(json) = std::fs::read_to_string(path) else {
             return out;
         };
-        let raw: serde_json::Value =
-            serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
+        let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
         if let Some(obj) = raw.as_object() {
             for (provider, val) in obj {
                 let Some(token) = val.get("token").and_then(|v| v.as_str()) else {
@@ -178,7 +177,10 @@ impl CredentialResolver {
                 if token.is_empty() {
                     continue;
                 }
-                out.insert(provider.to_lowercase(), SecretString::from(token.to_owned()));
+                out.insert(
+                    provider.to_lowercase(),
+                    SecretString::from(token.to_owned()),
+                );
             }
         }
         out
@@ -425,7 +427,10 @@ mod tests {
 
         let tokens = CredentialResolver::load_auth_file_from(&path);
         assert_secret_eq(tokens.get("minimax"), "mm-file-token");
-        assert!(tokens.get("empty").is_none(), "empty tokens must be skipped");
+        assert!(
+            tokens.get("empty").is_none(),
+            "empty tokens must be skipped"
+        );
     }
 
     #[test]

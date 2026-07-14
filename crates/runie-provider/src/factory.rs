@@ -81,10 +81,7 @@ impl BuiltProviderFactory {
         }
 
         // Determine protocol from env var or fixture inference.
-        let protocol = match std::env::var("RUNIE_REPLAY_PROTOCOL")
-            .ok()
-            .as_deref()
-        {
+        let protocol = match std::env::var("RUNIE_REPLAY_PROTOCOL").ok().as_deref() {
             Some("anthropic") => Protocol::Anthropic,
             Some("openai") => Protocol::OpenAi,
             _ => ReplayProvider::infer_protocol(&fixtures),
@@ -101,11 +98,7 @@ impl BuiltProviderFactory {
         };
         let model = if model.is_empty() { "replay" } else { model };
 
-        Some(BuiltProvider::from_provider(
-            Box::new(replay),
-            key,
-            model,
-        ))
+        Some(BuiltProvider::from_provider(Box::new(replay), key, model))
     }
 }
 

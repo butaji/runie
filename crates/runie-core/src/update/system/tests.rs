@@ -54,10 +54,12 @@ fn apply_config_switches_active_model_when_not_overridden() {
     config.model_providers.insert(
         "anthropic".into(),
         crate::config::ModelProvider {
+
             provider_type: None,
             base_url: "https://api.anthropic.com".into(),
             api_key: "sk-test".into(),
             models: vec!["claude-3".into()],
+                    headers: std::collections::HashMap::new(),
         },
     );
     state.apply_config(&config);
@@ -79,10 +81,12 @@ fn apply_config_keeps_active_model_when_overridden() {
     config.model_providers.insert(
         "anthropic".into(),
         crate::config::ModelProvider {
+
             provider_type: None,
             base_url: "https://api.anthropic.com".into(),
             api_key: "sk-test".into(),
             models: vec!["claude-3".into()],
+                    headers: std::collections::HashMap::new(),
         },
     );
     state.apply_config(&config);
@@ -104,10 +108,12 @@ fn set_provider_uses_configured_model_for_custom_provider() {
     state.config_mut().model_providers_mut().insert(
         "custom".into(),
         crate::config::ModelProvider {
+
             provider_type: None,
             base_url: "http://test".into(),
             api_key: "key".into(),
             models: vec!["custom-model".into()],
+                    headers: std::collections::HashMap::new(),
         },
     );
 
@@ -127,10 +133,12 @@ fn apply_config_falls_back_to_first_configured_provider_when_no_default() {
     config.model_providers.insert(
         "custom".into(),
         crate::config::ModelProvider {
+
             provider_type: None,
             base_url: "http://test".into(),
             api_key: "key".into(),
             models: vec!["custom-model".into()],
+                    headers: std::collections::HashMap::new(),
         },
     );
     state.apply_config(&config);
@@ -154,10 +162,12 @@ fn apply_config_keeps_override_when_no_default() {
     config.model_providers.insert(
         "custom".into(),
         crate::config::ModelProvider {
+
             provider_type: None,
             base_url: "http://test".into(),
             api_key: "key".into(),
             models: vec!["custom-model".into()],
+                    headers: std::collections::HashMap::new(),
         },
     );
     state.apply_config(&config);

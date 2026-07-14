@@ -43,6 +43,7 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
                 provider_type: None,
                 base_url: String::new(),
                 models: models.clone(),
+                headers: std::collections::HashMap::new(),
             },
         );
     }

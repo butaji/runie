@@ -59,7 +59,13 @@ fn render_transient(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect, msg:
 /// cannot break the single-line transient hint bar.
 fn sanitize_transient_text(msg: &str) -> String {
     msg.chars()
-        .map(|c| if c.is_control() || c == '\n' || c == '\r' || c == '\t' { ' ' } else { c })
+        .map(|c| {
+            if c.is_control() || c == '\n' || c == '\r' || c == '\t' {
+                ' '
+            } else {
+                c
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()

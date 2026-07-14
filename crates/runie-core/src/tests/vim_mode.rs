@@ -559,8 +559,7 @@ fn enter_in_vim_nav_toggles_expand() {
     state.update(crate::Event::Submit);
 
     assert_eq!(
-        state.view.all_collapsed,
-        !initially_collapsed,
+        state.view.all_collapsed, !initially_collapsed,
         "Enter in nav mode should toggle all_collapsed"
     );
     assert!(

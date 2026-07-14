@@ -49,7 +49,10 @@ fn switch(active: &str, workers: Option<usize>) -> CommandResult {
 
 /// Parse `<pattern> workers <n>`; `n` must be a usize >= 1.
 fn parse_workers(active: &str, rest: &[&str]) -> CommandResult {
-    match rest.first().and_then(|w| w.parse::<usize>().ok()).filter(|&w| w >= 1)
+    match rest
+        .first()
+        .and_then(|w| w.parse::<usize>().ok())
+        .filter(|&w| w >= 1)
     {
         Some(w) => switch(active, Some(w)),
         None => CommandResult::Warning(m::invalid_workers(&rest.join(" "))),

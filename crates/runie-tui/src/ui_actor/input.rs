@@ -18,8 +18,7 @@ impl UiActor {
         // check sees the text the user actually typed.
         let pending: String = self.pending_input_chars.iter().collect();
         let effective = format!("{}{}", input.input, pending);
-        if self.state.completion().at_suggestions.is_some()
-            || input.cursor_pos != input.input.len()
+        if self.state.completion().at_suggestions.is_some() || input.cursor_pos != input.input.len()
         {
             return false;
         }

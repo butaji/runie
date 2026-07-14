@@ -171,7 +171,10 @@ impl PatternRegistry {
     }
 
     pub fn get(&self, name: &str) -> Option<&dyn Pattern> {
-        self.patterns.iter().find(|p| p.name() == name).map(|p| &**p)
+        self.patterns
+            .iter()
+            .find(|p| p.name() == name)
+            .map(|p| &**p)
     }
 
     pub fn names(&self) -> Vec<&'static str> {

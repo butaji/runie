@@ -360,7 +360,11 @@ impl AppState {
         // Split `<think>` reasoning out before text reaches the visible
         // message; partial-tag tails stay buffered in the filter until later
         // deltas (or turn finish) resolve them.
-        let visible = self.agent_state_mut().think_filter.push_delta(&content).visible;
+        let visible = self
+            .agent_state_mut()
+            .think_filter
+            .push_delta(&content)
+            .visible;
         if visible.is_empty() {
             return;
         }

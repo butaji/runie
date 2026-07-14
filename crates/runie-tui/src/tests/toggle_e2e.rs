@@ -355,7 +355,10 @@ fn e2e_full_turn_with_global_toggle() {
     // Second Ctrl+O restores tool output; the thought stays summarized —
     // Ctrl+O no longer expands thoughts.
     state.update(Event::ToggleExpand);
-    assert!(!state.view.all_collapsed, "Second toggle should expand tools");
+    assert!(
+        !state.view.all_collapsed,
+        "Second toggle should expand tools"
+    );
     assert_tools_expanded(&render_content(&mut state));
 
     finish_turn(&mut state);

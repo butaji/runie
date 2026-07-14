@@ -26,10 +26,7 @@ pub(super) fn render_code_header(
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));
         }
-        spans.push(Span::styled(
-            format!(" {}", ts_str),
-            style_feed_timestamp(),
-        ));
+        spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
     }
     Line::from(spans).style(style_code_header())
 }

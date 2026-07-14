@@ -109,6 +109,7 @@ pub fn save_provider_to_path(
                 provider_type,
                 base_url: b.clone(),
                 models: m.clone(),
+                headers: std::collections::HashMap::new(),
             },
         );
     })
@@ -248,6 +249,7 @@ fn default_empty_provider() -> ModelProvider {
         provider_type: None,
         base_url: String::new(),
         models: Vec::new(),
+        headers: std::collections::HashMap::new(),
     }
 }
 
@@ -271,8 +273,7 @@ mod tests {
         .expect("write override");
 
         let content = std::fs::read_to_string(&path).unwrap();
-        let parsed: crate::config::Config =
-            toml::from_str(&content).expect("config must parse");
+        let parsed: crate::config::Config = toml::from_str(&content).expect("config must parse");
         assert_eq!(
             parsed.models.thinking.get("openai/gpt-4o"),
             Some(&crate::model::ThinkingLevel::High),
@@ -281,8 +282,7 @@ mod tests {
 
         set_model_thinking_at_path(&path, "openai", "gpt-4o", None).expect("clear override");
         let content = std::fs::read_to_string(&path).unwrap();
-        let parsed: crate::config::Config =
-            toml::from_str(&content).expect("config must parse");
+        let parsed: crate::config::Config = toml::from_str(&content).expect("config must parse");
         assert!(
             !parsed.models.thinking.contains_key("openai/gpt-4o"),
             "None must remove the override: {content}"
@@ -295,11 +295,7 @@ mod tests {
     #[test]
     fn write_creates_missing_parent_dir() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir
-            .path()
-            .join("absent")
-            .join(".runie")
-            .join("config.toml");
+        let path = dir.path().join("absent").join(".runie").join("config.toml");
         assert!(
             !path.parent().unwrap().exists(),
             "precondition: parent dir must be missing"

@@ -388,7 +388,9 @@ mod tests {
             flow.available_models,
             vec!["gemini-3.1-flash-lite", "gemini-3.1-pro-preview"]
         );
-        assert!(!flow.selected_models.contains("veo-3.1-fast-generate-preview"));
+        assert!(!flow
+            .selected_models
+            .contains("veo-3.1-fast-generate-preview"));
         assert!(!flow.selected_models.contains("imagen-4.0-generate-001"));
     }
 

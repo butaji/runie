@@ -309,11 +309,7 @@ mod tests {
         .is_retryable());
         assert!(!ModelError::Other("boom".into()).is_retryable());
         assert!(!ModelError::Refusal("no".into()).is_retryable());
-        assert!(!ModelError::ContextLength {
-            limit: 1,
-            used: 2
-        }
-        .is_retryable());
+        assert!(!ModelError::ContextLength { limit: 1, used: 2 }.is_retryable());
         assert!(!ModelError::JsonDecode("bad".into()).is_retryable());
     }
 

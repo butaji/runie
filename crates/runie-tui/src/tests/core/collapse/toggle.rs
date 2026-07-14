@@ -124,7 +124,9 @@ fn thought_summarized_by_default_and_expandable() {
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ThoughtSummary {
-            content, expandable, ..
+            content,
+            expandable,
+            ..
         } => Some((content.as_str(), *expandable)),
         _ => None,
     });

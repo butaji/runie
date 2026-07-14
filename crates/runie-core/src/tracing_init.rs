@@ -105,10 +105,7 @@ fn init_with_mode(mode: InitMode) {
                 .json()
                 .with_writer(non_blocking);
 
-            Registry::default()
-                .with(file_layer)
-                .with(filter)
-                .init();
+            Registry::default().with(file_layer).with(filter).init();
         }
     }
 

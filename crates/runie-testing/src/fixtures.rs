@@ -10,6 +10,7 @@ use std::sync::Arc;
 use runie_core::config::Config;
 use runie_core::permissions::{AutoAllowSink, PermissionGate, PermissionManager};
 use runie_core::session::store::SessionStore;
+use runie_core::Provider;
 use tempfile::TempDir;
 
 use crate::env_lock::with_env;
@@ -59,7 +60,13 @@ pub fn mock_provider() -> runie_provider::BuiltProvider {
     with_env(|env| {
         env.set("RUNIE_MOCK", "1");
         let mock = runie_provider::MockProvider::default();
-        runie_provider::BuiltProvider::from_provider(Box::new(mock), "mock", "echo")
+        let metadata = mock.metadata();
+        runie_provider::BuiltProvider::with_metadata(
+            Box::new(mock),
+            "mock".to_string(),
+            "echo".to_string(),
+            metadata,
+        )
     })
 }
 
