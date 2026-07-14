@@ -59,6 +59,10 @@ pub enum TraceEvent {
 #[derive(Debug, Clone)]
 pub struct AgentTrace {
     pub agent_id: String,
+    /// Human-readable label for feed rows (e.g. the worker's task text).
+    pub description: String,
+    /// Final output text (or failure message) — shown when the row is expanded.
+    pub output: String,
     pub start_time: DateTime<Utc>,
     pub duration_ms: u64,
     pub events: Vec<TraceEvent>,

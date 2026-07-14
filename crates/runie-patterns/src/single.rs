@@ -58,6 +58,8 @@ impl Pattern for SinglePattern {
 
         let trace = AgentTrace {
             agent_id: "leader".into(),
+            description: "direct execution".into(),
+            output: result.clone(),
             start_time,
             duration_ms: start.elapsed().as_millis() as u64,
             events: vec![TraceEvent::Termination {

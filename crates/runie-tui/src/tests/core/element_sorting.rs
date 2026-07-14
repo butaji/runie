@@ -27,6 +27,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::ToolDone { .. } => "ToolDone".to_string(),
             runie_core::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
             runie_core::view::Element::ContextGroup { .. } => "Context".to_string(),
+            runie_core::view::Element::SubagentRow { .. } => "Subagent".to_string(),
             runie_core::view::Element::TurnComplete { .. } => "Turn".to_string(),
             runie_core::view::Element::Spacer { .. } => "Spacer".to_string(),
         })

@@ -4275,6 +4275,9 @@ name = "runie-tui"
 version = "0.2.16"
 dependencies = [
  "ansi_colours",
+ "anyhow",
+ "async-trait",
+ "chrono",
  "clap 4.6.1",
  "color-eyre",
  "crokey",
@@ -4289,6 +4292,7 @@ dependencies = [
  "ratatui",
  "runie-agent",
  "runie-core",
+ "runie-patterns",
  "runie-provider",
  "runie-testing",
  "serde_json",

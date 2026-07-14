@@ -476,6 +476,7 @@ impl TuiRuntime {
 
         // Create channels for event routing
         let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
+        let thinking = state.effective_thinking_level();
 
         // Spawn UI actor
         let bus = leader_handle.event_bus().clone();
@@ -493,6 +494,7 @@ impl TuiRuntime {
         ui_actor.set_agent_handle(AgentHandleBox::Leader(LeaderAgentActorHandle::new(
             leader_handle.agent.clone(),
         )));
+        install_pattern_executor(&mut ui_actor, &leader_handle, thinking);
         let render_rx = ui_actor.take_render_rx();
         handles.spawn(tokio::spawn(async move {
             ui_actor.run_with_external_rx(submit_rx).await;
@@ -561,6 +563,7 @@ async fn spawn_background_tasks(
     let bus = leader_handle.event_bus().clone();
     let (input_tx, input_rx) = mpsc::channel::<Event>(100);
     let (submit_tx, submit_rx) = mpsc::channel::<Event>(16);
+    let thinking = state.effective_thinking_level();
 
     let (kb_tx, kb_rx) = watch::channel(state.config().keybindings().clone());
     handles.spawn(tokio::spawn(input_forwarder_task(input_rx, submit_tx)));
@@ -580,12 +583,30 @@ async fn spawn_background_tasks(
     ui_actor.set_agent_handle(AgentHandleBox::Leader(LeaderAgentActorHandle::new(
         leader_handle.agent.clone(),
     )));
+    install_pattern_executor(&mut ui_actor, &leader_handle, thinking);
     let render_rx = ui_actor.take_render_rx();
     handles.spawn(tokio::spawn(async move {
         ui_actor.run_with_external_rx(submit_rx).await;
     }));
 
     spawn_agent_tasks(input_tx, kb_rx, terminal, render_rx, caps, handles);
+}
+
+/// Install the pattern worker runner into UiActor (PATTERNS.md Phase 2).
+///
+/// Workers build providers through the leader's ProviderActor handle and run
+/// subagent turns with the bootstrap-time thinking level and the same
+/// iteration cap as normal agent turns.
+fn install_pattern_executor(
+    ui_actor: &mut UiActor,
+    leader_handle: &LeaderHandle,
+    thinking: runie_core::model::ThinkingLevel,
+) {
+    ui_actor.set_pattern_executor(Arc::new(crate::pattern_runner::TuiWorkerRunner::new(
+        leader_handle.provider.clone(),
+        thinking,
+        runie_agent::constants::DEFAULT_MAX_TOOL_ROUNDS,
+    )));
 }
 
 fn spawn_agent_tasks(

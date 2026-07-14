@@ -27,6 +27,7 @@ pub mod effects;
 pub mod input_mapping;
 pub mod keymap;
 pub mod mock_cmd;
+pub mod pattern_runner;
 pub mod terminal;
 pub mod terminal_setup;
 pub mod ui_actor;

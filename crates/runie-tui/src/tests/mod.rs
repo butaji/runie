@@ -52,6 +52,8 @@ mod onboarding_input;
 #[cfg(test)]
 mod onboarding_render;
 #[cfg(test)]
+mod pattern_turn;
+#[cfg(test)]
 mod permission_dialog;
 #[cfg(test)]
 mod provider_config_e2e;

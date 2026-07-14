@@ -24,6 +24,7 @@ use runie_core::bus::{EventBus, Receiver};
 use runie_core::update::dialog::handle_form_dialog;
 use runie_core::permissions::PermissionAction;
 use runie_core::{AppState, Event, Snapshot};
+use runie_patterns::Pattern as _;
 
 use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
 use crate::pace::PacedRenderer;
@@ -73,6 +74,15 @@ pub struct UiActor {
     /// Placeholder receiver stored when UiActor is created with `with_external_bus_rx`.
     /// Consumed by `run_with_external_rx`.
     _bus_rx: Option<Receiver<Event>>,
+    /// Runner for pattern-mode turns (`[mode].active == "swarm"`). Injected at
+    /// bootstrap via `set_pattern_executor`; `None` falls back to the agent turn.
+    pattern_runner: Option<std::sync::Arc<dyn runie_patterns::WorkerRunner>>,
+    /// Abort token for the in-flight pattern run; cancelled from
+    /// `clear_turn_state` on Abort (Esc, Ctrl+C, /new).
+    pattern_abort: Option<tokio_util::sync::CancellationToken>,
+    /// Join handle of the spawned pattern task — aborted together with the
+    /// token so a cancelled turn leaves no pattern driver task behind.
+    pattern_task: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl UiActor {
@@ -139,6 +149,9 @@ impl UiActor {
             input_handle: Some(input_handle),
             // Store the pre-created receiver for run_with_external_rx
             _bus_rx: Some(bus_rx),
+            pattern_runner: None,
+            pattern_abort: None,
+            pattern_task: None,
         };
         this.state.set_event_bus(state_bus);
         this
@@ -177,6 +190,9 @@ impl UiActor {
             turn_handle,
             input_handle,
             _bus_rx: None,
+            pattern_runner: None,
+            pattern_abort: None,
+            pattern_task: None,
         };
         this.state.set_event_bus(state_bus);
         this
@@ -188,6 +204,22 @@ impl UiActor {
     /// `leader.start_with_bus()` to install the real handle.
     pub fn set_agent_handle(&mut self, handle: AgentHandleBox) {
         self.agent_handle = handle;
+    }
+
+    /// Install the pattern worker runner (bootstrap, after the leader starts).
+    /// Without a runner, pattern modes fall back to the single-agent turn.
+    /// Tests inject a fake runner here.
+    pub fn set_pattern_executor(
+        &mut self,
+        runner: std::sync::Arc<dyn runie_patterns::WorkerRunner>,
+    ) {
+        self.pattern_runner = Some(runner);
+    }
+
+    /// The in-flight pattern run's abort token (tests only).
+    #[cfg(test)]
+    pub(crate) fn pattern_abort_token(&self) -> Option<tokio_util::sync::CancellationToken> {
+        self.pattern_abort.clone()
     }
 
     /// Run the actor with a pre-created bus receiver.
@@ -325,7 +357,7 @@ impl UiActor {
         match &evt {
             // Ctrl+Q (ForceQuit) is the "really exit" hatch: always quit, even
             // during an active turn.
-            Event::ForceQuit { .. } => {
+            Event::ForceQuit => {
                 // Abort the background file-index scan so the process exits
                 // immediately instead of waiting for the initial walk to finish.
                 runie_core::actors::fff_indexer::cancel_indexer_scan();
@@ -333,7 +365,7 @@ impl UiActor {
             }
             // Ctrl+C (Quit): during a turn, abort the in-flight agent and stay
             // open; when idle, quit (unchanged behavior).
-            Event::Quit { .. } => {
+            Event::Quit => {
                 if turn_active {
                     // clear_turn_state(true) cancels the agent's per-turn token
                     // (exactly once) and clears the turn state.
@@ -402,21 +434,22 @@ impl UiActor {
             // turn_was_active is set when an agent was spawned in the previous turn cycle.
             if !prev_turn_active && !self.turn_was_active {
                 self.turn_was_active = true;
-                let provider = self.state.config().current_provider.clone();
-                let model = self.state.config().current_model.clone();
-                let cmd = AgentCommand {
-                    content: content.clone(),
-                    id: request_id.clone(),
-                    provider,
-                    model,
-                    thinking_level: self.state.effective_thinking_level(),
-                    read_only: false,
-                    skills_context: String::new(),
-                    system_prompt: String::new(),
-                    truncation: TruncationPolicy::default(),
-                    cancellation_token: tokio_util::sync::CancellationToken::new(),
-                };
-                self.agent_handle.run(cmd).await;
+                let mode_active = self.state.config().mode.active.clone();
+                if mode_active == "eval-optimizer" {
+                    // eval-optimizer lands in Phase 3 — warn and run as a
+                    // normal single-agent turn for now.
+                    self.bus.publish(Event::TransientMessage {
+                        content: "eval-optimizer lands in Phase 3 — running as single agent".into(),
+                        level: runie_core::event::TransientLevel::Warning,
+                    });
+                    self.run_agent_turn(request_id, content).await;
+                } else if crate::pattern_runner::should_use_pattern(&mode_active)
+                    && self.pattern_runner.is_some()
+                {
+                    self.start_pattern_turn(request_id, content);
+                } else {
+                    self.run_agent_turn(request_id, content).await;
+                }
             }
             // Clear the queued-turn flag now that the turn has started.
             // (submit_user_message was already called for queued turns by TurnActor.)
@@ -444,6 +477,86 @@ impl UiActor {
         }
 
         false
+    }
+
+    /// Spawn the single-agent turn for a TurnStarted (the pre-patterns path).
+    async fn run_agent_turn(&mut self, request_id: &str, content: &str) {
+        let provider = self.state.config().current_provider.clone();
+        let model = self.state.config().current_model.clone();
+        let cmd = AgentCommand {
+            content: content.to_owned(),
+            id: request_id.to_owned(),
+            provider,
+            model,
+            thinking_level: self.state.effective_thinking_level(),
+            read_only: false,
+            skills_context: String::new(),
+            system_prompt: String::new(),
+            truncation: TruncationPolicy::default(),
+            cancellation_token: tokio_util::sync::CancellationToken::new(),
+        };
+        self.agent_handle.run(cmd).await;
+    }
+
+    /// Intercept the turn with the swarm pattern (PATTERNS.md Phase 2).
+    ///
+    /// The pattern replaces the agent turn, so the spawned task must publish
+    /// the same terminal events the agent actor would — `TurnComplete` +
+    /// `Done` on success, `Error` + `Done` on failure — or the TurnActor
+    /// stays stuck. On abort the normal `Event::Abort` path finalizes the
+    /// turn, so the task publishes nothing once its token is cancelled.
+    fn start_pattern_turn(&mut self, request_id: &str, content: &str) {
+        let Some(runner) = self.pattern_runner.clone() else {
+            // Guarded by the caller; never get stuck if misconfigured.
+            tracing::warn!("pattern mode active but no runner installed; dropping turn");
+            return;
+        };
+        let mode = self.state.config().mode.clone();
+        let provider = self.state.config().current_provider.clone();
+        let model = self.state.config().current_model.clone();
+        let variant = self.state.config().swarm_variant.clone();
+        let bus = self.bus.clone();
+
+        let abort = tokio_util::sync::CancellationToken::new();
+        self.pattern_abort = Some(abort.clone());
+
+        // Traces arrive only on worker completion; rows are published
+        // post-hoc from PatternOutput::traces, so the receiver is unused.
+        let (trace_tx, _trace_rx) = tokio::sync::mpsc::unbounded_channel();
+        let ctx = runie_patterns::Context {
+            config: runie_patterns::PatternConfig {
+                active: mode.active.clone(),
+                workers: mode.workers,
+                max_rounds: mode.max_rounds,
+                timeout_ms: mode.timeout_ms,
+                max_retries: mode.max_retries,
+                circuit_breaker: mode.circuit_breaker,
+            },
+            models: vec![(provider, model.clone())],
+            semaphore: std::sync::Arc::new(tokio::sync::Semaphore::new(mode.workers.max(1))),
+            trace_tx,
+            abort: abort.clone(),
+            runner,
+        };
+        let pattern = crate::pattern_runner::swarm_for_variant(variant.as_deref());
+
+        let id = request_id.to_owned();
+        let input = content.to_owned();
+        let start = std::time::Instant::now();
+        let task = tokio::spawn(async move {
+            // "Waiting for response…" row for the whole pattern run; cleared
+            // by the terminal events below (same contract as the agent turn).
+            bus.publish(Event::Thinking { id: id.clone() });
+            let outcome = pattern.execute(&ctx, &input).await;
+            if abort.is_cancelled() {
+                // The Abort event path already finalized the turn (UiActor::
+                // clear_turn_state + TurnActor::AbortTurn). Publishing Done
+                // here would double-finalize the turn.
+                return;
+            }
+            crate::pattern_runner::publish_pattern_outcome(&bus, &id, outcome, &model, start);
+        });
+        self.pattern_task = Some(task);
     }
 
     /// Handle hosted permission-dialog actions emitted by the dialog panel.
@@ -772,6 +885,20 @@ impl UiActor {
             // Safe even when idle: token.cancel is idempotent and the handle
             // abort is a harmless no-op when nothing is running.
             self.agent_handle.abort().await;
+            // Cancel an in-flight pattern run (mode=swarm): the pattern task
+            // observes the token and skips terminal events; the join handle
+            // is aborted so no pattern driver task lingers. In-flight worker
+            // subagent runs detach per the pattern cancellation contract.
+            if let Some(token) = self.pattern_abort.take() {
+                token.cancel();
+            }
+            if let Some(task) = self.pattern_task.take() {
+                task.abort();
+            }
+        } else {
+            // Turn ended normally — drop the finished pattern state.
+            self.pattern_abort = None;
+            self.pattern_task = None;
         }
         if let Some(ref turn_handle) = self.turn_handle {
             if is_abort {

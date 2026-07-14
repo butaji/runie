@@ -299,6 +299,12 @@ async fn call_leader(ctx: &Context, state: &SwarmState, id: &str, prompt: String
         &ctx.trace_tx,
         AgentTrace {
             agent_id: id.to_string(),
+            description: id.to_string(),
+            output: match &call {
+                LeaderCall::Text(text) => text.clone(),
+                LeaderCall::Failed(message) => message.clone(),
+                LeaderCall::Aborted => String::new(),
+            },
             start_time,
             duration_ms: start.elapsed().as_millis() as u64,
             events,
@@ -403,6 +409,7 @@ async fn run_worker(
     }];
 
     let (provider, model) = model_for(&env.models, index + 1);
+    let task_description = task_text.clone();
     let task = WorkerTask {
         id: worker_id.clone(),
         prompt: task_text,
@@ -454,6 +461,11 @@ async fn run_worker(
         &env.trace_tx,
         AgentTrace {
             agent_id: worker_id,
+            description: task_description,
+            output: match &result {
+                Ok((_, text)) => text.clone(),
+                Err(message) => message.clone(),
+            },
             start_time,
             duration_ms: start.elapsed().as_millis() as u64,
             events,
