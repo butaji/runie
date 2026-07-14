@@ -534,6 +534,17 @@ impl UiActor {
                 self.pending_input_chars.push(*c);
             }
         }
+        // Mirror newlines too: each routed Newline produces exactly one
+        // InputChanged echo (dropping one pending char), so the effective
+        // content stays accurate for fast-typed multi-line input. Without
+        // this, Up/Down right after a fast Shift+Enter saw a single-line
+        // mirror and moved the cursor to the start instead of up a line.
+        if matches!(evt, Event::Newline)
+            && self.state.open_dialog().is_none()
+            && !self.state.view().vim_nav_mode
+        {
+            self.pending_input_chars.push('\n');
+        }
 
         // Dialog input guard: when a dialog is open, apply typing/navigation/submit
         // events directly to state so the dialog form/palette receives them. The
@@ -564,20 +575,32 @@ impl UiActor {
             }
         }
 
-        // Empty-input ↑/↓ scroll the feed instead of cycling prompt history.
-        // The canonical router would send these straight to the InputActor,
-        // bypassing the core history-nav mode dispatch (HistoryNavMode::Scroll).
-        // Terminals with "alternate scroll" (iTerm2, kitty, WezTerm) translate
-        // mouse-wheel ticks into arrow keys when the app does not capture the
-        // mouse (runie keeps native selection), so wheel events arrive as
-        // HistoryPrev/HistoryNext and must scroll, not recall history.
+        // Up/Down follow grok's input model: history is recalled only into an
+        // EMPTY box (or while an unmodified recalled entry is showing, tracked
+        // by `history_pos`); with text in the box arrows move the cursor.
+        // The canonical router forwards HistoryPrev/Next verbatim to the
+        // InputActor — for a multi-line draft that would recall history and
+        // clobber the text, so translate to cursor messages here. Feed
+        // scrolling uses PgUp/PgDn and Esc nav mode.
         // `effective_input_content` includes the optimistic pending mirror so
         // fast typing (echo not yet processed) still counts as non-empty.
         if matches!(evt, Event::HistoryPrev | Event::HistoryNext)
-            && self.effective_input_content().is_empty()
+            && self.state.input().history_pos.is_none()
         {
-            self.apply_event(evt.clone());
-            return;
+            let content = self.effective_input_content();
+            if !content.is_empty() {
+                if let Some(ref handle) = self.input_handle {
+                    use runie_core::actors::InputMsg;
+                    let msg = match (content.contains('\n'), matches!(evt, Event::HistoryPrev)) {
+                        (true, true) => InputMsg::CursorLineUp,
+                        (true, false) => InputMsg::CursorLineDown,
+                        (false, true) => InputMsg::CursorStart,
+                        (false, false) => InputMsg::CursorEnd,
+                    };
+                    let _ = handle.send_message(msg);
+                }
+                return;
+            }
         }
 
         // Canonical routing via the shared helper (one place to maintain the mapping).

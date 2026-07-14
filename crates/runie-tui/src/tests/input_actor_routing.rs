@@ -655,57 +655,171 @@ async fn submit_after_fast_typing_keeps_full_content() {
     leader.shutdown().await;
 }
 
-/// Regression: Up on an EMPTY chat input must scroll the feed in production
-/// routing too, not only in the core `update` path.
+/// Receive the next `InputChanged` the real InputActor publishes on the bus.
 ///
-/// UiActor routes HistoryPrev/HistoryNext straight to the InputActor
-/// (`route_to_input_actor`), bypassing the core history-nav mode dispatch.
-/// Terminals with "alternate scroll" (iTerm2, kitty, WezTerm) translate
-/// mouse-wheel ticks into arrow keys when the app does not capture the mouse
-/// (runie keeps native selection), so empty-input arrows must scroll the
-/// feed instead of cycling prompt history.
-#[tokio::test]
-async fn up_on_empty_input_scrolls_feed_in_production() {
-    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+/// The manual harness drives the UiActor by hand, but the leader's InputActor
+/// is live: every routed `InputMsg` makes it publish its authoritative state.
+/// Reading that echo is how production-path tests observe what the actor
+/// actually did (as opposed to a fabricated projection).
+async fn next_input_changed(
+    sub: &mut tokio::sync::broadcast::Receiver<Event>,
+) -> runie_core::InputState {
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        let evt = tokio::time::timeout_at(deadline, sub.recv())
+            .await
+            .expect("timed out waiting for InputChanged echo")
+            .expect("bus closed while waiting for InputChanged");
+        if let Event::InputChanged { state } = evt {
+            return *state;
+        }
+    }
+}
 
-    // Seed a message so the feed has scrollback.
+/// Up on an EMPTY chat input recalls the latest history entry in production
+/// routing (grok parity). Feed scrolling is handled by PgUp/PgDn and Esc nav
+/// mode, not by arrow keys.
+#[tokio::test]
+async fn up_on_empty_input_recalls_history_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    let mut sub = leader.event_bus().subscribe();
+
+    // Seed the InputActor's history (the authoritative store).
+    leader
+        .input
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded {
+            entries: vec!["first".to_string(), "second".to_string()],
+        })
+        .expect("input actor should accept HistoryLoaded");
+    let seeded = next_input_changed(&mut sub).await;
+    assert_eq!(seeded.input_history.len(), 2);
+
+    // Seed a message so any feed scroll would be observable.
     ui.state.submit_user_message("hello".to_string());
     assert_eq!(ui.state.view().scroll, 0);
 
     ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
 
+    let echoed = next_input_changed(&mut sub).await;
     assert_eq!(
-        ui.state.view().scroll, 1,
-        "Up on empty input must scroll the feed in production routing"
+        echoed.input, "second",
+        "Up on empty input must recall the latest history entry"
     );
-    assert!(
-        ui.state.input().input.is_empty(),
-        "Up on empty input must not recall history into the input box"
+    assert_eq!(echoed.history_pos, Some(1));
+    assert_eq!(
+        ui.state.view().scroll, 0,
+        "Up on empty input must not scroll the feed"
     );
 
     leader.shutdown().await;
 }
 
-/// Down on an EMPTY chat input scrolls the feed toward newer content.
+/// Down on an EMPTY chat input (nothing newer) does not scroll the feed and
+/// flashes the input box.
 #[tokio::test]
-async fn down_on_empty_input_scrolls_feed_in_production() {
+async fn down_on_empty_input_does_not_scroll_in_production() {
     let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    let mut sub = leader.event_bus().subscribe();
 
     ui.state.submit_user_message("hello".to_string());
     ui.state.view_mut().scroll = 3;
 
     ui.handle_event(Event::HistoryNext, effect_tx.clone()).await;
 
+    let echoed = next_input_changed(&mut sub).await;
+    assert!(echoed.input.is_empty(), "Down on empty input recalls nothing");
+    assert!(echoed.input_flash > 0, "Down on empty input flashes");
     assert_eq!(
-        ui.state.view().scroll, 2,
-        "Down on empty input must scroll the feed down in production routing"
+        ui.state.view().scroll, 3,
+        "Down on empty input must not scroll the feed"
     );
 
     leader.shutdown().await;
 }
 
-/// With text in the input, Up keeps history routing (no feed scroll) — the
-/// scroll interception must only fire for an empty input box.
+/// Up with a multi-line draft moves the cursor up one line — it must NOT
+/// recall history over the draft. Regression: production routed Up verbatim
+/// to the InputActor, so a multi-line draft was replaced by a history entry.
+#[tokio::test]
+async fn up_with_multiline_moves_cursor_not_history_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    let mut sub = leader.event_bus().subscribe();
+
+    // Seed history: if Up recalled it, the draft would be replaced by "zzz".
+    leader
+        .input
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded {
+            entries: vec!["zzz".to_string()],
+        })
+        .expect("input actor should accept HistoryLoaded");
+    let _ = next_input_changed(&mut sub).await;
+
+    // Type "a", newline, "b" through the real routing path. Each event is
+    // routed to the InputActor; the UiActor's pending mirror keeps its
+    // effective content current without waiting for echoes.
+    ui.handle_event(Event::Input('a'), effect_tx.clone()).await;
+    let _ = next_input_changed(&mut sub).await;
+    ui.handle_event(Event::Newline, effect_tx.clone()).await;
+    let _ = next_input_changed(&mut sub).await;
+    ui.handle_event(Event::Input('b'), effect_tx.clone()).await;
+    let typed = next_input_changed(&mut sub).await;
+    assert_eq!(typed.input, "a\nb");
+    assert_eq!(typed.cursor_pos, 3);
+
+    ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
+
+    let echoed = next_input_changed(&mut sub).await;
+    assert_eq!(
+        echoed.input, "a\nb",
+        "Up with a multi-line draft must not recall history"
+    );
+    assert_eq!(
+        echoed.cursor_pos, 1,
+        "Up moves the cursor up one line, column preserved (line 1 col 1)"
+    );
+
+    leader.shutdown().await;
+}
+
+/// Up/Down with a single-line draft move the cursor to the start/end of the
+/// text (grok parity); the draft is never replaced by history.
+#[tokio::test]
+async fn up_down_with_single_line_moves_cursor_in_production() {
+    let (mut ui, effect_tx, leader) = manual_ui_actor().await;
+    let mut sub = leader.event_bus().subscribe();
+
+    leader
+        .input
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded {
+            entries: vec!["zzz".to_string()],
+        })
+        .expect("input actor should accept HistoryLoaded");
+    let _ = next_input_changed(&mut sub).await;
+
+    for c in "draft".chars() {
+        ui.handle_event(Event::Input(c), effect_tx.clone()).await;
+        let _ = next_input_changed(&mut sub).await;
+    }
+
+    ui.handle_event(Event::HistoryPrev, effect_tx.clone()).await;
+    let echoed = next_input_changed(&mut sub).await;
+    assert_eq!(echoed.input, "draft", "Up must not replace the draft");
+    assert_eq!(echoed.cursor_pos, 0, "Up moves cursor to start of text");
+
+    ui.handle_event(Event::HistoryNext, effect_tx.clone()).await;
+    let echoed = next_input_changed(&mut sub).await;
+    assert_eq!(echoed.input, "draft");
+    assert_eq!(
+        echoed.cursor_pos,
+        "draft".len(),
+        "Down moves cursor to end of text"
+    );
+
+    leader.shutdown().await;
+}
+
+/// With text in the input, Up moves the cursor (no feed scroll) — history
+/// recall only ever fires from an empty input box.
 #[tokio::test]
 async fn up_with_text_does_not_scroll_feed_in_production() {
     let (mut ui, effect_tx, leader) = manual_ui_actor().await;
@@ -738,8 +852,8 @@ async fn up_with_text_does_not_scroll_feed_in_production() {
 
 /// Race guard: fast typing whose InputChanged echo has not been processed
 /// yet leaves the AppState projection empty while the optimistic pending
-/// mirror holds the text. Up in that window must still route to the
-/// InputActor (history), not scroll the feed.
+/// mirror holds the text. Up in that window must move the cursor (text is
+/// present), not recall history or scroll the feed.
 #[tokio::test]
 async fn up_after_fast_typing_does_not_scroll_feed_in_production() {
     let (mut ui, effect_tx, leader) = manual_ui_actor().await;

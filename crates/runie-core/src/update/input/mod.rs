@@ -138,17 +138,25 @@ fn plan_mode_input_event(state: &mut AppState, event: crate::Event) {
 
 /// Navigation mode selected by history/preview key bindings.
 ///
-/// The four input modes that affect history navigation are:
+/// Up/Down semantics follow grok's input model: history is only ever recalled
+/// into an EMPTY input box, so drafts can never be clobbered by arrow keys.
+/// The five input modes that affect Up/Down are:
 /// - Path-completion suggestions open → navigate those
-/// - Multi-line input active → move cursor vertically
-/// - Empty input → scroll the feed (mouse wheels arrive as ↑/↓ in
-///   terminals with alternate scroll, and must scroll the feed)
-/// - Otherwise → navigate session history
+/// - An unmodified recalled history entry is showing → keep navigating history
+/// - Multi-line draft → move the cursor vertically
+/// - Empty input → recall history (latest first)
+/// - Single-line draft → move the cursor to the start/end of the text
+///
+/// Feed scrolling uses PgUp/PgDn and Esc nav mode; earlier versions scrolled
+/// the feed on Up/Down with an empty input so mouse wheels (which arrive as
+/// arrow keys in alternate-scroll terminals) would scroll — that sacrificed
+/// history recall from an empty box, the more familiar behavior.
 pub(crate) enum HistoryNavMode {
     PathComplete,
-    Cursor,
-    Scroll,
+    Recall,
+    MultiLine,
     History,
+    SingleLine,
 }
 
 /// Returns the navigation mode based on current input state.
@@ -158,30 +166,34 @@ pub(crate) enum HistoryNavMode {
 pub(crate) fn get_history_nav_mode(state: &mut AppState) -> HistoryNavMode {
     if state.completion().path_suggestions.is_some() {
         HistoryNavMode::PathComplete
+    } else if state.input().history_pos.is_some() {
+        // A recalled entry is showing unmodified (any edit clears
+        // `history_pos` in `InputMsg::apply_to`): keep navigating history.
+        HistoryNavMode::Recall
     } else if state.input().input.contains('\n') {
-        HistoryNavMode::Cursor
+        HistoryNavMode::MultiLine
     } else if state.input().input.is_empty() {
-        HistoryNavMode::Scroll
-    } else {
         HistoryNavMode::History
+    } else {
+        HistoryNavMode::SingleLine
     }
 }
 
 fn handle_history_prev(state: &mut AppState) {
     match get_history_nav_mode(state) {
         HistoryNavMode::PathComplete => state.path_completion_up(),
-        HistoryNavMode::Cursor => state.move_cursor_up(),
-        HistoryNavMode::Scroll => scroll_event(state, crate::Event::Up),
-        HistoryNavMode::History => state.history_prev(),
+        HistoryNavMode::Recall | HistoryNavMode::History => state.history_prev(),
+        HistoryNavMode::MultiLine => state.move_cursor_up(),
+        HistoryNavMode::SingleLine => state.move_cursor_to_line_start(),
     }
 }
 
 fn handle_history_next(state: &mut AppState) {
     match get_history_nav_mode(state) {
         HistoryNavMode::PathComplete => state.path_completion_down(),
-        HistoryNavMode::Cursor => state.move_cursor_down(),
-        HistoryNavMode::Scroll => scroll_event(state, crate::Event::Down),
-        HistoryNavMode::History => state.history_next(),
+        HistoryNavMode::Recall | HistoryNavMode::History => state.history_next(),
+        HistoryNavMode::MultiLine => state.move_cursor_down(),
+        HistoryNavMode::SingleLine => state.move_cursor_to_line_end(),
     }
 }
 

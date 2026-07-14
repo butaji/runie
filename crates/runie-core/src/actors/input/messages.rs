@@ -54,6 +54,19 @@ pub enum InputMsg {
     HistoryPrev,
     /// Navigate to the next history entry.
     HistoryNext,
+    /// Move the cursor one visual line up in a multi-line input.
+    ///
+    /// Column is preserved (clamped to the target line's length); on the
+    /// first line — and for single-line input — the cursor goes to the very
+    /// start of the input. grok parity: arrows with text in the box move the
+    /// cursor, they never recall history.
+    CursorLineUp,
+    /// Move the cursor one visual line down in a multi-line input.
+    ///
+    /// Column is preserved (clamped to the target line's length); on the
+    /// last line — and for single-line input — the cursor goes to the very
+    /// end of the input.
+    CursorLineDown,
     /// Undo the last edit.
     Undo,
     /// Redo the last undone edit.
@@ -95,6 +108,7 @@ impl InputMsg {
         match self {
             InputMsg::InsertChar(c) => {
                 state.push_undo();
+                state.history_pos = None;
                 state.adjust_chips_for_replace(state.cursor_pos, state.cursor_pos, c.len_utf8());
                 if state.cursor_pos == state.input.len() {
                     state.input.push(*c);
@@ -107,6 +121,7 @@ impl InputMsg {
             InputMsg::Backspace => {
                 if state.cursor_pos > 0 {
                     state.push_undo();
+                    state.history_pos = None;
                     if let Some(chip) = state.chip_at_cursor_end() {
                         // Atomic delete: the whole chip goes in one press.
                         state.input.drain(chip.start..chip.end);
@@ -123,6 +138,7 @@ impl InputMsg {
             }
             InputMsg::Newline => {
                 state.push_undo();
+                state.history_pos = None;
                 state.adjust_chips_for_replace(state.cursor_pos, state.cursor_pos, 1);
                 if state.cursor_pos == state.input.len() {
                     state.input.push('\n');
@@ -138,6 +154,7 @@ impl InputMsg {
                 }
                 let start = find_word_boundary_left(&state.input, state.cursor_pos);
                 state.push_undo();
+                state.history_pos = None;
                 state.input.drain(start..state.cursor_pos);
                 state.adjust_chips_for_replace(start, state.cursor_pos, 0);
                 state.cursor_pos = start;
@@ -146,6 +163,7 @@ impl InputMsg {
             InputMsg::DeleteToEnd => {
                 if state.cursor_pos < state.input.len() {
                     state.push_undo();
+                    state.history_pos = None;
                     let end = state.input.len();
                     state.input.truncate(state.cursor_pos);
                     state.adjust_chips_for_replace(state.cursor_pos, end, 0);
@@ -155,6 +173,7 @@ impl InputMsg {
             InputMsg::DeleteToStart => {
                 if state.cursor_pos > 0 {
                     state.push_undo();
+                    state.history_pos = None;
                     state.input.drain(..state.cursor_pos);
                     state.adjust_chips_for_replace(0, state.cursor_pos, 0);
                     state.cursor_pos = 0;
@@ -165,6 +184,7 @@ impl InputMsg {
                 if state.cursor_pos < state.input.len() {
                     let end = next_grapheme_boundary(&state.input, state.cursor_pos);
                     state.push_undo();
+                    state.history_pos = None;
                     state.input.drain(state.cursor_pos..end);
                     state.adjust_chips_for_replace(state.cursor_pos, end, 0);
                     state.redo_stack.clear();
@@ -174,6 +194,7 @@ impl InputMsg {
                 // Preserves newlines (multi-line input); >3 lines becomes a
                 // `[Pasted: N lines]` chip — grok parity.
                 state.insert_paste(text);
+                state.history_pos = None;
             }
             InputMsg::PasteImage => {
                 state.input_flash = 3;
@@ -214,7 +235,11 @@ impl InputMsg {
                 }
                 let pos = match state.history_pos {
                     Some(p) if p > 0 => p - 1,
-                    Some(p) => p,
+                    Some(_) => {
+                        // Already at the oldest entry: stay, no wrap-around.
+                        state.input_flash = 3;
+                        return;
+                    }
                     None => state.input_history.len() - 1,
                 };
                 state.history_pos = Some(pos);
@@ -225,7 +250,10 @@ impl InputMsg {
             InputMsg::HistoryNext => {
                 let pos = match state.history_pos {
                     Some(p) => p + 1,
-                    None => return,
+                    None => {
+                        state.input_flash = 3;
+                        return;
+                    }
                 };
                 if pos >= state.input_history.len() {
                     state.history_pos = None;
@@ -238,8 +266,50 @@ impl InputMsg {
                 }
                 state.chips.clear();
             }
+            InputMsg::CursorLineUp => {
+                let input = &state.input;
+                if !input.contains('\n') {
+                    // Single-line draft: Up goes to the start of the text.
+                    state.cursor_pos = 0;
+                    return;
+                }
+                let cursor = state.cursor_pos.min(input.len());
+                let cur_start = input[..cursor].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                if cur_start == 0 {
+                    // First line: Up goes to the very start of the input.
+                    state.cursor_pos = 0;
+                    return;
+                }
+                let prev_ls = input[..cur_start - 1].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                // Previous line spans [prev_ls, cur_start - 1); clamp the column
+                // to its length (not to prev_ls — wrong from line 3 onward).
+                let prev_line_len = cur_start - 1 - prev_ls;
+                state.cursor_pos = prev_ls + (cursor - cur_start).min(prev_line_len);
+            }
+            InputMsg::CursorLineDown => {
+                let input = &state.input;
+                let input_len = input.len();
+                let cursor = state.cursor_pos.min(input_len);
+                let cur_start = input[..cursor].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                let line_end = input[cur_start..]
+                    .find('\n')
+                    .map(|i| cur_start + i)
+                    .unwrap_or(input_len);
+                if line_end >= input_len {
+                    // Last line (or single-line): Down goes to the very end.
+                    state.cursor_pos = input_len;
+                    return;
+                }
+                let next_ls = line_end + 1;
+                let next_le = input[next_ls..]
+                    .find('\n')
+                    .map(|i| next_ls + i)
+                    .unwrap_or(input_len);
+                state.cursor_pos = next_ls + (cursor - cur_start).min(next_le - next_ls);
+            }
             InputMsg::Undo => {
                 if let Some((text, pos)) = state.undo_stack.pop() {
+                    state.history_pos = None;
                     state
                         .redo_stack
                         .push((state.input.clone(), state.cursor_pos));
@@ -250,6 +320,7 @@ impl InputMsg {
             }
             InputMsg::Redo => {
                 if let Some((text, pos)) = state.redo_stack.pop() {
+                    state.history_pos = None;
                     state
                         .undo_stack
                         .push((state.input.clone(), state.cursor_pos));
@@ -308,6 +379,7 @@ impl InputMsg {
                 }
                 if !combined.is_empty() {
                     state.push_undo();
+                    state.history_pos = None;
                     let append_at = state.input.len()
                         + usize::from(!state.input.is_empty() && !state.input.ends_with('\n'));
                     if !state.input.is_empty() && !state.input.ends_with('\n') {
@@ -325,6 +397,7 @@ impl InputMsg {
             }
             InputMsg::InsertAtRef { text } => {
                 state.push_undo();
+                state.history_pos = None;
                 state.adjust_chips_for_replace(state.cursor_pos, state.cursor_pos, text.len());
                 state.input.insert_str(state.cursor_pos, text);
                 state.cursor_pos += text.len();

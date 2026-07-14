@@ -7,20 +7,6 @@ use crate::model::AppState;
 
 pub const PAGE_SIZE: usize = 5;
 
-/// Pure helper: compute the byte offset of the start of the line containing `cursor_pos`.
-fn current_line_start(input: &str, cursor_pos: usize) -> usize {
-    let mut pos = 0;
-    for (i, c) in input.char_indices() {
-        if c == '\n' {
-            if i >= cursor_pos {
-                return pos;
-            }
-            pos = i + 1;
-        }
-    }
-    pos
-}
-
 fn count_input_lines(input: &str) -> usize {
     if input.is_empty() {
         return 1;
@@ -68,51 +54,17 @@ impl AppState {
     }
 
     pub(crate) fn move_cursor_up(&mut self) {
-        if !self.input().input.contains('\n') {
-            self.history_prev();
-            return;
-        }
-        let input_text = self.input().input.clone();
-        let cursor_pos = self.input().cursor_pos;
-        let cur_start = current_line_start(&input_text, cursor_pos);
-        if cur_start == 0 {
-            self.input_mut().input_flash = 3;
-            return;
-        }
-        let prev_ls = input_text[..cur_start - 1]
-            .rfind('\n')
-            .map(|i| i + 1)
-            .unwrap_or(0);
-        let new_pos = prev_ls + (cursor_pos - cur_start).min(prev_ls);
-        try_send_input(self, crate::actors::InputMsg::MoveCursor { pos: new_pos });
+        // Line-aware cursor move lives in `InputMsg::CursorLineUp` so the
+        // InputActor (production) and the synchronous test path share one
+        // implementation. Single-line drafts move to the start of the text;
+        // history recall is handled by the nav-mode dispatch, not here.
+        try_send_input(self, crate::actors::InputMsg::CursorLineUp);
         self.clamp_input_scroll();
         self.view_mut().dirty = true;
     }
 
     pub(crate) fn move_cursor_down(&mut self) {
-        if !self.input().input.contains('\n') {
-            self.history_next();
-            return;
-        }
-        let input_text = self.input().input.clone();
-        let cursor_pos = self.input().cursor_pos;
-        let input_len = self.input().input.len();
-        let cur_start = current_line_start(&input_text, cursor_pos);
-        let line_end = input_text[cur_start..]
-            .find('\n')
-            .map(|i| cur_start + i)
-            .unwrap_or(input_len);
-        if line_end >= input_len {
-            self.input_mut().input_flash = 3;
-            return;
-        }
-        let next_ls = line_end + 1;
-        let next_le = input_text[next_ls..]
-            .find('\n')
-            .map(|i| next_ls + i)
-            .unwrap_or(input_len);
-        let new_pos = next_ls + (cursor_pos - cur_start).min(next_le - next_ls);
-        try_send_input(self, crate::actors::InputMsg::MoveCursor { pos: new_pos });
+        try_send_input(self, crate::actors::InputMsg::CursorLineDown);
         self.clamp_input_scroll();
         self.view_mut().dirty = true;
     }

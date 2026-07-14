@@ -11,9 +11,8 @@
 //! text selection, so capture would force users to hold a
 //! terminal-specific modifier (Shift/Option/Fn) to copy feed text.
 //! Leaving the mouse to the terminal gives plain click-drag selection;
-//! feed scrolling is keyboard-driven (PgUp/PgDn, nav mode, and ↑/↓ on an
-//! empty input — which is also what mouse wheels send in terminals with
-//! alternate scroll).
+//! feed scrolling is keyboard-driven (PgUp/PgDn and Esc nav mode; ↑/↓ with
+//! an empty input box recall prompt history — grok parity).
 
 use crate::terminal::caps;
 use crossterm::{
