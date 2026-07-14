@@ -26,6 +26,8 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
     registry.register("approve", NamedHandler::Handler(handle_approve));
     registry.register("reject", NamedHandler::Handler(handle_reject));
     registry.register("provider", NamedHandler::Handler(handle_providers));
+    registry.register("mcp-servers", NamedHandler::Handler(handle_mcp_servers));
+    registry.register("skills-dialog", NamedHandler::Handler(handle_skills_dialog));
 }
 
 pub fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
@@ -133,4 +135,14 @@ pub fn handle_prompt(_state: &mut AppState, args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RunPromptCommand {
         name: args.trim().to_owned(),
     })
+}
+
+/// Open the MCP servers management dialog.
+pub fn handle_mcp_servers(_: &mut AppState, _: &str) -> CommandResult {
+    CommandResult::OpenDialog(DialogType::McpServers)
+}
+
+/// Open the skills management dialog.
+pub fn handle_skills_dialog(_: &mut AppState, _: &str) -> CommandResult {
+    CommandResult::OpenDialog(DialogType::Skills)
 }

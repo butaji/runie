@@ -18,6 +18,7 @@ mod mcp;
 mod print;
 mod scope; // Required for ConfigScope ValueEnum impl
 mod server;
+pub mod skills;
 pub mod transport;
 
 #[cfg(feature = "completions")]
@@ -72,6 +73,11 @@ enum Command {
         #[command(subcommand)]
         command: McpCommand,
     },
+    /// Manage skills (list, create, delete, show, install)
+    Skill {
+        #[command(subcommand)]
+        command: SkillCommand,
+    },
     /// Generate shell completions
     #[cfg(feature = "completions")]
     Completion {
@@ -85,7 +91,7 @@ enum Command {
 enum McpCommand {
     /// List configured MCP servers
     List,
-    /// Add an MCP server
+    /// Add an MCP server (stdio only, for full wizard use `mcp wizard`)
     Add {
         /// Server name (e.g., "filesystem")
         name: String,
@@ -103,6 +109,44 @@ enum McpCommand {
         /// Scope: global (default) or project
         #[arg(long, default_value = "global")]
         scope: scope::ConfigScopeValue,
+    },
+    /// Interactive wizard to add MCP server with all transport types
+    Wizard {
+        /// Scope: global (default) or project
+        #[arg(long, default_value = "global")]
+        scope: scope::ConfigScopeValue,
+    },
+    /// Show connection status of all configured MCP servers
+    Status,
+}
+
+/// Manage skills (list, create, delete, show, install)
+#[derive(Parser, Debug)]
+enum SkillCommand {
+    /// List all installed skills
+    List,
+    /// Show detailed information about a skill
+    Show {
+        /// Skill name
+        name: String,
+    },
+    /// Create a new skill from template
+    Create {
+        /// Skill name
+        name: String,
+    },
+    /// Delete a skill
+    Delete {
+        /// Skill name
+        name: String,
+    },
+    /// Install a skill from URL (e.g., GitHub raw URL)
+    Install {
+        /// URL to the skill file or repository
+        url: String,
+        /// Skill name (optional, derived from URL if not provided)
+        #[arg(long)]
+        name: Option<String>,
     },
 }
 
@@ -133,6 +177,7 @@ async fn main() {
         Command::Json => run_json().await,
         Command::Server { stdio, yolo } => run_server(stdio, yolo).await,
         Command::Mcp { command } => run_mcp(command).await,
+        Command::Skill { command } => run_skill(command).await,
         #[cfg(feature = "completions")]
         Command::Completion { shell } => crate::completion::run_completion(&shell),
     };
@@ -176,6 +221,18 @@ async fn run_mcp(cmd: McpCommand) -> Result<()> {
             scope,
         } => mcp::add(name, command, scope.0).await,
         McpCommand::Remove { name, scope } => mcp::remove(name, scope.0).await,
+        McpCommand::Wizard { scope } => mcp::wizard(scope.0).await,
+        McpCommand::Status => mcp::status().await,
+    }
+}
+
+async fn run_skill(cmd: SkillCommand) -> Result<()> {
+    match cmd {
+        SkillCommand::List => skills::list().await,
+        SkillCommand::Show { name } => skills::show(&name).await,
+        SkillCommand::Create { name } => skills::create(&name).await,
+        SkillCommand::Delete { name } => skills::delete(&name).await,
+        SkillCommand::Install { url, name } => skills::install(&url, name.as_deref()).await,
     }
 }
 
@@ -337,6 +394,135 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_mcp_wizard() {
+        let cli = Cli::try_parse_from(["runie", "mcp", "wizard"]).unwrap();
+        match cli.command {
+            Command::Mcp {
+                command: McpCommand::Wizard { scope },
+            } => {
+                assert_eq!(scope.0, runie_core::config::ConfigScope::Global);
+            }
+            _ => panic!("Expected Mcp::Wizard"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_mcp_wizard_project_scope() {
+        let cli = Cli::try_parse_from(["runie", "mcp", "wizard", "--scope", "project"]).unwrap();
+        match cli.command {
+            Command::Mcp {
+                command: McpCommand::Wizard { scope },
+            } => {
+                assert_eq!(scope.0, runie_core::config::ConfigScope::Project);
+            }
+            _ => panic!("Expected Mcp::Wizard with project scope"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_mcp_status() {
+        let cli = Cli::try_parse_from(["runie", "mcp", "status"]).unwrap();
+        assert!(matches!(
+            cli.command,
+            Command::Mcp {
+                command: McpCommand::Status
+            }
+        ));
+    }
+
+    #[test]
+    fn cli_parses_skill_list() {
+        let cli = Cli::try_parse_from(["runie", "skill", "list"]).unwrap();
+        assert!(matches!(
+            cli.command,
+            Command::Skill {
+                command: SkillCommand::List
+            }
+        ));
+    }
+
+    #[test]
+    fn cli_parses_skill_show() {
+        let cli = Cli::try_parse_from(["runie", "skill", "show", "my-skill"]).unwrap();
+        match cli.command {
+            Command::Skill {
+                command: SkillCommand::Show { name },
+            } => {
+                assert_eq!(name, "my-skill");
+            }
+            _ => panic!("Expected Skill::Show"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_skill_create() {
+        let cli = Cli::try_parse_from(["runie", "skill", "create", "new-skill"]).unwrap();
+        match cli.command {
+            Command::Skill {
+                command: SkillCommand::Create { name },
+            } => {
+                assert_eq!(name, "new-skill");
+            }
+            _ => panic!("Expected Skill::Create"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_skill_delete() {
+        let cli = Cli::try_parse_from(["runie", "skill", "delete", "old-skill"]).unwrap();
+        match cli.command {
+            Command::Skill {
+                command: SkillCommand::Delete { name },
+            } => {
+                assert_eq!(name, "old-skill");
+            }
+            _ => panic!("Expected Skill::Delete"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_skill_install() {
+        let cli = Cli::try_parse_from([
+            "runie",
+            "skill",
+            "install",
+            "https://github.com/user/repo/raw/main/SKILL.md",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Skill {
+                command: SkillCommand::Install { url, name },
+            } => {
+                assert_eq!(url, "https://github.com/user/repo/raw/main/SKILL.md");
+                assert!(name.is_none());
+            }
+            _ => panic!("Expected Skill::Install"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_skill_install_with_name() {
+        let cli = Cli::try_parse_from([
+            "runie",
+            "skill",
+            "install",
+            "--name",
+            "my-skill",
+            "https://github.com/user/repo/raw/main/SKILL.md",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Skill {
+                command: SkillCommand::Install { url, name },
+            } => {
+                assert_eq!(url, "https://github.com/user/repo/raw/main/SKILL.md");
+                assert_eq!(name, Some("my-skill".to_string()));
+            }
+            _ => panic!("Expected Skill::Install with name"),
+        }
+    }
+
+    #[test]
     fn cli_rejects_unknown_subcommand() {
         let result = Cli::try_parse_from(["runie", "unknown"]);
         assert!(result.is_err());
@@ -351,6 +537,7 @@ mod tests {
         assert!(help.contains("json"), "help should include json");
         assert!(help.contains("server"), "help should include server");
         assert!(help.contains("mcp"), "help should include mcp");
+        assert!(help.contains("skill"), "help should include skill");
     }
 
     #[test]

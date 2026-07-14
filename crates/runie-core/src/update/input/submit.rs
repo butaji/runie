@@ -180,6 +180,8 @@ impl AppState {
                 DialogType::Settings => crate::update::dialog::open_settings_dialog(self),
                 DialogType::ScopedModels => crate::update::dialog::open_scoped_models_dialog(self),
                 DialogType::ThemeSelector => crate::update::dialog::open_theme_selector(self),
+                DialogType::McpServers => crate::update::dialog::open_mcp_servers_dialog(self),
+                DialogType::Skills => crate::update::dialog::open_skills_dialog(self),
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 *self.open_dialog_mut() = Some(crate::commands::DialogState::Active {

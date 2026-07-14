@@ -161,7 +161,9 @@
     "SubmitKey": "{ provider: String, key: String }",
     "ValidationFailed": "{ provider: String, key: String, error: String }",
     "ModelsFetched": "{ provider: String, key: String, models: Vec<String> }",
-    "ToggleModel": "{ model: String }"
+    "ToggleModel": "{ model: String }",
+    "McpServerAction": "{ name: String, action: crate::dialog::builders::mcp::McpServerActionKind }",
+    "SkillAction": "{ name: String, action: crate::dialog::builders::skills::SkillActionKind }"
   },
   "categories": {
     "Input": {
@@ -233,7 +235,9 @@
         "CommandFormSubmit", "CommandFormClose", "DialogBack", "ProvidersDialog",
         "ProvidersSelectModel", "ProvidersDisconnect", "ProvidersAdd",
         "ProvidersEditModels", "CopyToClipboard", "CopySelectedBlock",
-        "CopyBlockMetadata", "AtFilePicker", "InsertAtRef"
+        "CopyBlockMetadata", "AtFilePicker", "InsertAtRef",
+        "ToggleMcpServersDialog", "McpServerAction",
+        "ToggleSkillsDialog", "SkillAction"
       ]
     },
     "Edit": {

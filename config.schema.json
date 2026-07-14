@@ -299,6 +299,11 @@
           "description": "Server-Sent Events transport.",
           "type": "string",
           "const": "sse"
+        },
+        {
+          "description": "WebSocket-based MCP server.",
+          "type": "string",
+          "const": "websocket"
         }
       ]
     },
