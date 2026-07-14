@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-patterns"]
 resolver = "2"
 
 # Default test timeout: 120 seconds. Tests exceeding this are killed.
@@ -117,6 +117,7 @@ runie-core = { path = "crates/runie-core" }
 runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
+runie-patterns = { path = "crates/runie-patterns" }
 
 # Provider-specific dependencies (hoisted to workspace for consistency)
 async-stream = "0.3"

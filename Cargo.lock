@@ -4209,6 +4209,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-patterns"
+version = "0.2.16"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "futures",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "runie-provider"
 version = "0.2.16"
 dependencies = [
