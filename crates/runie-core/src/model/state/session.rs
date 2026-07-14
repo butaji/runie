@@ -119,6 +119,13 @@ pub struct ConfigState {
     /// Truncation limits for tool output. Loaded from `[truncation]` in
     /// `config.toml`. See `runie-agent::truncate::TruncationPolicy`.
     pub truncation: crate::config::TruncationSection,
+    /// Agent orchestration pattern settings. Loaded from `[mode]` in
+    /// `config.toml`; switched at runtime via `/mode`.
+    pub mode: crate::config::ModeSection,
+    /// Swarm execution variant for this session ("parallel" | "delegation" |
+    /// "dag"), set by `/mode swarm <variant>`. Cleared when switching to a
+    /// non-swarm pattern. Session-only; not persisted to config.toml.
+    pub swarm_variant: Option<String>,
     /// Vim-style scrollback navigation (opt-in).
     pub vim_mode: bool,
     pub steering_mode: crate::model::DeliveryMode,
@@ -166,6 +173,8 @@ impl Default for ConfigState {
             scoped_models: Vec::new(),
             scoped_index: 0,
             truncation: crate::config::TruncationSection::default(),
+            mode: crate::config::ModeSection::default(),
+            swarm_variant: None,
             vim_mode: true,
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),

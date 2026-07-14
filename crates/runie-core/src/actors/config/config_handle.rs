@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use ractor::ActorRef;
 
 use crate::bus::EventBus;
-use crate::config::{Config, McpServer, TruncationSection};
+use crate::config::{Config, McpServer, ModeSection, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
 
@@ -127,6 +127,11 @@ impl RactorConfigHandle {
         let _ = self
             .inner
             .send_message(ConfigMsg::SetThinkingLevel { level });
+    }
+
+    /// Set the agent orchestration pattern section.
+    pub async fn set_mode(&self, section: ModeSection) {
+        let _ = self.inner.send_message(ConfigMsg::SetMode { section });
     }
 
     /// Load layered config (global + project) and return the effective config.

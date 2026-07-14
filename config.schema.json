@@ -43,6 +43,18 @@
         "servers": {}
       }
     },
+    "mode": {
+      "description": "Agent orchestration pattern settings.",
+      "$ref": "#/$defs/ModeSection",
+      "default": {
+        "active": "single",
+        "circuit_breaker": 3,
+        "max_retries": 2,
+        "max_rounds": 5,
+        "timeout_ms": 120000,
+        "workers": 3
+      }
+    },
     "model": {
       "description": "Legacy model field (use `[models].default` instead).",
       "type": [
@@ -301,6 +313,52 @@
           "const": "sse"
         }
       ]
+    },
+    "ModeSection": {
+      "description": "Agent orchestration pattern configuration (`[mode]` in config.toml).\n\nSee PATTERNS.md: `active` selects the orchestration pattern\n(`single` | `swarm` | `eval-optimizer`); the remaining fields bound\nworker concurrency, iterations, per-task timeout, retries, and the\nconsecutive-failure circuit breaker.",
+      "type": "object",
+      "properties": {
+        "active": {
+          "description": "Active orchestration pattern: \"single\" | \"swarm\" | \"eval-optimizer\".",
+          "type": "string",
+          "default": "single"
+        },
+        "circuit_breaker": {
+          "description": "Consecutive failures before fail-fast.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 3,
+          "minimum": 0
+        },
+        "max_retries": {
+          "description": "Retries per task on failure.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 2,
+          "minimum": 0
+        },
+        "max_rounds": {
+          "description": "Max iterations (eval-optimizer, swarm).",
+          "type": "integer",
+          "format": "uint",
+          "default": 5,
+          "minimum": 0
+        },
+        "timeout_ms": {
+          "description": "Per-task timeout in milliseconds.",
+          "type": "integer",
+          "format": "uint64",
+          "default": 120000,
+          "minimum": 0
+        },
+        "workers": {
+          "description": "Max parallel workers.",
+          "type": "integer",
+          "format": "uint",
+          "default": 3,
+          "minimum": 0
+        }
+      }
     },
     "ModelProvider": {
       "description": "A provider's configuration entry.\nAPI keys are resolved from environment variables or OS keyring, not stored here.",

@@ -77,6 +77,10 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             state.set_thinking_level(*level);
             true
         }
+        crate::Event::SetMode { active, workers } => {
+            state.set_mode(active, *workers);
+            true
+        }
         crate::Event::ToggleReadOnly => {
             state.toggle_read_only();
             true

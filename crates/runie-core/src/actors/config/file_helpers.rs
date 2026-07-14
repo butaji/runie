@@ -200,6 +200,14 @@ pub fn set_thinking_level_at_path(path: &Path, level: ThinkingLevel) -> anyhow::
     })
 }
 
+/// Set the agent orchestration pattern section.
+pub fn set_mode_at_path(path: &Path, section: &crate::config::ModeSection) -> anyhow::Result<()> {
+    let s = section.clone();
+    with_exclusive_lock(path, move |config| {
+        config.mode = s.clone();
+    })
+}
+
 /// Set or clear the per-model thinking level override (`provider/model`).
 pub fn set_model_thinking_at_path(
     path: &Path,

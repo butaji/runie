@@ -192,6 +192,7 @@ impl AppState {
             self.config_mut().theme_name = theme.clone();
         }
         self.config_mut().truncation = config.truncation.clone();
+        self.config_mut().mode = config.mode.clone();
         self.config_mut().thinking_level = config.thinking_level;
         self.config_mut().model_thinking = config.models.thinking.clone();
         self.config_mut().vim_mode = config.vim_mode();
@@ -453,6 +454,26 @@ impl AppState {
             ),
             TransientLevel::Info,
         );
+    }
+
+    /// Switch the agent orchestration pattern (`/mode`).
+    /// Persists the `[mode]` section to config.toml via ConfigActor and
+    /// clears the per-session swarm variant when leaving the swarm pattern.
+    pub(crate) fn set_mode(&mut self, active: &str, workers: Option<usize>) {
+        self.config_mut().mode.active = active.to_owned();
+        if let Some(w) = workers {
+            self.config_mut().mode.workers = w;
+        }
+        if active != "swarm" {
+            self.config_mut().swarm_variant = None;
+        }
+        // Fire-and-forget persist.  In tests without handles, mutation is already applied.
+        if let Some(h) = self.actor_handles() {
+            let _ = h.config.try_send(ConfigMsg::SetMode {
+                section: self.config().mode.clone(),
+            });
+        }
+        self.notify(format!("Pattern set to: {}", active), TransientLevel::Info);
     }
 
     /// Set or clear the per-model thinking level override (`provider/model`).

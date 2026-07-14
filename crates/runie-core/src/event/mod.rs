@@ -488,6 +488,12 @@ pub enum Event {
     },
     CycleThinkingLevel,
     SetThinkingLevel(ThinkingLevel),
+    /// Switch the agent orchestration pattern (`/mode`); `workers` overrides
+    /// the configured worker count when present.
+    SetMode {
+        active: String,
+        workers: Option<usize>,
+    },
     ToggleReadOnly,
     TrustProject,
     UntrustProject,

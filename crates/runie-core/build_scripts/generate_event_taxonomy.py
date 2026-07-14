@@ -53,7 +53,7 @@ VARIANTS_WITH_FIELDS = {
     "TerminalSize", "SelectProvider", "SubmitKey", "ToggleModel", "SwitchModel",
     "SelectModel", "SwitchModelWithLevel",
     "SwitchTheme", "ScopedModelToggle", "ScopedModelToggleProvider",
-    "SettingsSwitchCategory", "SetThinkingLevel", "ForkSession", "SessionTreeSelect",
+    "SettingsSwitchCategory", "SetThinkingLevel", "SetMode", "ForkSession", "SessionTreeSelect",
     "SessionLoaded", "SessionImported", "SessionList", "SessionOperationFailed",
     "SessionMessageAdded", "SessionMessageUpdated", "SessionMetadataUpdated",
     "SessionChanged", "SessionTreeSnapshot",

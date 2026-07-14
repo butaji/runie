@@ -145,6 +145,62 @@ pub mod model {
     }
 }
 
+/// Mode (orchestration pattern) command strings.
+pub mod mode {
+    use crate::config::ModeSection;
+
+    /// Valid orchestration patterns, for error messages.
+    pub const VALID_PATTERNS: &str = "single, swarm, eval-optimizer";
+    /// Valid swarm variants, for error messages.
+    pub const VALID_VARIANTS: &str = "parallel, delegation, dag";
+
+    /// Current pattern plus its tunable config.
+    pub fn current(mode: &ModeSection) -> String {
+        format!(
+            "Pattern: {}\nworkers: {}, max_rounds: {}, timeout: {}s, max_retries: {}, circuit_breaker: {}",
+            mode.active,
+            mode.workers,
+            mode.max_rounds,
+            mode.timeout_ms / 1000,
+            mode.max_retries,
+            mode.circuit_breaker
+        )
+    }
+
+    /// Available patterns with descriptions.
+    pub fn list() -> String {
+        [
+            "single — Direct execution",
+            "swarm — Coordinated multi-agent work",
+            "eval-optimizer — Critical review loops",
+        ]
+        .join("\n")
+    }
+
+    /// Unknown pattern name.
+    pub fn unknown_pattern(name: &str) -> String {
+        format!("Unknown pattern '{}'. Valid patterns: {}", name, VALID_PATTERNS)
+    }
+
+    /// Invalid workers value.
+    pub fn invalid_workers(value: &str) -> String {
+        format!("Invalid workers value '{}': expected a number >= 1", value)
+    }
+
+    /// Unknown swarm variant.
+    pub fn unknown_variant(name: &str) -> String {
+        format!(
+            "Unknown swarm variant '{}'. Valid variants: {}",
+            name, VALID_VARIANTS
+        )
+    }
+
+    /// Unknown argument for a pattern.
+    pub fn unknown_arg(active: &str, arg: &str) -> String {
+        format!("Unknown argument '{}' for pattern '{}'", arg, active)
+    }
+}
+
 /// System command strings.
 pub mod system {
     /// Message when nothing to copy.

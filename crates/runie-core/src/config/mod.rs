@@ -134,6 +134,47 @@ pub struct PromptsSection {
 }
 
 // ============================================================================
+// Mode Section
+// ============================================================================
+
+/// Agent orchestration pattern configuration (`[mode]` in config.toml).
+///
+/// See PATTERNS.md: `active` selects the orchestration pattern
+/// (`single` | `swarm` | `eval-optimizer`); the remaining fields bound
+/// worker concurrency, iterations, per-task timeout, retries, and the
+/// consecutive-failure circuit breaker.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[derive(JsonSchema)]
+pub struct ModeSection {
+    /// Active orchestration pattern: "single" | "swarm" | "eval-optimizer".
+    pub active: String,
+    /// Max parallel workers.
+    pub workers: usize,
+    /// Max iterations (eval-optimizer, swarm).
+    pub max_rounds: usize,
+    /// Per-task timeout in milliseconds.
+    pub timeout_ms: u64,
+    /// Retries per task on failure.
+    pub max_retries: u32,
+    /// Consecutive failures before fail-fast.
+    pub circuit_breaker: u32,
+}
+
+impl Default for ModeSection {
+    fn default() -> Self {
+        Self {
+            active: "single".into(),
+            workers: 3,
+            max_rounds: 5,
+            timeout_ms: 120_000,
+            max_retries: 2,
+            circuit_breaker: 3,
+        }
+    }
+}
+
+// ============================================================================
 // Truncation Section
 // ============================================================================
 
@@ -373,6 +414,9 @@ pub struct Config {
     /// Truncation settings.
     #[serde(default)]
     pub truncation: TruncationSection,
+    /// Agent orchestration pattern settings.
+    #[serde(default)]
+    pub mode: ModeSection,
     /// Thinking level for reasoning-intensive tasks.
     #[serde(default)]
     pub thinking_level: crate::model::ThinkingLevel,

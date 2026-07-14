@@ -11,7 +11,7 @@ use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 
 use crate::actors::CONFIG_WATCHER_DEBOUNCE_MS;
-use crate::config::{Config, McpServer, TruncationSection};
+use crate::config::{Config, McpServer, ModeSection, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
 use ractor::{ActorRef, RpcReplyPort};
@@ -60,6 +60,7 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         ConfigMsg::SetTelemetry { enabled } => set_telemetry(state, enabled).await,
         ConfigMsg::SetTruncation { limits } => set_truncation(state, &limits).await,
         ConfigMsg::SetThinkingLevel { level } => set_thinking_level(state, &level).await,
+        ConfigMsg::SetMode { section } => set_mode(state, &section).await,
         ConfigMsg::SetModelThinking {
             provider,
             model,
@@ -256,6 +257,15 @@ pub(super) async fn set_thinking_level(state: &mut ConfigActorState, level: &Thi
     let result =
         tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level))
             .await;
+    handle_write_result(state, result).await;
+}
+
+/// Set the agent orchestration pattern section.
+pub(super) async fn set_mode(state: &mut ConfigActorState, section: &ModeSection) {
+    let path = state.path.clone();
+    let section = section.clone();
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::set_mode_at_path(&path, &section)).await;
     handle_write_result(state, result).await;
 }
 

@@ -92,6 +92,95 @@ fn fff_section_has_tunable_scan_settings() {
 }
 
 #[test]
+fn mode_section_has_tunable_defaults() {
+    let section = ModeSection::default();
+    assert_eq!(section.active, "single");
+    assert_eq!(section.workers, 3);
+    assert_eq!(section.max_rounds, 5);
+    assert_eq!(section.timeout_ms, 120_000);
+    assert_eq!(section.max_retries, 2);
+    assert_eq!(section.circuit_breaker, 3);
+
+    let custom = ModeSection {
+        active: "swarm".into(),
+        workers: 5,
+        ..ModeSection::default()
+    };
+    assert_eq!(custom.active, "swarm");
+    assert_eq!(custom.workers, 5);
+    assert_eq!(custom.max_rounds, 5);
+}
+
+#[test]
+fn config_load_defaults_mode_section_when_missing() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(&dir, "");
+    let config = Config::load(Some(&path));
+    assert_eq!(config.mode, ModeSection::default());
+}
+
+#[test]
+fn config_load_parses_partial_mode_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[mode]
+workers = 5
+"#,
+    );
+    let config = Config::load(Some(&path));
+    assert_eq!(config.mode.workers, 5);
+    assert_eq!(config.mode.active, "single");
+    assert_eq!(config.mode.max_rounds, 5);
+    assert_eq!(config.mode.timeout_ms, 120_000);
+    assert_eq!(config.mode.max_retries, 2);
+    assert_eq!(config.mode.circuit_breaker, 3);
+}
+
+#[test]
+fn config_load_parses_full_mode_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = make_test_config(
+        &dir,
+        r#"
+[mode]
+active = "eval-optimizer"
+workers = 4
+max_rounds = 7
+timeout_ms = 60000
+max_retries = 1
+circuit_breaker = 2
+"#,
+    );
+    let config = Config::load(Some(&path));
+    assert_eq!(config.mode.active, "eval-optimizer");
+    assert_eq!(config.mode.workers, 4);
+    assert_eq!(config.mode.max_rounds, 7);
+    assert_eq!(config.mode.timeout_ms, 60_000);
+    assert_eq!(config.mode.max_retries, 1);
+    assert_eq!(config.mode.circuit_breaker, 2);
+}
+
+#[test]
+fn mode_section_roundtrips_through_toml() {
+    let config = Config {
+        mode: ModeSection {
+            active: "swarm".into(),
+            workers: 8,
+            max_rounds: 9,
+            timeout_ms: 30_000,
+            max_retries: 4,
+            circuit_breaker: 6,
+        },
+        ..Config::default()
+    };
+    let serialized = toml::to_string(&config).expect("config serializes");
+    let parsed: Config = toml::from_str(&serialized).expect("config deserializes");
+    assert_eq!(parsed.mode, config.mode);
+}
+
+#[test]
 fn config_includes_all_tunable_sections() {
     let config = Config::default();
     // HTTP section
@@ -293,6 +382,10 @@ fn config_path_returns_expected_path() {
 
 #[test]
 fn classify_change_detects_model_change() {
+    // Pin the thread-local mock override: classify_change → resolve_default_model
+    // reads is_mock_enabled(), whose global atomic is flipped by unrelated
+    // parallel tests.
+    crate::provider::set_mock_enabled(false);
     let prev = Config {
         provider: Some("openai".to_string()),
         ..Config::default()
@@ -309,6 +402,8 @@ fn classify_change_detects_model_change() {
 
 #[test]
 fn classify_change_detects_theme_change() {
+    // See classify_change_detects_model_change for why the override is pinned.
+    crate::provider::set_mock_enabled(false);
     let prev = Config {
         theme: Some("dark".to_string()),
         ..Config::default()
@@ -323,6 +418,8 @@ fn classify_change_detects_theme_change() {
 
 #[test]
 fn classify_change_returns_empty_when_identical() {
+    // See classify_change_detects_model_change for why the override is pinned.
+    crate::provider::set_mock_enabled(false);
     let prev = Config {
         provider: Some("openai".to_string()),
         theme: Some("dark".to_string()),

@@ -1,6 +1,6 @@
 //! Typed messages for `ConfigActor`.
 
-use crate::config::{Config, McpServer, TruncationSection};
+use crate::config::{Config, McpServer, ModeSection, TruncationSection};
 use crate::model::ThinkingLevel;
 use ractor::RpcReplyPort;
 
@@ -37,6 +37,8 @@ pub enum ConfigMsg {
     SetTruncation { limits: TruncationSection },
     /// Set thinking level.
     SetThinkingLevel { level: ThinkingLevel },
+    /// Set the agent orchestration pattern section.
+    SetMode { section: ModeSection },
     /// Set (or clear, with `None`) the per-model thinking level override for
     /// `provider/model`.
     SetModelThinking {
@@ -106,6 +108,9 @@ impl Clone for ConfigMsg {
                 limits: limits.clone(),
             },
             ConfigMsg::SetThinkingLevel { level } => ConfigMsg::SetThinkingLevel { level: *level },
+            ConfigMsg::SetMode { section } => ConfigMsg::SetMode {
+                section: section.clone(),
+            },
             ConfigMsg::SetModelThinking {
                 provider,
                 model,

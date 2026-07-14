@@ -102,6 +102,7 @@
     "ScopedModelToggleProvider": "{ provider: String }",
     "SettingsSwitchCategory": "{ category: SettingsCategory }",
     "SetThinkingLevel": "ThinkingLevel",
+    "SetMode": "{ active: String, workers: Option<usize> }",
     "PaletteFilter": "char",
     "ModelSelectorFilter": "char",
     "CommandFormInput": "char",
@@ -215,7 +216,7 @@
         "ScopedModelDisableAll", "ScopedModelToggleProvider", "ToggleSettingsDialog",
         "SettingsUp", "SettingsDown", "SettingsLeft", "SettingsRight",
         "SettingsSelect", "SettingsClose", "SettingsSwitchCategory",
-        "CycleThinkingLevel", "SetThinkingLevel", "ToggleReadOnly",
+        "CycleThinkingLevel", "SetThinkingLevel", "SetMode", "ToggleReadOnly",
         "TrustProject", "UntrustProject", "ReloadAll"
       ],
       "fact_variants": ["KeybindingsReloaded"]

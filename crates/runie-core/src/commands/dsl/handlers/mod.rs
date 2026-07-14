@@ -2,6 +2,7 @@
 //!
 
 pub mod help;
+pub mod mode;
 pub mod model;
 pub mod registry;
 pub mod session;
@@ -23,6 +24,7 @@ fn init_handler_registry() -> HandlerRegistry {
     // Register all handlers
     session::register_handlers(&mut registry);
     model::register_handlers(&mut registry);
+    mode::register_handlers(&mut registry);
     tool::register_handlers(&mut registry);
     system::register_handlers(&mut registry);
     help::register_handlers(&mut registry);

@@ -135,6 +135,7 @@ fn dispatcher_handles_all_variants() {
             | Event::SettingsSwitchCategory { .. }
             | Event::CycleThinkingLevel
             | Event::SetThinkingLevel(_)
+            | Event::SetMode { .. }
             | Event::ToggleReadOnly
             | Event::TrustProject
             | Event::UntrustProject

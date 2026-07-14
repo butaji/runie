@@ -1,0 +1,9 @@
+# Mode command
+name: mode
+description: Switch agent orchestration pattern
+category: System
+sub: true
+triggers:
+  - /mode
+type: handler
+handler: mode

@@ -340,6 +340,7 @@ impl DurableCoreEvent {
             | Event::SettingsClose
             | Event::SettingsSwitchCategory { .. }
             | Event::CycleThinkingLevel
+            | Event::SetMode { .. }
             | Event::ToggleReadOnly
             | Event::TrustProject
             | Event::UntrustProject
