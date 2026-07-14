@@ -73,6 +73,31 @@ pub fn generate_schema<T: JsonSchema>() -> Value {
     serde_json::to_value(schemars::schema_for!(T)).unwrap_or_default()
 }
 
+/// Supported tool format output targets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolFormat {
+    /// MCP (Model Context Protocol) format.
+    Mcp,
+    /// OpenAI function calling format.
+    OpenAi,
+    /// Anthropic tool format (no type wrapper, uses input_schema).
+    Anthropic,
+    /// Google Gemini function declaration format.
+    Gemini,
+}
+
+impl ToolFormat {
+    /// Convert a `ToolDef` implementation to the target format.
+    pub fn convert<T: ToolDef>(&self) -> Value {
+        match self {
+            ToolFormat::Mcp => to_mcp_tool::<T>().into(),
+            ToolFormat::OpenAi => to_openai_function::<T>(),
+            ToolFormat::Anthropic => to_anthropic_tool::<T>(),
+            ToolFormat::Gemini => to_gemini_tool::<T>(),
+        }
+    }
+}
+
 /// Generate MCP tool definition from a `ToolDef` implementation.
 pub fn to_mcp_tool<T: ToolDef>() -> Tool {
     let schema = generate_schema::<T::Input>();
@@ -100,6 +125,35 @@ pub fn to_openai_function<T: ToolDef>() -> Value {
             "description": T::DESCRIPTION,
             "parameters": schema,
         }
+    })
+}
+
+/// Generate Anthropic tool format.
+///
+/// Unlike OpenAI, this uses `input_schema` directly without the `type` and
+/// `function` wrapper. The output is a bare tool object with `name`,
+/// `description`, and `input_schema` fields.
+pub fn to_anthropic_tool<T: ToolDef>() -> Value {
+    let schema = generate_schema::<T::Input>();
+    serde_json::json!({
+        "name": T::NAME,
+        "description": T::DESCRIPTION,
+        "input_schema": schema,
+    })
+}
+
+/// Generate Google Gemini function declaration format.
+///
+/// The output is a `function_declarations` array containing the tool definition
+/// with `name`, `description`, and `parameters` fields at the top level.
+pub fn to_gemini_tool<T: ToolDef>() -> Value {
+    let schema = generate_schema::<T::Input>();
+    serde_json::json!({
+        "function_declarations": [{
+            "name": T::NAME,
+            "description": T::DESCRIPTION,
+            "parameters": schema,
+        }]
     })
 }
 
@@ -158,5 +212,78 @@ mod tests {
         let parsed: TestInput = parse_input(&input).unwrap();
         assert_eq!(parsed.path, "/tmp/test.txt");
         assert_eq!(parsed.limit, None);
+    }
+
+    #[test]
+    fn openai_function_has_correct_structure() {
+        let result = to_openai_function::<TestInput>();
+        assert!(result.get("type").is_some(), "should have 'type' field");
+        assert!(result.get("function").is_some(), "should have 'function' wrapper");
+        let func = result.get("function").unwrap().as_object().unwrap();
+        assert_eq!(func.get("name").and_then(|v| v.as_str()), Some(""));
+        assert!(func.get("description").is_some());
+        assert!(func.get("parameters").is_some());
+    }
+
+    #[test]
+    fn anthropic_tool_has_correct_structure() {
+        let result = to_anthropic_tool::<TestInput>();
+        // Anthropic format has no 'type' or 'function' wrapper
+        assert!(result.get("type").is_none(), "should NOT have 'type' field");
+        assert!(result.get("function").is_none(), "should NOT have 'function' wrapper");
+        assert!(result.get("name").is_some(), "should have 'name' field");
+        assert!(result.get("description").is_some(), "should have 'description' field");
+        assert!(result.get("input_schema").is_some(), "should have 'input_schema' field");
+        assert!(result.get("parameters").is_none(), "should NOT have 'parameters' field");
+    }
+
+    #[test]
+    fn gemini_tool_has_correct_structure() {
+        let result = to_gemini_tool::<TestInput>();
+        // Gemini format wraps in function_declarations array
+        assert!(result.get("function_declarations").is_some(), "should have 'function_declarations' field");
+        let decls = result.get("function_declarations").unwrap().as_array().unwrap();
+        assert_eq!(decls.len(), 1);
+        let decl = &decls[0];
+        assert!(decl.get("name").is_some());
+        assert!(decl.get("description").is_some());
+        assert!(decl.get("parameters").is_some(), "should have 'parameters' field");
+    }
+
+    #[test]
+    fn tool_format_convert_mcp() {
+        let result = ToolFormat::Mcp.convert::<TestInput>();
+        let obj = result.as_object().unwrap();
+        assert!(obj.contains_key("name"));
+        assert!(obj.contains_key("description"));
+    }
+
+    #[test]
+    fn tool_format_convert_openai() {
+        let result = ToolFormat::OpenAi.convert::<TestInput>();
+        assert!(result.get("type").is_some());
+        assert!(result.get("function").is_some());
+    }
+
+    #[test]
+    fn tool_format_convert_anthropic() {
+        let result = ToolFormat::Anthropic.convert::<TestInput>();
+        assert!(result.get("type").is_none());
+        assert!(result.get("name").is_some());
+        assert!(result.get("input_schema").is_some());
+    }
+
+    #[test]
+    fn tool_format_convert_gemini() {
+        let result = ToolFormat::Gemini.convert::<TestInput>();
+        assert!(result.get("function_declarations").is_some());
+    }
+
+    #[test]
+    fn tool_format_is_copy() {
+        use std::mem;
+        let fmt = ToolFormat::Anthropic;
+        let size = mem::size_of_val(&fmt);
+        assert_eq!(size, 1, "ToolFormat should be 1 byte (copyable enum)");
     }
 }

@@ -60,7 +60,9 @@ pub mod markdown;
 pub mod message;
 /// Wire-protocol types (JSON-RPC envelope, submission-queue types).
 pub mod proto;
+pub mod hidden_params;
 pub mod provider_event;
+pub use hidden_params::{AsHiddenParams, HiddenParams, ProviderEventWithHiddenParams, ResponseCost};
 pub use message::Part;
 pub mod harness_skills;
 pub mod model;
@@ -81,6 +83,7 @@ pub mod snapshot;
 /// Metrics facade for telemetry (counters, histograms, gauges).
 pub mod metrics;
 pub mod streaming_buffer;
+pub mod stream_wrapper;
 pub mod subagents;
 /// Tracing subscriber initialization.
 pub mod tracing_init;
@@ -137,6 +140,11 @@ pub use diff::{Diff, DiffHunk, DiffLine};
 pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
 // NOTE: RunieError/RunieErrorKind were deleted — see crates/runie-core/src/error.rs note.
+pub mod agentic_loop;
+pub use agentic_loop::{
+    check_agentic_loop_safety, fingerprint_tools, AgenticLoopConfig, AgenticLoopState,
+    AgenticLoopTracker,
+};
 pub use event::Event;
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use harness_skills::{
