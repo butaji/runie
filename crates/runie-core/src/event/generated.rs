@@ -184,6 +184,9 @@ impl Event {
             Event::SettingsUp => EventKind::Intent,
             Event::ShareSession => EventKind::Control,
             Event::ShowDiagnostics => EventKind::Intent,
+            Event::SkillCreated { .. } => EventKind::Fact,
+            Event::SkillDeleted { .. } => EventKind::Fact,
+            Event::SkillError { .. } => EventKind::Fact,
             Event::SkillsLoaded { .. } => EventKind::Fact,
             Event::StarSession { .. } => EventKind::Control,
             Event::Start => EventKind::Intent,
@@ -422,6 +425,9 @@ impl Event {
             Event::SettingsUp => EventCategory::ModelConfig,
             Event::ShareSession => EventCategory::Control,
             Event::ShowDiagnostics => EventCategory::System,
+            Event::SkillCreated { .. } => EventCategory::IO,
+            Event::SkillDeleted { .. } => EventCategory::IO,
+            Event::SkillError { .. } => EventCategory::IO,
             Event::SkillsLoaded { .. } => EventCategory::IO,
             Event::StarSession { .. } => EventCategory::Control,
             Event::Start => EventCategory::LoginFlow,
@@ -697,6 +703,9 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FilesWritten { .. }
             | Event::GistShared { .. }
             | Event::ProcessResumed
+            | Event::SkillCreated { .. }
+            | Event::SkillDeleted { .. }
+            | Event::SkillError { .. }
             | Event::SkillsLoaded { .. }
             | Event::ModelsFetched { .. }
             | Event::ValidationFailed { .. }

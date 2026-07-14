@@ -56,12 +56,19 @@ impl LazyCache {
             E::UserMessage { .. } => PostKind::UserInput,
             E::AgentMessage { .. } => PostKind::AgentResponse,
             E::Thinking { .. } => PostKind::Thinking,
-            E::ThoughtMarker { .. } | E::ThoughtSummary { .. } => PostKind::Thought,
+            E::ThoughtMarker { .. } | E::ThoughtSummary { .. } | E::AnthropicThinking { .. } => PostKind::Thought,
             E::ToolRunning { .. } => PostKind::ToolRunning,
             E::ToolDone { .. } => PostKind::ToolDone,
             E::ToolSummary { .. } => PostKind::ToolSummary,
+            E::ToolConfirmation { .. } => PostKind::ToolRunning,
             E::ContextGroup { .. } => PostKind::ContextGroup,
             E::TurnComplete { .. } => PostKind::TurnComplete,
+            E::Image { .. } => PostKind::AgentResponse,
+            E::DataPart { .. } => PostKind::AgentResponse,
+            E::MarkdownTable { .. } => PostKind::AgentResponse,
+            E::DiffOutput { .. } => PostKind::AgentResponse,
+            E::WebSearchCall { .. } => PostKind::AgentResponse,
+            E::AnsiStyled { .. } => PostKind::AgentResponse,
         }
     }
 
@@ -219,8 +226,37 @@ impl LazyCache {
         match part {
             Part::Text { content } => Some((Self::text_elem(content, ts, provider), false)),
             Part::Reasoning { content } => Some((Self::reasoning_elem(content, state, ts), true)),
+            Part::ReasoningEncrypted { data, signature } => {
+                Some((Self::redacted_thinking_elem(data, signature.as_deref(), ts), true))
+            }
+            Part::AnthropicThinking { content, signature } => {
+                Some((Self::anthropic_thinking_elem(content, signature.as_deref(), ts), true))
+            }
             Part::ToolCall { name, args, .. } => Some((Self::tool_call_elem(name, args, ts), false)),
             Part::ToolResult { output, .. } => Some((Self::tool_result_elem(output, ts), false)),
+            Part::ToolConfirmation { id, name, args, description, .. } => {
+                Some((Self::tool_confirmation_elem(id, name, args, description.as_deref(), ts), false))
+            }
+            Part::Image { data, mime_type } => {
+                Some((Self::image_elem(data, mime_type, ts), false))
+            }
+            Part::Data { data, format } => {
+                Some((Self::data_part_elem(data, format.as_deref(), ts), false))
+            }
+            Part::WebSearch { query } => {
+                Some((Self::web_search_elem(query, ts), false))
+            }
+            Part::Diff { content, diff_type } => {
+                let dt = match diff_type.as_str() {
+                    "side_by_side" => crate::view::elements::DiffType::SideBySide,
+                    "context" => crate::view::elements::DiffType::Context,
+                    _ => crate::view::elements::DiffType::Unified,
+                };
+                Some((Self::diff_output_elem(content, dt, ts), false))
+            }
+            Part::Ansi { raw, plain } => {
+                Some((Self::ansi_styled_elem(raw, plain, ts), false))
+            }
         }
     }
 
@@ -248,6 +284,46 @@ impl LazyCache {
         Element::tool_done("tool", String::new(), 0.0, output, None, false).at(ts)
     }
 
+    fn redacted_thinking_elem(data: &str, _signature: Option<&str>, ts: f64) -> Element {
+        Element::redacted_thinking(data.to_owned()).at(ts)
+    }
+
+    fn anthropic_thinking_elem(content: &str, signature: Option<&str>, ts: f64) -> Element {
+        Element::anthropic_thinking(content, signature.map(|s| s.to_owned())).at(ts)
+    }
+
+    fn tool_confirmation_elem(
+        request_id: &str,
+        name: &str,
+        args: &serde_json::Value,
+        description: Option<&str>,
+        ts: f64,
+    ) -> Element {
+        let args_compact = crate::tool::compact_json_args(args);
+        let desc = description.map(|s| s.to_owned()).unwrap_or_else(|| format!("Run {} with args", name));
+        Element::tool_confirmation(request_id, name, args_compact, desc).at(ts)
+    }
+
+    fn image_elem(data: &str, mime_type: &str, ts: f64) -> Element {
+        Element::image(data, mime_type).at(ts)
+    }
+
+    fn data_part_elem(data: &str, format_string: Option<&str>, ts: f64) -> Element {
+        Element::data_part(data, format_string.map(|s| s.to_owned())).at(ts)
+    }
+
+    fn web_search_elem(query: &str, ts: f64) -> Element {
+        Element::web_search_call(query, vec![]).at(ts)
+    }
+
+    fn diff_output_elem(content: &str, diff_type: crate::view::elements::DiffType, ts: f64) -> Element {
+        Element::diff_output(content, diff_type).at(ts)
+    }
+
+    fn ansi_styled_elem(raw: &str, plain: &str, ts: f64) -> Element {
+        Element::ansi_styled(raw, plain).at(ts)
+    }
+
     fn thought_elem(msg: &ChatMessage, _state: &AppState, ts: f64) -> Element {
         let content = msg.content();
         // Show "Thought for Xs" as a summary (like Grok does)
@@ -272,12 +348,28 @@ impl LazyCache {
         if state.view().expanded_posts.contains(&post_index) {
             return elem;
         }
-        if let Element::ThoughtMarker { content, timestamp } = elem {
-            let first_line = content.lines().next().unwrap_or(&content).to_owned();
-            return Element::thought_summary(first_line, Self::parse_thought_dur(&content))
-                .at(timestamp);
+        match elem {
+            Element::ThoughtMarker { content, timestamp } => {
+                let first_line = content.lines().next().unwrap_or(&content).to_owned();
+                Element::thought_summary(first_line, Self::parse_thought_dur(&content))
+                    .at(timestamp)
+            }
+            Element::AnthropicThinking { content, signature, redacted, timestamp } => {
+                let first_line = content.lines().next().unwrap_or(&content).to_owned();
+                let summary = if redacted {
+                    format!("[Redacted thinking - {} chars]", content.len())
+                } else {
+                    first_line
+                };
+                Element::AnthropicThinking {
+                    content: summary,
+                    signature,
+                    redacted,
+                    timestamp,
+                }
+            }
+            _ => elem,
         }
-        elem
     }
 
     /// Check if the thought is just a duration marker like "Thought for 0.2s"

@@ -376,6 +376,16 @@ pub enum Event {
         #[serde(skip)]
         skills: Vec<crate::skills::Skill>,
     },
+    SkillCreated {
+        name: String,
+    },
+    SkillDeleted {
+        name: String,
+    },
+    SkillError {
+        name: String,
+        message: String,
+    },
     AuthLoaded {
         providers: Vec<String>,
     },

@@ -78,6 +78,7 @@ mod permission_dialog;
 mod popup_bg;
 mod scoped_models;
 mod scrollbar;
+mod special_content;
 mod timestamps;
 mod toggle_expand;
 mod tool_truncation;
