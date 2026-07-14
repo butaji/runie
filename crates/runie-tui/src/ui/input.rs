@@ -36,7 +36,7 @@ pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     // mode AND when a dialog (command bar, model selector, etc.) is open.
     let token_held = !snap.vim_nav_mode && snap.dialog.is_none();
 
-    let title = format!(" {}/{} ", snap.provider, snap.model);
+    let title = format!(" {} ", snap.input_title);
     let block = block_input(&title, snap.input_flash > 0);
 
     // Build the input content based on whether it's empty or has content.

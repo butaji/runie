@@ -5,13 +5,19 @@ use crate::model::state::AppState;
 use crate::snapshot::Snapshot;
 
 /// Build the input box title string.
-/// Format: `provider/model · read-only` when read-only, otherwise `provider/model`.
-pub(crate) fn build_input_title(provider: &str, model: &str, read_only: bool) -> String {
+/// Format: `mode · provider/model · read-only` when non-single mode and read-only,
+/// `mode · provider/model` when non-single mode, and `provider/model` otherwise.
+pub(crate) fn build_input_title(provider: &str, model: &str, read_only: bool, mode_active: &str) -> String {
     let base = format!("{}/{}", provider, model);
-    if read_only {
-        format!("{} · read-only", base)
-    } else {
+    let with_mode = if mode_active == "single" {
         base
+    } else {
+        format!("{} · {}", mode_active, base)
+    };
+    if read_only {
+        format!("{} · read-only", with_mode)
+    } else {
+        with_mode
     }
 }
 
@@ -63,6 +69,7 @@ pub(crate) fn fill_snapshot_config(s: &mut Snapshot, state: &AppState) {
         &config.current_provider,
         &config.current_model,
         config.read_only,
+        &config.mode.active,
     );
 }
 
@@ -91,4 +98,67 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.active_plan_id = state.view().active_plan_id.clone();
     // Auto-approve mode projection
     s.auto_mode = state.view().auto_mode;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_title_default_is_base() {
+        let title = build_input_title("openai", "gpt-4o", false, "single");
+        assert_eq!(title, "openai/gpt-4o");
+    }
+
+    #[test]
+    fn input_title_includes_read_only() {
+        let title = build_input_title("openai", "gpt-4o", true, "single");
+        assert!(
+            title.contains("read-only"),
+            "title should contain read-only: {title}"
+        );
+    }
+
+    #[test]
+    fn input_title_no_suffix_for_default() {
+        let title = build_input_title("anthropic", "claude-3-5-sonnet", false, "single");
+        assert!(
+            !title.contains("read-only"),
+            "read-only should not appear: {title}"
+        );
+    }
+
+    #[test]
+    fn input_title_uses_provider_and_model() {
+        let title = build_input_title("google", "gemini-2.5", false, "single");
+        assert!(
+            title.starts_with("google/"),
+            "title should start with provider: {title}"
+        );
+        assert!(
+            title.contains("gemini-2.5"),
+            "title should contain model: {title}"
+        );
+    }
+
+    #[test]
+    fn input_title_includes_non_single_mode() {
+        let title = build_input_title("openai", "gpt-4o", false, "swarm");
+        assert_eq!(title, "swarm · openai/gpt-4o");
+    }
+
+    #[test]
+    fn input_title_single_mode_omits_mode() {
+        let title = build_input_title("openai", "gpt-4o", false, "single");
+        assert!(
+            !title.contains("single"),
+            "single mode should not appear in title: {title}"
+        );
+    }
+
+    #[test]
+    fn input_title_mode_and_read_only() {
+        let title = build_input_title("openai", "gpt-4o", true, "eval-optimizer");
+        assert_eq!(title, "eval-optimizer · openai/gpt-4o · read-only");
+    }
 }

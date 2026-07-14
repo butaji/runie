@@ -88,6 +88,16 @@ impl Command {
         if spec.sub {
             cmd = cmd.sub();
         }
+        // FormWithHandler commands need the cmd_name set on the panel so the
+        // form submission can be routed back through the command registry.
+        if let CommandKind::FormWithHandler {
+            title,
+            fields,
+            handler,
+        } = &spec.kind
+        {
+            return cmd.form_with_handler(title, |f| add_fields(f, fields), *handler);
+        }
         let action = spec.kind.to_action();
         // Extract form_handler for Form actions
         if let Action::Form { handler, .. } = &action {
@@ -128,12 +138,23 @@ pub fn build_cmd_from_yaml(
     match &yaml.kind {
         YamlKind::Handler { handler } => {
             if let Some(kind) = handler_registry.to_command_kind(handler) {
-                let action = kind.to_action();
-                // Extract form_handler for Form actions
-                if let Action::Form { handler, .. } = &action {
-                    cmd.form_handler = Some(*handler);
+                // FormWithHandler registry entries must use the form builder so
+                // the panel carries the command name for submission routing.
+                if let CommandKind::FormWithHandler {
+                    title,
+                    fields,
+                    handler: form_handler,
+                } = &kind
+                {
+                    cmd = cmd.form_with_handler(title, |f| add_fields(f, fields), *form_handler);
+                } else {
+                    let action = kind.to_action();
+                    // Extract form_handler for Form actions
+                    if let Action::Form { handler, .. } = &action {
+                        cmd.form_handler = Some(*handler);
+                    }
+                    cmd = cmd.action(action);
                 }
-                cmd = cmd.action(action);
             }
         }
         YamlKind::FormWithHandler {

@@ -24,7 +24,6 @@ use runie_core::bus::{EventBus, Receiver};
 use runie_core::update::dialog::handle_form_dialog;
 use runie_core::permissions::PermissionAction;
 use runie_core::{AppState, Event, Snapshot};
-use runie_patterns::Pattern as _;
 
 use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
 use crate::pace::PacedRenderer;
@@ -509,6 +508,23 @@ impl UiActor {
         let variant = self.state.config().swarm_variant.clone();
         let bus = self.bus.clone();
 
+        // Multi-model patterns: use enabled scoped models when available;
+        // otherwise fall back to the current model so single-model swarms
+        // keep working.
+        let pattern_models: Vec<(String, String)> = self
+            .state
+            .config()
+            .scoped_models
+            .iter()
+            .filter(|m| m.enabled)
+            .map(|m| (m.provider.clone(), m.name.clone()))
+            .collect();
+        let models = if pattern_models.is_empty() {
+            vec![(provider, model.clone())]
+        } else {
+            pattern_models
+        };
+
         let abort = tokio_util::sync::CancellationToken::new();
         self.pattern_abort = Some(abort.clone());
 
@@ -524,7 +540,7 @@ impl UiActor {
                 max_retries: mode.max_retries,
                 circuit_breaker: mode.circuit_breaker,
             },
-            models: vec![(provider, model.clone())],
+            models,
             semaphore: std::sync::Arc::new(tokio::sync::Semaphore::new(mode.workers.max(1))),
             trace_tx,
             abort: abort.clone(),
