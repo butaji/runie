@@ -35,6 +35,16 @@ pub enum StreamingChunk {
     ToolCallInputDelta { id: String, delta: String },
     /// An LLM finished a tool invocation.
     ToolCallEnd { id: String },
+    /// A tool started executing.
+    ToolExecutionStart { id: String, name: String },
+    /// A tool finished executing.
+    ToolExecutionEnd { id: String },
+    /// The output/result of a tool execution.
+    ToolExecutionResult { id: String, result: String },
+    /// A conversation turn ended.
+    TurnEnd,
+    /// The agent finished.
+    AgentEnd,
     /// An error occurred during generation.
     Error(String),
     /// Token usage information.
@@ -64,6 +74,17 @@ impl From<ProviderEvent> for Option<StreamingChunk> {
                 Some(StreamingChunk::ToolCallInputDelta { id, delta })
             }
             ProviderEvent::ToolCallEnd { id } => Some(StreamingChunk::ToolCallEnd { id }),
+            ProviderEvent::ToolExecutionStart { id, name } => {
+                Some(StreamingChunk::ToolExecutionStart { id, name })
+            }
+            ProviderEvent::ToolExecutionEnd { id } => {
+                Some(StreamingChunk::ToolExecutionEnd { id })
+            }
+            ProviderEvent::ToolExecutionResult { id, result } => {
+                Some(StreamingChunk::ToolExecutionResult { id, result })
+            }
+            ProviderEvent::TurnEnd => Some(StreamingChunk::TurnEnd),
+            ProviderEvent::AgentEnd => Some(StreamingChunk::AgentEnd),
             ProviderEvent::Error(ModelError::JsonDecode(msg)) => {
                 Some(StreamingChunk::Error(msg))
             }
@@ -177,7 +198,9 @@ where
                 // Track last chunk.
                 if !this.sent_last_chunk {
                     match &event {
-                        ProviderEvent::Finish { .. } | ProviderEvent::Error(_) => {
+                        ProviderEvent::Finish { .. }
+                        | ProviderEvent::Error(_)
+                        | ProviderEvent::AgentEnd => {
                             this.sent_last_chunk = true;
                         }
                         _ => {}

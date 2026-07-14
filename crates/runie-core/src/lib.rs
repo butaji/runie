@@ -82,6 +82,7 @@ pub mod snapshot;
 // state types moved to model::state
 /// Metrics facade for telemetry (counters, histograms, gauges).
 pub mod metrics;
+pub mod streaming;
 pub mod streaming_buffer;
 pub mod stream_wrapper;
 pub mod subagents;
@@ -175,6 +176,7 @@ pub use provider::{
     RetryConfig,
 };
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
+pub use streaming::OrderedStreamEmitter;
 pub use resource_loader::{
     derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
     load_resources_from_dir, parse_resource_md, resolve_name,

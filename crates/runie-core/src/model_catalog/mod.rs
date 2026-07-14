@@ -58,7 +58,7 @@ impl ModelCapabilities {
 }
 
 /// Information about a model for the model selector dialog.
-#[derive(Clone, Debug, PartialEq, Builder)]
+#[derive(Clone, Debug, Default, PartialEq, Builder)]
 #[builder(setter(strip_option))]
 pub struct ModelInfo {
     pub name: String,

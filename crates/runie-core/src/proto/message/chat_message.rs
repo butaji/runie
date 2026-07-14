@@ -1,8 +1,11 @@
 //! Chat message types.
 
+use std::sync::Arc;
+
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
+use crate::hidden_params::{AsHiddenParams, HiddenParams};
 use super::metadata::MessageMetadata;
 use super::parts::Part;
 use super::role::Role;
@@ -48,6 +51,10 @@ pub struct ChatMessage {
     #[builder(default, setter(name = "set_parts"))]
     #[serde(default)]
     pub parts: Vec<Part>,
+    /// Hidden parameters attached to this message (not serialized).
+    #[builder(default, setter(name = "set_hidden_params"))]
+    #[serde(skip)]
+    hidden_params: Option<Arc<HiddenParams>>,
 }
 
 impl ChatMessage {
@@ -70,6 +77,7 @@ impl ChatMessage {
             } else {
                 vec![Part::Text { content }]
             },
+            hidden_params: None,
         }
     }
 
@@ -172,6 +180,21 @@ impl ChatMessage {
     pub fn with_parts(mut self, parts: Vec<Part>) -> Self {
         self.parts = parts;
         self
+    }
+
+    /// Set hidden parameters for internal use (cost, API base, etc.).
+    pub fn set_hidden_params(&mut self, params: Arc<HiddenParams>) {
+        self.hidden_params = Some(params);
+    }
+}
+
+impl AsHiddenParams for ChatMessage {
+    fn hidden_params(&self) -> Option<&Arc<HiddenParams>> {
+        self.hidden_params.as_ref()
+    }
+
+    fn hidden_params_mut(&mut self) -> Option<&mut Arc<HiddenParams>> {
+        self.hidden_params.as_mut()
     }
 }
 
@@ -295,6 +318,11 @@ impl ChatMessageBuilder {
         self
     }
 
+    pub fn hidden_params(mut self, params: Arc<HiddenParams>) -> Self {
+        self.hidden_params = Some(params);
+        self
+    }
+
     pub fn build(self) -> ChatMessage {
         let role = self.role.unwrap_or(Role::User);
         let timestamp = self.timestamp.unwrap_or_else(now);
@@ -311,6 +339,7 @@ impl ChatMessageBuilder {
             tool_call_id: self.tool_call_id.flatten(),
             provider_metadata: self.provider_metadata.flatten(),
             parts,
+            hidden_params: self.hidden_params,
         }
     }
 }

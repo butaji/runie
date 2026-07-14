@@ -12,10 +12,14 @@ pub mod layers;
 pub mod mcp;
 pub mod migrate;
 pub mod provider_config;
+pub mod routing;
 pub mod schema;
 pub mod scope;
 #[cfg(test)]
 mod tests;
+
+// Re-export routing types for use in runie-provider and other crates.
+pub use routing::{ModelId, ModelRoutingConfig, RouterStrategy, RoutingStrategy};
 
 // Re-export ConfigScope for use in McpServer and CLI.
 pub use scope::ConfigScope;
@@ -61,6 +65,12 @@ pub struct ModelProvider {
     pub base_url: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub models: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub headers: std::collections::HashMap<String, String>,
+    /// Fallback model IDs to try when the primary model cannot handle a request
+    /// (e.g., context window exceeded). Ordered by priority.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub context_window_fallbacks: Vec<ModelId>,
 }
 
 // ============================================================================
