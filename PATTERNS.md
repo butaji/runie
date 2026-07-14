@@ -1,16 +1,14 @@
 # Agent Patterns
 
-Runie supports five orchestration patterns for multi-agent workflows. Patterns are sold as first-class features — discoverable via `/mode`, configurable per session, and composable from existing Runie primitives.
+Runie supports three orchestration patterns for multi-agent workflows. Patterns are sold as first-class features — discoverable via `/mode`, configurable per session, and composable from existing Runie primitives.
 
 ## Patterns
 
 | Pattern | Use Case | Leader Role | Workers Role |
 |---------|----------|-------------|--------------|
 | **single** | 80% prototyping tasks | Direct execution | — |
-| **hierarchical** | Cross-functional teams with clear roles | Orchestrates + delegates | Execute specific roles |
-| **parallel** | Bulk independent subtasks | Splits + fans out | Process in parallel |
+| **swarm** | Coordinated multi-agent work | Orchestrates workers | Fan-out, delegate, or form DAG |
 | **eval-optimizer** | Critical review loops | Evaluates output | Revises based on feedback |
-| **swarm** | Discovery and research | Coordinates discovery | Explore + synthesize |
 
 ## Config
 
@@ -18,12 +16,12 @@ Minimal TOML config — models come from existing `/model` and `/provider` UX:
 
 ```toml
 [mode]
-active = "single"        # single | hierarchical | parallel | eval-optimizer | swarm
-workers = 3              # max parallel agents (ignored for single)
-max_rounds = 5           # max iterations (eval-optimizer, swarm)
-timeout_ms = 120000      # per-task timeout (2 minutes)
-max_retries = 2          # retries per task on failure
-circuit_breaker = 3      # consecutive failures before fail-fast
+active = "single"     # single | swarm | eval-optimizer
+workers = 3           # max parallel workers
+max_rounds = 5        # max iterations (eval-optimizer, swarm)
+timeout_ms = 120000   # per-task timeout (2 minutes)
+max_retries = 2       # retries per task on failure
+circuit_breaker = 3  # consecutive failures before fail-fast
 ```
 
 ### Defaults
@@ -31,8 +29,8 @@ circuit_breaker = 3      # consecutive failures before fail-fast
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `active` | `single` | Current pattern |
-| `workers` | `3` | Max parallel agents for non-single patterns |
-| `max_rounds` | `5` | Max iterations (eval-optimizer, swarm) |
+| `workers` | `3` | Max parallel workers |
+| `max_rounds` | `5` | Max iterations |
 | `timeout_ms` | `120000` | Per-task timeout (2 minutes) |
 | `max_retries` | `2` | Retries per task on failure |
 | `circuit_breaker` | `3` | Consecutive failures before fail-fast |
@@ -49,22 +47,29 @@ If configured models < `workers`:
 All interaction via `/mode`:
 
 ```bash
-/mode                       # show current pattern + config
-/mode list                  # show available patterns
-/mode swarm                 # switch to swarm (uses /model list)
-/mode swarm workers 5      # switch + override workers
-/mode eval-optimizer max_rounds 5  # override max rounds
-/mode single                # back to single (default)
-/mode swarm "Research async Rust patterns"  # set goal (swarm only)
+/mode                        # show current pattern + config
+/mode list                   # show available patterns
+/mode swarm                  # switch to swarm (uses /model list)
+/mode swarm workers 5       # switch + override workers
+/mode eval-optimizer         # switch to eval-optimizer
+/mode single                 # back to single (default)
 ```
 
-### Pattern-specific Behavior
+### Swarm Variants
 
-- **swarm**: Goal set per session via `/mode swarm "goal description"`
-- **hierarchical**: Roles inferred from `workers` list, LLM picks agent for each role
-- **eval-optimizer**: Review loop until `max_rounds` reached or evaluator approves
-- **parallel**: Task list derived from input context, aggregated at end
-- **single**: Uses `/model` directly, no pattern overhead
+Swarm has three execution modes, set per session:
+
+```bash
+/mode swarm parallel "process these 10 files"        # fan-out workers
+/mode swarm delegation "code review with reviewer"   # leader delegates
+/mode swarm dag "research async Rust patterns"      # DAG with dependencies
+```
+
+| Variant | Description | When to use |
+|---------|-------------|-------------|
+| **parallel** | Fan-out to all workers | Independent subtasks, bulk work |
+| **delegation** | Leader assigns tasks | Known roles, clear workflow |
+| **dag** | Workers form dependency graph | Discovery, research, waves |
 
 ## Architecture
 
@@ -78,13 +83,10 @@ crates/runie-patterns/
 │   ├── lib.rs              # Pattern trait + registry
 │   ├── primitives/          # Core primitives (phase-gated)
 │   │   ├── mod.rs
-│   │   ├── dag.rs          # Phase 5: DAG building + cycle detection
-│   │   └── termination.rs  # Termination conditions
+│   │   └── dag.rs          # Phase 3: DAG building + cycle detection
 │   ├── single.rs           # Phase 1: Single agent (pass-through)
-│   ├── parallel.rs         # Phase 2: Fan-out + fan-in
-│   ├── hierarchical.rs     # Phase 3: Manager + role workers
-│   ├── eval_optimizer.rs   # Phase 4: Review + revise loop
-│   └── swarm.rs            # Phase 5: DAG-based discovery
+│   ├── swarm.rs            # Phase 2: All variants (parallel, delegation, dag)
+│   └── eval_optimizer.rs  # Phase 3: Review + revise loop
 └── Cargo.toml
 ```
 
@@ -102,7 +104,7 @@ crates/runie-patterns/
 ### Core Primitives (NEW)
 
 ```rust
-/// DAG for swarm pattern (Phase 5 only)
+/// DAG for swarm dag variant (Phase 3)
 pub struct Dag {
     nodes: HashMap<AgentId, AgentConfig>,
     edges: Vec<(AgentId, AgentId)>,  // (from, to) = "from waits for to"
@@ -190,16 +192,14 @@ No separate model config in patterns — keeps it simple.
 | Pattern | State Scope | Recommendation |
 |---------|-------------|----------------|
 | **single** | N/A | Direct execution, full context |
-| **hierarchical** | Leader holds shared, workers scoped | Aggregate worker outputs before next delegation |
-| **parallel** | Shared read, isolated writes | Fan-out with aggregation, merge at end |
+| **swarm** | Shared + worker-scoped | Leader holds context, workers scoped; dag variant checkpoints per wave |
 | **eval-optimizer** | Accumulates revisions | Full history for evaluator to assess progress |
-| **swarm** | Distributed, loosely coupled | DAG state with checkpoints per wave |
 
 ## Error Handling
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `max_retries` | `2` | Retries per task on failure (not per worker) |
+| `max_retries` | `2` | Retries per task on failure |
 | `circuit_breaker` | `3` | Consecutive failures before fail-fast |
 
 - **Fail-fast**: Circuit opens after `circuit_breaker` consecutive failures
@@ -218,10 +218,8 @@ Pattern selection is discoverable via:
 ## Implementation Phases
 
 1. **Phase 1**: Pattern trait + single pattern (baseline)
-2. **Phase 2**: Parallel pattern (fan-out workers, tokio Semaphore)
-3. **Phase 3**: Hierarchical pattern (role-based delegation)
-4. **Phase 4**: Eval-optimizer pattern (review loop + termination)
-5. **Phase 5**: Swarm pattern (DAG building, wave execution)
+2. **Phase 2**: Swarm pattern (parallel + delegation variants)
+3. **Phase 3**: Swarm dag variant + eval-optimizer pattern
 
 ## Anti-Goals
 
@@ -229,12 +227,12 @@ Pattern selection is discoverable via:
 - **No unbounded concurrency** — always bounded by `workers`
 - **No infinite loops** — always bounded by `max_rounds`
 - **No explicit model config in patterns** — use `/model`
-- **No config-based approval gates** — approval is runtime decision by evaluator agent (eval-optimizer)
+- **No config-based approval gates** — approval is runtime decision by evaluator agent
 
 ## References
 
-- crewAI hierarchical process: delegation tools injected into manager agent
 - oh-my-pi: tokio Semaphore + mapWithConcurrencyLimit for parallel execution
 - oh-my-pi swarm: DAG with topological sort for wave execution
+- crewAI hierarchical process: delegation tools injected into manager agent
 - AutoGen: typed messages with explicit approval signal
 - LangGraph: checkpointing for state persistence
