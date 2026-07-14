@@ -87,10 +87,28 @@ pub enum ModelError {
         #[serde(rename = "retryAfterSecs", skip_serializing_if = "Option::is_none")]
         retry_after_secs: Option<u32>,
     },
+    /// Provider cluster overloaded (e.g. HTTP 529 / `overloaded_error`).
+    /// Transient — retry with backoff.
+    #[error("Provider overloaded")]
+    Overloaded {
+        #[serde(rename = "retryAfterSecs", skip_serializing_if = "Option::is_none")]
+        retry_after_secs: Option<u32>,
+    },
     /// An underlying error (network, parse, etc.).
     /// Stores only the message string for serialization simplicity.
     #[error("{0}")]
     Other(String),
+}
+
+impl ModelError {
+    /// Returns true if the error is transient and the request should be
+    /// retried with backoff (rate limit, provider overload).
+    pub fn is_retryable(&self) -> bool {
+        matches!(
+            self,
+            ModelError::RateLimit { .. } | ModelError::Overloaded { .. }
+        )
+    }
 }
 
 // ─── From implementations ───────────────────────────────────────────────────────
@@ -266,6 +284,37 @@ mod tests {
         assert_eq!(json, r#"{"kind":"other","message":"connection refused"}"#);
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, err);
+    }
+
+    #[test]
+    fn model_error_overloaded_roundtrip_and_display() {
+        let err = ModelError::Overloaded {
+            retry_after_secs: None,
+        };
+        assert_eq!(err.to_string(), "Provider overloaded");
+        let json = serde_json::to_string(&err).unwrap();
+        let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
+        assert_eq!(roundtrip, err);
+    }
+
+    #[test]
+    fn model_error_is_retryable_matrix() {
+        assert!(ModelError::RateLimit {
+            retry_after_secs: None
+        }
+        .is_retryable());
+        assert!(ModelError::Overloaded {
+            retry_after_secs: None
+        }
+        .is_retryable());
+        assert!(!ModelError::Other("boom".into()).is_retryable());
+        assert!(!ModelError::Refusal("no".into()).is_retryable());
+        assert!(!ModelError::ContextLength {
+            limit: 1,
+            used: 2
+        }
+        .is_retryable());
+        assert!(!ModelError::JsonDecode("bad".into()).is_retryable());
     }
 
     #[test]

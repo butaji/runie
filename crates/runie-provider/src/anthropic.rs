@@ -233,6 +233,7 @@ struct ErrorEvent {
 fn classify_error(error_type: &str, message: &str) -> ModelError {
     match error_type {
         "rate_limit" => ModelError::RateLimit { retry_after_secs: None },
+        "overloaded_error" => ModelError::Overloaded { retry_after_secs: None },
         "invalid_request" if message.to_lowercase().contains("context") => {
             ModelError::ContextLength { limit: 0, used: 0 }
         }
@@ -294,6 +295,29 @@ data: {"type":"rate_limit","message":"Rate limit exceeded. Try again in 30s."}
             e,
             ProviderEvent::Error(ModelError::RateLimit { .. })
         )));
+    }
+
+    #[test]
+    fn anthropic_overloaded_error_is_retryable() {
+        // The exact payload MiniMax returns under cluster load (HTTP 529).
+        let text = r#"event: message_start
+data: {"type":"message_start","message":{"id":"msg_err","type":"message","role":"assistant","stop_reason":null,"content":[],"usage":{"input_tokens":10,"output_tokens":0}}}
+event: error
+data: {"type":"overloaded_error","message":"The server cluster is currently under high load. Please retry after a short wait and thank you for your patience. (2064) (529)"}
+"#;
+        let events = replay_anthropic_sse(text);
+        assert!(events.iter().any(|e| matches!(
+            e,
+            ProviderEvent::Error(ModelError::Overloaded { .. })
+        )));
+        let err = events
+            .iter()
+            .find_map(|e| match e {
+                ProviderEvent::Error(m) => Some(m),
+                _ => None,
+            })
+            .expect("error event");
+        assert!(err.is_retryable());
     }
 
     #[test]

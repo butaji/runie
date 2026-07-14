@@ -606,6 +606,11 @@ impl From<ToolAccum> for runie_core::proto::message::ToolCall {
 pub enum OpenAiFrame {
     Chunk(Chunk),
     Done,
+    /// Provider error delivered as an SSE data frame (HTTP 200), e.g.
+    /// MiniMax/Anthropic `{"type":"error","error":{"type":"overloaded_error",…}}`
+    /// or OpenAI `{"error":{…}}`. Terminal; retryable variants are retried
+    /// at the whole-request level by the stream driver.
+    Error(runie_core::provider_event::ModelError),
 }
 
 impl OpenAiFrame {
@@ -620,6 +625,15 @@ impl OpenAiFrame {
             line
         };
         let json: serde_json::Value = serde_json::from_str(json_str).ok()?;
+        // Error payloads arrive without `choices`: Anthropic-style
+        // `{"type":"error",…}` or OpenAI-style `{"error":{…}}`.
+        let is_error = json.get("type").and_then(|t| t.as_str()) == Some("error")
+            || (json.get("error").is_some() && json.get("choices").is_none());
+        if is_error {
+            return Some(OpenAiFrame::Error(
+                super::stream::classify_error_value(&json),
+            ));
+        }
         parse_chunk(&json).map(OpenAiFrame::Chunk)
     }
 }
@@ -643,6 +657,7 @@ impl ProviderProtocol for OpenAiProtocol {
                 events.extend(new_state.lifecycle.finish(StopReason::Stop));
                 (new_state, events)
             }
+            OpenAiFrame::Error(err) => (state, vec![ProviderEvent::Error(err)]),
         }
     }
 
@@ -657,7 +672,7 @@ impl ProviderProtocol for OpenAiProtocol {
     }
 
     fn terminal(&self, frame: &Self::Frame) -> bool {
-        matches!(frame, OpenAiFrame::Done)
+        matches!(frame, OpenAiFrame::Done | OpenAiFrame::Error(_))
     }
 }
 
@@ -846,6 +861,7 @@ fn map_finish_reason(reason: Option<&str>) -> StopReason {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::provider_event::ModelError;
 
     fn chunk_with_content(text: &str) -> OpenAiFrame {
         let json: serde_json::Value = serde_json::from_str(&format!(
@@ -1120,6 +1136,46 @@ mod tests {
     #[test]
     fn openai_frame_from_line_invalid() {
         assert!(OpenAiFrame::from_line("not sse").is_none());
+    }
+
+    #[test]
+    fn openai_frame_from_line_anthropic_style_error_is_overloaded() {
+        // MiniMax/Anthropic-style overload payload (HTTP 200 + SSE error frame).
+        let frame = OpenAiFrame::from_line(
+            r#"data: {"type":"error","error":{"type":"overloaded_error","message":"The server cluster is currently under high load. Please retry after a short wait and thank you for your patience. (2064) (529)"},"request_id":"06a4daca9074419a500d1208c1f4fa0a"}"#,
+        );
+        match frame {
+            Some(OpenAiFrame::Error(err)) => {
+                assert!(
+                    matches!(err, ModelError::Overloaded { .. }),
+                    "expected Overloaded, got {err:?}"
+                );
+                assert!(err.is_retryable());
+            }
+            other => panic!("expected Error frame, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn openai_frame_from_line_openai_style_error() {
+        let frame = OpenAiFrame::from_line(
+            r#"data: {"error":{"message":"Invalid API key","type":"authentication_error","code":"401"}}"#,
+        );
+        match frame {
+            Some(OpenAiFrame::Error(err)) => {
+                assert!(!err.is_retryable(), "auth errors must not be retried");
+            }
+            other => panic!("expected Error frame, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn error_frame_is_terminal() {
+        let protocol = OpenAiProtocol::new();
+        let frame = OpenAiFrame::Error(ModelError::Overloaded {
+            retry_after_secs: None,
+        });
+        assert!(protocol.terminal(&frame));
     }
 
     #[test]

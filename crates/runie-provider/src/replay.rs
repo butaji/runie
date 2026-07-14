@@ -89,13 +89,46 @@ impl Provider for ReplayProvider {
         &self,
         _messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
-        let idx = self.index.fetch_add(1, Ordering::SeqCst) % self.fixtures.len().max(1);
-        let events = match self.fixtures.get(idx) {
-            Some(fixture) => parse_fixture(fixture, self.protocol),
-            None => Vec::new(),
-        };
+        // Retry simulation: a fixture whose events are a retryable error
+        // (overload/rate limit) with no content is treated as a failed
+        // attempt — the next fixture in the rotation is consumed, mirroring
+        // the whole-request retry in the live provider (without the backoff
+        // sleeps, so tests stay deterministic and fast). After
+        // `max_attempts` failures the last error is surfaced.
+        let max_attempts = crate::RetryConfig::default().max_attempts.max(1);
+        let mut events = Vec::new();
+        for attempt in 1..=max_attempts {
+            let idx = self.index.fetch_add(1, Ordering::SeqCst) % self.fixtures.len().max(1);
+            events = match self.fixtures.get(idx) {
+                Some(fixture) => parse_fixture(fixture, self.protocol),
+                None => Vec::new(),
+            };
+            if !is_bare_retryable_error(&events) || attempt == max_attempts {
+                break;
+            }
+        }
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
     }
+}
+
+/// True when the fixture produced only a retryable error and no content:
+/// the live provider would retry the request in this case.
+fn is_bare_retryable_error(events: &[ProviderEvent]) -> bool {
+    let has_content = events.iter().any(|e| {
+        matches!(
+            e,
+            ProviderEvent::TextDelta(_)
+                | ProviderEvent::ThinkingDelta(_)
+                | ProviderEvent::ToolCallStart { .. }
+        )
+    });
+    if has_content {
+        return false;
+    }
+    events.iter().any(|e| match e {
+        ProviderEvent::Error(err) => err.is_retryable(),
+        _ => false,
+    })
 }
 
 /// Parse a fixture string into `ProviderEvent`s.
@@ -117,6 +150,7 @@ fn parse_fixture(content: &str, protocol: Protocol) -> Vec<ProviderEvent> {
             let model_err = match code {
                 401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
                 429 => ModelError::RateLimit { retry_after_secs: None },
+                529 => ModelError::Overloaded { retry_after_secs: None },
                 500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
                 _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
             };
@@ -157,5 +191,103 @@ mod tests {
     fn infer_protocol_default_openai() {
         let fixtures = vec![r#"data: {"unknown":"format"}"#.to_string()];
         assert_eq!(ReplayProvider::infer_protocol(&fixtures), Protocol::OpenAi);
+    }
+
+    fn collect(provider: &ReplayProvider) -> Vec<ProviderEvent> {
+        use futures::StreamExt;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        rt.block_on(async {
+            provider
+                .generate(vec![])
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .map(|r| r.unwrap())
+                .collect()
+        })
+    }
+
+    #[test]
+    fn http_529_maps_to_overloaded() {
+        let provider = ReplayProvider::new(
+            vec!["# HTTP 529\n# overloaded".to_string()],
+            Protocol::OpenAi,
+        );
+        let events = collect(&provider);
+        assert!(events.iter().any(|e| matches!(
+            e,
+            ProviderEvent::Error(ModelError::Overloaded { .. })
+        )));
+    }
+
+    #[test]
+    fn retryable_error_consumes_next_fixture() {
+        // [529 overload, content] — the overload attempt is retried and the
+        // content fixture answers the same turn.
+        let provider = ReplayProvider::new(
+            vec![
+                "# HTTP 529\n# overloaded".to_string(),
+                "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\ndata: [DONE]\n\n"
+                    .to_string(),
+            ],
+            Protocol::OpenAi,
+        );
+        let events = collect(&provider);
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::TextDelta(d) if d == "pong")),
+            "expected retried content, got: {events:?}"
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::Error(_))),
+            "the exhausted overload error must not surface when retry succeeds: {events:?}"
+        );
+    }
+
+    #[test]
+    fn retryable_error_surfaces_after_max_attempts() {
+        let provider = ReplayProvider::new(
+            vec!["# HTTP 529\n# overloaded".to_string()],
+            Protocol::OpenAi,
+        );
+        let events = collect(&provider);
+        assert!(events.iter().any(|e| matches!(
+            e,
+            ProviderEvent::Error(ModelError::Overloaded { .. })
+        )));
+    }
+
+    #[test]
+    fn non_retryable_error_does_not_consume_next_fixture() {
+        // [401 auth, content] — 401 is fatal: surfaces immediately; the
+        // content fixture stays queued for the next turn.
+        let provider = ReplayProvider::new(
+            vec![
+                "# HTTP 401\n# invalid api key".to_string(),
+                "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\ndata: [DONE]\n\n"
+                    .to_string(),
+            ],
+            Protocol::OpenAi,
+        );
+        let events = collect(&provider);
+        assert!(events.iter().any(|e| matches!(e, ProviderEvent::Error(_))));
+        assert!(
+            !events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::TextDelta(_))),
+            "next fixture must not be consumed on a fatal error: {events:?}"
+        );
+        let events = collect(&provider);
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::TextDelta(d) if d == "pong")),
+            "content fixture should answer the next turn: {events:?}"
+        );
     }
 }

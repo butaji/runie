@@ -223,6 +223,17 @@ async fn stream_sse_events(
                 Some(Ok(frame)) => {
                     event_count += 1;
                     tracing::trace!(event_count = event_count, "processing SSE frame");
+                    // Retryable error frames (provider overload 529, rate
+                    // limit) with no content emitted yet fail the attempt so
+                    // the whole-request retry builds a fresh connection.
+                    // Once content has streamed, the error is surfaced as an
+                    // event instead (retrying would duplicate output).
+                    if let OpenAiFrame::Error(err) = &frame {
+                        if err.is_retryable() && event_count == 1 {
+                            tracing::warn!(error = %err, "retryable provider error before content; failing attempt");
+                            return Err(crate::ProviderError::Server(529, err.to_string()).into());
+                        }
+                    }
                     if protocol.terminal(&frame) {
                         let (new_state, frame_events) = protocol.step(state, frame);
                         tracing::debug!(events = ?frame_events, "terminal frame events");
@@ -277,8 +288,13 @@ pub fn replay_sse(text: &str) -> Vec<ProviderEvent> {
     events
 }
 
-/// Parse an SSE error line value into a ModelError.
-fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::ModelError {
+/// Parse an SSE error payload into a ModelError.
+///
+/// Handles OpenAI-style `{"error":{…}}` and Anthropic-style
+/// `{"type":"error","error":{…}}` bodies. Overload conditions (HTTP 529,
+/// `overloaded_error`, "high load") classify as the retryable
+/// `ModelError::Overloaded`.
+pub fn classify_error_value(val: &serde_json::Value) -> runie_core::provider_event::ModelError {
     use runie_core::provider_event::ModelError;
     let err: ErrorBodyJson = match serde_json::from_value(val.clone()) {
         Ok(e) => e,
@@ -301,6 +317,17 @@ fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::Mod
             retry_after_secs: err.retry_after_secs(),
         };
     }
+    // Provider overload: Anthropic `overloaded_error`, HTTP 529, or an
+    // explicit "overloaded"/"high load" message. Transient — retry.
+    if type_.contains("overloaded")
+        || code == "529"
+        || msg.to_lowercase().contains("overloaded")
+        || msg.to_lowercase().contains("high load")
+    {
+        return ModelError::Overloaded {
+            retry_after_secs: err.retry_after_secs(),
+        };
+    }
     if code.contains("context_length") || code.contains("token_limit") {
         return ModelError::ContextLength { limit: 0, used: 0 };
     }
@@ -311,6 +338,11 @@ fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::Mod
         return ModelError::Refusal(msg.to_string());
     }
     ModelError::Other(msg.to_string())
+}
+
+/// Parse an SSE error line value into a ModelError.
+fn parse_error_value(val: &serde_json::Value) -> runie_core::provider_event::ModelError {
+    classify_error_value(val)
 }
 
 #[cfg(test)]
@@ -635,6 +667,244 @@ pub mod tests {
                 .iter()
                 .any(|i| matches!(i, Ok(ProviderEvent::Finish { .. }))),
             "expected Finish after successful retry, got: {items:?}"
+        );
+    }
+
+    /// 529 overload delivered as an SSE error frame (HTTP 200) MUST be
+    /// retried like a transport-level transient failure: the first attempt
+    /// carries the error frame, the second delivers content.
+    #[tokio::test]
+    async fn openai_stream_retries_overloaded_sse_error_frame_then_succeeds() {
+        use futures::StreamExt;
+        use runie_core::proto::message::ChatMessage;
+        use runie_core::Provider as _;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use std::time::Duration;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let hits = Arc::new(AtomicUsize::new(0));
+        let hits_for = hits.clone();
+        tokio::spawn(async move {
+            for _ in 0..2 {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                let n = hits_for.fetch_add(1, Ordering::SeqCst) + 1;
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 1024];
+                loop {
+                    match sock.read(&mut tmp).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(k) => {
+                            buf.extend_from_slice(&tmp[..k]);
+                            if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                                break;
+                            }
+                        }
+                    }
+                }
+                let resp = if n == 1 {
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n\
+                     data: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"The server cluster is currently under high load. Please retry after a short wait and thank you for your patience. (2064) (529)\"},\"request_id\":\"06a4daca\"}\n\n"
+                        .to_string()
+                } else {
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n\
+                     data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\n\
+                     data: [DONE]\n\n"
+                        .to_string()
+                };
+                let _ = sock.write_all(resp.as_bytes()).await;
+                let _ = sock.flush().await;
+            }
+        });
+
+        let provider = OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
+            .with_base_url(base_url)
+            .with_retry_config(crate::RetryConfig::new(
+                3,
+                Duration::from_millis(1),
+                Duration::from_millis(20),
+                1.0,
+            ));
+
+        let mut stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
+        let mut items = Vec::new();
+        while let Some(item) = stream.next().await {
+            items.push(item);
+        }
+
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            2,
+            "expected the overloaded attempt to be retried exactly once"
+        );
+        assert!(
+            items.iter().all(|i| i.is_ok()),
+            "expected success after retrying the 529 error frame, got: {items:?}"
+        );
+        assert!(
+            items
+                .iter()
+                .any(|i| matches!(i, Ok(ProviderEvent::TextDelta(d)) if d == "pong")),
+            "expected retried request to deliver TextDelta(\"pong\"), got: {items:?}"
+        );
+        assert!(
+            items
+                .iter()
+                .any(|i| matches!(i, Ok(ProviderEvent::Finish { .. }))),
+            "expected Finish after successful retry, got: {items:?}"
+        );
+    }
+
+    /// A persistent 529 SSE error frame MUST surface as an error after the
+    /// retry budget is exhausted — never as a silent empty Finish.
+    #[tokio::test]
+    async fn openai_stream_surfaces_overloaded_after_retries_exhausted() {
+        use futures::StreamExt;
+        use runie_core::proto::message::ChatMessage;
+        use runie_core::Provider as _;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use std::time::Duration;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let hits = Arc::new(AtomicUsize::new(0));
+        let hits_for = hits.clone();
+        tokio::spawn(async move {
+            for _ in 0..3 {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                hits_for.fetch_add(1, Ordering::SeqCst);
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 1024];
+                loop {
+                    match sock.read(&mut tmp).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(k) => {
+                            buf.extend_from_slice(&tmp[..k]);
+                            if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                                break;
+                            }
+                        }
+                    }
+                }
+                let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n\
+                     data: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"The server cluster is currently under high load. (529)\"}}\n\n"
+                    .to_string();
+                let _ = sock.write_all(resp.as_bytes()).await;
+                let _ = sock.flush().await;
+            }
+        });
+
+        let provider = OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
+            .with_base_url(base_url)
+            .with_retry_config(crate::RetryConfig::new(
+                3,
+                Duration::from_millis(1),
+                Duration::from_millis(20),
+                1.0,
+            ));
+
+        let mut stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
+        let mut items = Vec::new();
+        while let Some(item) = stream.next().await {
+            items.push(item);
+        }
+
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            3,
+            "expected exactly max_attempts requests before giving up"
+        );
+        assert!(
+            items.iter().any(|i| i.is_err()),
+            "expected an Err after exhausting retries, got all-Ok: {items:?}"
+        );
+        assert!(
+            !items
+                .iter()
+                .any(|i| matches!(i, Ok(ProviderEvent::Finish { .. }))),
+            "a failed stream must not report a normal Finish, got: {items:?}"
+        );
+    }
+
+    /// Non-retryable error frames (auth, invalid request) surface
+    /// immediately as an Error event — no retry.
+    #[tokio::test]
+    async fn openai_stream_does_not_retry_non_retryable_error_frame() {
+        use futures::StreamExt;
+        use runie_core::proto::message::ChatMessage;
+        use runie_core::Provider as _;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        use std::time::Duration;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let hits = Arc::new(AtomicUsize::new(0));
+        let hits_for = hits.clone();
+        tokio::spawn(async move {
+            for _ in 0..2 {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                hits_for.fetch_add(1, Ordering::SeqCst);
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 1024];
+                loop {
+                    match sock.read(&mut tmp).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(k) => {
+                            buf.extend_from_slice(&tmp[..k]);
+                            if buf.windows(4).any(|w| w == b"\r\n\r\n") || buf.len() > 64 * 1024 {
+                                break;
+                            }
+                        }
+                    }
+                }
+                let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n\
+                     data: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"Invalid API key\"}}\n\n"
+                    .to_string();
+                let _ = sock.write_all(resp.as_bytes()).await;
+                let _ = sock.flush().await;
+            }
+        });
+
+        let provider = OpenAiProvider::new("sk-test".to_string(), "gpt-4o")
+            .with_base_url(base_url)
+            .with_retry_config(crate::RetryConfig::new(
+                3,
+                Duration::from_millis(1),
+                Duration::from_millis(20),
+                1.0,
+            ));
+
+        let mut stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
+        let mut items = Vec::new();
+        while let Some(item) = stream.next().await {
+            items.push(item);
+        }
+
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            1,
+            "auth errors must not be retried"
+        );
+        assert!(
+            items.iter().any(
+                |i| matches!(i, Ok(ProviderEvent::Error(e)) if e.to_string().contains("Invalid API key"))
+            ),
+            "expected the auth error to surface as an Error event, got: {items:?}"
         );
     }
 
