@@ -94,9 +94,7 @@ crates/runie-patterns/
 
 | Primitive | Location | Purpose |
 |-----------|----------|---------|
-| `LeaderHandle` | `runie-core` | Coordinates all agents |
-| `AgentActorFactory` | `runie-core` | Spawns worker agents |
-| `LeaderAgentHandle` | `runie-core` | Sends commands to agents |
+| `WorkerRunner` | `runie-patterns` | Executes one agent turn; implemented in runie-tui over `runie_agent::subagent::run_subagent` |
 | `SubagentType` | `runie-core` | Declarative agent configs |
 | Event bus | `runie-core` | Coordination between agents |
 | `tokio::sync::Semaphore` | tokio | Concurrency control |
@@ -222,14 +220,38 @@ No separate model config in patterns — keeps it simple.
 Pattern selection is discoverable via:
 
 1. `/mode list` — shows all patterns with descriptions
-2. Tab completion for `/mode <pattern>`
-3. Help text per pattern via `/mode <pattern> help`
+2. `/mode <pattern> [workers N]` — switch with optional worker override
+3. `/mode swarm <parallel|delegation|dag>` — switch + set session variant
 
-## Implementation Phases
+## Implementation Status (shipped)
 
-1. **Phase 1**: Pattern trait + single pattern (baseline)
-2. **Phase 2**: Swarm pattern (parallel + delegation variants)
-3. **Phase 3**: Swarm dag variant + eval-optimizer pattern
+1. **Phase 1** ✅ — Pattern trait + single pattern + `[mode]` config + `/mode` command
+2. **Phase 2** ✅ — Swarm parallel + delegation; TUI routes non-single turns
+   through `runie-patterns`; per-worker lifecycle feed rows
+   (`Event::PatternWorkerSpawned/Finished` → `Element::SubagentRow`,
+   grok-style `✓ Subagent completed in Xs: "<task>"`, expandable to the
+   worker transcript)
+3. **Phase 3** ✅ — Swarm dag variant (topological waves, dependency context,
+   cycle detection, skip-on-failed-dependency) + eval-optimizer
+   (generate → review → revise loop, `Approved`/`MaxRoundsReached`)
+
+Notes on the shipped design:
+
+- **Turn hook**: `UiActor` intercepts `TurnStarted` when `mode.active !=
+  "single"` and spawns the pattern; it publishes the agent actor's exact
+  terminal contract (`Response` + `TurnComplete` + `Done`, or `Error` +
+  `Done`), so TurnActor/follow-up queues need no changes. Abort cancels the
+  pattern's `CancellationToken` without double-finalizing.
+- **Feed rows**: traces are published post-hoc (patterns emit traces on
+  completion), so lifecycle rows appear with the final state; live
+  in-flight rows would need per-event streaming.
+- **Mock provider markers** (deterministic, for black-box tests):
+  `[swarm-plan parallel|delegation]` → JSON task array; `[swarm-plan dag]`
+  → JSON objects with `deps`; `[swarm-synthesize]` → summary;
+  `[eval-generate]` → draft; `[eval-revise]` → revision; `[eval-review]` →
+  `APPROVED`.
+- **Descoped**: tab completion for `/mode <pattern>` (no subcommand
+  completion infrastructure exists) and `/mode <pattern> help`.
 
 ## Anti-Goals
 

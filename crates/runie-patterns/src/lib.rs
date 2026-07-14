@@ -3,8 +3,9 @@
 //! A [`Pattern`] executes a user request through one of three strategies:
 //! `single` (one agent end to end), `swarm` (leader + fan-out workers), or
 //! `eval-optimizer` (evaluate / revise loop). Phase 1 shipped the core
-//! primitives and [`SinglePattern`]; Phase 2 adds [`SwarmPattern`]
-//! (parallel + delegation variants); eval-optimizer lands in Phase 3.
+//! types and [`SinglePattern`]; Phase 2 added [`SwarmPattern`] (parallel +
+//! delegation variants); Phase 3 adds the swarm dag variant (backed by
+//! [`primitives::dag::Dag`]) and [`EvalOptimizerPattern`].
 //!
 //! # Deviation from PATTERNS.md: `WorkerRunner` instead of `LeaderHandle`
 //!
@@ -24,9 +25,12 @@
 //! - The pattern returns `TerminationReason::Error("aborted")`.
 //! - Clean shutdown with no zombie tasks.
 
+mod eval_optimizer;
+pub mod primitives;
 mod single;
 mod swarm;
 
+pub use eval_optimizer::EvalOptimizerPattern;
 pub use single::SinglePattern;
 pub use swarm::{SwarmPattern, SwarmVariant};
 
@@ -180,6 +184,7 @@ impl Default for PatternRegistry {
         let mut registry = Self::new();
         registry.register(Box::new(SinglePattern));
         registry.register(Box::new(SwarmPattern::parallel()));
+        registry.register(Box::new(EvalOptimizerPattern));
         registry
     }
 }

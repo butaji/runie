@@ -1,10 +1,9 @@
-//! Layer 2 tests: pattern-mode turn interception (PATTERNS.md Phase 2).
+//! Layer 2 tests: pattern-mode turn interception (PATTERNS.md Phase 2-3).
 //!
-//! A `TurnStarted` with `[mode].active == "swarm"` must NOT call the agent
-//! handle; instead UiActor runs the swarm pattern and publishes the same
-//! terminal events the agent actor would (Thinking, Response, TurnComplete,
-//! Done) plus worker feed rows. `eval-optimizer` falls back to the agent
-//! turn with a warning until Phase 3.
+//! A `TurnStarted` with `[mode].active == "swarm"` or `"eval-optimizer"`
+//! must NOT call the agent handle; instead UiActor runs the pattern and
+//! publishes the same terminal events the agent actor would (Thinking,
+//! Response, TurnComplete, Done) plus worker feed rows for swarm.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -209,10 +208,12 @@ async fn swarm_turn_runs_pattern_not_agent() {
     );
 }
 
-/// eval-optimizer is not implemented yet: it warns and runs as a normal
-/// single-agent turn.
+/// eval-optimizer routes through the pattern engine: no agent spawn, and
+/// the standard terminal contract (Thinking, Response, TurnComplete, Done).
+/// EchoRunner never returns "APPROVED", so the loop exhausts max_rounds and
+/// delivers the last draft as the result.
 #[tokio::test]
-async fn eval_optimizer_warns_and_falls_back_to_agent() {
+async fn eval_optimizer_runs_through_pattern_engine() {
     let bus = EventBus::<Event>::new(16);
     let mut bus_rx = bus.subscribe();
     let agent = TestAgentHandle::default();
@@ -226,16 +227,36 @@ async fn eval_optimizer_warns_and_falls_back_to_agent() {
 
     assert_eq!(
         agent.run_count.load(Ordering::SeqCst),
-        1,
-        "eval-optimizer falls back to the agent turn for now"
+        0,
+        "eval-optimizer must not spawn the agent"
     );
-    let events = drain_until(&mut bus_rx, |e| matches!(e, Event::TransientMessage { .. })).await;
+
+    let events = drain_until(
+        &mut bus_rx,
+        |e| matches!(e, Event::Done { id } if id == "req.0"),
+    )
+    .await;
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, Event::Thinking { id } if id == "req.0")),
+        "thinking row must show for the whole pattern run: {events:?}"
+    );
     assert!(
         events.iter().any(
-            |e| matches!(e, Event::TransientMessage { content, .. } if content.contains("eval-optimizer"))
+            |e| matches!(e, Event::Response { id, content, .. } if id == "req.0" && content == "x")
         ),
-        "warning must mention eval-optimizer: {events:?}"
+        "last draft must be published as the response: {events:?}"
     );
+    let turn_complete = events
+        .iter()
+        .position(|e| matches!(e, Event::TurnComplete { id, .. } if id == "req.0"))
+        .expect("TurnComplete must be published");
+    let done = events
+        .iter()
+        .position(|e| matches!(e, Event::Done { id } if id == "req.0"))
+        .expect("Done must be published");
+    assert!(turn_complete < done, "TurnComplete must precede Done");
 }
 
 /// Swarm mode without an installed runner falls back to the agent turn.

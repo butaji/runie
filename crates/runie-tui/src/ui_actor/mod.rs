@@ -435,15 +435,7 @@ impl UiActor {
             if !prev_turn_active && !self.turn_was_active {
                 self.turn_was_active = true;
                 let mode_active = self.state.config().mode.active.clone();
-                if mode_active == "eval-optimizer" {
-                    // eval-optimizer lands in Phase 3 — warn and run as a
-                    // normal single-agent turn for now.
-                    self.bus.publish(Event::TransientMessage {
-                        content: "eval-optimizer lands in Phase 3 — running as single agent".into(),
-                        level: runie_core::event::TransientLevel::Warning,
-                    });
-                    self.run_agent_turn(request_id, content).await;
-                } else if crate::pattern_runner::should_use_pattern(&mode_active)
+                if crate::pattern_runner::should_use_pattern(&mode_active)
                     && self.pattern_runner.is_some()
                 {
                     self.start_pattern_turn(request_id, content);
@@ -538,7 +530,8 @@ impl UiActor {
             abort: abort.clone(),
             runner,
         };
-        let pattern = crate::pattern_runner::swarm_for_variant(variant.as_deref());
+        let pattern = crate::pattern_runner::pattern_for_mode(&mode.active, variant.as_deref())
+            .expect("start_pattern_turn is guarded by should_use_pattern");
 
         let id = request_id.to_owned();
         let input = content.to_owned();

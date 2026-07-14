@@ -8,6 +8,9 @@
 //! - [`SwarmVariant::Delegation`] — repeat plan → execute up to
 //!   `max_rounds`; the leader finishes early by returning an empty/invalid
 //!   plan. Each plan prompt after round 1 carries a summary of prior rounds.
+//! - [`SwarmVariant::Dag`] — one plan produces a dependency graph; workers
+//!   execute in topological waves, each task receiving its dependencies'
+//!   outputs as context. Tasks with failed dependencies are skipped.
 //!
 //! # Cancellation contract
 //!
@@ -24,7 +27,9 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use futures::future::join_all;
 use tokio::sync::Semaphore;
+use tokio::task::JoinError;
 
+use crate::primitives::dag::{CycleError, Dag};
 use crate::{
     model_for, AgentTrace, Context, Pattern, PatternConfig, PatternOutput, TerminationReason,
     TraceEvent, TraceSender, WorkerRunner, WorkerTask,
@@ -34,6 +39,8 @@ use crate::{
 const SYNTHESIS_OUTPUT_CHARS: usize = 4000;
 /// Per-result truncation in the prior-rounds summary.
 const SUMMARY_OUTPUT_CHARS: usize = 500;
+/// Per-dependency output truncation in dag worker prompts.
+const DEP_OUTPUT_CHARS: usize = 1000;
 
 /// Swarm execution mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,10 +49,12 @@ pub enum SwarmVariant {
     Parallel,
     /// Leader delegates over multiple rounds until done or `max_rounds`.
     Delegation,
+    /// Workers form a dependency graph executed in topological waves.
+    Dag,
 }
 
 /// Coordinated multi-agent swarm: leader plans, workers execute, leader
-/// synthesizes. Both variants report [`Pattern::name`] as `"swarm"`.
+/// synthesizes. All variants report [`Pattern::name`] as `"swarm"`.
 pub struct SwarmPattern {
     variant: SwarmVariant,
 }
@@ -65,6 +74,14 @@ impl SwarmPattern {
         }
     }
 
+    /// Dag variant: leader plans a dependency graph; workers execute in
+    /// topological waves with dependency outputs as context.
+    pub fn dag() -> Self {
+        Self {
+            variant: SwarmVariant::Dag,
+        }
+    }
+
     /// The configured execution variant.
     pub fn variant(&self) -> &SwarmVariant {
         &self.variant
@@ -73,7 +90,7 @@ impl SwarmPattern {
     /// Run the plan → execute loop; the caller handles synthesis.
     async fn run_rounds(&self, ctx: &Context, state: &Arc<SwarmState>, input: &str) -> LoopOutcome {
         let max_rounds = match self.variant {
-            SwarmVariant::Parallel => 1,
+            SwarmVariant::Parallel | SwarmVariant::Dag => 1,
             SwarmVariant::Delegation => ctx.config.max_rounds.max(1),
         };
         let mut outcome = LoopOutcome::default();
@@ -130,9 +147,19 @@ impl Pattern for SwarmPattern {
             return Ok(finish(&state, String::new(), aborted()));
         }
 
-        let rounds = self.run_rounds(ctx, &state, input).await;
+        let rounds = match self.variant {
+            SwarmVariant::Parallel | SwarmVariant::Delegation => {
+                self.run_rounds(ctx, &state, input).await
+            }
+            SwarmVariant::Dag => run_dag(ctx, &state, input).await,
+        };
         if rounds.aborted {
             return Ok(finish(&state, String::new(), aborted()));
+        }
+        // A variant-level failure (dag dependency cycle) ends the pattern
+        // before any worker ran or synthesis happened.
+        if let TerminationReason::Error(message) = &rounds.termination {
+            return Ok(finish(&state, message.clone(), rounds.termination.clone()));
         }
         if state.is_tripped() {
             let message = format!(
@@ -357,7 +384,7 @@ async fn execute_round(
     let handles: Vec<_> = tasks
         .into_iter()
         .enumerate()
-        .map(|(index, task_text)| tokio::spawn(run_worker(env.clone(), round, index, task_text)))
+        .map(|(index, task_text)| tokio::spawn(run_worker(env.clone(), round, index, task_text, None)))
         .collect();
 
     // On abort the join is dropped, detaching in-flight worker spawns; their
@@ -382,11 +409,16 @@ async fn execute_round(
 
 /// Run one worker task with per-task timeout and retries, feeding the
 /// circuit breaker. Returns `(worker_id, output)` on success.
+/// One worker task with retries, timeout, circuit-breaker accounting, and a
+/// completion trace. `description` overrides the trace/feed-row label;
+/// defaults to `task_text`. Dag tasks pass the bare task so injected
+/// dependency context does not leak into the feed row.
 async fn run_worker(
     env: WorkerEnv,
     round: usize,
     index: usize,
     task_text: String,
+    description: Option<String>,
 ) -> Result<(String, String), String> {
     let worker_id = format!("worker-{round}-{index}");
     let permit = env
@@ -409,7 +441,7 @@ async fn run_worker(
     }];
 
     let (provider, model) = model_for(&env.models, index + 1);
-    let task_description = task_text.clone();
+    let task_description = description.unwrap_or_else(|| task_text.clone());
     let task = WorkerTask {
         id: worker_id.clone(),
         prompt: task_text,
@@ -535,10 +567,23 @@ fn build_plan_prompt(
             "Assign the task below to specialist workers, with clear instructions per task."
                 .to_string(),
         ),
+        SwarmVariant::Dag => (
+            "[swarm-plan dag]",
+            "Decompose the task below into subtasks with explicit dependencies, forming a DAG that executes in waves."
+                .to_string(),
+        ),
+    };
+    let format_instruction = match variant {
+        SwarmVariant::Dag => "Reply ONLY with a JSON array of objects, one per task, each \
+             {\"task\": \"...\", \"deps\": [<zero-based indices of earlier tasks it depends on>]}. \
+             No prose, no markdown fences.",
+        SwarmVariant::Parallel | SwarmVariant::Delegation => {
+            "Reply ONLY with a JSON array of strings, one per task. No prose, no markdown fences."
+        }
     };
     let mut prompt = format!(
         "{marker}\nYou are the leader of a coordinated worker swarm. {instruction}\n\
-         Reply ONLY with a JSON array of strings, one per task. No prose, no markdown fences.\n\n\
+         {format_instruction}\n\n\
          Task:\n{input}"
     );
     if round > 1 && !prior_summary.is_empty() {
@@ -581,5 +626,306 @@ fn truncate(text: &str, max_chars: usize) -> String {
         text.to_string()
     } else {
         text.chars().take(max_chars).collect()
+    }
+}
+
+/// Dag variant: plan once, execute in topological waves (PATTERNS.md Phase 3).
+/// A dependency cycle or an aborted/failed leader call ends the pattern
+/// before synthesis; an unparseable plan falls back to a single task, like
+/// the parallel variant.
+async fn run_dag(ctx: &Context, state: &Arc<SwarmState>, input: &str) -> LoopOutcome {
+    let mut outcome = LoopOutcome::default();
+    let prompt = build_plan_prompt(&SwarmVariant::Dag, ctx.config.workers, input, 1, "");
+    let response = match call_leader(ctx, state, "leader-plan-1", prompt).await {
+        LeaderCall::Aborted => {
+            outcome.aborted = true;
+            return outcome;
+        }
+        LeaderCall::Failed(_) => None,
+        LeaderCall::Text(text) => Some(text),
+    };
+
+    let (tasks, edges) = response
+        .as_deref()
+        .and_then(parse_dag_plan)
+        .unwrap_or_else(|| (vec![input.to_string()], Vec::new()));
+
+    let waves = match build_waves(ctx, state, &tasks, &edges) {
+        Ok(waves) => waves,
+        Err(CycleError(node)) => {
+            let message = format!("dependency cycle detected at node {node}");
+            outcome.errors.push(message.clone());
+            outcome.termination = TerminationReason::Error(message);
+            return outcome;
+        }
+    };
+
+    let env = WorkerEnv {
+        runner: Arc::clone(&ctx.runner),
+        semaphore: Arc::clone(&ctx.semaphore),
+        trace_tx: ctx.trace_tx.clone(),
+        config: ctx.config.clone(),
+        models: ctx.models.clone(),
+        state: Arc::clone(state),
+    };
+    let mut run = DagRun::new(tasks, &edges);
+    for (wave_index, wave) in waves.iter().enumerate() {
+        if ctx.abort.is_cancelled() {
+            outcome.aborted = true;
+            return outcome;
+        }
+        if state.is_tripped() {
+            break;
+        }
+        let wave_outcome = run_wave(ctx, &env, state, &mut run, wave_index + 1, wave).await;
+        if wave_outcome.aborted {
+            outcome.aborted = true;
+            return outcome;
+        }
+        outcome.successes.extend(wave_outcome.successes);
+        outcome.errors.extend(wave_outcome.errors);
+    }
+    outcome
+}
+
+/// A parsed dag plan: task texts plus `(task, dependency)` edges.
+type DagPlan = (Vec<String>, Vec<(usize, usize)>);
+
+/// Parse a dag plan: an array of objects with a required `"task"` string and
+/// an optional `"deps"` array of zero-based indices of earlier tasks.
+///
+/// Reuses the lenient array scan of [`parse_tasks`] (first `[` to last `]`).
+/// Returns `(tasks, edges)` where an edge `(task, dependency)` means `task`
+/// waits for `dependency`. Returns `None` when nothing usable is found —
+/// including any object missing a valid `"task"`, since dropping an object
+/// would shift the indices `deps` refer to. Non-integer dep entries are
+/// ignored; out-of-range deps are dropped later by [`Dag::add_edge`].
+fn parse_dag_plan(response: &str) -> Option<DagPlan> {
+    let start = response.find('[')?;
+    let end = response.rfind(']')?;
+    if end <= start {
+        return None;
+    }
+    let slice = &response[start..=end];
+    let values: Vec<serde_json::Value> = serde_json::from_str(slice).ok()?;
+    if values.is_empty() {
+        return None;
+    }
+    let mut tasks = Vec::new();
+    let mut edges = Vec::new();
+    for (index, value) in values.iter().enumerate() {
+        let task = value.get("task")?.as_str()?.to_string();
+        if let Some(deps) = value.get("deps").and_then(|d| d.as_array()) {
+            for dep in deps {
+                if let Some(dep_index) = dep.as_u64() {
+                    edges.push((index, dep_index as usize));
+                }
+            }
+        }
+        tasks.push(task);
+    }
+    Some((tasks, edges))
+}
+
+/// Build the [`Dag`] and compute execution waves. Out-of-range dependencies
+/// are dropped (via [`Dag::add_edge`]) and logged with a trace Error event
+/// instead of failing the plan.
+fn build_waves(
+    ctx: &Context,
+    state: &SwarmState,
+    tasks: &[String],
+    edges: &[(usize, usize)],
+) -> Result<Vec<Vec<usize>>, CycleError> {
+    let mut dag = Dag::new();
+    for task in tasks {
+        dag.add_node(task.clone());
+    }
+    for &(task, dependency) in edges {
+        dag.add_edge(task, dependency);
+    }
+    let dropped: Vec<(usize, usize)> = edges
+        .iter()
+        .copied()
+        .filter(|&(task, dependency)| task >= tasks.len() || dependency >= tasks.len())
+        .collect();
+    if !dropped.is_empty() {
+        let events: Vec<TraceEvent> = dropped
+            .iter()
+            .map(|(task, dependency)| TraceEvent::Error {
+                error: format!(
+                    "dropped out-of-range dependency: task {task} depends on {dependency}"
+                ),
+            })
+            .collect();
+        state.finish_trace(
+            &ctx.trace_tx,
+            AgentTrace {
+                agent_id: "dag-plan-validation".into(),
+                description: "dag plan validation".into(),
+                output: format!("dropped {} out-of-range dependencies", dropped.len()),
+                start_time: Utc::now(),
+                duration_ms: 0,
+                events,
+            },
+        );
+    }
+    dag.topological_waves()
+}
+
+/// Mutable per-node execution state shared across dag waves.
+struct DagRun {
+    tasks: Vec<String>,
+    /// Node id → dependency node ids (only valid edges).
+    deps: Vec<Vec<usize>>,
+    /// Node id → worker output for completed tasks.
+    outputs: Vec<Option<String>>,
+    /// Node id → the task failed or was skipped.
+    failed: Vec<bool>,
+}
+
+impl DagRun {
+    fn new(tasks: Vec<String>, edges: &[(usize, usize)]) -> Self {
+        let mut deps: Vec<Vec<usize>> = vec![Vec::new(); tasks.len()];
+        for &(task, dependency) in edges {
+            if task < tasks.len() && dependency < tasks.len() {
+                deps[task].push(dependency);
+            }
+        }
+        let node_count = tasks.len();
+        Self {
+            tasks,
+            deps,
+            outputs: vec![None; node_count],
+            failed: vec![false; node_count],
+        }
+    }
+}
+
+/// Execute one wave: skip tasks whose dependency failed (counting toward the
+/// circuit breaker), run the rest concurrently (bounded by the semaphore).
+async fn run_wave(
+    ctx: &Context,
+    env: &WorkerEnv,
+    state: &Arc<SwarmState>,
+    run: &mut DagRun,
+    wave_number: usize,
+    wave: &[usize],
+) -> RoundOutcome {
+    let mut outcome = RoundOutcome::default();
+    let mut handles = Vec::new();
+    for &node in wave {
+        if run.deps[node].iter().any(|&dep| run.failed[dep]) {
+            run.failed[node] = true;
+            outcome.errors.push(skip_failed_dependency(
+                ctx,
+                state,
+                wave_number,
+                node,
+                &run.tasks[node],
+            ));
+            continue;
+        }
+        let prompt = build_dag_task_prompt(&run.tasks[node], &run.deps[node], &run.tasks, &run.outputs);
+        let worker_env = env.clone();
+        let bare_task = run.tasks[node].clone();
+        handles.push(tokio::spawn(async move {
+            (node, run_worker(worker_env, wave_number, node, prompt, Some(bare_task)).await)
+        }));
+    }
+
+    // On abort the join is dropped, detaching in-flight worker spawns (see
+    // module docs).
+    let results = tokio::select! {
+        () = ctx.abort.cancelled() => return RoundOutcome { aborted: true, ..RoundOutcome::default() },
+        results = join_all(handles) => results,
+    };
+    collect_wave_results(results, &mut run.outputs, &mut run.failed, &mut outcome);
+    outcome
+}
+
+/// Skip a task whose dependency failed: trace an Error event, count the
+/// failure toward the circuit breaker, and return the error message.
+fn skip_failed_dependency(
+    ctx: &Context,
+    state: &SwarmState,
+    wave: usize,
+    node: usize,
+    task_text: &str,
+) -> String {
+    let worker_id = format!("worker-{wave}-{node}");
+    let message = format!("{worker_id}: skipped: dependency failed");
+    state.record_failure(ctx.config.circuit_breaker);
+    state.finish_trace(
+        &ctx.trace_tx,
+        AgentTrace {
+            agent_id: worker_id,
+            description: task_text.to_string(),
+            output: message.clone(),
+            start_time: Utc::now(),
+            duration_ms: 0,
+            events: vec![
+                TraceEvent::Error {
+                    error: "skipped: dependency failed".into(),
+                },
+                TraceEvent::Termination {
+                    reason: TerminationReason::Error(message.clone()),
+                },
+            ],
+        },
+    );
+    message
+}
+
+/// One spawned worker's join result, tagged with its node id.
+type WaveResult = Result<(usize, Result<(String, String), String>), JoinError>;
+
+/// Fold one wave's join results into per-node outputs/failures and the outcome.
+fn collect_wave_results(
+    results: Vec<WaveResult>,
+    outputs: &mut [Option<String>],
+    failed: &mut [bool],
+    outcome: &mut RoundOutcome,
+) {
+    for result in results {
+        match result {
+            Ok((node, Ok((worker_id, output)))) => {
+                outputs[node] = Some(output.clone());
+                outcome.successes.push((worker_id, output));
+            }
+            Ok((node, Err(error))) => {
+                failed[node] = true;
+                outcome.errors.push(error);
+            }
+            Err(join_error) => {
+                outcome.errors.push(format!("worker task failed to join: {join_error}"));
+            }
+        }
+    }
+}
+
+/// Worker prompt for a dag task: the task text plus a `Context from previous
+/// steps` section listing each completed dependency's output (truncated to
+/// 1000 chars). Omitted entirely when no dependency produced output.
+fn build_dag_task_prompt(
+    task_text: &str,
+    deps: &[usize],
+    tasks: &[String],
+    outputs: &[Option<String>],
+) -> String {
+    let context: Vec<String> = deps
+        .iter()
+        .filter_map(|&dep| {
+            outputs[dep]
+                .as_ref()
+                .map(|output| format!("- {}: {}", tasks[dep], truncate(output, DEP_OUTPUT_CHARS)))
+        })
+        .collect();
+    if context.is_empty() {
+        task_text.to_string()
+    } else {
+        format!(
+            "{task_text}\n\nContext from previous steps:\n{}",
+            context.join("\n")
+        )
     }
 }

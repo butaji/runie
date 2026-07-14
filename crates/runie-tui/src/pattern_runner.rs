@@ -58,17 +58,28 @@ pub(crate) fn resolve_provider_model(task: &WorkerTask, mock_enabled: bool) -> (
 }
 
 /// Whether `mode.active` selects a pattern-driven turn that intercepts the
-/// single-agent turn. Only `swarm` is wired in Phase 2; `eval-optimizer`
-/// falls back to the agent turn with a warning until Phase 3.
+/// single-agent turn.
 pub(crate) fn should_use_pattern(active: &str) -> bool {
-    active == "swarm"
+    pattern_for_mode(active, None).is_some()
 }
 
-/// Swarm engine for the session variant. `dag` falls back to `parallel`
-/// until Phase 3 lands the DAG scheduler.
+/// Pattern engine for the active mode and session swarm variant.
+pub(crate) fn pattern_for_mode(
+    active: &str,
+    variant: Option<&str>,
+) -> Option<Box<dyn runie_patterns::Pattern>> {
+    match active {
+        "swarm" => Some(Box::new(swarm_for_variant(variant))),
+        "eval-optimizer" => Some(Box::new(runie_patterns::EvalOptimizerPattern)),
+        _ => None,
+    }
+}
+
+/// Swarm engine for the session variant.
 pub(crate) fn swarm_for_variant(variant: Option<&str>) -> SwarmPattern {
     match variant {
         Some("delegation") => SwarmPattern::delegation(),
+        Some("dag") => SwarmPattern::dag(),
         _ => SwarmPattern::parallel(),
     }
 }
@@ -264,13 +275,19 @@ mod tests {
     }
 
     #[test]
-    fn pattern_intercepts_only_swarm() {
+    fn pattern_intercepts_pattern_modes() {
         assert!(!should_use_pattern("single"));
         assert!(should_use_pattern("swarm"));
-        // eval-optimizer falls back to the agent turn (Phase 3).
-        assert!(!should_use_pattern("eval-optimizer"));
+        assert!(should_use_pattern("eval-optimizer"));
         assert!(!should_use_pattern("unknown"));
         assert!(!should_use_pattern(""));
+    }
+
+    #[test]
+    fn mode_pattern_mapping() {
+        assert!(pattern_for_mode("swarm", None).is_some());
+        assert!(pattern_for_mode("eval-optimizer", None).is_some());
+        assert!(pattern_for_mode("single", None).is_none());
     }
 
     #[test]
@@ -283,10 +300,9 @@ mod tests {
             swarm_for_variant(Some("parallel")).variant(),
             SwarmVariant::Parallel
         ));
-        // dag is not implemented yet — falls back to parallel (Phase 3).
         assert!(matches!(
             swarm_for_variant(Some("dag")).variant(),
-            SwarmVariant::Parallel
+            SwarmVariant::Dag
         ));
         // No variant configured defaults to parallel.
         assert!(matches!(

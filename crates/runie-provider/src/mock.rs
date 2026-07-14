@@ -447,17 +447,29 @@ fn last_user_content(messages: &[ChatMessage]) -> Option<String> {
     })
 }
 
-/// Deterministic canned responses for the swarm pattern's orchestration
-/// prompts (`[swarm-plan …]` / `[swarm-synthesize]` markers, see
+/// Deterministic canned responses for the pattern orchestration prompts
+/// (`[swarm-plan …]` / `[swarm-synthesize]` / `[eval-*]` markers, see
 /// runie-patterns). Worker prompts carry no marker and fall through to the
-/// normal fixture/echo path.
+/// normal fixture/echo path. The dag plan check must come before the
+/// generic `[swarm-plan` prefix.
 fn swarm_marker_response(user_input: &str) -> Option<Vec<String>> {
-    if user_input.starts_with("[swarm-plan") {
+    if user_input.starts_with("[swarm-plan dag") {
+        Some(vec![
+            "[{\"task\": \"Summarize the task\", \"deps\": []}, {\"task\": \"Draft an implementation outline\", \"deps\": [0]}]"
+                .to_owned(),
+        ])
+    } else if user_input.starts_with("[swarm-plan") {
         Some(vec![
             "[\"Summarize the task\", \"Draft an implementation outline\"]".to_owned(),
         ])
     } else if user_input.starts_with("[swarm-synthesize") {
         Some(vec!["Swarm complete: all workers finished successfully.".to_owned()])
+    } else if user_input.starts_with("[eval-generate]") {
+        Some(vec!["Draft: here is the best answer to your task.".to_owned()])
+    } else if user_input.starts_with("[eval-revise]") {
+        Some(vec!["Revised draft addressing all reviewer feedback.".to_owned()])
+    } else if user_input.starts_with("[eval-review]") {
+        Some(vec!["APPROVED".to_owned()])
     } else {
         None
     }
@@ -821,5 +833,24 @@ mod tests {
         let provider = MockProviderBuilder::new().build();
         let text = collect_text(&provider, "regular worker prompt").await;
         assert_eq!(text, "regular worker prompt\n");
+    }
+
+    #[tokio::test]
+    async fn swarm_dag_plan_marker_streams_object_array() {
+        let provider = MockProviderBuilder::new().build();
+        let text = collect_text(&provider, "[swarm-plan dag]\nTask: build a feature").await;
+        assert!(text.starts_with("[{"));
+        assert!(text.contains("\"deps\""));
+    }
+
+    #[tokio::test]
+    async fn eval_markers_stream_draft_revision_and_approval() {
+        let provider = MockProviderBuilder::new().build();
+        let draft = collect_text(&provider, "[eval-generate]\nTask: x").await;
+        assert!(draft.starts_with("Draft:"));
+        let revised = collect_text(&provider, "[eval-revise]\nTask: x").await;
+        assert!(revised.starts_with("Revised draft"));
+        let review = collect_text(&provider, "[eval-review]\nTask: x").await;
+        assert_eq!(review, "APPROVED");
     }
 }

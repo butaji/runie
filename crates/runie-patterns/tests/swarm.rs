@@ -417,3 +417,207 @@ async fn swarm_workers_fall_back_to_leader_model() -> Result<()> {
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn swarm_dag_two_waves_dependency_context() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![
+        ok(r#"[{"task": "research", "deps": []}, {"task": "summarize", "deps": [0]}]"#),
+        ok("research notes"),
+        ok("summary"),
+        ok("final"),
+    ]));
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::dag().execute(&ctx, "research async Rust").await?;
+
+    assert_eq!(out.result, "final");
+    assert_eq!(out.termination, TerminationReason::Completed);
+    let ids = trace_ids(&out);
+    for expected in [
+        "leader-plan-1",
+        "worker-1-0",
+        "worker-2-1",
+        "leader-synthesize",
+    ] {
+        assert!(ids.contains(&expected.to_string()), "missing trace {expected} in {ids:?}");
+    }
+
+    let workers = runner.calls_with_prefix("worker-");
+    assert_eq!(workers.len(), 2, "one worker per wave");
+    assert_eq!(workers[0].id, "worker-1-0");
+    assert_eq!(workers[0].prompt, "research", "root task has no dependency context");
+    assert_eq!(workers[1].id, "worker-2-1");
+    assert!(workers[1].prompt.contains("summarize"));
+    assert!(
+        workers[1].prompt.contains("Context from previous steps:"),
+        "dependent task prompt gets the context section: {}",
+        workers[1].prompt
+    );
+    assert!(
+        workers[1].prompt.contains("- research: research notes"),
+        "context carries the dependency output: {}",
+        workers[1].prompt
+    );
+
+    // Feed-row descriptions carry the bare task, not the augmented prompt.
+    let dep_trace = out
+        .traces
+        .iter()
+        .find(|t| t.agent_id == "worker-2-1")
+        .expect("dependent worker trace");
+    assert_eq!(dep_trace.description, "summarize");
+
+    let plan_calls = runner.calls_with_prefix("leader-plan-");
+    assert_eq!(plan_calls.len(), 1, "dag plans exactly once");
+    assert_eq!(
+        plan_calls[0].prompt.lines().next(),
+        Some("[swarm-plan dag]"),
+        "plan prompt starts with the dag marker"
+    );
+    assert!(plan_calls[0].prompt.contains("\"deps\""), "plan prompt documents the deps schema");
+    Ok(())
+}
+
+#[tokio::test]
+async fn swarm_dag_skips_dependent_on_failed_dependency() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![
+        ok(r#"[{"task": "research", "deps": []}, {"task": "summarize", "deps": [0]}]"#),
+        err("boom"),
+        err("boom"),
+        err("boom"),
+    ]));
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::dag().execute(&ctx, "doomed research").await?;
+
+    match &out.termination {
+        TerminationReason::Error(msg) => assert!(msg.contains("all workers failed"), "got {msg}"),
+        other => panic!("expected error termination, got {other:?}"),
+    }
+    // The dependency failed 3 times (1 attempt + 2 retries); the dependent
+    // task was never dispatched.
+    let workers = runner.calls_with_prefix("worker-");
+    assert_eq!(workers.len(), 3);
+    assert!(workers.iter().all(|t| t.id == "worker-1-0"));
+    assert!(
+        runner.calls_with_prefix("leader-synthesize").is_empty(),
+        "synthesis must be skipped"
+    );
+
+    let skipped = out
+        .traces
+        .iter()
+        .find(|t| t.agent_id == "worker-2-1")
+        .expect("skipped task still gets a trace");
+    assert!(
+        skipped
+            .events
+            .iter()
+            .any(|e| matches!(e, TraceEvent::Error { error } if error == "skipped: dependency failed")),
+        "skip is traced with an Error event: {:?}",
+        skipped.events
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn swarm_dag_cycle_returns_pattern_error() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![ok(
+        r#"[{"task": "a", "deps": [1]}, {"task": "b", "deps": [0]}]"#,
+    )]));
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::dag().execute(&ctx, "cyclic").await?;
+
+    assert_eq!(
+        out.termination,
+        TerminationReason::Error("dependency cycle detected at node 0".into())
+    );
+    assert!(
+        runner.calls_with_prefix("worker-").is_empty(),
+        "no execution on cycle"
+    );
+    assert!(runner.calls_with_prefix("leader-synthesize").is_empty());
+    assert_eq!(trace_ids(&out), vec!["leader-plan-1"]);
+    Ok(())
+}
+
+#[tokio::test]
+async fn swarm_dag_plan_parse_failure_falls_back_to_single_task() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![
+        ok("sorry, no JSON here"),
+        ok("worker out"),
+        ok("final"),
+    ]));
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::dag().execute(&ctx, "the original task").await?;
+
+    assert_eq!(out.result, "final");
+    assert_eq!(out.termination, TerminationReason::Completed);
+    let workers = runner.calls_with_prefix("worker-");
+    assert_eq!(workers.len(), 1, "fallback dispatches exactly one task");
+    assert_eq!(workers[0].prompt, "the original task");
+    Ok(())
+}
+
+#[tokio::test]
+async fn swarm_dag_out_of_range_dependency_dropped_not_failed() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![
+        ok(r#"[{"task": "solo", "deps": [5]}]"#),
+        ok("out"),
+        ok("final"),
+    ]));
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::dag().execute(&ctx, "bad deps").await?;
+
+    assert_eq!(out.result, "final");
+    assert_eq!(out.termination, TerminationReason::Completed);
+    let workers = runner.calls_with_prefix("worker-");
+    assert_eq!(workers.len(), 1);
+    assert_eq!(workers[0].prompt, "solo", "dropped dep adds no context");
+    assert!(
+        out.traces.iter().any(|t| t
+            .events
+            .iter()
+            .any(|e| matches!(e, TraceEvent::Error { error } if error.contains("out-of-range")))),
+        "dropped dependency is logged via a trace Error event"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn swarm_dag_workers_fall_back_to_leader_model() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![
+        ok(r#"[{"task": "t1", "deps": []}, {"task": "t2", "deps": []}]"#),
+        ok("o1"),
+        ok("o2"),
+        ok("final"),
+    ]));
+    // make_ctx configures a single ("mock", "echo") model.
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::dag().execute(&ctx, "models").await?;
+
+    assert_eq!(out.termination, TerminationReason::Completed);
+    let workers = runner.calls_with_prefix("worker-");
+    assert_eq!(workers.len(), 2);
+    for task in workers {
+        assert_eq!(
+            (task.provider.as_str(), task.model.as_str()),
+            ("mock", "echo"),
+            "worker {} must reuse the leader model",
+            task.id
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn swarm_dag_variant_metadata() {
+    let dag = SwarmPattern::dag();
+    assert_eq!(dag.name(), "swarm");
+    assert_eq!(dag.variant(), &SwarmVariant::Dag);
+    assert!(!dag.description().is_empty());
+}
