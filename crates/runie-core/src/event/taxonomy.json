@@ -57,6 +57,8 @@
     "ToolStart": "{ id: String, name: String, input: serde_json::Value }",
     "ToolInputDelta": "{ id: String, content: String }",
     "ToolEnd": "{ id: String, duration_secs: f64, output: String }",
+    "PatternWorkerSpawned": "{ id: String, description: String, model: String }",
+    "PatternWorkerFinished": "{ id: String, status: String, duration_ms: u64, output: String }",
     "ToolConstraintError": "{ id: String, tool: String, violations: Vec<crate::tool::ConstraintViolation> }",
     "ResponseDelta": "{ id: String, content: String }",
     "ThinkingDelta": "{ id: String, content: String }",
@@ -187,7 +189,8 @@
         "TokenStatsUpdated", "CompactionTriggered", "StreamStarted",
         "UserMessageSubmitted", "QueueAborted", "QueuesCleared", "QueueFollowUpAdded",
         "QueueSteeringAdded", "SteeringDelivered", "FollowUpDelivered", "MessageDequeued",
-        "IdGenerated", "AssistantMessageReady"
+        "IdGenerated", "AssistantMessageReady", "PatternWorkerSpawned",
+        "PatternWorkerFinished"
       ]
     },
     "Scroll": {

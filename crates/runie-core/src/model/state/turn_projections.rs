@@ -7,6 +7,10 @@
 
 use super::AppState;
 
+/// Cap on retained worker output (chars) — the feed body is expandable, so
+/// a runaway worker response must not bloat in-memory state.
+const MAX_PATTERN_WORKER_OUTPUT_CHARS: usize = 20_000;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,6 +285,9 @@ impl AppState {
         agent.inflight += 1;
         agent.streaming = true;
         agent.turn_started_at = Some(std::time::Instant::now());
+        // Worker rows belong to a single turn: drop the previous turn's
+        // swarm lifecycle rows when the next turn begins.
+        agent.pattern_workers.clear();
         // Mirror the TurnActor: it pops its request_queue in handle_run_if_queued
         // before emitting TurnStarted. Without this pop the projection's
         // request_queue grew by one every turn and never drained, showing a
@@ -433,6 +440,60 @@ impl AppState {
             });
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
+    }
+
+    // ── Swarm pattern worker rows (GROK.md §26) ──────────────────────────────
+
+    /// Project PatternWorkerSpawned — push (or replace, id-keyed) a Running row.
+    pub(crate) fn apply_pattern_worker_spawned(
+        &mut self,
+        id: String,
+        description: String,
+        model: String,
+    ) {
+        use crate::model::{PatternWorkerRow, PatternWorkerStatus};
+        let row = PatternWorkerRow {
+            id,
+            description,
+            model,
+            status: PatternWorkerStatus::Running,
+            started: std::time::Instant::now(),
+            duration_ms: None,
+            output: String::new(),
+        };
+        let agent = self.agent_state_mut();
+        match agent.pattern_workers.iter_mut().find(|w| w.id == row.id) {
+            Some(existing) => *existing = row,
+            None => agent.pattern_workers.push(row),
+        }
+        self.messages_changed();
+    }
+
+    /// Project PatternWorkerFinished — update the row in place. "completed"
+    /// maps to Completed; any other status maps to Failed.
+    pub(crate) fn apply_pattern_worker_finished(
+        &mut self,
+        id: String,
+        status: String,
+        duration_ms: u64,
+        output: String,
+    ) {
+        use crate::model::PatternWorkerStatus;
+        let agent = self.agent_state_mut();
+        let Some(row) = agent.pattern_workers.iter_mut().find(|w| w.id == id) else {
+            return;
+        };
+        row.status = if status == "completed" {
+            PatternWorkerStatus::Completed
+        } else {
+            PatternWorkerStatus::Failed
+        };
+        row.duration_ms = Some(duration_ms);
+        row.output = output
+            .chars()
+            .take(MAX_PATTERN_WORKER_OUTPUT_CHARS)
+            .collect();
+        self.messages_changed();
     }
 }
 

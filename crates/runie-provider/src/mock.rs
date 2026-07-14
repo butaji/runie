@@ -447,6 +447,38 @@ fn last_user_content(messages: &[ChatMessage]) -> Option<String> {
     })
 }
 
+/// Deterministic canned responses for the swarm pattern's orchestration
+/// prompts (`[swarm-plan …]` / `[swarm-synthesize]` markers, see
+/// runie-patterns). Worker prompts carry no marker and fall through to the
+/// normal fixture/echo path.
+fn swarm_marker_response(user_input: &str) -> Option<Vec<String>> {
+    if user_input.starts_with("[swarm-plan") {
+        Some(vec![
+            "[\"Summarize the task\", \"Draft an implementation outline\"]".to_owned(),
+        ])
+    } else if user_input.starts_with("[swarm-synthesize") {
+        Some(vec!["Swarm complete: all workers finished successfully.".to_owned()])
+    } else {
+        None
+    }
+}
+
+/// Stream text chunks as TextDelta events (same chunking as fixture streams).
+fn text_chunks_stream(
+    delay_ms: Option<Duration>,
+    chunks: Vec<String>,
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+    Box::pin(async_stream::stream! {
+        for chunk_text in chunks {
+            if let Some(d) = delay_ms {
+                tokio::time::sleep(d).await;
+            }
+            yield Ok(ProviderEvent::TextDelta(chunk_text));
+        }
+        yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+    })
+}
+
 impl Provider for MockProvider {
     fn generate(
         &self,
@@ -455,6 +487,13 @@ impl Provider for MockProvider {
         let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = last_user_content(&messages).unwrap_or_default();
+
+        // Swarm orchestration markers (runie-patterns swarm pattern):
+        // deterministic canned responses, no input dependence. Worker prompts
+        // carry no marker and fall through to the fixture/echo path.
+        if let Some(chunks) = swarm_marker_response(&user_input) {
+            return text_chunks_stream(delay_ms, chunks);
+        }
 
         // MiniMax-shaped reasoning+tool scenario (regression fixture).
         if user_input.contains("think tool") {
@@ -744,5 +783,43 @@ mod tests {
         // A truly unknown input should NOT match any fixture
         let result = detect_fixture("xyzabc123 what is 2+2");
         assert!(result.is_none(), "Unexpected fixture detected: {:?}", result);
+    }
+
+    /// Collect all streamed text from a mock `generate` call.
+    async fn collect_text(provider: &MockProvider, input: &str) -> String {
+        use futures::StreamExt;
+        let messages = vec![ChatMessage::user(input.to_string())];
+        let mut stream = provider.generate(messages);
+        let mut text = String::new();
+        while let Some(event) = stream.next().await {
+            if let Ok(ProviderEvent::TextDelta(chunk)) = event {
+                text.push_str(&chunk);
+            }
+        }
+        text
+    }
+
+    #[tokio::test]
+    async fn swarm_plan_marker_streams_task_array() {
+        let provider = MockProviderBuilder::new().build();
+        let text = collect_text(&provider, "[swarm-plan parallel]\nTask: build a feature").await;
+        assert_eq!(
+            text,
+            "[\"Summarize the task\", \"Draft an implementation outline\"]"
+        );
+    }
+
+    #[tokio::test]
+    async fn swarm_synthesize_marker_streams_completion() {
+        let provider = MockProviderBuilder::new().build();
+        let text = collect_text(&provider, "[swarm-synthesize]\nOriginal task: x").await;
+        assert_eq!(text, "Swarm complete: all workers finished successfully.");
+    }
+
+    #[tokio::test]
+    async fn worker_prompt_falls_through_to_echo() {
+        let provider = MockProviderBuilder::new().build();
+        let text = collect_text(&provider, "regular worker prompt").await;
+        assert_eq!(text, "regular worker prompt\n");
     }
 }

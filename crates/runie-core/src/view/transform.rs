@@ -34,11 +34,20 @@ impl LazyCache {
             } else {
                 elem
             };
+            let elem = Self::maybe_expand_subagent(elem, state, feed.post_count());
             let kind = Self::post_kind(&elem);
-            let expanded = !matches!(
-                elem,
-                Element::ThoughtSummary { .. } | Element::ToolSummary { .. }
-            );
+            let expanded = match &elem {
+                Element::ThoughtSummary { .. } | Element::ToolSummary { .. } => false,
+                // Running workers have no body, so they are never collapsible;
+                // finished workers collapse to the one-line summary unless the
+                // post was individually expanded.
+                Element::SubagentRow {
+                    status, expanded, ..
+                } => {
+                    *expanded || matches!(status, crate::model::PatternWorkerStatus::Running)
+                }
+                _ => true,
+            };
             feed.push_post(
                 crate::view::posts::PostBuilder::new(kind)
                     .with_element(elem)
@@ -61,6 +70,7 @@ impl LazyCache {
             E::ToolDone { .. } => PostKind::ToolDone,
             E::ToolSummary { .. } => PostKind::ToolSummary,
             E::ContextGroup { .. } => PostKind::ContextGroup,
+            E::SubagentRow { .. } => PostKind::SubagentRow,
             E::TurnComplete { .. } => PostKind::TurnComplete,
         }
     }
@@ -107,6 +117,26 @@ impl LazyCache {
             }
             // Always show TurnComplete (like Grok does)
             entries.extend(Self::msg_to_elem(msg, state));
+        }
+
+        // Swarm worker lifecycle rows for the current turn, injected before
+        // the thinking row (same sort timestamp; the stable sort keeps them
+        // above "Waiting for response…" in spawn order).
+        for row in &state.agent_state().pattern_workers {
+            entries.push((
+                Element::subagent_row(
+                    row.id.clone(),
+                    row.description.clone(),
+                    row.model.clone(),
+                    row.status,
+                    matches!(row.status, crate::model::PatternWorkerStatus::Running)
+                        .then_some(row.started),
+                    row.duration_ms,
+                    row.output.clone(),
+                )
+                .at(Self::thinking_timestamp(state)),
+                false,
+            ));
         }
 
         if let Some(started) = state.agent_state().thinking_started_at {
@@ -276,6 +306,19 @@ impl LazyCache {
             let first_line = content.lines().next().unwrap_or(&content).to_owned();
             return Element::thought_summary(first_line, Self::parse_thought_dur(&content))
                 .at(timestamp);
+        }
+        elem
+    }
+
+    /// Mark a subagent row expanded when its post was individually expanded
+    /// with Enter in feed navigation. Running rows never expand (no output).
+    fn maybe_expand_subagent(mut elem: Element, state: &AppState, post_index: usize) -> Element {
+        if let Element::SubagentRow {
+            expanded, status, ..
+        } = &mut elem
+        {
+            *expanded = !matches!(status, crate::model::PatternWorkerStatus::Running)
+                && state.view().expanded_posts.contains(&post_index);
         }
         elem
     }

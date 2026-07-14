@@ -50,6 +50,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
         Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
+        SubagentRow { output, .. } => output.len() / 4 + 10,
         ContextGroup { tools, .. } => tools.iter().map(estimate_element_tokens).sum(),
         Spacer { .. } => 0,
     }
@@ -59,7 +60,6 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 mod tests {
     use super::*;
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
-    use ratatui::widgets::Paragraph;
     use runie_core::layout::word_wrap;
     use runie_core::view::elements::Element;
 

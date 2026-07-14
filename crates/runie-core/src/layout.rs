@@ -51,6 +51,9 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
                 tools.iter().map(|t| element_line_count(t, width)).sum()
             }
         }
+        Element::SubagentRow {
+            output, expanded, ..
+        } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
     }
 }
@@ -81,7 +84,20 @@ fn fallback_line_count(element: &Element) -> usize {
                 tools.iter().map(fallback_line_count).sum()
             }
         }
+        Element::SubagentRow {
+            output, expanded, ..
+        } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
+    }
+}
+
+/// Header line plus, when expanded, one row per output line (unwrapped,
+/// matching `render_subagent_row` in the TUI).
+fn subagent_row_line_count(output: &str, expanded: bool) -> usize {
+    if expanded && !output.is_empty() {
+        1 + output.lines().count()
+    } else {
+        1
     }
 }
 

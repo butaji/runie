@@ -56,6 +56,20 @@ pub enum Element {
         collapsed: bool,
         timestamp: f64,
     },
+    /// Swarm pattern worker lifecycle row (GROK.md §26). One row per worker
+    /// per turn; `started` is set while Running (drives the braille spinner),
+    /// `expanded` renders the worker `output` as the post body.
+    SubagentRow {
+        id: String,
+        description: String,
+        model: String,
+        status: crate::model::PatternWorkerStatus,
+        started: Option<std::time::Instant>,
+        duration_ms: Option<u64>,
+        output: String,
+        expanded: bool,
+        timestamp: f64,
+    },
     TurnComplete {
         duration_secs: f64,
         timestamp: f64,
@@ -79,6 +93,7 @@ impl ElementBuilder {
             Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
             Element::ContextGroup { timestamp: ts, .. } => *ts = timestamp,
+            Element::SubagentRow { timestamp: ts, .. } => *ts = timestamp,
             Element::TurnComplete { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -174,6 +189,31 @@ impl Element {
             timestamp: 0.0,
         })
     }
+    /// A swarm worker lifecycle row. `started` is `Some` only while the
+    /// worker is Running (spinner animation); `expanded` is set later by the
+    /// transform when the post is individually expanded.
+    #[allow(clippy::too_many_arguments)]
+    pub fn subagent_row(
+        id: impl Into<String>,
+        description: impl Into<String>,
+        model: impl Into<String>,
+        status: crate::model::PatternWorkerStatus,
+        started: Option<std::time::Instant>,
+        duration_ms: Option<u64>,
+        output: impl Into<String>,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::SubagentRow {
+            id: id.into(),
+            description: description.into(),
+            model: model.into(),
+            status,
+            started,
+            duration_ms,
+            output: output.into(),
+            expanded: false,
+            timestamp: 0.0,
+        })
+    }
     pub fn turn_complete(duration_secs: f64) -> ElementBuilder {
         ElementBuilder(Element::TurnComplete {
             duration_secs,
@@ -201,6 +241,7 @@ impl Element {
             Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
             Element::ContextGroup { timestamp: ts, .. } => *ts = timestamp,
+            Element::SubagentRow { timestamp: ts, .. } => *ts = timestamp,
             Element::TurnComplete { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -218,6 +259,7 @@ impl Element {
             Element::ToolDone { timestamp, .. } => *timestamp,
             Element::ToolSummary { timestamp, .. } => *timestamp,
             Element::ContextGroup { timestamp, .. } => *timestamp,
+            Element::SubagentRow { timestamp, .. } => *timestamp,
             Element::TurnComplete { timestamp, .. } => *timestamp,
         }
     }
@@ -245,6 +287,8 @@ pub enum PostKind {
     ToolSummary,
     /// A group of context-gathering tools.
     ContextGroup,
+    /// A swarm pattern worker lifecycle row.
+    SubagentRow,
     /// Turn completion marker.
     TurnComplete,
 }

@@ -161,12 +161,22 @@ pub enum TraceEvent {
 
 ```rust
 pub struct Context {
-    pub leader: LeaderHandle,
-    pub session: SessionState,
-    pub config: ConfigState,
+    pub config: PatternConfig,      // mirrors [mode] section
+    pub models: Vec<(String, String)>, // (provider, model) priority list
     pub semaphore: Arc<tokio::sync::Semaphore>,
-    pub trace_tx: TraceSender,
+    pub trace_tx: TraceSender,      // mpsc::UnboundedSender<AgentTrace>
     pub abort: CancellationToken,
+    pub runner: Arc<dyn WorkerRunner>,
+}
+
+/// Executes one agent turn and returns the final assistant text.
+/// Implemented in runie-tui over runie_agent::subagent::run_subagent;
+/// mocked in tests. (Deviation from the original LeaderHandle design:
+/// LeaderAgentHandle::run is fire-and-forget and cannot return worker
+/// text, so patterns go through this trait instead.)
+#[async_trait]
+pub trait WorkerRunner: Send + Sync {
+    async fn run(&self, task: WorkerTask) -> anyhow::Result<String>;
 }
 ```
 

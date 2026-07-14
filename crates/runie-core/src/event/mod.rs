@@ -192,6 +192,20 @@ pub enum Event {
     AssistantMessageReady {
         message: crate::message::ChatMessage,
     },
+    /// Swarm pattern worker spawned — transient feed row (GROK.md §26).
+    PatternWorkerSpawned {
+        id: String,
+        description: String,
+        model: String,
+    },
+    /// Swarm pattern worker finished — updates its feed row in place.
+    /// `status` is "completed" or any other string (treated as failed).
+    PatternWorkerFinished {
+        id: String,
+        status: String,
+        duration_ms: u64,
+        output: String,
+    },
 
     // ── Command variants ─────────────────────────────────────────────────────
     SetPrompt {

@@ -25,6 +25,7 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
             crate::view::Element::ToolDone { .. } => "ToolDone".to_string(),
             crate::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
             crate::view::Element::ContextGroup { .. } => "Context".to_string(),
+            crate::view::Element::SubagentRow { .. } => "Subagent".to_string(),
             crate::view::Element::TurnComplete { .. } => "Turn".to_string(),
             crate::view::Element::Spacer { .. } => "Spacer".to_string(),
         })

@@ -60,6 +60,11 @@ pub struct AgentState {
     pub last_assistant_index: Option<usize>,
     pub thinking_started_at: Option<std::time::Instant>,
 
+    // ── Swarm pattern workers (event-projected, not in TurnState) ──────────────
+    /// Lifecycle rows for the current turn's swarm workers (GROK.md §26).
+    /// Populated by PatternWorker* events; cleared on the next TurnStarted.
+    pub pattern_workers: Vec<crate::model::PatternWorkerRow>,
+
     // ── UI display helpers ─────────────────────────────────────────────────────
     /// Animated display value for tokens_in (smooth interpolation).
     pub tokens_in_display: f64,
@@ -100,6 +105,9 @@ impl From<&TurnState> for AgentState {
             thought_seq: ts.thought_seq,
             last_assistant_index: ts.last_assistant_index,
             thinking_started_at: ts.thinking_started_at,
+            // Event-projected (not part of TurnState); a rebuild from
+            // TurnState starts empty, projections repopulate it.
+            pattern_workers: Vec::new(),
             tokens_in_display: ts.tokens_in_display,
             tokens_out_display: ts.tokens_out_display,
             tokens_in_prev: ts.tokens_in_prev,

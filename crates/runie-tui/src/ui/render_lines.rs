@@ -57,6 +57,7 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
         ContextGroup {
             tools, collapsed, ..
         } => msg::render_context_group(tools, *collapsed),
+        SubagentRow { .. } => msg::render_subagent_row(elem),
         _ => render_tool_element(elem, content_width),
     }
 }

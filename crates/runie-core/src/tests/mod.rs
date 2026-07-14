@@ -101,6 +101,8 @@ mod paced_turn_completed;
 #[cfg(test)]
 mod paste;
 #[cfg(test)]
+mod pattern_workers;
+#[cfg(test)]
 mod placeholder;
 #[cfg(test)]
 mod queue;

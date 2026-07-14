@@ -83,6 +83,8 @@ fn dispatcher_handles_all_variants() {
             | Event::ThinkingEnd { .. }
             | Event::Response { .. }
             | Event::MessageReplayed { .. }
+            | Event::PatternWorkerSpawned { .. }
+            | Event::PatternWorkerFinished { .. }
             | Event::TurnComplete { .. }
             | Event::Done { .. }
             | Event::Error { .. } => Event::Done { id: "x".into() },

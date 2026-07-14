@@ -105,6 +105,8 @@ impl Event {
             Event::PathCompletionDown => EventKind::Intent,
             Event::PathCompletionSelect => EventKind::Intent,
             Event::PathCompletionUp => EventKind::Intent,
+            Event::PatternWorkerFinished { .. } => EventKind::Fact,
+            Event::PatternWorkerSpawned { .. } => EventKind::Fact,
             Event::PendingEdit { .. } => EventKind::Intent,
             Event::PermissionAllow { .. } => EventKind::Intent,
             Event::PermissionAlwaysAllow { .. } => EventKind::Intent,
@@ -344,6 +346,8 @@ impl Event {
             Event::PathCompletionDown => EventCategory::Dialog,
             Event::PathCompletionSelect => EventCategory::Dialog,
             Event::PathCompletionUp => EventCategory::Dialog,
+            Event::PatternWorkerFinished { .. } => EventCategory::Agent,
+            Event::PatternWorkerSpawned { .. } => EventCategory::Agent,
             Event::PendingEdit { .. } => EventCategory::Edit,
             Event::PermissionAllow { .. } => EventCategory::Permission,
             Event::PermissionAlwaysAllow { .. } => EventCategory::Permission,
@@ -660,6 +664,8 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FollowUpDelivered { .. }
             | Event::IdGenerated { .. }
             | Event::MessageDequeued { .. }
+            | Event::PatternWorkerFinished { .. }
+            | Event::PatternWorkerSpawned { .. }
             | Event::QueueAborted { .. }
             | Event::QueueFollowUpAdded { .. }
             | Event::QueueSteeringAdded { .. }

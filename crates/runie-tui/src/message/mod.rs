@@ -31,8 +31,9 @@ pub(crate) use wrap::word_wrap;
 use wrap::wrap_styled_spans;
 
 pub use support::{
-    render_context_group, render_thinking, render_thought_marker, render_thought_summary,
-    render_tool_done, render_tool_running, render_tool_summary, render_turn_complete,
+    render_context_group, render_subagent_row, render_thinking, render_thought_marker,
+    render_thought_summary, render_tool_done, render_tool_running, render_tool_summary,
+    render_turn_complete,
 };
 
 fn span_width(spans: &[Span<'_>]) -> u16 {

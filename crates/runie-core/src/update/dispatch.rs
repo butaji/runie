@@ -154,6 +154,29 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.end_tool(*duration_secs, output.clone());
             true
         }
+        // Swarm pattern worker lifecycle — transient feed rows (GROK.md §26).
+        Event::PatternWorkerSpawned {
+            id,
+            description,
+            model,
+        } => {
+            state.apply_pattern_worker_spawned(id.clone(), description.clone(), model.clone());
+            true
+        }
+        Event::PatternWorkerFinished {
+            id,
+            status,
+            duration_ms,
+            output,
+        } => {
+            state.apply_pattern_worker_finished(
+                id.clone(),
+                status.clone(),
+                *duration_ms,
+                output.clone(),
+            );
+            true
+        }
         Event::ResponseDelta { id, content } => {
             state.handle_llm_event(Event::ResponseDelta {
                 id: id.clone(),

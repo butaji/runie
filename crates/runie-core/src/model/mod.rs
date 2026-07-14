@@ -15,6 +15,7 @@ pub(crate) use crate::model::state::types::InputReceiver;
 pub use crate::model::state::types::PermissionRequestState;
 pub use crate::model::state::types::{QueuedMessage, QueuedMessageKind};
 pub use crate::model::state::view::ViewState;
+pub use crate::model::pattern_worker::{PatternWorkerRow, PatternWorkerStatus};
 pub use crate::model::state::FffFileEntry;
 pub use crate::model::state::ModelSource;
 pub use crate::model_catalog::{
@@ -29,5 +30,6 @@ pub type ModelSelectorItem = (String, String, String, bool, bool);
 
 mod cache;
 mod compaction;
+mod pattern_worker;
 pub mod state;
 mod view_cache;

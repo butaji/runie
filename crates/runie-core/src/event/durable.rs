@@ -67,6 +67,8 @@ impl DurableCoreEvent {
             | Event::MessageDequeued { .. }
             | Event::IdGenerated(_)
             | Event::AssistantMessageReady { .. }
+            | Event::PatternWorkerSpawned { .. }
+            | Event::PatternWorkerFinished { .. }
             | Event::Error { .. }
             // Init load events — not persisted, only used during bootstrap
             | Event::SkillsLoaded { .. }
