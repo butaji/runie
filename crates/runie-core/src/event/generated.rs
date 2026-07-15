@@ -106,6 +106,8 @@ impl Event {
             Event::PathCompletionDown => EventKind::Intent,
             Event::PathCompletionSelect => EventKind::Intent,
             Event::PathCompletionUp => EventKind::Intent,
+            Event::PatternWorkerFinished { .. } => EventKind::Fact,
+            Event::PatternWorkerSpawned { .. } => EventKind::Fact,
             Event::PendingEdit { .. } => EventKind::Intent,
             Event::PermissionAllow { .. } => EventKind::Intent,
             Event::PermissionAlwaysAllow { .. } => EventKind::Intent,
@@ -174,6 +176,7 @@ impl Event {
             Event::SessionTreeFilterCycle => EventKind::Intent,
             Event::SessionTreeSelect { .. } => EventKind::Intent,
             Event::SessionTreeSnapshot { .. } => EventKind::Fact,
+            Event::SetMode { .. } => EventKind::Intent,
             Event::SetPrompt { .. } => EventKind::Fact,
             Event::SetThinkingLevel { .. } => EventKind::Intent,
             Event::SettingsClose => EventKind::Intent,
@@ -186,6 +189,9 @@ impl Event {
             Event::ShareSession => EventKind::Control,
             Event::ShowDiagnostics => EventKind::Intent,
             Event::SkillAction { .. } => EventKind::Intent,
+            Event::SkillCreated { .. } => EventKind::Fact,
+            Event::SkillDeleted { .. } => EventKind::Fact,
+            Event::SkillError { .. } => EventKind::Fact,
             Event::SkillsLoaded { .. } => EventKind::Fact,
             Event::StarSession { .. } => EventKind::Control,
             Event::Start => EventKind::Intent,
@@ -348,6 +354,8 @@ impl Event {
             Event::PathCompletionDown => EventCategory::Dialog,
             Event::PathCompletionSelect => EventCategory::Dialog,
             Event::PathCompletionUp => EventCategory::Dialog,
+            Event::PatternWorkerFinished { .. } => EventCategory::Agent,
+            Event::PatternWorkerSpawned { .. } => EventCategory::Agent,
             Event::PendingEdit { .. } => EventCategory::Edit,
             Event::PermissionAllow { .. } => EventCategory::Permission,
             Event::PermissionAlwaysAllow { .. } => EventCategory::Permission,
@@ -416,6 +424,7 @@ impl Event {
             Event::SessionTreeFilterCycle => EventCategory::Session,
             Event::SessionTreeSelect { .. } => EventCategory::Session,
             Event::SessionTreeSnapshot { .. } => EventCategory::Session,
+            Event::SetMode { .. } => EventCategory::ModelConfig,
             Event::SetPrompt { .. } => EventCategory::Command,
             Event::SetThinkingLevel { .. } => EventCategory::ModelConfig,
             Event::SettingsClose => EventCategory::ModelConfig,
@@ -428,6 +437,9 @@ impl Event {
             Event::ShareSession => EventCategory::Control,
             Event::ShowDiagnostics => EventCategory::System,
             Event::SkillAction { .. } => EventCategory::Dialog,
+            Event::SkillCreated { .. } => EventCategory::IO,
+            Event::SkillDeleted { .. } => EventCategory::IO,
+            Event::SkillError { .. } => EventCategory::IO,
             Event::SkillsLoaded { .. } => EventCategory::IO,
             Event::StarSession { .. } => EventCategory::Control,
             Event::Start => EventCategory::LoginFlow,
@@ -618,6 +630,7 @@ impl Event {
             Event::ScopedModelToggle { .. } => Some(self.clone()),
             Event::ScopedModelToggleProvider { .. } => Some(self.clone()),
             Event::SelectModel { .. } => Some(self.clone()),
+            Event::SetMode { .. } => Some(self.clone()),
             Event::SetThinkingLevel { .. } => Some(self.clone()),
             Event::SettingsClose => Some(self),
             Event::SettingsDown => Some(self),
@@ -669,6 +682,8 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FollowUpDelivered { .. }
             | Event::IdGenerated { .. }
             | Event::MessageDequeued { .. }
+            | Event::PatternWorkerFinished { .. }
+            | Event::PatternWorkerSpawned { .. }
             | Event::QueueAborted { .. }
             | Event::QueueFollowUpAdded { .. }
             | Event::QueueSteeringAdded { .. }
@@ -709,6 +724,9 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FilesWritten { .. }
             | Event::GistShared { .. }
             | Event::ProcessResumed
+            | Event::SkillCreated { .. }
+            | Event::SkillDeleted { .. }
+            | Event::SkillError { .. }
             | Event::SkillsLoaded { .. }
             | Event::ModelsFetched { .. }
             | Event::ValidationFailed { .. }

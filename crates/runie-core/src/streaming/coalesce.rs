@@ -193,6 +193,11 @@ impl Coalescable for ProviderEvent {
             ProviderEvent::Error(_) => "error",
             ProviderEvent::Usage { .. } => "usage",
             ProviderEvent::Finish { .. } => "finish",
+            ProviderEvent::ToolExecutionStart { .. } => "tool_execution_start",
+            ProviderEvent::ToolExecutionEnd { .. } => "tool_execution_end",
+            ProviderEvent::ToolExecutionResult { .. } => "tool_execution_result",
+            ProviderEvent::TurnEnd => "turn_end",
+            ProviderEvent::AgentEnd => "agent_end",
         }
     }
 

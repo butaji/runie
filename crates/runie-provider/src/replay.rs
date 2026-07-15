@@ -22,7 +22,7 @@ use runie_core::provider_event::{ModelError, ProviderEvent};
 use sha2::{Digest, Sha256};
 
 /// A tool call entry for deterministic key computation.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct ToolCallEntry {
     pub tool_name: String,
     pub args_hash: String,

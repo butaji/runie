@@ -125,7 +125,7 @@ pub fn always_ask(_ctx: &AuthorizationContext<'_>) -> AuthorizeResult {
 }
 
 /// Default authorization that denies with a reason.
-pub fn deny(reason: &str) -> impl Fn(&AuthorizationContext<'_>) -> AuthorizeResult {
+pub fn deny(reason: &str) -> impl Fn(&AuthorizationContext<'_>) -> AuthorizeResult + '_ {
     move |_ctx: &AuthorizationContext<'_>| AuthorizeResult::Denied {
         reason: reason.to_owned(),
     }

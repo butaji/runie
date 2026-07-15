@@ -25,7 +25,7 @@ pub mod replay;
 
 #[cfg(feature = "replay")]
 pub use replay::{
-    compute_replay_key, ReplayKeyBuilder, ReplayProtocol, ReplayProvider, ToolCallEntry,
+    compute_replay_key, ReplayKeyBuilder, Protocol as ReplayProtocol, ReplayProvider, ToolCallEntry,
 };
 
 use crate::retry::{is_retryable, with_retry};

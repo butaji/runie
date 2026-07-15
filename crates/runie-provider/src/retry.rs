@@ -227,8 +227,11 @@ impl ExceptionClassifier {
         }
 
         // Priority 5: Timeout errors (retryable)
-        if self.matches_any(&msg, &["timeout", "timed out", "timedout"]) {
-            return ProviderError::Timeout;
+        {
+            let timeout_patterns: HashSet<_> = ["timeout", "timed out", "timedout"].into();
+            if self.matches_any(&msg, &timeout_patterns) {
+                return ProviderError::Timeout;
+            }
         }
 
         // Priority 6: Auth errors (fatal)
@@ -621,7 +624,7 @@ where
             // Check if this category has a specific retry limit
             if let Some(max) = max_retries {
                 let current = counter.load(Ordering::SeqCst);
-                if current >= max {
+                if current >= *max {
                     tracing::debug!(
                         error_category = %category,
                         current_retries = %current,

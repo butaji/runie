@@ -99,7 +99,7 @@ impl ToolFormat {
 }
 
 /// Generate MCP tool definition from a `ToolDef` implementation.
-pub fn to_mcp_tool<T: ToolDef>() -> Tool {
+pub fn to_mcp_tool<T: ToolDef>() -> Value {
     let schema = generate_schema::<T::Input>();
     let input_schema = Arc::new(schema.as_object().cloned().unwrap_or_default());
 
@@ -112,7 +112,7 @@ pub fn to_mcp_tool<T: ToolDef>() -> Tool {
     // so we handle this at the permission gate layer
     tool.annotations = Some(annotations);
 
-    tool
+    serde_json::to_value(&tool).expect("Tool should serialize to JSON")
 }
 
 /// Generate OpenAI function definition format.

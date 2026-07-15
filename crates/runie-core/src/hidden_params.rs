@@ -19,7 +19,7 @@ pub struct ResponseCost {
 
 /// Non-public struct holding metadata attached to a provider response.
 /// Stored behind `Arc` so cloning is cheap.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct HiddenParams {
     /// Actual cost incurred by this response.
     pub response_cost: Option<ResponseCost>,

@@ -54,7 +54,7 @@ pub struct ChatMessage {
     /// Hidden parameters attached to this message (not serialized).
     #[builder(default, setter(name = "set_hidden_params"))]
     #[serde(skip)]
-    hidden_params: Option<Arc<HiddenParams>>,
+    pub(crate) hidden_params: Option<Arc<HiddenParams>>,
 }
 
 impl ChatMessage {
@@ -318,11 +318,6 @@ impl ChatMessageBuilder {
         self
     }
 
-    pub fn hidden_params(mut self, params: Arc<HiddenParams>) -> Self {
-        self.hidden_params = Some(params);
-        self
-    }
-
     pub fn build(self) -> ChatMessage {
         let role = self.role.unwrap_or(Role::User);
         let timestamp = self.timestamp.unwrap_or_else(now);
@@ -339,7 +334,13 @@ impl ChatMessageBuilder {
             tool_call_id: self.tool_call_id.flatten(),
             provider_metadata: self.provider_metadata.flatten(),
             parts,
-            hidden_params: self.hidden_params,
+            hidden_params: self.hidden_params.unwrap_or_default(),
         }
+    }
+
+    /// Attach hidden parameters to this message.
+    pub fn with_hidden_params(mut self, params: Arc<HiddenParams>) -> Self {
+        self.set_hidden_params(Some(params));
+        self
     }
 }

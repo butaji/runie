@@ -66,6 +66,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
             query.len() / 4 + results.iter().map(|r| r.title.len() + r.snippet.len()).sum::<usize>() / 4
         }
         AnsiStyled { plain_text, .. } => plain_text.len() / 4,
+        SubagentRow { .. } => 10,
     }
 }
 
