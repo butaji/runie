@@ -165,6 +165,23 @@ async fn test_agent_loop_events_have_correct_id() {
 }
 
 #[test]
+fn skills_context_injected_into_system_prompt() {
+    let cmd = agent_cmd("grill me on caching")
+        .skills_context("## Context\n\nInterview me relentlessly.")
+        .build();
+    let msgs = build_initial_messages(&cmd, false);
+    let system = match &msgs[0].role {
+        runie_core::message::Role::System => msgs[0].content().clone(),
+        _ => panic!("expected system message"),
+    };
+    assert!(
+        system.contains("Interview me relentlessly"),
+        "skills_context must be appended to the system prompt, got: {}",
+        system
+    );
+}
+
+#[test]
 fn read_only_excludes_write_tools() {
     let cmd = agent_cmd("test").read_only(true).build();
     let msgs = build_initial_messages(&cmd, true);

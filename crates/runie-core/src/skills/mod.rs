@@ -36,9 +36,15 @@ impl Skill {
 
 /// Load skills from user (`~/.runie/skills/`), project (`./.runie/skills/`),
 /// and system (`~/.agents/skills/`) directories.
+///
+/// `$HOME` is honored first so isolated test environments (and users who set
+/// it explicitly) get the expected skills directory.
 pub fn load_all() -> Vec<Skill> {
     let mut skills = Vec::new();
-    if let Some(home) = dirs::home_dir() {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .or_else(dirs::home_dir);
+    if let Some(home) = home {
         skills.extend(load_from_dir(&home.join(".agents").join("skills")));
         skills.extend(load_from_dir(&home.join(".runie").join("skills")));
     }

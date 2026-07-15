@@ -23,6 +23,7 @@ use runie_core::actors::RactorInputHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::permissions::PermissionAction;
 use runie_core::update::dialog::handle_form_dialog;
+use runie_core::skills::build_skills_context;
 use runie_core::{AppState, Event, Snapshot};
 
 use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
@@ -481,7 +482,7 @@ impl UiActor {
             model,
             thinking_level: self.state.effective_thinking_level(),
             read_only: false,
-            skills_context: String::new(),
+            skills_context: build_skills_context(self.state.skills()),
             system_prompt: String::new(),
             truncation: TruncationPolicy::default(),
             cancellation_token: tokio_util::sync::CancellationToken::new(),
