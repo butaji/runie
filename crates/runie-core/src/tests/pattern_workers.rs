@@ -129,10 +129,22 @@ fn finished_failed_marks_row_failed() {
 }
 
 #[test]
-fn finished_unknown_status_marks_row_failed() {
+fn finished_cancelled_marks_row_cancelled() {
     let mut state = fresh_state();
     spawn(&mut state, "w.1", "Summarize the task", "echo");
     finish(&mut state, "w.1", "cancelled", 100, "");
+
+    assert_eq!(
+        state.agent_state().pattern_workers[0].status,
+        PatternWorkerStatus::Cancelled
+    );
+}
+
+#[test]
+fn finished_unknown_status_marks_row_failed() {
+    let mut state = fresh_state();
+    spawn(&mut state, "w.1", "Summarize the task", "echo");
+    finish(&mut state, "w.1", "exploded", 100, "");
 
     assert_eq!(
         state.agent_state().pattern_workers[0].status,

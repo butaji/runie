@@ -149,7 +149,7 @@ fn render_row(
     let style = match worker.status {
         S::Running => running_row_style(snap),
         S::Completed => completed_row_style(),
-        S::Failed => failed_row_style(),
+        S::Failed | S::Cancelled => failed_row_style(),
     };
 
     let elapsed = match worker.status {

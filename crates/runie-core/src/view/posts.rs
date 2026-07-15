@@ -29,6 +29,7 @@ pub struct PostBuilder {
     elements: Vec<Element>,
     timestamp: f64,
     expanded: bool,
+    trailing_spacer: bool,
 }
 
 impl PostBuilder {
@@ -39,6 +40,7 @@ impl PostBuilder {
             elements: Vec::new(),
             timestamp: 0.0,
             expanded: true,
+            trailing_spacer: true,
         }
     }
 
@@ -51,6 +53,14 @@ impl PostBuilder {
     /// Set whether the post body is expanded (default: true).
     pub fn expanded(mut self, expanded: bool) -> Self {
         self.expanded = expanded;
+        self
+    }
+
+    /// Set whether a trailing spacer is appended after this post (default:
+    /// true). Used to stack sub-agent lifecycle rows visually without blank
+    /// lines between them (GROK.md §26).
+    pub fn trailing_spacer(mut self, trailing_spacer: bool) -> Self {
+        self.trailing_spacer = trailing_spacer;
         self
     }
 
@@ -78,7 +88,9 @@ impl PostBuilder {
             element.set_timestamp(self.timestamp);
         }
         feed.elements.extend(elements);
-        feed.elements.push(Element::spacer().at(self.timestamp));
+        if self.trailing_spacer {
+            feed.elements.push(Element::spacer().at(self.timestamp));
+        }
 
         let index = feed.posts.len();
         feed.posts.push(Post {

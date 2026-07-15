@@ -69,7 +69,7 @@ fn build_title(worker: &PatternWorkerRow, frame: u32) -> Vec<Span<'static>> {
             crate::theme::GLYPH_CHECK.to_string(),
             Style::default().fg(crate::theme::color_subagent_completed()),
         ),
-        PatternWorkerStatus::Failed => (
+        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => (
             crate::theme::GLYPH_X.to_string(),
             Style::default().fg(crate::theme::color_subagent_failed()),
         ),

@@ -12,6 +12,7 @@ pub enum PatternWorkerStatus {
     Running,
     Completed,
     Failed,
+    Cancelled,
 }
 
 /// Detail view state for an open subagent row overlay.

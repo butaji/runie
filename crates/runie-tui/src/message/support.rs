@@ -201,6 +201,17 @@ pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
                 dim,
             ),
         ]),
+        S::Cancelled => Line::from(vec![
+            Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_failed_diamond())),
+            Span::styled(" ", Style::new().fg(color_subagent_failed_bright())),
+            Span::styled(
+                format!(
+                    "Subagent cancelled in {}: {GLYPH_SUBAGENT_QUOTE_LEFT}{description}{GLYPH_SUBAGENT_QUOTE_RIGHT}",
+                    runie_core::labels::format_elapsed_secs(duration_ms.unwrap_or(0) as f64 / 1000.0)
+                ),
+                dim,
+            ),
+        ]),
     };
 
     let mut lines = vec![header];

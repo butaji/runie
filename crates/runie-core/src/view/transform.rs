@@ -1,6 +1,6 @@
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
-use crate::view::elements::{Element, Feed};
+use crate::view::elements::{Element, Feed, PostKind};
 
 pub struct LazyCache;
 
@@ -23,16 +23,17 @@ impl LazyCache {
         });
 
         let mut feed = Feed::new();
-        for (elem, collapsible) in entries.into_iter() {
+        for i in 0..entries.len() {
+            let (elem, collapsible) = entries.get_mut(i).expect("entries bound by loop");
             let ts = elem.timestamp();
             // Only agent thoughts/reasoning collapse to one-line summaries
             // (grok parity). System messages (trust banner, /sessions,
             // compaction summaries) reuse the thought element for styling
             // but must always render in full.
-            let elem = if collapsible {
-                Self::maybe_collapse_thought(elem, state, feed.post_count())
+            let elem = if *collapsible {
+                Self::maybe_collapse_thought(elem.clone(), state, feed.post_count())
             } else {
-                elem
+                elem.clone()
             };
             let elem = Self::maybe_expand_subagent(elem, state, feed.post_count());
             let kind = Self::post_kind(&elem);
@@ -46,10 +47,21 @@ impl LazyCache {
                 } => *expanded || matches!(status, crate::model::PatternWorkerStatus::Running),
                 _ => true,
             };
+
+            // Stack consecutive sub-agent lifecycle rows without blank lines
+            // between them (GROK.md §26).
+            let next_is_subagent = entries
+                .get(i + 1)
+                .map(|(e, _)| Self::post_kind(e) == PostKind::SubagentRow)
+                .unwrap_or(false);
+            let trailing_spacer =
+                !(kind == PostKind::SubagentRow && next_is_subagent);
+
             feed.push_post(
                 crate::view::posts::PostBuilder::new(kind)
                     .with_element(elem)
                     .expanded(expanded)
+                    .trailing_spacer(trailing_spacer)
                     .at(ts),
             );
         }

@@ -474,7 +474,7 @@ impl AppState {
     }
 
     /// Project PatternWorkerFinished — update the row in place. "completed"
-    /// maps to Completed; any other status maps to Failed.
+    /// maps to Completed, "cancelled" maps to Cancelled, anything else to Failed.
     pub(crate) fn apply_pattern_worker_finished(
         &mut self,
         id: String,
@@ -487,10 +487,10 @@ impl AppState {
         let Some(row) = agent.pattern_workers.iter_mut().find(|w| w.id == id) else {
             return;
         };
-        row.status = if status == "completed" {
-            PatternWorkerStatus::Completed
-        } else {
-            PatternWorkerStatus::Failed
+        row.status = match status.as_str() {
+            "completed" => PatternWorkerStatus::Completed,
+            "cancelled" => PatternWorkerStatus::Cancelled,
+            _ => PatternWorkerStatus::Failed,
         };
         row.duration_ms = Some(duration_ms);
         row.output = output
