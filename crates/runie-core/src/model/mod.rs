@@ -13,6 +13,8 @@ pub use crate::model::state::session::{CompletionState, ConfigState, SessionStat
 pub use crate::model::state::types::DeliveryMode;
 pub(crate) use crate::model::state::types::InputReceiver;
 pub use crate::model::state::types::PermissionRequestState;
+pub use crate::model::state::types::{GoalState, GoalStatus};
+pub use crate::model::state::types::{Question, QuestionOption, QuestionState, Answer};
 pub use crate::model::state::types::{QueuedMessage, QueuedMessageKind};
 pub use crate::model::state::view::ViewState;
 pub use crate::model::state::FffFileEntry;

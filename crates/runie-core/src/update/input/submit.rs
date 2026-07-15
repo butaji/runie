@@ -162,9 +162,13 @@ impl AppState {
     pub fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
         use crate::commands::DialogType;
         match result {
-            crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
+            crate::commands::CommandResult::Message(msg) => {
+                self.add_system_msg(msg);
+                self.input_mut().input.clear();
+            }
             crate::commands::CommandResult::Warning(msg) => {
-                self.notify(msg, crate::event::TransientLevel::Warning)
+                self.notify(msg, crate::event::TransientLevel::Warning);
+                self.input_mut().input.clear();
             }
             crate::commands::CommandResult::Event(evt) => {
                 self.apply_command_event(evt);

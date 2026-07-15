@@ -1,5 +1,49 @@
 //! Core application state types used by `AppState`.
 
+/// Status of an active goal.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GoalStatus {
+    Active,
+    Paused,
+    Completed,
+    Cancelled,
+}
+
+impl GoalStatus {
+    /// Human-readable label for this status.
+    pub fn label(&self) -> &'static str {
+        match self {
+            GoalStatus::Active => "Active",
+            GoalStatus::Paused => "Paused",
+            GoalStatus::Completed => "Completed",
+            GoalStatus::Cancelled => "Cancelled",
+        }
+    }
+}
+
+/// Active goal state — tracks the current objective and completion criterion.
+#[derive(Clone, Debug)]
+pub struct GoalState {
+    pub objective: String,
+    pub completion_criterion: Option<String>,
+    pub status: GoalStatus,
+    pub created_at: std::time::Instant,
+    pub turns_spent: usize,
+}
+
+impl GoalState {
+    /// Create a new active goal.
+    pub fn new(objective: String, completion_criterion: Option<String>) -> Self {
+        Self {
+            objective,
+            completion_criterion,
+            status: GoalStatus::Active,
+            created_at: std::time::Instant::now(),
+            turns_spent: 0,
+        }
+    }
+}
+
 /// A file entry from the FFF indexer for the file picker.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FffFileEntry {
@@ -119,6 +163,87 @@ pub struct PermissionRequestState {
     pub request_id: String,
     pub tool: String,
     pub input: serde_json::Value,
+}
+
+/// A single question in an AskUserQuestion dialog.
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Question {
+    /// Unique identifier for this question
+    pub id: String,
+    /// The question text shown to the user
+    pub question: String,
+    /// Available options for this question
+    pub options: Vec<QuestionOption>,
+}
+
+/// A single option within a question.
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct QuestionOption {
+    /// Option identifier (e.g., "_1", "_S")
+    pub id: String,
+    /// Display label for this option
+    pub label: String,
+}
+
+/// Active AskUserQuestion dialog state.
+/// Tracks which question the user is on and their answers.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct QuestionState {
+    pub request_id: String,
+    pub questions: Vec<Question>,
+    pub current_index: usize,
+    pub answers: Vec<Answer>,
+}
+
+impl QuestionState {
+    /// Create a new question state.
+    pub fn new(request_id: String, questions: Vec<Question>) -> Self {
+        Self {
+            request_id,
+            questions,
+            current_index: 0,
+            answers: Vec::new(),
+        }
+    }
+
+    /// Get the current question, if any.
+    pub fn current_question(&self) -> Option<&Question> {
+        self.questions.get(self.current_index)
+    }
+
+    /// Record an answer for the current question and advance.
+    pub fn answer(&mut self, option_id: String) {
+        if self.current_index < self.questions.len() {
+            self.answers.push(Answer {
+                question_id: self.questions[self.current_index].id.clone(),
+                option_id,
+            });
+            self.current_index += 1;
+        }
+    }
+
+    /// Skip the current question without answering.
+    pub fn skip(&mut self) {
+        if self.current_index < self.questions.len() {
+            self.answers.push(Answer {
+                question_id: self.questions[self.current_index].id.clone(),
+                option_id: "_S".to_string(),
+            });
+            self.current_index += 1;
+        }
+    }
+
+    /// Check if all questions have been answered or skipped.
+    pub fn is_complete(&self) -> bool {
+        self.current_index >= self.questions.len()
+    }
+}
+
+/// An answer to a question.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Answer {
+    pub question_id: String,
+    pub option_id: String,
 }
 
 /// Identifies which component is currently receiving keyboard input.

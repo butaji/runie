@@ -285,6 +285,26 @@ pub enum Event {
     /// Disable plan mode.
     PlanModeDisabled,
 
+    // ── Goal variants ────────────────────────────────────────────────────────
+    /// Create a new goal with the given objective text.
+    GoalCreate {
+        objective: String,
+    },
+    /// Mark the goal as completed.
+    GoalComplete {
+        objective: String,
+    },
+    /// Pause the active goal.
+    GoalPause,
+    /// Resume a paused goal.
+    GoalResume,
+    /// Cancel the active goal.
+    GoalCancel,
+    /// Emit current goal status as a fact (used for UI updates).
+    GoalStatus {
+        status: String,
+    },
+
     // ── Dialog variants ──────────────────────────────────────────────────────
     ToggleWelcome,
     ToggleCommandPalette,
@@ -545,6 +565,26 @@ pub enum Event {
         request_id: String,
     },
 
+    // ── AskUserQuestion variants ─────────────────────────────────────────────────
+    /// Open an interactive multi-question dialog.
+    AskUserQuestion {
+        request_id: String,
+        questions: Vec<crate::model::Question>,
+    },
+    /// User answered the current question with an option.
+    QuestionAnswer {
+        request_id: String,
+        option_id: String,
+    },
+    /// User skipped the current question.
+    QuestionSkip {
+        request_id: String,
+    },
+    /// All questions answered or skipped — submit the collected answers.
+    QuestionSubmit {
+        request_id: String,
+    },
+
     // ── Persistence / Fact variants ──────────────────────────────────────────
     InputChanged {
         state: Box<crate::model::InputState>,
@@ -675,6 +715,7 @@ pub enum EventCategory {
     Control,
     Dialog,
     Edit,
+    Goal,
     IO,
     Input,
     LoginFlow,
@@ -683,6 +724,7 @@ pub enum EventCategory {
     Permission,
     Persistence,
     PlanMode,
+    Question,
     Scroll,
     Session,
     System,

@@ -197,6 +197,11 @@ impl DurableCoreEvent {
             | Event::PermissionDeny { .. }
             | Event::PermissionAlwaysAllow { .. }
             | Event::PermissionSessionAllow { .. }
+            // AskUserQuestion dialog — not persisted
+            | Event::AskUserQuestion { .. }
+            | Event::QuestionAnswer { .. }
+            | Event::QuestionSkip { .. }
+            | Event::QuestionSubmit { .. }
             | Event::PermissionOnce { .. } => None,
             // PermissionResponse / PermissionRequest — not persisted
             // Other facts — not persisted
@@ -350,7 +355,13 @@ impl DurableCoreEvent {
             | Event::KeybindingsReloaded
             | Event::SetPrompt { .. }
             | Event::PlanModeEnabled { .. }
-            | Event::PlanModeDisabled => None,
+            | Event::PlanModeDisabled
+            | Event::GoalCreate { .. }
+            | Event::GoalComplete { .. }
+            | Event::GoalPause
+            | Event::GoalResume
+            | Event::GoalCancel
+            | Event::GoalStatus { .. } => None,
         }
     }
 }

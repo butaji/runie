@@ -397,6 +397,47 @@ impl AppState {
     }
 }
 
+// ── Goal event handler ─────────────────────────────────────────────────────────
+
+pub(super) fn handle_goal_event(state: &mut AppState, event: Event) {
+    match event {
+        Event::GoalCreate { objective } => {
+            let goal = crate::model::GoalState::new(objective.clone(), None);
+            *state.goal_state_mut() = Some(goal);
+        }
+        Event::GoalComplete { objective } => {
+            if let Some(g) = state.goal_state_mut() {
+                g.status = crate::model::GoalStatus::Completed;
+            }
+            state.add_system_msg(format!("Goal completed: {}", objective));
+        }
+        Event::GoalPause => {
+            if let Some(g) = state.goal_state_mut() {
+                if g.status == crate::model::GoalStatus::Active {
+                    g.status = crate::model::GoalStatus::Paused;
+                    state.notify("Goal paused.".into(), TransientLevel::Info);
+                }
+            }
+        }
+        Event::GoalResume => {
+            if let Some(g) = state.goal_state_mut() {
+                if g.status == crate::model::GoalStatus::Paused {
+                    g.status = crate::model::GoalStatus::Active;
+                    state.notify("Goal resumed.".into(), TransientLevel::Info);
+                }
+            }
+        }
+        Event::GoalCancel => {
+            if let Some(g) = state.goal_state_mut() {
+                let obj = g.objective.clone();
+                *state.goal_state_mut() = None;
+                state.add_system_msg(format!("Goal cancelled: {}", obj));
+            }
+        }
+        _ => {}
+    }
+}
+
 // ── System event dispatcher ──────────────────────────────────────────────────
 
 pub(super) fn handle_system_event(state: &mut AppState, event: Event) {

@@ -1,6 +1,8 @@
 //! Command handlers — execution logic for slash commands.
 //!
 
+pub mod ask;
+pub mod goal;
 pub mod help;
 pub mod model;
 pub mod registry;
@@ -27,6 +29,8 @@ fn init_handler_registry() -> HandlerRegistry {
     system::register_handlers(&mut registry);
     help::register_handlers(&mut registry);
     status::register_handlers(&mut registry);
+    registry.register("goal", NamedHandler::Handler(goal::handle_goal));
+    registry.register("ask", NamedHandler::Handler(ask::handle_ask));
 
     // Register built-in handlers that are defined inline in model.rs
     registry.register("model", NamedHandler::Handler(model::handle_model));
