@@ -101,6 +101,14 @@ impl AppState {
         self.perm_req.as_ref()
     }
 
+    pub fn goal_state(&self) -> Option<&crate::model::GoalState> {
+        self.goal_state.as_ref()
+    }
+
+    pub fn question_state(&self) -> Option<&crate::model::QuestionState> {
+        self.question_state.as_ref()
+    }
+
     pub fn actor_handles(&self) -> Option<&crate::actors::LeaderHandle> {
         self.actor_handles.as_ref()
     }
@@ -224,6 +232,14 @@ impl AppState {
 
     pub fn permission_request_mut(&mut self) -> &mut Option<crate::model::PermissionRequestState> {
         &mut self.perm_req
+    }
+
+    pub fn goal_state_mut(&mut self) -> &mut Option<crate::model::GoalState> {
+        &mut self.goal_state
+    }
+
+    pub fn question_state_mut(&mut self) -> &mut Option<crate::model::QuestionState> {
+        &mut self.question_state
     }
 
     pub fn actor_handles_mut(&mut self) -> &mut Option<crate::actors::LeaderHandle> {

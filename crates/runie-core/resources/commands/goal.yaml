@@ -1,0 +1,9 @@
+# Goal management command
+name: goal
+description: Create, view, or manage a goal for the current session
+category: Session
+sub: false
+triggers:
+  - /goal
+type: handler
+handler: goal

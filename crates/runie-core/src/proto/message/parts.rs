@@ -16,6 +16,13 @@ pub enum Part {
     Text { content: String },
     /// Model reasoning / thinking block.
     Reasoning { content: String },
+    /// Redacted/encrypted thinking (from models like DeepSeek with signature)
+    ReasoningEncrypted { data: String, signature: Option<String> },
+    /// Anthropic-style thinking block with explicit type and signature
+    AnthropicThinking {
+        content: String,
+        signature: Option<String>,
+    },
     /// A tool invocation requested by the assistant.
     ToolCall {
         id: String,
@@ -24,6 +31,26 @@ pub enum Part {
     },
     /// The result returned for a tool invocation.
     ToolResult { id: String, output: String },
+    /// Tool call requiring user confirmation
+    ToolConfirmation {
+        id: String,
+        name: String,
+        args: Value,
+        description: Option<String>,
+    },
+    /// Inline image (base64 encoded)
+    Image {
+        data: String,
+        mime_type: String,
+    },
+    /// Structured data / JSON
+    Data { data: String, format: Option<String> },
+    /// Web search invocation
+    WebSearch { query: String },
+    /// Diff/changelist output
+    Diff { content: String, diff_type: String },
+    /// ANSI-styled content
+    Ansi { raw: String, plain: String },
 }
 
 impl Part {
@@ -39,6 +66,20 @@ impl Part {
         }
     }
 
+    pub fn reasoning_encrypted(data: impl Into<String>, signature: Option<String>) -> Self {
+        Self::ReasoningEncrypted {
+            data: data.into(),
+            signature,
+        }
+    }
+
+    pub fn anthropic_thinking(content: impl Into<String>, signature: Option<String>) -> Self {
+        Self::AnthropicThinking {
+            content: content.into(),
+            signature,
+        }
+    }
+
     pub fn tool_call(id: impl Into<String>, name: impl Into<String>, args: Value) -> Self {
         Self::ToolCall {
             id: id.into(),
@@ -51,6 +92,51 @@ impl Part {
         Self::ToolResult {
             id: id.into(),
             output: output.into(),
+        }
+    }
+
+    pub fn tool_confirmation(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        args: Value,
+        description: Option<String>,
+    ) -> Self {
+        Self::ToolConfirmation {
+            id: id.into(),
+            name: name.into(),
+            args,
+            description,
+        }
+    }
+
+    pub fn image(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self::Image {
+            data: data.into(),
+            mime_type: mime_type.into(),
+        }
+    }
+
+    pub fn data(data: impl Into<String>, format: Option<String>) -> Self {
+        Self::Data { data: data.into(), format }
+    }
+
+    pub fn web_search(query: impl Into<String>) -> Self {
+        Self::WebSearch {
+            query: query.into(),
+        }
+    }
+
+    pub fn diff(content: impl Into<String>, diff_type: impl Into<String>) -> Self {
+        Self::Diff {
+            content: content.into(),
+            diff_type: diff_type.into(),
+        }
+    }
+
+    pub fn ansi(raw: impl Into<String>, plain: impl Into<String>) -> Self {
+        Self::Ansi {
+            raw: raw.into(),
+            plain: plain.into(),
         }
     }
 }

@@ -73,6 +73,9 @@ impl DurableCoreEvent {
             | Event::ToggleTasksPane
             // Init load events — not persisted, only used during bootstrap
             | Event::SkillsLoaded { .. }
+            | Event::SkillCreated { .. }
+            | Event::SkillDeleted { .. }
+            | Event::SkillError { .. }
             | Event::AuthLoaded { .. } => None,
             // Durable: message
             // Durable: assistant response (uses stored role/timestamp/provider)
@@ -197,6 +200,11 @@ impl DurableCoreEvent {
             | Event::PermissionDeny { .. }
             | Event::PermissionAlwaysAllow { .. }
             | Event::PermissionSessionAllow { .. }
+            // AskUserQuestion dialog — not persisted
+            | Event::AskUserQuestion { .. }
+            | Event::QuestionAnswer { .. }
+            | Event::QuestionSkip { .. }
+            | Event::QuestionSubmit { .. }
             | Event::PermissionOnce { .. } => None,
             // PermissionResponse / PermissionRequest — not persisted
             // Other facts — not persisted
@@ -357,7 +365,13 @@ impl DurableCoreEvent {
             | Event::ToggleMcpServersDialog
             | Event::ToggleSkillsDialog
             | Event::McpServerAction { .. }
-            | Event::SkillAction { .. } => None,
+            | Event::SkillAction { .. }
+            | Event::GoalCreate { .. }
+            | Event::GoalComplete { .. }
+            | Event::GoalPause
+            | Event::GoalResume
+            | Event::GoalCancel
+            | Event::GoalStatus { .. } => None,
         }
     }
 }

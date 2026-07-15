@@ -39,9 +39,11 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
+        Element::AnthropicThinking { content, .. } => thought_marker_line_count(content, width),
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
+        Element::ToolConfirmation { .. } => 1,
         Element::ContextGroup {
             tools, collapsed, ..
         } => {
@@ -55,6 +57,18 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
             output, expanded, ..
         } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
+        Element::Image { .. } => 1, // Image placeholder height
+        Element::DataPart { data, .. } => data.lines().count().max(1),
+        Element::MarkdownTable { rows, .. } => {
+            // Header + separator + rows
+            1 + 1 + rows.len()
+        }
+        Element::DiffOutput { content, .. } => content.lines().count().max(1),
+        Element::WebSearchCall { results, .. } => {
+            // Query line + result headers + separator
+            1 + results.len() * 2
+        }
+        Element::AnsiStyled { plain_text, .. } => plain_text.lines().count().max(1),
     }
 }
 
@@ -66,6 +80,7 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
         Element::ThoughtSummary { .. } => 1,
+        Element::AnthropicThinking { content, .. } => content.lines().count().max(1),
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => {
             if output.is_empty() {
@@ -75,6 +90,7 @@ fn fallback_line_count(element: &Element) -> usize {
             }
         }
         Element::ToolSummary { .. } => 1,
+        Element::ToolConfirmation { .. } => 1,
         Element::ContextGroup {
             tools, collapsed, ..
         } => {
@@ -88,6 +104,12 @@ fn fallback_line_count(element: &Element) -> usize {
             output, expanded, ..
         } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
+        Element::Image { .. } => 1,
+        Element::DataPart { data, .. } => data.lines().count().max(1),
+        Element::MarkdownTable { rows, .. } => 1 + 1 + rows.len(),
+        Element::DiffOutput { content, .. } => content.lines().count().max(1),
+        Element::WebSearchCall { results, .. } => 1 + results.len() * 2,
+        Element::AnsiStyled { plain_text, .. } => plain_text.lines().count().max(1),
     }
 }
 

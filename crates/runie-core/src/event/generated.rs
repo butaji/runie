@@ -9,6 +9,7 @@ impl Event {
         match self {
             Event::Abort => EventKind::Control,
             Event::ApproveEdit => EventKind::Intent,
+            Event::AskUserQuestion { .. } => EventKind::Fact,
             Event::AssistantMessageReady { .. } => EventKind::Fact,
             Event::AtFilePicker => EventKind::Intent,
             Event::AuthLoaded { .. } => EventKind::Fact,
@@ -66,6 +67,12 @@ impl Event {
             Event::GistShared { .. } => EventKind::Fact,
             Event::GoToBottom => EventKind::Intent,
             Event::GoToTop => EventKind::Intent,
+            Event::GoalCancel { .. } => EventKind::Intent,
+            Event::GoalComplete { .. } => EventKind::Intent,
+            Event::GoalCreate { .. } => EventKind::Intent,
+            Event::GoalPause { .. } => EventKind::Intent,
+            Event::GoalResume { .. } => EventKind::Intent,
+            Event::GoalStatus { .. } => EventKind::Fact,
             Event::HistoryAppend { .. } => EventKind::Fact,
             Event::HistoryLoaded { .. } => EventKind::Fact,
             Event::HistoryNext => EventKind::Intent,
@@ -125,6 +132,9 @@ impl Event {
             Event::ProvidersDisconnect { .. } => EventKind::Intent,
             Event::ProvidersEditModels { .. } => EventKind::Intent,
             Event::ProvidersSelectModel { .. } => EventKind::Intent,
+            Event::QuestionAnswer { .. } => EventKind::Intent,
+            Event::QuestionSkip { .. } => EventKind::Intent,
+            Event::QuestionSubmit { .. } => EventKind::Intent,
             Event::QueueAborted { .. } => EventKind::Fact,
             Event::QueueFollowUpAdded { .. } => EventKind::Fact,
             Event::QueueSteeringAdded { .. } => EventKind::Fact,
@@ -191,6 +201,9 @@ impl Event {
             Event::ShareSession => EventKind::Control,
             Event::ShowDiagnostics => EventKind::Intent,
             Event::SkillAction { .. } => EventKind::Intent,
+            Event::SkillCreated { .. } => EventKind::Fact,
+            Event::SkillDeleted { .. } => EventKind::Fact,
+            Event::SkillError { .. } => EventKind::Fact,
             Event::SkillsLoaded { .. } => EventKind::Fact,
             Event::StarSession { .. } => EventKind::Control,
             Event::Start => EventKind::Intent,
@@ -257,6 +270,7 @@ impl Event {
         match self {
             Event::Abort => EventCategory::Control,
             Event::ApproveEdit => EventCategory::Edit,
+            Event::AskUserQuestion { .. } => EventCategory::Question,
             Event::AssistantMessageReady { .. } => EventCategory::Agent,
             Event::AtFilePicker => EventCategory::Dialog,
             Event::AuthLoaded { .. } => EventCategory::IO,
@@ -314,6 +328,12 @@ impl Event {
             Event::GistShared { .. } => EventCategory::IO,
             Event::GoToBottom => EventCategory::Input,
             Event::GoToTop => EventCategory::Input,
+            Event::GoalCancel { .. } => EventCategory::Goal,
+            Event::GoalComplete { .. } => EventCategory::Goal,
+            Event::GoalCreate { .. } => EventCategory::Goal,
+            Event::GoalPause { .. } => EventCategory::Goal,
+            Event::GoalResume { .. } => EventCategory::Goal,
+            Event::GoalStatus { .. } => EventCategory::Goal,
             Event::HistoryAppend { .. } => EventCategory::Persistence,
             Event::HistoryLoaded { .. } => EventCategory::Persistence,
             Event::HistoryNext => EventCategory::Input,
@@ -373,6 +393,9 @@ impl Event {
             Event::ProvidersDisconnect { .. } => EventCategory::Dialog,
             Event::ProvidersEditModels { .. } => EventCategory::Dialog,
             Event::ProvidersSelectModel { .. } => EventCategory::Dialog,
+            Event::QuestionAnswer { .. } => EventCategory::Question,
+            Event::QuestionSkip { .. } => EventCategory::Question,
+            Event::QuestionSubmit { .. } => EventCategory::Question,
             Event::QueueAborted { .. } => EventCategory::Agent,
             Event::QueueFollowUpAdded { .. } => EventCategory::Agent,
             Event::QueueSteeringAdded { .. } => EventCategory::Agent,
@@ -439,6 +462,9 @@ impl Event {
             Event::ShareSession => EventCategory::Control,
             Event::ShowDiagnostics => EventCategory::System,
             Event::SkillAction { .. } => EventCategory::Dialog,
+            Event::SkillCreated { .. } => EventCategory::IO,
+            Event::SkillDeleted { .. } => EventCategory::IO,
+            Event::SkillError { .. } => EventCategory::IO,
             Event::SkillsLoaded { .. } => EventCategory::IO,
             Event::StarSession { .. } => EventCategory::Control,
             Event::Start => EventCategory::LoginFlow,
@@ -586,6 +612,11 @@ impl Event {
             Event::ApproveEdit => Some(self),
             Event::PendingEdit { .. } => Some(self.clone()),
             Event::RejectEdit => Some(self),
+            Event::GoalCancel => Some(self),
+            Event::GoalComplete { .. } => Some(self.clone()),
+            Event::GoalCreate { .. } => Some(self.clone()),
+            Event::GoalPause => Some(self),
+            Event::GoalResume => Some(self),
             Event::Backspace => Some(self),
             Event::CursorEnd => Some(self),
             Event::CursorLeft => Some(self),
@@ -658,6 +689,9 @@ impl Event {
             Event::PermissionSessionAllow { .. } => Some(self.clone()),
             Event::PlanModeDisabled => Some(self),
             Event::PlanModeEnabled { .. } => Some(self.clone()),
+            Event::QuestionAnswer { .. } => Some(self.clone()),
+            Event::QuestionSkip { .. } => Some(self.clone()),
+            Event::QuestionSubmit { .. } => Some(self.clone()),
             Event::Down => Some(self),
             Event::Up => Some(self),
             Event::CloneSession => Some(self),
@@ -717,6 +751,7 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::TurnStarted { .. }
             | Event::UserMessageSubmitted { .. }
             | Event::SetPrompt { .. }
+            | Event::GoalStatus { .. }
             | Event::AuthLoaded { .. }
             | Event::BashOutput { .. }
             | Event::ClipboardRead { .. }
@@ -727,6 +762,9 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FilesWritten { .. }
             | Event::GistShared { .. }
             | Event::ProcessResumed
+            | Event::SkillCreated { .. }
+            | Event::SkillDeleted { .. }
+            | Event::SkillError { .. }
             | Event::SkillsLoaded { .. }
             | Event::ModelsFetched { .. }
             | Event::ValidationFailed { .. }
@@ -743,6 +781,7 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::TrustLoaded { .. }
             | Event::TrustSet { .. }
             | Event::ViewChanged { .. }
+            | Event::AskUserQuestion { .. }
             | Event::SessionChanged { .. }
             | Event::SessionDeleted { .. }
             | Event::SessionExported { .. }
