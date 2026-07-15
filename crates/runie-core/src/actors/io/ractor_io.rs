@@ -3,7 +3,7 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};

@@ -120,7 +120,7 @@ fn message_to_event(message: &ChatMessage) -> Option<DurableCoreEvent> {
         Role::TurnComplete => None,
         _ => Some(DurableCoreEvent::MessageSent {
             id: message.id.clone(),
-            role: message.role.as_str().to_owned(),
+            role: message.role.as_str().to_string(),
             content: message.content(),
             timestamp: message.timestamp,
             provider: message.provider.clone(),

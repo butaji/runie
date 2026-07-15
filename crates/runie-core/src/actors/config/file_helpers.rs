@@ -83,7 +83,7 @@ pub fn save_provider_to_path(
     path: &Path,
     name: &str,
     base_url: &str,
-    api_key: &str,
+    #[allow(unused)] api_key: &str,
     models: &[String],
 ) -> anyhow::Result<()> {
     // Store api_key in keyring (never in config)

@@ -118,7 +118,7 @@ pub fn model_reasoning_panel(
         let label = if override_level == Some(level) {
             format!("{} (current)", level.as_str())
         } else {
-            level.as_str().to_owned()
+            level.as_str().to_string()
         };
         panel = panel.item(
             label,

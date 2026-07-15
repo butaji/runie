@@ -163,10 +163,7 @@ async fn run_sandboxed_direct(
 ) -> ShellResult {
     use crate::sandbox;
 
-    let env_pairs: Vec<(String, String)> =
-        env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-
-    let child = match sandbox::run_sandboxed_direct_async(program, args, working_dir, &env_pairs)
+    let child = match sandbox::run_sandboxed_direct_async(program, args, working_dir, &env_to_vec(env))
         .await
     {
         Ok(c) => c,
@@ -194,21 +191,7 @@ async fn run_sandboxed_direct(
     tokio::select! {
         result = rx => {
             match result {
-                Ok(Ok(out)) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    let combined = combine_output(&stdout, &stderr);
-                    let bytes = out.stdout.len() as u64 + out.stderr.len() as u64;
-                    ShellResult {
-                        output: combined,
-                        bytes_transferred: Some(bytes),
-                        status: if out.status.success() {
-                            ShellStatus::Success
-                        } else {
-                            ShellStatus::Error
-                        },
-                    }
-                }
+                Ok(Ok(out)) => process_output(out),
                 Ok(Err(e)) => ShellResult::error(format!("IO error reading output: {}", e)),
                 Err(_) => ShellResult::error("Output collection cancelled".to_owned()),
             }
@@ -233,10 +216,7 @@ async fn run_sandboxed_shell(
 ) -> ShellResult {
     use crate::sandbox;
 
-    let env_pairs: Vec<(String, String)> =
-        env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-
-    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_pairs).await
+    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_to_vec(env)).await
     {
         Ok(c) => c,
         Err(e) => return ShellResult::error(format!("Failed to spawn sandboxed shell: {}", e)),
@@ -300,21 +280,7 @@ async fn run_command(mut cmd: Command, timeout: Duration) -> ShellResult {
     tokio::select! {
         result = rx => {
             match result {
-                Ok(Ok(out)) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    let combined = combine_output(&stdout, &stderr);
-                    let bytes = out.stdout.len() as u64 + out.stderr.len() as u64;
-                    ShellResult {
-                        output: combined,
-                        bytes_transferred: Some(bytes),
-                        status: if out.status.success() {
-                            ShellStatus::Success
-                        } else {
-                            ShellStatus::Error
-                        },
-                    }
-                }
+                Ok(Ok(out)) => process_output(out),
                 Ok(Err(e)) => ShellResult::error(format!("IO error reading output: {}", e)),
                 // Sender dropped means timeout fired first — result already returned.
                 Err(_) => ShellResult::error("Output collection cancelled".to_owned()),
@@ -361,21 +327,7 @@ fn run_bash_sync_shell(
         .output();
 
     match output {
-        Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-            let combined = combine_output(&stdout, &stderr);
-            let bytes = out.stdout.len() as u64 + out.stderr.len() as u64;
-            ShellResult {
-                output: combined,
-                bytes_transferred: Some(bytes),
-                status: if out.status.success() {
-                    ShellStatus::Success
-                } else {
-                    ShellStatus::Error
-                },
-            }
-        }
+        Ok(out) => process_output(out),
         Err(e) => ShellResult::error(format!("Error running command: {}", e)),
     }
 }
@@ -401,26 +353,35 @@ fn run_bash_sync_direct(
         .output();
 
     match output {
-        Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-            let combined = combine_output(&stdout, &stderr);
-            let bytes = out.stdout.len() as u64 + out.stderr.len() as u64;
-            ShellResult {
-                output: combined,
-                bytes_transferred: Some(bytes),
-                status: if out.status.success() {
-                    ShellStatus::Success
-                } else {
-                    ShellStatus::Error
-                },
-            }
-        }
+        Ok(out) => process_output(out),
         Err(e) => ShellResult::error(format!("Error running command: {}", e)),
     }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Convert a HashMap of environment variables to a Vec of (key, value) pairs.
+/// Used by sandbox functions that expect Vec<(String, String)>.
+fn env_to_vec(env: &HashMap<String, String>) -> Vec<(String, String)> {
+    env.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+}
+
+/// Process command output bytes into a ShellResult.
+fn process_output(out: std::process::Output) -> ShellResult {
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    let combined = combine_output(&stdout, &stderr);
+    let bytes = out.stdout.len() as u64 + out.stderr.len() as u64;
+    ShellResult {
+        output: combined,
+        bytes_transferred: Some(bytes),
+        status: if out.status.success() {
+            ShellStatus::Success
+        } else {
+            ShellStatus::Error
+        },
+    }
+}
 
 fn combine_output(stdout: &str, stderr: &str) -> String {
     if stdout.is_empty() && stderr.is_empty() {

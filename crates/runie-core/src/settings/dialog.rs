@@ -167,7 +167,7 @@ fn thinking_level_item(state: &AppState) -> SettingItem {
         "thinking_level",
         "Thinking Level",
         SettingValue::Cycle {
-            current: state.config().thinking_level.as_str().to_owned(),
+            current: state.config().thinking_level.as_str().to_string(),
             options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
         },
         "Agent reasoning depth",

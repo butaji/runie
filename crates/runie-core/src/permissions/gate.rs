@@ -48,12 +48,6 @@ impl PermissionGate {
         }
     }
 
-    /// Get a reference to the approval sink (for testing).
-    #[allow(dead_code)]
-    pub fn sink_ref(&self) -> &Arc<dyn ApprovalSink> {
-        &self.sink
-    }
-
     /// Cancel any pending approval request.
     /// Call this when the turn is aborted (e.g. via AbortTurn / ForceQuit).
     pub fn cancel_pending(&self) {

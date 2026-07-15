@@ -128,7 +128,7 @@ impl LazyCache {
             .iter()
             .filter(|m| m.role == Role::User)
             .map(|m| m.timestamp)
-            .last();
+            .next_back();
         last_user_ts
             .map(|t| t + 1e-7)
             .unwrap_or_else(|| Self::thinking_timestamp(state))

@@ -64,17 +64,14 @@ fn v3_to_v4(config: &mut toml::Value) -> anyhow::Result<()> {
         .as_table_mut()
         .ok_or_else(|| anyhow::anyhow!("config must be a table"))?;
 
-    let providers = match map.get_mut("model_providers") {
-        Some(toml::Value::Table(t)) => t,
-        _ => return Ok(()),
+    let Some(providers) = map.get_mut("model_providers").and_then(|p| p.as_table_mut()) else {
+        return Ok(());
     };
 
-    for (name, provider_value) in providers.iter_mut() {
-        let provider_map = match provider_value.as_table_mut() {
-            Some(m) => m,
-            None => continue,
-        };
+    for (_name, provider_value) in providers.iter_mut() {
+        let Some(provider_map) = provider_value.as_table_mut() else { continue };
 
+        #[allow(unused_variables)]
         let api_key = match provider_map.get("api_key") {
             Some(toml::Value::String(s)) if !s.is_empty() => Some(s.clone()),
             _ => None,

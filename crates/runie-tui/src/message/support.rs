@@ -16,12 +16,12 @@ use crate::theme::{
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
 
+use super::word_wrap;
+
 /// Display-cell width for any `AsRef<str>` type.
 fn str_width(s: impl AsRef<str>) -> usize {
     UnicodeWidthStr::width(s.as_ref())
 }
-
-use super::word_wrap;
 
 pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'static>> {
     let style = style_thought();
@@ -388,7 +388,7 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
 ///
 /// Kept for future ordered-list rendering in the markdown pipeline.
 /// Currently unused but exercised by doctests.
-#[allow(dead_code, reason = "kept for future ordered-list rendering")]
+#[allow(clippy::too_many_arguments, dead_code, reason = "kept for future ordered-list rendering")]
 pub fn render_list_item_from_spans(
     row: &[MdSpan],
     ordered: bool,

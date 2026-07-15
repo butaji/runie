@@ -39,13 +39,6 @@ impl LifecycleState {
         events
     }
 
-    /// Explicitly close a text block and emit `TextEnd`.
-    #[allow(dead_code)]
-    fn text_end(&mut self, id: &str) -> Vec<ProviderEvent> {
-        self.open_text_blocks.remove(id);
-        vec![ProviderEvent::TextEnd { id: id.to_owned() }]
-    }
-
     /// Process a thinking delta and emit lifecycle events.
     ///
     /// Returns `ThinkingStart` on first delta for this `id`, then `ThinkingDelta`.
@@ -57,13 +50,6 @@ impl LifecycleState {
         }
         events.push(ProviderEvent::ThinkingDelta(delta.to_owned()));
         events
-    }
-
-    /// Explicitly close a thinking block and emit `ThinkingEnd`.
-    #[allow(dead_code)]
-    fn thinking_end(&mut self, id: &str) -> Vec<ProviderEvent> {
-        self.open_thinking_blocks.remove(id);
-        vec![ProviderEvent::ThinkingEnd { id: id.to_owned() }]
     }
 
     /// Close all open blocks and emit their end events, plus `Finish`.
@@ -119,21 +105,6 @@ mod lifecycle_tests {
             reason: StopReason::Stop
         }));
         assert_eq!(events.len(), 4); // 3 End + 1 Finish
-    }
-
-    #[test]
-    fn lifecycle_text_end_removes_from_open_set() {
-        let mut state = LifecycleState::default();
-        state.text_delta("b1", "hi");
-        state.text_end("b1");
-        let events = state.text_delta("b1", "x");
-        assert_eq!(
-            events,
-            vec![
-                ProviderEvent::TextStart { id: "b1".into() },
-                ProviderEvent::TextDelta("x".into())
-            ]
-        );
     }
 
     #[test]
@@ -384,10 +355,8 @@ impl ContentFilter {
         let span = self.buffer[..end].to_owned();
         self.buffer.drain(..end);
         if !suppress_tools {
-            for result in parse_minimax_tool_calls(&span) {
-                if let Ok(call) = result {
-                    out.push(ContentSegment::ToolCall(call));
-                }
+            for call in parse_minimax_tool_calls(&span).into_iter().flatten() {
+                out.push(ContentSegment::ToolCall(call));
             }
         }
         true

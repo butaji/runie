@@ -32,19 +32,13 @@ pub trait KeyringStore: Send + Sync {
 /// OS keyring backend using the `keyring` crate.
 /// All entries use the `"runie"` service name with `"provider:{name}"` accounts.
 #[cfg(feature = "keyring")]
+#[derive(Default)]
 pub struct OsKeyringStore;
 
 #[cfg(feature = "keyring")]
 impl OsKeyringStore {
     pub fn new() -> Self {
         Self
-    }
-}
-
-#[cfg(feature = "keyring")]
-impl Default for OsKeyringStore {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

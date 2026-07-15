@@ -224,7 +224,6 @@ impl AppState {
 
     /// Set streaming state. For test setup only.
     /// Production code should use events and projection handlers.
-    #[allow(dead_code)]
     pub fn set_streaming(&mut self, streaming: bool) {
         self.agent_state_mut().streaming = streaming;
     }

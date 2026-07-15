@@ -11,6 +11,7 @@ pub struct CycleError(pub usize);
 ///
 /// An edge `(task, dependency)` means `task` waits for `dependency`: the
 /// dependency must appear in an earlier execution wave than the task.
+#[derive(Default)]
 pub struct Dag {
     nodes: Vec<String>,
     edges: Vec<(usize, usize)>,
@@ -79,11 +80,5 @@ impl Dag {
             return Err(CycleError(stuck));
         }
         Ok(waves)
-    }
-}
-
-impl Default for Dag {
-    fn default() -> Self {
-        Self::new()
     }
 }

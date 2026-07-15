@@ -39,17 +39,12 @@ impl runie_core::actors::leader::LeaderAgentHandle for LeaderAgentHandleImpl {
 }
 
 /// Factory for spawning agent actors (implements `AgentActorFactory`).
+#[derive(Default)]
 pub struct AgentActorFactoryImpl;
 
 impl AgentActorFactoryImpl {
     pub fn new() -> Self {
         Self
-    }
-}
-
-impl Default for AgentActorFactoryImpl {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

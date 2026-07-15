@@ -41,12 +41,6 @@ pub enum ServerState {
 
 /// MCP server handle for a single server.
 struct ServerHandle {
-    /// Server name.
-    #[allow(dead_code)]
-    name: String,
-    /// Server configuration.
-    #[allow(dead_code)]
-    config: McpServer,
     /// Current state.
     state: ServerState,
     /// Cancellation token for rmcp client shutdown.
@@ -54,10 +48,8 @@ struct ServerHandle {
 }
 
 impl ServerHandle {
-    fn new(name: String, config: McpServer, cancellation_token: CancellationToken) -> Self {
+    fn new(cancellation_token: CancellationToken) -> Self {
         Self {
-            name,
-            config,
             state: ServerState::Starting,
             cancellation_token,
         }
@@ -126,7 +118,7 @@ impl McpConnectionManager {
 
             // For cached servers, create a dummy cancellation token
             let dummy_token = CancellationToken::new();
-            let handle = ServerHandle::new(name.clone(), config.clone(), dummy_token);
+            let handle = ServerHandle::new(dummy_token);
 
             let mut servers = self.servers.write().await;
             let h = servers.entry(name.clone()).or_insert(handle);
@@ -197,7 +189,7 @@ impl McpConnectionManager {
                 // Create a cancellation token that will be cancelled when the client is dropped
                 // The rmcp client will be kept alive by storing it in the server handle
                 let cancellation_token = CancellationToken::new();
-                let handle = ServerHandle::new(name.clone(), config.clone(), cancellation_token);
+                let handle = ServerHandle::new(cancellation_token);
                 let mut servers = self.servers.write().await;
                 let h = servers.entry(name.clone()).or_insert(handle);
                 h.state = ServerState::Running(mcp_tools);
@@ -218,7 +210,7 @@ impl McpConnectionManager {
 
                 // HTTP/SSE transport not yet implemented - create empty tools
                 let dummy_token = CancellationToken::new();
-                let handle = ServerHandle::new(name.clone(), config.clone(), dummy_token);
+                let handle = ServerHandle::new(dummy_token);
 
                 let tools: Vec<CachedToolSchema> = Vec::new();
                 self.cache.put(&name, &config, tools).await?;

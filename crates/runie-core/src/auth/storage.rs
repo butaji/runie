@@ -72,7 +72,7 @@ impl AuthStorage {
 
         #[cfg(feature = "keyring")]
         {
-            return Self::load_merged(&super::store_trait::OsKeyringStore::new());
+            Self::load_merged(&super::store_trait::OsKeyringStore::new())
         }
 
         #[cfg(not(feature = "keyring"))]

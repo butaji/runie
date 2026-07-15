@@ -30,13 +30,6 @@ pub fn to_lines_and_count(elem: &Element, content_width: u16) -> (Vec<Line<'stat
     (lines, count)
 }
 
-#[allow(dead_code)]
-fn wrapped_row_count(lines: &[Line<'_>], width: u16) -> usize {
-    Paragraph::new(lines)
-        .wrap(Wrap { trim: false })
-        .line_count(width)
-}
-
 fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
     use runie_core::Element::*;
     match elem {

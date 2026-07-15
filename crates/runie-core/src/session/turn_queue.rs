@@ -58,6 +58,23 @@ impl TurnQueue {
         std::mem::take(&mut self.messages)
     }
 
+    /// Collect and remove all messages of a given kind, returning their contents joined by newline.
+    fn extract_all(&mut self, kind: QueuedMessageKind) -> Option<(String, usize)> {
+        let items: Vec<_> = self
+            .messages
+            .iter()
+            .filter(|m| m.kind == kind)
+            .map(|m| m.content.clone())
+            .collect();
+        if items.is_empty() {
+            return None;
+        }
+        let count = items.len();
+        let content = items.join("\n");
+        self.messages.retain(|m| m.kind != kind);
+        Some((content, count))
+    }
+
     /// Pop steering messages from the queue.
     ///
     /// - `OneAtATime`: pops the first steering message (count ≤ 1).
@@ -75,18 +92,7 @@ impl TurnQueue {
                 }
             }
             All => {
-                let steerings: Vec<_> = self
-                    .messages
-                    .iter()
-                    .filter(|m| m.kind == kind)
-                    .map(|m| m.content.clone())
-                    .collect();
-                if steerings.is_empty() {
-                    return None;
-                }
-                let count = steerings.len();
-                let content = steerings.join("\n");
-                self.messages.retain(|m| m.kind != kind);
+                let (content, count) = self.extract_all(kind)?;
                 Some(PopResult::new(content, count))
             }
         }
@@ -114,19 +120,7 @@ impl TurnQueue {
 
     /// Pop all follow-up messages from the queue.
     pub fn pop_all_follow_ups(&mut self) -> Option<PopResult> {
-        let kind = QueuedMessageKind::FollowUp;
-        let follow_ups: Vec<_> = self
-            .messages
-            .iter()
-            .filter(|m| m.kind == kind)
-            .map(|m| m.content.clone())
-            .collect();
-        if follow_ups.is_empty() {
-            return None;
-        }
-        let count = follow_ups.len();
-        let content = follow_ups.join("\n");
-        self.messages.retain(|m| m.kind != kind);
+        let (content, count) = self.extract_all(QueuedMessageKind::FollowUp)?;
         Some(PopResult::new(content, count))
     }
 }

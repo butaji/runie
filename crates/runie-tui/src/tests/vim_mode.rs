@@ -397,7 +397,7 @@ fn no_duplicate_content_after_nav_mode_exit() {
         snap_nav.vim_nav_mode,
         "snapshot must have vim_nav_mode = true"
     );
-    let nav_count = count_rows_with_prefix(&buf_nav, "this is a");
+    let nav_count = count_rows_with_prefix(buf_nav, "this is a");
 
     // ── After exiting vim nav mode ───────────────────────────────────────────
     state.update(Event::DialogBack);
@@ -418,7 +418,7 @@ fn no_duplicate_content_after_nav_mode_exit() {
         snap_exited.selected_post.is_none(),
         "snapshot selected_post must be None after exit"
     );
-    let exited_count = count_rows_with_prefix(&buf_exited, "this is a");
+    let exited_count = count_rows_with_prefix(buf_exited, "this is a");
 
     // Both modes should render the same number of content rows — no extra
     // duplicates appear after exiting nav mode.
