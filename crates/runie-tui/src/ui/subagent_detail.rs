@@ -69,7 +69,7 @@ fn build_title(worker: &PatternWorkerRow, frame: u32) -> Vec<Span<'static>> {
             crate::theme::GLYPH_CHECK.to_string(),
             Style::default().fg(crate::theme::color_subagent_completed()),
         ),
-        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => (
+        PatternWorkerStatus::Failed => (
             crate::theme::GLYPH_X.to_string(),
             Style::default().fg(crate::theme::color_subagent_failed()),
         ),
@@ -166,7 +166,7 @@ mod tests {
     use crate::terminal::caps::{MouseCapability, TermCaps};
     use crate::theme::set_current_theme_with_caps;
     use ratatui::{backend::TestBackend, Terminal};
-    use runie_core::model::state::view::SubagentDetail;
+    use runie_core::model::SubagentDetail;
     use runie_core::model::PatternWorkerStatus;
     use std::sync::Arc;
 

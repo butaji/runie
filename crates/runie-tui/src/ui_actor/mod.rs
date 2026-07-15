@@ -563,7 +563,8 @@ impl UiActor {
                 // here would double-finalize the turn.
                 return;
             }
-            crate::pattern_runner::publish_pattern_outcome(&bus, &id, outcome, &model, start);
+            crate::pattern_runner::publish_pattern_outcome(&bus, &id, outcome, &model, start)
+                .await;
         });
         self.pattern_task = Some(task);
     }

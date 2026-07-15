@@ -100,6 +100,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ClearQueues
             | Event::FollowUp
             | Event::ToggleExpand
+            | Event::ToggleTasksPane
             | Event::Dequeue
             | Event::OpenExternalEditor
             | Event::ExternalEditorDone { .. }

@@ -95,6 +95,21 @@ impl AppState {
         self.messages_changed();
     }
 
+    pub(crate) fn toggle_tasks_pane(&mut self) {
+        let visible = !self.view().tasks_pane_visible;
+        self.view_mut().tasks_pane_visible = visible;
+        if visible {
+            // Show done workers when none are running so the pane is useful.
+            let has_running = self
+                .agent_state()
+                .pattern_workers
+                .iter()
+                .any(|w| w.status == crate::model::PatternWorkerStatus::Running);
+            self.view_mut().tasks_pane_show_done = !has_running;
+        }
+        self.view_mut().dirty = true;
+    }
+
     pub(crate) fn page_up(&mut self) {
         crate::update::input::scroll_event(self, Event::PageUp);
     }
@@ -220,6 +235,7 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::ClearQueues => handle_clear_queues(state),
         Event::ExternalEditorDone { content } => handle_editor_done(state, content),
         Event::ToggleExpand => state.toggle_expand_all(),
+        Event::ToggleTasksPane => state.toggle_tasks_pane(),
         Event::FollowUp => state.queue_follow_up(),
         Event::Dequeue => state.dequeue(),
         Event::ToggleVimMode => handle_toggle_vim_mode(state),

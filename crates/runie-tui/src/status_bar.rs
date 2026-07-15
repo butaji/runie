@@ -50,11 +50,30 @@ pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<String> {
     let mut parts = Vec::new();
     push_git_or_folder(&mut parts, snap);
     push_turn_status_text(&mut parts, snap);
+    push_running_subagents(&mut parts, snap);
     push_thinking(&mut parts, snap);
     push_pending_edits(&mut parts, snap);
     push_read_only(&mut parts, snap);
     push_auto_mode(&mut parts, snap);
     parts
+}
+
+fn push_running_subagents(parts: &mut Vec<String>, snap: &Snapshot) {
+    let count = snap
+        .pattern_workers
+        .iter()
+        .filter(|w| w.status == runie_core::model::PatternWorkerStatus::Running)
+        .count();
+    if snap.turn_active && count > 0 {
+        // Grok-style subagent spinner frames (match the tasks pane).
+        let frames = [':', '\u{2e2c}', '\u{22c5}'];
+        let idx = runie_core::labels::BRAILLE_SIX
+            .iter()
+            .position(|&c| c == snap.spinner_frame)
+            .unwrap_or(0);
+        let glyph = frames[idx % frames.len()];
+        parts.push(format!("{} {}", glyph, count));
+    }
 }
 
 /// Build the left status bar text as a joined string (without the spinner char).

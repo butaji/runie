@@ -7,7 +7,7 @@ pub use crate::model::state::types::ThinkingLevel;
 pub use crate::model::state::AppState;
 // Re-export state types as pub for external crates.
 pub use crate::actors::turn::SpeedWindow;
-pub use crate::model::pattern_worker::{PatternWorkerRow, PatternWorkerStatus};
+pub use crate::model::pattern_worker::{PatternWorkerRow, PatternWorkerStatus, SubagentDetail};
 pub use crate::model::state::agent::AgentState;
 pub use crate::model::state::input::{InputChip, InputState};
 pub use crate::model::state::session::{CompletionState, ConfigState, SessionState};

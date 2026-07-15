@@ -1,5 +1,5 @@
 use ratatui::layout::Alignment;
-use ratatui::style::Style;
+use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, BorderType, Borders, TitlePosition};
 
@@ -274,6 +274,13 @@ pub fn style_popup_border() -> Style {
 }
 pub fn style_thought_summary() -> Style {
     style_fn("runie.thought.summary")
+}
+
+/// Tasks pane header style (grok parity: bold accent).
+pub fn style_tasks_pane_header() -> Style {
+    Style::default()
+        .fg(crate::theme::color_accent())
+        .add_modifier(Modifier::BOLD)
 }
 pub fn style_diff_insert() -> Style {
     style_fn("runie.diff.insert")

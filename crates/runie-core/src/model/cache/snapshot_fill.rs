@@ -52,6 +52,7 @@ pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
     s.input_flash = input.input_flash;
     s.vim_nav_mode = view.vim_nav_mode;
     s.spinner_frame = state.spinner_frame();
+    s.animation_frame = state.view().animation_frame;
     s.turn_elapsed_secs = state.turn_elapsed_secs();
     s.queue_count = agent.message_queue.len() + agent.request_queue.len();
     s.tokens_in = agent.tokens_in;
@@ -103,6 +104,11 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.active_plan_id = state.view().active_plan_id.clone();
     // Auto-approve mode projection
     s.auto_mode = state.view().auto_mode;
+    // Tasks pane and subagent detail projection
+    s.tasks_pane_visible = state.view().tasks_pane_visible;
+    s.tasks_pane_show_done = state.view().tasks_pane_show_done;
+    s.subagent_detail = state.view().subagent_detail.clone();
+    s.pattern_workers = state.agent_state().pattern_workers.clone().into();
 }
 
 #[cfg(test)]

@@ -84,14 +84,23 @@ pub(crate) fn swarm_for_variant(variant: Option<&str>) -> SwarmPattern {
     }
 }
 
+/// Minimum time a worker row stays in the Running state before the Finished
+/// update is published. Without this, Spawned and Finished events are batched
+/// in a single UiActor iteration and the running row is never rendered.
+const WORKER_RUNNING_VISIBILITY_MS: u64 = 200;
+
 /// Publish one feed row per worker trace (`worker-*` ids only; leader
 /// plan/synthesis traces are internal to the pattern).
 ///
 /// The patterns emit traces only on worker completion, so rows are published
-/// post-hoc after `execute()` returns: each worker gets a Spawned row
-/// immediately followed by its Finished update. Live in-flight rows would
-/// need per-trace streaming, which the pattern crate does not offer yet.
-pub(crate) fn publish_worker_rows(bus: &EventBus<Event>, traces: &[AgentTrace], model: &str) {
+/// post-hoc after `execute()` returns: each worker gets a Spawned row, a short
+/// visibility delay, then its Finished update. Live in-flight rows would need
+/// per-trace streaming, which the pattern crate does not offer yet.
+pub(crate) async fn publish_worker_rows(
+    bus: &EventBus<Event>,
+    traces: &[AgentTrace],
+    model: &str,
+) {
     for trace in traces {
         if !trace.agent_id.starts_with("worker-") {
             continue;
@@ -102,6 +111,7 @@ pub(crate) fn publish_worker_rows(bus: &EventBus<Event>, traces: &[AgentTrace], 
             description: truncate_description(&trace.description),
             model: model.to_owned(),
         });
+        tokio::time::sleep(std::time::Duration::from_millis(WORKER_RUNNING_VISIBILITY_MS)).await;
         let (status, output) = worker_outcome(trace);
         bus.publish(Event::PatternWorkerFinished {
             id,
@@ -167,7 +177,7 @@ fn worker_outcome(trace: &AgentTrace) -> (String, String) {
 /// bridges `Done`/`Error` into `TurnCompleted`/`TurnErrored`, which releases
 /// the UiActor turn guard. Callers must skip this entirely on abort: the
 /// `Event::Abort` path already finalized the turn.
-pub(crate) fn publish_pattern_outcome(
+pub(crate) async fn publish_pattern_outcome(
     bus: &EventBus<Event>,
     id: &str,
     outcome: anyhow::Result<PatternOutput>,
@@ -176,7 +186,7 @@ pub(crate) fn publish_pattern_outcome(
 ) {
     match outcome {
         Ok(output) => {
-            publish_worker_rows(bus, &output.traces, model);
+            publish_worker_rows(bus, &output.traces, model).await;
             match output.termination {
                 TerminationReason::Completed
                 | TerminationReason::MaxRoundsReached
@@ -351,7 +361,7 @@ mod tests {
             trace("worker-1-1", true),
             trace("leader-synthesize", false),
         ];
-        publish_worker_rows(&bus, &traces, "echo");
+        publish_worker_rows(&bus, &traces, "echo").await;
 
         let mut events = Vec::new();
         while let Ok(evt) = rx.try_recv() {
@@ -410,7 +420,8 @@ mod tests {
             Ok(output("final answer", TerminationReason::Completed)),
             "echo",
             std::time::Instant::now(),
-        );
+        )
+        .await;
         let events = drain(&mut rx);
         assert_eq!(events.len(), 3, "{events:?}");
         assert!(matches!(
@@ -432,7 +443,8 @@ mod tests {
             Ok(output("", TerminationReason::MaxRoundsReached)),
             "echo",
             std::time::Instant::now(),
-        );
+        )
+        .await;
         let events = drain(&mut rx);
         assert_eq!(events.len(), 2, "{events:?}");
         assert!(matches!(&events[0], Event::TurnComplete { .. }));
@@ -454,7 +466,8 @@ mod tests {
             )),
             "echo",
             std::time::Instant::now(),
-        );
+        )
+        .await;
         let events = drain(&mut rx);
         assert_eq!(events.len(), 2, "{events:?}");
         assert!(matches!(
@@ -475,7 +488,8 @@ mod tests {
             Err(anyhow::anyhow!("kaboom")),
             "echo",
             std::time::Instant::now(),
-        );
+        )
+        .await;
         let events = drain(&mut rx);
         assert_eq!(events.len(), 2, "{events:?}");
         assert!(matches!(

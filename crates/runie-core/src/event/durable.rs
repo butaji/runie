@@ -70,6 +70,7 @@ impl DurableCoreEvent {
             | Event::PatternWorkerSpawned { .. }
             | Event::PatternWorkerFinished { .. }
             | Event::Error { .. }
+            | Event::ToggleTasksPane
             // Init load events — not persisted, only used during bootstrap
             | Event::SkillsLoaded { .. }
             | Event::AuthLoaded { .. } => None,

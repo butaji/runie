@@ -8,7 +8,7 @@
 //! crate::theme only. No literals, no hardcoded values.
 
 use ratatui::{
-    layout::{Constraint, Margin},
+    layout::{Constraint, Layout, Margin},
     style::Style,
     Frame,
 };
@@ -22,6 +22,8 @@ mod layout;
 pub(crate) mod messages;
 mod render_lines;
 mod scroll;
+pub(crate) mod subagent_detail;
+pub(crate) mod tasks_pane;
 
 pub use input::count_input_lines;
 pub use render_lines::element_line_count;
@@ -30,6 +32,9 @@ pub use scroll::render_scrollbar;
 pub(crate) use hints::parse_hint_spans;
 pub(crate) use layout::hstack;
 pub(crate) use messages::estimate_element_tokens;
+
+/// Width of the Grok-style tasks side pane in columns.
+const TASKS_PANE_WIDTH: u16 = 32;
 
 /// Draw a Snapshot to the terminal.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
@@ -45,7 +50,19 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let constraints = snapshot_constraints(snap);
     let c = layout::vstack(area, &constraints);
 
-    messages::render_messages(f, snap, c[0]);
+    let message_area = if snap.tasks_pane_visible && area.width > TASKS_PANE_WIDTH + 10 {
+        let h = Layout::horizontal([
+            Constraint::Min(10),
+            Constraint::Length(TASKS_PANE_WIDTH),
+        ]);
+        let split = h.split(c[0]);
+        tasks_pane::render_tasks_pane(f, snap, split[1]);
+        split[0]
+    } else {
+        c[0]
+    };
+
+    messages::render_messages(f, snap, message_area);
     if snap.has_models {
         // c[1] is the empty margin line — no rendering needed
         crate::status_bar::render(f, snap, c[2]);
@@ -59,6 +76,10 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     crate::popups::path_suggestions(f, snap);
     crate::popups::panel::panel_dialog(f, snap);
     crate::popups::plan::render_plan_panel(f, snap);
+
+    if snap.subagent_detail.is_some() {
+        subagent_detail::render_subagent_detail(f, snap, message_area);
+    }
 }
 
 fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {

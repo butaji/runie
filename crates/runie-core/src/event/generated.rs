@@ -216,6 +216,7 @@ impl Event {
             Event::ToggleScopedModelsDialog => EventKind::Intent,
             Event::ToggleSessionTree => EventKind::Intent,
             Event::ToggleSettingsDialog => EventKind::Intent,
+            Event::ToggleTasksPane => EventKind::Control,
             Event::ToggleVimMode => EventKind::Control,
             Event::ToggleWelcome => EventKind::Intent,
             Event::TokenStatsUpdated { .. } => EventKind::Fact,
@@ -457,6 +458,7 @@ impl Event {
             Event::ToggleScopedModelsDialog => EventCategory::ModelConfig,
             Event::ToggleSessionTree => EventCategory::Session,
             Event::ToggleSettingsDialog => EventCategory::ModelConfig,
+            Event::ToggleTasksPane => EventCategory::Control,
             Event::ToggleVimMode => EventCategory::Control,
             Event::ToggleWelcome => EventCategory::Dialog,
             Event::TokenStatsUpdated { .. } => EventCategory::Agent,
@@ -526,6 +528,7 @@ impl Event {
             Event::StarSession { .. } => Some(self.clone()),
             Event::Suspend => Some(self),
             Event::ToggleExpand => Some(self),
+            Event::ToggleTasksPane => Some(self),
             Event::ToggleVimMode => Some(self),
             Event::AtFilePicker => Some(self),
             Event::CommandFormBackspace => Some(self),
@@ -657,7 +660,8 @@ impl Event {
 pub fn is_fact_variant(e: &Event) -> bool {
     matches!(
         e,
-        |Event::AssistantMessageReady { .. }| Event::CompactionTriggered { .. }
+            | Event::AssistantMessageReady { .. }
+            | Event::CompactionTriggered { .. }
             | Event::Done { .. }
             | Event::Error { .. }
             | Event::FollowUpDelivered { .. }
@@ -813,9 +817,7 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("Cancel", || Event::Cancel),
     ("CycleModelNext", || Event::CycleModelNext),
     ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || {
-        Event::ToggleScopedModelsDialog
-    }),
+    ("ToggleScopedModelsDialog", || Event::ToggleScopedModelsDialog),
     ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
     ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
     ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),
@@ -844,6 +846,7 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("ClearQueues", || Event::ClearQueues),
     ("FollowUp", || Event::FollowUp),
     ("ToggleExpand", || Event::ToggleExpand),
+    ("ToggleTasksPane", || Event::ToggleTasksPane),
     ("Dequeue", || Event::Dequeue),
     ("OpenExternalEditor", || Event::OpenExternalEditor),
     ("ShareSession", || Event::ShareSession),
@@ -872,7 +875,11 @@ impl Event {
     }
 
     /// Create a ToolEnd with default input field.
-    pub fn tool_end(id: impl Into<String>, duration_secs: f64, output: impl Into<String>) -> Self {
+    pub fn tool_end(
+        id: impl Into<String>,
+        duration_secs: f64,
+        output: impl Into<String>,
+    ) -> Self {
         Event::ToolEnd {
             id: id.into(),
             input: None,

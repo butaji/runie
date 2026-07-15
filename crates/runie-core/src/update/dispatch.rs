@@ -462,6 +462,11 @@ fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
 }
 
 fn handle_dialog_back_no_dialog(state: &mut AppState) {
+    if state.view().subagent_detail.is_some() {
+        state.view_mut().subagent_detail = None;
+        state.view_mut().dirty = true;
+        return;
+    }
     if state.open_dialog().is_none() && state.view().plan_mode {
         // Plain Esc maps to DialogBack since the keymap refactor. Plan mode
         // is a view flag (not a dialog), so route it here: Esc cancels plan

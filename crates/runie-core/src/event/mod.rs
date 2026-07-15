@@ -265,6 +265,7 @@ pub enum Event {
     ClearQueues,
     FollowUp,
     ToggleExpand,
+    ToggleTasksPane,
     Dequeue,
     OpenExternalEditor,
     ExternalEditorDone {

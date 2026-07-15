@@ -99,6 +99,21 @@ pub fn color_agent_text() -> Color {
     theme_color_fallback("feed.agent.fg", color_fg())
 }
 
+/// Subagent running state color (grok parity: purple accent).
+pub fn color_subagent_running() -> Color {
+    theme_color_fallback("subagent.running", Color::Rgb(180, 90, 240))
+}
+
+/// Subagent completed state color (grok parity: success green).
+pub fn color_subagent_completed() -> Color {
+    theme_color_fallback("subagent.completed", color_success())
+}
+
+/// Subagent failed state color (grok parity: error red).
+pub fn color_subagent_failed() -> Color {
+    theme_color_fallback("subagent.failed", color_error())
+}
+
 /// Diff gutter insert background: subtle green tint over base bg.
 pub fn color_diff_insert_bg() -> Color {
     let bg = color_bg();

@@ -78,6 +78,12 @@ pub struct ViewState {
     pub active_plan_content: String,
     /// ID of the active plan file.
     pub active_plan_id: Option<String>,
+    /// Grok-style tasks pane visibility.
+    pub tasks_pane_visible: bool,
+    /// Show completed workers in the tasks pane (true when no workers are running).
+    pub tasks_pane_show_done: bool,
+    /// Open subagent detail overlay state.
+    pub subagent_detail: Option<crate::model::SubagentDetail>,
 }
 
 impl PartialEq for ViewState {
@@ -166,6 +172,9 @@ impl Default for ViewState {
             auto_mode: false,
             active_plan_content: String::new(),
             active_plan_id: None,
+            tasks_pane_visible: false,
+            tasks_pane_show_done: false,
+            subagent_detail: None,
         }
     }
 }

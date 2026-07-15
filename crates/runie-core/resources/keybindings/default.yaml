@@ -10,7 +10,7 @@ bindings:
   - combo: ctrl+a
     event: CursorStart
   - combo: ctrl+b
-    event: CursorLeft
+    event: ToggleTasksPane
   - combo: ctrl+f
     event: CursorRight
   - combo: ctrl+w

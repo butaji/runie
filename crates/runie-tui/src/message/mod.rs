@@ -28,7 +28,7 @@ mod support;
 mod wrap;
 
 pub(crate) use wrap::word_wrap;
-use wrap::wrap_styled_spans;
+pub(crate) use wrap::wrap_styled_spans;
 
 pub use support::{
     render_context_group, render_subagent_row, render_thinking, render_thought_marker,

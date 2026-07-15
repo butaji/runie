@@ -201,7 +201,7 @@
       "kind": "Control",
       "variants": [
         "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp",
-        "ToggleExpand", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
+        "ToggleExpand", "ToggleTasksPane", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
         "ShareSession", "Suspend", "ToggleVimMode", "CopyLastResponse",
         "OpenSessionList", "NewSession", "ResumeSession", "SelectSession",
         "StarSession", "RenameSession", "DeleteSession"

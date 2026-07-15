@@ -34,9 +34,9 @@ UNIT_VARIANTS = {
     "SettingsRight", "SettingsSelect", "SettingsUp", "ShareSession", "ShowDiagnostics",
     "Start", "Submit", "Suspend", "ToggleCommandPalette", "ToggleExpand",
     "ToggleModelSelector", "TogglePathCompletion", "ToggleReadOnly",
-    "ToggleScopedModelsDialog", "ToggleSessionTree", "ToggleSettingsDialog", "ToggleVimMode",
-    "ToggleWelcome", "TrustProject", "TurnAborted", "TurnCompleted", "Undo", "UntrustProject",
-    "Up",
+    "ToggleScopedModelsDialog", "ToggleSessionTree", "ToggleSettingsDialog", "ToggleTasksPane",
+    "ToggleVimMode", "ToggleWelcome", "TrustProject", "TurnAborted", "TurnCompleted", "Undo",
+    "UntrustProject", "Up",
 }
 
 # Variants with fields (non-unit variants) — for into_intent() return type
@@ -68,7 +68,7 @@ VARIANTS_WITH_FIELDS = {
 # Control variants that are also intents (from taxonomy.json intent_variants for Control)
 CONTROL_INTENT_VARIANTS = {
     "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp",
-    "ToggleExpand", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
+    "ToggleExpand", "ToggleTasksPane", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
     "ShareSession", "Suspend", "ToggleVimMode", "CopyLastResponse",
     "OpenSessionList", "NewSession", "ResumeSession", "SelectSession",
     "StarSession", "RenameSession", "DeleteSession",
@@ -314,6 +314,7 @@ def main():
         f.write('    ("ClearQueues", || Event::ClearQueues),\n')
         f.write('    ("FollowUp", || Event::FollowUp),\n')
         f.write('    ("ToggleExpand", || Event::ToggleExpand),\n')
+        f.write('    ("ToggleTasksPane", || Event::ToggleTasksPane),\n')
         f.write('    ("Dequeue", || Event::Dequeue),\n')
         f.write('    ("OpenExternalEditor", || Event::OpenExternalEditor),\n')
         f.write('    ("ShareSession", || Event::ShareSession),\n')

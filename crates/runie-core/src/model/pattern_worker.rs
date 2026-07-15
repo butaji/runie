@@ -14,6 +14,13 @@ pub enum PatternWorkerStatus {
     Failed,
 }
 
+/// Detail view state for an open subagent row overlay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SubagentDetail {
+    pub worker_id: String,
+    pub scroll: usize,
+}
+
 /// One swarm worker's lifecycle row for the current turn.
 #[derive(Debug, Clone)]
 pub struct PatternWorkerRow {

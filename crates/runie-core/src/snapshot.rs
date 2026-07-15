@@ -5,6 +5,8 @@
 use crate::view::elements::Element;
 use std::sync::Arc;
 
+pub use crate::model::SubagentDetail;
+
 /// Git repository info detected from current working directory.
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GitInfo {
@@ -60,6 +62,8 @@ pub struct Snapshot {
     pub model: String,
     /// Active theme name for the render actor
     pub theme_name: String,
+    /// Global animation frame counter for deterministic overlays.
+    pub animation_frame: u32,
     /// Current thinking level for status display
     pub thinking_level: crate::model::ThinkingLevel,
     /// Read-only mode active — only safe tools exposed to LLM
@@ -144,6 +148,14 @@ pub struct Snapshot {
     pub active_plan_content: String,
     /// ID of the active plan file.
     pub active_plan_id: Option<String>,
+    /// Grok-style tasks pane visibility.
+    pub tasks_pane_visible: bool,
+    /// Show completed workers in the tasks pane (true when no workers are running).
+    pub tasks_pane_show_done: bool,
+    /// Open subagent detail overlay state.
+    pub subagent_detail: Option<SubagentDetail>,
+    /// Lifecycle rows for the current turn's swarm workers.
+    pub pattern_workers: Arc<[crate::model::PatternWorkerRow]>,
 }
 
 /// Compute the index of the element currently at the top of the
