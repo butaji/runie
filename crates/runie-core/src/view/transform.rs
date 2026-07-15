@@ -130,6 +130,7 @@ impl LazyCache {
                     matches!(row.status, crate::model::PatternWorkerStatus::Running)
                         .then_some(row.started),
                     row.duration_ms,
+                    row.activity.clone(),
                     row.output.clone(),
                 )
                 .at(Self::thinking_timestamp(state)),

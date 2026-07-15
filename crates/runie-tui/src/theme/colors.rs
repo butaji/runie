@@ -114,6 +114,45 @@ pub fn color_subagent_failed() -> Color {
     theme_color_fallback("subagent.failed", color_error())
 }
 
+// Grok-style feed sub-agent lifecycle row accents (GROK.md §26).
+// These are intentionally granular so the diamond, left bar, and body can be
+// colored independently while still being themeable.
+
+/// Running left bar `❙` color (grok: `#685786`).
+pub fn color_subagent_running_bar() -> Color {
+    theme_color_fallback("subagent.running.bar", Color::Rgb(104, 87, 134))
+}
+
+/// Running diamond `◆` color (grok: `#332d3e`).
+pub fn color_subagent_running_diamond() -> Color {
+    theme_color_fallback("subagent.running.diamond", Color::Rgb(51, 45, 62))
+}
+
+/// Space/dim accent between running diamond and text (grok: `#685786`).
+pub fn color_subagent_running_dim() -> Color {
+    theme_color_fallback("subagent.running.dim", Color::Rgb(104, 87, 134))
+}
+
+/// Completed diamond `◆` color (grok: `#59713f`).
+pub fn color_subagent_completed_diamond() -> Color {
+    theme_color_fallback("subagent.completed.diamond", Color::Rgb(89, 113, 63))
+}
+
+/// Bright accent after completed diamond (grok: `#9ece6a`).
+pub fn color_subagent_completed_bright() -> Color {
+    theme_color_fallback("subagent.completed.bright", Color::Rgb(158, 206, 106))
+}
+
+/// Failed diamond `◆` color (grok: `#864551`).
+pub fn color_subagent_failed_diamond() -> Color {
+    theme_color_fallback("subagent.failed.diamond", Color::Rgb(134, 69, 81))
+}
+
+/// Bright accent after failed diamond (grok: `#f7768e`).
+pub fn color_subagent_failed_bright() -> Color {
+    theme_color_fallback("subagent.failed.bright", Color::Rgb(247, 118, 142))
+}
+
 /// Diff gutter insert background: subtle green tint over base bg.
 pub fn color_diff_insert_bg() -> Color {
     let bg = color_bg();

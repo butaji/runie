@@ -186,6 +186,7 @@ mod tests {
             status,
             started: std::time::Instant::now(),
             duration_ms: Some(2500),
+            activity: "Waiting for response…".into(),
             output: output.into(),
         }
     }

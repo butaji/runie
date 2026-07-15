@@ -41,6 +41,7 @@ fn subagent_row(
         status,
         started,
         duration_ms,
+        activity: "Waiting for response…".into(),
         output: output.into(),
         expanded,
         timestamp: 0.0,
@@ -50,7 +51,7 @@ fn subagent_row(
 // ─── Running ────────────────────────────────────────────────────────────────
 
 #[test]
-fn running_row_shows_braille_spinner_and_format() {
+fn running_row_shows_grok_style_bar_diamond_and_format() {
     let elem = subagent_row(
         PatternWorkerStatus::Running,
         Some(std::time::Instant::now()),
@@ -60,13 +61,15 @@ fn running_row_shows_braille_spinner_and_format() {
     );
     let output = render_to_string(render_subagent_row(&elem), 100, 3);
     assert!(
-        runie_core::labels::BRAILLE_SIX
-            .iter()
-            .any(|c| output.contains(*c)),
-        "running row should show a braille spinner frame: {output}"
+        output.contains("❙"),
+        "running row should show the left bar: {output}"
     );
     assert!(
-        output.contains("Subagent running: \"find callers\" (echo) — Running"),
+        output.contains("◆"),
+        "running row should show the diamond bullet: {output}"
+    );
+    assert!(
+        output.contains("Subagent running: “find callers” — Waiting for response… (echo)"),
         "running row format: {output}"
     );
 }
@@ -84,7 +87,7 @@ fn completed_row_shows_check_and_duration() {
     );
     let output = render_to_string(render_subagent_row(&elem), 100, 3);
     assert!(
-        output.contains("✓ Subagent completed in 2.5s: \"find callers\""),
+        output.contains("◆ Subagent completed in 2.5s: “find callers”"),
         "completed row format: {output}"
     );
 }
@@ -96,7 +99,7 @@ fn failed_row_shows_x_and_duration() {
     let elem = subagent_row(PatternWorkerStatus::Failed, None, Some(1000), "boom", false);
     let output = render_to_string(render_subagent_row(&elem), 100, 3);
     assert!(
-        output.contains("✗ Subagent failed in 1.0s: \"find callers\""),
+        output.contains("◆ Subagent failed in 1.0s: “find callers”"),
         "failed row format: {output}"
     );
 }

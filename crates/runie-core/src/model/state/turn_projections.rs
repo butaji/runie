@@ -462,6 +462,7 @@ impl AppState {
             status: PatternWorkerStatus::Running,
             started: std::time::Instant::now(),
             duration_ms: None,
+            activity: "Waiting for response…".into(),
             output: String::new(),
         };
         let agent = self.agent_state_mut();

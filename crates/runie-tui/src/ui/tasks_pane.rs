@@ -269,6 +269,7 @@ mod tests {
                 status: PatternWorkerStatus::Running,
                 started,
                 duration_ms: None,
+                activity: "Waiting for response…".into(),
                 output: String::new(),
             },
             PatternWorkerRow {
@@ -278,6 +279,7 @@ mod tests {
                 status: PatternWorkerStatus::Running,
                 started,
                 duration_ms: None,
+                activity: "Waiting for response…".into(),
                 output: String::new(),
             },
             PatternWorkerRow {
@@ -287,6 +289,7 @@ mod tests {
                 status: PatternWorkerStatus::Completed,
                 started,
                 duration_ms: Some(2500),
+                activity: String::new(),
                 output: String::new(),
             },
         ];

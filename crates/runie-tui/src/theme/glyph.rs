@@ -19,6 +19,12 @@ pub const GLYPH_TOOL: &str = "◆ ";
 pub const GLYPH_BULLET: &str = "•";
 pub const GLYPH_DOWNLOAD: &str = "⇣"; // bytes transferred indicator
 
+// Sub-agent lifecycle row glyphs (GROK.md §26).
+pub const GLYPH_SUBAGENT_BAR: &str = "❙"; // running left bar
+pub const GLYPH_SUBAGENT_DIAMOND: &str = "◆"; // state diamond
+pub const GLYPH_SUBAGENT_QUOTE_LEFT: &str = "“";
+pub const GLYPH_SUBAGENT_QUOTE_RIGHT: &str = "”";
+
 // Spinner and indicator glyphs
 // throbber BRAILLE_SIX[5] = '⠋' — first frame of the braille spinner.
 pub const GLYPH_SPINNER: char = '⠋';

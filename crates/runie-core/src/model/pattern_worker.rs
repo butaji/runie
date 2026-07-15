@@ -31,6 +31,8 @@ pub struct PatternWorkerRow {
     /// Wall-clock start — drives the braille spinner while `Running`.
     pub started: std::time::Instant,
     pub duration_ms: Option<u64>,
+    /// Live activity suffix shown while `Running` (e.g. "Waiting for response…").
+    pub activity: String,
     /// Final worker output (capped); renders as the expandable post body.
     pub output: String,
 }

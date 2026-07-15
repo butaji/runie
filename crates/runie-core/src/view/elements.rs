@@ -66,6 +66,7 @@ pub enum Element {
         status: crate::model::PatternWorkerStatus,
         started: Option<std::time::Instant>,
         duration_ms: Option<u64>,
+        activity: String,
         output: String,
         expanded: bool,
         timestamp: f64,
@@ -203,6 +204,7 @@ impl Element {
         status: crate::model::PatternWorkerStatus,
         started: Option<std::time::Instant>,
         duration_ms: Option<u64>,
+        activity: impl Into<String>,
         output: impl Into<String>,
     ) -> ElementBuilder {
         ElementBuilder(Element::SubagentRow {
@@ -212,6 +214,7 @@ impl Element {
             status,
             started,
             duration_ms,
+            activity: activity.into(),
             output: output.into(),
             expanded: false,
             timestamp: 0.0,

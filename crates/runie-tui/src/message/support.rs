@@ -5,10 +5,13 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_error, color_success, style_agent, style_feed_timestamp, style_thinking, style_thought,
-    style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
-    style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_CHECK, GLYPH_INDENT, GLYPH_SPINNER,
-    GLYPH_X,
+    color_subagent_completed_bright, color_subagent_completed_diamond,
+    color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
+    color_subagent_running_diamond, color_subagent_running_dim, style_agent, style_feed_timestamp,
+    style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running,
+    style_tool_summary, style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT,
+    GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT,
+    GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_SPINNER, GLYPH_X,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -135,10 +138,9 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
 
 /// Render a swarm subagent lifecycle row (GROK.md §26).
 ///
-/// Running:   `⠷ Subagent running: "<desc>" (<model>) — Running` (braille
-/// frame derived from `started.elapsed()`, like the thinking row)
-/// Completed: `✓ Subagent completed in Xs: "<desc>"` (success green)
-/// Failed:    `✗ Subagent failed in Xs: "<desc>"` (error red)
+/// Running:   `❙  ◆ Subagent running: “<desc>” — <activity> (<model>)`
+/// Completed: `◆ Subagent completed in Xs: “<desc>”`
+/// Failed:    `◆ Subagent failed in Xs: “<desc>”`
 ///
 /// Expanded finished rows render the worker output indented under the row,
 /// styled like an expanded thought body.
@@ -147,8 +149,9 @@ pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
         description,
         model,
         status,
-        started,
+        started: _,
         duration_ms,
+        activity,
         output,
         expanded,
         ..
@@ -158,25 +161,46 @@ pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
     };
     use runie_core::model::PatternWorkerStatus as S;
 
+    let dim = style_tool_running();
     let header = match status {
         S::Running => {
-            let elapsed = started.map(|s| s.elapsed().as_secs_f64()).unwrap_or(0.0);
-            let frame = braille_frame(elapsed);
-            return vec![Line::from(format!(
-                "{frame} Subagent running: \"{description}\" ({model}) — Running"
-            ))
-            .style(style_tool_running())];
+            let activity_text = if activity.is_empty() { "Running" } else { activity };
+            Line::from(vec![
+                Span::styled(GLYPH_SUBAGENT_BAR, Style::new().fg(color_subagent_running_bar())),
+                Span::styled("  ", Style::new().fg(color_subagent_running_bar())),
+                Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_running_diamond())),
+                Span::styled(" ", Style::new().fg(color_subagent_running_dim())),
+                Span::styled("Subagent running: ", dim.bold()),
+                Span::styled(
+                    format!(
+                        "{GLYPH_SUBAGENT_QUOTE_LEFT}{description}{GLYPH_SUBAGENT_QUOTE_RIGHT} — {activity_text} ({model})"
+                    ),
+                    dim,
+                ),
+            ])
         }
-        S::Completed => Line::from(format!(
-            "{GLYPH_CHECK} Subagent completed in {}: \"{description}\"",
-            runie_core::labels::format_elapsed_secs(duration_ms.unwrap_or(0) as f64 / 1000.0)
-        ))
-        .style(Style::new().fg(color_success())),
-        S::Failed => Line::from(format!(
-            "{GLYPH_X} Subagent failed in {}: \"{description}\"",
-            runie_core::labels::format_elapsed_secs(duration_ms.unwrap_or(0) as f64 / 1000.0)
-        ))
-        .style(Style::new().fg(color_error())),
+        S::Completed => Line::from(vec![
+            Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_completed_diamond())),
+            Span::styled(" ", Style::new().fg(color_subagent_completed_bright())),
+            Span::styled(
+                format!(
+                    "Subagent completed in {}: {GLYPH_SUBAGENT_QUOTE_LEFT}{description}{GLYPH_SUBAGENT_QUOTE_RIGHT}",
+                    runie_core::labels::format_elapsed_secs(duration_ms.unwrap_or(0) as f64 / 1000.0)
+                ),
+                dim,
+            ),
+        ]),
+        S::Failed => Line::from(vec![
+            Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_failed_diamond())),
+            Span::styled(" ", Style::new().fg(color_subagent_failed_bright())),
+            Span::styled(
+                format!(
+                    "Subagent failed in {}: {GLYPH_SUBAGENT_QUOTE_LEFT}{description}{GLYPH_SUBAGENT_QUOTE_RIGHT}",
+                    runie_core::labels::format_elapsed_secs(duration_ms.unwrap_or(0) as f64 / 1000.0)
+                ),
+                dim,
+            ),
+        ]),
     };
 
     let mut lines = vec![header];
@@ -186,14 +210,6 @@ pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
         }
     }
     lines
-}
-
-/// Braille spinner frame for an elapsed time (~120ms per frame), same
-/// cadence as `thinking_line`.
-fn braille_frame(elapsed_secs: f64) -> char {
-    const FRAME_MS: f64 = 120.0;
-    let frames = runie_core::labels::BRAILLE_SIX;
-    frames[((elapsed_secs * 1000.0 / FRAME_MS) as usize) % frames.len()]
 }
 
 pub fn render_context_group(tools: &[runie_core::Element], collapsed: bool) -> Vec<Line<'static>> {
