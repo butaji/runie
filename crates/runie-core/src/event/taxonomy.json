@@ -261,7 +261,7 @@
       "variants": [
         "GistShared", "ExternalEditorClosed", "ClipboardWritten", "ClipboardRead",
         "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult",
-        "SkillsLoaded", "AuthLoaded"
+        "SkillsLoaded", "SkillCreated", "SkillDeleted", "SkillError", "AuthLoaded"
       ]
     },
     "Session": {

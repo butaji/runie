@@ -406,3 +406,521 @@ pub fn render_list_item_from_spans(
 
     Line::from(result_spans).style(style_agent())
 }
+
+// ---------------------------------------------------------------------------
+// Special content type renderers (images, tables, diffs, tool confirmations)
+// ---------------------------------------------------------------------------
+
+use runie_core::view::elements::{DiffType, ImageProtocol, WebSearchResult};
+
+/// Render an inline image element.
+///
+/// For iTerm2/Kitty protocols, outputs the terminal escape sequence prefix.
+/// Actual image rendering happens via terminal control sequences written directly
+/// to the terminal buffer. We output a placeholder showing dimensions.
+pub fn render_image(
+    _data: &str,
+    mime_type: &str,
+    width_cells: Option<u16>,
+    height_cells: Option<u16>,
+    protocol: ImageProtocol,
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, GLYPH_INDENT};
+
+    let style = style_agent();
+    let dim_str = match (width_cells, height_cells) {
+        (Some(w), Some(h)) => format!("{}x{}", w, h),
+        (Some(w), None) => format!("{} cells wide", w),
+        _ => "auto".to_string(),
+    };
+    let protocol_str = match protocol {
+        ImageProtocol::ITerm2 => "iTerm2",
+        ImageProtocol::Kitty => "Kitty",
+        ImageProtocol::Sixel => "Sixel",
+    };
+    let mime_owned = mime_type.to_string();
+
+    vec![
+        Line::from(vec![
+            Span::styled(GLYPH_INDENT, style),
+            Span::styled("[Image: ", style),
+            Span::styled(mime_owned, style.bold()),
+            Span::styled(format!(" | {} | {}]", dim_str, protocol_str), style),
+        ]),
+        Line::from(vec![
+            Span::styled(GLYPH_INDENT, style),
+            Span::styled("  └─ ", style),
+            Span::styled("Rendered via terminal graphics protocol", style),
+        ]),
+    ]
+}
+
+/// Render a structured data/JSON part with optional format string.
+pub fn render_data_part(
+    data: &str,
+    format_string: Option<&str>,
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, style_tool_output, GLYPH_INDENT};
+
+    let style = style_agent();
+    let output_style = style_tool_output();
+    let label = format_string.unwrap_or("data");
+    let display_data = if data.len() > 200 {
+        format!("{}...", &data[..200])
+    } else {
+        data.to_string()
+    };
+
+    vec![
+        Line::from(vec![
+            Span::styled(GLYPH_INDENT, style),
+            Span::styled(format!("[{}]", label), style.bold()),
+        ]),
+        Line::from(vec![
+            Span::styled(format!("  {} ", GLYPH_INDENT), style),
+            Span::styled(display_data, output_style),
+        ]),
+    ]
+}
+
+/// Render a markdown table with headers, rows, and column alignments.
+pub fn render_markdown_table(
+    headers: &[String],
+    rows: &[Vec<String>],
+    alignments: &[Option<bool>],
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, GLYPH_INDENT};
+
+    let style = style_agent();
+    let mut lines = Vec::new();
+
+    if headers.is_empty() {
+        return lines;
+    }
+
+    // Calculate column widths
+    let col_count = headers.len();
+    let mut col_widths: Vec<usize> = headers.iter().map(|h| h.len()).collect();
+    for row in rows {
+        for (i, cell) in row.iter().enumerate() {
+            if i < col_count {
+                col_widths[i] = col_widths[i].max(cell.len());
+            }
+        }
+    }
+
+    // Render header row
+    let mut header_spans = vec![Span::styled(GLYPH_INDENT.to_string(), style)];
+    for (i, header) in headers.iter().enumerate() {
+        let width = col_widths[i];
+        let aligned = if i < alignments.len() {
+            alignments[i]
+        } else {
+            None
+        };
+        let cell_str = match aligned {
+            Some(true) => format!("{:>width$}", header, width = width),  // right
+            Some(false) => format!("{:^width$}", header, width = width), // center
+            None => format!("{:<width$}", header, width = width),        // left
+        };
+        header_spans.push(Span::styled(cell_str, style.bold().underlined()));
+    }
+    lines.push(Line::from(header_spans));
+
+    // Render separator
+    let sep = col_widths
+        .iter()
+        .map(|w| "─".repeat(*w))
+        .collect::<Vec<_>>()
+        .join("─┼─");
+    lines.push(Line::from(format!("{} {}", GLYPH_INDENT, sep)).style(style));
+
+    // Render data rows
+    for row in rows {
+        let mut row_spans = vec![Span::styled(GLYPH_INDENT.to_string(), style)];
+        for (i, cell) in row.iter().enumerate() {
+            if i >= col_count {
+                break;
+            }
+            let width = col_widths[i];
+            let aligned = if i < alignments.len() {
+                alignments[i]
+            } else {
+                None
+            };
+            let cell_str = match aligned {
+                Some(true) => format!("{:>width$}", cell, width = width),
+                Some(false) => format!("{:^width$}", cell, width = width),
+                None => format!("{:<width$}", cell, width = width),
+            };
+            row_spans.push(Span::styled(cell_str, style));
+        }
+        lines.push(Line::from(row_spans));
+    }
+
+    lines
+}
+
+/// Render diff/changelist output with type indicator.
+pub fn render_diff_output(
+    content: &str,
+    diff_type: DiffType,
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, style_tool_output, GLYPH_INDENT};
+
+    let style = style_agent();
+    let output_style = style_tool_output();
+    let type_str = match diff_type {
+        DiffType::Unified => "unified",
+        DiffType::SideBySide => "side-by-side",
+        DiffType::Context => "context",
+    };
+
+    let header = Line::from(vec![
+        Span::styled(GLYPH_INDENT, style),
+        Span::styled("[Diff: ", style),
+        Span::styled(type_str, style.bold()),
+        Span::styled("]", style),
+    ]);
+
+    let mut lines = vec![header];
+    for line in content.lines().take(50) {
+        let line_owned = line.to_string();
+        let diff_line = if line.starts_with("+++") || line.starts_with("---") {
+            Line::from(vec![
+                Span::styled(format!("{} ", GLYPH_INDENT), style),
+                Span::styled(line_owned.clone(), style),
+            ])
+        } else if line.starts_with("+") {
+            Line::from(vec![
+                Span::styled(format!("{} +", GLYPH_INDENT), style),
+                Span::styled(line[1..].to_string(), style.green()),
+            ])
+        } else if line.starts_with("-") {
+            Line::from(vec![
+                Span::styled(format!("{} -", GLYPH_INDENT), style),
+                Span::styled(line[1..].to_string(), style.red()),
+            ])
+        } else if line.starts_with("@@") {
+            Line::from(vec![
+                Span::styled(format!("{} ", GLYPH_INDENT), style),
+                Span::styled(line_owned.clone(), style.cyan()),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled(format!("{} ", GLYPH_INDENT), style),
+                Span::styled(line_owned, output_style),
+            ])
+        };
+        lines.push(diff_line);
+    }
+
+    if content.lines().count() > 50 {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} ", GLYPH_INDENT), style),
+            Span::styled("... (truncated)", style),
+        ]));
+    }
+
+    lines
+}
+
+/// Render an Anthropic-style thinking block.
+pub fn render_anthropic_thinking(
+    content: &str,
+    signature: Option<String>,
+    redacted: bool,
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, style_thinking, GLYPH_INDENT};
+
+    let base_style = if redacted {
+        style_thinking()
+    } else {
+        style_agent()
+    };
+
+    let mut lines = Vec::new();
+
+    // Header
+    let header_text = if redacted {
+        "[Redacted Thinking]"
+    } else {
+        "[Thinking]"
+    };
+    lines.push(Line::from(vec![
+        Span::styled(GLYPH_INDENT, base_style),
+        Span::styled(header_text, base_style.bold()),
+    ]));
+
+    // Signature if present
+    if let Some(sig) = &signature {
+        let tail = if sig.len() >= 8 {
+            format!("...{}", &sig[sig.len() - 8..])
+        } else {
+            sig.clone()
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   sig: ", GLYPH_INDENT), base_style),
+            Span::styled(tail, base_style),
+        ]));
+    }
+
+    // Content (if not redacted)
+    if !redacted {
+        for raw_line in content.lines() {
+            if raw_line.is_empty() {
+                lines.push(Line::from("").style(base_style));
+            } else {
+                for chunk in word_wrap(raw_line, 80, 80) {
+                    lines.push(Line::from(vec![
+                        Span::styled(format!("{}   ", GLYPH_INDENT), base_style),
+                        Span::styled(chunk.to_string(), base_style),
+                    ]));
+                }
+            }
+        }
+    } else {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   [encrypted content]", GLYPH_INDENT), base_style),
+        ]));
+    }
+
+    lines
+}
+
+/// Render a web search call with results.
+pub fn render_web_search_call(
+    query: &str,
+    results: &[WebSearchResult],
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, GLYPH_INDENT};
+
+    let style = style_agent();
+    let mut lines = Vec::new();
+
+    // Search header
+    lines.push(Line::from(vec![
+        Span::styled(GLYPH_INDENT, style),
+        Span::styled("Web Search: ", style.bold()),
+        Span::styled(format!("\"{}\"", query), style),
+    ]));
+
+    // Results
+    for (i, result) in results.iter().enumerate().take(5) {
+        let title_owned = result.title.clone();
+        let snippet_owned = result.snippet.clone();
+        let url_owned = result.url.clone();
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} ", GLYPH_INDENT), style),
+            Span::styled(format!("{}. ", i + 1), style.bold()),
+            Span::styled(title_owned, style.underlined()),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   ", GLYPH_INDENT), style),
+            Span::styled(snippet_owned, style),
+        ]));
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   ", GLYPH_INDENT), style),
+            Span::styled(url_owned, style.dim()),
+        ]));
+    }
+
+    if results.is_empty() {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   ", GLYPH_INDENT), style),
+            Span::styled("Searching...", style),
+        ]));
+    }
+
+    lines
+}
+
+/// Render ANSI escape sequence styled content.
+pub fn render_ansi_styled(
+    raw_content: &str,
+    _plain_text: &str,
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, style_tool_output, GLYPH_INDENT};
+
+    let style = style_agent();
+    let output_style = style_tool_output();
+    let mut lines = Vec::new();
+
+    // Header
+    lines.push(Line::from(vec![
+        Span::styled(GLYPH_INDENT, style),
+        Span::styled("[ANSI Styled]", style.bold()),
+    ]));
+
+    // Render the ANSI content - show the colored version with fallback
+    for line in raw_content.lines().take(20) {
+        let spans = ansi_to_spans(line, output_style);
+        if !spans.is_empty() {
+            lines.push(Line::from(spans));
+        } else {
+            lines.push(Line::from(line.to_string()).style(output_style));
+        }
+    }
+
+    if raw_content.lines().count() > 20 {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   ", GLYPH_INDENT), style),
+            Span::styled("... (truncated)", style),
+        ]));
+    }
+
+    lines
+}
+
+/// Convert ANSI escape sequences to ratatui spans.
+fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<'static>> {
+    use ratatui::style::Color;
+
+    let mut spans = Vec::new();
+    let mut current_style = default_style;
+    let mut current_text = String::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1B' {
+            // Start of escape sequence
+            let mut seq = String::from(ch);
+
+            // Collect the escape sequence
+            while let Some(&next) = chars.peek() {
+                seq.push(next);
+                chars.next();
+                if next.is_ascii_alphabetic() || next == 'm' {
+                    break;
+                }
+            }
+
+            // Flush current text
+            if !current_text.is_empty() {
+                spans.push(Span::styled(std::mem::take(&mut current_text), current_style));
+            }
+
+            // Parse SGR (Select Graphic Rendition) parameters
+            if seq.ends_with('m') {
+                let params = &seq[2..seq.len()-1];
+                if params.is_empty() || params == "0" {
+                    current_style = default_style;
+                } else {
+                    for part in params.split(';') {
+                        match part.parse::<u8>().unwrap_or(0) {
+                            1 => current_style = current_style.bold(),
+                            2 => current_style = current_style.dim(),
+                            3 => current_style = current_style.italic(),
+                            4 => current_style = current_style.underlined(),
+                            30 => current_style = current_style.fg(Color::Black),
+                            31 => current_style = current_style.fg(Color::Red),
+                            32 => current_style = current_style.fg(Color::Green),
+                            33 => current_style = current_style.fg(Color::Yellow),
+                            34 => current_style = current_style.fg(Color::Blue),
+                            35 => current_style = current_style.fg(Color::Magenta),
+                            36 => current_style = current_style.fg(Color::Cyan),
+                            37 => current_style = current_style.fg(Color::White),
+                            90..=97 => current_style = current_style.fg(Color::Indexed(part.parse::<u8>().unwrap_or(90) - 90)),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        } else {
+            current_text.push(ch);
+        }
+    }
+
+    // Flush remaining text
+    if !current_text.is_empty() {
+        spans.push(Span::styled(current_text, current_style));
+    }
+
+    if spans.is_empty() && !input.is_empty() {
+        spans.push(Span::styled(input.to_string(), default_style));
+    }
+
+    spans
+}
+
+/// Render a tool confirmation request.
+pub fn render_tool_confirmation(
+    request_id: &str,
+    name: &str,
+    args: &str,
+    description: &str,
+    _timestamp: f64,
+) -> Vec<Line<'static>> {
+    use crate::theme::{style_agent, GLYPH_INDENT, GLYPH_X};
+
+    let style = style_agent();
+    let name_owned = name.to_string();
+    let desc_owned = description.to_string();
+    let args_owned = args.to_string();
+    let request_id_owned = request_id.to_string();
+    let mut lines = Vec::new();
+
+    // Header with warning style
+    lines.push(Line::from(vec![
+        Span::styled(GLYPH_INDENT, style),
+        Span::styled(format!("{} ", GLYPH_X), style.red()),
+        Span::styled("[CONFIRM]", style.bold().red()),
+        Span::styled(" Tool call requires approval", style),
+    ]));
+
+    // Tool name and description
+    lines.push(Line::from(vec![
+        Span::styled(format!("{}   ", GLYPH_INDENT), style),
+        Span::styled("Tool: ", style.bold()),
+        Span::styled(name_owned.clone(), style),
+    ]));
+
+    if !description.is_empty() {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   ", GLYPH_INDENT), style),
+            Span::styled("Action: ", style.bold()),
+            Span::styled(desc_owned.clone(), style),
+        ]));
+    }
+
+    // Arguments
+    if !args.is_empty() {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}   ", GLYPH_INDENT), style),
+            Span::styled("Args: ", style.bold()),
+        ]));
+        for line in args_owned.lines().take(5) {
+            let line_owned = line.to_string();
+            lines.push(Line::from(vec![
+                Span::styled(format!("{}     ", GLYPH_INDENT), style),
+                Span::styled(line_owned, style),
+            ]));
+        }
+    }
+
+    // Request ID (for debugging/reference)
+    lines.push(Line::from(vec![
+        Span::styled(format!("{}   ", GLYPH_INDENT), style),
+        Span::styled("Request ID: ", style.dim()),
+        Span::styled(request_id_owned, style.dim()),
+    ]));
+
+    // Action hint
+    lines.push(Line::from(vec![
+        Span::styled(format!("{} ", GLYPH_INDENT), style),
+        Span::styled("Press ", style),
+        Span::styled("y", style.bold()),
+        Span::styled(" to confirm, ", style),
+        Span::styled("n", style.bold()),
+        Span::styled(" to deny", style),
+    ]));
+
+    lines
+}

@@ -72,6 +72,9 @@ impl DurableCoreEvent {
             | Event::Error { .. }
             // Init load events — not persisted, only used during bootstrap
             | Event::SkillsLoaded { .. }
+            | Event::SkillCreated { .. }
+            | Event::SkillDeleted { .. }
+            | Event::SkillError { .. }
             | Event::AuthLoaded { .. } => None,
             // Durable: message
             // Durable: assistant response (uses stored role/timestamp/provider)

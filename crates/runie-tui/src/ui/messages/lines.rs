@@ -46,13 +46,26 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
     match elem {
         UserMessage { content, .. }
         | AgentMessage { content, .. }
-        | ThoughtMarker { content, .. } => content.len() / 4,
+        | ThoughtMarker { content, .. }
+        | AnthropicThinking { content, .. } => content.len() / 4,
         Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
-        SubagentRow { output, .. } => output.len() / 4 + 10,
+        ToolConfirmation { args, .. } => args.len() / 4,
         ContextGroup { tools, .. } => tools.iter().map(estimate_element_tokens).sum(),
         Spacer { .. } => 0,
+        Image { data, .. } => data.len() / 4, // Approximate token count for base64
+        DataPart { data, .. } => data.len() / 4,
+        MarkdownTable { headers, rows, .. } => {
+            let header_len: usize = headers.iter().map(|h| h.len()).sum();
+            let row_len: usize = rows.iter().map(|r| r.iter().map(|c| c.len()).sum::<usize>()).sum();
+            (header_len + row_len) / 4
+        }
+        DiffOutput { content, .. } => content.len() / 4,
+        WebSearchCall { query, results, .. } => {
+            query.len() / 4 + results.iter().map(|r| r.title.len() + r.snippet.len()).sum::<usize>() / 4
+        }
+        AnsiStyled { plain_text, .. } => plain_text.len() / 4,
     }
 }
 
@@ -60,6 +73,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 mod tests {
     use super::*;
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
+    use ratatui::widgets::Paragraph;
     use runie_core::layout::word_wrap;
     use runie_core::view::elements::Element;
 
