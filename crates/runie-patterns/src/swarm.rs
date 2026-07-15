@@ -302,6 +302,7 @@ async fn call_leader(ctx: &Context, state: &SwarmState, id: &str, prompt: String
     let start_time = Utc::now();
     let start = Instant::now();
 
+    let timeout = Duration::from_millis(ctx.config.timeout_ms);
     let run = ctx.runner.run(task);
     tokio::pin!(run);
     let mut events = Vec::new();
@@ -310,13 +311,21 @@ async fn call_leader(ctx: &Context, state: &SwarmState, id: &str, prompt: String
             events.push(TraceEvent::Termination { reason: aborted() });
             LeaderCall::Aborted
         }
-        outcome = &mut run => match outcome {
-            Ok(text) => {
+        outcome = tokio::time::timeout(timeout, &mut run) => match outcome {
+            Ok(Ok(text)) => {
                 events.push(TraceEvent::Termination { reason: TerminationReason::Completed });
                 LeaderCall::Text(text)
             }
-            Err(error) => {
+            Ok(Err(error)) => {
                 let message = error.to_string();
+                events.push(TraceEvent::Error { error: message.clone() });
+                events.push(TraceEvent::Termination {
+                    reason: TerminationReason::Error(message.clone()),
+                });
+                LeaderCall::Failed(message)
+            }
+            Err(_) => {
+                let message = format!("leader call timed out after {} ms", ctx.config.timeout_ms);
                 events.push(TraceEvent::Error { error: message.clone() });
                 events.push(TraceEvent::Termination {
                     reason: TerminationReason::Error(message.clone()),

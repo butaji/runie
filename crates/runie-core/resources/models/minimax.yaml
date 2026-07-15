@@ -8,3 +8,9 @@ models:
     context_window: 256000
   - name: MiniMax-M2.7
     context_window: 256000
+  - name: MiniMax-M2.7-highspeed
+    context_window: 256000
+  - name: MiniMax-M2.5
+    context_window: 256000
+  - name: MiniMax-M2.5-highspeed
+    context_window: 256000

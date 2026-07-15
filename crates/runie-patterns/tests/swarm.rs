@@ -309,6 +309,49 @@ async fn swarm_worker_timeout_counts_as_failure() -> Result<()> {
 }
 
 #[tokio::test]
+async fn swarm_leader_timeout_fails_fast() -> Result<()> {
+    // The leader planning/synthesis calls must respect timeout_ms so that a
+    // slow provider cannot hang the pattern indefinitely.
+    let config = PatternConfig {
+        timeout_ms: 50,
+        max_retries: 0,
+        ..test_config()
+    };
+    let runner = Arc::new(
+        MockRunner::new(vec![ok("never")]) // leader plan sleeps past timeout
+            .with_sleep(Duration::from_millis(500)),
+    );
+    let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
+    let start = Instant::now();
+
+    let out = SwarmPattern::parallel().execute(&ctx, "hang").await?;
+
+    assert!(
+        start.elapsed() < Duration::from_secs(2),
+        "leader timeout must fail fast"
+    );
+    match &out.termination {
+        TerminationReason::Error(msg) => {
+            assert!(msg.contains("timed out"), "got {msg}");
+        }
+        other => panic!("expected timeout error, got {other:?}"),
+    }
+    let plan_trace = out
+        .traces
+        .iter()
+        .find(|t| t.agent_id == "leader-plan-1")
+        .expect("leader plan trace");
+    assert!(
+        plan_trace
+            .events
+            .iter()
+            .any(|e| matches!(e, TraceEvent::Error { error } if error.contains("timed out"))),
+        "leader trace should record the timeout"
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn swarm_abort_mid_execute() -> Result<()> {
     let abort = CancellationToken::new();
     let runner = Arc::new(

@@ -228,8 +228,14 @@ impl AppState {
             self.config_mut().scoped_models =
                 scoped.iter().map(|s| self.parse_scoped_model(s)).collect();
         } else {
+            // Default scoped models to the first 10 models from providers that
+            // actually have credentials. Without this filter, unconfigured
+            // providers (e.g. anthropic with no API key) end up enabled in the
+            // cycle list and in swarm worker routing, causing pattern modes to
+            // fail immediately.
             self.config_mut().scoped_models = crate::model_catalog::model_catalog()
                 .iter()
+                .filter(|m| ranking::has_provider_credentials(config, &m.provider))
                 .take(10)
                 .map(|m| crate::model::ScopedModel {
                     provider: m.provider.clone(),
@@ -609,5 +615,60 @@ mod tests {
         state.set_active_model(provider, model, ModelSource::ConfigDefault);
         assert_eq!(state.current_model(), "MiniMax-M2.7");
         assert_ne!(state.current_model(), "MiniMax-M2");
+    }
+
+    #[test]
+    fn apply_scoped_models_filters_out_providers_without_credentials() {
+        // When the config does not explicitly list [models.scoped], the default
+        // scoped model list must not include providers that lack credentials.
+        // Otherwise pattern modes (swarm, eval-optimizer) try to route workers
+        // to unconfigured providers and fail immediately.
+        // CredentialResolver reads the process-global RUNIE_AUTH_FILE env var,
+        // so serialize tests that override it.
+        static AUTH_FILE_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = AUTH_FILE_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+        let dir = tempfile::tempdir().unwrap();
+        let fake_auth = dir.path().join("auth.json");
+        std::fs::write(&fake_auth, r#"{"minimax": {"token": "sk-minimax-test"}}"#).unwrap();
+        std::env::set_var("RUNIE_AUTH_FILE", &fake_auth);
+
+        crate::provider::set_mock_enabled(false);
+        let mut state = AppState::default();
+        let mut config = crate::config::Config::default();
+        // Configure two providers: one with credentials, one without.
+        config.model_providers.insert(
+            "minimax".to_string(),
+            crate::config::ModelProvider {
+                provider_type: Some("openai".to_string()),
+                base_url: "https://api.minimaxi.chat/v1".to_string(),
+                models: vec!["MiniMax-M3".to_string()],
+                headers: std::collections::HashMap::new(),
+            },
+        );
+        config.model_providers.insert(
+            "anthropic".to_string(),
+            crate::config::ModelProvider {
+                provider_type: Some("anthropic".to_string()),
+                base_url: "https://api.anthropic.com/v1".to_string(),
+                models: vec!["claude-3-5-sonnet".to_string()],
+                headers: std::collections::HashMap::new(),
+            },
+        );
+
+        state.apply_scoped_models(&config);
+        std::env::remove_var("RUNIE_AUTH_FILE");
+
+        let scoped = state.config().scoped_models.clone();
+        assert!(
+            scoped.iter().all(|m| m.provider == "minimax"),
+            "default scoped models should only include credentialed providers, got: {:?}",
+            scoped
+        );
+        assert!(
+            scoped.iter().any(|m| m.name == "MiniMax-M3"),
+            "minimax models should still be present, got: {:?}",
+            scoped
+        );
     }
 }
