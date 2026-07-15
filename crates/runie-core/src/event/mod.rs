@@ -671,6 +671,20 @@ pub enum Event {
     ConfigLoaded {
         config: Box<crate::config::Config>,
     },
+
+    // ── MCP variants ─────────────────────────────────────────────────────────
+    McpServerAction {
+        name: String,
+        action: crate::dialog::builders::mcp::McpServerActionKind,
+    },
+    ToggleMcpServersDialog,
+
+    // ── Skills variants ────────────────────────────────────────────────────────
+    SkillAction {
+        name: String,
+        action: crate::dialog::builders::skills::SkillActionKind,
+    },
+    ToggleSkillsDialog,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

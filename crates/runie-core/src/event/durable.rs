@@ -353,7 +353,11 @@ impl DurableCoreEvent {
             | Event::KeybindingsReloaded
             | Event::SetPrompt { .. }
             | Event::PlanModeEnabled { .. }
-            | Event::PlanModeDisabled => None,
+            | Event::PlanModeDisabled
+            | Event::ToggleMcpServersDialog
+            | Event::ToggleSkillsDialog
+            | Event::McpServerAction { .. }
+            | Event::SkillAction { .. } => None,
         }
     }
 }

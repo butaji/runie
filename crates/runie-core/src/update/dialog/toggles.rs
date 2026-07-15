@@ -5,8 +5,8 @@ use crate::commands::{DialogKind, DialogState};
 use crate::model::AppState;
 
 use super::{
-    open_at_file_picker_all, open_command_palette, open_model_selector, open_scoped_models_dialog,
-    open_settings_dialog,
+    open_at_file_picker_all, open_command_palette, open_mcp_servers_dialog, open_model_selector,
+    open_scoped_models_dialog, open_settings_dialog, open_skills_dialog,
 };
 
 // ---------------------------------------------------------------------------
@@ -39,6 +39,8 @@ pub fn dialog_toggle_event(state: &mut AppState, event: crate::Event) {
         crate::Event::ToggleScopedModelsDialog => handle_scoped_models_toggle(state),
         crate::Event::ScopedModelEnableAll => handle_scoped_model_enable_all(state),
         crate::Event::ScopedModelDisableAll => handle_scoped_model_disable_all(state),
+        crate::Event::ToggleMcpServersDialog => handle_mcp_servers_toggle(state),
+        crate::Event::ToggleSkillsDialog => handle_skills_toggle(state),
         _ => {}
     }
 }
@@ -92,6 +94,34 @@ fn handle_settings_toggle(state: &mut AppState) {
             })
         ),
         open_settings_dialog,
+    );
+}
+
+fn handle_mcp_servers_toggle(state: &mut AppState) {
+    do_toggle_dialog(
+        state,
+        matches!(
+            state.open_dialog(),
+            Some(&DialogState::Active {
+                kind: DialogKind::McpServers,
+                panels: _
+            })
+        ),
+        open_mcp_servers_dialog,
+    );
+}
+
+fn handle_skills_toggle(state: &mut AppState) {
+    do_toggle_dialog(
+        state,
+        matches!(
+            state.open_dialog(),
+            Some(&DialogState::Active {
+                kind: DialogKind::Skills,
+                panels: _
+            })
+        ),
+        open_skills_dialog,
     );
 }
 

@@ -26,6 +26,11 @@ impl AppState {
         *self.skills_mut() = skills;
     }
 
+    /// Set the loaded MCP servers from config.
+    pub fn set_mcp_servers(&mut self, servers: Vec<crate::dialog::builders::McpServerRow>) {
+        *self.mcp_servers_mut() = servers;
+    }
+
     // ── Login flow helpers ──────────────────────────────────────────────────
 
     /// Returns the provider from the active login flow, or the config's current provider.
@@ -201,6 +206,19 @@ impl AppState {
             prompts_section.default.as_deref(),
             prompts_section.custom.as_deref(),
         );
+        // Populate MCP servers from config.
+        let mcp_servers = config
+            .mcp
+            .servers
+            .iter()
+            .map(|(name, server)| crate::dialog::builders::McpServerRow {
+                name: name.clone(),
+                transport: format!("{:?}", server.transport),
+                connected: false,
+                tool_count: 0,
+            })
+            .collect();
+        self.set_mcp_servers(mcp_servers);
         self.apply_scoped_models(config);
         // Trigger the onboarding/login flow only when there is no usable model.
         // For `--mock-onboarding` the app already has a default mock model, so

@@ -105,6 +105,8 @@ pub enum DialogType {
     Settings,
     ScopedModels,
     ThemeSelector,
+    McpServers,
+    Skills,
 }
 
 #[cfg(test)]
@@ -142,6 +144,8 @@ mod tests {
             DialogType::Settings,
             DialogType::ScopedModels,
             DialogType::ThemeSelector,
+            DialogType::McpServers,
+            DialogType::Skills,
         ] {
             let s = dt.to_string();
             let parsed = DialogType::from_str(&s);

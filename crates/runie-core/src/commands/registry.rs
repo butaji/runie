@@ -120,6 +120,8 @@ pub enum DialogKind {
     Settings,
     ScopedModels,
     SessionTree,
+    McpServers,
+    Skills,
     Generic,
 }
 

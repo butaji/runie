@@ -526,6 +526,8 @@ fn is_toggle_dialog_event(event: &crate::Event) -> bool {
                 | crate::Event::ToggleScopedModelsDialog
                 | crate::Event::ScopedModelEnableAll
                 | crate::Event::ScopedModelDisableAll
+                | crate::Event::ToggleMcpServersDialog
+                | crate::Event::ToggleSkillsDialog
         )
 }
 

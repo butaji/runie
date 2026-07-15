@@ -27,7 +27,7 @@ git       = ["dep:git2"]                  # git-status checks in fff indexer + g
 watch     = ["dep:notify", "dep:notify-debouncer-mini"]  # file-system watcher in ConfigActor
 keyring   = ["dep:keyring"]               # OS keyring credential storage
 clipboard = ["dep:arboard"]               # OS clipboard read/write
-mcp       = ["dep:rmcp"]   # MCP client + timestamp cache (rmcp pulls chrono)
+mcp       = ["dep:rmcp", "dep:tokio-tungstenite", "dep:native-tls", "dep:tungstenite"]   # MCP client + HTTP/SSE/WebSocket transports
 tiktoken  = ["dep:tiktoken"]             # accurate token counting via tiktoken
 landlock  = ["dep:landlock"]              # Linux Landlock LSM sandboxing
 
@@ -38,6 +38,9 @@ serde_yaml.workspace = true
 rmcp = { workspace = true, optional = true }
 schemars.workspace = true
 jsonschema.workspace = true
+tokio-tungstenite = { workspace = true, optional = true }
+native-tls = { workspace = true, optional = true }
+tungstenite = { workspace = true, optional = true }
 anyhow.workspace = true
 thiserror.workspace = true
 diffy.workspace = true
@@ -65,7 +68,7 @@ command-group.workspace = true
 sublime_fuzzy.workspace = true
 strum.workspace = true
 git2  = { workspace = true, optional = true }
-reqwest = { workspace = true, features = ["blocking"] }
+reqwest = { workspace = true }
 tempfile.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

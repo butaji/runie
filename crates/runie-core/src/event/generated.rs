@@ -76,6 +76,7 @@ impl Event {
             Event::InsertAtRef { .. } => EventKind::Intent,
             Event::KeybindingsReloaded => EventKind::Fact,
             Event::KillChar => EventKind::Intent,
+            Event::McpServerAction { .. } => EventKind::Intent,
             Event::MessageDequeued { .. } => EventKind::Fact,
             Event::MessageReplayed { .. } => EventKind::Fact,
             Event::ModelSelectorBackspace => EventKind::Intent,
@@ -105,8 +106,6 @@ impl Event {
             Event::PathCompletionDown => EventKind::Intent,
             Event::PathCompletionSelect => EventKind::Intent,
             Event::PathCompletionUp => EventKind::Intent,
-            Event::PatternWorkerFinished { .. } => EventKind::Fact,
-            Event::PatternWorkerSpawned { .. } => EventKind::Fact,
             Event::PendingEdit { .. } => EventKind::Intent,
             Event::PermissionAllow { .. } => EventKind::Intent,
             Event::PermissionAlwaysAllow { .. } => EventKind::Intent,
@@ -175,7 +174,6 @@ impl Event {
             Event::SessionTreeFilterCycle => EventKind::Intent,
             Event::SessionTreeSelect { .. } => EventKind::Intent,
             Event::SessionTreeSnapshot { .. } => EventKind::Fact,
-            Event::SetMode { .. } => EventKind::Intent,
             Event::SetPrompt { .. } => EventKind::Fact,
             Event::SetThinkingLevel { .. } => EventKind::Intent,
             Event::SettingsClose => EventKind::Intent,
@@ -187,9 +185,7 @@ impl Event {
             Event::SettingsUp => EventKind::Intent,
             Event::ShareSession => EventKind::Control,
             Event::ShowDiagnostics => EventKind::Intent,
-            Event::SkillCreated { .. } => EventKind::Fact,
-            Event::SkillDeleted { .. } => EventKind::Fact,
-            Event::SkillError { .. } => EventKind::Fact,
+            Event::SkillAction { .. } => EventKind::Intent,
             Event::SkillsLoaded { .. } => EventKind::Fact,
             Event::StarSession { .. } => EventKind::Control,
             Event::Start => EventKind::Intent,
@@ -212,6 +208,7 @@ impl Event {
             Event::ThoughtDone { .. } => EventKind::Fact,
             Event::ToggleCommandPalette => EventKind::Intent,
             Event::ToggleExpand => EventKind::Control,
+            Event::ToggleMcpServersDialog { .. } => EventKind::Intent,
             Event::ToggleModel { .. } => EventKind::Intent,
             Event::ToggleModelSelector => EventKind::Intent,
             Event::TogglePathCompletion => EventKind::Intent,
@@ -219,6 +216,7 @@ impl Event {
             Event::ToggleScopedModelsDialog => EventKind::Intent,
             Event::ToggleSessionTree => EventKind::Intent,
             Event::ToggleSettingsDialog => EventKind::Intent,
+            Event::ToggleSkillsDialog { .. } => EventKind::Intent,
             Event::ToggleVimMode => EventKind::Control,
             Event::ToggleWelcome => EventKind::Intent,
             Event::TokenStatsUpdated { .. } => EventKind::Fact,
@@ -320,6 +318,7 @@ impl Event {
             Event::InsertAtRef { .. } => EventCategory::Dialog,
             Event::KeybindingsReloaded => EventCategory::ModelConfig,
             Event::KillChar => EventCategory::Input,
+            Event::McpServerAction { .. } => EventCategory::Dialog,
             Event::MessageDequeued { .. } => EventCategory::Agent,
             Event::MessageReplayed { .. } => EventCategory::Other,
             Event::ModelSelectorBackspace => EventCategory::Dialog,
@@ -349,8 +348,6 @@ impl Event {
             Event::PathCompletionDown => EventCategory::Dialog,
             Event::PathCompletionSelect => EventCategory::Dialog,
             Event::PathCompletionUp => EventCategory::Dialog,
-            Event::PatternWorkerFinished { .. } => EventCategory::Agent,
-            Event::PatternWorkerSpawned { .. } => EventCategory::Agent,
             Event::PendingEdit { .. } => EventCategory::Edit,
             Event::PermissionAllow { .. } => EventCategory::Permission,
             Event::PermissionAlwaysAllow { .. } => EventCategory::Permission,
@@ -419,7 +416,6 @@ impl Event {
             Event::SessionTreeFilterCycle => EventCategory::Session,
             Event::SessionTreeSelect { .. } => EventCategory::Session,
             Event::SessionTreeSnapshot { .. } => EventCategory::Session,
-            Event::SetMode { .. } => EventCategory::ModelConfig,
             Event::SetPrompt { .. } => EventCategory::Command,
             Event::SetThinkingLevel { .. } => EventCategory::ModelConfig,
             Event::SettingsClose => EventCategory::ModelConfig,
@@ -431,9 +427,7 @@ impl Event {
             Event::SettingsUp => EventCategory::ModelConfig,
             Event::ShareSession => EventCategory::Control,
             Event::ShowDiagnostics => EventCategory::System,
-            Event::SkillCreated { .. } => EventCategory::IO,
-            Event::SkillDeleted { .. } => EventCategory::IO,
-            Event::SkillError { .. } => EventCategory::IO,
+            Event::SkillAction { .. } => EventCategory::Dialog,
             Event::SkillsLoaded { .. } => EventCategory::IO,
             Event::StarSession { .. } => EventCategory::Control,
             Event::Start => EventCategory::LoginFlow,
@@ -456,6 +450,7 @@ impl Event {
             Event::ThoughtDone { .. } => EventCategory::Agent,
             Event::ToggleCommandPalette => EventCategory::Dialog,
             Event::ToggleExpand => EventCategory::Control,
+            Event::ToggleMcpServersDialog { .. } => EventCategory::Dialog,
             Event::ToggleModel { .. } => EventCategory::LoginFlow,
             Event::ToggleModelSelector => EventCategory::Dialog,
             Event::TogglePathCompletion => EventCategory::Dialog,
@@ -463,6 +458,7 @@ impl Event {
             Event::ToggleScopedModelsDialog => EventCategory::ModelConfig,
             Event::ToggleSessionTree => EventCategory::Session,
             Event::ToggleSettingsDialog => EventCategory::ModelConfig,
+            Event::ToggleSkillsDialog { .. } => EventCategory::Dialog,
             Event::ToggleVimMode => EventCategory::Control,
             Event::ToggleWelcome => EventCategory::Dialog,
             Event::TokenStatsUpdated { .. } => EventCategory::Agent,
@@ -545,6 +541,7 @@ impl Event {
             Event::CopyToClipboard { .. } => Some(self.clone()),
             Event::DialogBack => Some(self),
             Event::InsertAtRef { .. } => Some(self.clone()),
+            Event::McpServerAction { .. } => Some(self.clone()),
             Event::ModelSelectorBackspace => Some(self),
             Event::ModelSelectorClose => Some(self),
             Event::ModelSelectorDown => Some(self),
@@ -566,9 +563,12 @@ impl Event {
             Event::ProvidersDisconnect { .. } => Some(self.clone()),
             Event::ProvidersEditModels { .. } => Some(self.clone()),
             Event::ProvidersSelectModel { .. } => Some(self.clone()),
+            Event::SkillAction { .. } => Some(self.clone()),
             Event::ToggleCommandPalette => Some(self),
+            Event::ToggleMcpServersDialog => Some(self),
             Event::ToggleModelSelector => Some(self),
             Event::TogglePathCompletion => Some(self),
+            Event::ToggleSkillsDialog => Some(self),
             Event::ToggleWelcome => Some(self),
             Event::ApproveEdit => Some(self),
             Event::PendingEdit { .. } => Some(self.clone()),
@@ -618,7 +618,6 @@ impl Event {
             Event::ScopedModelToggle { .. } => Some(self.clone()),
             Event::ScopedModelToggleProvider { .. } => Some(self.clone()),
             Event::SelectModel { .. } => Some(self.clone()),
-            Event::SetMode { .. } => Some(self.clone()),
             Event::SetThinkingLevel { .. } => Some(self.clone()),
             Event::SettingsClose => Some(self),
             Event::SettingsDown => Some(self),
@@ -670,8 +669,6 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FollowUpDelivered { .. }
             | Event::IdGenerated { .. }
             | Event::MessageDequeued { .. }
-            | Event::PatternWorkerFinished { .. }
-            | Event::PatternWorkerSpawned { .. }
             | Event::QueueAborted { .. }
             | Event::QueueFollowUpAdded { .. }
             | Event::QueueSteeringAdded { .. }
@@ -712,9 +709,6 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::FilesWritten { .. }
             | Event::GistShared { .. }
             | Event::ProcessResumed
-            | Event::SkillCreated { .. }
-            | Event::SkillDeleted { .. }
-            | Event::SkillError { .. }
             | Event::SkillsLoaded { .. }
             | Event::ModelsFetched { .. }
             | Event::ValidationFailed { .. }

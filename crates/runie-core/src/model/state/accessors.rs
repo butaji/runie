@@ -172,6 +172,14 @@ impl AppState {
         &mut self.skills
     }
 
+    pub fn mcp_servers(&self) -> &[crate::dialog::builders::McpServerRow] {
+        &self.mcp_servers
+    }
+
+    pub fn mcp_servers_mut(&mut self) -> &mut Vec<crate::dialog::builders::McpServerRow> {
+        &mut self.mcp_servers
+    }
+
     pub fn prompts(&self) -> &[crate::prompts::PromptTemplate] {
         &self.prompts
     }
