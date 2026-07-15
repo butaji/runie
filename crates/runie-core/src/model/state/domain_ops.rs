@@ -630,7 +630,7 @@ mod tests {
     fn apply_scoped_models_filters_out_providers_without_credentials() {
         // When the config does not explicitly list [models.scoped], the default
         // scoped model list must not include providers that lack credentials.
-        // Otherwise pattern modes (swarm, eval-optimizer) try to route workers
+        // Otherwise pattern modes (swarm, improve) try to route workers
         // to unconfigured providers and fail immediately.
         // CredentialResolver reads the process-global RUNIE_AUTH_FILE env var,
         // so serialize tests that override it.

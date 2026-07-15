@@ -446,7 +446,7 @@ fn last_user_content(messages: &[ChatMessage]) -> Option<String> {
 }
 
 /// Deterministic canned responses for the pattern orchestration prompts
-/// (`[swarm-plan …]` / `[swarm-synthesize]` / `[eval-*]` markers, see
+/// (`[swarm-plan …]` / `[swarm-synthesize]` / `[improve-*]` markers, see
 /// runie-patterns). Worker prompts carry no marker and fall through to the
 /// normal fixture/echo path. The dag plan check must come before the
 /// generic `[swarm-plan` prefix.
@@ -464,15 +464,15 @@ fn swarm_marker_response(user_input: &str) -> Option<Vec<String>> {
         Some(vec![
             "Swarm complete: all workers finished successfully.".to_owned()
         ])
-    } else if user_input.starts_with("[eval-generate]") {
+    } else if user_input.starts_with("[improve-generate]") {
         Some(vec![
             "Draft: here is the best answer to your task.".to_owned()
         ])
-    } else if user_input.starts_with("[eval-revise]") {
+    } else if user_input.starts_with("[improve-revise]") {
         Some(vec![
             "Revised draft addressing all reviewer feedback.".to_owned()
         ])
-    } else if user_input.starts_with("[eval-review]") {
+    } else if user_input.starts_with("[improve-review]") {
         Some(vec!["APPROVED".to_owned()])
     } else {
         None
@@ -858,13 +858,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn eval_markers_stream_draft_revision_and_approval() {
+    async fn improve_markers_stream_draft_revision_and_approval() {
         let provider = MockProviderBuilder::new().build();
-        let draft = collect_text(&provider, "[eval-generate]\nTask: x").await;
+        let draft = collect_text(&provider, "[improve-generate]\nTask: x").await;
         assert!(draft.starts_with("Draft:"));
-        let revised = collect_text(&provider, "[eval-revise]\nTask: x").await;
+        let revised = collect_text(&provider, "[improve-revise]\nTask: x").await;
         assert!(revised.starts_with("Revised draft"));
-        let review = collect_text(&provider, "[eval-review]\nTask: x").await;
+        let review = collect_text(&provider, "[improve-review]\nTask: x").await;
         assert_eq!(review, "APPROVED");
     }
 }

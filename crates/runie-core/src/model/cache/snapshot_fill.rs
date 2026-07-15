@@ -175,8 +175,8 @@ mod tests {
 
     #[test]
     fn input_title_mode_and_read_only() {
-        let title = build_input_title("openai", "gpt-4o", true, "eval-optimizer");
-        assert_eq!(title, "eval-optimizer · openai/gpt-4o · read-only");
+        let title = build_input_title("openai", "gpt-4o", true, "improve");
+        assert_eq!(title, "improve · openai/gpt-4o · read-only");
     }
 
     #[test]

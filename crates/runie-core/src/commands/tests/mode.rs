@@ -39,8 +39,8 @@ fn mode_list_shows_all_patterns_with_descriptions_and_config() {
         assert!(msg.contains("single"), "missing single: {}", msg);
         assert!(msg.contains("swarm"), "missing swarm: {}", msg);
         assert!(
-            msg.contains("eval-optimizer"),
-            "missing eval-optimizer: {}",
+            msg.contains("improve"),
+            "missing improve: {}",
             msg
         );
         assert!(
@@ -54,8 +54,8 @@ fn mode_list_shows_all_patterns_with_descriptions_and_config() {
             msg
         );
         assert!(
-            msg.contains("Critical review loops"),
-            "missing eval-optimizer description: {}",
+            msg.contains("Iterative improvement with review"),
+            "missing improve description: {}",
             msg
         );
         assert!(msg.contains("workers: 3"), "missing workers: {}", msg);
@@ -72,7 +72,7 @@ fn mode_list_shows_all_patterns_with_descriptions_and_config() {
 #[test]
 fn mode_switch_to_pattern_emits_set_mode_event() {
     let mut state = AppState::default();
-    for pattern in ["single", "swarm", "eval-optimizer"] {
+    for pattern in ["single", "swarm", "improve"] {
         let result = handle(&mut state, pattern);
         assert!(
             matches!(result, CommandResult::Event(crate::Event::SetMode { ref active, workers: None })
@@ -90,7 +90,7 @@ fn mode_unknown_pattern_warns() {
     let result = handle(&mut state, "bogus");
     assert!(
         matches!(result, CommandResult::Warning(ref msg)
-            if msg.contains("bogus") && msg.contains("single") && msg.contains("swarm") && msg.contains("eval-optimizer")),
+            if msg.contains("bogus") && msg.contains("single") && msg.contains("swarm") && msg.contains("improve")),
         "expected warning listing valid patterns, got {:?}",
         result
     );
@@ -223,11 +223,11 @@ fn set_mode_event_updates_state_via_model_config_event() {
     crate::update::agent::model_config_event(
         &mut state,
         crate::Event::SetMode {
-            active: "eval-optimizer".into(),
+            active: "improve".into(),
             workers: Some(7),
         },
     );
-    assert_eq!(state.config().mode.active, "eval-optimizer");
+    assert_eq!(state.config().mode.active, "improve");
     assert_eq!(state.config().mode.workers, 7);
     assert_eq!(
         state.config().swarm_variant,

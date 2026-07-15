@@ -148,7 +148,7 @@ pub fn model_reasoning_panel(
 /// Build the `/mode` interactive selector.
 ///
 /// Shows all pattern choices in one panel: `single`, the three `swarm`
-/// variants, and `eval-optimizer`. The current choice is marked with `★`.
+/// variants, and `improve`. The current choice is marked with `★`.
 pub fn mode_selector(current: &str, current_variant: Option<&str>) -> PanelStack {
     let mut panel = Panel::new("mode", " Select Mode ").header("Agent orchestration pattern");
 
@@ -182,14 +182,14 @@ pub fn mode_selector(current: &str, current_variant: Option<&str>) -> PanelStack
 
     panel = panel.item(
         mode_item_label(
-            "eval-optimizer",
+            "improve",
             "Generate → review → revise loop",
             current,
             None,
             current_variant,
         ),
         ItemAction::Emit(Event::SetMode {
-            active: "eval-optimizer".into(),
+            active: "improve".into(),
             workers: None,
         }),
     );

@@ -1,4 +1,4 @@
-//! Eval-optimizer pattern: critical review loops (PATTERNS.md Phase 3).
+//! Improve pattern: iterative improvement with review (PATTERNS.md Phase 3).
 //!
 //! A leader agent generates a draft, reviews it, and revises until the
 //! reviewer replies `APPROVED` or `max_rounds` is exhausted. Every runner
@@ -20,17 +20,17 @@ use crate::{
     WorkerTask,
 };
 
-/// Critical review loops — generate, evaluate, revise.
-pub struct EvalOptimizerPattern;
+/// Iterative improvement with review — generate, evaluate, revise.
+pub struct ImprovePattern;
 
 #[async_trait::async_trait]
-impl Pattern for EvalOptimizerPattern {
+impl Pattern for ImprovePattern {
     fn name(&self) -> &'static str {
-        "eval-optimizer"
+        "improve"
     }
 
     fn description(&self) -> &str {
-        "Critical review loops — generate, evaluate, revise"
+        "Iterative improvement with review"
     }
 
     async fn execute(&self, ctx: &Context, input: &str) -> anyhow::Result<PatternOutput> {
@@ -144,7 +144,7 @@ async fn eval_round(
             reason: aborted(),
         };
     }
-    let id = format!("eval-review-{round}");
+    let id = format!("improve-review-{round}");
     let description = format!("review round {round}");
     match call_eval(
         ctx,
@@ -180,12 +180,12 @@ async fn draft_call(
 ) -> EvalCall {
     let (id, description, prompt) = match step {
         DraftStep::Generate => (
-            format!("eval-generate-{round}"),
+            format!("improve-generate-{round}"),
             "generate".to_string(),
             build_generate_prompt(input),
         ),
         DraftStep::Revise => (
-            format!("eval-revise-{round}"),
+            format!("improve-revise-{round}"),
             format!("revise round {round}"),
             build_revise_prompt(input, draft, feedback),
         ),
@@ -272,20 +272,20 @@ fn approved(response: &str) -> bool {
 
 fn build_generate_prompt(input: &str) -> String {
     format!(
-        "[eval-generate]\nProduce the best possible answer to the task below.\n\nTask:\n{input}"
+        "[improve-generate]\nProduce the best possible answer to the task below.\n\nTask:\n{input}"
     )
 }
 
 fn build_revise_prompt(input: &str, draft: &str, feedback: &str) -> String {
     format!(
-        "[eval-revise]\nTask:\n{input}\n\nCurrent draft:\n{draft}\n\nReviewer feedback:\n{feedback}\n\n\
+        "[improve-revise]\nTask:\n{input}\n\nCurrent draft:\n{draft}\n\nReviewer feedback:\n{feedback}\n\n\
          Revise the draft, addressing all reviewer feedback."
     )
 }
 
 fn build_review_prompt(input: &str, draft: &str) -> String {
     format!(
-        "[eval-review]\nTask:\n{input}\n\nDraft under review:\n{draft}\n\n\
+        "[improve-review]\nTask:\n{input}\n\nDraft under review:\n{draft}\n\n\
          Reply with exactly APPROVED if the draft fully satisfies the task; \
          otherwise reply with concise, actionable feedback."
     )
