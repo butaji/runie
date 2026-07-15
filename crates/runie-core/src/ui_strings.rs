@@ -167,14 +167,19 @@ pub mod mode {
         )
     }
 
-    /// Available patterns with descriptions.
-    pub fn list() -> String {
-        [
-            "single — Direct execution",
-            "swarm — Coordinated multi-agent work",
-            "eval-optimizer — Critical review loops",
-        ]
-        .join("\n")
+    /// Available patterns with descriptions and current tunable config.
+    pub fn list(mode: &ModeSection) -> String {
+        format!(
+            "single — Direct execution\n\
+             swarm — Coordinated multi-agent work\n\
+             eval-optimizer — Critical review loops\n\
+             workers: {}, max_rounds: {}, timeout: {}s, max_retries: {}, circuit_breaker: {}",
+            mode.workers,
+            mode.max_rounds,
+            mode.timeout_ms / 1000,
+            mode.max_retries,
+            mode.circuit_breaker
+        )
     }
 
     /// Unknown pattern name.

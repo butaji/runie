@@ -117,6 +117,7 @@ pub fn filter_commands<'a>(reg: &'a CommandRegistry, query: &str) -> Vec<&'a Com
 pub enum DialogKind {
     CommandPalette,
     ModelSelector,
+    ModeSelector,
     Settings,
     ScopedModels,
     SessionTree,

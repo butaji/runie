@@ -482,6 +482,15 @@ impl AppState {
         self.notify(format!("Pattern set to: {}", active), TransientLevel::Info);
     }
 
+    /// Set the per-session swarm execution variant.
+    pub(crate) fn set_swarm_variant(&mut self, variant: &str) {
+        self.config_mut().swarm_variant = Some(variant.to_owned());
+        self.notify(
+            format!("Swarm variant set to: {}", variant),
+            TransientLevel::Info,
+        );
+    }
+
     /// Set or clear the per-model thinking level override (`provider/model`).
     /// Persists to `[models.thinking]` in config.toml via ConfigActor.
     pub fn set_model_thinking_level(

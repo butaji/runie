@@ -344,6 +344,8 @@ impl DurableCoreEvent {
             | Event::SettingsSwitchCategory { .. }
             | Event::CycleThinkingLevel
             | Event::SetMode { .. }
+            | Event::SetSwarmVariant { .. }
+            | Event::SetModeAndSwarmVariant { .. }
             | Event::ToggleReadOnly
             | Event::TrustProject
             | Event::UntrustProject

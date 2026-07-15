@@ -105,6 +105,8 @@
     "SettingsSwitchCategory": "{ category: SettingsCategory }",
     "SetThinkingLevel": "ThinkingLevel",
     "SetMode": "{ active: String, workers: Option<usize> }",
+    "SetSwarmVariant": "{ variant: String }",
+    "SetModeAndSwarmVariant": "{ active: String, swarm_variant: String }",
     "PaletteFilter": "char",
     "ModelSelectorFilter": "char",
     "CommandFormInput": "char",
@@ -219,7 +221,8 @@
         "ScopedModelDisableAll", "ScopedModelToggleProvider", "ToggleSettingsDialog",
         "SettingsUp", "SettingsDown", "SettingsLeft", "SettingsRight",
         "SettingsSelect", "SettingsClose", "SettingsSwitchCategory",
-        "CycleThinkingLevel", "SetThinkingLevel", "SetMode", "ToggleReadOnly",
+        "CycleThinkingLevel", "SetThinkingLevel", "SetMode", "SetSwarmVariant",
+        "SetModeAndSwarmVariant", "ToggleReadOnly",
         "TrustProject", "UntrustProject", "ReloadAll"
       ],
       "fact_variants": ["KeybindingsReloaded"]

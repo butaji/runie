@@ -140,6 +140,97 @@ pub fn model_reasoning_panel(
     PanelStack::new(panel)
 }
 
+/// Build the `/mode` interactive selector.
+///
+/// Shows all pattern choices in one panel: `single`, the three `swarm`
+/// variants, and `eval-optimizer`. The current choice is marked with `★`.
+pub fn mode_selector(current: &str, current_variant: Option<&str>) -> PanelStack {
+    let mut panel = Panel::new("mode", " Select Mode ").header("Agent orchestration pattern");
+
+    panel = panel.item(
+        mode_item_label("single", "Direct execution", current, None, current_variant),
+        ItemAction::Emit(Event::SetMode {
+            active: "single".into(),
+            workers: None,
+        }),
+    );
+
+    for (variant_name, desc) in [
+        ("parallel", "Fan-out to all workers at once"),
+        ("delegation", "Leader assigns tasks to specialists"),
+        ("dag", "Workers form dependency waves"),
+    ] {
+        panel = panel.item(
+            mode_item_label(
+                &format!("swarm / {variant_name}"),
+                desc,
+                current,
+                Some(variant_name),
+                current_variant,
+            ),
+            ItemAction::Emit(Event::SetModeAndSwarmVariant {
+                active: "swarm".into(),
+                swarm_variant: variant_name.into(),
+            }),
+        );
+    }
+
+    panel = panel.item(
+        mode_item_label(
+            "eval-optimizer",
+            "Generate → review → revise loop",
+            current,
+            None,
+            current_variant,
+        ),
+        ItemAction::Emit(Event::SetMode {
+            active: "eval-optimizer".into(),
+            workers: None,
+        }),
+    );
+
+    // Pre-select the current choice so pressing Enter without moving is a no-op
+    // that still dismisses the dialog and re-applies the current mode.
+    // `Panel.selected` is an index into navigable items, so skip headers/separators.
+    let selected = panel
+        .items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| item.is_navigable())
+        .position(|(_, item)| match item {
+            crate::dialog::PanelItem::Action { label, .. } => {
+                label.starts_with("★ ") || label.starts_with("★")
+            }
+            _ => false,
+        })
+        .unwrap_or(0);
+    panel.selected = selected;
+
+    PanelStack::new(panel)
+}
+
+fn mode_item_label(
+    name: &str,
+    desc: &str,
+    current: &str,
+    variant: Option<&str>,
+    current_variant: Option<&str>,
+) -> String {
+    let is_current = match variant {
+        Some(v) => {
+            current == "swarm"
+                && (current_variant == Some(v)
+                    || (current_variant.is_none() && v == "parallel"))
+        }
+        None => current == name,
+    };
+    if is_current {
+        format!("★ {name} — {desc}")
+    } else {
+        format!("  {name} — {desc}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

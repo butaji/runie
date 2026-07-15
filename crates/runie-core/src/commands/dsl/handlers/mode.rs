@@ -4,7 +4,7 @@
 //! multi-agent work), and `eval-optimizer` (critical review loops).
 
 use crate::commands::dsl::handlers::NamedHandler;
-use crate::commands::CommandResult;
+use crate::commands::{CommandResult, DialogType};
 use crate::model::AppState;
 use crate::ui_strings::mode as m;
 
@@ -21,10 +21,10 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
 pub fn handle_mode(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
-        return CommandResult::Message(m::current(&state.config().mode));
+        return CommandResult::OpenDialog(DialogType::ModeSelector);
     }
     if rest == "list" {
-        return CommandResult::Message(m::list());
+        return CommandResult::Message(m::list(&state.config().mode));
     }
     let parts: Vec<&str> = rest.split_whitespace().collect();
     let active = parts[0];

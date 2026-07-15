@@ -202,19 +202,40 @@ impl CredentialResolver {
     /// Returns a `SecretString` to prevent accidental exposure. Use `.expose_secret()`
     /// only at the HTTP boundary where the key is actually needed.
     pub fn resolve_api_key(&self, provider: &str) -> Option<SecretString> {
-        let env_key = format!("{}_API_KEY", provider.to_uppercase());
+        self.resolve_api_key_with_env_vars(provider, &[])
+    }
 
-        // 1. Environment variable
-        if let Some(val) = self.env.get(&env_key) {
-            if !val.expose_secret().is_empty() {
-                return Some(val.clone());
+    /// Resolve the API key, preferring the given env var names before falling
+    /// back to the default `{PROVIDER}_API_KEY` form. This lets providers with
+    /// hyphens in their key (e.g. `kimi-code`) declare a clean env var such as
+    /// `KIMI_API_KEY` while still accepting the derived form for backwards
+    /// compatibility.
+    pub fn resolve_api_key_with_env_vars(
+        &self,
+        provider: &str,
+        preferred_env_vars: &[String],
+    ) -> Option<SecretString> {
+        let default_env_key = format!("{}_API_KEY", provider.to_uppercase());
+        let mut env_keys: Vec<String> = preferred_env_vars.to_vec();
+        if !env_keys.contains(&default_env_key) {
+            env_keys.push(default_env_key);
+        }
+
+        // 1. Environment variables (preferred first, then default)
+        for env_key in &env_keys {
+            if let Some(val) = self.env.get(env_key) {
+                if !val.expose_secret().is_empty() {
+                    return Some(val.clone());
+                }
             }
         }
 
         // 2. .env file
-        if let Some(val) = self.dotenv.get(&env_key) {
-            if !val.expose_secret().is_empty() {
-                return Some(val.clone());
+        for env_key in &env_keys {
+            if let Some(val) = self.dotenv.get(env_key) {
+                if !val.expose_secret().is_empty() {
+                    return Some(val.clone());
+                }
             }
         }
 

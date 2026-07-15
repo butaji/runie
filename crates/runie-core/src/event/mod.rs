@@ -509,6 +509,13 @@ pub enum Event {
         active: String,
         workers: Option<usize>,
     },
+    /// Set the swarm execution variant (`parallel`, `delegation`, `dag`).
+    SetSwarmVariant { variant: String },
+    /// Switch to swarm and set its variant in one action (used by the mode picker).
+    SetModeAndSwarmVariant {
+        active: String,
+        swarm_variant: String,
+    },
     ToggleReadOnly,
     TrustProject,
     UntrustProject,

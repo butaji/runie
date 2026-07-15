@@ -52,7 +52,12 @@ pub fn has_provider_credentials(_config: &crate::config::Config, provider: &str)
     // other sources are consistently detected. This fixes the bug where a provider
     // with valid credentials in auth.json was not detected during startup.
     let resolver = crate::auth::CredentialResolver::new();
-    let has = resolver.resolve_api_key(provider).is_some();
+    let preferred = crate::provider::find_provider(provider)
+        .map(|p| vec![p.env_var])
+        .unwrap_or_default();
+    let has = resolver
+        .resolve_api_key_with_env_vars(provider, &preferred)
+        .is_some();
     tracing::debug!(provider, has_credentials = has, "has_provider_credentials");
     has
 }

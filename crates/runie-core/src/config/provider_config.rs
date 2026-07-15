@@ -12,7 +12,12 @@ impl crate::proto::provider::ProviderConfig for crate::config::Config {
             // Only pass base_url; api_key comes from env/keyring
             resolver.set_config(name, None, non_empty(&p.base_url));
         }
-        resolver.resolve_api_key(provider)
+        // Honor the provider's declared env_var (e.g. kimi-code → KIMI_API_KEY)
+        // while still accepting the derived KIMI-CODE_API_KEY form.
+        let preferred = crate::provider::find_provider(provider)
+            .map(|p| vec![p.env_var])
+            .unwrap_or_default();
+        resolver.resolve_api_key_with_env_vars(provider, &preferred)
     }
 
     fn resolve_base_url(&self, provider: &str) -> Option<String> {

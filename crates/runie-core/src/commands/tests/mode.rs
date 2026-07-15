@@ -1,6 +1,6 @@
 //! /mode command tests — pattern display, listing, switching, and validation.
 
-use crate::commands::CommandResult;
+use crate::commands::{CommandResult, DialogType};
 use crate::model::AppState;
 
 use super::exec_handler;
@@ -14,40 +14,25 @@ fn mode_command_is_registered() {
     let mut state = AppState::default();
     let result = exec_handler(&mut state, "mode", "");
     assert!(
-        matches!(result, CommandResult::Message(ref msg) if msg.contains("Pattern: single")),
-        "expected current-pattern message via registry, got {:?}",
+        matches!(result, CommandResult::OpenDialog(DialogType::ModeSelector)),
+        "expected mode selector dialog via registry, got {:?}",
         result
     );
 }
 
 #[test]
-fn mode_empty_shows_current_pattern_and_config() {
+fn mode_empty_opens_interactive_selector() {
     let mut state = AppState::default();
     let result = handle(&mut state, "");
     assert!(
-        matches!(result, CommandResult::Message(ref msg) if msg.contains("Pattern: single")),
-        "expected 'Pattern: single', got {:?}",
+        matches!(result, CommandResult::OpenDialog(DialogType::ModeSelector)),
+        "expected mode selector dialog, got {:?}",
         result
     );
-    if let CommandResult::Message(msg) = result {
-        assert!(msg.contains("workers: 3"), "missing workers: {}", msg);
-        assert!(msg.contains("max_rounds: 5"), "missing max_rounds: {}", msg);
-        assert!(msg.contains("timeout: 120s"), "missing timeout: {}", msg);
-        assert!(
-            msg.contains("max_retries: 2"),
-            "missing max_retries: {}",
-            msg
-        );
-        assert!(
-            msg.contains("circuit_breaker: 3"),
-            "missing circuit_breaker: {}",
-            msg
-        );
-    }
 }
 
 #[test]
-fn mode_list_shows_all_patterns_with_descriptions() {
+fn mode_list_shows_all_patterns_with_descriptions_and_config() {
     let mut state = AppState::default();
     let result = handle(&mut state, "list");
     if let CommandResult::Message(msg) = result {
@@ -71,6 +56,12 @@ fn mode_list_shows_all_patterns_with_descriptions() {
         assert!(
             msg.contains("Critical review loops"),
             "missing eval-optimizer description: {}",
+            msg
+        );
+        assert!(msg.contains("workers: 3"), "missing workers: {}", msg);
+        assert!(
+            msg.contains("max_rounds: 5"),
+            "missing max_rounds: {}",
             msg
         );
     } else {

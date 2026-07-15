@@ -40,7 +40,7 @@ base_url = "https://api.x.ai/v1"
 
 [model_providers.minimax]
 type = "openai-compatible"
-base_url = "https://api.minimax.chat/v1"
+base_url = "https://api.minimaxi.chat/v1"
 # api_key = "..."
 
 [model_providers.ollama]

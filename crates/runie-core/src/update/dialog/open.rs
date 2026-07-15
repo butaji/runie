@@ -93,6 +93,19 @@ pub fn open_model_selector(state: &mut AppState) {
     });
 }
 
+pub fn open_mode_selector(state: &mut AppState) {
+    use crate::dialog::builders::mode_selector;
+    let current = state.config().mode.active.clone();
+    let variant = state.config().swarm_variant.clone();
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::ModeSelector,
+        panels: mode_selector(&current, variant.as_deref()),
+    });
+}
+
 pub fn open_settings_dialog(state: &mut AppState) {
     use crate::dialog::builders::settings;
 

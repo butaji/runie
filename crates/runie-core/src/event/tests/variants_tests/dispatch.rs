@@ -139,6 +139,8 @@ fn dispatcher_handles_all_variants() {
             | Event::CycleThinkingLevel
             | Event::SetThinkingLevel(_)
             | Event::SetMode { .. }
+            | Event::SetSwarmVariant { .. }
+            | Event::SetModeAndSwarmVariant { .. }
             | Event::ToggleReadOnly
             | Event::TrustProject
             | Event::UntrustProject

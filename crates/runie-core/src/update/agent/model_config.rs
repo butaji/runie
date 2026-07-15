@@ -81,6 +81,18 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             state.set_mode(active, *workers);
             true
         }
+        crate::Event::SetSwarmVariant { variant } => {
+            state.set_swarm_variant(variant);
+            true
+        }
+        crate::Event::SetModeAndSwarmVariant {
+            active,
+            swarm_variant,
+        } => {
+            state.set_mode(active, None);
+            state.set_swarm_variant(swarm_variant);
+            true
+        }
         crate::Event::ToggleReadOnly => {
             state.toggle_read_only();
             true

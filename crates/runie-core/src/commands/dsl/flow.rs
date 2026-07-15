@@ -102,6 +102,7 @@ impl CommandResult {
 pub enum DialogType {
     CommandPalette,
     ModelSelector,
+    ModeSelector,
     Settings,
     ScopedModels,
     ThemeSelector,
@@ -139,6 +140,7 @@ mod tests {
         for dt in [
             DialogType::CommandPalette,
             DialogType::ModelSelector,
+            DialogType::ModeSelector,
             DialogType::Settings,
             DialogType::ScopedModels,
             DialogType::ThemeSelector,

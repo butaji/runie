@@ -11,8 +11,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    open_command_palette, open_model_selector, open_scoped_models_dialog, open_settings_dialog,
-    open_theme_selector,
+    open_command_palette, open_mode_selector, open_model_selector, open_scoped_models_dialog,
+    open_settings_dialog, open_theme_selector,
     panel_handler::{update_panel_stack, PanelUpdateResult},
 };
 
@@ -169,6 +169,7 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
             match d {
                 DialogType::CommandPalette => open_command_palette(state),
                 DialogType::ModelSelector => open_model_selector(state),
+                DialogType::ModeSelector => open_mode_selector(state),
                 DialogType::Settings => open_settings_dialog(state),
                 DialogType::ScopedModels => open_scoped_models_dialog(state),
                 DialogType::ThemeSelector => open_theme_selector(state),
