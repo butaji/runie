@@ -103,6 +103,25 @@ impl LazyCache {
             .unwrap_or_else(|| turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6))
     }
 
+    /// Timestamp for swarm worker lifecycle rows.
+    ///
+    /// Worker rows belong to the current turn and must stay above the final
+    /// assistant response. Anchoring to the last user message (the one that
+    /// started the turn) guarantees that; falling back to `thinking_timestamp`
+    /// keeps the existing behavior when no user message is present.
+    fn worker_row_timestamp(state: &AppState) -> f64 {
+        let last_user_ts = state
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.role == Role::User)
+            .map(|m| m.timestamp)
+            .last();
+        last_user_ts
+            .map(|t| t + 1e-7)
+            .unwrap_or_else(|| Self::thinking_timestamp(state))
+    }
+
     /// Collect renderable entries. Each element carries a `collapsible`
     /// flag: true only for agent thoughts and streamed reasoning (the
     /// grok-style one-line summary applies to them exclusively).
@@ -133,7 +152,7 @@ impl LazyCache {
                     row.activity.clone(),
                     row.output.clone(),
                 )
-                .at(Self::thinking_timestamp(state)),
+                .at(Self::worker_row_timestamp(state)),
                 false,
             ));
         }

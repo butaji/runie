@@ -15,7 +15,8 @@ fn command_palette_builds() {
     let stack = command_palette(vec![
         CommandRow::new("Commands", "/save", "Save session", dummy_evt()),
         CommandRow::new("Commands", "/load", "Load session", dummy_evt()),
-        CommandRow::new("Skills", "test-skill", "A skill", dummy_evt()),
+        CommandRow::new("Skills", "test-skill", "A skill", dummy_evt())
+            .with_aliases(vec!["ts".into()]),
     ]);
     assert_eq!(stack.len(), 1);
     let panel = stack.current().unwrap();

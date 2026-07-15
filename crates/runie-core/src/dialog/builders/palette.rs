@@ -24,7 +24,12 @@ pub fn command_palette(items: Vec<crate::commands::CommandRow>) -> PanelStack {
             panel = panel.header(row.category.clone());
             last_category = row.category;
         }
-        panel = panel.command(row.name, row.desc, ItemAction::Emit(row.event));
+        panel = panel.command_with_aliases(
+            row.name,
+            row.desc,
+            row.aliases,
+            ItemAction::Emit(row.event),
+        );
     }
     PanelStack::new(panel)
 }

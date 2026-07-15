@@ -47,3 +47,33 @@ fn provider_alias_dispatches_to_same_command() {
         "/providers should open providers dialog"
     );
 }
+
+#[test]
+fn exit_alias_quits_immediately() {
+    let mut state = AppState::default();
+    run_slash(&mut state, "/exit");
+    assert!(
+        state.should_quit,
+        "/exit should resolve to /quit and set should_quit"
+    );
+}
+
+#[test]
+fn q_alias_quits_immediately() {
+    let mut state = AppState::default();
+    run_slash(&mut state, "/q");
+    assert!(
+        state.should_quit,
+        "/q should resolve to /quit and set should_quit"
+    );
+}
+
+#[test]
+fn colon_q_quits_immediately() {
+    let mut state = AppState::default();
+    run_slash(&mut state, ":q");
+    assert!(
+        state.should_quit,
+        ":q should quit immediately without slash prefix"
+    );
+}

@@ -42,6 +42,7 @@ pub struct CommandRow {
     pub category: String,
     pub name: String,
     pub desc: String,
+    pub aliases: Vec<String>,
     pub event: crate::Event,
 }
 
@@ -56,7 +57,13 @@ impl CommandRow {
             category: category.into(),
             name: name.into(),
             desc: desc.into(),
+            aliases: Vec::new(),
             event,
         }
+    }
+
+    pub fn with_aliases(mut self, aliases: Vec<String>) -> Self {
+        self.aliases = aliases;
+        self
     }
 }

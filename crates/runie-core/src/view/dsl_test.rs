@@ -435,4 +435,55 @@ mod tests {
             .collect();
         assert_eq!(markers.len(), 1, "expanded thought must render full body");
     }
+
+    #[test]
+    fn swarm_worker_rows_render_before_assistant_response() {
+        let mut state = AppState::default();
+        // User message at t=1 starts the turn.
+        state.session.messages.push(msg(Role::User, "hello", 1.0, "req.0"));
+        // Worker row emitted by the pattern before the final Response.
+        state.update(crate::Event::PatternWorkerSpawned {
+            id: "worker-1".into(),
+            description: "Analyze context".into(),
+            model: "mock/echo".into(),
+        });
+        state.update(crate::Event::PatternWorkerFinished {
+            id: "worker-1".into(),
+            status: "completed".into(),
+            duration_ms: 500,
+            output: "done".into(),
+        });
+        // Final assistant response arrives after worker rows.
+        state.update(crate::Event::Response {
+            id: "req.0".into(),
+            content: "Final answer".into(),
+            role: String::new(),
+            timestamp: crate::message::now(),
+            provider: String::new(),
+        });
+
+        let elements = LazyCache::rebuild(&state);
+        let positions: Vec<_> = elements
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| match e {
+                Element::SubagentRow { id, .. } if id == "worker-1" => Some(("worker", i)),
+                Element::AgentMessage { content, .. } if content == "Final answer" => {
+                    Some(("response", i))
+                }
+                _ => None,
+            })
+            .collect();
+        let worker_pos = positions.iter().find(|(k, _)| *k == "worker").map(|(_, i)| *i);
+        let response_pos = positions.iter().find(|(k, _)| *k == "response").map(|(_, i)| *i);
+        assert!(
+            worker_pos.is_some() && response_pos.is_some(),
+            "both worker row and response must be present: {positions:?}"
+        );
+        assert!(
+            worker_pos.unwrap() < response_pos.unwrap(),
+            "worker row must appear before final response"
+        );
+    }
+
 }

@@ -13,7 +13,13 @@ pub(crate) fn build_input_title(
     read_only: bool,
     mode_active: &str,
 ) -> String {
-    let base = format!("{}/{}", provider, model);
+    // Models are sometimes stored with their provider prefix (e.g. "minimax/MiniMax-M3");
+    // avoid rendering "minimax/minimax/MiniMax-M3".
+    let base = if let Some(stripped) = model.strip_prefix(&format!("{}/", provider)) {
+        format!("{}/{}", provider, stripped)
+    } else {
+        format!("{}/{}", provider, model)
+    };
     let with_mode = if mode_active == "single" {
         base
     } else {
@@ -171,5 +177,17 @@ mod tests {
     fn input_title_mode_and_read_only() {
         let title = build_input_title("openai", "gpt-4o", true, "eval-optimizer");
         assert_eq!(title, "eval-optimizer · openai/gpt-4o · read-only");
+    }
+
+    #[test]
+    fn input_title_dedupes_provider_prefix() {
+        let title = build_input_title("minimax", "minimax/MiniMax-M3", false, "single");
+        assert_eq!(title, "minimax/MiniMax-M3");
+    }
+
+    #[test]
+    fn input_title_dedupes_provider_prefix_with_mode() {
+        let title = build_input_title("minimax", "minimax/MiniMax-M3", false, "swarm");
+        assert_eq!(title, "swarm · minimax/MiniMax-M3");
     }
 }

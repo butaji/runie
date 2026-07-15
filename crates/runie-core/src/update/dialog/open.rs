@@ -17,15 +17,18 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
     let mut rows: Vec<crate::commands::CommandRow> = Vec::new();
     let ranked = state.rank_commands("", 100);
     for (cmd, _score) in ranked {
-        rows.push(crate::commands::CommandRow::new(
-            cmd.category.to_string(),
-            &cmd.name,
-            &cmd.desc,
-            crate::Event::RunPaletteCommand {
-                name: cmd.name.clone(),
-                args: String::new(),
-            },
-        ));
+        rows.push(
+            crate::commands::CommandRow::new(
+                cmd.category.to_string(),
+                &cmd.name,
+                &cmd.desc,
+                crate::Event::RunPaletteCommand {
+                    name: cmd.name.clone(),
+                    args: String::new(),
+                },
+            )
+            .with_aliases(cmd.aliases.clone()),
+        );
     }
     for skill in state.skills() {
         if skill.user_invocable {

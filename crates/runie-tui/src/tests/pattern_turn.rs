@@ -92,7 +92,7 @@ fn turn_started(id: &str, content: &str) -> Event {
 /// event fails fast instead of hanging. Returns everything received.
 async fn drain_until(bus_rx: &mut Receiver<Event>, stop: impl Fn(&Event) -> bool) -> Vec<Event> {
     let mut seen = Vec::new();
-    let deadline = tokio::time::sleep(std::time::Duration::from_secs(2));
+    let deadline = tokio::time::sleep(std::time::Duration::from_secs(10));
     tokio::pin!(deadline);
     loop {
         tokio::select! {

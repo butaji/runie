@@ -283,7 +283,13 @@ mod tests {
         assert_eq!(p.env_var, "MINIMAX_API_KEY");
         assert_eq!(
             p.models.iter().map(|m| m.name.as_str()).collect::<Vec<_>>(),
-            vec!["MiniMax-M3", "MiniMax-M2.7"]
+            vec![
+                "MiniMax-M3",
+                "MiniMax-M2.7",
+                "MiniMax-M2.7-highspeed",
+                "MiniMax-M2.5",
+                "MiniMax-M2.5-highspeed",
+            ]
         );
     }
 

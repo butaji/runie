@@ -74,9 +74,20 @@ impl Panel {
 
     /// Add a command-palette entry with separate name and description.
     pub fn command(
+        self,
+        name: impl Into<String>,
+        desc: impl Into<String>,
+        action: super::ItemAction,
+    ) -> Self {
+        self.command_with_aliases(name, desc, Vec::new(), action)
+    }
+
+    /// Add a command-palette entry with aliases for filtering.
+    pub fn command_with_aliases(
         mut self,
         name: impl Into<String>,
         desc: impl Into<String>,
+        aliases: Vec<String>,
         action: super::ItemAction,
     ) -> Self {
         let name = name.into();
@@ -86,6 +97,7 @@ impl Panel {
             name,
             desc,
             label,
+            aliases,
             action,
         });
         self

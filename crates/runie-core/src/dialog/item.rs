@@ -18,10 +18,13 @@ pub enum PanelItem {
     /// Command palette entry with separate name and description.
     /// `label` is the combined "name description" string used for fuzzy
     /// filtering; `name` and `desc` are used by the renderer for styling.
+    /// `aliases` are additional invocations (e.g. `/quit` also answers to `q`
+    /// and `exit`) and participate in palette filtering.
     Command {
         name: String,
         desc: String,
         label: String,
+        aliases: Vec<String>,
         action: ItemAction,
     },
     Toggle {

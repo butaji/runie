@@ -89,7 +89,16 @@ pub(crate) fn swarm_for_variant(variant: Option<&str>) -> SwarmPattern {
 /// in a single UiActor iteration and the running row is never rendered.
 const WORKER_RUNNING_VISIBILITY_MS: u64 = 200;
 
-/// Publish one feed row per worker trace (`worker-*` ids only; leader
+/// Whether a trace id should surface as a feed row.
+///
+/// Swarm workers use `worker-*`; eval-optimizer uses `eval-generate-*`,
+/// `eval-review-*`, and `eval-revise-*`. Internal leader/plan/synthesis traces
+/// are filtered out.
+fn is_visible_worker_trace(agent_id: &str) -> bool {
+    agent_id.starts_with("worker-") || agent_id.starts_with("eval-")
+}
+
+/// Publish one feed row per worker trace (`worker-*` and `eval-*` ids; leader
 /// plan/synthesis traces are internal to the pattern).
 ///
 /// The patterns emit traces only on worker completion, so rows are published
@@ -102,7 +111,7 @@ pub(crate) async fn publish_worker_rows(
     model: &str,
 ) {
     for trace in traces {
-        if !trace.agent_id.starts_with("worker-") {
+        if !is_visible_worker_trace(&trace.agent_id) {
             continue;
         }
         let id = trace.agent_id.clone();
@@ -391,6 +400,42 @@ mod tests {
             Event::PatternWorkerFinished { id, status, output, .. }
                 if id == "worker-1-1" && status != "completed" && output.contains("boom")
         ));
+    }
+
+    /// Eval-optimizer traces (`eval-generate-*`, `eval-review-*`,
+    /// `eval-revise-*`) produce feed rows the same way swarm workers do.
+    #[tokio::test]
+    async fn worker_rows_published_for_eval_optimizer_traces() {
+        let bus = EventBus::<Event>::new(16);
+        let mut rx = bus.subscribe();
+        let traces = vec![
+            trace("eval-generate-1", false),
+            trace("eval-review-1", false),
+            trace("eval-revise-1", false),
+            trace("leader-synthesize", false),
+        ];
+        publish_worker_rows(&bus, &traces, "echo").await;
+
+        let mut events = Vec::new();
+        while let Ok(evt) = rx.try_recv() {
+            events.push(evt);
+        }
+        let spawned: Vec<_> = events
+            .iter()
+            .filter_map(|e| match e {
+                Event::PatternWorkerSpawned { id, .. } => Some(id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            spawned,
+            vec![
+                "eval-generate-1".to_string(),
+                "eval-review-1".to_string(),
+                "eval-revise-1".to_string(),
+            ],
+            "eval traces must produce rows; leader trace must be hidden: {events:?}"
+        );
     }
 
     fn output(result: &str, termination: TerminationReason) -> PatternOutput {
