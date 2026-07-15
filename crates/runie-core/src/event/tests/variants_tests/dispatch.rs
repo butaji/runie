@@ -385,6 +385,16 @@ fn dispatcher_handles_all_variants() {
                 content: content.clone(),
             },
             Event::PlanModeDisabled => Event::PlanModeDisabled,
+            Event::ToggleMcpServersDialog => Event::ToggleMcpServersDialog,
+            Event::ToggleSkillsDialog => Event::ToggleSkillsDialog,
+            Event::McpServerAction { name, action } => Event::McpServerAction {
+                name,
+                action,
+            },
+            Event::SkillAction { name, action } => Event::SkillAction {
+                name,
+                action,
+            },
         }
     }
     let _ = assert_exhaustive(Event::Submit);

@@ -46,6 +46,7 @@ pub struct AppState {
     pub login_flow: Option<crate::login_flow::LoginFlowState>,
     pub registry: crate::commands::CommandRegistry,
     pub skills: Vec<crate::skills::Skill>,
+    pub mcp_servers: Vec<crate::dialog::builders::McpServerRow>,
     pub prompts: Vec<crate::prompts::PromptTemplate>,
     pub trust_decisions: indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision>,
     pub transient_message: Option<String>,
