@@ -32,7 +32,7 @@ fn row_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
 
 #[test]
 fn render_tool_running_shows_spinner() {
-    let lines = render_tool_running("ls", ".", 1.5);
+    let lines = render_tool_running("ls", ".", 1.5, 0);
     let output = render_to_string(lines, 80, 3);
     // Should contain spinner char
     assert!(
@@ -44,7 +44,7 @@ fn render_tool_running_shows_spinner() {
 
 #[test]
 fn render_tool_running_shows_label() {
-    let lines = render_tool_running("ls", ".", 1.5);
+    let lines = render_tool_running("ls", ".", 1.5, 0);
     let output = render_to_string(lines, 80, 3);
     assert!(
         output.contains("Run ls"),
@@ -55,7 +55,7 @@ fn render_tool_running_shows_label() {
 
 #[test]
 fn render_tool_running_shows_args() {
-    let lines = render_tool_running("bash", "echo hello", 0.5);
+    let lines = render_tool_running("bash", "echo hello", 0.5, 0);
     let output = render_to_string(lines, 80, 3);
     assert!(
         output.contains("echo hello"),
@@ -66,7 +66,7 @@ fn render_tool_running_shows_args() {
 
 #[test]
 fn render_tool_running_shows_duration() {
-    let lines = render_tool_running("ls", ".", 12.5);
+    let lines = render_tool_running("ls", ".", 12.5, 0);
     let output = render_to_string(lines, 80, 3);
     assert!(
         output.contains("12.5s"),

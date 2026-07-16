@@ -1,7 +1,6 @@
 //! Per-element line rendering — pure functions from Element + width to lines.
 
 use ratatui::text::Line;
-use ratatui::widgets::{Paragraph, Wrap};
 use runie_core::Element;
 
 use crate::message as msg;
@@ -55,11 +54,11 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
             tools, collapsed, ..
         } => msg::render_context_group(tools, *collapsed),
         SubagentRow { .. } => msg::render_subagent_row(elem, animation_frame),
-        _ => render_tool_element(elem, content_width),
+        _ => render_tool_element(elem, animation_frame, content_width),
     }
 }
 
-fn render_tool_element(elem: &Element, _content_width: u16) -> Vec<Line<'static>> {
+fn render_tool_element(elem: &Element, animation_frame: u32, _content_width: u16) -> Vec<Line<'static>> {
     use runie_core::Element::*;
     match elem {
         ToolRunning {
@@ -67,7 +66,7 @@ fn render_tool_element(elem: &Element, _content_width: u16) -> Vec<Line<'static>
             args,
             started,
             ..
-        } => msg::render_tool_running(name, args, started.elapsed().as_secs_f64()),
+        } => msg::render_tool_running(name, args, started.elapsed().as_secs_f64(), animation_frame),
         ToolDone {
             name,
             args,

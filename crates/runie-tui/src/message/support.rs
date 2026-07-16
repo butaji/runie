@@ -5,13 +5,14 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    blend_color, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
-    color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
-    color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent,
-    style_feed_timestamp, style_thinking, style_thought, style_tool_header, style_tool_output,
-    style_tool_running, style_tool_summary, style_turn_complete, wave_brightness, GLYPH_AGENT,
-    GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND,
-    GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_SPINNER, GLYPH_X,
+    blend_color, color_accent, color_bg, color_subagent_completed_bright,
+    color_subagent_completed_diamond, color_subagent_failed_bright, color_subagent_failed_diamond,
+    color_subagent_running_bar, color_subagent_running_diamond, color_subagent_running_dim,
+    pulse_brightness, style_agent, style_feed_timestamp, style_thinking, style_thought,
+    style_tool_header, style_tool_output, style_tool_running, style_tool_summary, style_turn_complete,
+    wave_brightness, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR,
+    GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT,
+    GLYPH_SPINNER, GLYPH_X,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -69,13 +70,28 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
     }
 }
 
-pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
+/// Animation speed for running blocks (radians per tick).
+/// ~0.15 gives a nice smooth wave that travels the block in ~40 ticks (grok parity).
+const WAVE_SPEED: f32 = 0.15;
+
+/// Number of rows per wave cycle (grok parity).
+const WAVE_ROWS: u16 = 32;
+
+pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, animation_frame: u32) -> Vec<Line<'static>> {
     let (verb, args_part) = format_tool_label_parts(name, args);
-    vec![Line::from(format!(
-        "{} {}{} {:.1}s",
-        GLYPH_SPINNER, verb, args_part, duration_secs
-    ))
-    .style(style_tool_running())]
+    // Use wave_brightness on the spinner glyph color for running tools (grok parity).
+    // The wave travels through the glyph row using WAVE_ROWS phase offset.
+    let wave = wave_brightness(animation_frame, 0, WAVE_ROWS, WAVE_SPEED);
+    let base_style = style_tool_running();
+    let spinner_color = blend_color(color_bg(), color_accent(), wave)
+        .unwrap_or_else(|| color_accent());
+    vec![Line::from(vec![
+        Span::styled(GLYPH_SPINNER.to_string(), Style::new().fg(spinner_color)),
+        Span::styled(" ", base_style),
+        Span::styled(verb, base_style.bold()),
+        Span::styled(args_part, base_style),
+        Span::styled(format!(" {:.1}s", duration_secs), base_style),
+    ])]
 }
 
 pub fn render_tool_done(

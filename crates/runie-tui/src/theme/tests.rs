@@ -271,7 +271,7 @@ fn glyph_download_is_correct() {
 fn thinking_line_matches_grok_waiting_row() {
     let line = crate::theme::thinking_line(0.4);
     assert!(
-        runie_core::labels::BRAILLE_SIX
+        runie_core::labels::BRAILLE_EIGHT
             .iter()
             .any(|g| line.contains(*g)),
         "thinking line must carry a braille spinner frame, got: {line}"
@@ -305,11 +305,11 @@ fn thinking_line_matches_grok_waiting_row() {
 /// yield different braille frames (~120ms per frame).
 #[test]
 fn thinking_line_spinner_advances_with_elapsed() {
-    let early = crate::theme::thinking_line(0.3); // bucket 2
-    let late = crate::theme::thinking_line(1.26); // bucket 10 → 10 % 6 = 4
+    let early = crate::theme::thinking_line(0.24); // frame 2 → BRAILLE_EIGHT[2]
+    let late = crate::theme::thinking_line(0.84); // frame 7 → BRAILLE_EIGHT[7]
     assert_ne!(early, late);
-    assert!(early.contains(runie_core::labels::BRAILLE_SIX[2]));
-    assert!(late.contains(runie_core::labels::BRAILLE_SIX[4]));
+    assert!(early.contains(runie_core::labels::BRAILLE_EIGHT[2]));
+    assert!(late.contains(runie_core::labels::BRAILLE_EIGHT[7]));
 }
 
 /// Verifies that all box drawing glyphs have correct values.
