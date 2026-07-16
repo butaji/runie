@@ -56,7 +56,7 @@ pub fn element_jump_down(state: &mut AppState) {
     scroll_to_post(state, &snap, target);
 }
 
-fn scroll_to_post(state: &mut AppState, snap: &crate::Snapshot, post_index: usize) {
+pub(crate) fn scroll_to_post(state: &mut AppState, snap: &crate::Snapshot, post_index: usize) {
     let visible = state.view_mut().last_visible_height.max(3) as usize;
     let total = snap.total_lines;
     let max_scroll = total.saturating_sub(visible);
@@ -70,7 +70,7 @@ fn scroll_to_post(state: &mut AppState, snap: &crate::Snapshot, post_index: usiz
     state.view_mut().scroll = max_scroll.saturating_sub(target_top);
 }
 
-fn current_top_post(snap: &crate::Snapshot) -> usize {
+pub(crate) fn current_top_post(snap: &crate::Snapshot) -> usize {
     crate::snapshot::compute_current_top_element(
         &snap.elements,
         &snap.line_counts,
@@ -104,13 +104,29 @@ fn scroll_up(state: &mut AppState) {
         state.input_mut().input_flash = 3;
     }
     state.view_mut().scroll = state.view_mut().scroll.saturating_add(1);
+    // Any manual scroll away from bottom disables follow mode
+    state.view_mut().follow_mode = false;
 }
 
 fn scroll_down(state: &mut AppState) {
+    let snap = state.snapshot();
+    let visible = state.view().last_visible_height.max(3) as usize;
+    let max_scroll = snap.total_lines.saturating_sub(visible);
+
     if state.view_mut().scroll == 0 {
         state.input_mut().input_flash = 3;
     }
-    state.view_mut().scroll = state.view_mut().scroll.saturating_sub(1);
+
+    let new_scroll = state.view_mut().scroll.saturating_sub(1);
+
+    // Grok-style: overscroll to bottom while at max re-engages follow mode.
+    // If user is at max scroll and scrolls down (toward bottom), jump to bottom
+    // and enable follow mode so new content auto-scrolls.
+    if state.view().follow_mode && state.view().scroll == max_scroll && new_scroll >= state.view().scroll {
+        state.view_mut().scroll = 0;
+    } else {
+        state.view_mut().scroll = new_scroll;
+    }
 }
 
 fn page_up(state: &mut AppState) {
@@ -135,6 +151,8 @@ fn go_to_top(state: &mut AppState) {
     let visible = state.view_mut().last_visible_height.max(3) as usize;
     let max_scroll = snap.total_lines.saturating_sub(visible);
     state.view_mut().scroll = max_scroll;
+    // Manual scroll to top disables follow mode
+    state.view_mut().follow_mode = false;
     if state.view_mut().vim_nav_mode {
         state.view_mut().selected_post = Some(0);
     }
@@ -143,6 +161,8 @@ fn go_to_top(state: &mut AppState) {
 fn go_to_bottom(state: &mut AppState) {
     let snap = state.snapshot();
     state.view_mut().scroll = 0;
+    // Go-to-bottom re-engages follow mode (Grok-style auto-scroll)
+    state.view_mut().follow_mode = true;
     if state.view_mut().vim_nav_mode {
         let len = snap.posts.len();
         state.view_mut().selected_post = len.checked_sub(1);

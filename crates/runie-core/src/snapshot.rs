@@ -5,7 +5,7 @@
 use crate::view::elements::Element;
 use std::sync::Arc;
 
-pub use crate::model::SubagentDetail;
+pub use crate::model::{FeedElementDetail, SubagentDetail};
 
 /// Git repository info detected from current working directory.
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -154,8 +154,14 @@ pub struct Snapshot {
     pub tasks_pane_show_done: bool,
     /// Open subagent detail overlay state.
     pub subagent_detail: Option<SubagentDetail>,
+    /// Open feed element detail overlay state.
+    pub feed_element_detail: Option<FeedElementDetail>,
     /// Lifecycle rows for the current turn's swarm workers.
     pub pattern_workers: Arc<[crate::model::PatternWorkerRow]>,
+    /// Follow mode active — auto-scroll to newest content when it arrives.
+    pub follow_mode: bool,
+    /// Scroll margin in lines.
+    pub scroll_margin: usize,
 }
 
 /// Compute the index of the element currently at the top of the

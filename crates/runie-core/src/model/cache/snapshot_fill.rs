@@ -114,7 +114,10 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.tasks_pane_visible = state.view().tasks_pane_visible;
     s.tasks_pane_show_done = state.view().tasks_pane_show_done;
     s.subagent_detail = state.view().subagent_detail.clone();
+    s.feed_element_detail = state.view().feed_element_detail.clone();
     s.pattern_workers = state.agent_state().pattern_workers.clone().into();
+    s.follow_mode = state.view().follow_mode;
+    s.scroll_margin = state.view().scroll_margin;
 }
 
 #[cfg(test)]

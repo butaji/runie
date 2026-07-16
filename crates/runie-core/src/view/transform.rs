@@ -297,7 +297,6 @@ impl LazyCache {
         match part {
             Part::Text { content } => Some((Self::text_elem(content, ts, provider), false)),
             Part::Reasoning { content } => Some((Self::reasoning_elem(content, state, ts), true)),
-<<<<<<< HEAD
             Part::ToolCall { name, args, .. } => {
                 Some((Self::tool_call_elem(name, args, ts), false))
             }
@@ -307,7 +306,6 @@ impl LazyCache {
             Part::AnthropicThinking { content, signature } => {
                 Some((Self::anthropic_thinking_elem(content, signature.as_deref(), ts), true))
             }
-            Part::ToolCall { name, args, .. } => Some((Self::tool_call_elem(name, args, ts), false)),
             Part::ToolResult { output, .. } => Some((Self::tool_result_elem(output, ts), false)),
             Part::ToolConfirmation { id, name, args, description, .. } => {
                 Some((Self::tool_confirmation_elem(id, name, args, description.as_deref(), ts), false))

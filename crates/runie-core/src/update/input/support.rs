@@ -71,7 +71,9 @@ pub fn vim_nav_hints() -> Vec<String> {
     vec![
         "J/K".to_owned(),
         "G/Shift+G".to_owned(),
-        "Enter expand".to_owned(),
+        "h/l turn".to_owned(),
+        "K/J anchor".to_owned(),
+        "Enter detail".to_owned(),
         "Q quit".to_owned(),
         "Space/I".to_owned(),
         "Esc".to_owned(),
