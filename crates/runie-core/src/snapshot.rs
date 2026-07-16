@@ -58,6 +58,9 @@ pub struct Snapshot {
     pub scroll: usize,
     /// Elapsed seconds since turn started. Captured at snapshot creation time.
     pub turn_elapsed_secs: Option<f64>,
+    /// Name of the currently running tool, if any. Used by the status bar to
+    /// display an activity label and by the monitor pulse glyph.
+    pub current_tool_name: Option<String>,
     pub provider: String,
     pub model: String,
     /// Active theme name for the render actor

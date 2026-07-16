@@ -94,6 +94,24 @@ pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, animation
     ])]
 }
 
+/// Grok-style finish-flash: linear decay over 400ms after tool completion.
+/// Returns brightness in [0.0, 1.0] — 1.0 = peak flash (just finished),
+/// 0.0 = settled (flash done).
+/// `finished_at` is the monotonic Instant when the tool finished.
+fn finish_flash(finished_at: &Option<std::time::Instant>, _animation_frame: u32) -> f32 {
+    const FLASH_DURATION_MS: f64 = 400.0;
+
+    let Some(finished) = finished_at else {
+        return 0.0;
+    };
+    let elapsed_ms = finished.elapsed().as_secs_f64() * 1000.0;
+    if elapsed_ms >= FLASH_DURATION_MS {
+        return 0.0;
+    }
+    // Linear decay: 1.0 → 0.0 over FLASH_DURATION_MS
+    (1.0 - elapsed_ms / FLASH_DURATION_MS) as f32
+}
+
 pub fn render_tool_done(
     name: &str,
     args: &str,
@@ -101,12 +119,27 @@ pub fn render_tool_done(
     output: &str,
     bytes_transferred: Option<u64>,
     error: bool,
+    finished_at: &Option<std::time::Instant>,
+    animation_frame: u32,
 ) -> Vec<Line<'static>> {
     let (verb, args_part) = format_tool_label_parts(name, args);
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
-    let style = style_tool_header();
+    let base_style = style_tool_header();
+
+    // Grok-style finish-flash: blend accent toward bg at peak, then settle.
+    // The flash uses the same wave brightness function as tool-running.
+    let flash = finish_flash(finished_at, animation_frame);
+    let glyph_style = if flash > 0.0 {
+        // At peak flash, blend accent toward bg, creating a bright flash.
+        let glyph_color = blend_color(color_bg(), color_accent(), 0.3 + flash * 0.7)
+            .unwrap_or_else(color_accent);
+        Style::new().fg(glyph_color)
+    } else {
+        base_style
+    };
+
     // Grok-style done post: `◆ ` + bold verb/name + plain args, all dim.
     // No ✓, no trailing duration. Errors keep the ✗ marker.
     let glyph = if error {
@@ -114,10 +147,13 @@ pub fn render_tool_done(
     } else {
         GLYPH_AGENT.to_string()
     };
-    let mut spans = vec![Span::styled(glyph, style), Span::styled(verb, style.bold())];
+    let mut spans = vec![
+        Span::styled(glyph, glyph_style),
+        Span::styled(verb, base_style.bold()),
+    ];
     let tail = format!("{args_part}{bytes_str}");
     if !tail.is_empty() {
-        spans.push(Span::styled(tail, style));
+        spans.push(Span::styled(tail, base_style));
     }
     let mut lines = vec![Line::from(spans)];
     if !output.is_empty() {
@@ -299,6 +335,8 @@ fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
             output,
             *bytes_transferred,
             *error,
+            &None,
+            0,
         ),
         runie_core::Element::ToolSummary {
             name,

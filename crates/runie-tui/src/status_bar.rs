@@ -9,8 +9,8 @@ use ratatui::{
 };
 
 use crate::theme::{
-    blend_color, color_accent, color_bg, pulse_brightness, style_status_idle, style_timestamp,
-    GLYPH_PENDING,
+    blend_color, color_accent, color_bg, color_success, pulse_brightness, style_status_idle,
+    style_timestamp, GLYPH_PENDING,
 };
 use crate::ui::{estimate_element_tokens, hstack};
 use runie_core::labels::format_elapsed_secs;
@@ -41,34 +41,63 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
 /// diamond replaces the spinner — same cadence as Grok's drain-blocked and
 /// plan-approval "your turn" indicators.
 fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let text_parts = build_left_text_parts(snap);
+    let idle = style_status_idle();
 
     if !snap.turn_active {
-        let left_text = text_parts.join(" · ");
-        f.render_widget(Paragraph::new(left_text).style(style_status_idle()), area);
+        let text_parts = build_left_text_parts(snap);
+        if text_parts.is_empty() {
+            return;
+        }
+        let left_text = text_parts
+            .into_iter()
+            .map(|s| s.content.clone())
+            .collect::<Vec<_>>()
+            .join(" · ");
+        let line = Line::from(left_text);
+        f.render_widget(Paragraph::new(line).style(idle), area);
         return;
     }
 
     // Build the left status line using spans so the indicator glyph can be
     // colored independently (pulsing diamond when pending, spinner otherwise).
-    let body = text_parts.join(" · ");
+    let text_parts = build_left_text_parts(snap);
+
+    let (activity_span, body_str) = if text_parts.is_empty() {
+        (None, String::new())
+    } else {
+        // First part is the activity label (already a styled Span), rest are plain.
+        let mut iter = text_parts.into_iter();
+        let first = iter.next().unwrap();
+        let body = iter
+            .map(|s| s.content.clone())
+            .collect::<Vec<_>>()
+            .join(" · ");
+        (Some(first), body)
+    };
+
     let line = if snap.is_pending_user_input {
         // Pulsing diamond: blend accent toward bg using sin² pulse (grok parity).
         let pulse = pulse_brightness(snap.animation_frame, USER_WAITING_PULSE_SPEED);
         let color = blend_color(color_bg(), color_accent(), 0.3 + pulse * 0.7)
             .unwrap_or_else(color_accent);
-        Line::from(vec![
-            Span::styled(format!("{} · ", GLYPH_PENDING), Style::new().fg(color)),
-            Span::styled(body, style_status_idle()),
-        ])
+        let spinner = Span::styled(format!("{} · ", GLYPH_PENDING), Style::new().fg(color));
+        let body_span = if body_str.is_empty() {
+            vec![spinner]
+        } else {
+            vec![spinner, Span::styled(body_str, idle)]
+        };
+        Line::from(body_span)
     } else {
-        Line::from(vec![
-            Span::styled(format!("{} · ", snap.spinner_frame), style_status_idle()),
-            Span::styled(body, style_status_idle()),
-        ])
+        let spinner = Span::styled(format!("{} · ", snap.spinner_frame), idle);
+        let body_span = if body_str.is_empty() {
+            vec![spinner]
+        } else {
+            vec![spinner, Span::styled(body_str, idle)]
+        };
+        Line::from(body_span)
     };
 
-    f.render_widget(Paragraph::new(line).style(style_status_idle()), area);
+    f.render_widget(Paragraph::new(line).style(idle), area);
 }
 
 /// Pulse speed for every "waiting on you" diamond (grok parity).
@@ -76,21 +105,50 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
 /// this gives a ~1.3s cycle (`π / (0.08 * 30) ≈ 1.31`).
 const USER_WAITING_PULSE_SPEED: f32 = 0.08;
 
-/// Build status bar text parts without the spinner char.
-/// The spinner is rendered as a throbber widget overlay.
-pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<String> {
-    let mut parts = Vec::new();
-    push_git_or_folder(&mut parts, snap);
-    push_turn_status_text(&mut parts, snap);
-    push_running_subagents(&mut parts, snap);
-    push_thinking(&mut parts, snap);
-    push_pending_edits(&mut parts, snap);
-    push_read_only(&mut parts, snap);
-    push_auto_mode(&mut parts, snap);
+/// Build status bar text parts (spans) without the spinner char.
+/// The spinner is rendered as a colored glyph in `render_left`.
+/// Returns `Vec<Span>` so individual parts can carry their own style
+/// (e.g. the activity label "Running {tool}…" is green).
+pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<Span<'static>> {
+    let idle = style_status_idle();
+    let mut parts: Vec<Span<'static>> = Vec::new();
+
+    if let Some(part) = push_git_or_folder(snap) {
+        parts.push(part);
+    }
+    if let Some(part) = push_turn_status_text(snap, idle) {
+        parts.push(part);
+    }
+    if let Some(part) = push_running_subagents(snap) {
+        parts.push(part);
+    }
+    if let Some(part) = push_thinking(snap, idle) {
+        parts.push(part);
+    }
+    if let Some(part) = push_pending_edits(snap) {
+        parts.push(part);
+    }
+    if let Some(part) = push_read_only(snap) {
+        parts.push(part);
+    }
+    if let Some(part) = push_auto_mode(snap) {
+        parts.push(part);
+    }
     parts
 }
 
-fn push_running_subagents(parts: &mut Vec<String>, snap: &Snapshot) {
+/// Build the left status bar text as a joined string (without the spinner char).
+/// Used by tests that only need the text content.
+#[cfg(test)]
+pub(crate) fn build_left_text(snap: &Snapshot) -> String {
+    build_left_text_parts(snap)
+        .into_iter()
+        .map(|s| s.content.clone())
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
+fn push_running_subagents(snap: &Snapshot) -> Option<Span<'static>> {
     let count = snap
         .pattern_workers
         .iter()
@@ -104,34 +162,42 @@ fn push_running_subagents(parts: &mut Vec<String>, snap: &Snapshot) {
             .position(|&c| c == snap.spinner_frame)
             .unwrap_or(0);
         let glyph = frames[idx % frames.len()];
-        parts.push(format!("{} {}", glyph, count));
+        Some(Span::raw(format!("{} {}", glyph, count)))
+    } else {
+        None
     }
 }
 
-/// Build the left status bar text as a joined string (without the spinner char).
-/// Used by tests that only need the text content.
-#[cfg(test)]
-pub(crate) fn build_left_text(snap: &Snapshot) -> String {
-    build_left_text_parts(snap).join(" · ")
-}
-
-fn push_git_or_folder(parts: &mut Vec<String>, snap: &Snapshot) {
+fn push_git_or_folder(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.turn_active {
-        return;
+        return None;
     }
     let git_or_folder = snap
         .git_info
         .as_ref()
         .map(|g| g.format_right(&snap.cwd_name))
         .unwrap_or_else(|| format!("{}/", snap.cwd_name));
-    parts.push(git_or_folder);
+    Some(Span::raw(git_or_folder))
 }
 
-/// Build the "Working…" status text (spinner char comes from the snapshot).
-fn push_turn_status_text(parts: &mut Vec<String>, snap: &Snapshot) {
+/// Build the activity label or "Working…" status text.
+/// When a tool is running, shows "Running {tool}…" in green (grok parity).
+/// Otherwise shows "Working…" with optional elapsed time.
+fn push_turn_status_text(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
     if !snap.turn_active {
-        return;
+        return None;
     }
+    if let Some(ref tool) = snap.current_tool_name {
+        // Activity label: "Running {tool}…" styled green (grok parity).
+        let color = blend_color(color_bg(), color_success(), 0.4)
+            .unwrap_or_else(color_success);
+        return Some(Span::styled(
+            format!("Running {}…", tool),
+            Style::new().fg(color),
+        ));
+    }
+
+    // Fallback: "Working…" with elapsed time
     let text = if let Some(elapsed) = snap.turn_elapsed_secs {
         format!("Working… {}", format_elapsed_secs(elapsed))
     } else {
@@ -141,32 +207,39 @@ fn push_turn_status_text(parts: &mut Vec<String>, snap: &Snapshot) {
     if snap.queue_count > 0 {
         full.push_str(&format!(" ({} queued)", snap.queue_count));
     }
-    parts.push(full);
+    Some(Span::styled(full, idle))
 }
 
-fn push_thinking(parts: &mut Vec<String>, snap: &Snapshot) {
+fn push_thinking(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
     if snap.thinking_level == runie_core::model::ThinkingLevel::Off {
-        return;
+        return None;
     }
-    parts.push(format!("Think: {}", snap.thinking_level.as_str()));
+    Some(Span::styled(
+        format!("Think: {}", snap.thinking_level.as_str()),
+        idle,
+    ))
 }
 
-fn push_pending_edits(parts: &mut Vec<String>, snap: &Snapshot) {
+fn push_pending_edits(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.pending_edits.is_empty() {
-        return;
+        return None;
     }
-    parts.push(format!("{} pending", snap.pending_edits.len()));
+    Some(Span::raw(format!("{} pending", snap.pending_edits.len())))
 }
 
-fn push_read_only(parts: &mut Vec<String>, snap: &Snapshot) {
+fn push_read_only(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.read_only {
-        parts.push("🔒 RO".to_owned());
+        Some(Span::raw("🔒 RO"))
+    } else {
+        None
     }
 }
 
-fn push_auto_mode(parts: &mut Vec<String>, snap: &Snapshot) {
+fn push_auto_mode(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.auto_mode {
-        parts.push("⚡ Auto".to_owned());
+        Some(Span::raw("⚡ Auto"))
+    } else {
+        None
     }
 }
 

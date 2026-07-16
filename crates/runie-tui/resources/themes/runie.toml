@@ -24,6 +24,9 @@ bg_elevated = "#201820"
 bg_active = "#302830"
 bg_selection = "#3A2E38"
 bg_user = "#242424"
+# Grok-style multi-tier block backgrounds (grok-build parity).
+bg_light = "#2E2E2E"
+bg_dark = "#101010"
 
 text_primary = "#EDE8E3"
 text_secondary = "#C4BEB7"
@@ -48,6 +51,8 @@ feed_agent_fg = "#C8C8C8"
 "bg.active" = "bg_active"
 "bg.selection" = "bg_selection"
 "bg.user" = "bg_user"
+"bg.light" = "bg_light"
+"bg.dark" = "bg_dark"
 
 # Feed tokens — grok CLI parity. Themes that lack these fall back to
 # their own dim/muted equivalents (see theme::styles).
@@ -60,6 +65,11 @@ feed_agent_fg = "#C8C8C8"
 "accent.secondary" = "amber_400"
 "accent.tertiary" = "coral_400"
 "accent.deep" = "orange_600"
+# Grok-style semantic accents (grok-build parity).
+"accent.thinking" = "#9D7CD8"
+"accent.plan" = "#E0AF68"
+"accent.feedback" = "#73DACA"
+"accent.monitor" = "#FF9E64"
 
 success = "green_400"
 error = "red_400"

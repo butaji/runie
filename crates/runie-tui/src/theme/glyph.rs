@@ -26,6 +26,27 @@ pub const GLYPH_SUBAGENT_DIAMOND: &str = "◆"; // state diamond
 pub const GLYPH_SUBAGENT_QUOTE_LEFT: &str = "“";
 pub const GLYPH_SUBAGENT_QUOTE_RIGHT: &str = "”";
 
+// Monitor pulse glyph frames (grok-build parity).
+// Concentric circles: outer ring breathing to solid to inner breathing to solid.
+// Used when pattern workers are running but no named tool is active yet.
+pub const GLYPH_MONITOR_FRAMES: [&str; 4] = ["○ ◉", "◉ ○", "◉ ○", "◉ ◉"];
+
+// Monitor pulse speed divisor - every N animation frames, advance one pulse frame.
+// pulse_brightness cycles at period pi, so at ~30fps this gives a ~2.1s cycle.
+pub const MONITOR_PULSE_DIVISOR: u32 = 16;
+
+// Advance one monitor pulse frame from the current frame index.
+#[inline]
+pub fn monitor_next_frame(frame: usize) -> usize {
+    (frame + 1) % GLYPH_MONITOR_FRAMES.len()
+}
+
+// Get the monitor glyph for a given frame index.
+#[inline]
+pub fn monitor_glyph(frame: usize) -> &'static str {
+    GLYPH_MONITOR_FRAMES[frame % GLYPH_MONITOR_FRAMES.len()]
+}
+
 // Spinner and indicator glyphs
 // throbber BRAILLE_SIX[5] = '⠋' — first frame of the braille spinner.
 pub const GLYPH_SPINNER: char = '⠋';

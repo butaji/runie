@@ -153,6 +153,40 @@ pub fn color_subagent_failed_bright() -> Color {
     theme_color_fallback("subagent.failed.bright", Color::Rgb(247, 118, 142))
 }
 
+// Grok-style semantic accent colors (grok-build parity).
+
+/// Thinking/plan/feedback accent: purple (grok: `#9D7CD8`).
+pub fn color_thinking() -> Color {
+    theme_color_fallback("accent.thinking", Color::Rgb(157, 124, 216))
+}
+
+/// Plan approval accent: gold (grok: `#E0AF68`).
+pub fn color_plan() -> Color {
+    theme_color_fallback("accent.plan", Color::Rgb(224, 175, 104))
+}
+
+/// Feedback/user-response accent: teal (grok: `#73DACA`).
+pub fn color_feedback() -> Color {
+    theme_color_fallback("accent.feedback", Color::Rgb(115, 218, 202))
+}
+
+/// Monitor/watch pulse accent: amber (grok: `#FF9E64`).
+pub fn color_monitor() -> Color {
+    theme_color_fallback("accent.monitor", Color::Rgb(255, 158, 100))
+}
+
+// Grok-style multi-tier block backgrounds (grok-build parity).
+
+/// Light block background (grok: `#2E2E2E`).
+pub fn color_bg_light() -> Color {
+    theme_color_fallback("bg.light", Color::Rgb(46, 46, 46))
+}
+
+/// Dark block background (grok: `#101010`).
+pub fn color_bg_dark() -> Color {
+    theme_color_fallback("bg.dark", Color::Rgb(16, 16, 16))
+}
+
 /// Diff gutter insert background: subtle green tint over base bg.
 pub fn color_diff_insert_bg() -> Color {
     let bg = color_bg();

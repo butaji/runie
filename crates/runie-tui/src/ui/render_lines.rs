@@ -74,6 +74,7 @@ fn render_tool_element(elem: &Element, animation_frame: u32, _content_width: u16
             output,
             bytes_transferred,
             error,
+            finished_at,
             ..
         } => msg::render_tool_done(
             name,
@@ -82,6 +83,8 @@ fn render_tool_element(elem: &Element, animation_frame: u32, _content_width: u16
             output,
             *bytes_transferred,
             *error,
+            finished_at,
+            animation_frame,
         ),
         ToolSummary {
             name,
