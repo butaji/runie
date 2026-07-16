@@ -322,11 +322,11 @@
       ]
     },
     "ModeSection": {
-      "description": "Agent orchestration pattern configuration (`[mode]` in config.toml).\n\nSee PATTERNS.md: `active` selects the orchestration pattern\n(`single` | `swarm` | `eval-optimizer`); the remaining fields bound\nworker concurrency, iterations, per-task timeout, retries, and the\nconsecutive-failure circuit breaker.",
+      "description": "Agent orchestration pattern configuration (`[mode]` in config.toml).\n\nSee PATTERNS.md: `active` selects the orchestration pattern\n(`single` | `swarm` | `improve`); the remaining fields bound\nworker concurrency, iterations, per-task timeout, retries, and the\nconsecutive-failure circuit breaker.",
       "type": "object",
       "properties": {
         "active": {
-          "description": "Active orchestration pattern: \"single\" | \"swarm\" | \"eval-optimizer\".",
+          "description": "Active orchestration pattern: \"single\" | \"swarm\" | \"improve\".",
           "type": "string",
           "default": "single"
         },
@@ -345,7 +345,7 @@
           "minimum": 0
         },
         "max_rounds": {
-          "description": "Max iterations (eval-optimizer, swarm).",
+          "description": "Max iterations (improve, swarm).",
           "type": "integer",
           "format": "uint",
           "default": 5,

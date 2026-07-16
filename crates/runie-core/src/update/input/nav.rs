@@ -275,17 +275,16 @@ impl AppState {
                     let snap = self.snapshot();
                     if let Some(post) = snap.posts.get(sel) {
                         if post.kind == crate::view::elements::PostKind::SubagentRow {
-                            if let Some(elem) = snap.elements.get(post.start) {
-                                if let crate::view::elements::Element::SubagentRow { id, .. } = elem
-                                {
-                                    self.view_mut().subagent_detail =
-                                        Some(crate::model::SubagentDetail {
-                                            worker_id: id.clone(),
-                                            scroll: 0,
-                                        });
-                                    self.view_mut().dirty = true;
-                                    return Some(true);
-                                }
+                            if let Some(crate::view::elements::Element::SubagentRow { id, .. }) =
+                                snap.elements.get(post.start)
+                            {
+                                self.view_mut().subagent_detail =
+                                    Some(crate::model::SubagentDetail {
+                                        worker_id: id.clone(),
+                                        scroll: 0,
+                                    });
+                                self.view_mut().dirty = true;
+                                return Some(true);
                             }
                         }
                         // Grok-style: Enter on any feed element opens the detail overlay.

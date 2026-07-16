@@ -161,7 +161,7 @@ impl ToolResultCache {
     /// Returns true if the cache has no entries.
     #[cfg(test)]
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.cache.read().is_empty()
     }
 
     #[inline]

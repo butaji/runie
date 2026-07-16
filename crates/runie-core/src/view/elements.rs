@@ -54,6 +54,9 @@ pub enum Element {
         output: String,
         bytes_transferred: Option<u64>,
         error: bool,
+        /// When this tool finished running (monotonic). Used by the renderer
+        /// to flash the accent briefly after completion (grok parity).
+        finished_at: Option<std::time::Instant>,
         timestamp: f64,
     },
     ToolSummary {
@@ -204,7 +207,16 @@ impl ElementBuilder {
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
             Element::AnthropicThinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolRunning { timestamp: ts, .. } => *ts = timestamp,
-            Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolDone {
+                timestamp: ts,
+                finished_at,
+                ..
+            } => {
+                *ts = timestamp;
+                if finished_at.is_none() {
+                    *finished_at = Some(std::time::Instant::now());
+                }
+            }
             Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolConfirmation { timestamp: ts, .. } => *ts = timestamp,
             Element::ContextGroup { timestamp: ts, .. } => *ts = timestamp,
@@ -314,6 +326,7 @@ impl Element {
             output: output.into(),
             bytes_transferred,
             error,
+            finished_at: None,
             timestamp: 0.0,
         })
     }

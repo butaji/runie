@@ -49,7 +49,7 @@ fn snapshot_agent_message_renders_correctly() {
 
 #[test]
 fn snapshot_tool_output_renders_correctly() {
-    let lines = render_tool_done("list_files", "", 1.2, "src/main.rs\nlib.rs", None, false);
+    let lines = render_tool_done("list_files", "", 1.2, "src/main.rs\nlib.rs", None, false, &None, 0);
     let output = render_lines(lines, 40, 5);
     insta::assert_snapshot!(output);
 }

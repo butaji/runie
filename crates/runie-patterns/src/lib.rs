@@ -2,10 +2,10 @@
 //!
 //! A [`Pattern`] executes a user request through one of three strategies:
 //! `single` (one agent end to end), `swarm` (leader + fan-out workers), or
-//! `eval-optimizer` (evaluate / revise loop). Phase 1 shipped the core
+//! `improve` (evaluate / revise loop). Phase 1 shipped the core
 //! types and [`SinglePattern`]; Phase 2 added [`SwarmPattern`] (parallel +
 //! delegation variants); Phase 3 adds the swarm dag variant (backed by
-//! [`primitives::dag::Dag`]) and [`EvalOptimizerPattern`].
+//! [`primitives::dag::Dag`]) and [`ImprovePattern`].
 //!
 //! # Deviation from PATTERNS.md: `WorkerRunner` instead of `LeaderHandle`
 //!
@@ -25,12 +25,12 @@
 //! - The pattern returns `TerminationReason::Error("aborted")`.
 //! - Clean shutdown with no zombie tasks.
 
-mod eval_optimizer;
+mod improve;
 pub mod primitives;
 mod single;
 mod swarm;
 
-pub use eval_optimizer::EvalOptimizerPattern;
+pub use improve::ImprovePattern;
 pub use single::SinglePattern;
 pub use swarm::{SwarmPattern, SwarmVariant};
 
@@ -79,7 +79,7 @@ pub type TraceSender = mpsc::UnboundedSender<AgentTrace>;
 /// constructed by the caller).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PatternConfig {
-    /// "single" | "swarm" | "eval-optimizer".
+    /// "single" | "swarm" | "improve".
     pub active: String,
     /// Max parallel workers.
     pub workers: usize,
@@ -187,7 +187,7 @@ impl Default for PatternRegistry {
         let mut registry = Self::new();
         registry.register(Box::new(SinglePattern));
         registry.register(Box::new(SwarmPattern::parallel()));
-        registry.register(Box::new(EvalOptimizerPattern));
+        registry.register(Box::new(ImprovePattern));
         registry
     }
 }

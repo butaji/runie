@@ -153,15 +153,10 @@ pub struct HarnessConfig {
 // ---------------------------------------------------------------------------
 
 /// Registry that manages harness skills and dispatches hooks.
+#[derive(Default)]
 pub struct SkillRegistry {
     skills: Vec<Box<dyn HarnessSkill>>,
     config: HarnessConfig,
-}
-
-impl Default for SkillRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl SkillRegistry {

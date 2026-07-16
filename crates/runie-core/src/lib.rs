@@ -181,7 +181,7 @@ pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};
 
 pub use tokens::{
-    estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,
+    estimate_tokens, estimate_tokens_for_model, token_tracker_for,
     TokenTracker,
 };
 pub use trust::{TrustDecision, TrustManager};

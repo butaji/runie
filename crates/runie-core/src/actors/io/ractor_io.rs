@@ -137,7 +137,7 @@ impl Actor for RactorIoActor {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         Ok(())
@@ -146,7 +146,7 @@ impl Actor for RactorIoActor {
     #[instrument(name = "io_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {

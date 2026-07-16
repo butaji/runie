@@ -113,7 +113,7 @@ impl Actor for RactorConfigActor {
     #[instrument(name = "config_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {

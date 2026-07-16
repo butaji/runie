@@ -70,7 +70,7 @@ pub(crate) fn pattern_for_mode(
 ) -> Option<Box<dyn runie_patterns::Pattern>> {
     match active {
         "swarm" => Some(Box::new(swarm_for_variant(variant))),
-        "eval-optimizer" => Some(Box::new(runie_patterns::EvalOptimizerPattern)),
+        "improve" => Some(Box::new(runie_patterns::ImprovePattern)),
         _ => None,
     }
 }
@@ -91,14 +91,17 @@ const WORKER_RUNNING_VISIBILITY_MS: u64 = 200;
 
 /// Whether a trace id should surface as a feed row.
 ///
-/// Swarm workers use `worker-*`; eval-optimizer uses `eval-generate-*`,
-/// `eval-review-*`, and `eval-revise-*`. Internal leader/plan/synthesis traces
+/// Swarm workers use `worker-*`; improve uses `improve-generate-*`,
+/// `improve-review-*`, and `improve-revise-*`. Internal leader/plan/synthesis traces
 /// are filtered out.
 fn is_visible_worker_trace(agent_id: &str) -> bool {
-    agent_id.starts_with("worker-") || agent_id.starts_with("eval-")
+    agent_id.starts_with("worker-")
+        || agent_id.starts_with("improve-generate-")
+        || agent_id.starts_with("improve-review-")
+        || agent_id.starts_with("improve-revise-")
 }
 
-/// Publish one feed row per worker trace (`worker-*` and `eval-*` ids; leader
+/// Publish one feed row per worker trace (`worker-*` and `improve-*` ids; leader
 /// plan/synthesis traces are internal to the pattern).
 ///
 /// The patterns emit traces only on worker completion, so rows are published
@@ -297,7 +300,7 @@ mod tests {
     fn pattern_intercepts_pattern_modes() {
         assert!(!should_use_pattern("single"));
         assert!(should_use_pattern("swarm"));
-        assert!(should_use_pattern("eval-optimizer"));
+        assert!(should_use_pattern("improve"));
         assert!(!should_use_pattern("unknown"));
         assert!(!should_use_pattern(""));
     }
@@ -305,7 +308,7 @@ mod tests {
     #[test]
     fn mode_pattern_mapping() {
         assert!(pattern_for_mode("swarm", None).is_some());
-        assert!(pattern_for_mode("eval-optimizer", None).is_some());
+        assert!(pattern_for_mode("improve", None).is_some());
         assert!(pattern_for_mode("single", None).is_none());
     }
 
@@ -402,16 +405,16 @@ mod tests {
         ));
     }
 
-    /// Eval-optimizer traces (`eval-generate-*`, `eval-review-*`,
-    /// `eval-revise-*`) produce feed rows the same way swarm workers do.
+    /// Improve traces (`improve-generate-*`, `improve-review-*`,
+    /// `improve-revise-*`) produce feed rows the same way swarm workers do.
     #[tokio::test]
-    async fn worker_rows_published_for_eval_optimizer_traces() {
+    async fn worker_rows_published_for_improve_traces() {
         let bus = EventBus::<Event>::new(16);
         let mut rx = bus.subscribe();
         let traces = vec![
-            trace("eval-generate-1", false),
-            trace("eval-review-1", false),
-            trace("eval-revise-1", false),
+            trace("improve-generate-1", false),
+            trace("improve-review-1", false),
+            trace("improve-revise-1", false),
             trace("leader-synthesize", false),
         ];
         publish_worker_rows(&bus, &traces, "echo").await;
@@ -430,11 +433,11 @@ mod tests {
         assert_eq!(
             spawned,
             vec![
-                "eval-generate-1".to_string(),
-                "eval-review-1".to_string(),
-                "eval-revise-1".to_string(),
+                "improve-generate-1".to_string(),
+                "improve-review-1".to_string(),
+                "improve-revise-1".to_string(),
             ],
-            "eval traces must produce rows; leader trace must be hidden: {events:?}"
+            "improve traces must produce rows; leader trace must be hidden: {events:?}"
         );
     }
 

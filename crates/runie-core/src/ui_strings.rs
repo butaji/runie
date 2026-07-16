@@ -150,7 +150,7 @@ pub mod mode {
     use crate::config::ModeSection;
 
     /// Valid orchestration patterns, for error messages.
-    pub const VALID_PATTERNS: &str = "single, swarm, eval-optimizer";
+    pub const VALID_PATTERNS: &str = "single, swarm, improve";
     /// Valid swarm variants, for error messages.
     pub const VALID_VARIANTS: &str = "parallel, delegation, dag";
 
@@ -172,7 +172,7 @@ pub mod mode {
         format!(
             "single — Direct execution\n\
              swarm — Coordinated multi-agent work\n\
-             eval-optimizer — Critical review loops\n\
+             improve — Iterative improvement with review\n\
              workers: {}, max_rounds: {}, timeout: {}s, max_retries: {}, circuit_breaker: {}",
             mode.workers,
             mode.max_rounds,

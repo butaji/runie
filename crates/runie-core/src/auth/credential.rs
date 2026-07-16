@@ -449,7 +449,7 @@ mod tests {
         let tokens = CredentialResolver::load_auth_file_from(&path);
         assert_secret_eq(tokens.get("minimax"), "mm-file-token");
         assert!(
-            tokens.get("empty").is_none(),
+            !tokens.contains_key("empty"),
             "empty tokens must be skipped"
         );
     }

@@ -18,17 +18,11 @@ use crate::replay::{Protocol, ReplayProvider};
 ///
 /// This is the only production implementation of [`ProviderFactory`] and the
 /// only production code path that constructs providers.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BuiltProviderFactory {
     /// Optional keyring store for credential resolution.
     /// When `None`, uses `OsKeyringStore` (production default).
     keyring_store: Option<Arc<dyn KeyringStore>>,
-}
-
-impl Default for BuiltProviderFactory {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl BuiltProviderFactory {

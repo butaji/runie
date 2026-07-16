@@ -98,8 +98,6 @@ impl ExceptionClassifier {
             let code = self.extract_status_code(&msg).unwrap_or_else(|| {
                 if msg_lower.contains("unauthorized") {
                     401
-                } else if msg_lower.contains("forbidden") {
-                    403
                 } else {
                     403
                 }

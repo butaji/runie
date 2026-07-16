@@ -6,7 +6,17 @@ impl AppState {
     /// Advance animation state on each tick.
     pub fn tick_animation(&mut self) {
         let mut changed = false;
-        if self.agent_state_mut().turn_active {
+        // Tick whenever the turn is active, a tool is running, a subagent is running,
+        // or a permission prompt is waiting for user input — all of these animate.
+        let agent = self.agent_state_mut();
+        let any_work_active = agent.turn_active
+            || agent.current_tool_name.is_some()
+            || agent
+                .pattern_workers
+                .iter()
+                .any(|w| w.status == crate::model::PatternWorkerStatus::Running);
+        drop(agent);
+        if any_work_active {
             self.view_mut().animation_frame = self.view_mut().animation_frame.wrapping_add(1);
             self.update_speed();
             changed = true;

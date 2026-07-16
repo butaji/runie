@@ -99,6 +99,7 @@ pub enum InputMsg {
 /// Mirrors `InputActor::handle_msg` for use in tests where the actor is not
 /// spawned. This lets synchronous tests exercise the same mutation logic that
 /// `InputActor` runs asynchronously in production.
+#[allow(clippy::cognitive_complexity)]
 impl InputMsg {
     pub fn apply_to(&self, state: &mut crate::model::InputState) {
         use crate::update::input::{
