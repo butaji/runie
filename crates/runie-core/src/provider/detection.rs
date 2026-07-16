@@ -123,9 +123,7 @@ pub fn detect_provider_from_api_base(api_base: &str) -> Option<&'static str> {
         Some("fireworks")
     } else if normalized.contains("api.together.xyz") {
         Some("together")
-    } else if normalized.contains("api.kimi.com") {
-        Some("kimi-code")
-    } else if normalized.contains("api.kimi.cn") {
+    } else if normalized.contains("api.kimi.com") || normalized.contains("api.kimi.cn") {
         Some("kimi-code")
     } else if normalized.contains("opencode.ai") {
         Some("opencode")

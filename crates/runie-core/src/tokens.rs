@@ -45,21 +45,9 @@ fn chars4_count(text: &str) -> usize {
     text.chars().count().div_ceil(4)
 }
 
-/// Estimate token count for the active provider/model.
-/// Uses tiktoken for OpenAI-compatible providers; falls back to chars/4.
-pub fn estimate_tokens_for_model(text: &str, provider: &str, _model: &str) -> usize {
-    // Try tiktoken for OpenAI-compatible models (cl100k_base family)
-    if provider == "openai" {
-        if let Some(count) = tiktoken_count(text) {
-            return count;
-        }
-    }
-    // Fall back to chars/4
-    chars4_count(text)
-}
-
-/// Estimate token count using tiktoken if available.
-pub fn estimate_tokens_with_tokenizer(text: &str) -> usize {
+/// Estimate token count. Delegates to `estimate_tokens`.
+#[allow(dead_code)]
+pub fn estimate_tokens_for_model(text: &str, _provider: &str, _model: &str) -> usize {
     estimate_tokens(text)
 }
 

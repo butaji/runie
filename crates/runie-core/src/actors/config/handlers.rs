@@ -10,11 +10,14 @@ use notify::RecursiveMode;
 #[cfg(feature = "watch")]
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 
+#[cfg(feature = "watch")]
+use ractor::ActorRef;
+#[cfg(feature = "watch")]
 use crate::actors::CONFIG_WATCHER_DEBOUNCE_MS;
 use crate::config::{Config, McpServer, ModeSection, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
-use ractor::{ActorRef, RpcReplyPort};
+use ractor::RpcReplyPort;
 
 use super::config_handle::ConfigActorState;
 use super::file_helpers;

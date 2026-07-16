@@ -170,18 +170,18 @@ pub struct PromptsSection {
 /// Agent orchestration pattern configuration (`[mode]` in config.toml).
 ///
 /// See PATTERNS.md: `active` selects the orchestration pattern
-/// (`single` | `swarm` | `eval-optimizer`); the remaining fields bound
+/// (`single` | `swarm` | `improve`); the remaining fields bound
 /// worker concurrency, iterations, per-task timeout, retries, and the
 /// consecutive-failure circuit breaker.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 #[derive(JsonSchema)]
 pub struct ModeSection {
-    /// Active orchestration pattern: "single" | "swarm" | "eval-optimizer".
+    /// Active orchestration pattern: "single" | "swarm" | "improve".
     pub active: String,
     /// Max parallel workers.
     pub workers: usize,
-    /// Max iterations (eval-optimizer, swarm).
+    /// Max iterations (improve, swarm).
     pub max_rounds: usize,
     /// Per-task timeout in milliseconds.
     pub timeout_ms: u64,

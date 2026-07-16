@@ -8,7 +8,7 @@ Runie supports three orchestration patterns for multi-agent workflows. Patterns 
 |---------|----------|-------------|--------------|
 | **single** | 80% prototyping tasks | Direct execution | — |
 | **swarm** | Coordinated multi-agent work | Orchestrates workers | Fan-out, delegate, or form DAG |
-| **eval-optimizer** | Critical review loops | Evaluates output | Revises based on feedback |
+| **improve** | Critical review loops | Evaluates output | Revises based on feedback |
 
 ## Config
 
@@ -16,9 +16,9 @@ Minimal TOML config — models come from existing `/model` and `/provider` UX:
 
 ```toml
 [mode]
-active = "single"     # single | swarm | eval-optimizer
+active = "single"     # single | swarm | improve
 workers = 3           # max parallel workers
-max_rounds = 5        # max iterations (eval-optimizer, swarm)
+max_rounds = 5        # max iterations (improve, swarm)
 timeout_ms = 120000   # per-task timeout (2 minutes)
 max_retries = 2       # retries per task on failure
 circuit_breaker = 3  # consecutive failures before fail-fast
@@ -51,7 +51,7 @@ All interaction via `/mode`:
 /mode list                   # show available patterns
 /mode swarm                  # switch to swarm (uses /model list)
 /mode swarm workers 5       # switch + override workers
-/mode eval-optimizer         # switch to eval-optimizer
+/mode improve         # switch to improve
 /mode single                 # back to single (default)
 ```
 
@@ -86,7 +86,7 @@ crates/runie-patterns/
 │   │   └── dag.rs          # Phase 3: DAG building + cycle detection
 │   ├── single.rs           # Phase 1: Single agent (pass-through)
 │   ├── swarm.rs            # Phase 2: All variants (parallel, delegation, dag)
-│   └── eval_optimizer.rs  # Phase 3: Review + revise loop
+│   └── improve.rs          # Phase 3: Review + revise loop
 └── Cargo.toml
 ```
 
@@ -201,7 +201,7 @@ No separate model config in patterns — keeps it simple.
 |---------|-------------|----------------|
 | **single** | N/A | Direct execution, full context |
 | **swarm** | Shared + worker-scoped | Leader holds context, workers scoped; dag variant checkpoints per wave |
-| **eval-optimizer** | Accumulates revisions | Full history for evaluator to assess progress |
+| **improve** | Accumulates revisions | Full history for evaluator to assess progress |
 
 ## Error Handling
 
@@ -232,7 +232,7 @@ Pattern selection is discoverable via:
    grok-style `✓ Subagent completed in Xs: "<task>"`, expandable to the
    worker transcript)
 3. **Phase 3** ✅ — Swarm dag variant (topological waves, dependency context,
-   cycle detection, skip-on-failed-dependency) + eval-optimizer
+   cycle detection, skip-on-failed-dependency) + improve
    (generate → review → revise loop, `Approved`/`MaxRoundsReached`)
 
 Notes on the shipped design:
@@ -248,7 +248,7 @@ Notes on the shipped design:
 - **Mock provider markers** (deterministic, for black-box tests):
   `[swarm-plan parallel|delegation]` → JSON task array; `[swarm-plan dag]`
   → JSON objects with `deps`; `[swarm-synthesize]` → summary;
-  `[eval-generate]` → draft; `[eval-revise]` → revision; `[eval-review]` →
+  `[improve-generate]` → draft; `[improve-revise]` → revision; `[improve-review]` →
   `APPROVED`.
 - **Descoped**: tab completion for `/mode <pattern>` (no subcommand
   completion infrastructure exists) and `/mode <pattern> help`.

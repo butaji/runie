@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let original: RunieResult<i32, &str> = RunieResult::Ok(42);
-        let cloned = original.clone();
+        let cloned = original;
         assert_eq!(original, cloned);
     }
 

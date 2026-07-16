@@ -89,7 +89,7 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
         let label = if level == current {
             format!("{} (current)", level.as_str())
         } else {
-            level.as_str().to_owned()
+            level.as_str().to_string()
         };
         let evt = crate::Event::RunThinkingCommand { level };
         panel = panel.item(&label, ItemAction::Emit(evt));

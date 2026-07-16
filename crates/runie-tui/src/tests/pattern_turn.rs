@@ -1,6 +1,6 @@
 //! Layer 2 tests: pattern-mode turn interception (PATTERNS.md Phase 2-3).
 //!
-//! A `TurnStarted` with `[mode].active == "swarm"` or `"eval-optimizer"`
+//! A `TurnStarted` with `[mode].active == "swarm"` or `"improve"`
 //! must NOT call the agent handle; instead UiActor runs the pattern and
 //! publishes the same terminal events the agent actor would (Thinking,
 //! Response, TurnComplete, Done) plus worker feed rows for swarm.
@@ -208,18 +208,18 @@ async fn swarm_turn_runs_pattern_not_agent() {
     );
 }
 
-/// eval-optimizer routes through the pattern engine: no agent spawn, and
+/// improve routes through the pattern engine: no agent spawn, and
 /// the standard terminal contract (Thinking, Response, TurnComplete, Done).
 /// EchoRunner never returns "APPROVED", so the loop exhausts max_rounds and
 /// delivers the last draft as the result.
 #[tokio::test]
-async fn eval_optimizer_runs_through_pattern_engine() {
+async fn improve_runs_through_pattern_engine() {
     let bus = EventBus::<Event>::new(16);
     let mut bus_rx = bus.subscribe();
     let agent = TestAgentHandle::default();
     let mut ui = make_ui(&agent, &bus);
     ui.set_pattern_executor(Arc::new(EchoRunner { output: "x".into() }));
-    ui.state.config_mut().mode.active = "eval-optimizer".into();
+    ui.state.config_mut().mode.active = "improve".into();
 
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
     ui.handle_event(turn_started("req.0", "hello"), effect_tx.clone())
@@ -228,7 +228,7 @@ async fn eval_optimizer_runs_through_pattern_engine() {
     assert_eq!(
         agent.run_count.load(Ordering::SeqCst),
         0,
-        "eval-optimizer must not spawn the agent"
+        "improve must not spawn the agent"
     );
 
     let events = drain_until(

@@ -1,7 +1,7 @@
 //! Mode command — switch the agent orchestration pattern (`/mode`).
 //!
 //! See PATTERNS.md: `single` (direct execution), `swarm` (coordinated
-//! multi-agent work), and `eval-optimizer` (critical review loops).
+//! multi-agent work), and `improve` (iterative improvement with review).
 
 use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::{CommandResult, DialogType};
@@ -9,7 +9,7 @@ use crate::model::AppState;
 use crate::ui_strings::mode as m;
 
 /// Orchestration patterns accepted by `/mode <pattern>`.
-const PATTERNS: [&str; 3] = ["single", "swarm", "eval-optimizer"];
+const PATTERNS: [&str; 3] = ["single", "swarm", "improve"];
 /// Execution variants accepted by `/mode swarm <variant>`.
 const SWARM_VARIANTS: [&str; 3] = ["parallel", "delegation", "dag"];
 

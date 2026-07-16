@@ -1,6 +1,4 @@
-use crate::tokens::{
-    estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, TokenTracker,
-};
+use crate::tokens::{estimate_tokens, estimate_tokens_for_model, TokenTracker};
 
 #[test]
 fn estimate_tokens_empty() {
@@ -105,7 +103,7 @@ fn cost_estimation_zero() {
 fn estimate_tokens_uses_tiktoken_for_openai() {
     let text = "hello world";
     // Tiktoken: "hello world" tokenization varies by version
-    let tiktoken_count = estimate_tokens_with_tokenizer(text);
+    let tiktoken_count = estimate_tokens(text);
     assert!(
         (2..=3).contains(&tiktoken_count),
         "hello world should be 2-3 tokens, got {}",

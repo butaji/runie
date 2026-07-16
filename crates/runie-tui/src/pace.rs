@@ -4,18 +4,12 @@
 //! snapping to word boundaries for a natural reading experience.
 
 /// PacedRenderer decouples "received text" from "displayed text" for smooth typing animation.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PacedRenderer {
     /// All text received so far (source of truth).
     received: String,
     /// Text currently displayed (cursor position in received text).
     displayed: usize,
-}
-
-impl Default for PacedRenderer {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl PacedRenderer {

@@ -145,7 +145,7 @@ fn config_load_parses_full_mode_section() {
         &dir,
         r#"
 [mode]
-active = "eval-optimizer"
+active = "improve"
 workers = 4
 max_rounds = 7
 timeout_ms = 60000
@@ -154,7 +154,7 @@ circuit_breaker = 2
 "#,
     );
     let config = Config::load(Some(&path));
-    assert_eq!(config.mode.active, "eval-optimizer");
+    assert_eq!(config.mode.active, "improve");
     assert_eq!(config.mode.workers, 4);
     assert_eq!(config.mode.max_rounds, 7);
     assert_eq!(config.mode.timeout_ms, 60_000);

@@ -307,6 +307,7 @@ fn render_agent_code_block(
     false
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_agent_list_block(
     items: &[Vec<runie_core::markdown::MdInline>],
     ordered: bool,

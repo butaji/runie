@@ -18,7 +18,7 @@ const DEBOUNCE_MS: u64 = 50;
 
 pub use crate::markdown::heal_markdown;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StreamingBuffer {
     /// Lines that are confirmed stable and ready to flush.
     stable: Vec<String>,
@@ -30,12 +30,6 @@ pub struct StreamingBuffer {
     in_open_table: bool,
     /// Time of last flush, for debouncing.
     last_flush: Option<Instant>,
-}
-
-impl Default for StreamingBuffer {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl StreamingBuffer {

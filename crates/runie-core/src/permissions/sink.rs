@@ -40,14 +40,9 @@ impl ApprovalSink for DenyAllSink {
 }
 
 /// Scripted sink for tests.
+#[derive(Default)]
 pub struct ScriptedSink {
     decisions: RwLock<Vec<(String, PermissionAction)>>,
-}
-
-impl Default for ScriptedSink {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl ScriptedSink {

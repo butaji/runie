@@ -32,7 +32,7 @@ fn vim_nav_mode_bracket_spans_post_elements() {
     let rows = bracket_rows(&buf);
     // UserInput posts don't include adjacent spacers in the bracket range
     assert!(
-        rows.len() >= 1,
+        !rows.is_empty(),
         "bracket should span at least the user message row"
     );
 }

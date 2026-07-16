@@ -25,6 +25,7 @@ use std::process;
 //
 // Private AppState fields must be accessed through accessors, not directly.
 const APPSTATE_PATTERNS: &[(&str, &str)] = &[
+    // state.xxx patterns
     ("state.session.", "state.session()"),
     ("state.input.", "state.input()"),
     ("state.agent.", "state.agent_state()"),
@@ -32,34 +33,27 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("state.config.", "state.config()"),
     ("state.completion.", "state.completion()"),
     ("state.should_quit ", "state.should_quit_mut()"),
-    ("state.should_quit\n", "state.should_quit_mut()"),
-    ("state.should_quit{", "state.should_quit_mut()"),
     ("state.open_dialog ", "state.open_dialog_mut()"),
     ("state.open_dialog.", "state.open_dialog_mut()"),
     ("state.dialog_back_stack.", "state.dialog_back_stack_mut()"),
     ("state.login_flow ", "state.login_flow_mut()"),
-    ("state.login_flow.", "state.login_flow_mut()"),
     ("state.transient_message ", "state.transient_message_mut()"),
     ("state.transient_until ", "state.transient_until_mut()"),
     ("state.transient_level ", "state.transient_level_mut()"),
     ("state.fff_file_results.", "state.fff_file_results()"),
     ("state.fff_debounce ", "state.fff_debounce_mut()"),
     ("state.perm_req ", "state.permission_request_opt()"),
-    ("state.perm_req.", "state.permission_request_opt()."),
     ("state.cwd_name ", "state.cwd_name_mut()"),
     ("state.git_info ", "state.git_info_mut()"),
     ("state.git_info.", "state.git_info_mut()"),
     ("state.skills ", "state.skills_mut()"),
     ("state.prompts ", "state.prompts_mut()"),
     ("state.trust_decisions ", "state.trust_decisions_mut()"),
-    ("state.trust_decisions.", "state.trust_decisions_mut()"),
     ("state.actor_handles ", "state.actor_handles_mut()"),
     ("state.registry ", "state.registry_mut()"),
     ("state.registry.", "state.registry_mut()"),
-    // turn_state patterns (authoritative turn lifecycle state)
     ("state.turn_state.", "state.turn_state()"),
-    ("self.turn_state.", "self.turn_state()"),
-    // self.xxx patterns (same replacement, different prefix)
+    // self.xxx patterns
     ("self.session.", "self.session()"),
     ("self.input.", "self.input()"),
     ("self.agent.", "self.agent_state()"),
@@ -67,13 +61,10 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("self.config.", "self.config()"),
     ("self.completion.", "self.completion()"),
     ("self.should_quit ", "self.should_quit_mut()"),
-    ("self.should_quit\n", "self.should_quit_mut()"),
-    ("self.should_quit{", "self.should_quit_mut()"),
     ("self.open_dialog ", "self.open_dialog_mut()"),
     ("self.open_dialog.", "self.open_dialog_mut()"),
     ("self.dialog_back_stack.", "self.dialog_back_stack_mut()"),
     ("self.login_flow ", "self.login_flow_mut()"),
-    ("self.login_flow.", "self.login_flow_mut()"),
     ("self.transient_message ", "self.transient_message_mut()"),
     ("self.transient_until ", "self.transient_until_mut()"),
     ("self.transient_level ", "self.transient_level_mut()"),
@@ -86,10 +77,10 @@ const APPSTATE_PATTERNS: &[(&str, &str)] = &[
     ("self.skills ", "self.skills_mut()"),
     ("self.prompts ", "self.prompts_mut()"),
     ("self.trust_decisions ", "self.trust_decisions_mut()"),
-    ("self.trust_decisions.", "self.trust_decisions_mut()"),
     ("self.actor_handles ", "self.actor_handles_mut()"),
     ("self.registry ", "self.registry_mut()"),
     ("self.registry.", "self.registry_mut()"),
+    ("self.turn_state.", "self.turn_state()"),
 ];
 
 fn find_rust_files(dir: &Path) -> Vec<PathBuf> {

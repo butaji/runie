@@ -1,4 +1,4 @@
-//! Black-box tests for runie-patterns Phase 3: EvalOptimizerPattern.
+//! Black-box tests for runie-patterns Phase 3: ImprovePattern.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use runie_patterns::{
-    AgentTrace, Context, EvalOptimizerPattern, Pattern, PatternConfig, PatternOutput,
+    AgentTrace, Context, ImprovePattern, Pattern, PatternConfig, PatternOutput,
     PatternRegistry, TerminationReason, WorkerRunner, WorkerTask,
 };
 use tokio::sync::{mpsc, Semaphore};
@@ -75,7 +75,7 @@ impl WorkerRunner for MockRunner {
 
 fn test_config() -> PatternConfig {
     PatternConfig {
-        active: "eval-optimizer".into(),
+        active: "improve".into(),
         workers: 3,
         max_rounds: 5,
         timeout_ms: 5_000,
@@ -106,15 +106,15 @@ fn trace_ids(out: &PatternOutput) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn eval_optimizer_approved_on_first_review() -> Result<()> {
+async fn improve_approved_on_first_review() -> Result<()> {
     let runner = Arc::new(MockRunner::new(vec![ok("draft v1"), ok("APPROVED")]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = EvalOptimizerPattern.execute(&ctx, "write a poem").await?;
+    let out = ImprovePattern.execute(&ctx, "write a poem").await?;
 
     assert_eq!(out.result, "draft v1");
     assert_eq!(out.termination, TerminationReason::Approved);
-    assert_eq!(trace_ids(&out), vec!["eval-generate-1", "eval-review-1"]);
+    assert_eq!(trace_ids(&out), vec!["improve-generate-1", "improve-review-1"]);
     assert_eq!(out.traces[0].description, "generate");
     assert_eq!(out.traces[0].output, "draft v1");
     assert_eq!(out.traces[1].description, "review round 1");
@@ -122,26 +122,26 @@ async fn eval_optimizer_approved_on_first_review() -> Result<()> {
 
     let calls = runner.calls();
     assert_eq!(calls.len(), 2);
-    assert_eq!(calls[0].prompt.lines().next(), Some("[eval-generate]"));
+    assert_eq!(calls[0].prompt.lines().next(), Some("[improve-generate]"));
     assert!(calls[0].prompt.contains("write a poem"));
-    assert_eq!(calls[1].prompt.lines().next(), Some("[eval-review]"));
+    assert_eq!(calls[1].prompt.lines().next(), Some("[improve-review]"));
     assert!(calls[1].prompt.contains("write a poem"));
     assert!(calls[1].prompt.contains("draft v1"));
     assert!(
         calls.iter().all(|t| t.read_only),
-        "eval calls are read-only"
+        "improve calls are read-only"
     );
     assert!(
         calls
             .iter()
             .all(|t| t.provider == "mock" && t.model == "echo"),
-        "eval calls use the leader model"
+        "improve calls use the leader model"
     );
     Ok(())
 }
 
 #[tokio::test]
-async fn eval_optimizer_feedback_then_approval() -> Result<()> {
+async fn improve_feedback_then_approval() -> Result<()> {
     let runner = Arc::new(MockRunner::new(vec![
         ok("draft v1"),
         ok("add more detail"),
@@ -150,17 +150,17 @@ async fn eval_optimizer_feedback_then_approval() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = EvalOptimizerPattern.execute(&ctx, "the task").await?;
+    let out = ImprovePattern.execute(&ctx, "the task").await?;
 
     assert_eq!(out.result, "draft v2");
     assert_eq!(out.termination, TerminationReason::Approved);
     assert_eq!(
         trace_ids(&out),
         vec![
-            "eval-generate-1",
-            "eval-review-1",
-            "eval-revise-2",
-            "eval-review-2"
+            "improve-generate-1",
+            "improve-review-1",
+            "improve-revise-2",
+            "improve-review-2"
         ]
     );
     assert_eq!(out.traces[2].description, "revise round 2");
@@ -168,8 +168,8 @@ async fn eval_optimizer_feedback_then_approval() -> Result<()> {
     let calls = runner.calls();
     assert_eq!(calls.len(), 4);
     let revise = &calls[2];
-    assert_eq!(revise.id, "eval-revise-2");
-    assert_eq!(revise.prompt.lines().next(), Some("[eval-revise]"));
+    assert_eq!(revise.id, "improve-revise-2");
+    assert_eq!(revise.prompt.lines().next(), Some("[improve-revise]"));
     assert!(revise.prompt.contains("the task"));
     assert!(
         revise.prompt.contains("draft v1"),
@@ -183,7 +183,7 @@ async fn eval_optimizer_feedback_then_approval() -> Result<()> {
 }
 
 #[tokio::test]
-async fn eval_optimizer_max_rounds_without_approval() -> Result<()> {
+async fn improve_max_rounds_without_approval() -> Result<()> {
     let config = PatternConfig {
         max_rounds: 2,
         ..test_config()
@@ -196,7 +196,7 @@ async fn eval_optimizer_max_rounds_without_approval() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
 
-    let out = EvalOptimizerPattern
+    let out = ImprovePattern
         .execute(&ctx, "never good enough")
         .await?;
 
@@ -205,10 +205,10 @@ async fn eval_optimizer_max_rounds_without_approval() -> Result<()> {
     assert_eq!(
         trace_ids(&out),
         vec![
-            "eval-generate-1",
-            "eval-review-1",
-            "eval-revise-2",
-            "eval-review-2"
+            "improve-generate-1",
+            "improve-review-1",
+            "improve-revise-2",
+            "improve-review-2"
         ]
     );
     assert_eq!(runner.calls().len(), 4, "2 rounds x (draft + review)");
@@ -216,7 +216,7 @@ async fn eval_optimizer_max_rounds_without_approval() -> Result<()> {
 }
 
 #[tokio::test]
-async fn eval_optimizer_abort_during_call() -> Result<()> {
+async fn improve_abort_during_call() -> Result<()> {
     let abort = CancellationToken::new();
     let runner = Arc::new(
         MockRunner::new(vec![ok("never used")])
@@ -226,7 +226,7 @@ async fn eval_optimizer_abort_during_call() -> Result<()> {
     let (ctx, _rx) = make_ctx(test_config(), runner, abort);
     let start = Instant::now();
 
-    let out = EvalOptimizerPattern.execute(&ctx, "abort me").await?;
+    let out = ImprovePattern.execute(&ctx, "abort me").await?;
 
     assert_eq!(out.termination, TerminationReason::Error("aborted".into()));
     assert!(
@@ -237,31 +237,31 @@ async fn eval_optimizer_abort_during_call() -> Result<()> {
 }
 
 #[tokio::test]
-async fn eval_optimizer_generator_error_returns_empty_result() -> Result<()> {
+async fn improve_generator_error_returns_empty_result() -> Result<()> {
     let runner = Arc::new(MockRunner::new(vec![err("boom")]));
     let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
 
-    let out = EvalOptimizerPattern.execute(&ctx, "explode").await?;
+    let out = ImprovePattern.execute(&ctx, "explode").await?;
 
     assert_eq!(out.result, "", "no draft exists yet");
     match &out.termination {
         TerminationReason::Error(msg) => assert!(msg.contains("boom"), "got {msg}"),
         other => panic!("expected Error termination, got {other:?}"),
     }
-    assert_eq!(trace_ids(&out), vec!["eval-generate-1"]);
+    assert_eq!(trace_ids(&out), vec!["improve-generate-1"]);
     Ok(())
 }
 
 #[test]
-fn eval_optimizer_registry_metadata() {
+fn improve_registry_metadata() {
     let registry = PatternRegistry::default();
     let pattern = registry
-        .get("eval-optimizer")
-        .expect("eval-optimizer registered");
-    assert_eq!(pattern.name(), "eval-optimizer");
+        .get("improve")
+        .expect("improve registered");
+    assert_eq!(pattern.name(), "improve");
     assert_eq!(
         pattern.description(),
-        "Critical review loops — generate, evaluate, revise"
+        "Iterative improvement with review"
     );
 
     let names = registry.names();
@@ -271,10 +271,10 @@ fn eval_optimizer_registry_metadata() {
         .expect("swarm registered");
     let eval_pos = names
         .iter()
-        .position(|n| *n == "eval-optimizer")
-        .expect("eval-optimizer registered");
+        .position(|n| *n == "improve")
+        .expect("improve registered");
     assert!(
         eval_pos > swarm_pos,
-        "eval-optimizer is registered after swarm"
+        "improve is registered after swarm"
     );
 }

@@ -342,12 +342,13 @@ impl TuiRuntimeBuilder {
 /// This struct holds all components needed to run the TUI and provides
 /// a unified interface for both production and testing use cases.
 #[derive(Clone)]
-#[allow(dead_code)]
 pub struct TuiRuntime {
     provider_factory: Arc<dyn runie_core::actors::provider::ProviderFactory>,
     backend: BackendType,
     keystrokes: Vec<Keystroke>,
+    #[allow(dead_code)]
     project_root: std::path::PathBuf,
+    #[allow(dead_code)]
     data_dir: std::path::PathBuf,
 }
 

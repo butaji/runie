@@ -103,7 +103,7 @@ pub trait AsyncHookHandler: Send + Sync {
     ) -> Option<Messages>;
 
     /// Process the payload after an API call completes.
-    async fn async_post_request_hook(&self, model: &str, payload: &Value) -> Value {
+    async fn async_post_request_hook(&self, _model: &str, payload: &Value) -> Value {
         payload.clone()
     }
 
