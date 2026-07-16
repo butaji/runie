@@ -64,6 +64,10 @@ VARIANTS_WITH_FIELDS = {
     "PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow",
     "PermissionSessionAllow", "PermissionOnce",
     "TransientMessage", "TransientError",
+    # Goal intent variants with fields
+    "GoalCreate", "GoalComplete",
+    # AskUserQuestion intent variants with fields
+    "AskUserQuestion", "QuestionAnswer", "QuestionSkip", "QuestionSubmit",
 }
 
 # Control variants that are also intents (from taxonomy.json intent_variants for Control)

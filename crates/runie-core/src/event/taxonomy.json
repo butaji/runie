@@ -44,7 +44,8 @@
       "AssistantMessageReady",
       "KeybindingsReloaded",
       "PermissionRequest",
-      "PermissionRequestDismissed"
+      "PermissionRequestDismissed",
+      "AskUserQuestion"
     ]
   },
   "fields": {
@@ -166,7 +167,19 @@
     "SubmitKey": "{ provider: String, key: String }",
     "ValidationFailed": "{ provider: String, key: String, error: String }",
     "ModelsFetched": "{ provider: String, key: String, models: Vec<String> }",
-    "ToggleModel": "{ model: String }"
+    "ToggleModel": "{ model: String }",
+    "McpServerAction": "{ name: String, action: crate::dialog::builders::mcp::McpServerActionKind }",
+    "SkillAction": "{ name: String, action: crate::dialog::builders::skills::SkillActionKind }",
+    "GoalCreate": "{ objective: String }",
+    "GoalComplete": "{ objective: String }",
+    "GoalPause": "null",
+    "GoalResume": "null",
+    "GoalCancel": "null",
+    "GoalStatus": "{ status: String }",
+    "AskUserQuestion": "{ request_id: String, questions: Vec<crate::model::Question> }",
+    "QuestionAnswer": "{ request_id: String, option_id: String }",
+    "QuestionSkip": "{ request_id: String }",
+    "QuestionSubmit": "{ request_id: String }"
   },
   "categories": {
     "Input": {
@@ -240,7 +253,9 @@
         "CommandFormSubmit", "CommandFormClose", "DialogBack", "ProvidersDialog",
         "ProvidersSelectModel", "ProvidersDisconnect", "ProvidersAdd",
         "ProvidersEditModels", "CopyToClipboard", "CopySelectedBlock",
-        "CopyBlockMetadata", "AtFilePicker", "InsertAtRef"
+        "CopyBlockMetadata", "AtFilePicker", "InsertAtRef",
+        "ToggleMcpServersDialog", "McpServerAction",
+        "ToggleSkillsDialog", "SkillAction"
       ]
     },
     "Edit": {
@@ -264,7 +279,7 @@
       "variants": [
         "GistShared", "ExternalEditorClosed", "ClipboardWritten", "ClipboardRead",
         "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult",
-        "SkillsLoaded", "AuthLoaded"
+        "SkillsLoaded", "SkillCreated", "SkillDeleted", "SkillError", "AuthLoaded"
       ]
     },
     "Session": {
@@ -301,6 +316,16 @@
       "kind": "Intent",
       "intent_variants": ["PermissionResponse", "PermissionAllow", "PermissionDeny", "PermissionAlwaysAllow", "PermissionSessionAllow", "PermissionOnce"],
       "fact_variants": ["PermissionRequest", "PermissionRequestDismissed"]
+    },
+    "Goal": {
+      "kind": "Fact",
+      "intent_variants": ["GoalCreate", "GoalComplete", "GoalPause", "GoalResume", "GoalCancel"],
+      "fact_variants": ["GoalStatus"]
+    },
+    "Question": {
+      "kind": "Intent",
+      "intent_variants": ["QuestionAnswer", "QuestionSkip", "QuestionSubmit"],
+      "fact_variants": ["AskUserQuestion"]
     },
     "Other": {
       "kind": "Fact",

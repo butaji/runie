@@ -1,4 +1,4 @@
-use runie_core::view::elements::Element;
+use runie_core::view::elements::{Element, DiffType, ImageProtocol, WebSearchResult};
 
 #[test]
 fn user_message_builder() {
@@ -81,4 +81,101 @@ fn thinking_builder() {
     let started = std::time::Instant::now();
     let e = Element::thinking(started).at(10.0);
     assert!(matches!(e, Element::Thinking { timestamp, .. } if timestamp == 10.0));
+}
+
+// ─── New Special Content Type Builders ───────────────────────────────────
+
+#[test]
+fn anthropic_thinking_builder() {
+    let sig = "abc123".to_string();
+    let e = Element::anthropic_thinking("thinking content", Some(sig.clone())).at(11.0);
+    assert!(
+        matches!(e, Element::AnthropicThinking { content, signature, redacted, timestamp }
+        if content == "thinking content" && signature == Some(sig) && !redacted && timestamp == 11.0)
+    );
+}
+
+#[test]
+fn redacted_thinking_builder() {
+    let e = Element::redacted_thinking("encrypted...").at(12.0);
+    assert!(
+        matches!(e, Element::AnthropicThinking { content, signature, redacted, timestamp }
+        if content == "encrypted..." && signature.is_none() && redacted && timestamp == 12.0)
+    );
+}
+
+#[test]
+fn tool_confirmation_builder() {
+    let e = Element::tool_confirmation("req.1", "delete", "{}", "Delete file").at(13.0);
+    assert!(
+        matches!(e, Element::ToolConfirmation { request_id, name, args, description, timestamp }
+        if request_id == "req.1" && name == "delete" && args == "{}" && description == "Delete file" && timestamp == 13.0)
+    );
+}
+
+#[test]
+fn image_builder() {
+    let e = Element::image("base64data...", "image/png").at(14.0);
+    assert!(
+        matches!(e, Element::Image { data, mime_type, width_cells, height_cells, protocol, timestamp }
+        if data == "base64data..." && mime_type == "image/png" && width_cells.is_none() && height_cells.is_none() && protocol == ImageProtocol::ITerm2 && timestamp == 14.0)
+    );
+}
+
+#[test]
+fn data_part_builder() {
+    let e = Element::data_part(r#"{"key": "value"}"#, Some("JSON object".to_string())).at(15.0);
+    assert!(
+        matches!(e, Element::DataPart { data, format_string, timestamp }
+        if data == r#"{"key": "value"}"# && format_string == Some("JSON object".to_string()) && timestamp == 15.0)
+    );
+}
+
+#[test]
+fn markdown_table_builder() {
+    let headers = vec!["Name".to_string(), "Age".to_string()];
+    let rows = vec![
+        vec!["Alice".to_string(), "30".to_string()],
+        vec!["Bob".to_string(), "25".to_string()],
+    ];
+    let alignments = vec![None, Some(true)];
+    let e = Element::markdown_table(headers.clone(), rows.clone(), alignments.clone()).at(16.0);
+    assert!(
+        matches!(e, Element::MarkdownTable { headers: h, rows: r, alignments: a, timestamp }
+        if h == headers && r == rows && a == alignments && timestamp == 16.0)
+    );
+}
+
+#[test]
+fn diff_output_builder() {
+    let e = Element::diff_output("@@ -1,3 +1,4 @@", DiffType::Unified).at(17.0);
+    assert!(
+        matches!(e, Element::DiffOutput { content, diff_type, timestamp }
+        if content == "@@ -1,3 +1,4 @@" && diff_type == DiffType::Unified && timestamp == 17.0)
+    );
+}
+
+#[test]
+fn web_search_call_builder() {
+    let results = vec![
+        WebSearchResult {
+            title: "Result 1".to_string(),
+            url: "https://example.com/1".to_string(),
+            snippet: "Snippet 1".to_string(),
+        },
+    ];
+    let e = Element::web_search_call("rust programming", results.clone()).at(18.0);
+    assert!(
+        matches!(e, Element::WebSearchCall { query, results: r, timestamp }
+        if query == "rust programming" && r == results && timestamp == 18.0)
+    );
+}
+
+#[test]
+fn ansi_styled_builder() {
+    let e = Element::ansi_styled("\x1b[31mred\x1b[0m", "red").at(19.0);
+    assert!(
+        matches!(e, Element::AnsiStyled { raw_content, plain_text, timestamp }
+        if raw_content == "\x1b[31mred\x1b[0m" && plain_text == "red" && timestamp == 19.0)
+    );
 }

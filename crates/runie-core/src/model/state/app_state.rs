@@ -46,6 +46,7 @@ pub struct AppState {
     pub login_flow: Option<crate::login_flow::LoginFlowState>,
     pub registry: crate::commands::CommandRegistry,
     pub skills: Vec<crate::skills::Skill>,
+    pub mcp_servers: Vec<crate::dialog::builders::McpServerRow>,
     pub prompts: Vec<crate::prompts::PromptTemplate>,
     pub trust_decisions: indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision>,
     pub transient_message: Option<String>,
@@ -58,6 +59,8 @@ pub struct AppState {
     pub fff_file_results: Vec<FffFileEntry>,
     pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
+    pub goal_state: Option<crate::model::GoalState>,
+    pub question_state: Option<crate::model::QuestionState>,
     pub actor_handles: Option<crate::actors::LeaderHandle>,
     /// Optional event bus bridge so core state handlers can publish events that
     /// must be observed by the actor layer (e.g. a form-generated `SubmitKey`).

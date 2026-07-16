@@ -162,9 +162,13 @@ impl AppState {
     pub fn apply_command_result(&mut self, result: crate::commands::CommandResult) {
         use crate::commands::DialogType;
         match result {
-            crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
+            crate::commands::CommandResult::Message(msg) => {
+                self.add_system_msg(msg);
+                self.input_mut().input.clear();
+            }
             crate::commands::CommandResult::Warning(msg) => {
-                self.notify(msg, crate::event::TransientLevel::Warning)
+                self.notify(msg, crate::event::TransientLevel::Warning);
+                self.input_mut().input.clear();
             }
             crate::commands::CommandResult::Event(evt) => {
                 self.apply_command_event(evt);
@@ -181,6 +185,8 @@ impl AppState {
                 DialogType::Settings => crate::update::dialog::open_settings_dialog(self),
                 DialogType::ScopedModels => crate::update::dialog::open_scoped_models_dialog(self),
                 DialogType::ThemeSelector => crate::update::dialog::open_theme_selector(self),
+                DialogType::McpServers => crate::update::dialog::open_mcp_servers_dialog(self),
+                DialogType::Skills => crate::update::dialog::open_skills_dialog(self),
             },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 *self.open_dialog_mut() = Some(crate::commands::DialogState::Active {
