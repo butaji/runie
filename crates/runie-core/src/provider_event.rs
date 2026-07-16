@@ -33,6 +33,16 @@ pub enum ProviderEvent {
     ToolCallInputDelta { id: String, delta: String },
     /// An LLM finished a tool invocation.
     ToolCallEnd { id: String },
+    /// A tool started executing (distinct from `ToolCallStart` which marks LLM invocation).
+    ToolExecutionStart { id: String, name: String },
+    /// A tool finished executing.
+    ToolExecutionEnd { id: String },
+    /// The output/result of a tool execution.
+    ToolExecutionResult { id: String, result: String },
+    /// A conversation turn ended.
+    TurnEnd,
+    /// The agent finished (all turns complete).
+    AgentEnd,
     /// An error occurred during generation.
     Error(ModelError),
     /// Token usage information.
@@ -61,6 +71,10 @@ pub enum StopReason {
     StopSequence,
     /// Model error or other.
     Unknown,
+    /// Conversation turn completed.
+    TurnEnd,
+    /// Agent finished (all turns done).
+    AgentEnd,
 }
 
 /// Model-specific errors (distinct from `ProviderError`).
@@ -324,5 +338,77 @@ mod tests {
         );
         let roundtrip: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(roundtrip, event);
+    }
+
+    #[test]
+    fn provider_event_tool_execution_roundtrip() {
+        let event = ProviderEvent::ToolExecutionStart {
+            id: "exec_1".into(),
+            name: "bash".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            parsed,
+            ProviderEvent::ToolExecutionStart { id, name }
+            if id == "exec_1" && name == "bash"
+        ));
+    }
+
+    #[test]
+    fn provider_event_tool_execution_end_roundtrip() {
+        let event = ProviderEvent::ToolExecutionEnd {
+            id: "exec_1".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            parsed,
+            ProviderEvent::ToolExecutionEnd { id } if id == "exec_1"
+        ));
+    }
+
+    #[test]
+    fn provider_event_tool_execution_result_roundtrip() {
+        let event = ProviderEvent::ToolExecutionResult {
+            id: "exec_1".into(),
+            result: "hello world".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert!(matches!(
+            parsed,
+            ProviderEvent::ToolExecutionResult { id, result }
+            if id == "exec_1" && result == "hello world"
+        ));
+    }
+
+    #[test]
+    fn provider_event_turn_end_roundtrip() {
+        let event = ProviderEvent::TurnEnd;
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(json, r#"{"type":"turnEnd"}"#);
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, event);
+    }
+
+    #[test]
+    fn provider_event_agent_end_roundtrip() {
+        let event = ProviderEvent::AgentEnd;
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(json, r#"{"type":"agentEnd"}"#);
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, event);
+    }
+
+    #[test]
+    fn stop_reason_turn_end_and_agent_end() {
+        let reason = StopReason::TurnEnd;
+        let json = serde_json::to_string(&reason).unwrap();
+        assert_eq!(json, "\"turn_end\"");
+
+        let reason2 = StopReason::AgentEnd;
+        let json2 = serde_json::to_string(&reason2).unwrap();
+        assert_eq!(json2, "\"agent_end\"");
     }
 }

@@ -105,6 +105,8 @@ tinytemplate.workspace = true
 # serde_with.workspace = true  # unused - cargo machete
 validator.workspace = true
 landlock = { workspace = true, optional = true }
+url.workspace = true
+once_cell.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 crossterm.workspace = true

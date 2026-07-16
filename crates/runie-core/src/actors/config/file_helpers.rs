@@ -110,6 +110,7 @@ pub fn save_provider_to_path(
                 base_url: b.clone(),
                 models: m.clone(),
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: Vec::new(),
             },
         );
     })
@@ -250,6 +251,7 @@ fn default_empty_provider() -> ModelProvider {
         base_url: String::new(),
         models: Vec::new(),
         headers: std::collections::HashMap::new(),
+        context_window_fallbacks: Vec::new(),
     }
 }
 

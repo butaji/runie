@@ -1,7 +1,10 @@
 //! Top-level protocol message enum.
 
+use std::sync::Arc;
+
 use serde_json::Value;
 
+use crate::hidden_params::{AsHiddenParams, HiddenParams};
 use super::error::Error;
 use super::notification::Notification;
 use super::request::Request;
@@ -45,6 +48,71 @@ impl Message {
             Self::Response(r) => &r.version,
             Self::Notification(n) => &n.version,
         }
+    }
+}
+
+/// A `Message` with attached hidden parameters.
+///
+/// Provides `AsHiddenParams` implementation while keeping `Message` serializable
+/// as a plain protocol message. For storing hidden params on `Message`, use this
+/// wrapper instead of adding fields to the enum directly.
+#[derive(Debug, Clone)]
+pub struct MessageWithHiddenParams {
+    /// The underlying message.
+    pub message: Message,
+    /// Hidden parameters attached to this message.
+    hidden: Arc<HiddenParams>,
+}
+
+impl MessageWithHiddenParams {
+    /// Create a new wrapper with hidden parameters.
+    pub fn new(message: Message, params: HiddenParams) -> Self {
+        Self {
+            message,
+            hidden: Arc::new(params),
+        }
+    }
+
+    /// Create a new wrapper with hidden parameters (arc form).
+    pub fn with_params(message: Message, params: Arc<HiddenParams>) -> Self {
+        Self { message, hidden: params }
+    }
+
+    /// Wrap a message with no hidden parameters.
+    pub fn from_message(message: Message) -> Self {
+        Self {
+            message,
+            hidden: Arc::new(HiddenParams::default()),
+        }
+    }
+
+    /// Set hidden parameters.
+    pub fn set_hidden_params(&mut self, params: Arc<HiddenParams>) {
+        self.hidden = params;
+    }
+}
+
+impl AsHiddenParams for Message {
+    fn hidden_params(&self) -> Option<&Arc<HiddenParams>> {
+        None
+    }
+}
+
+impl AsHiddenParams for MessageWithHiddenParams {
+    fn hidden_params(&self) -> Option<&Arc<HiddenParams>> {
+        if self.hidden.response_cost.is_none()
+            && self.hidden.api_base.is_none()
+            && self.hidden.original_model.is_none()
+            && self.hidden.additional_headers.is_empty()
+        {
+            None
+        } else {
+            Some(&self.hidden)
+        }
+    }
+
+    fn hidden_params_mut(&mut self) -> Option<&mut Arc<HiddenParams>> {
+        Some(&mut self.hidden)
     }
 }
 

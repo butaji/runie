@@ -122,6 +122,8 @@ runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
 runie-patterns = { path = "crates/runie-patterns" }
+url = "2"
+once_cell = "1"
 
 # Provider-specific dependencies (hoisted to workspace for consistency)
 async-stream = "0.3"

@@ -36,6 +36,8 @@ thiserror.workspace = true
 async-stream.workspace = true
 async-trait.workspace = true
 reqwest-eventsource.workspace = true
+sha2.workspace = true
+hex.workspace = true
 
 [dev-dependencies]
 test-case.workspace = true

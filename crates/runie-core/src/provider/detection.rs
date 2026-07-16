@@ -157,9 +157,39 @@ pub fn detect_provider(url: &str) -> Option<&'static str> {
     detect_provider_from_api_base(url)
 }
 
-// ============================================================================
-// Tests
-// ============================================================================
+/// Check if a provider name is a known/registered provider.
+pub fn is_known_provider(name: &str) -> bool {
+    matches!(
+        name,
+        "openai"
+            | "anthropic"
+            | "google"
+            | "azure"
+            | "groq"
+            | "together"
+            | "deepinfra"
+            | "mistral"
+            | "cohere"
+            | "fireworks"
+            | "perplexity"
+            | "ollama"
+            | "mock"
+    )
+}
+
+/// Normalize a model name to its canonical form with provider prefix.
+///
+/// If the model already has a provider prefix, returns it unchanged.
+/// If the model has no prefix and a default provider is given, adds the prefix.
+/// If the model has no prefix and no default is given, returns it unchanged.
+pub fn normalize_model_name(model: &str, default_provider: Option<&str>) -> String {
+    let (prefix, rest) = parse_model_prefix(model);
+    match (prefix, default_provider) {
+        (Some(p), _) => format!("{p}/{rest}"),
+        (None, Some(dp)) => format!("{dp}/{rest}"),
+        (None, None) => rest.to_string(),
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -596,5 +626,42 @@ mod tests {
                 url
             );
         }
+    }
+
+    // ========================================================================
+    // is_known_provider tests
+    // ========================================================================
+
+    #[test]
+    fn is_known_provider_positive() {
+        for p in ["openai", "anthropic", "google", "azure", "groq", "mock"] {
+            assert!(is_known_provider(p), "{p} should be known");
+        }
+    }
+
+    #[test]
+    fn is_known_provider_negative() {
+        assert!(!is_known_provider("unknown"));
+        assert!(!is_known_provider(""));
+        assert!(!is_known_provider("custom"));
+    }
+
+    // ========================================================================
+    // normalize_model_name tests
+    // ========================================================================
+
+    #[test]
+    fn normalize_with_provider_prefix() {
+        assert_eq!(normalize_model_name("azure/gpt-4", Some("openai")), "azure/gpt-4");
+    }
+
+    #[test]
+    fn normalize_adds_default_provider() {
+        assert_eq!(normalize_model_name("gpt-4", Some("openai")), "openai/gpt-4");
+    }
+
+    #[test]
+    fn normalize_no_provider_no_default() {
+        assert_eq!(normalize_model_name("gpt-4", None), "gpt-4");
     }
 }

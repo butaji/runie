@@ -24,7 +24,9 @@ pub mod mock;
 pub mod replay;
 
 #[cfg(feature = "replay")]
-pub use replay::{Protocol as ReplayProtocol, ReplayProvider};
+pub use replay::{
+    compute_replay_key, ReplayKeyBuilder, Protocol as ReplayProtocol, ReplayProvider, ToolCallEntry,
+};
 
 use crate::retry::{is_retryable, with_retry};
 use std::collections::HashMap;

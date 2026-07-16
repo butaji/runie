@@ -25,6 +25,24 @@ impl From<ProviderEvent> for Event {
             PE::ToolCallStart { id, name } => tool_start(id, name),
             PE::ToolCallInputDelta { id, delta } => tool_input_delta(id, delta),
             PE::ToolCallEnd { id } => tool_end(id),
+            PE::ToolExecutionStart { id, name } => Event::ToolStart {
+                id,
+                name,
+                input: Default::default(),
+            },
+            PE::ToolExecutionEnd { id } => Event::ToolEnd {
+                id,
+                input: None,
+                duration_secs: 0.0,
+                output: String::new(),
+            },
+            PE::ToolExecutionResult { id, result } => Event::ToolEnd {
+                id,
+                input: None,
+                duration_secs: 0.0,
+                output: result,
+            },
+            PE::TurnEnd | PE::AgentEnd => Event::Done { id: String::new() },
             PE::Finish { reason: _ } => Event::Done { id: String::new() },
             PE::Error(e) => Event::Error {
                 id: String::new(),
@@ -95,6 +113,17 @@ mod tests {
                 delta: "-la".into(),
             },
             ProviderEvent::ToolCallEnd { id: "c1".into() },
+            ProviderEvent::ToolExecutionStart {
+                id: "e1".into(),
+                name: "bash".into(),
+            },
+            ProviderEvent::ToolExecutionEnd { id: "e1".into() },
+            ProviderEvent::ToolExecutionResult {
+                id: "e1".into(),
+                result: "done".into(),
+            },
+            ProviderEvent::TurnEnd,
+            ProviderEvent::AgentEnd,
             ProviderEvent::Error(crate::provider_event::ModelError::Other("oops".into())),
             ProviderEvent::Usage {
                 input_tokens: 100,

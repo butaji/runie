@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub mod auto_approve;
+pub mod blocklist;
 pub mod default_tool_approve;
 pub mod file_access_ask;
 pub mod format;
@@ -34,6 +35,7 @@ pub mod rules;
 mod sink;
 
 pub use auto_approve::AutoApprove;
+pub use blocklist::{is_sensitive_path, SensitivePathBlocklist, SENSITIVE_PATH_PATTERNS};
 #[cfg(feature = "mcp")]
 pub use default_tool_approve::DefaultToolApprove;
 pub use file_access_ask::FileAccessAsk;
@@ -192,7 +194,9 @@ impl PermissionManager {
 
     /// Build the default policy chain for a permission mode.
     fn build_policies(mode: PermissionMode) -> Vec<Box<dyn PermissionPolicy>> {
-        match mode {
+        // Sensitive path blocklist is always first: ask for sensitive paths before any mode policy.
+        let blocklist: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(SensitivePathBlocklist::ask())];
+        let mut chain: Vec<Box<dyn PermissionPolicy>> = match mode {
             PermissionMode::BypassPermissions => {
                 // Auto-approve everything.
                 vec![Box::new(BypassAllPolicy)]
@@ -225,7 +229,8 @@ impl PermissionManager {
                 // Ask for all operations that match file access outside cwd.
                 vec![Box::new(FileAccessAsk::new())]
             }
-        }
+        };
+        blocklist.into_iter().chain(chain).collect()
     }
 
     pub fn with_policies(mut self, policies: Vec<Box<dyn PermissionPolicy>>) -> Self {
@@ -320,28 +325,6 @@ impl PermissionPolicy for AcceptEditsPolicy {
     async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
         Some(PermissionResult::Allow)
     }
-}
-
-/// Sensitive path patterns that are always denied.
-pub fn is_sensitive_path(path: &str) -> bool {
-    let sensitive = [
-        "**/.env",
-        ".env",
-        "**/.ssh/*",
-        ".ssh/*",
-        "**/.aws/*",
-        ".aws/*",
-        "**/.git/config",
-    ];
-    sensitive.iter().any(|p| glob_matches(p, path))
-}
-
-/// Match a glob pattern against a string using the `glob` crate.
-fn glob_matches(pattern: &str, name: &str) -> bool {
-    use glob::Pattern;
-    Pattern::new(pattern)
-        .map(|p| p.matches(name))
-        .unwrap_or(false)
 }
 
 /// Build an approval sink based on yolo mode.

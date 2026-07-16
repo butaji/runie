@@ -67,6 +67,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
             query.len() / 4 + results.iter().map(|r| r.title.len() + r.snippet.len()).sum::<usize>() / 4
         }
         AnsiStyled { plain_text, .. } => plain_text.len() / 4,
+        SubagentRow { .. } => 10,
     }
 }
 
@@ -74,6 +75,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 mod tests {
     use super::*;
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
+    use ratatui::widgets::Paragraph;
     use runie_core::layout::word_wrap;
     use runie_core::view::elements::Element;
 

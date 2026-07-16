@@ -137,7 +137,9 @@ fn update_config(provider_key: &str) -> Result<()> {
                 .iter()
                 .map(|m| m.name.clone())
                 .collect(),
-            headers: std::collections::HashMap::new(),
+<<<<<<< HEAD
+            headers: Default::default(),
+            context_window_fallbacks: Default::default(),
         });
 
     config.model_providers = model_providers;
