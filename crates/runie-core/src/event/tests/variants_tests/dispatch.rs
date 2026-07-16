@@ -385,6 +385,50 @@ fn dispatcher_handles_all_variants() {
                 content: content.clone(),
             },
             Event::PlanModeDisabled => Event::PlanModeDisabled,
+            Event::ToggleMcpServersDialog => Event::ToggleMcpServersDialog,
+            Event::ToggleSkillsDialog => Event::ToggleSkillsDialog,
+            Event::McpServerAction { name, action } => Event::McpServerAction {
+                name,
+                action,
+            },
+            Event::SkillAction { name, action } => Event::SkillAction {
+                name,
+                action,
+            },
+            Event::GoalCreate { objective } => Event::GoalCreate {
+                objective: objective.clone(),
+            },
+            Event::GoalComplete { objective } => Event::GoalComplete {
+                objective: objective.clone(),
+            },
+            Event::GoalPause => Event::GoalPause,
+            Event::GoalResume => Event::GoalResume,
+            Event::GoalCancel => Event::GoalCancel,
+            Event::GoalStatus { status } => Event::GoalStatus {
+                status: status.clone(),
+            },
+            Event::SkillCreated { name } => Event::SkillCreated {
+                name: name.clone(),
+            },
+            Event::SkillDeleted { name } => Event::SkillDeleted {
+                name: name.clone(),
+            },
+            Event::SkillError { name, message } => Event::SkillError {
+                name: name.clone(),
+                message: message.clone(),
+            },
+
+            // AskUserQuestion dialog
+            Event::AskUserQuestion { request_id, questions } => Event::AskUserQuestion {
+                request_id,
+                questions: questions.clone(),
+            },
+            Event::QuestionAnswer { request_id, option_id } => Event::QuestionAnswer {
+                request_id,
+                option_id,
+            },
+            Event::QuestionSkip { request_id } => Event::QuestionSkip { request_id },
+            Event::QuestionSubmit { request_id } => Event::QuestionSubmit { request_id },
         }
     }
     let _ = assert_exhaustive(Event::Submit);

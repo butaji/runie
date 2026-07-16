@@ -1,0 +1,9 @@
+# AskUserQuestion command — opens an interactive multi-question dialog.
+name: ask
+description: Open an interactive multi-question dialog to gather user input
+category: Session
+sub: false
+triggers:
+  - /ask
+type: handler
+handler: ask

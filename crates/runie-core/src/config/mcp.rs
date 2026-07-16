@@ -29,6 +29,8 @@ pub enum McpTransport {
     Http,
     /// Server-Sent Events transport.
     Sse,
+    /// WebSocket-based MCP server.
+    WebSocket,
 }
 
 // ============================================================================
@@ -103,6 +105,7 @@ mod tests {
         let stdio = McpTransport::Stdio;
         let http = McpTransport::Http;
         let sse = McpTransport::Sse;
+        let ws = McpTransport::WebSocket;
 
         let stdio_str = serde_json::to_string(&stdio).unwrap();
         assert_eq!(stdio_str, "\"stdio\"");
@@ -112,12 +115,20 @@ mod tests {
 
         let sse_str = serde_json::to_string(&sse).unwrap();
         assert_eq!(sse_str, "\"sse\"");
+
+        let ws_str = serde_json::to_string(&ws).unwrap();
+        assert_eq!(ws_str, "\"websocket\"");
     }
 
     #[test]
     fn mcp_transport_round_trip() {
         use std::str::FromStr;
-        for transport in [McpTransport::Stdio, McpTransport::Http, McpTransport::Sse] {
+        for transport in [
+            McpTransport::Stdio,
+            McpTransport::Http,
+            McpTransport::Sse,
+            McpTransport::WebSocket,
+        ] {
             let s = transport.to_string();
             let parsed = McpTransport::from_str(&s);
             assert_eq!(

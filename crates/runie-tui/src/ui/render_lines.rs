@@ -54,6 +54,53 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
             tools, collapsed, ..
         } => msg::render_context_group(tools, *collapsed),
         SubagentRow { .. } => msg::render_subagent_row(elem, animation_frame),
+        AnthropicThinking {
+            content,
+            signature,
+            redacted,
+            timestamp,
+        } => msg::render_anthropic_thinking(content, signature.clone(), *redacted, *timestamp),
+        Image {
+            data,
+            mime_type,
+            width_cells,
+            height_cells,
+            protocol,
+            timestamp,
+        } => msg::render_image(data, mime_type, *width_cells, *height_cells, *protocol, *timestamp),
+        DataPart {
+            data,
+            format_string,
+            timestamp,
+        } => msg::render_data_part(data, format_string.as_deref(), *timestamp),
+        MarkdownTable {
+            headers,
+            rows,
+            alignments,
+            timestamp,
+        } => msg::render_markdown_table(headers, rows, alignments, *timestamp),
+        DiffOutput {
+            content,
+            diff_type,
+            timestamp,
+        } => msg::render_diff_output(content, *diff_type, *timestamp),
+        WebSearchCall {
+            query,
+            results,
+            timestamp,
+        } => msg::render_web_search_call(query, results, *timestamp),
+        AnsiStyled {
+            raw_content,
+            plain_text,
+            timestamp,
+        } => msg::render_ansi_styled(raw_content, plain_text, *timestamp),
+        ToolConfirmation {
+            request_id,
+            name,
+            args,
+            description,
+            timestamp,
+        } => msg::render_tool_confirmation(request_id, name, args, description, *timestamp),
         _ => render_tool_element(elem, animation_frame, content_width),
     }
 }

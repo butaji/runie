@@ -1,0 +1,1077 @@
+{
+  "version": "1.0.0",
+  "description": "Black-box test plan for runie CLI and TUI, covering UI parity, replay fixtures, error states, and onboarding.",
+  "tasks": [
+    {
+      "id": "keyboard_shortcuts_overlay",
+      "title": "Keyboard shortcuts overlay",
+      "category": "Navigation",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/keyboard_shortcuts_overlay.md",
+      "grok_feature": "Ctrl+X searchable shortcuts overlay with expandable categories",
+      "runie_feature": "/hotkeys shortcuts overlay",
+      "acceptance_summary": "Overlay opens, lists bindings, supports search/filter, closes with Esc, and is reachable from main chat.",
+      "dependencies": []
+    },
+    {
+      "id": "command_palette_navigation",
+      "title": "Command palette navigation",
+      "category": "Navigation",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/command_palette_navigation.md",
+      "grok_feature": "Ctrl+P / searchable command palette with categories",
+      "runie_feature": "Ctrl+P command palette",
+      "acceptance_summary": "Palette opens with / and Ctrl+P, filters, arrow/Tab/Shift+Tab move selection, Enter runs, Esc closes.",
+      "dependencies": [
+        "keyboard_shortcuts_overlay"
+      ]
+    },
+    {
+      "id": "input_composition",
+      "title": "Input composition",
+      "category": "Input",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/input_composition.md",
+      "grok_feature": "Bottom input box with multiline and history shortcuts",
+      "runie_feature": "Chat input box",
+      "acceptance_summary": "Typing, multiline (Shift+Enter/Ctrl+J), special chars/unicode, empty submit, cursor movement work.",
+      "dependencies": []
+    },
+    {
+      "id": "model_switching",
+      "title": "Model switching",
+      "category": "Model",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/model_switching.md",
+      "grok_feature": "/model picker with current model marked and recent models",
+      "runie_feature": "/model command and status indicator",
+      "acceptance_summary": "Model picker opens, arrows/Tab select, Enter confirms, status bar updates, current model is marked.",
+      "dependencies": [
+        "command_palette_navigation"
+      ]
+    },
+    {
+      "id": "tool_permissions",
+      "title": "Tool permission dialog",
+      "category": "Tools",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/tool_permissions.md",
+      "grok_feature": "Edit permission dialog with Always / session / once / deny options",
+      "runie_feature": "Permission dialog (Allow/Deny/Always Allow)",
+      "acceptance_summary": "Dialog shows 4 options, number keys 1-4 select, arrows/Tab navigate, persistence matches chosen scope.",
+      "dependencies": [
+        "command_palette_navigation"
+      ]
+    },
+    {
+      "id": "turn_lifecycle",
+      "title": "Turn lifecycle",
+      "category": "Core",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/turn_lifecycle.md",
+      "grok_feature": "User message, streaming response, thought blocks, cancel, turn completed marker",
+      "runie_feature": "Agent turn loop with mock provider",
+      "acceptance_summary": "Message appears, response streams, cancels with Ctrl+C, turn-complete marker shown, follow-up accepted.",
+      "dependencies": [
+        "core_mock_loop",
+        "input_composition"
+      ]
+    },
+    {
+      "id": "tool_output_rendering",
+      "title": "Tool output rendering",
+      "category": "Tools",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/tool_output_rendering.md",
+      "grok_feature": "Collapsible tool blocks with titles like 'List .', 'Creating file', output inside",
+      "runie_feature": "Tool result rendering",
+      "acceptance_summary": "Tool calls render as collapsible blocks with Grok-style headings; output/diffs visible; denied calls show denial.",
+      "dependencies": [
+        "tool_permissions",
+        "turn_lifecycle"
+      ]
+    },
+    {
+      "id": "status_bar",
+      "title": "Status bar",
+      "category": "Core",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/status_bar.md",
+      "grok_feature": "Top status shows model, token usage, state, timing",
+      "runie_feature": "Global status line above input",
+      "acceptance_summary": "Status line shows model, token/context usage, idle/waiting/completed/error state, and timing.",
+      "dependencies": [
+        "turn_lifecycle"
+      ]
+    },
+    {
+      "id": "core_mock_loop",
+      "title": "Core mock provider loop",
+      "category": "Core",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/core_mock_loop.md",
+      "grok_feature": "Basic ask/response flow",
+      "runie_feature": "mock/echo and mock fixtures",
+      "acceptance_summary": "Mock provider starts, echoes input, list_dir fixture invokes tool permission and shows directory contents.",
+      "dependencies": []
+    },
+    {
+      "id": "chat_scrollback",
+      "title": "Chat scrollback",
+      "category": "Navigation",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/chat_scrollback.md",
+      "grok_feature": "Tab focuses scrollback, arrows/PageUp/PageDown scroll, Esc returns to input",
+      "runie_feature": "Scrollback focus",
+      "acceptance_summary": "Tab moves focus to scrollback, arrows/pages scroll, Esc returns focus to input.",
+      "dependencies": [
+        "turn_lifecycle"
+      ]
+    },
+    {
+      "id": "session_management",
+      "title": "Session management",
+      "category": "Session",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/session_management.md",
+      "grok_feature": "/new, /save, /load, /resume, /sessions, rename",
+      "runie_feature": "Session commands",
+      "acceptance_summary": "New session clears chat, save/load/resume/list work, keyboard nav in session list.",
+      "dependencies": [
+        "core_mock_loop",
+        "command_palette_navigation"
+      ]
+    },
+    {
+      "id": "settings_dialog",
+      "title": "Settings dialog",
+      "category": "Settings",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/settings_dialog.md",
+      "grok_feature": "F2 settings modal with categories",
+      "runie_feature": "/settings dialog",
+      "acceptance_summary": "Settings opens, arrow/Tab navigate categories and fields, toggles update state, Esc closes.",
+      "dependencies": [
+        "command_palette_navigation"
+      ]
+    },
+    {
+      "id": "provider_management",
+      "title": "Provider management",
+      "category": "Provider",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/provider_management.md",
+      "grok_feature": "Add/disconnect providers, API key entry",
+      "runie_feature": "/provider dialog and onboarding",
+      "acceptance_summary": "Provider picker navigable, invalid key handled, provider can be added/disconnected.",
+      "dependencies": [
+        "startup_onboarding",
+        "settings_dialog"
+      ]
+    },
+    {
+      "id": "slash_commands",
+      "title": "Slash commands",
+      "category": "Input",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/slash_commands.md",
+      "grok_feature": "/ autocomplete with command descriptions",
+      "runie_feature": "/ command palette filter",
+      "acceptance_summary": "/ opens command palette filtered to commands, description shown, execution leaves no stray slash.",
+      "dependencies": [
+        "command_palette_navigation",
+        "input_composition"
+      ]
+    },
+    {
+      "id": "file_references",
+      "title": "File references",
+      "category": "Input",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/file_references.md",
+      "grok_feature": "@file.txt attaches files",
+      "runie_feature": "@ refs",
+      "acceptance_summary": "@ triggers file hints/completion, attached file appears in context, no @! support required.",
+      "dependencies": [
+        "input_composition"
+      ]
+    },
+    {
+      "id": "startup_onboarding",
+      "title": "Startup and onboarding",
+      "category": "Onboarding",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/startup_onboarding.md",
+      "grok_feature": "Welcome screen, project directory prompt, provider picker, Ctrl+Q quit",
+      "runie_feature": "Onboarding provider picker",
+      "acceptance_summary": "Onboarding dialog is keyboard navigable and blocking until configured; Ctrl+Q quits from idle.",
+      "dependencies": []
+    },
+    {
+      "id": "onboarding_close_guard",
+      "title": "Onboarding close guard",
+      "category": "Onboarding",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/onboarding_close_guard.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Blocking onboarding provider picker",
+      "acceptance_summary": "Esc, text quit commands, and Cancel do not close onboarding until a provider and model are selected; Ctrl+Q still quits.",
+      "dependencies": [
+        "startup_onboarding"
+      ]
+    },
+    {
+      "id": "black_box_replay_testing",
+      "title": "Black-box replay testing harness",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/black-box-replay-testing.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay provider + CLI/TUI black-box tests",
+      "acceptance_summary": "Standalone runie-tests crate builds runie from submodule, replays SSE fixtures through runie-cli and runie-tui, and runs deterministic smoke tests without API keys, network calls, or runie crate imports.",
+      "dependencies": []
+    },
+    {
+      "id": "black_box_replay_dsl",
+      "title": "Black-box replay test DSL",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/black-box-replay-dsl.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Ergonomic Rust DSL for CLI/TUI replay tests",
+      "acceptance_summary": "DSL exposes test_cli() / test_tui() builders, predicate assertions, multi-turn fixture chaining, and tmux pane capture with isolated temp HOME.",
+      "dependencies": [
+        "black_box_replay_testing"
+      ]
+    },
+    {
+      "id": "cli_replay_conversations",
+      "title": "CLI replay conversations",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/cli_replay_conversations.md",
+      "grok_feature": "N/A",
+      "runie_feature": "CLI driven by recorded SSE fixtures",
+      "acceptance_summary": "CLI tests replay single-turn, multi-turn, tool-call, and reasoning fixtures and assert on stdout, JSON output, and exit codes without API keys.",
+      "dependencies": [
+        "black_box_replay_testing"
+      ]
+    },
+    {
+      "id": "runie_tests_isolation_contract",
+      "title": "runie-tests isolation contract",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/runie-tests-isolation-contract.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Documented isolation boundary for runie-tests",
+      "acceptance_summary": "AGENTS.md, README.md, EXECUTE.md, docs/black-box-replay-testing.md, and task files state the isolation contract: no runie crate imports, no API keys at test runtime, temp HOME, sanitized XDG_*, and accepted dependencies (submodule, tmux, Rust toolchain).",
+      "dependencies": []
+    },
+    {
+      "id": "tui_replay_conversations",
+      "title": "TUI replay conversations",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/tui_replay_conversations.md",
+      "grok_feature": "N/A",
+      "runie_feature": "TUI driven by recorded SSE fixtures",
+      "acceptance_summary": "TUI tmux tests replay single-turn, multi-turn, tool-call, and reasoning fixtures and assert on streamed output, tool blocks, and thinking blocks.",
+      "dependencies": [
+        "black_box_replay_testing",
+        "turn_lifecycle",
+        "tool_output_rendering",
+        "input_composition"
+      ]
+    },
+    {
+      "id": "error_state_rendering",
+      "title": "Error state rendering",
+      "category": "Core",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/error_state_rendering.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Error banners and non-zero exit codes",
+      "acceptance_summary": "CLI and TUI render invalid API keys, provider errors, replay error fixtures, and missing fixtures gracefully without leaking secrets.",
+      "dependencies": [
+        "black_box_replay_testing",
+        "core_mock_loop",
+        "startup_onboarding",
+        "add_openai_error_sse_fixtures",
+        "add_anthropic_error_sse_fixtures",
+        "wire_error_sse_fixtures_to_cli_replay_tests",
+        "wire_error_sse_fixtures_to_tui_replay_tests",
+        "add_http_status_error_replay_support_and_tests",
+        "add_error_recovery_and_retry_blackbox_tests"
+      ]
+    },
+    {
+      "id": "recorded_trace_coverage",
+      "title": "Recorded trace coverage",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/recorded-trace-coverage.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Full fixture-driven CLI/TUI black-box coverage",
+      "acceptance_summary": "All 131 recorded SSE fixtures under runie-tests/fixtures/ are wired by CLI and TUI replay tests; fixture-coverage reports 0 unwired fixtures.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "error_state_rendering",
+        "black_box_replay_dsl",
+        "add_openai_error_sse_fixtures",
+        "add_anthropic_error_sse_fixtures",
+        "wire_error_sse_fixtures_to_cli_replay_tests",
+        "wire_error_sse_fixtures_to_tui_replay_tests",
+        "add_http_status_error_replay_support_and_tests",
+        "add_error_recovery_and_retry_blackbox_tests"
+      ]
+    },
+    {
+      "id": "wire_anthropic_stream_error_mid_response",
+      "title": "Wire Anthropic stream_error_mid_response fixture",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/wire-anthropic-stream-error-mid-response.md",
+      "grok_feature": "N/A",
+      "runie_feature": "CLI replay coverage for anthropic/stream_error_mid_response.sse",
+      "acceptance_summary": "tests/cli_replay.rs contains anthropic_stream_error_mid_response_renders, referencing fixtures/anthropic/stream_error_mid_response.sse, asserting non-zero exit and readable error output; fixture-coverage reports 0 unwired fixtures.",
+      "dependencies": [
+        "black_box_replay_testing",
+        "cli_replay_dsl",
+        "add_anthropic_error_sse_fixtures"
+      ]
+    },
+    {
+      "id": "add_openai_error_sse_fixtures",
+      "title": "Add OpenAI-compatible error SSE fixtures",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/add-openai-error-sse-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Recorded SSE error fixtures for OpenAI protocol",
+      "acceptance_summary": "All OpenAI-protocol error fixtures (rate limit, server error, stream error, context length, model not found, invalid key) exist under runie-tests/fixtures/openai/ and are parseable.",
+      "dependencies": [
+        "black_box_replay_testing",
+        "cli_replay_conversations",
+        "tui_replay_conversations"
+      ]
+    },
+    {
+      "id": "add_anthropic_error_sse_fixtures",
+      "title": "Add Anthropic-compatible error SSE fixtures",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/add-anthropic-error-sse-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Recorded SSE error fixtures for Anthropic protocol",
+      "acceptance_summary": "All Anthropic-protocol error fixtures (rate limit, server error, stream error, context length, invalid key) exist under runie-tests/fixtures/anthropic/ and are parseable.",
+      "dependencies": [
+        "black_box_replay_testing",
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "add_openai_error_sse_fixtures"
+      ]
+    },
+    {
+      "id": "wire_error_sse_fixtures_to_cli_replay_tests",
+      "title": "Wire error SSE fixtures to CLI replay tests",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/wire-error-sse-fixtures-to-cli-replay-tests.md",
+      "grok_feature": "N/A",
+      "runie_feature": "CLI black-box tests for provider SSE errors",
+      "acceptance_summary": "tests/cli_replay.rs covers every OpenAI and Anthropic SSE error fixture with non-zero exit and readable error assertions, including anthropic_stream_error_mid_response_renders.",
+      "dependencies": [
+        "add_openai_error_sse_fixtures",
+        "add_anthropic_error_sse_fixtures",
+        "cli_replay_dsl"
+      ]
+    },
+    {
+      "id": "wire_error_sse_fixtures_to_tui_replay_tests",
+      "title": "Wire error SSE fixtures to TUI replay tests",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/wire-error-sse-fixtures-to-tui-replay-tests.md",
+      "grok_feature": "N/A",
+      "runie_feature": "TUI black-box tests for provider SSE errors",
+      "acceptance_summary": "tests/tui_replay_conversations.rs covers every OpenAI and Anthropic SSE error fixture with pane assertions and recovery tests.",
+      "dependencies": [
+        "add_openai_error_sse_fixtures",
+        "add_anthropic_error_sse_fixtures",
+        "tui_dsl_polling_waits"
+      ]
+    },
+    {
+      "id": "add_http_status_error_replay_support_and_tests",
+      "title": "Add HTTP-status error replay support and black-box tests",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/add-http-status-error-replay-support-and-tests.md",
+      "grok_feature": "N/A",
+      "runie_feature": "HTTP-level provider error simulation in replay tests",
+      "acceptance_summary": "Replay provider can simulate 429/500/502/503/401/403 HTTP responses for both protocols; CLI and TUI tests cover each status.",
+      "dependencies": [
+        "black_box_replay_testing",
+        "cli_replay_dsl",
+        "tui_dsl_polling_waits",
+        "add_openai_error_sse_fixtures"
+      ]
+    },
+    {
+      "id": "add_error_recovery_and_retry_blackbox_tests",
+      "title": "Add error recovery and retry behavior black-box tests",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/add-error-recovery-and-retry-blackbox-tests.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Verified retry and recovery behavior in CLI/TUI",
+      "acceptance_summary": "Black-box tests prove transient errors are retried with backoff, non-retryable errors fail fast, and the TUI accepts input after an error.",
+      "dependencies": [
+        "add_openai_error_sse_fixtures",
+        "add_anthropic_error_sse_fixtures",
+        "wire_error_sse_fixtures_to_cli_replay_tests",
+        "wire_error_sse_fixtures_to_tui_replay_tests"
+      ]
+    },
+    {
+      "id": "remove_test_sleep",
+      "title": "Remove test sleep calls",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/remove-test-sleep.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Deterministic black-box waits",
+      "acceptance_summary": "No sleep() calls remain in tests or TUI DSL; all waits are state-based.",
+      "dependencies": [
+        "tui_dsl_polling_waits",
+        "dsl_harness_timeouts"
+      ]
+    },
+    {
+      "id": "tui_replay_fixtures",
+      "title": "Convert TUI replay tests to real fixtures",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/tui-replay-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "TUI replay fixture coverage",
+      "acceptance_summary": "tests/tui_replay_conversations.rs uses recorded SSE fixtures for all scenarios instead of mock echo responses.",
+      "dependencies": [
+        "black_box_replay_dsl",
+        "tui_dsl_polling_waits",
+        "dsl_permission_dialog_helpers"
+      ]
+    },
+    {
+      "id": "cli_replay_dsl",
+      "title": "Unify CLI replay tests around the DSL",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/cli-replay-dsl.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Fluent CLI replay DSL",
+      "acceptance_summary": "CLI replay and error tests use test_cli().fixture(...).args(...).assert() and no longer spawn processes manually.",
+      "dependencies": [
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "tui_dsl_polling_waits",
+      "title": "TUI DSL polling waits",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/tui-dsl-polling-waits.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Fast polling waits in TUI DSL",
+      "acceptance_summary": "TUI DSL replaces sleeps with wait_for_text, wait_for_idle, and wait_for_no_text polling helpers.",
+      "dependencies": [
+        "black_box_replay_dsl",
+        "dsl_harness_timeouts"
+      ]
+    },
+    {
+      "id": "dsl_permission_dialog_helpers",
+      "title": "DSL permission dialog helpers",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/dsl-permission-dialog-helpers.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Permission dialog DSL helpers",
+      "acceptance_summary": "DSL provides request_tool_permission, expect_permission_dialog, allow/deny helpers and AGENTS.md documents them.",
+      "dependencies": [
+        "tool_permissions",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "dsl_response_assertions",
+      "title": "DSL response assertions",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/dsl-response-assertions.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Shared response assertion helper",
+      "acceptance_summary": "response_contains / expect_response helper exists in DSL and duplicated helpers are removed from test files.",
+      "dependencies": [
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "dsl_selected_row_helpers",
+      "title": "DSL selected row helpers",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/dsl-selected-row-helpers.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Selected row DSL helpers",
+      "acceptance_summary": "DSL provides expect_selected_row and expect_selection_glyphs helpers for dialogs and pickers.",
+      "dependencies": [
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "consolidate_redundant_tests",
+      "title": "Consolidate redundant tests",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/consolidate-redundant-tests.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Leaner black-box test suite",
+      "acceptance_summary": "Duplicate echo, permission, turn lifecycle, and follow-up tests are merged into canonical files without losing coverage. Sequential-submit tests merged.",
+      "dependencies": [
+        "dsl_permission_dialog_helpers",
+        "dsl_response_assertions"
+      ]
+    },
+    {
+      "id": "status_bar_assertions",
+      "title": "Strengthen status-bar assertions",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/status-bar-assertions.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Concrete status bar tests",
+      "acceptance_summary": "Status-bar tests assert on specific model name (mock/echo), response appearing, timing format (digits+unit), and model remains visible. All tests use MEDIUM_TIMEOUT.",
+      "dependencies": [
+        "turn_lifecycle"
+      ]
+    },
+    {
+      "id": "centralize_test_timeouts",
+      "title": "Centralize test timeouts",
+      "category": "Testing",
+      "priority": "P2",
+      "status": "done",
+      "path": "tasks/centralize-test-timeouts.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Consistent test timeouts",
+      "acceptance_summary": "Shared timeout constants (SHORT/MEDIUM/LONG/VERY_LONG) replace magic durations in all tests. Default TimeoutConfig: startup=10s, response=5s, idle=1s, dialog=3s.",
+      "dependencies": [
+        "black_box_replay_dsl",
+        "dsl_harness_timeouts"
+      ]
+    },
+    {
+      "id": "reorganize_input_composition_tests",
+      "title": "Reorganize input composition tests",
+      "category": "Testing",
+      "priority": "P2",
+      "status": "done",
+      "path": "tasks/reorganize-input-composition-tests.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Input composition tests in dedicated file",
+      "acceptance_summary": "Input composition tests live in tests/input_composition.rs. mock_echo.rs retains only cursor-editing tests (Ctrl+K). Duplicates removed.",
+      "dependencies": [
+        "input_composition"
+      ]
+    },
+    {
+      "id": "tighten_error_assertions",
+      "title": "Tighten error state assertions",
+      "category": "Testing",
+      "priority": "P2",
+      "status": "done",
+      "path": "tasks/tighten-error-assertions.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Specific error assertions",
+      "acceptance_summary": "Sequential-submit tests merged into sequential_submits_produce_distinct_responses. Error patterns tightened from broad alternations to specific strings.",
+      "dependencies": [
+        "cli_replay_dsl",
+        "tui_dsl_polling_waits"
+      ]
+    },
+    {
+      "id": "rename_test_files",
+      "title": "Rename misleading test files",
+      "category": "Testing",
+      "priority": "P2",
+      "status": "done",
+      "path": "tasks/rename-test-files.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Accurate test file names",
+      "acceptance_summary": "Test file names reflect whether they use mock or replay fixtures.",
+      "dependencies": [
+        "tui_replay_fixtures",
+        "cli_replay_dsl"
+      ]
+    },
+    {
+      "id": "remove_duplicated_fixture_helpers",
+      "title": "Remove duplicated fixture and temp-home helpers",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/remove-duplicated-fixture-helpers.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Shared fixture/temp-home helpers",
+      "acceptance_summary": "No local fixture_path() or temp_home() helpers remain in tests; all use DSL helpers.",
+      "dependencies": [
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "dsl_harness_timeouts",
+      "title": "DSL harness timeouts",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/dsl-harness-timeouts.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Unified timeout layer in black-box DSL",
+      "acceptance_summary": "Every blocking DSL operation has a default timeout from a single TimeoutConfig; no test can hang forever and timeouts report the operation plus last pane content.",
+      "dependencies": [
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "improve_test_execution_speed",
+      "title": "Improve test execution speed",
+      "category": "Testing",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/improve-test-execution-speed.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Faster black-box test suite",
+      "acceptance_summary": "Session reuse via shared_mock_app() and static OnceLock per test file; binary path caching with OnceLock; tight TimeoutConfig defaults; no sleep() calls; pre-built binary detection via RUNIE_BIN/RUNIE_CLI_BIN.",
+      "dependencies": [
+        "dsl_harness_timeouts",
+        "tui_dsl_polling_waits",
+        "remove_test_sleep"
+      ]
+    },
+    {
+      "id": "newline_key_aliases",
+      "title": "Newline key aliases",
+      "category": "Input",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/newline-key-aliases.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Ctrl+Enter / Alt+Enter newline",
+      "acceptance_summary": "Ctrl+Enter and Alt+Enter insert a newline in the chat input while existing newline bindings continue to work.",
+      "dependencies": [
+        "input_composition"
+      ]
+    },
+    {
+      "id": "undo_redo_commands",
+      "title": "Undo and redo commands",
+      "category": "Core",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/undo-redo-commands.md",
+      "grok_feature": "N/A",
+      "runie_feature": "/undo and /redo slash commands",
+      "acceptance_summary": "/undo reverts the last turn and its file edits; /redo re-applies a previously undone turn. 12 tests covering palette, basic undo/redo, edge cases, and palette execution.",
+      "dependencies": [
+        "tool_permissions",
+        "turn_lifecycle"
+      ]
+    },
+    {
+      "id": "dialog_numeric_selection",
+      "title": "Dialog numeric selection",
+      "category": "Navigation",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/dialog-numeric-selection.md",
+      "grok_feature": "N/A",
+      "runie_feature": "1-9 direct select in pickers",
+      "acceptance_summary": "Pressing 1-4 in permission dialogs selects options directly; model picker does not use number selection; invalid digits (0, 9) are ignored.",
+      "dependencies": [
+        "tool_permissions",
+        "model_switching"
+      ]
+    },
+    {
+      "id": "at_mention_improvements",
+      "title": "@-mention ranking and fallback",
+      "category": "Input",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/at-mention-improvements.md",
+      "grok_feature": "N/A",
+      "runie_feature": "@ file reference improvements",
+      "acceptance_summary": "@-mention completion boosts recently used files, shows a clear empty state, and refreshes asynchronously when fff results arrive. 10 tests.",
+      "dependencies": [
+        "file_references"
+      ]
+    },
+    {
+      "id": "approval_dialog_preview_feedback",
+      "title": "Approval dialog preview and feedback",
+      "category": "Tools",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/approval-dialog-preview-feedback.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Ctrl+E preview and reject feedback",
+      "acceptance_summary": "Permission dialogs support Ctrl+E full-screen preview and a reject-with-feedback option. 9 tests.",
+      "dependencies": [
+        "tool_permissions"
+      ]
+    },
+    {
+      "id": "dialog_navigation",
+      "title": "Dialog navigation",
+      "category": "Navigation",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/dialog_navigation.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Consistent keyboard navigation across all dialog types",
+      "acceptance_summary": "All 15 dialog navigation scenarios (form tabs, list panel arrows/Tab, UP recalls history in empty input, UP does not affect chat in dialogs) implemented in tests/dialog_navigation.rs. Session reuse intentionally disabled in this file.",
+      "dependencies": []
+    },
+    {
+      "id": "visible_message_queue",
+      "title": "Visible message queue indicator",
+      "category": "Core",
+      "priority": "P0",
+      "status": "done",
+      "path": "tasks/visible-message-queue.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Queued message count in status bar",
+      "acceptance_summary": "The status bar shows the number of queued follow-up messages during an active turn. 9 tests.",
+      "dependencies": [
+        "turn_lifecycle"
+      ]
+    },
+    {
+      "id": "automatic_config_reload",
+      "title": "Automatic config reload",
+      "category": "System",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/automatic-config-reload.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Watch config files and reload automatically",
+      "acceptance_summary": "Runie reloads keybindings, theme, and provider config when config files change, without requiring /reload. 14 tests.",
+      "dependencies": [
+        "input_composition",
+        "command_palette_navigation"
+      ]
+    },
+    {
+      "id": "status_command",
+      "title": "Status command",
+      "category": "Core",
+      "priority": "P1",
+      "status": "blocked",
+      "path": "tasks/status-command.md",
+      "grok_feature": "N/A",
+      "runie_feature": "/status dialog panel",
+      "acceptance_summary": "/status opens a dialog showing current model, provider, thinking level, permission mode, trust state, queued count, and context usage. Tests exist but are #[ignore] pending runie feature implementation.",
+      "dependencies": [
+        "model_switching",
+        "auto_approve_mode"
+      ]
+    },
+    {
+      "id": "tui_history_loaded_handling",
+      "title": "TUI history-loaded event handling",
+      "category": "Navigation",
+      "priority": "P1",
+      "status": "blocked",
+      "path": "tasks/tui-history-loaded-handling.md",
+      "grok_feature": "N/A",
+      "runie_feature": "UiActor handles Event::HistoryLoaded",
+      "acceptance_summary": "UiActor branches on Event::HistoryLoaded and forwards it to InputActor as InputMsg::HistoryLoaded. up_arrow_recalls_persisted_history_in_empty_input passes.",
+      "dependencies": [
+        "session_management"
+      ]
+    },
+    {
+      "id": "compact_command",
+      "title": "Compact command",
+      "category": "Core",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/compact-command.md",
+      "grok_feature": "N/A",
+      "runie_feature": "/compact slash command",
+      "acceptance_summary": "/compact summarizes older turns to reduce context usage, with a preview and confirmation step. 8 tests.",
+      "dependencies": [
+        "turn_lifecycle",
+        "status_command"
+      ]
+    },
+    {
+      "id": "session_title_export",
+      "title": "Session title and markdown export",
+      "category": "Session",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/session-title-export.md",
+      "grok_feature": "N/A",
+      "runie_feature": "/title and /export-md",
+      "acceptance_summary": "/title renames the current session; /export-md exports the transcript as Markdown. 10 tests.",
+      "dependencies": [
+        "status_command"
+      ]
+    },
+    {
+      "id": "auto_approve_mode",
+      "title": "Auto-approve mode",
+      "category": "Tools",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/auto-approve-mode.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Manual and auto permission modes",
+      "acceptance_summary": "A two-level permission mode (manual/auto) is surfaced in the status bar; auto mode approves regular tools automatically with confirmation. 7 tests.",
+      "dependencies": [
+        "tool_permissions",
+        "status_command"
+      ]
+    },
+    {
+      "id": "large_paste_placeholder",
+      "title": "Large-paste placeholder",
+      "category": "Input",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/large-paste-placeholder.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Collapse large pastes into placeholders",
+      "acceptance_summary": "Large pastes collapse into a [Pasted Text: N lines] placeholder; second paste expands; send expands automatically. 11 tests.",
+      "dependencies": [
+        "input_composition"
+      ]
+    },
+    {
+      "id": "context_aware_tool_toggle",
+      "title": "Context-aware tool output toggle",
+      "category": "Navigation",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/context-aware-tool-toggle.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Ctrl+O toggles tool output contextually",
+      "acceptance_summary": "Ctrl+O toggles the focused tool output block when a tool is selected, otherwise toggles global tool-output density. 9 tests.",
+      "dependencies": [
+        "tool_output_rendering",
+        "chat_scrollback"
+      ]
+    },
+    {
+      "id": "single_binary_cli_mode",
+      "title": "Single binary for CLI and TUI modes",
+      "category": "Architecture",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/single-binary-cli-mode.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Unified runie binary",
+      "acceptance_summary": "A single binary launches the TUI by default and enters CLI mode when non-interactive flags are provided. 8 tests.",
+      "dependencies": [
+        "cli_replay_dsl",
+        "configured_startup"
+      ]
+    },
+    {
+      "id": "wire_anthropic_minimax_remaining_fixtures",
+      "title": "Wire remaining Anthropic MiniMax fixtures",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/wire-anthropic-minimax-remaining-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay coverage for MiniMax m2.5, m2.7, m3 fixtures",
+      "acceptance_summary": "All MiniMax fixtures (m2.5 simple/tool, m2.7 multi_tool/reasoning, m3 multi_tool + all multi-turn) are wired by CLI and TUI replay tests.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "wire_anthropic_qwen_remaining_fixtures",
+      "title": "Wire remaining Anthropic Qwen fixtures",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/wire-anthropic-qwen-remaining-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay coverage for Qwen3.5-plus, Qwen3.6-plus, Qwen3.7-max, Qwen3.7-plus fixtures",
+      "acceptance_summary": "All Qwen fixtures (qwen3.5_plus, qwen3.6_plus, qwen3.7_max all variants, qwen3.7_plus all variants) are wired by CLI and TUI replay tests.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "wire_openai_deepseek_remaining_multiturn_fixtures",
+      "title": "Wire remaining OpenAI DeepSeek multi-turn fixtures",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/wire-openai-deepseek-remaining-multiturn-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay coverage for DeepSeek v4 flash/pro multi-turn fixtures",
+      "acceptance_summary": "All DeepSeek v4 flash and v4 pro multi-turn fixtures (clarification, math_chain, weather_chain, multi_tool_then_compare, read_summarize_followup, reasoning_followup) are wired.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "wire_openai_glm_remaining_fixtures",
+      "title": "Wire remaining OpenAI GLM fixtures",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/wire-openai-glm-remaining-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay coverage for GLM 5, 5.1, 5.2 fixtures",
+      "acceptance_summary": "All GLM fixtures (glm_5, glm_5.1, glm_5.2 all variants including multi-turn) are wired by CLI and TUI replay tests.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "wire_openai_kimi_remaining_fixtures",
+      "title": "Wire remaining OpenAI Kimi fixtures",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/wire-openai-kimi-remaining-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay coverage for Kimi k2.6 and k2.7-code fixtures",
+      "acceptance_summary": "All Kimi fixtures (k2.6 tool/reasoning/multi_tool + multi-turn, k2.7_code simple/tool) are wired by CLI and TUI replay tests.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "wire_openai_mimo_remaining_fixtures",
+      "title": "Wire remaining OpenAI Mimo fixtures",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/wire-openai-mimo-remaining-fixtures.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Replay coverage for Mimo v2.5 and v2.5-pro fixtures",
+      "acceptance_summary": "All Mimo fixtures (v2.5 simple/tool/multi_tool/reasoning, v2.5_pro simple/tool) are wired by CLI and TUI replay tests.",
+      "dependencies": [
+        "cli_replay_conversations",
+        "tui_replay_conversations",
+        "black_box_replay_dsl"
+      ]
+    },
+    {
+      "id": "fixture_coverage_report",
+      "title": "Fixture coverage report",
+      "category": "Testing",
+      "priority": "P2",
+      "status": "done",
+      "path": "tasks/fixture-coverage-report.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Fixture-to-test coverage report",
+      "acceptance_summary": "A `just fixture-coverage` command lists every SSE fixture and the test(s) that cover it, outputs Markdown and JSON reports, and groups coverage by protocol, model, scenario, and error category.",
+      "dependencies": [
+        "recorded_trace_coverage",
+        "black_box_replay_testing"
+      ]
+    },
+    {
+      "id": "unify_replay_tui_harness",
+      "title": "Unify replay TUI harness with AppTest",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/unify-replay-tui-harness.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Shared session/wait logic for mock and replay TUI tests",
+      "acceptance_summary": "TuiTest in src/tui.rs delegates tmux session lifecycle, key sending, and waits to the AppTest/TmuxSession layer; single-fixture replay tests share a session per test file and all replay TUI tests pass.",
+      "dependencies": [
+        "black_box_replay_dsl",
+        "tui_replay_conversations",
+        "tui_dsl_polling_waits"
+      ]
+    },
+    {
+      "id": "per_test_tmux_sockets",
+      "title": "Per-test tmux sockets",
+      "category": "Testing",
+      "priority": "P1",
+      "status": "done",
+      "path": "tasks/per-test-tmux-sockets.md",
+      "grok_feature": "N/A",
+      "runie_feature": "Isolated tmux socket per test session",
+      "acceptance_summary": "Every tmux command uses a per-test `-S <socket>` pointing to /tmp/runie-tests-<pid>/socket/<name>.sock; socket directory is cleaned by the justfile before each run, solving the std::process::exit static-dtor leak. TmuxSession, MockSessionCache::Drop, AppTest::kill_session, and AppTest::Drop all pass the socket path.",
+      "dependencies": [
+        "improve_test_execution_speed",
+        "unify_replay_tui_harness"
+      ]
+    }
+  ]
+}

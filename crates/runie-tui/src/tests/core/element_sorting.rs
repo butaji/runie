@@ -23,13 +23,22 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
             runie_core::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
             runie_core::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
+            runie_core::view::Element::AnthropicThinking { redacted: true, .. } => "Redacted".to_string(),
+            runie_core::view::Element::AnthropicThinking { redacted: false, .. } => "Thinking".to_string(),
             runie_core::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
             runie_core::view::Element::ToolDone { .. } => "ToolDone".to_string(),
             runie_core::view::Element::ToolSummary { .. } => "ToolSum".to_string(),
+            runie_core::view::Element::ToolConfirmation { .. } => "Confirm".to_string(),
             runie_core::view::Element::ContextGroup { .. } => "Context".to_string(),
             runie_core::view::Element::SubagentRow { .. } => "Subagent".to_string(),
             runie_core::view::Element::TurnComplete { .. } => "Turn".to_string(),
             runie_core::view::Element::Spacer { .. } => "Spacer".to_string(),
+            runie_core::view::Element::Image { .. } => "Image".to_string(),
+            runie_core::view::Element::DataPart { .. } => "Data".to_string(),
+            runie_core::view::Element::MarkdownTable { .. } => "Table".to_string(),
+            runie_core::view::Element::DiffOutput { .. } => "Diff".to_string(),
+            runie_core::view::Element::WebSearchCall { .. } => "Search".to_string(),
+            runie_core::view::Element::AnsiStyled { .. } => "ANSI".to_string(),
         })
         .collect()
 }

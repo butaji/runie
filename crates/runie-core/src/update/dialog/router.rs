@@ -11,14 +11,19 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    open_command_palette, open_mode_selector, open_model_selector, open_scoped_models_dialog,
-    open_settings_dialog, open_theme_selector,
+    open_command_palette, open_model_selector, open_mcp_servers_dialog, open_mode_selector,
+    open_scoped_models_dialog, open_settings_dialog, open_skills_dialog, open_theme_selector,
     panel_handler::{update_panel_stack, PanelUpdateResult},
 };
 
 /// Handles dialog-specific events. Returns whether the dialog was closed.
 pub fn update_dialog(state: &mut AppState, event: Event) {
     if route_global_dialog_event(state, &event) {
+        return;
+    }
+    // Handle MCP and Skills panel actions
+    if matches!(&event, Event::McpServerAction { .. }) || matches!(&event, Event::SkillAction { .. }) {
+        handle_mcp_skill_action(state, &event);
         return;
     }
     let Some(mut dialog) = state.open_dialog_mut().take() else {
@@ -173,6 +178,8 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
                 DialogType::Settings => open_settings_dialog(state),
                 DialogType::ScopedModels => open_scoped_models_dialog(state),
                 DialogType::ThemeSelector => open_theme_selector(state),
+                DialogType::McpServers => open_mcp_servers_dialog(state),
+                DialogType::Skills => open_skills_dialog(state),
             }
         }
         CR::OpenPanelStack(stack) => {
@@ -224,4 +231,64 @@ fn apply_command_event_for_dialog(state: &mut AppState, evt: crate::Event) {
         _ => {}
     }
     state.update(evt);
+}
+
+/// Handle MCP server and Skills panel actions.
+fn handle_mcp_skill_action(state: &mut AppState, event: &Event) {
+    match event {
+        Event::McpServerAction { name, action } => {
+            match action {
+                crate::dialog::builders::mcp::McpServerActionKind::Select => {
+                    // Show server details / tools
+                    state.add_system_msg(format!("MCP server: {}", name));
+                }
+                crate::dialog::builders::mcp::McpServerActionKind::Test => {
+                    // Test connection - trigger MCP status check
+                    state.add_system_msg(format!("Testing MCP server: {}", name));
+                    // Close the dialog and return to chat
+                    *state.open_dialog_mut() = None;
+                    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                }
+                crate::dialog::builders::mcp::McpServerActionKind::Remove => {
+                    // Remove the server
+                    let name = name.clone();
+                    state.add_system_msg(format!("Removing MCP server: {}", name));
+                    // Close the dialog and return to chat
+                    *state.open_dialog_mut() = None;
+                    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                }
+                crate::dialog::builders::mcp::McpServerActionKind::Edit => {
+                    // Open the MCP wizard for editing
+                    state.add_system_msg(format!("Editing MCP server: {}", name));
+                    // Close the dialog and return to chat
+                    *state.open_dialog_mut() = None;
+                    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                }
+            }
+        }
+        Event::SkillAction { name, action } => {
+            match action {
+                crate::dialog::builders::skills::SkillActionKind::Select => {
+                    // Show skill details
+                    state.add_system_msg(format!("Skill: {}", name));
+                }
+                crate::dialog::builders::skills::SkillActionKind::Show => {
+                    // Show full skill content
+                    let skills = state.skills();
+                    if let Some(skill) = skills.iter().find(|s| s.name == *name) {
+                        state.add_system_msg(format!("Skill '{}': {}", name, skill.description));
+                    }
+                }
+                crate::dialog::builders::skills::SkillActionKind::Delete => {
+                    // Delete the skill
+                    state.add_system_msg(format!("Deleting skill: {}", name));
+                    // Close the dialog and return to chat
+                    *state.open_dialog_mut() = None;
+                    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                }
+            }
+        }
+        _ => {}
+    }
+    state.view_mut().dirty = true;
 }

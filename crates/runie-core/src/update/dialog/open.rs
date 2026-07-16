@@ -1,7 +1,9 @@
 //! Functions that open specific dialogs.
 
 use crate::commands::{DialogKind, DialogState};
-use crate::dialog::builders::{command_palette, model_selector, scoped_models, session_tree};
+use crate::dialog::builders::{
+    command_palette, model_selector, mcp_servers, scoped_models, session_tree, skills,
+};
 use crate::model::{AppState, InputReceiver};
 
 use super::build_file_picker_panel;
@@ -289,4 +291,41 @@ pub(crate) fn refresh_file_picker_search(state: &mut AppState, query: &str) {
 /// Opens the file picker without any filter (shows all files).
 pub fn open_at_file_picker_all(state: &mut AppState) {
     open_at_file_picker(state, None);
+}
+
+/// Opens the MCP servers management dialog.
+pub fn open_mcp_servers_dialog(state: &mut AppState) {
+    let servers = state.mcp_servers().to_vec();
+
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::McpServers,
+        panels: mcp_servers(servers),
+    });
+}
+
+/// Opens the skills management dialog.
+pub fn open_skills_dialog(state: &mut AppState) {
+    use crate::dialog::builders::SkillRow;
+
+    let skill_rows: Vec<SkillRow> = state
+        .skills()
+        .into_iter()
+        .map(|s| SkillRow {
+            name: s.name.clone(),
+            description: s.description.clone(),
+            user_invocable: s.user_invocable,
+            file_path: s.file_path.to_string(),
+        })
+        .collect();
+
+    let v = state.view_mut();
+    v.input_receiver = InputReceiver::Dialog;
+    v.dirty = true;
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::Skills,
+        panels: skills(skill_rows),
+    });
 }

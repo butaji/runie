@@ -22,6 +22,8 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         EventCategory::Command => super::command::handle_command_event(state, event),
         EventCategory::LoginFlow => crate::login_flow::login_flow_event(state, event),
         EventCategory::Permission => super::permission::permission_event(state, event),
+        EventCategory::Question => super::question::question_event(state, event),
+        EventCategory::Goal => super::system::handle_goal_event(state, event),
         EventCategory::IO => {
             let _ = handle_io_events(state, &event);
         }
@@ -531,6 +533,8 @@ fn is_toggle_dialog_event(event: &crate::Event) -> bool {
                 | crate::Event::ToggleScopedModelsDialog
                 | crate::Event::ScopedModelEnableAll
                 | crate::Event::ScopedModelDisableAll
+                | crate::Event::ToggleMcpServersDialog
+                | crate::Event::ToggleSkillsDialog
         )
 }
 

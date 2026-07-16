@@ -8,14 +8,105 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use anyhow::Result;
+use futures::{SinkExt, StreamExt};
 use rmcp::model::Tool;
 use rmcp::transport::TokioChildProcess;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 
+#[cfg(feature = "mcp")]
+use {
+    futures::FutureExt,
+    rmcp::service::{RoleClient, RxJsonRpcMessage, TxJsonRpcMessage},
+    std::future::Future,
+    tokio_tungstenite::{connect_async, tungstenite::Message},
+};
+
 use crate::config::McpServer;
 use crate::mcp::cache::{CachedToolSchema, SchemaCache};
+
+// ---------------------------------------------------------------------------
+// WebSocket transport — implements rmcp's Transport trait directly
+// ---------------------------------------------------------------------------
+
+/// Error type for the WebSocket transport.
+#[cfg(feature = "mcp")]
+#[derive(Debug, thiserror::Error)]
+pub enum WsTransportError {
+    #[error("WebSocket error: {0}")]
+    Tungstenite(#[from] tokio_tungstenite::tungstenite::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("JSON-RPC error: {0}")]
+    Json(#[from] serde_json::Error),
+}
+
+/// WebSocket transport that implements rmcp's `Transport<RoleClient>` trait.
+///
+/// This wraps a tokio_tungstenite WebSocket stream and handles JSON-RPC
+/// message serialization/deserialization automatically.
+#[cfg(feature = "mcp")]
+pub struct WsMcpTransport {
+    sink: std::sync::Arc<tokio::sync::Mutex<futures::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, Message>>>,
+    stream: futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+}
+
+#[cfg(feature = "mcp")]
+impl WsMcpTransport {
+    /// Connect to a WebSocket URL and return a transport ready for `rmcp::serve_client()`.
+    pub async fn connect(url: &str) -> Result<Self, WsTransportError> {
+        let (ws, _) = connect_async(url).await?;
+        let (sink, stream) = ws.split();
+        Ok(Self {
+            sink: std::sync::Arc::new(tokio::sync::Mutex::new(sink)),
+            stream,
+        })
+    }
+}
+
+#[cfg(feature = "mcp")]
+impl rmcp::transport::Transport<RoleClient> for WsMcpTransport {
+    type Error = WsTransportError;
+
+    fn send(
+        &mut self,
+        item: TxJsonRpcMessage<RoleClient>,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + 'static {
+        let text = serde_json::to_string(&item).unwrap_or_default();
+        let msg = Message::Text(text.into());
+        let sink = self.sink.clone();
+        async move {
+            let mut write = sink.lock().await;
+            use futures::SinkExt;
+            write.send(msg).await.map_err(WsTransportError::from)
+        }
+    }
+
+    fn receive(&mut self) -> impl Future<Output = Option<RxJsonRpcMessage<RoleClient>>> + Send {
+        use futures::StreamExt;
+        let this_ptr = self as *mut WsMcpTransport as usize;
+        async move {
+            // SAFETY: we own &mut self exclusively in this future.
+            let this = unsafe { &mut *(this_ptr as *mut WsMcpTransport) };
+            let mut stream = std::pin::Pin::new(&mut this.stream);
+            let opt_msg = stream.next().await;
+            let opt_bytes = opt_msg.and_then(|r| r.ok()).map(|msg| msg.into_data());
+            let bytes = opt_bytes?;
+            let text = std::str::from_utf8(&bytes).ok()?;
+            serde_json::from_str::<RxJsonRpcMessage<RoleClient>>(text).ok()
+        }
+    }
+
+    fn close(&mut self) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        let sink = self.sink.clone();
+        async move {
+            let mut write = sink.lock().await;
+            use futures::SinkExt;
+            write.close().await.map_err(WsTransportError::from)
+        }
+    }
+}
 
 /// MCP tool representation with source server.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,16 +299,120 @@ impl McpConnectionManager {
 
                 tracing::info!("Starting MCP server via {}: {}", config.transport, url);
 
-                // HTTP/SSE transport not yet implemented - create empty tools
-                let dummy_token = CancellationToken::new();
-                let handle = ServerHandle::new(dummy_token);
+                // Use StreamableHttpClientTransport for HTTP/SSE (reqwest-backed)
+                // Note: from_uri requires the transport-streamable-http-client-reqwest feature
+                use rmcp::transport::StreamableHttpClientTransport;
+                let transport = StreamableHttpClientTransport::from_uri(url.as_str());
 
-                let tools: Vec<CachedToolSchema> = Vec::new();
+                let client = rmcp::serve_client((), transport).await?;
+                let _client_token = client.cancellation_token();
+
+                // Get tool list
+                tracing::info!("Fetching tools from MCP server: {}", name);
+                let rmcp_tools = client.list_all_tools().await?;
+
+                // Convert to CachedToolSchema for caching
+                let tools: Vec<CachedToolSchema> = rmcp_tools
+                    .iter()
+                    .map(|t| {
+                        let desc = t
+                            .description
+                            .as_ref()
+                            .map(|d| d.to_string())
+                            .unwrap_or_default();
+                        CachedToolSchema {
+                            name: t.name.to_string(),
+                            description: desc,
+                            input_schema: serde_json::to_value(&t.input_schema).unwrap_or_default(),
+                        }
+                    })
+                    .collect();
+
+                // Cache the tools
                 self.cache.put(&name, &config, tools).await?;
+
+                // Convert to McpTool for runtime use
+                let mcp_tools: Vec<McpTool> = rmcp_tools
+                    .into_iter()
+                    .map(|tool| {
+                        let desc = tool.description.map(|d| d.to_string()).unwrap_or_default();
+                        McpTool {
+                            server_name: name.clone(),
+                            tool: Tool::new(tool.name, desc, tool.input_schema),
+                        }
+                    })
+                    .collect();
+
+                let cancellation_token = CancellationToken::new();
+                let handle = ServerHandle::new(cancellation_token);
 
                 let mut servers = self.servers.write().await;
                 let h = servers.entry(name.clone()).or_insert(handle);
-                h.state = ServerState::Running(Vec::new());
+                h.state = ServerState::Running(mcp_tools);
+
+                // Keep client alive
+                drop(client);
+
+                Ok(())
+            }
+            crate::config::McpTransport::WebSocket => {
+                let url = config
+                    .url
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("URL required for WebSocket transport"))?;
+
+                tracing::info!("Starting MCP server via WebSocket: {}", url);
+
+                // Use WsMcpTransport which implements Transport<RoleClient>
+                let transport = WsMcpTransport::connect(url.as_str()).await?;
+                let client = rmcp::serve_client((), transport).await?;
+                let _client_token = client.cancellation_token();
+
+                // Get tool list
+                tracing::info!("Fetching tools from MCP server: {}", name);
+                let rmcp_tools = client.list_all_tools().await?;
+
+                // Convert to CachedToolSchema for caching
+                let tools: Vec<CachedToolSchema> = rmcp_tools
+                    .iter()
+                    .map(|t| {
+                        let desc = t
+                            .description
+                            .as_ref()
+                            .map(|d| d.to_string())
+                            .unwrap_or_default();
+                        CachedToolSchema {
+                            name: t.name.to_string(),
+                            description: desc,
+                            input_schema: serde_json::to_value(&t.input_schema).unwrap_or_default(),
+                        }
+                    })
+                    .collect();
+
+                // Cache the tools
+                self.cache.put(&name, &config, tools).await?;
+
+                // Convert to McpTool for runtime use
+                let mcp_tools: Vec<McpTool> = rmcp_tools
+                    .into_iter()
+                    .map(|tool| {
+                        let desc = tool.description.map(|d| d.to_string()).unwrap_or_default();
+                        McpTool {
+                            server_name: name.clone(),
+                            tool: Tool::new(tool.name, desc, tool.input_schema),
+                        }
+                    })
+                    .collect();
+
+                let cancellation_token = CancellationToken::new();
+                let handle = ServerHandle::new(cancellation_token);
+
+                let mut servers = self.servers.write().await;
+                let h = servers.entry(name.clone()).or_insert(handle);
+                h.state = ServerState::Running(mcp_tools);
+
+                // Keep client alive
+                drop(client);
 
                 Ok(())
             }

@@ -101,6 +101,8 @@ pub mod input;
 
 mod permission;
 pub mod permission_dialog;
+mod question;
+pub mod question_dialog;
 mod session;
 mod system;
 mod tools;
