@@ -5,13 +5,13 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_subagent_completed_bright, color_subagent_completed_diamond,
+    blend_color, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
     color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
-    color_subagent_running_diamond, color_subagent_running_dim, style_agent, style_feed_timestamp,
-    style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running,
-    style_tool_summary, style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT,
-    GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT,
-    GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_SPINNER, GLYPH_X,
+    color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent,
+    style_feed_timestamp, style_thinking, style_thought, style_tool_header, style_tool_output,
+    style_tool_running, style_tool_summary, style_turn_complete, wave_brightness, GLYPH_AGENT,
+    GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND,
+    GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_SPINNER, GLYPH_X,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -144,7 +144,7 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
 ///
 /// Expanded finished rows render the worker output indented under the row,
 /// styled like an expanded thought body.
-pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
+pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> Vec<Line<'static>> {
     let runie_core::Element::SubagentRow {
         description,
         model,
@@ -165,11 +165,19 @@ pub fn render_subagent_row(elem: &runie_core::Element) -> Vec<Line<'static>> {
     let header = match status {
         S::Running => {
             let activity_text = if activity.is_empty() { "Running" } else { activity };
+            // Pulse the bar/diamond toward background using pulse_brightness (grok parity)
+            let pulse = pulse_brightness(animation_frame, 0.08);
+            let bar_color = blend_color(color_bg(), color_subagent_running_bar(), pulse)
+                .unwrap_or(color_subagent_running_bar());
+            let diamond_color = blend_color(color_bg(), color_subagent_running_diamond(), pulse)
+                .unwrap_or(color_subagent_running_diamond());
+            let dim_color = blend_color(color_bg(), color_subagent_running_dim(), pulse)
+                .unwrap_or(color_subagent_running_dim());
             Line::from(vec![
-                Span::styled(GLYPH_SUBAGENT_BAR, Style::new().fg(color_subagent_running_bar())),
-                Span::styled("  ", Style::new().fg(color_subagent_running_bar())),
-                Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_running_diamond())),
-                Span::styled(" ", Style::new().fg(color_subagent_running_dim())),
+                Span::styled(GLYPH_SUBAGENT_BAR, Style::new().fg(bar_color)),
+                Span::styled("  ", Style::new().fg(bar_color)),
+                Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(diamond_color)),
+                Span::styled(" ", Style::new().fg(dim_color)),
                 Span::styled("Subagent running: ", dim.bold()),
                 Span::styled(
                     format!(

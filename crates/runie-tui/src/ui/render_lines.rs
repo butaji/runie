@@ -8,7 +8,7 @@ use crate::message as msg;
 
 /// Render an element and return the number of terminal rows Ratatui will use.
 pub fn element_line_count(elem: &Element, content_width: u16) -> usize {
-    to_lines_and_count(elem, content_width).1
+    to_lines_and_count(elem, 0, content_width).1
 }
 
 /// Render an element to terminal lines.
@@ -18,19 +18,23 @@ pub fn element_line_count(elem: &Element, content_width: u16) -> usize {
 /// exercised by integration tests.
 #[allow(dead_code, reason = "kept for future direct rendering use")]
 pub fn to_lines_internal(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
-    to_lines_and_count(elem, content_width).0
+    to_lines_and_count(elem, 0, content_width).0
 }
 
 /// Render an element and return both the lines and the number of terminal
 /// rows those lines occupy. The lines are already pre-wrapped during rendering,
 /// so the count is simply the number of lines returned.
-pub fn to_lines_and_count(elem: &Element, content_width: u16) -> (Vec<Line<'static>>, usize) {
-    let lines = render_element(elem, content_width);
+pub fn to_lines_and_count(
+    elem: &Element,
+    animation_frame: u32,
+    content_width: u16,
+) -> (Vec<Line<'static>>, usize) {
+    let lines = render_element(elem, animation_frame, content_width);
     let count = lines.len();
     (lines, count)
 }
 
-fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
+fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> Vec<Line<'static>> {
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
@@ -50,7 +54,7 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
         ContextGroup {
             tools, collapsed, ..
         } => msg::render_context_group(tools, *collapsed),
-        SubagentRow { .. } => msg::render_subagent_row(elem),
+        SubagentRow { .. } => msg::render_subagent_row(elem, animation_frame),
         _ => render_tool_element(elem, content_width),
     }
 }

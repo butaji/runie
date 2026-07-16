@@ -3,7 +3,7 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -137,7 +137,7 @@ impl Actor for RactorIoActor {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         Ok(())
@@ -146,7 +146,7 @@ impl Actor for RactorIoActor {
     #[instrument(name = "io_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {

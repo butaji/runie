@@ -68,7 +68,7 @@ fn v3_to_v4(config: &mut toml::Value) -> anyhow::Result<()> {
         return Ok(());
     };
 
-    for (_name, provider_value) in providers.iter_mut() {
+    for (name, provider_value) in providers.iter_mut() {
         let Some(provider_map) = provider_value.as_table_mut() else { continue };
 
         #[allow(unused_variables)]

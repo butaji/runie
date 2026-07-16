@@ -26,6 +26,9 @@ pub const THINKING_LOADING: &str = "Thinking...";
 /// Index 0 → '⠷', index 5 → '⠋' (the default initial frame).
 pub const BRAILLE_SIX: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
 
+// Grok-style 8-frame braille spinner matching grok-build's braille_spinner_frames().
+pub const BRAILLE_EIGHT: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧'];
+
 /// 10-frame braille spinner for running subagent detail title animation.
 pub const BRAILLE_TEN: &[char] = &[
     '⠷', '⠯', '⠟', '⠻', '⠽', '⠾', '⠷', '⠯', '⠟', '⠻',

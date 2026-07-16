@@ -55,6 +55,51 @@ pub fn code_header_label(prefix: &str, lang: &str) -> String {
     }
 }
 
+/// Compute animated brightness for a traveling wave effect (grok parity).
+///
+/// Creates a wave that travels along the accent line. Each row has a fixed phase
+/// offset so the wave appears to move smoothly regardless of block height.
+///
+/// # Arguments
+/// - `tick`: Frame counter (increments each render tick)
+/// - `row`: Current row within the block (0 = top)
+/// - `wave_rows`: Rows per full wave cycle (e.g., 32)
+/// - `speed`: Wave speed (radians per tick, e.g., 0.15)
+///
+/// # Returns
+/// Brightness value in [0.0, 1.0] for this row at this tick.
+pub fn wave_brightness(tick: u32, row: u16, wave_rows: u16, speed: f32) -> f32 {
+    use std::f32::consts::PI;
+
+    let rows_per_wave = wave_rows.max(1) as f32;
+    let phase = (row as f32 / rows_per_wave) * 2.0 * PI;
+
+    // Time-based oscillation
+    let t = tick as f32 * speed;
+
+    // sin²(t + phase) gives smooth 0-1 oscillation
+    let sin_val = (t + phase).sin();
+    sin_val * sin_val
+}
+
+/// Compute a smooth pulsing brightness for a single element (grok parity).
+///
+/// Unlike [`wave_brightness`] which creates a spatial wave across rows,
+/// this is a simple temporal pulse: all elements sharing the same tick
+/// pulse in unison.
+///
+/// # Arguments
+/// - `tick`: Frame counter (increments each render tick, ~30fps)
+/// - `speed`: Pulse speed (radians per tick). At 30fps, `speed = 0.08` ≈ 1.3s per cycle.
+///
+/// # Returns
+/// Brightness value in [0.0, 1.0].
+pub fn pulse_brightness(tick: u32, speed: f32) -> f32 {
+    let t = tick as f32 * speed;
+    let sin_val = t.sin();
+    sin_val * sin_val
+}
+
 /// Thinking/waiting indicator line (grok parity — GROK.md §24).
 ///
 /// `◆ ⠋ Waiting for response… 0.4s` — the braille frame is derived from the
@@ -62,13 +107,13 @@ pub fn code_header_label(prefix: &str, lang: &str) -> String {
 /// cadence regardless of render rate. Timer: one decimal below 10s, integer
 /// at ≥10s.
 pub fn thinking_line(elapsed_secs: f64) -> String {
-    use runie_core::labels::{format_elapsed_secs, BRAILLE_SIX};
+    use runie_core::labels::{format_elapsed_secs, BRAILLE_EIGHT};
     const FRAME_MS: f64 = 120.0;
-    let idx = ((elapsed_secs * 1000.0 / FRAME_MS) as usize) % BRAILLE_SIX.len();
+    let idx = ((elapsed_secs * 1000.0 / FRAME_MS) as usize) % BRAILLE_EIGHT.len();
     format!(
         "{}{} Waiting for response… {}",
         GLYPH_AGENT,
-        BRAILLE_SIX[idx],
+        BRAILLE_EIGHT[idx],
         format_elapsed_secs(elapsed_secs)
     )
 }
