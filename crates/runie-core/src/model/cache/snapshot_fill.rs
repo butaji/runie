@@ -60,6 +60,7 @@ pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
     s.spinner_frame = state.spinner_frame();
     s.animation_frame = state.view().animation_frame;
     s.turn_elapsed_secs = state.turn_elapsed_secs();
+    s.current_tool_name = agent.current_tool_name.clone();
     s.queue_count = agent.message_queue.len() + agent.request_queue.len();
     s.tokens_in = agent.tokens_in;
     s.tokens_out = agent.tokens_out;

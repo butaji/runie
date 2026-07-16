@@ -9,11 +9,12 @@ use ratatui::{
 };
 
 use crate::theme::{
-    blend_color, color_accent, color_bg, color_success, pulse_brightness, style_status_idle,
-    style_timestamp, GLYPH_PENDING,
+    blend_color, color_accent, color_bg, color_monitor, color_success, pulse_brightness,
+    style_status_idle, style_timestamp, GLYPH_MONITOR_FRAMES, monitor_glyph, MONITOR_PULSE_DIVISOR,
+    GLYPH_PENDING,
 };
 use crate::ui::{estimate_element_tokens, hstack};
-use runie_core::labels::format_elapsed_secs;
+use runie_core::labels::{format_elapsed_secs};
 use runie_core::Snapshot;
 use unicode_width::UnicodeWidthStr;
 
@@ -62,17 +63,15 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
     // colored independently (pulsing diamond when pending, spinner otherwise).
     let text_parts = build_left_text_parts(snap);
 
-    let (activity_span, body_str) = if text_parts.is_empty() {
-        (None, String::new())
+    let body_str = if text_parts.is_empty() {
+        String::new()
     } else {
-        // First part is the activity label (already a styled Span), rest are plain.
+        // Skip the first part (activity label), join the rest as plain body.
         let mut iter = text_parts.into_iter();
-        let first = iter.next().unwrap();
-        let body = iter
-            .map(|s| s.content.clone())
+        iter.next(); // discard activity span
+        iter.map(|s| s.content.clone())
             .collect::<Vec<_>>()
-            .join(" · ");
-        (Some(first), body)
+            .join(" · ")
     };
 
     let line = if snap.is_pending_user_input {
@@ -120,6 +119,9 @@ pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<Span<'static>> {
         parts.push(part);
     }
     if let Some(part) = push_running_subagents(snap) {
+        parts.push(part);
+    }
+    if let Some(part) = push_watching_label(snap, idle) {
         parts.push(part);
     }
     if let Some(part) = push_thinking(snap, idle) {
@@ -178,6 +180,38 @@ fn push_git_or_folder(snap: &Snapshot) -> Option<Span<'static>> {
         .map(|g| g.format_right(&snap.cwd_name))
         .unwrap_or_else(|| format!("{}/", snap.cwd_name));
     Some(Span::raw(git_or_folder))
+}
+
+/// Build the "○ ◉ watching · N workers" label for idle pattern workers.
+/// Shows when the agent is idle but background workers are still running (grok parity).
+fn push_watching_label(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
+    // Only show when idle and workers exist
+    if snap.turn_active {
+        return None;
+    }
+
+    let running = snap
+        .pattern_workers
+        .iter()
+        .filter(|w| w.status == runie_core::model::PatternWorkerStatus::Running)
+        .count();
+
+    if running == 0 {
+        return None;
+    }
+
+    // Get the animated monitor glyph frame
+    let frame_idx = ((snap.animation_frame / MONITOR_PULSE_DIVISOR) as usize)
+        % GLYPH_MONITOR_FRAMES.len();
+    let monitor_glyph_str = monitor_glyph(frame_idx);
+
+    // Render as: "○ ◉ watching · N workers"
+    let noun = if running == 1 { "worker" } else { "workers" };
+    let monitor_color = color_monitor();
+    Some(Span::styled(
+        format!("{} watching · {} {noun}", monitor_glyph_str, running),
+        idle.fg(monitor_color),
+    ))
 }
 
 /// Build the activity label or "Working…" status text.
