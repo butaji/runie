@@ -133,14 +133,20 @@ reqwest-eventsource = "0.6"
 wiremock = "0.6"
 proptest = "1.6"
 
-# Faster incremental dev builds
+# Faster dev builds: opt-level 1, parallel codegen, incremental.
 [profile.dev]
-opt-level = 0
-debug = false  # faster builds
+opt-level = 1
+debug = false
 split-debuginfo = "unpacked"
+codegen-units = 16
+incremental = true
 
-[profile.dev.package."*"]
-opt-level = 0  # deps stay fast
+# Release: opt-level 2 + thin LTO for production use.
+[profile.release]
+opt-level = 2
+lto = "thin"
+codegen-units = 16
+strip = true
 
 
 

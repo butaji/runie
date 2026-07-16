@@ -1,13 +1,27 @@
-[alias]
-run-tui = ["run", "-p", "runie-tui", "--bin", "runie-tui"]
+# Compilation speed optimizations
 
 [build]
-# rustflags = ["-Zcodegen-backend=cranelift"]
+# Use all available CPU cores
+jobs = -1
 
-[profile.dev]
-split-debuginfo = "unpacked"
-opt-level = 0
-debug = false
+[target.aarch64-apple-darwin]
+# macOS Apple Silicon: use standard ld64 linker with parallel mode
+rustflags = [
+    "-C", "link-arg=-undefined",
+    "-C", "link-arg=dynamic_lookup",
+    "-C", "link-args=-ObjC",
+]
 
-[profile.dev.build-override]
-opt-level = 3
+[target.x86_64-apple-darwin]
+# macOS Intel: use standard ld64 linker
+rustflags = [
+    "-C", "link-arg=-undefined",
+    "-C", "link-arg=dynamic_lookup",
+    "-C", "link-args=-ObjC",
+]
+
+[env]
+# sccache for fast incremental compilation (10-100x faster on cache hits)
+RUSTC_WRAPPER = "sccache"
+# sccache tmp directory for better performance
+SCCACHE_DIR = "/tmp/sccache"
