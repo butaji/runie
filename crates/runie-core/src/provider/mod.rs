@@ -21,15 +21,11 @@ pub use provider_trait::{
     CONNECT_TIMEOUT, REQUEST_TIMEOUT,
 };
 pub use detection::{
-    detect_provider_from_url, is_known_provider, normalize_model_name, parse_model_prefix,
+    detect_provider, detect_provider_from_api_base, is_known_provider,
+    normalize_model_name, parse_model_prefix, KNOWN_API_BASES,
 };
 pub use registry::{
     display_name, find_model, find_provider, find_provider_by_env_var,
-    known_providers, ModelMeta, ProviderMeta,
-};
-pub use registry::{
-    is_mock_enabled, is_mock_onboarding, mock_model, set_mock_enabled, set_mock_onboarding,
-};
-pub use detection::{
-    detect_provider, detect_provider_from_api_base, parse_model_prefix, KNOWN_API_BASES,
+    is_mock_enabled, is_mock_onboarding, known_providers, mock_model, ModelMeta, ProviderMeta,
+    set_mock_enabled, set_mock_onboarding,
 };

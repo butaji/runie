@@ -18,6 +18,9 @@ use strum::EnumString;
 use crate::proto::message::ChatMessage;
 use crate::scoped_model::ScopedModel;
 
+/// A sequence of chat messages.
+pub type Messages = Vec<ChatMessage>;
+
 /// Lifecycle events that can be hooked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
 pub enum HookEvent {

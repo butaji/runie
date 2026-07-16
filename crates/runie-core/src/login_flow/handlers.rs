@@ -362,7 +362,6 @@ fn sync_config_cache(
                 .and_then(|p| p.provider_type.clone()),
             base_url: base_url.into(),
             models: models.into(),
-<<<<<<< HEAD
             headers: existing_headers,
             context_window_fallbacks: Vec::new(),
         },

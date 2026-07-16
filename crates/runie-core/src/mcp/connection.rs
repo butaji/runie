@@ -352,7 +352,7 @@ impl McpConnectionManager {
                     .collect();
 
                 let cancellation_token = CancellationToken::new();
-                let handle = ServerHandle::new(cancellation_token);
+                let handle = ServerHandle::new(name.clone(), config.clone(), cancellation_token);
 
                 let mut servers = self.servers.write().await;
                 let h = servers.entry(name.clone()).or_insert(handle);
@@ -413,7 +413,7 @@ impl McpConnectionManager {
                     .collect();
 
                 let cancellation_token = CancellationToken::new();
-                let handle = ServerHandle::new(cancellation_token);
+                let handle = ServerHandle::new(name.clone(), config.clone(), cancellation_token);
 
                 let mut servers = self.servers.write().await;
                 let h = servers.entry(name.clone()).or_insert(handle);
