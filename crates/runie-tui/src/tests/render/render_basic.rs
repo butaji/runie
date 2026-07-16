@@ -227,7 +227,7 @@ fn test_render_thinking_indicator() {
         content
     );
     assert!(
-        runie_core::labels::BRAILLE_SIX
+        runie_core::labels::BRAILLE_EIGHT
             .iter()
             .any(|g| content.contains(*g)),
         "Thinking should show an animated braille spinner frame. Got: {}",

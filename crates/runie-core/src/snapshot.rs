@@ -58,6 +58,9 @@ pub struct Snapshot {
     pub scroll: usize,
     /// Elapsed seconds since turn started. Captured at snapshot creation time.
     pub turn_elapsed_secs: Option<f64>,
+    /// Name of the currently running tool, if any. Used by the status bar to
+    /// display an activity label and by the monitor pulse glyph.
+    pub current_tool_name: Option<String>,
     pub provider: String,
     pub model: String,
     /// Active theme name for the render actor
@@ -97,6 +100,9 @@ pub struct Snapshot {
     pub image_attachments: Vec<String>,
     /// Active permission approval prompt for modal rendering.
     pub permission_request: Option<crate::model::PermissionRequestState>,
+    /// True when a permission prompt or ask_user_question is waiting for user input.
+    /// Used by the status bar to render a pulsing diamond instead of the spinner.
+    pub is_pending_user_input: bool,
     /// Authenticated providers for status display.
     pub auth_providers: Arc<[String]>,
     /// Transient notification message shown in hints line.

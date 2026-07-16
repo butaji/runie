@@ -13,8 +13,9 @@ pub(crate) fn build_lines_with_mapping(
 ) -> (Vec<Line<'_>>, Vec<usize>) {
     let mut lines = Vec::with_capacity(snap.total_lines);
     let mut mapping = Vec::with_capacity(snap.total_lines);
+    let tick = snap.animation_frame;
     for (idx, elem) in snap.elements.iter().enumerate() {
-        let (elem_lines, wrapped_rows) = to_lines_and_count(elem, content_width);
+        let (elem_lines, wrapped_rows) = to_lines_and_count(elem, tick, content_width);
         mapping.extend(std::iter::repeat_n(idx, wrapped_rows));
         lines.extend(elem_lines);
     }

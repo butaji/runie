@@ -59,7 +59,7 @@ fn running_row_shows_grok_style_bar_diamond_and_format() {
         "",
         false,
     );
-    let output = render_to_string(render_subagent_row(&elem), 100, 3);
+    let output = render_to_string(render_subagent_row(&elem, 0), 100, 3);
     assert!(
         output.contains("❙"),
         "running row should show the left bar: {output}"
@@ -85,7 +85,7 @@ fn completed_row_shows_check_and_duration() {
         "out",
         false,
     );
-    let output = render_to_string(render_subagent_row(&elem), 100, 3);
+    let output = render_to_string(render_subagent_row(&elem, 0), 100, 3);
     assert!(
         output.contains("◆ Subagent completed in 2.5s: “find callers”"),
         "completed row format: {output}"
@@ -97,7 +97,7 @@ fn completed_row_shows_check_and_duration() {
 #[test]
 fn failed_row_shows_x_and_duration() {
     let elem = subagent_row(PatternWorkerStatus::Failed, None, Some(1000), "boom", false);
-    let output = render_to_string(render_subagent_row(&elem), 100, 3);
+    let output = render_to_string(render_subagent_row(&elem, 0), 100, 3);
     assert!(
         output.contains("◆ Subagent failed in 1.0s: “find callers”"),
         "failed row format: {output}"
@@ -115,7 +115,7 @@ fn expanded_completed_row_renders_output_body() {
         "first line\nsecond line",
         true,
     );
-    let output = render_to_string(render_subagent_row(&elem), 100, 5);
+    let output = render_to_string(render_subagent_row(&elem, 0), 100, 5);
     assert!(output.contains("first line"), "body line 1: {output}");
     assert!(output.contains("second line"), "body line 2: {output}");
 }
@@ -129,7 +129,7 @@ fn collapsed_completed_row_hides_output_body() {
         "hidden body",
         false,
     );
-    let output = render_to_string(render_subagent_row(&elem), 100, 3);
+    let output = render_to_string(render_subagent_row(&elem, 0), 100, 3);
     assert!(
         !output.contains("hidden body"),
         "collapsed row must not render the output body: {output}"

@@ -26,6 +26,9 @@ pub const THINKING_LOADING: &str = "Thinking...";
 /// Index 0 → '⠷', index 5 → '⠋' (the default initial frame).
 pub const BRAILLE_SIX: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
 
+// Grok-style 8-frame braille spinner matching grok-build's braille_spinner_frames().
+pub const BRAILLE_EIGHT: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧'];
+
 /// 10-frame braille spinner for running subagent detail title animation.
 pub const BRAILLE_TEN: &[char] = &[
     '⠷', '⠯', '⠟', '⠻', '⠽', '⠾', '⠷', '⠯', '⠟', '⠻',
@@ -62,6 +65,37 @@ pub fn tool_running(name: &str) -> String {
 /// tui1-style tool done
 pub fn tool_done(name: &str, seconds: f64) -> String {
     format!("✓ {} {:.1}s", name, seconds)
+}
+
+/// Format a token count compactly (grok parity).
+/// - Under 1000: `500` (raw number)
+/// - 1k-100k: `1.5k`, `12.3k` (with one decimal)
+/// - 100k-999k: `100k`, `500k` (whole thousands)
+/// - 1M+: `1.5M`, `10.1M` (with one decimal)
+pub fn format_tokens_compact(tokens: i64) -> String {
+    let sign = if tokens < 0 { "-" } else { "" };
+    let abs = tokens.unsigned_abs();
+    if abs >= 1_000_000 {
+        let m = abs as f64 / 1_000_000.0;
+        format!("{sign}{}", format!("{m:.1}M").replace(".0M", "M"))
+    } else if abs >= 1_000 {
+        let k = abs as f64 / 1_000.0;
+        format!("{sign}{}", format!("{k:.1}k").replace(".0k", "k"))
+    } else {
+        tokens.to_string()
+    }
+}
+
+/// Format elapsed milliseconds compactly (grok parity): `5s`, `3m`, `1h`.
+pub fn format_elapsed_compact(ms: u64) -> String {
+    let secs = ms / 1000;
+    if secs >= 3600 {
+        format!("{}h", secs / 3600)
+    } else if secs >= 60 {
+        format!("{}m", secs / 60)
+    } else {
+        format!("{}s", secs)
+    }
 }
 
 pub const SPINNER_THINKING: char = '◐';

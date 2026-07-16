@@ -8,7 +8,7 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::{Sink, SinkExt, Stream, StreamExt};
+use futures::{SinkExt, StreamExt};
 use rmcp::model::Tool;
 use rmcp::transport::TokioChildProcess;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,6 @@ use tokio_util::sync::CancellationToken;
 use {
     futures::FutureExt,
     rmcp::service::{RoleClient, RxJsonRpcMessage, TxJsonRpcMessage},
-    rmcp::transport::streamable_http_client::StreamableHttpClientTransport,
     std::future::Future,
     tokio_tungstenite::{connect_async, tungstenite::Message},
 };
@@ -353,7 +352,7 @@ impl McpConnectionManager {
                     .collect();
 
                 let cancellation_token = CancellationToken::new();
-                let handle = ServerHandle::new(name.clone(), config.clone(), cancellation_token);
+                let handle = ServerHandle::new(cancellation_token);
 
                 let mut servers = self.servers.write().await;
                 let h = servers.entry(name.clone()).or_insert(handle);
@@ -414,7 +413,7 @@ impl McpConnectionManager {
                     .collect();
 
                 let cancellation_token = CancellationToken::new();
-                let handle = ServerHandle::new(name.clone(), config.clone(), cancellation_token);
+                let handle = ServerHandle::new(cancellation_token);
 
                 let mut servers = self.servers.write().await;
                 let h = servers.entry(name.clone()).or_insert(handle);

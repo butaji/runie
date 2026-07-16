@@ -75,7 +75,7 @@ impl Actor for RactorConfigActor {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let (bus, path, project_path) = args;
@@ -113,7 +113,7 @@ impl Actor for RactorConfigActor {
     #[instrument(name = "config_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
