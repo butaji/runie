@@ -97,6 +97,9 @@ pub struct Snapshot {
     pub image_attachments: Vec<String>,
     /// Active permission approval prompt for modal rendering.
     pub permission_request: Option<crate::model::PermissionRequestState>,
+    /// True when a permission prompt or ask_user_question is waiting for user input.
+    /// Used by the status bar to render a pulsing diamond instead of the spinner.
+    pub is_pending_user_input: bool,
     /// Authenticated providers for status display.
     pub auth_providers: Arc<[String]>,
     /// Transient notification message shown in hints line.

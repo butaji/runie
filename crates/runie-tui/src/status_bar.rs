@@ -2,11 +2,16 @@
 
 use ratatui::{
     layout::{Constraint, Rect},
+    style::Style,
+    text::{Line, Span},
     widgets::Paragraph,
     Frame,
 };
 
-use crate::theme::{style_status_idle, style_timestamp};
+use crate::theme::{
+    blend_color, color_accent, color_bg, pulse_brightness, style_status_idle, style_timestamp,
+    GLYPH_PENDING,
+};
 use crate::ui::{estimate_element_tokens, hstack};
 use runie_core::labels::format_elapsed_secs;
 use runie_core::Snapshot;
@@ -31,6 +36,10 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
 /// Render the left side of the status bar. The spinner frame is taken from
 /// the snapshot and only shown while a turn is active; when idle the left
 /// area shows only the git/folder status and badges.
+///
+/// When a permission request is pending (`is_pending_user_input`), a pulsing
+/// diamond replaces the spinner — same cadence as Grok's drain-blocked and
+/// plan-approval "your turn" indicators.
 fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let text_parts = build_left_text_parts(snap);
 
@@ -40,9 +49,32 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
         return;
     }
 
-    let left_text = format!("{} · {}", snap.spinner_frame, text_parts.join(" · "));
-    f.render_widget(Paragraph::new(left_text).style(style_status_idle()), area);
+    // Build the left status line using spans so the indicator glyph can be
+    // colored independently (pulsing diamond when pending, spinner otherwise).
+    let body = text_parts.join(" · ");
+    let line = if snap.is_pending_user_input {
+        // Pulsing diamond: blend accent toward bg using sin² pulse (grok parity).
+        let pulse = pulse_brightness(snap.animation_frame, USER_WAITING_PULSE_SPEED);
+        let color = blend_color(color_bg(), color_accent(), 0.3 + pulse * 0.7)
+            .unwrap_or_else(color_accent);
+        Line::from(vec![
+            Span::styled(format!("{} · ", GLYPH_PENDING), Style::new().fg(color)),
+            Span::styled(body, style_status_idle()),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled(format!("{} · ", snap.spinner_frame), style_status_idle()),
+            Span::styled(body, style_status_idle()),
+        ])
+    };
+
+    f.render_widget(Paragraph::new(line).style(style_status_idle()), area);
 }
+
+/// Pulse speed for every "waiting on you" diamond (grok parity).
+/// `pulse_brightness` returns `sin²(tick*speed)` with period π, so at ~30fps
+/// this gives a ~1.3s cycle (`π / (0.08 * 30) ≈ 1.31`).
+const USER_WAITING_PULSE_SPEED: f32 = 0.08;
 
 /// Build status bar text parts without the spinner char.
 /// The spinner is rendered as a throbber widget overlay.

@@ -16,6 +16,7 @@ pub const GLYPH_FILTER: char = '❯'; // filter input prompt indicator
 
 // Tool / status glyphs
 pub const GLYPH_TOOL: &str = "◆ ";
+pub const GLYPH_PENDING: &str = "◆"; // pulsing "waiting on user" diamond
 pub const GLYPH_BULLET: &str = "•";
 pub const GLYPH_DOWNLOAD: &str = "⇣"; // bytes transferred indicator
 
