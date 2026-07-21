@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use crate::model::view_cache::ViewCache;
+use crate::model::FeedElementDetail;
 use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
+use crate::view::turns::{ViewMode, Turn};
 
 /// View state — scroll, animation, and UI dimensions.
 ///
@@ -84,6 +86,21 @@ pub struct ViewState {
     pub tasks_pane_show_done: bool,
     /// Open subagent detail overlay state.
     pub subagent_detail: Option<crate::model::SubagentDetail>,
+    /// Open feed element detail overlay state.
+    pub feed_element_detail: Option<FeedElementDetail>,
+    /// Current turn index (for h/l turn navigation).
+    pub current_turn: Option<usize>,
+    /// How the scrollback feed is displayed.
+    pub view_mode: ViewMode,
+    /// Follow mode: when true, auto-scroll to newest content when it arrives.
+    /// Re-engaged by overscrolling to the bottom.
+    pub follow_mode: bool,
+    /// Scroll margin: number of lines to keep visible above/below the
+    /// selected element during scroll. Acts as padding so elements don't
+    /// crowd the edges of the viewport.
+    pub scroll_margin: usize,
+    /// Cached turns rebuilt from elements. Used for turn navigation (h/l).
+    pub cached_turns: Vec<Turn>,
 }
 
 impl PartialEq for ViewState {
@@ -98,6 +115,7 @@ impl PartialEq for ViewState {
             && self.selected_post == other.selected_post
             && self.expanded_posts == other.expanded_posts
             && self.vim_nav_mode == other.vim_nav_mode
+            && self.follow_mode == other.follow_mode
     }
 }
 
@@ -175,6 +193,12 @@ impl Default for ViewState {
             tasks_pane_visible: false,
             tasks_pane_show_done: false,
             subagent_detail: None,
+            feed_element_detail: None,
+            current_turn: None,
+            view_mode: ViewMode::AllTurns,
+            follow_mode: false,
+            scroll_margin: 3,
+            cached_turns: Vec::new(),
         }
     }
 }

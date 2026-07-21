@@ -22,6 +22,7 @@ mod layout;
 pub(crate) mod messages;
 mod render_lines;
 mod scroll;
+pub(crate) mod feed_detail;
 pub(crate) mod subagent_detail;
 pub(crate) mod tasks_pane;
 
@@ -79,6 +80,9 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
 
     if snap.subagent_detail.is_some() {
         subagent_detail::render_subagent_detail(f, snap, message_area);
+    }
+    if snap.feed_element_detail.is_some() {
+        feed_detail::render_feed_detail(f, snap, message_area);
     }
 }
 

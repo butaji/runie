@@ -13,6 +13,7 @@ pub mod dsl_test;
 pub mod elements;
 pub mod posts;
 pub mod transform;
+pub mod turns;
 
 pub use elements::{Element, Feed, Post, PostKind};
 pub use posts::PostBuilder;

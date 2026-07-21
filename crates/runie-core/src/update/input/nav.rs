@@ -135,6 +135,14 @@ impl AppState {
     }
 
     pub(crate) fn handle_vim_nav_char(&mut self, c: char) {
+        // Close feed element detail overlay on Esc/q
+        if self.view().feed_element_detail.is_some() {
+            if c == 'q' || c == 'Q' {
+                self.view_mut().feed_element_detail = None;
+                self.view_mut().dirty = true;
+                return;
+            }
+        }
         if c == ' ' {
             self.view_mut().vim_nav_mode = false;
             self.view_mut().selected_post = None;
@@ -176,6 +184,24 @@ impl AppState {
             }
             'y' => Some(self.handle_vim_copy(crate::Event::CopySelectedBlock)),
             'Y' => Some(self.handle_vim_copy(crate::Event::CopyBlockMetadata)),
+            // Grok-style turn navigation: h/l jump between user prompt boundaries
+            'h' => {
+                crate::update::input::prev_turn(self);
+                Some(true)
+            }
+            'l' => {
+                crate::update::input::next_turn(self);
+                Some(true)
+            }
+            // Grok-style response anchor nav: K/J snap to prev/next agent message
+            'K' => {
+                crate::update::input::prev_response(self);
+                Some(true)
+            }
+            'J' => {
+                crate::update::input::next_response(self);
+                Some(true)
+            }
             _ => None,
         }
     }
@@ -235,13 +261,15 @@ impl AppState {
                 );
                 Some(false)
             }
-            // Enter in vim nav mode: on a subagent row open the detail overlay;
-            // on a collapsible (summarized) post — or one the user already
-            // expanded individually — toggle that post only (the "Enter expand"
-            // hint, grok's per-item Ctrl+E). Works in both global modes: thoughts
-            // are collapsed by default, so per-item expansion must not require
-            // global collapse first. On any other post it keeps the legacy
-            // behavior: toggle global expand/collapse (same as Ctrl+O).
+            // Enter in vim nav mode: on a subagent row open the subagent detail
+            // overlay; on any other feed element open the feed_element_detail
+            // overlay (Grok-style: Enter opens a full-detail dialog for the
+            // element). On a collapsible (summarized) post — or one the user
+            // already expanded individually — toggle that post only (the "Enter
+            // expand" hint, grok's per-item Ctrl+E). Works in both global modes:
+            // thoughts are collapsed by default, so per-item expansion must not
+            // require global collapse first. On any other post it keeps the
+            // legacy behavior: toggle global expand/collapse (same as Ctrl+O).
             crate::Event::Submit => {
                 if let Some(sel) = self.view().selected_post {
                     let snap = self.snapshot();
@@ -258,6 +286,17 @@ impl AppState {
                                 self.view_mut().dirty = true;
                                 return Some(true);
                             }
+                        }
+                        // Grok-style: Enter on any feed element opens the detail overlay.
+                        // Skip elements that already have their own dedicated overlay
+                        // (SubagentRow above) and skip non-visual kinds (Thinking).
+                        use crate::model::feed_detail::FeedElementDetail;
+                        if let Some(detail) =
+                            FeedElementDetail::from_postkind(post.kind, post.start)
+                        {
+                            self.view_mut().feed_element_detail = Some(detail);
+                            self.view_mut().dirty = true;
+                            return Some(true);
                         }
                     }
                     let collapsible = snap.posts.get(sel).is_some_and(|p| !p.expanded);
