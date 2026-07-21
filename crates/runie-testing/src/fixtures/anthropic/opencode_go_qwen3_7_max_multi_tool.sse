@@ -1,0 +1,99 @@
+event:message_start
+data:{"message":{"model": "qwen3.7-max","id":"msg_opencode_go_fixture","role":"assistant","type":"message","content":[],"usage":{"input_tokens":42,"output_tokens":0}},"type":"message_start"}
+
+event:ping
+data:{"type":"ping"}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"type":"thinking","signature":"","thinking":""},"index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"The"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" user is asking for"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the weather in two"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" cities: Paris and"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Berlin. I need"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" to use the get"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"_weather function for each"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" city. I can"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" make both calls simultaneously"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" since they"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" are independent of each"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" other."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"signature_delta","signature":""},"type":"content_block_delta","index":0}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":0}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"name":"get_weather","input":{},"id":"toolu_2cd348cf93184d898a41fbee","type":"tool_use"},"index":1}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"","type":"input_json_delta"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"{\"city\": \"Paris","type":"input_json_delta"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"\"","type":"input_json_delta"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"}","type":"input_json_delta"},"type":"content_block_delta","index":1}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":1}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"name":"get_weather","input":{},"id":"toolu_8e73fbb5bf7c4afdb352f1e7","type":"tool_use"},"index":2}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"","type":"input_json_delta"},"type":"content_block_delta","index":2}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"{\"city\": ","type":"input_json_delta"},"type":"content_block_delta","index":2}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"\"Berlin","type":"input_json_delta"},"type":"content_block_delta","index":2}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"\"","type":"input_json_delta"},"type":"content_block_delta","index":2}
+
+event:content_block_delta
+data:{"delta":{"partial_json":"}","type":"input_json_delta"},"type":"content_block_delta","index":2}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":2}
+
+event:message_delta
+data:{"delta":{"stop_reason":"tool_use"},"type":"message_delta","usage":{"output_tokens":97,"cache_creation_input_tokens":0,"input_tokens":277,"cache_read_input_tokens":0,"prompt_tokens_details":{"cached_tokens":0}}}
+
+event:message_stop
+data:{"type":"message_stop"}
+
+event: ping
+data: {"type":"ping","cost":"0.00000000"}
+

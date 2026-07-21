@@ -1,0 +1,39 @@
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_opencode_go_fixture","type":"message","role":"assistant","stop_reason":null,"stop_sequence":null,"model": "minimax-m2.7","content":[],"usage":{"input_tokens":54,"output_tokens":0}}}
+
+event: ping
+data: {"type":"ping"}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"The user"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":" asks: \"What is 9 times 7? Show your reasoning briefly.\"\n\nWe must answer: 9 * 7 = 63. The reasoning"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":": multiplication, addition, repeated addition, counting.\n\nWe have to output answer in plain text, no disallowed content. Should be short. No policy"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":" violation. Provide brief reasoning.\n\nThus answer: 63.\n\nWe can also explain like: 9 + 9 + 9 + 9 + 9 + 9 + 9 = 63, or "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"7 * 9 = 7 * (10 - "}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"},"usage":{"input_tokens":54,"output_tokens":120}}
+
+event: ping
+data: {"type":"ping","x-opencode-type":"inference-cost","cost":"0.00000000","normalizedUsage":{"inputTokens":54,"outputTokens":120,"reasoningTokens":0,"cacheReadTokens":0,"cacheWrite5mTokens":0,"cacheWrite1hTokens":0}}
+
+event: message_stop
+data: {"type":"message_stop"}
+
+event: ping
+data: {"type":"ping","cost":"0.00000000"}
+

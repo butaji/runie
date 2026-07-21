@@ -1,0 +1,19 @@
+# Enforced code quality limits for the runie codebase.
+#
+# Lint levels are set in Cargo.toml [lints.clippy] — this file only
+# contains threshold/configuration overrides.
+
+# Max 40 lines per function (too_many_lines lint threshold).
+too-many-lines-threshold = 40
+
+# Max 10 cognitive complexity per function.
+cognitive-complexity-threshold = 10
+
+# Max 10 complexity per function.
+single-char-binding-names-threshold = 1
+
+# Excessive nesting threshold (prevents deeply nested closures/ifs).
+excessive-nesting-threshold = 10
+
+# Max 500 lines per file (enforced via CI script, not clippy).
+# Files exceeding this must be split into modules.

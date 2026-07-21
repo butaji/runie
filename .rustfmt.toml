@@ -1,0 +1,12 @@
+edition = "2021"
+max_width = 120
+tab_spaces = 4
+newline_style = "Auto"
+merge_derives = true
+use_small_heuristics = "Max"
+
+# Enforce line limits: file max 500 lines, fn max 40 lines
+max_file_line_length = 500
+fn_call_width = 60
+chain_width = 60
+single_line_if_else_max_width = 50

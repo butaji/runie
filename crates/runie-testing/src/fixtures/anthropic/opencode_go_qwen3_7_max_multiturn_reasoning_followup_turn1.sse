@@ -1,0 +1,444 @@
+event:message_start
+data:{"message":{"model": "qwen3.7-max","id":"msg_opencode_go_fixture","role":"assistant","type":"message","content":[],"usage":{"input_tokens":13,"output_tokens":0}},"type":"message_start"}
+
+event:ping
+data:{"type":"ping"}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"type":"thinking","signature":"","thinking":""},"index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Thinking"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Process:\n\n1"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **An"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"alyze the Request:**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    *  "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Question"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":": What is "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"9 times 7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"?\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   Constraint: Show"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" reasoning briefly.\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"2.  **"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Calculate the Answer:**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   $9 \\"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"times 7 ="},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 63$"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n\n3. "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" **Formulate the"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Reasoning ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Briefly):**\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Method 1 ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Multip"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"lication table):*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Direct"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" recall from the standard"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" multiplication table.\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Method 2 ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Distributive property"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" /"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" breaking it down):"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"* $"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"9 \\times "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"7 = (1"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"0 - 1"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":") \\times "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"7 = 7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"0 - 7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" = 63"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"$.\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   *Method "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"3 (Repeated addition"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"):* $9"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" + 9 +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 9 + "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"9 + 9"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" + 9 +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 9 = "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"63$ ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"too long)."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    *  "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *Selection:* Method"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 2 is the"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" best"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" for showing \"reason"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ing"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\" briefly and clearly"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" without"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" just saying \"I"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" memorized"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" it\".\n\n4"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **Draft"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the Response:**\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   Answer"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":": 63"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   Reasoning:"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" You can think of"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 9 as ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"10 - "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"1). So,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 1"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"0 times 7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" is 70"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", and subtracting"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" one group"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" of 7 gives"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 70 -"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 7 = "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"63.\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"5.  **"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Refine for"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Brevity:**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    \""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"9 times 7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" is **63"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"**.\n    **"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Reasoning:** You"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" can break 9"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" down into"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" (10 -"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 1). Multip"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"lying 10"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" by 7 gives"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 70,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" and subtracting one"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" group of 7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" gives"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 70 -"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 7 = "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"63.\"\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"6.  **"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Final Review:** Me"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ets all constraints."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Accurate, brief"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", shows"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" reasoning. clear output"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":". \n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *Wait,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" I"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" can also just say"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"7 * 1"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"0 ="},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 70,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" minus 7 ="},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 63."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Keep"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" it simple.*\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"signature_delta","signature":""},"type":"content_block_delta","index":0}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":0}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"type":"text","text":""},"index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"9 times "},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"7 is **6"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"3**.\n\n**"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"Reasoning:** \n"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"You can think of"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" 9 as ("},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"10 - "},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"1). \n"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"* 10"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" times"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" 7 is "},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"70. \n"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"* Subtract one group"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" of 7:"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" 70 -"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" 7 = "},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"63."},"type":"content_block_delta","index":1}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":1}
+
+event:message_delta
+data:{"delta":{"stop_reason":"end_turn"},"type":"message_delta","usage":{"output_tokens":493,"cache_creation_input_tokens":0,"input_tokens":23,"cache_read_input_tokens":0,"prompt_tokens_details":{"cached_tokens":0}}}
+
+event:message_stop
+data:{"type":"message_stop"}
+
+event: ping
+data: {"type":"ping","cost":"0.00000000"}
+

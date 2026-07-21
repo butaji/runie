@@ -1,0 +1,1065 @@
+event:message_start
+data:{"message":{"model": "qwen3.7-max","id":"msg_opencode_go_fixture","role":"assistant","type":"message","content":[],"usage":{"input_tokens":98,"output_tokens":0}},"type":"message_start"}
+
+event:ping
+data:{"type":"ping"}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"type":"thinking","signature":"","thinking":""},"index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Thinking"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Process:\n\n1"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **An"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"alyze the User's"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Input:**\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   **Occ"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"asion:** Casual dinner"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   **Location:**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Paris.\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   **Goal"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":** Out"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"fit recommendation.\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"2."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"  **Understand"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the Context (\""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Parisian Casual Dinner"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\"):**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    *  "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *Parisian Style"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":* Effortlessly"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" chic, understated"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" elegance, neutral colors"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", well-f"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"itted basics, avoiding"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" overly flashy"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"/logomania items"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":". \"Je"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" ne sais quoi\"."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    *  "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *Casual Dinner"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":* Not"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" black-tie,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" not"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" sweatpants. Smart"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" casual /"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" elevated casual. Think"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" nice"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" bistro, brass"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"erie, or"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" casual restaurant.\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   *Weather/"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Season:* ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Unknown, so I"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" should"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" provide options or advise"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" layering/check"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ing the weather)."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Gender"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":* (Unknown,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" so I must"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" provide options for both"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" feminine"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" and masculine styles,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or keep"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" it gender-neutral/ad"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"aptable).\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"3.  **"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Form"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ulate Outfit Recommendations"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n\n    *  "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"General Parisian Rules"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":*\n        *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   Avoid athletic wear"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":","},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" flip-flops,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" overly"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" distressed jeans, giant"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" logos.\n       "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   Focus on"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" fit, fabric"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" quality, and neutral"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" pa"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"lettes (navy"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", black, white"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", camel, olive"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":").\n        *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   Comfortable but"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" stylish shoes"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" (lots of walking"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" in"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Paris).\n\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   *F"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"eminine/Le"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"aning Femin"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ine Options:*\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"        *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   *Option "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"1 ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Classic & Chic):"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"* Well"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"-fitted straight-leg"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or wide"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"-leg dark jeans +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" a silk camis"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ole or fine-k"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"nit t"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"urtleneck + a"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" tailored"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" blazer or trench"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" coat +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" ankle boots or clean"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" white"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" leather sneakers.\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"       "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   *Option"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 2 (Eff"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ortless Dress):"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Midi slip dress or"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" wrap dress + leather"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" jacket or oversized card"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"igan +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" ballet flats or low"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" block heels.\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Masculine/"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Leaning Masculine"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Options:*\n       "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   *Option"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 1 (Smart"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Casual Bistro):*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Dark,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" unripped jeans"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" chinos + a"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" high"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"-quality plain t-shirt"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or casual"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" button-down (ox"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ford"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"/linen depending"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" on season) +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" an unstructured bl"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"azer or a nice"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" crewneck sweater +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" clean"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" leather sneakers or Chelsea"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" boots.\n       "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   *Option"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 2 (Rel"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"axed but Polished"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"):*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Tailored trousers +"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" a fine"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"-gauge turt"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"leneck or"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" polo + a classic"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" overcoat or bomber"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" jacket + loafers"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or suede derby"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" shoes.\n\n4"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **Structure"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the Response:**\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   **Ack"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"nowledge and"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Validate:** Express excitement"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Paris is great!)"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" and define"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the \"Parisian"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" casual\" vibe ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"effortless chic"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":").\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   **Femin"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ine Outfit"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Ideas:** 2"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" distinct looks"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   **Mascul"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ine Outfit Ideas"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":** 2 distinct"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" looks.\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *   **Key"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Parisian Style Rules"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" (The \""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Don'ts\"):"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" No athleisure"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", no"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" giant logos, etc"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   **Cruc"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ial Accessories/"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Practical Tips:**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Comfortable shoes ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"cobblestones!),"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" layering (weather"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"), a nice bag"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n    *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"   **Call to"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Action:**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Ask about the weather"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or their"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" personal style to narrow"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" it"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" down further if needed"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n\n5"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **Draft"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ing the Content ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Iterative refinement):**"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\n    *  "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *Tone:*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Stylish, helpful"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", encouraging.\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Refining the looks"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":* Make sure they"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" sound accessible but elevated"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":". \""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Dark wash jeans\""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" is a staple"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":". \"Tailored"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" blazer\""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" is very Parisian"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *   *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Shoes:* Em"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"phasize *no"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" stile"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ttos* ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"cobblestones)"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" and *clean*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" sneakers.\n\n6"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **Final"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Review against User Prompt"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":":** Does this answer"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" \"What"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" should I wear tonight"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" for a casual dinner"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" in Paris?\" Yes"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", comprehensively and"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" stylishly. ("},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Self-correction:"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Ensure I explicitly mention"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" checking"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the weather since I"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" don't know the"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" current season in their"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" timeline).\n\n7"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":".  **Generate"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Output.** (Proceed"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" to generate response based"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" on these structured"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" thoughts). \n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *(Self-Cor"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"rection during drafting:"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Keep"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" it concise but descriptive"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":". Use formatting"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" like bolding and"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" bullet points"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" for readability.)*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" \n    *Wait"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":", I shouldn't"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" assume gender."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" I will explicitly divide"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" into"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" \"Feminine"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"-leaning"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\" and \"Mas"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"culine-leaning\""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" or just \"Option"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" A"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" / Option B\""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" with"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" clear descriptions.* Let"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"'s use \""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Feminine/"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Leaning Feminine"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"\" and \"Mas"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"culine/Le"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"aning Masculine\""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" for clarity.\n\n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"8.  **"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Final Polish:** Add"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" a touch of French"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" flair (\"Bon app"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Ã©tit!\")."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Ensure the transition from"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the previous cut-off"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" message is smooth."},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" (The previous message"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" cut off at \""},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"2\", so I"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"'ll just smoothly"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" dive into the Paris"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" advice). \n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    *Actually,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" I"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" don't need to"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" address"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" the cut-off,"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" just answer the new"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" prompt directly.* \n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    Let"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"'s go. \n"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"    "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"1. The V"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ibe\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 2. Femin"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ine Looks\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 3. Mascul"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"ine Looks\n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" 4. Golden"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Rules\n    "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"5. Shoes/"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"Weather. \n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" Perfect. \n   "},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":" *"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"thinking_delta","thinking":"End thought process.*"},"type":"content_block_delta","index":0}
+
+event:content_block_delta
+data:{"delta":{"type":"signature_delta","signature":""},"type":"content_block_delta","index":0}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":0}
+
+event:content_block_start
+data:{"type":"content_block_start","content_block":{"type":"text","text":""},"index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"Oh, how"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" exciting"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"! A casual dinner"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" in Paris"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" calls for the ultimate"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" **\"eff"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"ortless chic\"**"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" look"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":". Parisians are"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" masters of looking"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" put-together without"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" looking"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" like they tried too"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" hard. The"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" goal is elevated basics"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":","},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" neutral colors, and"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" great"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" fit. \n\nSince"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" I"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" don't know your"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" gender"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" or the current weather"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":", here"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" are a few fool"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":"proof options for both"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":" feminine and masculine styles"},"type":"content_block_delta","index":1}
+
+event:content_block_delta
+data:{"delta":{"type":"text_delta","text":":\n\n### "},"type":"content_block_delta","index":1}
+
+event:content_block_stop
+data:{"type":"content_block_stop","index":1}
+
+event:message_delta
+data:{"delta":{"stop_reason":"max_tokens"},"type":"message_delta","usage":{"output_tokens":1156,"cache_creation_input_tokens":0,"input_tokens":120,"cache_read_input_tokens":0,"prompt_tokens_details":{"cached_tokens":0}}}
+
+event:message_stop
+data:{"type":"message_stop"}
+
+event: ping
+data: {"type":"ping","cost":"0.00000000"}
+

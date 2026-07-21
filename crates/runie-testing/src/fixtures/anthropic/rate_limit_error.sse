@@ -1,0 +1,4 @@
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_error","type":"message","role":"assistant","stop_reason":null,"content":[],"usage":{"input_tokens":10,"output_tokens":0}}}
+event: error
+data: {"type":"rate_limit","message":"Rate limit exceeded. Try again in 30s."}

@@ -1,0 +1,10 @@
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_error","type":"message","role":"assistant","stop_reason":null,"content":[],"usage":{"input_tokens":10,"output_tokens":0}}}
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","id":"block_0"}}
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Partial "}}
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"response"}}
+event: error
+data: {"type":"server_error","message":"Server error during streaming."}
