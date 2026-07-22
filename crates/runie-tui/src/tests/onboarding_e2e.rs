@@ -1,4 +1,5 @@
 #![allow(clippy::useless_conversion)]
+#![allow(clippy::too_many_lines)]
 //! End-to-end onboarding tests (Layer 2 + Layer 3).
 //!
 //! Drives the first-run login flow and the providers-add flow through core
@@ -23,13 +24,8 @@ fn full_flow_from_empty_to_input_box() {
     state.config.current_model.clear();
 
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -62,13 +58,8 @@ fn validation_failure_shows_error() {
     state.config.current_model.clear();
 
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ValidationFailed {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -105,13 +96,8 @@ fn add_second_provider_keeps_first_active() {
 
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -182,6 +168,7 @@ fn login_flow_auto_opens_when_no_model_connected() {
 }
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn invalid_key_retry_with_valid_key_saves_and_connects() {
     clean_config();
 
@@ -190,13 +177,8 @@ fn invalid_key_retry_with_valid_key_saves_and_connects() {
     state.config.current_model.clear();
 
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-bad".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-bad".into() });
     state.update(Event::ValidationFailed {
         provider: "minimax".into(),
         key: "sk-bad".into(),
@@ -221,10 +203,7 @@ fn invalid_key_retry_with_valid_key_saves_and_connects() {
     assert!(content.contains("invalid key"));
 
     // Retry with a valid key.
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-good".into(),
-    });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-good".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-good".into(),
@@ -262,13 +241,8 @@ fn uncheck_all_models_rejects_save_with_transient_error() {
     state.config.current_model.clear();
 
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),

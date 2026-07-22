@@ -24,12 +24,7 @@ pub fn command_palette(items: Vec<crate::commands::CommandRow>) -> PanelStack {
             panel = panel.header(row.category.clone());
             last_category = row.category;
         }
-        panel = panel.command_with_aliases(
-            row.name,
-            row.desc,
-            row.aliases,
-            ItemAction::Emit(row.event),
-        );
+        panel = panel.command_with_aliases(row.name, row.desc, row.aliases, ItemAction::Emit(row.event));
     }
     PanelStack::new(panel)
 }
@@ -37,48 +32,89 @@ pub fn command_palette(items: Vec<crate::commands::CommandRow>) -> PanelStack {
 /// Build a model selector panel with provider-grouped items.
 ///
 /// `groups` is a list of `(provider_name, [(model_name, event_to_emit_on_select)])`.
+/// Build a model label with optional star, thinking-level suffix, and
+/// orchestration role tag (lead / worker).
+fn model_label(
+    full_name: &str,
+    current: &str,
+    thinking: &std::collections::HashMap<String, crate::model::ThinkingLevel>,
+    lead_model: Option<&str>,
+    worker_model: Option<&str>,
+) -> String {
+    let (provider, model_name) = full_name.split_once('/').unwrap_or(("", full_name));
+    let is_current = full_name == current;
+    #[allow(clippy::unnecessary_map_or)]
+    let is_lead = lead_model.map_or(false, |m| m == full_name);
+    #[allow(clippy::unnecessary_map_or)]
+    let is_worker = worker_model.map_or(false, |m| m == full_name);
+
+    let mut label = if is_current {
+        format!("★ {}/{}", provider, model_name)
+    } else {
+        full_name.to_string()
+    };
+
+    // Orchestration role tag — shown after the star so it reads clearly.
+    if is_lead {
+        label.push_str("  [lead]");
+    } else if is_worker {
+        label.push_str("  [worker]");
+    }
+
+    if let Some(level) = thinking.get(full_name) {
+        label.push_str(&format!("  · {}", level.as_str()));
+    }
+
+    label
+}
+
 /// `thinking` holds per-model thinking-level overrides keyed `"provider/model"`;
 /// models with an override show the level as a dim suffix on their row.
+/// `lead_model` and `worker_model`, when set, append a role tag to the
+/// matching entry so the user can see which model is assigned in the
+/// current orchestration config.
 pub fn model_selector(
     recent: Vec<String>,
     groups: Vec<(String, Vec<(String, Event)>)>,
     current: &str,
     thinking: &std::collections::HashMap<String, crate::model::ThinkingLevel>,
+    role: Option<&str>,
+    lead_model: Option<String>,
+    worker_model: Option<String>,
 ) -> PanelStack {
-    let mut panel = Panel::new("model", " Select Model ").with_filter();
+    let title = if let Some(r) = role {
+        format!(" Select {} Model ", r.to_uppercase())
+    } else {
+        " Select Model ".into()
+    };
+    let mut panel = Panel::new("model", title).with_filter();
+    let lead = lead_model.as_deref();
+    let worker = worker_model.as_deref();
 
     if !recent.is_empty() {
         panel = panel.header("Recent");
         for model in recent {
-            let (provider, model_name) = model.split_once('/').unwrap_or(("", &model));
             let evt = Event::SelectModel {
-                provider: provider.into(),
-                model: model_name.into(),
+                provider: model
+                    .split_once('/')
+                    .map(|p| p.0.to_string())
+                    .unwrap_or_default(),
+                model: model
+                    .split_once('/')
+                    .map(|m| m.1.to_string())
+                    .unwrap_or_else(|| model.clone()),
             };
-            let mut label = if model == current {
-                format!("★ {}", model)
-            } else {
-                model.clone()
-            };
-            if let Some(level) = thinking.get(&model) {
-                label.push_str(&format!("  · {}", level.as_str()));
-            }
+            let label = model_label(&model, current, thinking, lead, worker);
             panel = panel.item(label, ItemAction::Emit(evt));
         }
         panel = panel.separator();
     }
 
     for (provider, models) in groups {
-        panel = panel.header(provider);
+        panel = panel.header(provider.clone());
         for (name, evt) in models {
-            let mut label = if name == current {
-                format!("★ {}", name)
-            } else {
-                name.clone()
-            };
-            if let Some(level) = thinking.get(&name) {
-                label.push_str(&format!("  · {}", level.as_str()));
-            }
+            let full_name = format!("{}/{}", provider, name);
+            let label = model_label(&full_name, current, thinking, lead, worker);
             panel = panel.item(label, ItemAction::Emit(evt));
         }
     }
@@ -91,6 +127,7 @@ pub fn model_selector(
 /// `global` is the global thinking level; `override_level` is the stored
 /// per-model choice (if any). The effective choice — the override when set,
 /// otherwise the "default" row — is marked `(current)`.
+#[allow(clippy::too_many_lines)]
 pub fn model_reasoning_panel(
     provider: &str,
     model: &str,
@@ -107,11 +144,7 @@ pub fn model_reasoning_panel(
     };
     panel = panel.item(
         default_label,
-        ItemAction::Emit(Event::SwitchModelWithLevel {
-            provider: provider.into(),
-            model: model.into(),
-            level: None,
-        }),
+        ItemAction::Emit(Event::SwitchModelWithLevel { provider: provider.into(), model: model.into(), level: None }),
     );
 
     for &level in crate::model::ThinkingLevel::all() {
@@ -149,15 +182,20 @@ pub fn model_reasoning_panel(
 ///
 /// Shows all pattern choices in one panel: `single`, the three `swarm`
 /// variants, and `improve`. The current choice is marked with `★`.
-pub fn mode_selector(current: &str, current_variant: Option<&str>) -> PanelStack {
+/// When `current` is `"swarm"`, additional rows show the configured
+/// lead (coordinator) and worker (task-executor) models, if any.
+#[allow(clippy::too_many_lines)]
+pub fn mode_selector(
+    current: &str,
+    current_variant: Option<&str>,
+    lead_model: Option<String>,
+    worker_model: Option<String>,
+) -> PanelStack {
     let mut panel = Panel::new("mode", " Select Mode ").header("Agent orchestration pattern");
 
     panel = panel.item(
         mode_item_label("single", "Direct execution", current, None, current_variant),
-        ItemAction::Emit(Event::SetMode {
-            active: "single".into(),
-            workers: None,
-        }),
+        ItemAction::Emit(Event::SetMode { active: "single".into(), workers: None }),
     );
 
     for (variant_name, desc) in [
@@ -188,11 +226,27 @@ pub fn mode_selector(current: &str, current_variant: Option<&str>) -> PanelStack
             None,
             current_variant,
         ),
-        ItemAction::Emit(Event::SetMode {
-            active: "improve".into(),
-            workers: None,
-        }),
+        ItemAction::Emit(Event::SetMode { active: "improve".into(), workers: None }),
     );
+
+    // ── Lead / Worker model configuration (shown in swarm mode) ─────────────────
+    let is_swarm = current == "swarm";
+    if is_swarm {
+        panel = panel.separator();
+        panel = panel.header("Swarm Models");
+
+        let lead_display = lead_model.unwrap_or("(uses current)".to_string());
+        panel = panel.item(
+            format!("  Lead Model: {lead_display}"),
+            ItemAction::Emit(Event::RunPaletteCommand { name: "select-lead-model".into(), args: "".into() }),
+        );
+
+        let worker_display = worker_model.unwrap_or("(uses current)".to_string());
+        panel = panel.item(
+            format!("  Worker Model: {worker_display}"),
+            ItemAction::Emit(Event::RunPaletteCommand { name: "select-worker-model".into(), args: "".into() }),
+        );
+    }
 
     // Pre-select the current choice so pressing Enter without moving is a no-op
     // that still dismisses the dialog and re-applies the current mode.
@@ -203,9 +257,7 @@ pub fn mode_selector(current: &str, current_variant: Option<&str>) -> PanelStack
         .enumerate()
         .filter(|(_, item)| item.is_navigable())
         .position(|(_, item)| match item {
-            crate::dialog::PanelItem::Action { label, .. } => {
-                label.starts_with("★ ") || label.starts_with("★")
-            }
+            crate::dialog::PanelItem::Action { label, .. } => label.starts_with("★ ") || label.starts_with("★"),
             _ => false,
         })
         .unwrap_or(0);
@@ -222,11 +274,7 @@ fn mode_item_label(
     current_variant: Option<&str>,
 ) -> String {
     let is_current = match variant {
-        Some(v) => {
-            current == "swarm"
-                && (current_variant == Some(v)
-                    || (current_variant.is_none() && v == "parallel"))
-        }
+        Some(v) => current == "swarm" && (current_variant == Some(v) || (current_variant.is_none() && v == "parallel")),
         None => current == name,
     };
     if is_current {
@@ -247,6 +295,9 @@ mod tests {
             vec![],
             "minimax/M3",
             &std::collections::HashMap::new(),
+            None,
+            None,
+            None,
         );
         let panel = stack.current().unwrap();
         let action = panel
@@ -263,10 +314,7 @@ mod tests {
         };
         assert_eq!(
             evt,
-            Event::SelectModel {
-                provider: "minimax".into(),
-                model: "M3".into(),
-            },
+            Event::SelectModel { provider: "minimax".into(), model: "M3".into() },
         );
     }
 }

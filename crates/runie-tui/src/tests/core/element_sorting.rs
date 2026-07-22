@@ -1,4 +1,5 @@
 //! Tests for chat feed element sorting by last update time.
+#![allow(clippy::too_many_lines)]
 
 use runie_core::Event;
 
@@ -65,17 +66,8 @@ fn response_after_tool_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: "file.txt".into(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "file.txt".into() },
         Event::Response {
             id: "req.0".into(),
             content: "check files.".into(),
@@ -83,10 +75,7 @@ fn response_after_tool_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 2.0,
-        },
+        Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 },
         Event::Done { id: "req.0".into() },
     ]
 }
@@ -145,10 +134,7 @@ fn multiple_response_chunks_preserve_creation_order() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -168,17 +154,8 @@ fn thought_before_agent_events() -> Vec<Event> {
     vec![
         Event::Thinking { id: "req.0".into() },
         Event::ThoughtDone { id: "req.0".into() },
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: "a".into(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".into() },
         Event::Response {
             id: "req.0".into(),
             content: "Result".into(),
@@ -193,10 +170,7 @@ fn thought_before_agent_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 1.0,
-        },
+        Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 },
         Event::Done { id: "req.0".into() },
     ]
 }
@@ -236,17 +210,8 @@ fn turn_complete_last_during_turn_despite_updates() {
     state.agent.streaming = true;
     state.update(Event::Thinking { id: "req.0".into() });
     state.update(Event::ThoughtDone { id: "req.0".into() });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".into(),
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".into() });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -254,10 +219,7 @@ fn turn_complete_last_during_turn_despite_updates() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     // Even after turn complete, delayed empty response bumps assistant
     state.update(Event::Response {
         id: "req.0".into(),
@@ -284,17 +246,8 @@ fn turn_then_user_events() -> Vec<Event> {
     vec![
         Event::Thinking { id: "req.0".into() },
         Event::ThoughtDone { id: "req.0".into() },
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: "a".into(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".into() },
         Event::Response {
             id: "req.0".into(),
             content: "T1".into(),
@@ -302,10 +255,7 @@ fn turn_then_user_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 1.0,
-        },
+        Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 },
         Event::Done { id: "req.0".into() },
         Event::Input('H'),
         Event::submit(),
@@ -349,18 +299,14 @@ fn elements_sorted_by_timestamp_not_index() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "First".into(),
-        }],
+        parts: vec![Part::Text { content: "First".into() }],
         timestamp: 3.0,
         id: "u1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "Second".into(),
-        }],
+        parts: vec![Part::Text { content: "Second".into() }],
         timestamp: 1.0,
         id: "u2".into(),
         ..Default::default()

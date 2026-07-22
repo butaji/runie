@@ -37,6 +37,10 @@ UNIT_VARIANTS = {
     "ToggleScopedModelsDialog", "ToggleSessionTree", "ToggleSettingsDialog", "ToggleTasksPane",
     "ToggleVimMode", "ToggleWelcome", "TrustProject", "TurnAborted", "TurnCompleted", "Undo",
     "UntrustProject", "Up",
+    # Goal — unit variants only (GoalCreate/GoalComplete have fields)
+    "GoalCancel", "GoalPause", "GoalResume",
+    # Dialog intents — unit variants
+    "ToggleMcpServersDialog", "ToggleSkillsDialog",
 }
 
 # Variants with fields (non-unit variants) — for into_intent() return type
@@ -68,6 +72,10 @@ VARIANTS_WITH_FIELDS = {
     "GoalCreate", "GoalComplete",
     # AskUserQuestion intent variants with fields
     "AskUserQuestion", "QuestionAnswer", "QuestionSkip", "QuestionSubmit",
+    # Dialog intent variants with fields
+    "McpServerAction", "SkillAction",
+    # ModelConfig intent variants with fields
+    "SetLeadModel", "SetWorkerModel",
 }
 
 # Control variants that are also intents (from taxonomy.json intent_variants for Control)

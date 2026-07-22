@@ -103,8 +103,8 @@ fn env_var_still_takes_priority_over_saved_config() {
     let saved = std::env::var("MINIMAX_API_KEY").ok();
     std::env::set_var("MINIMAX_API_KEY", "sk-from-env");
 
-    let provider = runie_provider::build_provider_with_config("minimax", "MiniMax-M3", &config)
-        .expect("provider should build");
+    let provider =
+        runie_provider::build_provider_with_config("minimax", "MiniMax-M3", &config).expect("provider should build");
     assert_eq!(provider.key(), "minimax");
 
     if let Some(v) = saved {

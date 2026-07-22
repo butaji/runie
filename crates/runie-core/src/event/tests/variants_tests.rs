@@ -1,4 +1,5 @@
 #![allow(clippy::all)]
+#![allow(clippy::too_many_lines)]
 //! Tests for Event variants.
 
 use crate::event::EventKind;
@@ -35,9 +36,7 @@ fn event_agent_equality() {
     let id = "test.1".to_string();
     assert_eq!(
         Event::Thinking { id: id.clone() },
-        Event::Thinking {
-            id: "test.1".to_string()
-        },
+        Event::Thinking { id: "test.1".to_string() },
     );
 }
 
@@ -54,25 +53,16 @@ fn all_sub_enums_have_variants() {
     let _ = Event::Up;
     let _ = Event::Quit;
     let _ = Event::ForceQuit;
-    let _ = Event::SwitchModel {
-        provider: "openai".into(),
-        model: "gpt-4".into(),
-        explicit: false,
-    };
+    let _ = Event::SwitchModel { provider: "openai".into(), model: "gpt-4".into(), explicit: false };
     let _ = Event::ToggleCommandPalette;
-    let _ = Event::PendingEdit {
-        path: "x".into(),
-        original: "a".into(),
-        proposed: "b".into(),
-    };
+    let _ = Event::PendingEdit { path: "x".into(), original: "a".into(), proposed: "b".into() };
     let _ = Event::ClearTransient;
     let _ = Event::CloneSession;
-    let _ = Event::RunNameCommand {
-        name: "test".into(),
-    };
+    let _ = Event::RunNameCommand { name: "test".into() };
 }
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn convenience_constructors() {
     assert!(matches!(Event::input('x'), Event::Input('x')));
     assert!(matches!(Event::submit(), Event::Submit));
@@ -128,17 +118,11 @@ fn intent_events_have_typed_event_conversion() {
         (Event::Input('x'), |i| matches!(i, Event::Input('x'))),
         (Event::Submit, |i| matches!(i, Event::Submit)),
         (
-            Event::SwitchModel {
-                provider: "openai".into(),
-                model: "gpt-4".into(),
-                explicit: true,
-            },
+            Event::SwitchModel { provider: "openai".into(), model: "gpt-4".into(), explicit: true },
             |i| matches!(i, Event::SwitchModel { provider, model, explicit } if provider == "openai" && model == "gpt-4" && explicit),
         ),
         (
-            Event::RunSaveCommand {
-                name: "test".into(),
-            },
+            Event::RunSaveCommand { name: "test".into() },
             |i| matches!(i, Event::RunSaveCommand { name } if name == "test"),
         ),
         (Event::ToggleCommandPalette, |i| {
@@ -179,18 +163,8 @@ fn intent_events_have_typed_event_conversion() {
 fn fact_events_do_not_convert_to_intent() {
     let fact_events = vec![
         Event::Thinking { id: "1".into() },
-        Event::ToolStart {
-            id: "t1".into(),
-            name: "bash".into(),
-            input: serde_json::json!({}),
-        },
-        Event::ToolEnd {
-            id: "t1".into(),
-            duration_secs: 1.0,
-            output: "ok".into(),
-
-            input: None,
-        },
+        Event::ToolStart { id: "t1".into(), name: "bash".into(), input: serde_json::json!({}) },
+        Event::ToolEnd { id: "t1".into(), duration_secs: 1.0, output: "ok".into(), input: None },
         Event::Response {
             id: "r1".into(),
             content: "hello".into(),
@@ -199,23 +173,11 @@ fn fact_events_do_not_convert_to_intent() {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::TurnComplete {
-            id: "1".into(),
-            duration_secs: 1.0,
-        },
-        Event::ConfigLoaded {
-            config: Box::new(crate::config::Config::default()),
-        },
-        Event::TrustLoaded {
-            decisions: Default::default(),
-        },
-        Event::SessionSaved {
-            name: "test".into(),
-        },
-        Event::BashOutput {
-            command: "ls".into(),
-            output: "/".into(),
-        },
+        Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
+        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
+        Event::TrustLoaded { decisions: Default::default() },
+        Event::SessionSaved { name: "test".into() },
+        Event::BashOutput { command: "ls".into(), output: "/".into() },
     ];
 
     for event in fact_events {

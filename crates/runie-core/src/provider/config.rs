@@ -75,12 +75,7 @@ where
 
 /// Save a provider configuration to `~/.runie/config.toml`.
 /// Uses surgical TOML edit with fs2 exclusive lock via file_helpers.
-pub fn save_provider_config(
-    name: &str,
-    base_url: &str,
-    api_key: &str,
-    models: &[String],
-) -> anyhow::Result<()> {
+pub fn save_provider_config(name: &str, base_url: &str, api_key: &str, models: &[String]) -> anyhow::Result<()> {
     file_helpers::save_provider_to_path(&config_path(), name, base_url, api_key, models)
 }
 

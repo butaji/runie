@@ -8,18 +8,14 @@ fn collapse_all_when_some_expanded() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s\nreasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nreasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "◆ Ran ls 0.5s\noutput".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\noutput".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()
@@ -38,18 +34,14 @@ fn expand_all_when_all_collapsed() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s\nreasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nreasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "◆ Ran ls 0.5s\noutput".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\noutput".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()
@@ -68,18 +60,14 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "⠋ Running ls...".into(),
-        }],
+        parts: vec![Part::Text { content: "⠋ Running ls...".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()
@@ -105,9 +93,7 @@ fn toggle_all_twice_restores_expanded() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -129,9 +115,7 @@ fn toggle_all_with_many_items() {
     for i in 0..5 {
         state.session.messages.push(ChatMessage {
             role: Role::Thought,
-            parts: vec![Part::Text {
-                content: format!("◆ Thought {}", i),
-            }],
+            parts: vec![Part::Text { content: format!("◆ Thought {}", i) }],
             timestamp: i as f64,
             id: format!("t{}", i),
             ..Default::default()
@@ -156,9 +140,7 @@ fn new_thought_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
@@ -166,9 +148,7 @@ fn new_thought_respects_global_collapse_when_true() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.ensure_fresh();
 
     let feed = runie_core::view::LazyCache::feed(&state);
@@ -189,9 +169,7 @@ fn new_thought_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Reasoning".to_string(),
@@ -199,9 +177,7 @@ fn new_thought_respects_global_expand_when_false() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.ensure_fresh();
 
     let feed = runie_core::view::LazyCache::feed(&state);
@@ -223,17 +199,8 @@ fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.view.all_collapsed = true;
 
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".to_string() });
     state.ensure_fresh();
 
     let feed = runie_core::view::LazyCache::feed(&state);
@@ -252,17 +219,8 @@ fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.view.all_collapsed = false;
 
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".to_string() });
     state.ensure_fresh();
 
     let feed = runie_core::view::LazyCache::feed(&state);

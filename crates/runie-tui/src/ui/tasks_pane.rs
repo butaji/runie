@@ -35,17 +35,29 @@ pub(crate) fn render_tasks_pane(f: &mut Frame, snap: &Snapshot, area: Rect) {
         content_width,
     );
 
-    let mut y = inner.y + 1;
-    for worker in snap
+    let worker_row_count = snap
         .pattern_workers
         .iter()
         .filter(|w| w.status == PatternWorkerStatus::Running || snap.tasks_pane_show_done)
-    {
+        .count();
+
+    for (y, worker) in (inner.y + 1..).zip(
+        snap.pattern_workers
+            .iter()
+            .filter(|w| w.status == PatternWorkerStatus::Running || snap.tasks_pane_show_done),
+    ) {
         if y >= inner.y + inner.height {
             break;
         }
         render_row(f, snap, worker, inner.x, y, content_width);
-        y += 1;
+    }
+
+    // Render DISPATCH PAUSED overlay if circuit breaker is tripped.
+    if snap.circuit_breaker_tripped {
+        let overlay_y = inner.y + 1 + worker_row_count as u16 + 1;
+        if overlay_y < inner.y + inner.height - 1 {
+            render_dispatch_paused_overlay(f, inner.x, overlay_y, content_width);
+        }
     }
 }
 
@@ -92,12 +104,7 @@ fn render_header(f: &mut Frame, count: usize, x: u16, y: u16, content_width: u16
 
     f.render_widget(
         Paragraph::new(Line::from(spans)),
-        Rect {
-            x,
-            y,
-            width: content_width,
-            height: 1,
-        },
+        Rect { x, y, width: content_width, height: 1 },
     );
 }
 
@@ -136,6 +143,7 @@ struct RowStyle {
     buttons: &'static str,
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_row(
     f: &mut Frame,
     snap: &Snapshot,
@@ -153,9 +161,7 @@ fn render_row(
     };
 
     let elapsed = match worker.status {
-        S::Running => {
-            runie_core::labels::format_elapsed_secs(worker.started.elapsed().as_secs_f64())
-        }
+        S::Running => runie_core::labels::format_elapsed_secs(worker.started.elapsed().as_secs_f64()),
         _ => worker
             .duration_ms
             .map(|ms| runie_core::labels::format_elapsed_secs(ms as f64 / 1000.0))
@@ -167,8 +173,8 @@ fn render_row(
 
     let fixed_left_width = fixed_left.width();
     let right_width = right_text.width();
-    let avail_desc_width = (content_width as usize)
-        .saturating_sub(INDENT as usize + fixed_left_width + right_width + 1);
+    let avail_desc_width =
+        (content_width as usize).saturating_sub(INDENT as usize + fixed_left_width + right_width + 1);
     let description = truncate_to_width(&worker.description, avail_desc_width);
 
     let left_text = format!("{}{}", fixed_left, description);
@@ -192,12 +198,7 @@ fn render_row(
 
     f.render_widget(
         Paragraph::new(Line::from(spans)),
-        Rect {
-            x,
-            y,
-            width: content_width,
-            height: 1,
-        },
+        Rect { x, y, width: content_width, height: 1 },
     );
 }
 
@@ -251,6 +252,27 @@ fn failed_row_style() -> RowStyle {
     }
 }
 
+/// Render the DISPATCH PAUSED overlay when the circuit breaker has tripped.
+fn render_dispatch_paused_overlay(f: &mut Frame, x: u16, y: u16, content_width: u16) {
+    let warning_color = crate::theme::color_warning();
+    let bg = crate::theme::color_bg();
+
+    let text = "DISPATCH PAUSED";
+    let text_width = text.width() as u16;
+    let padding = content_width.saturating_sub(text_width).saturating_sub(2) / 2;
+
+    let spans = vec![
+        Span::raw(" ".repeat(padding as usize)),
+        Span::styled(text, Style::default().fg(warning_color).bg(bg).add_modifier(ratatui::style::Modifier::BOLD)),
+        Span::raw(" ".repeat(padding as usize)),
+    ];
+
+    f.render_widget(
+        Paragraph::new(Line::from(spans)),
+        Rect { x, y, width: content_width, height: 1 },
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,6 +281,7 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn tasks_pane_renders_header_rows_and_buttons() {
         let started = std::time::Instant::now();
         let workers = vec![

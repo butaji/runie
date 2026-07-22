@@ -24,9 +24,7 @@ pub struct RactorConfigActor;
 impl RactorConfigActor {
     /// Emit the current config as an event.
     fn emit_current_config(state: &ConfigActorState) {
-        state.emit(Event::ConfigLoaded {
-            config: Box::new(state.cfg.clone()),
-        });
+        state.emit(Event::ConfigLoaded { config: Box::new(state.cfg.clone()) });
         tracing::info!("ConfigLoaded");
     }
 
@@ -48,10 +46,9 @@ impl RactorConfigActor {
     )> {
         let path = global_path.unwrap_or_else(crate::config::config_path);
         let actor = Self;
-        let (handle, join, cell) =
-            spawn_ractor(None, actor, (bus, path.clone(), project_path.clone()))
-                .await
-                .map_err(|e| anyhow::anyhow!("RactorConfigActor spawn failed: {}", e))?;
+        let (handle, join, cell) = spawn_ractor(None, actor, (bus, path.clone(), project_path.clone()))
+            .await
+            .map_err(|e| anyhow::anyhow!("RactorConfigActor spawn failed: {}", e))?;
         Ok((RactorConfigHandle::new(handle), cell, join))
     }
 
@@ -98,6 +95,10 @@ impl Actor for RactorConfigActor {
         #[cfg(feature = "watch")]
         handlers::spawn_config_watcher(myself.clone(), path.clone());
 
+        // Suppress unused warning when `watch` feature is disabled
+        #[cfg(not(feature = "watch"))]
+        let _ = myself;
+
         let state = ConfigActorState {
             cfg: config.clone(),
             path: path.clone(),
@@ -113,7 +114,7 @@ impl Actor for RactorConfigActor {
     #[instrument(name = "config_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
@@ -135,10 +136,9 @@ mod tests {
         let temp_path = std::env::temp_dir().join("runie_test_config.toml");
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (_handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
-                .await
-                .unwrap();
+        let (_handle, _cell, _) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
+            .await
+            .unwrap();
 
         // Wait for ConfigLoaded with timeout to prevent hanging forever
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -162,10 +162,9 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_config2.toml");
         let mut sub = bus.subscribe();
-        let (handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
-                .await
-                .unwrap();
+        let (handle, _cell, _) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
+            .await
+            .unwrap();
 
         // Wait for ConfigLoaded to ensure actor is ready
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
@@ -188,6 +187,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn load_layers_returns_effective_config() {
         // Unset env vars so config-file values are not overridden
         std::env::remove_var("RUNIE_PROVIDER");
@@ -243,16 +243,16 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn mcp_server_roundtrip() {
         let bus = EventBus::<Event>::new(16);
         let temp_path = std::env::temp_dir().join("runie_test_mcp.toml");
 
         // Subscribe BEFORE spawning so we don't miss pre_start's ConfigLoaded
         let mut sub = bus.subscribe();
-        let (handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
-                .await
-                .unwrap();
+        let (handle, _cell, _) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
+            .await
+            .unwrap();
 
         // Wait for ConfigLoaded to confirm actor is ready
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
@@ -330,10 +330,9 @@ mod tests {
         }
 
         let mut sub = bus.subscribe();
-        let (_handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
-                .await
-                .unwrap();
+        let (_handle, _cell, _) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
+            .await
+            .unwrap();
 
         // Collect events for up to 3 seconds
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(3);
@@ -380,10 +379,9 @@ mod tests {
         }
 
         let mut sub = bus.subscribe();
-        let (_handle, _cell, _) =
-            RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
-                .await
-                .unwrap();
+        let (_handle, _cell, _) = RactorConfigActor::spawn(bus.clone(), Some(temp_path.clone()), None)
+            .await
+            .unwrap();
 
         // Collect events for up to 2 seconds
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);

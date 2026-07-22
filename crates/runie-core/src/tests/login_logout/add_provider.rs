@@ -51,13 +51,8 @@ fn login_flow_cancel_allowed_with_model() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 

@@ -39,10 +39,7 @@ pub struct VerificationLoopSkill {
 
 impl VerificationLoopSkill {
     pub fn new(config: VerificationConfig) -> Self {
-        Self {
-            config,
-            fix_pass_count: std::sync::atomic::AtomicUsize::new(0),
-        }
+        Self { config, fix_pass_count: std::sync::atomic::AtomicUsize::new(0) }
     }
     pub(crate) fn needs_verification(message: &str) -> bool {
         message.contains("```")
@@ -112,14 +109,10 @@ mod tests {
 
     #[tokio::test]
     async fn run_verification_simple_command() {
-        let config = VerificationConfig {
-            command: Some("echo hello".to_string()),
-            enabled: true,
-            ..Default::default()
-        };
+        let config =
+            VerificationConfig { command: Some("echo hello".to_string()), enabled: true, ..Default::default() };
         let _skill = VerificationLoopSkill::new(config);
-        let output =
-            VerificationLoopSkill::run_verification("echo hello", Duration::from_secs(5)).await;
+        let output = VerificationLoopSkill::run_verification("echo hello", Duration::from_secs(5)).await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
@@ -129,9 +122,7 @@ mod tests {
     #[tokio::test]
     async fn run_verification_quoted_args() {
         // Test that shell_words handles quoted arguments with spaces
-        let output =
-            VerificationLoopSkill::run_verification("echo 'hello world'", Duration::from_secs(5))
-                .await;
+        let output = VerificationLoopSkill::run_verification("echo 'hello world'", Duration::from_secs(5)).await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
@@ -140,11 +131,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_verification_double_quoted_args() {
-        let output = VerificationLoopSkill::run_verification(
-            r#"echo "hello world""#,
-            Duration::from_secs(5),
-        )
-        .await;
+        let output = VerificationLoopSkill::run_verification(r#"echo "hello world""#, Duration::from_secs(5)).await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());
@@ -160,11 +147,7 @@ mod tests {
     #[tokio::test]
     async fn run_verification_complex_args() {
         // Test with multiple quoted args
-        let output = VerificationLoopSkill::run_verification(
-            "echo hello 'world test'",
-            Duration::from_secs(5),
-        )
-        .await;
+        let output = VerificationLoopSkill::run_verification("echo hello 'world test'", Duration::from_secs(5)).await;
         assert!(output.is_some());
         let out = output.unwrap();
         assert!(out.status.success());

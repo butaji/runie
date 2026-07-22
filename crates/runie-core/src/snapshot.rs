@@ -168,6 +168,12 @@ pub struct Snapshot {
     pub follow_mode: bool,
     /// Scroll margin in lines.
     pub scroll_margin: usize,
+    /// Active goal state for goal pane rendering.
+    pub goal_state: Option<crate::goal::GoalState>,
+    /// True when the swarm circuit breaker has tripped (dispatch paused).
+    pub circuit_breaker_tripped: bool,
+    /// Threshold that triggered the circuit breaker (for display).
+    pub circuit_breaker_threshold: u32,
 }
 
 /// Compute the index of the element currently at the top of the
@@ -261,11 +267,7 @@ pub fn scroll_offset(total_lines: usize, scroll: usize, visible_height: usize) -
 }
 
 /// Shared scrollbar metrics helper used by `AppState` and `Snapshot`.
-pub fn scrollbar_metrics(
-    total_lines: usize,
-    scroll: usize,
-    visible_height: usize,
-) -> (usize, usize) {
+pub fn scrollbar_metrics(total_lines: usize, scroll: usize, visible_height: usize) -> (usize, usize) {
     if total_lines <= visible_height || visible_height == 0 {
         return (0, 0);
     }

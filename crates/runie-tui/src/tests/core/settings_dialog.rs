@@ -8,10 +8,7 @@ use runie_core::Event;
 
 fn settings_selected(state: &AppState) -> Option<usize> {
     match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) => stack.current().map(|p| p.selected),
+        Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) => stack.current().map(|p| p.selected),
         _ => None,
     }
 }
@@ -39,10 +36,7 @@ fn settings_opens_dialog() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Settings,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::Settings, panels: _ })
         ),
         "Expected Settings dialog, got {:?}",
         state.open_dialog
@@ -82,19 +76,16 @@ fn settings_select_toggles_read_only() {
     // Scan for the read-only toggle
     let count = settings_count(&state);
     for _ in 0..count {
-        let is_readonly = if let Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) = &state.open_dialog
-        {
-            stack
-                .current()
-                .and_then(|p| p.selected_item())
-                .and_then(|i| i.label())
-                == Some("Read-Only")
-        } else {
-            false
-        };
+        let is_readonly =
+            if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+                stack
+                    .current()
+                    .and_then(|p| p.selected_item())
+                    .and_then(|i| i.label())
+                    == Some("Read-Only")
+            } else {
+                false
+            };
         if is_readonly {
             state.update(Event::SettingsSelect);
             break;
@@ -116,10 +107,7 @@ fn settings_space_toggles_read_only_and_keeps_dialog_open() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Settings,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::Settings, panels: _ })
         ),
         "space toggle should keep the dialog open"
     );
@@ -150,19 +138,16 @@ fn settings_select_toggles_steering_mode() {
         DeliveryMode::OneAtATime
     ));
     for _ in 0..count {
-        let is_steering = if let Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) = &state.open_dialog
-        {
-            stack
-                .current()
-                .and_then(|p| p.selected_item())
-                .and_then(|i| i.label())
-                == Some("Steering Mode")
-        } else {
-            false
-        };
+        let is_steering =
+            if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+                stack
+                    .current()
+                    .and_then(|p| p.selected_item())
+                    .and_then(|i| i.label())
+                    == Some("Steering Mode")
+            } else {
+                false
+            };
         if is_steering {
             state.update(Event::SettingsSelect);
             break;
@@ -184,19 +169,16 @@ fn settings_select_cycles_provider() {
     state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
-        let is_provider = if let Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) = &state.open_dialog
-        {
-            stack
-                .current()
-                .and_then(|p| p.selected_item())
-                .and_then(|i| i.label())
-                == Some("Provider")
-        } else {
-            false
-        };
+        let is_provider =
+            if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+                stack
+                    .current()
+                    .and_then(|p| p.selected_item())
+                    .and_then(|i| i.label())
+                    == Some("Provider")
+            } else {
+                false
+            };
         if is_provider {
             state.update(Event::SettingsSelect);
             break;
@@ -213,19 +195,16 @@ fn settings_select_cycles_theme() {
     state.update(Event::ToggleSettingsDialog);
     let count = settings_count(&state);
     for _ in 0..count {
-        let is_theme = if let Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) = &state.open_dialog
-        {
-            stack
-                .current()
-                .and_then(|p| p.selected_item())
-                .and_then(|i| i.label())
-                == Some("Theme")
-        } else {
-            false
-        };
+        let is_theme =
+            if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+                stack
+                    .current()
+                    .and_then(|p| p.selected_item())
+                    .and_then(|i| i.label())
+                    == Some("Theme")
+            } else {
+                false
+            };
         if is_theme {
             state.update(Event::SettingsSelect);
             break;
@@ -258,19 +237,16 @@ fn find_index(state: &AppState, label: &str) -> Option<usize> {
 fn select_by_label(state: &mut AppState, label: &str) {
     let count = settings_count(state);
     for _ in 0..count {
-        let is_match = if let Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) = &state.open_dialog
-        {
-            stack
-                .current()
-                .and_then(|p| p.selected_item())
-                .and_then(|i| i.label())
-                == Some(label)
-        } else {
-            false
-        };
+        let is_match =
+            if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+                stack
+                    .current()
+                    .and_then(|p| p.selected_item())
+                    .and_then(|i| i.label())
+                    == Some(label)
+            } else {
+                false
+            };
         if is_match {
             state.update(Event::SettingsSelect);
             return;
@@ -283,19 +259,16 @@ fn select_by_label(state: &mut AppState, label: &str) {
 fn navigate_to_setting(state: &mut AppState, label: &str) {
     let count = settings_count(state);
     for _ in 0..count {
-        let is_match = if let Some(DialogState::Active {
-            kind: DialogKind::Settings,
-            panels: stack,
-        }) = &state.open_dialog
-        {
-            stack
-                .current()
-                .and_then(|p| p.selected_item())
-                .and_then(|i| i.label())
-                == Some(label)
-        } else {
-            false
-        };
+        let is_match =
+            if let Some(DialogState::Active { kind: DialogKind::Settings, panels: stack }) = &state.open_dialog {
+                stack
+                    .current()
+                    .and_then(|p| p.selected_item())
+                    .and_then(|i| i.label())
+                    == Some(label)
+            } else {
+                false
+            };
         if is_match {
             return;
         }
@@ -398,12 +371,7 @@ fn settings_contains_every_runtime_tunable_config_key() {
     // The settings dialog must expose every field that the user can change
     // at runtime and that comes from config.toml.
     let state = AppState::default();
-    for key in [
-        "vim_mode",
-        "telemetry_enabled",
-        "truncation_max_lines",
-        "truncation_max_bytes",
-    ] {
+    for key in ["vim_mode", "telemetry_enabled", "truncation_max_lines", "truncation_max_bytes"] {
         assert!(
             has_item(&state, key),
             "settings must contain config key {key}"

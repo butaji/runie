@@ -49,9 +49,7 @@ mod tests {
                 Ok(Ok(evt)) => {
                     if matches!(
                         evt,
-                        Event::SkillsLoaded { .. }
-                            | Event::AuthLoaded { .. }
-                            | Event::EnvDetected { .. }
+                        Event::SkillsLoaded { .. } | Event::AuthLoaded { .. } | Event::EnvDetected { .. }
                     ) {
                         found += 1;
                         if found >= 3 {

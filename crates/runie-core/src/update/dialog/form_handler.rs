@@ -15,11 +15,7 @@ pub fn handle_form_dialog(state: &mut AppState, event: crate::Event) {
     let Some(mut dialog) = state.open_dialog_mut().take() else {
         return;
     };
-    let DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: ref mut stack,
-    } = dialog
-    else {
+    let DialogState::Active { kind: DialogKind::Generic, panels: ref mut stack } = dialog else {
         *state.open_dialog_mut() = Some(dialog);
         return;
     };
@@ -66,22 +62,15 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
     if let Some(handles) = state.actor_handles() {
         let _ = handles
             .input
-            .send_message(crate::actors::InputMsg::SetText {
-                text: final_text,
-                chips,
-            });
+            .send_message(crate::actors::InputMsg::SetText { text: final_text, chips });
     }
     *state.open_dialog_mut() = None;
     state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
     state.view_mut().dirty = true;
 }
 
-fn build_insert_text(
-    state: &mut AppState,
-    path: &str,
-) -> (String, Option<crate::model::InputChip>) {
-    let Some((original_input, insert_pos, cursor, _)) = state.input_mut().file_picker_backup.take()
-    else {
+fn build_insert_text(state: &mut AppState, path: &str) -> (String, Option<crate::model::InputChip>) {
+    let Some((original_input, insert_pos, cursor, _)) = state.input_mut().file_picker_backup.take() else {
         return (path.to_owned(), None);
     };
     let before = compute_before_text(&original_input, insert_pos, cursor);
@@ -101,11 +90,7 @@ fn build_insert_text(
         before.len()
     };
     let chip_end = before.len() + path.len() + suffix.len();
-    let chip = Some(crate::model::InputChip {
-        start: chip_start,
-        end: chip_end,
-        label: None,
-    });
+    let chip = Some(crate::model::InputChip { start: chip_start, end: chip_end, label: None });
     // Trailing space after the mention so further typing appends cleanly.
     (format!("{}{}{} {}", before, path, suffix, after), chip)
 }
@@ -114,8 +99,7 @@ fn compute_before_text(original_input: &str, insert_pos: usize, cursor: usize) -
     let before = extract_before(original_input, insert_pos);
     let trimmed_before = before.trim_end();
     let prefix = extract_prefix(original_input, insert_pos, cursor);
-    let has_word_boundary_space =
-        insert_pos > 0 && original_input.chars().nth(insert_pos - 1) == Some(' ');
+    let has_word_boundary_space = insert_pos > 0 && original_input.chars().nth(insert_pos - 1) == Some(' ');
 
     if has_word_boundary_space {
         before

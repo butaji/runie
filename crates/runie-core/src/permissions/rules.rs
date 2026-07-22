@@ -32,9 +32,7 @@ use serde::{Deserialize, Serialize};
 use super::PermissionAction;
 
 /// Scope of a permission rule.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionScope {
     /// User-level rules from ~/.runie/config.toml
@@ -68,13 +66,7 @@ pub struct PermissionRule {
 impl PermissionRule {
     /// Create a rule from an action and tool pattern.
     pub fn new(action: PermissionAction, tool: impl Into<String>) -> Self {
-        Self {
-            action,
-            tool: tool.into(),
-            path: None,
-            pattern: None,
-            scope: PermissionScope::User,
-        }
+        Self { action, tool: tool.into(), path: None, pattern: None, scope: PermissionScope::User }
     }
 
     /// Set the path pattern for this rule.
@@ -167,12 +159,7 @@ impl PermissionSet {
     }
 
     /// Evaluate with the built-in sensitive-path denylist applied first.
-    pub fn effective_action(
-        &self,
-        tool: &str,
-        path: Option<&str>,
-        cmd: Option<&str>,
-    ) -> PermissionAction {
+    pub fn effective_action(&self, tool: &str, path: Option<&str>, cmd: Option<&str>) -> PermissionAction {
         if let Some(p) = path {
             if super::is_sensitive_path(p) {
                 return PermissionAction::Deny;
@@ -193,11 +180,7 @@ impl PermissionSet {
     ) -> PermissionAction {
         // Track whether each scope has a matching rule
         let mut scope_has_match = [false, false, false];
-        let mut scope_actions = [
-            PermissionAction::Ask,
-            PermissionAction::Ask,
-            PermissionAction::Ask,
-        ];
+        let mut scope_actions = [PermissionAction::Ask, PermissionAction::Ask, PermissionAction::Ask];
 
         for rule in &self.rules {
             // Skip rules with higher scope than max_scope
@@ -342,10 +325,7 @@ impl super::PermissionPolicy for PermissionSetPolicy {
         true
     }
 
-    async fn evaluate(
-        &self,
-        ctx: &super::PermissionContext<'_>,
-    ) -> Option<super::PermissionResult> {
+    async fn evaluate(&self, ctx: &super::PermissionContext<'_>) -> Option<super::PermissionResult> {
         // Extract the command string from bash input if present.
         let cmd = ctx
             .input
@@ -355,12 +335,8 @@ impl super::PermissionPolicy for PermissionSetPolicy {
             .rules
             .effective_action(ctx.tool, path_str.as_deref(), cmd);
         Some(match action {
-            crate::permissions::PermissionAction::Allow => {
-                crate::permissions::PermissionResult::Allow
-            }
-            crate::permissions::PermissionAction::Deny => {
-                crate::permissions::PermissionResult::Deny
-            }
+            crate::permissions::PermissionAction::Allow => crate::permissions::PermissionResult::Allow,
+            crate::permissions::PermissionAction::Deny => crate::permissions::PermissionResult::Deny,
             crate::permissions::PermissionAction::Ask => crate::permissions::PermissionResult::Ask,
         })
     }

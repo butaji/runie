@@ -47,9 +47,7 @@ pub struct ScriptedSink {
 
 impl ScriptedSink {
     pub fn new() -> Self {
-        Self {
-            decisions: RwLock::new(Vec::new()),
-        }
+        Self { decisions: RwLock::new(Vec::new()) }
     }
     pub fn add_decision(&self, tool: impl Into<String>, action: PermissionAction) {
         self.decisions.write().push((tool.into(), action));

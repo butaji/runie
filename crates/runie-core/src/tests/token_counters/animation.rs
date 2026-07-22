@@ -175,9 +175,7 @@ fn turn_start_records_in_speed_window() {
     // Default state has empty window
     assert!(state.agent.speed_window.is_empty());
 
-    state.update(crate::Event::Thinking {
-        id: "r1".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "r1".to_string() });
 
     // Speed window should have at least 1 event (recording on turn start)
     assert!(!state.agent.speed_window.is_empty());
@@ -187,9 +185,7 @@ fn turn_start_records_in_speed_window() {
 #[test]
 fn speed_window_rolls_to_1k_tokens_across_turns() {
     let mut state = fresh_state();
-    state.update(crate::Event::Thinking {
-        id: "r1".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "r1".to_string() });
     let initial_len = state.agent.speed_window.len();
     assert!(initial_len >= 1, "Window should have initial event");
     // Record to agent state speed window.
@@ -201,14 +197,10 @@ fn speed_window_rolls_to_1k_tokens_across_turns() {
     assert!(after_streaming > initial_len);
     state.agent.current_request_id = Some("r1".to_string());
 
-    state.update(crate::Event::Done {
-        id: "r1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "r1".to_string() });
     assert!(!state.agent.speed_window.is_empty());
     let after_turn1 = state.agent.speed_window.len();
-    state.update(crate::Event::Thinking {
-        id: "r2".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "r2".to_string() });
     let after_turn2_start = state.agent.speed_window.len();
     assert!(
         after_turn2_start >= after_turn1,

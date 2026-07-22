@@ -114,16 +114,9 @@ fn flush_invoke(
     let body = &block[start..end];
     let args = parse_body(body);
     results.push(if is_known_tool(&name) {
-        Ok(ParsedToolCall {
-            name,
-            args: Value::Object(args),
-            id: None,
-        })
+        Ok(ParsedToolCall { name, args: Value::Object(args), id: None })
     } else {
-        Err(ToolParseError {
-            raw: block.to_owned(),
-            reason: format!("unknown tool '{}'", name),
-        })
+        Err(ToolParseError { raw: block.to_owned(), reason: format!("unknown tool '{}'", name) })
     });
 }
 

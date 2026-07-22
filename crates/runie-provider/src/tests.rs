@@ -1,16 +1,15 @@
 #![allow(clippy::all)]
+#![allow(clippy::too_many_lines)]
 //! Tests for runie-provider
 
 use proptest::prelude::*;
 
 use crate::{
-    build_provider_with_config, BuiltProviderFactory, MockProvider, MockProviderBuilder,
-    MockStreamingProvider, Provider, ProviderError,
+    build_provider_with_config, BuiltProviderFactory, MockProvider, MockProviderBuilder, MockStreamingProvider,
+    Provider, ProviderError,
 };
 use futures::StreamExt;
-use runie_core::actors::{
-    provider::RactorProviderActor as ProviderActor, RactorConfigActor as ConfigActor,
-};
+use runie_core::actors::{provider::RactorProviderActor as ProviderActor, RactorConfigActor as ConfigActor};
 use runie_core::bus::EventBus;
 use runie_core::config::Config;
 use runie_core::event::Event;
@@ -29,9 +28,7 @@ where
 }
 
 /// Collect all text deltas from a stream.
-async fn collect_text(
-    stream: impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Unpin,
-) -> Vec<String> {
+async fn collect_text(stream: impl futures::Stream<Item = anyhow::Result<ProviderEvent>> + Unpin) -> Vec<String> {
     let mut texts = Vec::new();
     futures::pin_mut!(stream);
     while let Some(result) = stream.next().await {
@@ -221,8 +218,7 @@ async fn test_built_provider_mock_delay_adds_streaming_delay() {
     let provider = build_provider_with_config("mock", "echo", &Config::default())
         .expect("mock should build with RUNIE_MOCK_DELAY");
     let start = std::time::Instant::now();
-    let texts =
-        collect_text(provider.generate(vec![ChatMessage::user("hello world".to_string())])).await;
+    let texts = collect_text(provider.generate(vec![ChatMessage::user("hello world".to_string())])).await;
 
     std::env::remove_var("RUNIE_MOCK_DELAY");
     assert!(!texts.is_empty());
@@ -294,8 +290,8 @@ fn test_built_provider_reads_retry_config_from_config() {
         config.retry.max_delay_ms = 1000;
         config.retry.multiplier = 1.5;
 
-        let provider = build_provider_with_config("openai", "gpt-4o", &config)
-            .expect("should build with custom retry config");
+        let provider =
+            build_provider_with_config("openai", "gpt-4o", &config).expect("should build with custom retry config");
 
         let retry = provider.metadata().retry_config.clone();
         assert_eq!(
@@ -360,13 +356,13 @@ async fn test_built_provider_sends_config_headers_to_mock_server() {
                 h.insert("x-mock-latency-ms".to_string(), "500".to_string());
                 h
             },
+            context_window_fallbacks: vec![],
         },
     );
 
     let _guard = runie_testing::ENV_LOCK.lock().unwrap();
     std::env::set_var("OPENAI_API_KEY", "test-key-123");
-    let provider = build_provider_with_config("openai", "gpt-4o", &config)
-        .expect("should build with custom headers");
+    let provider = build_provider_with_config("openai", "gpt-4o", &config).expect("should build with custom headers");
 
     let mut stream = provider.generate(vec![ChatMessage::user("hello".to_string())]);
     let mut items = Vec::new();
@@ -571,9 +567,8 @@ fn test_built_provider_accepts_minimax_prefixed_model_name() {
     // Regression: "minimax/MiniMax-M3" previously failed because validation and
     // provider construction did not strip the provider prefix before registry lookup.
     with_env_lock("MINIMAX_API_KEY", "sk-minimax-test", || {
-        let provider =
-            build_provider_with_config("minimax", "minimax/MiniMax-M3", &Config::default())
-                .expect("should build with minimax prefix");
+        let provider = build_provider_with_config("minimax", "minimax/MiniMax-M3", &Config::default())
+            .expect("should build with minimax prefix");
         assert_eq!(provider.key(), "minimax");
         assert_eq!(provider.model(), "minimax/MiniMax-M3");
     });
@@ -673,12 +668,7 @@ async fn test_validate_api_key_times_out_on_hanging_server() {
 async fn test_validate_api_key_rejects_unreachable_port() {
     use std::time::Duration;
 
-    let result = crate::validate_api_key_with_timeout(
-        "http://127.0.0.1:1/v1",
-        "sk-test",
-        Duration::from_secs(1),
-    )
-    .await;
+    let result = crate::validate_api_key_with_timeout("http://127.0.0.1:1/v1", "sk-test", Duration::from_secs(1)).await;
 
     assert!(result.is_err(), "unreachable port should produce an error");
 }
@@ -752,8 +742,8 @@ async fn test_validate_api_key_strips_gemini_models_prefix() {
 #[test]
 fn test_built_provider_trims_whitespace_api_key_from_env() {
     with_env_lock("OPENAI_API_KEY", "  sk-with-space\n ", || {
-        let provider = build_provider_with_config("openai", "gpt-4o-mini", &Config::default())
-            .expect("trimmed key should build");
+        let provider =
+            build_provider_with_config("openai", "gpt-4o-mini", &Config::default()).expect("trimmed key should build");
         assert_eq!(provider.key(), "openai");
     });
 }
@@ -780,8 +770,7 @@ async fn provider_actor_builds_mock_provider_with_runie_mock() {
     std::env::set_var("RUNIE_MOCK", "1");
 
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor, _join) =
-        ConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
     let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
         bus,
         config_handle,
@@ -807,8 +796,7 @@ async fn provider_actor_builds_mock_provider_with_fixture_model() {
     std::env::set_var("RUNIE_MOCK", "1");
 
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor, _join) =
-        ConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
     let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
         bus,
         config_handle,
@@ -831,8 +819,7 @@ async fn provider_actor_builds_mock_provider_with_fixture_model() {
 #[tokio::test]
 async fn provider_actor_rejects_unknown_provider_real_factory() {
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor, _join) =
-        ConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (config_handle, _config_actor, _join) = ConfigActor::spawn_default(bus.clone()).await.unwrap();
     let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
         bus,
         config_handle,
@@ -930,11 +917,12 @@ async fn prefixed_model_name_is_stripped_in_api_request() {
             base_url: format!("{base_url}/v1"),
             models: vec!["MiniMax-M3".to_string()],
             headers: std::collections::HashMap::new(),
+            context_window_fallbacks: vec![],
         },
     );
 
-    let provider = build_provider_with_config("minimax", "minimax/MiniMax-M3", &config)
-        .expect("should build with prefixed model");
+    let provider =
+        build_provider_with_config("minimax", "minimax/MiniMax-M3", &config).expect("should build with prefixed model");
 
     // Drive the stream to ensure the HTTP request is made. We don't assert on
     // events here; the goal is to verify the outgoing request body.
@@ -944,8 +932,7 @@ async fn prefixed_model_name_is_stripped_in_api_request() {
         .await;
 
     let body_bytes = captured.lock().unwrap().clone();
-    let body: serde_json::Value =
-        serde_json::from_slice(&body_bytes).expect("request body is valid JSON");
+    let body: serde_json::Value = serde_json::from_slice(&body_bytes).expect("request body is valid JSON");
     assert_eq!(
         body.get("model").and_then(|v| v.as_str()),
         Some("MiniMax-M3"),
@@ -987,10 +974,9 @@ api_key = "sk-test"
     std::fs::write(&config_path, config).unwrap();
 
     let bus = EventBus::<Event>::new(1);
-    let (config_handle, _config_actor, _) =
-        ConfigActor::spawn(bus.clone(), Some(config_path), None)
-            .await
-            .unwrap();
+    let (config_handle, _config_actor, _) = ConfigActor::spawn(bus.clone(), Some(config_path), None)
+        .await
+        .unwrap();
     let (provider_handle, _provider_actor, _join) = ProviderActor::spawn(
         bus,
         config_handle,

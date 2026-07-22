@@ -7,6 +7,45 @@
 //!
 //! Fixtures are stored as inline constants and selected based on explicit
 //! configuration. This replaces the previous brittle keyword-matching approach.
+//!
+//! # Error Injection
+//!
+//! Errors are controlled via environment variables set before the runie-tui
+//! process starts (e.g. via `AppTest::with_env()`):
+//!
+//! - `RUNIE_MOCK_ERROR_CODE=<u16>` — inject an HTTP error code on the next response.
+//!   Values: `401` (auth), `429` (rate limit), `500` (server error).
+//! - `RUNIE_MOCK_ERROR_TYPE=<type>` — type of error. Values: `http`, `abort`,
+//!   `truncate`, `hang`. Defaults to `http` if only `RUNIE_MOCK_ERROR_CODE` is set.
+//! - `RUNIE_MOCK_LATENCY_MS=<u64>` — override the per-chunk delay to a fixed value.
+//!   Use `0` for instant responses. Defaults to the configured `delay_ms` range.
+//!
+//! # Scripted Turns
+//!
+//! `RUNIE_MOCK_SCRIPT=<json>` — a JSON array of scripted turns. Each turn
+//! specifies text chunks, tool calls, errors, and latency. Example:
+//!
+//! ```json
+//! [{"chunks": ["Hello world\n"], "tool_calls": [], "error": null, "latency_ms": 0}]
+//! ```
+//!
+//! Supported error envelopes: `{"Http": 401}`, `{"RateLimit": 60}`,
+//! `"MidStreamAbort"`, `{"Truncate": 100}`.
+//!
+//! Example (Rust DSL):
+//! ```ignore
+//! use runie_tests::{AppTest, MockTurn, MockError};
+//!
+//! AppTest::mock_script(vec![
+//!     MockTurn {
+//!         chunks: vec!["Hello world\n".to_owned()],
+//!         tool_calls: vec![],
+//!         error: None,
+//!         latency_ms: 0,
+//!         token_usage: None,
+//!     },
+//! ]);
+//! ```
 
 use crate::{Provider, ProviderMetadata};
 use futures::Stream;
@@ -15,11 +54,212 @@ use runie_core::provider_event::{ProviderEvent, StopReason};
 use std::default::Default;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 /// Seed used by [`MockProvider::default`] to produce deterministic delays.
 const MOCK_DEFAULT_SEED: u64 = 42;
+
+// ─── Error Injection ──────────────────────────────────────────────────────────
+
+/// Error variants that the mock provider can inject into the event stream.
+/// Used to test retry logic, error rendering, and user-facing error messages.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MockError {
+    /// HTTP error with the given status code (401, 429, 500, etc.).
+    Http(u16),
+    /// Stream abort mid-response — partial text then error.
+    Abort { after_chunks: usize },
+    /// Truncated stream — text ends mid-chunk.
+    Truncate { after_chars: usize },
+    /// Hang — provider delays indefinitely until cancelled.
+    Hang,
+}
+
+impl MockError {
+    /// Parse from environment variable values.
+    /// `error_code` — HTTP status code (e.g. "401").
+    /// `error_type` — one of: "http" (default), "abort", "truncate", "hang".
+    pub fn from_env(error_code: Option<&str>, error_type: Option<&str>) -> Option<Self> {
+        let code = error_code.and_then(|s| s.parse::<u16>().ok())?;
+        let etype = error_type.unwrap_or("http");
+        match etype {
+            "abort" => Some(MockError::Abort { after_chunks: 2 }),
+            "truncate" => Some(MockError::Truncate { after_chars: 10 }),
+            "hang" => Some(MockError::Hang),
+            _ => Some(MockError::Http(code)),
+        }
+    }
+}
+
+// ─── Scripted Turns ───────────────────────────────────────────────────────────
+
+/// Token usage reported by a scripted turn.
+#[derive(Debug, Clone, serde::Deserialize)]
+struct ScriptTokenUsage {
+    #[serde(default)]
+    input_tokens: u64,
+    #[serde(default)]
+    output_tokens: u64,
+    #[serde(default)]
+    #[allow(dead_code)]
+    reasoning_tokens: Option<u64>,
+}
+
+/// A tool call emitted by a scripted turn.
+#[derive(Debug, Clone, serde::Deserialize)]
+struct ScriptTool {
+    name: String,
+    #[serde(default)]
+    arguments: serde_json::Value,
+}
+
+/// Error variant in a scripted turn (JSON envelope format).
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(untagged)]
+enum ScriptError {
+    Http(u16),
+    RateLimit(u64),
+    MidStreamAbort,
+    Truncate(usize),
+}
+
+/// A single scripted turn deserialized from JSON.
+#[derive(Debug, Clone, serde::Deserialize)]
+struct ScriptTurn {
+    #[serde(default)]
+    chunks: Vec<String>,
+    #[serde(default)]
+    tool_calls: Vec<ScriptTool>,
+    #[serde(default)]
+    error: Option<ScriptError>,
+    #[serde(default)]
+    latency_ms: u64,
+    #[serde(default)]
+    token_usage: Option<ScriptTokenUsage>,
+}
+
+/// Manages a sequence of scripted turns parsed from `RUNIE_MOCK_SCRIPT`.
+///
+/// Each call to `MockScript::next()` consumes the next turn and returns a
+/// stream configured for it. When all turns are exhausted the script falls
+/// through to the normal echo/fixture path.
+struct MockScript {
+    turns: Vec<ScriptTurn>,
+    index: usize,
+}
+
+impl MockScript {
+    /// Parse turns from the `RUNIE_MOCK_SCRIPT` environment variable.
+    fn from_env() -> Option<Self> {
+        let json = std::env::var("RUNIE_MOCK_SCRIPT").ok()?;
+        let turns: Vec<ScriptTurn> = serde_json::from_str(&json).ok()?;
+        if turns.is_empty() {
+            return None;
+        }
+        Some(Self { turns, index: 0 })
+    }
+
+    /// Return the next scripted turn, or `None` if the script is exhausted.
+    fn next(&mut self) -> Option<ScriptTurn> {
+        if self.index < self.turns.len() {
+            let turn = self.turns[self.index].clone();
+            self.index += 1;
+            Some(turn)
+        } else {
+            None
+        }
+    }
+}
+
+
+
+/// Stream the events for a single scripted turn.
+#[allow(clippy::too_many_lines)]
+fn script_turn_stream(turn: ScriptTurn) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+    use runie_core::provider_event::ModelError;
+    Box::pin(async_stream::stream! {
+        // Apply per-turn latency.
+        if turn.latency_ms > 0 {
+            tokio::time::sleep(Duration::from_millis(turn.latency_ms)).await;
+        }
+
+        match turn.error {
+            Some(ScriptError::Http(code)) => {
+                let msg = match code {
+                    401 => "Authentication failed: check your API key.",
+                    429 => "Rate limit exceeded. Please wait before retrying.",
+                    500 => "Internal server error. Please try again later.",
+                    _ => "Provider error",
+                };
+                yield Ok(ProviderEvent::TextDelta("Let me check that for you...".into()));
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                yield Ok(ProviderEvent::Error(ModelError::Other(format!(
+                    "HTTP {}: {}",
+                    code, msg
+                ))));
+                return;
+            }
+            Some(ScriptError::RateLimit(after)) => {
+                yield Ok(ProviderEvent::Error(ModelError::RateLimit {
+                    retry_after_secs: Some(after as u32),
+                }));
+                return;
+            }
+            Some(ScriptError::MidStreamAbort) => {
+                for chunk in &turn.chunks {
+                    yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+                yield Ok(ProviderEvent::Error(ModelError::Other(
+                    "Stream aborted by provider".into(),
+                )));
+                return;
+            }
+            Some(ScriptError::Truncate(n)) => {
+                let full: String = turn.chunks.join("");
+                let end = n.min(full.len());
+                let truncated = &full[..end];
+                yield Ok(ProviderEvent::TextDelta(truncated.into()));
+                yield Ok(ProviderEvent::Error(ModelError::Other(
+                    "Response truncated".into(),
+                )));
+                return;
+            }
+            None => {}
+        }
+
+        // Emit text chunks.
+        for chunk in &turn.chunks {
+            yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+        }
+
+        // Emit tool calls.
+        for tool in &turn.tool_calls {
+            yield Ok(ProviderEvent::ToolCallStart {
+                id: "call_1".to_string(),
+                name: tool.name.clone(),
+            });
+            if !tool.arguments.is_null() {
+                yield Ok(ProviderEvent::ToolCallInputDelta {
+                    id: "call_1".to_string(),
+                    delta: tool.arguments.to_string(),
+                });
+            }
+            yield Ok(ProviderEvent::ToolCallEnd { id: "call_1".to_string() });
+        }
+
+        // Emit token usage if provided.
+        if let Some(usage) = turn.token_usage {
+            yield Ok(ProviderEvent::Usage {
+                input_tokens: usage.input_tokens as usize,
+                output_tokens: usage.output_tokens as usize,
+            });
+        }
+
+        yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+    })
+}
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -45,10 +285,7 @@ mod fixtures {
     /// Returns text that includes the "TOOL:" marker for agent parsing.
     pub fn list_dir() -> Fixture {
         Fixture {
-            prelude: vec![
-                "I'll list the files in the current directory.\n".to_owned(),
-                "TOOL:list_dir:.".to_owned(),
-            ],
+            prelude: vec!["I'll list the files in the current directory.\n".to_owned(), "TOOL:list_dir:.".to_owned()],
             tool_call: Some(("list_dir".to_owned(), r#"{"path": "."}"#.to_owned())),
         }
     }
@@ -56,10 +293,7 @@ mod fixtures {
     /// Fixture for read_file tool call.
     pub fn read_file() -> Fixture {
         Fixture {
-            prelude: vec![
-                "Let me read that file for you.\n".to_owned(),
-                "TOOL:read_file:README.md".to_owned(),
-            ],
+            prelude: vec!["Let me read that file for you.\n".to_owned(), "TOOL:read_file:README.md".to_owned()],
             tool_call: Some((
                 "read_file".to_owned(),
                 r#"{"path": "README.md"}"#.to_owned(),
@@ -86,7 +320,8 @@ mod fixtures {
         Fixture {
             prelude: vec![
                 "I'll make that edit for you.\n".to_owned(),
-                r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_owned(),
+                r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#
+                    .to_owned(),
             ],
             tool_call: Some((
                 "edit_file".to_owned(),
@@ -98,10 +333,7 @@ mod fixtures {
     /// Fixture for bash tool call.
     pub fn bash() -> Fixture {
         Fixture {
-            prelude: vec![
-                "I'll run that command for you.\n".to_owned(),
-                "TOOL:bash:echo hello".to_owned(),
-            ],
+            prelude: vec!["I'll run that command for you.\n".to_owned(), "TOOL:bash:echo hello".to_owned()],
             tool_call: Some(("bash".to_owned(), r#"{"command": "echo hello"}"#.to_owned())),
         }
     }
@@ -153,8 +385,7 @@ mod fixtures {
         Fixture {
             prelude: vec![
                 "I'll list the files in the current directory.\n".to_owned(),
-                r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#
-                    .to_owned(),
+                r#"[TOOL_CALL]{tool => "list_dir", args => {"path" => "."}}[/TOOL_CALL]"#.to_owned(),
             ],
             tool_call: Some(("list_dir".to_owned(), r#"{"path": "."}"#.to_owned())),
         }
@@ -225,6 +456,8 @@ pub struct MockProvider {
     fixture: Option<Fixture>,
     /// Whether to echo back user input when no fixture matches.
     echo_fallback: bool,
+    /// Scripted turns from `RUNIE_MOCK_SCRIPT`.
+    script: Arc<Mutex<Option<MockScript>>>,
 }
 
 /// Builder for configuring a `MockProvider`.
@@ -315,12 +548,14 @@ impl MockProviderBuilder {
     }
 
     pub fn build(self) -> MockProvider {
+        let script = MockScript::from_env();
         MockProvider {
             delay_ms: self.delay_ms,
             seed: self.seed.unwrap_or(MOCK_DEFAULT_SEED),
             counter: Arc::new(AtomicU64::new(0)),
             fixture: self.fixture,
             echo_fallback: self.echo_fallback.unwrap_or(true),
+            script: Arc::new(Mutex::new(script)),
         }
     }
 }
@@ -359,6 +594,12 @@ impl MockProvider {
     }
 
     pub(crate) fn random_delay(&self) -> Option<Duration> {
+        // Override via env var for deterministic test control.
+        if let Ok(ms) = std::env::var("RUNIE_MOCK_LATENCY_MS") {
+            if let Ok(latency) = ms.parse::<u64>() {
+                return Some(Duration::from_millis(latency));
+            }
+        }
         self.delay_ms.map(|(min, max)| {
             let range = max.saturating_sub(min) + 1;
             let n = self.counter.fetch_add(1, Ordering::Relaxed);
@@ -415,11 +656,7 @@ fn detect_fixture(input: &str) -> Option<Fixture> {
 }
 
 /// Build response chunks from fixture or echo fallback.
-fn response_from_fixture(
-    fixture: Option<Fixture>,
-    user_input: &str,
-    echo_fallback: bool,
-) -> Vec<String> {
+fn response_from_fixture(fixture: Option<Fixture>, user_input: &str, echo_fallback: bool) -> Vec<String> {
     if let Some(f) = fixture {
         return f.prelude;
     }
@@ -495,14 +732,95 @@ fn text_chunks_stream(
     })
 }
 
+/// Stream a configurable error variant for error-path testing.
+#[allow(clippy::too_many_lines)]
+fn error_stream(
+    error: MockError,
+    delay_ms: Option<Duration>,
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+    use runie_core::provider_event::ModelError;
+    Box::pin(async_stream::stream! {
+        match error {
+            MockError::Http(code) => {
+                let msg = match code {
+                    401 => "Authentication failed: check your API key.",
+                    429 => "Rate limit exceeded. Please wait before retrying.",
+                    500 => "Internal server error. Please try again later.",
+                    _ => "Provider error",
+                };
+                yield Ok(ProviderEvent::TextDelta("Let me check that for you...".into()));
+                if let Some(d) = delay_ms {
+                    tokio::time::sleep(d).await;
+                }
+                yield Ok(ProviderEvent::Error(ModelError::Other(format!(
+                    "HTTP {}: {}",
+                    code, msg
+                ))));
+            }
+            MockError::Abort { after_chunks } => {
+                let chunks = ["First ", "chunk.\n", "Second "];
+                for (i, chunk) in chunks.iter().enumerate() {
+                    if i >= after_chunks {
+                        break;
+                    }
+                    if let Some(d) = delay_ms {
+                        tokio::time::sleep(d).await;
+                    }
+                    yield Ok(ProviderEvent::TextDelta(chunk.to_string()));
+                }
+                yield Ok(ProviderEvent::Error(ModelError::Other(
+                    "Stream aborted by provider".into(),
+                )));
+            }
+            MockError::Truncate { after_chars } => {
+                let text = "This is a response that will be cut short.";
+                let truncated = &text[..after_chars.min(text.len())];
+                if let Some(d) = delay_ms {
+                    tokio::time::sleep(d).await;
+                }
+                yield Ok(ProviderEvent::TextDelta(truncated.to_string()));
+                yield Ok(ProviderEvent::Error(ModelError::Other(
+                    "Response truncated".into(),
+                )));
+            }
+            MockError::Hang => {
+                yield Ok(ProviderEvent::TextDelta("Starting... ".into()));
+                tokio::time::sleep(Duration::from_secs(3600)).await;
+            }
+        }
+    })
+}
+
 impl Provider for MockProvider {
+    #[allow(clippy::too_many_lines)]
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
+        // Serve scripted turns first, if a script is loaded.
+        {
+            let mut guard = self.script.lock().unwrap();
+            if let Some(ref mut script) = *guard {
+                if let Some(turn) = script.next() {
+                    return script_turn_stream(turn);
+                }
+            }
+        }
+
         let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = last_user_content(&messages).unwrap_or_default();
+
+        // Parse error injection from environment variables.
+        if let Some(error) = MockError::from_env(
+            std::env::var("RUNIE_MOCK_ERROR_CODE").ok().as_deref(),
+            std::env::var("RUNIE_MOCK_ERROR_TYPE").ok().as_deref(),
+        ) {
+            // Clear the env vars so each injection is one-shot.
+            std::env::remove_var("RUNIE_MOCK_ERROR_CODE");
+            std::env::remove_var("RUNIE_MOCK_ERROR_TYPE");
+            return error_stream(error, delay_ms);
+        }
 
         // Swarm orchestration markers (runie-patterns swarm pattern):
         // deterministic canned responses, no input dependence. Worker prompts
@@ -518,31 +836,13 @@ impl Provider for MockProvider {
 
         // Check for completion after tool result
         if is_after_tool_result(last) {
-            let chunks = fixtures::done();
-            return Box::pin(async_stream::stream! {
-                for chunk_text in chunks {
-                    if let Some(d) = delay_ms {
-                        tokio::time::sleep(d).await;
-                    }
-                    yield Ok(ProviderEvent::TextDelta(chunk_text));
-                }
-                yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
-            });
+            return text_chunks_stream(delay_ms, fixtures::done());
         }
 
         // Use explicit fixture or auto-detect
         let fixture = self.fixture.clone().or_else(|| detect_fixture(&user_input));
         let chunks = response_from_fixture(fixture, &user_input, self.echo_fallback);
-
-        Box::pin(async_stream::stream! {
-            for chunk_text in chunks {
-                if let Some(d) = delay_ms {
-                    tokio::time::sleep(d).await;
-                }
-                yield Ok(ProviderEvent::TextDelta(chunk_text));
-            }
-            yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
-        })
+        text_chunks_stream(delay_ms, chunks)
     }
 
     fn generate_with_tools(
@@ -598,11 +898,7 @@ pub struct MockStreamingProvider {
 
 impl Default for MockStreamingProvider {
     fn default() -> Self {
-        Self {
-            chunk_size: 1,
-            delay_ms: 10,
-            total_chunks: None,
-        }
+        Self { chunk_size: 1, delay_ms: 10, total_chunks: None }
     }
 }
 
@@ -618,19 +914,11 @@ impl MockStreamingProvider {
         } else {
             50
         };
-        Self {
-            chunk_size: 1,
-            delay_ms,
-            total_chunks: None,
-        }
+        Self { chunk_size: 1, delay_ms, total_chunks: None }
     }
 
     pub fn with_variable_rate() -> Self {
-        Self {
-            chunk_size: 1,
-            delay_ms: 30,
-            total_chunks: None,
-        }
+        Self { chunk_size: 1, delay_ms: 30, total_chunks: None }
     }
 }
 
@@ -639,8 +927,8 @@ impl Provider for MockStreamingProvider {
         &self,
         messages: Vec<ChatMessage>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
-        let user_input = last_user_content(&messages)
-            .unwrap_or_else(|| "This is a test response with multiple words.".to_owned());
+        let user_input =
+            last_user_content(&messages).unwrap_or_else(|| "This is a test response with multiple words.".to_owned());
         let response = format!(
             "You said: '{}'. I understand and will help you with that task. ",
             user_input
@@ -764,14 +1052,10 @@ mod tests {
     #[test]
     fn mock_provider_builder_creates_list_dir_fixture() {
         let provider = MockProviderBuilder::new().list_dir().build();
-        let chunks =
-            response_from_fixture(provider.fixture.clone(), "hello", provider.echo_fallback);
+        let chunks = response_from_fixture(provider.fixture.clone(), "hello", provider.echo_fallback);
         assert_eq!(
             chunks,
-            vec![
-                "I'll list the files in the current directory.\n".to_owned(),
-                "TOOL:list_dir:.".to_owned()
-            ]
+            vec!["I'll list the files in the current directory.\n".to_owned(), "TOOL:list_dir:.".to_owned()]
         );
     }
 

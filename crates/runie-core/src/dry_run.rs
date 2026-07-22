@@ -93,11 +93,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     fn temp_config_with_provider(provider: &str, model: &str) -> Config {
-        Config {
-            provider: Some(provider.into()),
-            model: Some(model.into()),
-            ..Default::default()
-        }
+        Config { provider: Some(provider.into()), model: Some(model.into()), ..Default::default() }
     }
 
     #[test]
@@ -139,6 +135,10 @@ mod tests {
                 context: String::new(),
                 user_invocable: false,
                 file_path: Utf8PathBuf::from("rust/SKILL.md"),
+                scope: crate::skills::SkillScope::Local,
+                enabled: true,
+                plugin_name: None,
+                ignore_paths: vec![],
             };
 
             let config = temp_config_with_provider("openai", "gpt-4o");

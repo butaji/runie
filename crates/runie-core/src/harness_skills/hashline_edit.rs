@@ -16,10 +16,7 @@ pub struct HashlineEditConfig {
 
 impl Default for HashlineEditConfig {
     fn default() -> Self {
-        Self {
-            enabled: true,
-            hash_length: 6,
-        }
+        Self { enabled: true, hash_length: 6 }
     }
 }
 
@@ -74,8 +71,7 @@ impl HashlineEditSkill {
 
     /// Validate that the hashes in the edit request match the current file content.
     pub fn validate_hashes(path: &std::path::Path, edits: &[HashlineEdit]) -> Result<(), String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
+        let content = std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
         let lines: Vec<&str> = content.lines().collect();
         for edit in edits {
             let idx = edit.line.saturating_sub(1);
@@ -95,8 +91,7 @@ impl HashlineEditSkill {
 
     /// Apply hashline edits to a file.
     pub fn apply_edits(path: &std::path::Path, edits: &[HashlineEdit]) -> Result<String, String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
+        let content = std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
         let mut lines: Vec<String> = content.lines().map(|s| s.to_owned()).collect();
         // Apply from bottom to top to avoid line number shifting
         let mut sorted = edits.to_vec();
@@ -114,8 +109,7 @@ impl HashlineEditSkill {
         }
 
         let new_content = lines.join("\n");
-        std::fs::write(path, &new_content)
-            .map_err(|e| format!("Error writing {}: {}", path.display(), e))?;
+        std::fs::write(path, &new_content).map_err(|e| format!("Error writing {}: {}", path.display(), e))?;
 
         Ok(new_content)
     }
@@ -143,8 +137,8 @@ fn format_diff(old: &str, new: &str) -> String {
 
 fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {
     let edits = ctx.tool_input.get("edits").cloned().unwrap_or_default();
-    let edits: Vec<HashlineEdit> = serde_json::from_value(edits)
-        .map_err(|e| format!("Invalid hashline edit format: {}", e))?;
+    let edits: Vec<HashlineEdit> =
+        serde_json::from_value(edits).map_err(|e| format!("Invalid hashline edit format: {}", e))?;
     let path = ctx
         .tool_input
         .get("path")
@@ -153,8 +147,7 @@ fn try_apply_hashline(ctx: &ToolCallCtx) -> Result<ToolCallResult, String> {
     let path = std::path::PathBuf::from(path);
 
     HashlineEditSkill::validate_hashes(&path, &edits)?;
-    let old_content = std::fs::read_to_string(&path)
-        .map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
+    let old_content = std::fs::read_to_string(&path).map_err(|e| format!("Error reading {}: {}", path.display(), e))?;
     let new_content = HashlineEditSkill::apply_edits(&path, &edits)?;
     Ok(ToolCallResult::SkipWithOutput(format_diff(
         &old_content,

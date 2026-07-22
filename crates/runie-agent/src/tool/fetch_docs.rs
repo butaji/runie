@@ -69,8 +69,21 @@ async fn fetch_docs(library: &str) -> anyhow::Result<String> {
     let doc_resp = client.get(&doc_url).send().await?;
     let doc_text = doc_resp.text().await?;
 
+    // Cap the body: llms.txt files can be hundreds of KB, which stalls
+    // providers when the result is sent back.
+    const MAX_DOC_BYTES: usize = 50_000;
+    let capped = if doc_text.len() > MAX_DOC_BYTES {
+        let total = doc_text.len();
+        format!(
+            "{}\n[docs truncated: {total} bytes total]",
+            runie_core::tool::truncate_output(&doc_text, MAX_DOC_BYTES, usize::MAX)
+        )
+    } else {
+        doc_text
+    };
+
     Ok(format!(
         "Source: {}/{}/llms.txt\n\n{}",
-        DOC_BASE, lib_id, doc_text
+        DOC_BASE, lib_id, capped
     ))
 }

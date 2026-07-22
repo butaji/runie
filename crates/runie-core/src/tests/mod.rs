@@ -2,6 +2,7 @@
 // as an empty shell in non-test builds.  The module itself is unconditional
 // so that pub-re-exports are visible to runie-testing dev-dependencies.
 
+#[allow(clippy::too_many_lines)]
 #[cfg(test)]
 mod arch_guardrails;
 #[cfg(test)]

@@ -33,19 +33,14 @@ fn appends_and_replays_events() {
     store
         .append(
             sid,
-            &DurableCoreEvent::ModelSwitched {
-                provider: "anthropic".into(),
-                model: "claude-3".into(),
-            },
+            &DurableCoreEvent::ModelSwitched { provider: "anthropic".into(), model: "claude-3".into() },
         )
         .unwrap();
 
     let events = store.load_events(sid).unwrap();
     assert_eq!(events.len(), 3);
     assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "msg1"));
-    assert!(
-        matches!(&events[2], DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")
-    );
+    assert!(matches!(&events[2], DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic"));
 }
 
 #[test]
@@ -335,11 +330,7 @@ fn contract_crash_recovery() {
             provider: String::new(),
             parts: Vec::new(),
         },
-        DurableCoreEvent::ToolCalled {
-            id: "tool1".into(),
-            name: "bash".into(),
-            input: serde_json::json!({}),
-        },
+        DurableCoreEvent::ToolCalled { id: "tool1".into(), name: "bash".into(), input: serde_json::json!({}) },
     ];
 
     store1.append_batch(sid, &batch).unwrap();

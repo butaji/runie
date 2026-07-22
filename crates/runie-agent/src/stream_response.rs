@@ -73,25 +73,19 @@ impl StreamState {
                 // assistant message, which later becomes the expandable
                 // thought post. Without these events the thought renders
                 // duration-only and the reasoning is lost.
-                (self.emit)(runie_core::Event::ThinkingStart {
-                    id: self.command_id.clone(),
-                });
+                (self.emit)(runie_core::Event::ThinkingStart { id: self.command_id.clone() });
                 ControlFlow::Continue(())
             }
             ProviderEvent::ThinkingDelta(delta) => self.on_thinking_delta(delta),
             ProviderEvent::ThinkingEnd { .. } => {
-                (self.emit)(runie_core::Event::ThinkingEnd {
-                    id: self.command_id.clone(),
-                });
+                (self.emit)(runie_core::Event::ThinkingEnd { id: self.command_id.clone() });
                 ControlFlow::Continue(())
             }
             ProviderEvent::ToolCallStart { id, name } => self.on_tool_start(id, name),
             ProviderEvent::ToolCallInputDelta { id, delta } => self.on_tool_input(id, delta),
             ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
             ProviderEvent::Finish { .. } => ControlFlow::Break(Ok(())),
-            ProviderEvent::Error(e) => {
-                ControlFlow::Break(Err(anyhow::anyhow!("Model error: {:?}", e)))
-            }
+            ProviderEvent::Error(e) => ControlFlow::Break(Err(anyhow::anyhow!("Model error: {:?}", e))),
             _ => ControlFlow::Continue(()),
         }
     }
@@ -100,10 +94,7 @@ impl StreamState {
         // Accumulate text in shared state; emit ResponseDelta directly.
         self.shared.push_text(&delta);
 
-        (self.emit)(runie_core::Event::ResponseDelta {
-            id: self.command_id.clone(),
-            content: delta,
-        });
+        (self.emit)(runie_core::Event::ResponseDelta { id: self.command_id.clone(), content: delta });
         ControlFlow::Continue(())
     }
 
@@ -111,10 +102,7 @@ impl StreamState {
         self.reasoning
             .get_or_insert_with(String::new)
             .push_str(&delta);
-        (self.emit)(runie_core::Event::ThinkingDelta {
-            id: self.command_id.clone(),
-            content: delta,
-        });
+        (self.emit)(runie_core::Event::ThinkingDelta { id: self.command_id.clone(), content: delta });
         ControlFlow::Continue(())
     }
 
@@ -135,17 +123,8 @@ impl StreamState {
     }
 
     fn into_response(self) -> StreamedResponse {
-        let SharedResponse {
-            text,
-            tool_calls,
-            parse_errors,
-        } = self.shared.into_response();
-        StreamedResponse {
-            text,
-            tool_calls,
-            parse_errors,
-            reasoning: self.reasoning,
-        }
+        let SharedResponse { text, tool_calls, parse_errors } = self.shared.into_response();
+        StreamedResponse { text, tool_calls, parse_errors, reasoning: self.reasoning }
     }
 }
 
@@ -218,8 +197,7 @@ mod tests {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>>
-        {
+        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>> {
             let events = self.events.clone();
             Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
         }
@@ -231,20 +209,10 @@ mod tests {
             events: vec![
                 ProviderEvent::TextDelta("I'll ".into()),
                 ProviderEvent::TextDelta("read.".into()),
-                ProviderEvent::ToolCallStart {
-                    id: "call_1".into(),
-                    name: "read_file".into(),
-                },
-                ProviderEvent::ToolCallInputDelta {
-                    id: "call_1".into(),
-                    delta: "{\"path\":\"Cargo.toml\"}".into(),
-                },
-                ProviderEvent::ToolCallEnd {
-                    id: "call_1".into(),
-                },
-                ProviderEvent::Finish {
-                    reason: StopReason::ToolCalls,
-                },
+                ProviderEvent::ToolCallStart { id: "call_1".into(), name: "read_file".into() },
+                ProviderEvent::ToolCallInputDelta { id: "call_1".into(), delta: "{\"path\":\"Cargo.toml\"}".into() },
+                ProviderEvent::ToolCallEnd { id: "call_1".into() },
+                ProviderEvent::Finish { reason: StopReason::ToolCalls },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -271,9 +239,7 @@ mod tests {
         let provider = TestProvider {
             events: vec![
                 ProviderEvent::TextDelta(r#"{"name":"bash","arguments":{"command":"ls"}}"#.into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -298,13 +264,9 @@ mod tests {
     async fn strips_tool_artifacts_from_text() {
         let provider = TestProvider {
             events: vec![
-                ProviderEvent::TextDelta(
-                    "→ ```json{\"name\":\"list_dir\",\"arguments\":{\"path\":\".\"}}".into(),
-                ),
+                ProviderEvent::TextDelta("→ ```json{\"name\":\"list_dir\",\"arguments\":{\"path\":\".\"}}".into()),
                 ProviderEvent::TextDelta("Here's the current directory.".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -336,9 +298,7 @@ mod tests {
                 ProviderEvent::TextDelta("Let me ".into()),
                 ProviderEvent::TextDelta("<tool_call>analyzing".into()),
                 ProviderEvent::TextDelta("</tool_call>done".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -366,9 +326,7 @@ mod tests {
             events: vec![
                 ProviderEvent::TextDelta("<tool_call>think".into()),
                 ProviderEvent::TextDelta("ing</tool_call>text".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -395,9 +353,7 @@ mod tests {
                 ProviderEvent::ThinkingStart { id: "test".into() },
                 ProviderEvent::ThinkingDelta("reasoning".into()),
                 ProviderEvent::ThinkingEnd { id: "test".into() },
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -421,25 +377,19 @@ mod tests {
     /// Swallowing them here (previously the case) left the thought
     /// duration-only — a dead `[+]` affordance and lost reasoning.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn thinking_events_are_forwarded_to_the_tui() {
         let provider = TestProvider {
             events: vec![
-                ProviderEvent::ThinkingStart {
-                    id: "reasoning".into(),
-                },
+                ProviderEvent::ThinkingStart { id: "reasoning".into() },
                 ProviderEvent::ThinkingDelta("Let me think".into()),
                 ProviderEvent::ThinkingDelta(" about this.".into()),
-                ProviderEvent::ThinkingEnd {
-                    id: "reasoning".into(),
-                },
+                ProviderEvent::ThinkingEnd { id: "reasoning".into() },
                 ProviderEvent::TextDelta("The answer".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
-        let emitted: Arc<std::sync::Mutex<Vec<runie_core::Event>>> =
-            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let emitted: Arc<std::sync::Mutex<Vec<runie_core::Event>>> = Arc::new(std::sync::Mutex::new(Vec::new()));
         let cap = emitted.clone();
         let emit: EmitFn = Arc::new(move |e| cap.lock().unwrap().push(e));
         let result = stream_response(
@@ -487,9 +437,7 @@ mod tests {
         let provider = TestProvider {
             events: vec![
                 ProviderEvent::TextDelta("<thinking>unclosed".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -515,9 +463,7 @@ mod tests {
             events: vec![
                 ProviderEvent::TextDelta("Hello ".into()),
                 ProviderEvent::TextDelta("world!".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -540,12 +486,8 @@ mod tests {
     async fn think_filter_nested_tool_call_tags() {
         let provider = TestProvider {
             events: vec![
-                ProviderEvent::TextDelta(
-                    "<tool_call>first</tool_call><tool_call>second</tool_call>rest".into(),
-                ),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::TextDelta("<tool_call>first</tool_call><tool_call>second</tool_call>rest".into()),
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -571,9 +513,7 @@ mod tests {
         let provider = TestProvider {
             events: vec![
                 ProviderEvent::TextDelta("<thinking>reasoning</thinking>answer".into()),
-                ProviderEvent::Finish {
-                    reason: StopReason::Stop,
-                },
+                ProviderEvent::Finish { reason: StopReason::Stop },
             ],
         };
         let emit: EmitFn = Arc::new(|_| ());
@@ -604,8 +544,7 @@ mod tests {
             fn generate(
                 &self,
                 _: Vec<ChatMessage>,
-            ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>>
-            {
+            ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<ProviderEvent>> + Send + '_>> {
                 Box::pin(futures::stream::iter([Err(anyhow::anyhow!(
                     "provider error"
                 ))]))
@@ -641,8 +580,7 @@ mod tests {
         use runie_provider::openai::stream::replay_sse;
         let events = replay_sse(&runie_testing::fixtures::minimax::fixture(name));
         let provider = TestProvider { events };
-        let captured: Arc<std::sync::Mutex<Vec<runie_core::Event>>> =
-            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let captured: Arc<std::sync::Mutex<Vec<runie_core::Event>>> = Arc::new(std::sync::Mutex::new(Vec::new()));
         let cap = captured.clone();
         let emit: EmitFn = Arc::new(move |ev| cap.lock().unwrap().push(ev));
         let result = stream_response(

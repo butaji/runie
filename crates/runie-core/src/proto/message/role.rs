@@ -42,9 +42,7 @@ impl Role {
 }
 
 /// Origin of a message, used to distinguish user messages from injected content.
-#[derive(
-    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, Display, EnumString, IntoStaticStr,
-)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, Display, EnumString, IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
 pub enum MessageOrigin {
     /// Direct user input.

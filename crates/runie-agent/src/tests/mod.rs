@@ -1,5 +1,6 @@
 //! Tests for runie-agent
 //! Note: Some tests were archived due to dependencies on unbuilt crates.
+#![allow(clippy::too_many_lines)] // test files contain many test cases
 
 mod events;
 mod minimax_like;

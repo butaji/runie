@@ -46,8 +46,8 @@ pub fn session_list(sessions: Vec<SessionRow>) -> PanelStack {
         .keep_open();
     panel = add_session_section(panel, &sessions, true, false, Some("System"));
     panel = add_session_section(panel, &sessions, false, true, Some("Starred"));
-    let show_recent_header = sessions.iter().any(|s| s.is_system)
-        || sessions.iter().any(|s| s.is_starred && !s.is_system);
+    let show_recent_header =
+        sessions.iter().any(|s| s.is_system) || sessions.iter().any(|s| s.is_starred && !s.is_system);
     panel = add_session_section(
         panel,
         &sessions,
@@ -120,8 +120,7 @@ fn add_session_item(panel: &mut Panel, session: &SessionRow) {
 
     let id = session.id.clone();
     let evt = crate::Event::SelectSession { id };
-    panel.items.push(PanelItem::Action {
-        label,
-        action: ItemAction::Emit(evt),
-    });
+    panel
+        .items
+        .push(PanelItem::Action { label, action: ItemAction::Emit(evt) });
 }

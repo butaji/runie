@@ -150,8 +150,7 @@ pub fn save_history(entries: &[String]) -> Result<()> {
         .open(&path)
         .with_context(|| format!("open history: {:?}", path))?;
     fs2::FileExt::lock_exclusive(&target)?;
-    std::fs::rename(&temp_path, &path)
-        .with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
+    std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
 
     Ok(())
 }
@@ -185,8 +184,7 @@ pub fn append_history(entry: &str) -> Result<()> {
     // Atomic write back: write to temp, then rename under lock.
     let temp_path = dir.join("history.jsonl.tmp");
     write_entries_atomic(&entries, &temp_path)?;
-    std::fs::rename(&temp_path, &path)
-        .with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
+    std::fs::rename(&temp_path, &path).with_context(|| format!("rename history: {:?} -> {:?}", temp_path, path))?;
 
     // Lock released when `file` is dropped.
     Ok(())
@@ -242,9 +240,7 @@ pub fn search_history(entries: &[String], query: &str) -> Vec<String> {
     let mut scored: Vec<(i32, usize, String)> = entries
         .iter()
         .enumerate()
-        .filter_map(|(idx, entry)| {
-            fuzzy_entry_score(entry, query).map(|score| (score, idx, entry.clone()))
-        })
+        .filter_map(|(idx, entry)| fuzzy_entry_score(entry, query).map(|score| (score, idx, entry.clone())))
         .collect();
 
     // Sort: highest score first; for equal scores, most recent (highest index) first.
@@ -267,12 +263,7 @@ mod tests {
 
     #[test]
     fn filter_history_prefix_match() {
-        let entries = vec![
-            "hello world".into(),
-            "help me".into(),
-            "HELLO there".into(),
-            "goodbye".into(),
-        ];
+        let entries = vec!["hello world".into(), "help me".into(), "HELLO there".into(), "goodbye".into()];
 
         // Exact prefix (case-insensitive, so 3 matches: hello world, help me, HELLO there)
         let result = filter_history(&entries, "hel");
@@ -342,11 +333,7 @@ mod tests {
         //   - "caret build": c-a-r fuzzy-match (all in "caret");
         //     NOT a substring; "crgt" not in it at all → no match.
         // "cargo test" should appear via fuzzy even though it's not an exact substring.
-        let entries = vec![
-            "cargo test".into(),
-            "caret build".into(),
-            "hello world".into(),
-        ];
+        let entries = vec!["cargo test".into(), "caret build".into(), "hello world".into()];
         let result = search_history(&entries, "crgt");
         assert!(
             result.iter().any(|e| e.contains("cargo")),
@@ -386,11 +373,7 @@ mod tests {
 
     #[test]
     fn history_save_load_roundtrip() {
-        let entries = vec![
-            "first command".to_string(),
-            "second command".to_string(),
-            "third command".to_string(),
-        ];
+        let entries = vec!["first command".to_string(), "second command".to_string(), "third command".to_string()];
 
         for entry in &entries {
             let json = serde_json::to_string(entry).unwrap();

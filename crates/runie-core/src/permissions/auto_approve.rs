@@ -6,9 +6,7 @@
 
 use async_trait::async_trait;
 
-use super::{
-    is_read_only_tool, is_sensitive_path, PermissionContext, PermissionPolicy, PermissionResult,
-};
+use super::{is_read_only_tool, is_sensitive_path, PermissionContext, PermissionPolicy, PermissionResult};
 
 /// Auto-approve read, edit and shell tools; ask for sensitive paths.
 #[derive(Debug, Default, Clone, Copy)]

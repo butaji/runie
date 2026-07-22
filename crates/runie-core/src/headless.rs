@@ -1,4 +1,5 @@
 //! Enhanced headless runtime with structured output (from Grok Build)
+#![allow(clippy::too_many_lines)]
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

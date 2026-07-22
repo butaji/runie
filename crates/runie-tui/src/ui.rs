@@ -16,13 +16,14 @@ use runie_core::Snapshot;
 
 use crate::theme::color_bg;
 
+pub(crate) mod feed_detail;
+mod goal_pane;
 mod hints;
 mod input;
 mod layout;
 pub(crate) mod messages;
 mod render_lines;
 mod scroll;
-pub(crate) mod feed_detail;
 pub(crate) mod subagent_detail;
 pub(crate) mod tasks_pane;
 
@@ -38,6 +39,7 @@ pub(crate) use messages::estimate_element_tokens;
 const TASKS_PANE_WIDTH: u16 = 32;
 
 /// Draw a Snapshot to the terminal.
+#[allow(clippy::too_many_lines)]
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let full_area = f.area();
     f.buffer_mut()
@@ -51,13 +53,15 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let constraints = snapshot_constraints(snap);
     let c = layout::vstack(area, &constraints);
 
-    let message_area = if snap.tasks_pane_visible && area.width > TASKS_PANE_WIDTH + 10 {
-        let h = Layout::horizontal([
-            Constraint::Min(10),
-            Constraint::Length(TASKS_PANE_WIDTH),
-        ]);
+    let message_area = if (snap.tasks_pane_visible || snap.goal_state.is_some()) && area.width > TASKS_PANE_WIDTH + 10 {
+        let h = Layout::horizontal([Constraint::Min(10), Constraint::Length(TASKS_PANE_WIDTH)]);
         let split = h.split(c[0]);
-        tasks_pane::render_tasks_pane(f, snap, split[1]);
+        if snap.tasks_pane_visible {
+            tasks_pane::render_tasks_pane(f, snap, split[1]);
+        }
+        if snap.goal_state.is_some() {
+            goal_pane::render_goal_pane(f, snap, split[1]);
+        }
         split[0]
     } else {
         c[0]

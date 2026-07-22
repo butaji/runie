@@ -144,6 +144,7 @@ mod tests {
     /// The final file content must be exactly one of the written values.
     #[cfg(unix)]
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn atomic_write_concurrent_stress() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
@@ -164,8 +165,7 @@ mod tests {
         let total_writes = num_writers * writes_per_writer;
 
         // Track all possible written values
-        let all_values: Arc<Vec<String>> =
-            Arc::new((0..total_writes).map(|i| format!("value_{}", i)).collect());
+        let all_values: Arc<Vec<String>> = Arc::new((0..total_writes).map(|i| format!("value_{}", i)).collect());
 
         // Shared counter for assigning unique values
         let counter = Arc::new(AtomicUsize::new(0));

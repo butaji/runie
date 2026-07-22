@@ -17,11 +17,7 @@ pub struct Notification {
 impl Notification {
     /// Create a new notification with the current protocol version.
     pub fn new(method: impl Into<String>, params: Value) -> Self {
-        Self {
-            method: method.into(),
-            params,
-            version: Version::current(),
-        }
+        Self { method: method.into(), params, version: Version::current() }
     }
 }
 

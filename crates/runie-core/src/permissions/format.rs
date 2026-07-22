@@ -1,4 +1,5 @@
 //! Format a tool's input arguments into a human-readable summary for dialogs.
+#![allow(clippy::too_many_lines)]
 
 /// Maximum length for formatted input before truncation.
 const MAX_INPUT_LENGTH: usize = 500;
@@ -179,8 +180,7 @@ mod tests {
 
     #[test]
     fn test_edit_file_formatting() {
-        let input =
-            serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
+        let input = serde_json::json!({"path": "/tmp/test.rs", "old_text": "fn foo", "new_text": "fn bar"});
         let result = format_tool_input("edit_file", &input);
         assert!(result.contains("File: /tmp/test.rs"));
     }

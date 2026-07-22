@@ -91,6 +91,8 @@ struct Usage {
 }
 
 /// Replay Anthropic SSE text and return the accumulated `ProviderEvent`s.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 pub fn replay_anthropic_sse(text: &str) -> Vec<ProviderEvent> {
     let mut events = Vec::new();
     let mut blocks: HashMap<usize, (String, String)> = HashMap::new();
@@ -209,9 +211,7 @@ pub fn replay_anthropic_sse(text: &str) -> Vec<ProviderEvent> {
                 }
             }
             Some("message_stop") => {
-                events.push(ProviderEvent::Finish {
-                    reason: finish_reason.unwrap_or(StopReason::Stop),
-                });
+                events.push(ProviderEvent::Finish { reason: finish_reason.unwrap_or(StopReason::Stop) });
             }
             _ => {}
         }
@@ -232,12 +232,8 @@ struct ErrorEvent {
 /// Classify an Anthropic error type into a `ModelError` variant.
 fn classify_error(error_type: &str, message: &str) -> ModelError {
     match error_type {
-        "rate_limit" => ModelError::RateLimit {
-            retry_after_secs: None,
-        },
-        "overloaded_error" => ModelError::Overloaded {
-            retry_after_secs: None,
-        },
+        "rate_limit" => ModelError::RateLimit { retry_after_secs: None },
+        "overloaded_error" => ModelError::Overloaded { retry_after_secs: None },
         "invalid_request" if message.to_lowercase().contains("context") => {
             ModelError::ContextLength { limit: 0, used: 0 }
         }

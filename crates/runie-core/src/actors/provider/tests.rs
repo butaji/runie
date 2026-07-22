@@ -5,9 +5,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::actors::config::RactorConfigActor as ConfigActor;
-use crate::actors::provider::{
-    BuiltProvider, ProviderFactory, RactorProviderActor as ProviderActor,
-};
+use crate::actors::provider::{BuiltProvider, ProviderFactory, RactorProviderActor as ProviderActor};
 use crate::bus::EventBus;
 use crate::config::Config;
 use crate::event::Event;
@@ -64,12 +62,7 @@ impl MockFactory {
 
 #[async_trait]
 impl ProviderFactory for MockFactory {
-    fn build(
-        &self,
-        _provider: &str,
-        _model: &str,
-        _config: &Config,
-    ) -> Result<BuiltProvider, ProviderError> {
+    fn build(&self, _provider: &str, _model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
         self.build_result
             .lock()
             .unwrap()

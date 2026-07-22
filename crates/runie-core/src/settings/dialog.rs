@@ -30,21 +30,18 @@ pub fn build_setting_categories(state: &AppState) -> Vec<(SettingsCategory, Vec<
 
 fn setting_value_to_panel_items(key: &str, label: &str, value: &SettingValue) -> Vec<PanelItem> {
     match value {
-        SettingValue::Bool(v) => vec![PanelItem::Toggle {
-            label: label.into(),
-            value: *v,
-            action: ItemAction::Toggle(key.into()),
-        }],
+        SettingValue::Bool(v) => {
+            vec![PanelItem::Toggle { label: label.into(), value: *v, action: ItemAction::Toggle(key.into()) }]
+        }
         SettingValue::Cycle { current, options } => vec![PanelItem::Select {
             label: label.into(),
             current: current.clone(),
             options: options.clone(),
             key: key.into(),
         }],
-        SettingValue::Action(evt) => vec![PanelItem::Action {
-            label: label.into(),
-            action: ItemAction::Emit(evt.clone()),
-        }],
+        SettingValue::Action(evt) => {
+            vec![PanelItem::Action { label: label.into(), action: ItemAction::Emit(evt.clone()) }]
+        }
         SettingValue::MultiSelect { current, options } => {
             let mut items = vec![PanelItem::Header(format!("{} models", label))];
             let selected: std::collections::HashSet<String> = current.iter().cloned().collect();
@@ -82,10 +79,7 @@ fn provider_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "provider",
         "Provider",
-        SettingValue::Cycle {
-            current: state.config().current_provider.clone(),
-            options: provider_options(state),
-        },
+        SettingValue::Cycle { current: state.config().current_provider.clone(), options: provider_options(state) },
         "LLM provider",
         SettingsCategory::Models,
     )
@@ -110,10 +104,7 @@ fn provider_models_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         &provider,
         "Provider Models",
-        SettingValue::MultiSelect {
-            current: saved,
-            options: available,
-        },
+        SettingValue::MultiSelect { current: saved, options: available },
         "Enabled models for the current provider",
         SettingsCategory::Models,
     )
@@ -153,10 +144,7 @@ fn theme_item(state: &AppState) -> SettingItem {
     SettingItem::new(
         "theme",
         "Theme",
-        SettingValue::Cycle {
-            current: state.config().theme_name.clone(),
-            options: theme_options(),
-        },
+        SettingValue::Cycle { current: state.config().theme_name.clone(), options: theme_options() },
         "UI theme",
         SettingsCategory::Appearance,
     )

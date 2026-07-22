@@ -41,11 +41,7 @@ impl LoginFlowState {
     }
 
     pub fn with_provider(self, provider: String) -> Self {
-        Self {
-            step: LoginStep::KeyInput,
-            provider,
-            ..self
-        }
+        Self { step: LoginStep::KeyInput, provider, ..self }
     }
 
     /// Store the submitted key and wait for API validation.
@@ -63,22 +59,12 @@ impl LoginFlowState {
     /// Transition to the model selector after a successful API validation.
     pub fn with_validation_success(self, models: Vec<String>) -> Self {
         let selected_models: HashSet<String> = models.iter().cloned().collect();
-        Self {
-            step: LoginStep::ModelSelect,
-            available_models: models,
-            selected_models,
-            validated: true,
-            ..self
-        }
+        Self { step: LoginStep::ModelSelect, available_models: models, selected_models, validated: true, ..self }
     }
 
     /// Return to the key input panel after a failed validation.
     pub fn with_validation_error(self) -> Self {
-        Self {
-            step: LoginStep::KeyInput,
-            validated: false,
-            ..self
-        }
+        Self { step: LoginStep::KeyInput, validated: false, ..self }
     }
 
     /// Replace the model list with the result of a background fetch.
@@ -98,11 +84,7 @@ impl LoginFlowState {
                 new_selected.insert(m.clone());
             }
         }
-        Self {
-            available_models: fetched,
-            selected_models: new_selected,
-            ..self
-        }
+        Self { available_models: fetched, selected_models: new_selected, ..self }
     }
 
     pub fn toggle_model(&mut self, model: &str) {

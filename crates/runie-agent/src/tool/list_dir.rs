@@ -62,14 +62,30 @@ impl ToolDef for ListDirTool {
         };
         let names = Self::collect_entries(dir).await;
         let content = if names.is_empty() {
-            "(empty directory)"
+            format!("{} is empty (0 entries)", full_path.display())
         } else {
-            &names.join("\n")
+            let listing = names.join("\n");
+            // Cap output so huge directories don't blow up the follow-up
+            // request (some providers stall for minutes on very large
+            // tool results). ~2000 lines / 50KB, matching pi's limits.
+            let truncated = runie_core::tool::truncate_output(&listing, 50_000, 2_000);
+            let shown = truncated.lines().filter(|l| *l != "…").count();
+            if shown < names.len() {
+                format!(
+                    "Contents of {} ({} of {} entries shown):\n{}",
+                    full_path.display(),
+                    shown,
+                    names.len(),
+                    truncated
+                )
+            } else {
+                format!("Contents of {} ({} entries):\n{}", full_path.display(), names.len(), listing)
+            }
         };
         ToolOutput {
             tool_name: "list_dir".into(),
             tool_args,
-            content: content.to_string(),
+            content,
             bytes_transferred: None,
             duration: start.elapsed(),
             status: ToolStatus::Success,
@@ -103,11 +119,48 @@ mod tests {
 
     #[tokio::test]
     async fn tool_call_executes() {
-        let input = ListDirInput {
-            path: Some(".".to_string()),
-        };
+        let input = ListDirInput { path: Some(".".to_string()) };
         let ctx = ToolContext::default();
         let result = ListDirTool::execute(input, &ctx).await;
         assert_eq!(result.status, ToolStatus::Success);
+    }
+
+    #[tokio::test]
+    async fn output_includes_path_and_count_header() {
+        let dir = std::env::temp_dir().join(format!("runie_list_dir_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.txt"), "x").unwrap();
+        let input = ListDirInput { path: Some(dir.to_string_lossy().into_owned()) };
+        let ctx = ToolContext::default();
+        let result = ListDirTool::execute(input, &ctx).await;
+        assert_eq!(result.status, ToolStatus::Success);
+        assert!(
+            result.content.contains(&dir.to_string_lossy().to_string()),
+            "output should name the listed path: {}",
+            result.content
+        );
+        assert!(result.content.contains("1 entries"), "got: {}", result.content);
+        assert!(result.content.contains("a.txt"), "got: {}", result.content);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn output_is_capped_for_huge_directories() {
+        let dir = std::env::temp_dir().join(format!("runie_list_dir_cap_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for i in 0..2_100 {
+            std::fs::write(dir.join(format!("f{i:04}.txt")), "x").unwrap();
+        }
+        let input = ListDirInput { path: Some(dir.to_string_lossy().into_owned()) };
+        let ctx = ToolContext::default();
+        let result = ListDirTool::execute(input, &ctx).await;
+        assert_eq!(result.status, ToolStatus::Success);
+        assert!(
+            result.content.contains("of 2100 entries shown"),
+            "truncation note missing: {}",
+            &result.content[..200.min(result.content.len())]
+        );
+        assert!(result.content.len() < 60_000, "output not capped");
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

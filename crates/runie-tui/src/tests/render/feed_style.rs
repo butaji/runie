@@ -6,6 +6,7 @@
 //! indent, and the (unchanged) orange selection gutter. Deviations from grok
 //! by explicit request: the feed chevron uses the accent color (matching the
 //! input-box chevron) and content sits 2 columns further left.
+#![allow(clippy::too_many_lines)]
 
 use super::*;
 use crate::terminal::caps::{MouseCapability, TermCaps};
@@ -26,11 +27,7 @@ fn dark_theme() -> std::sync::MutexGuard<'static, ()> {
     let guard = crate::theme::test_lock();
     crate::theme::set_current_theme_with_caps(
         "runie",
-        TermCaps {
-            truecolor: true,
-            mouse: MouseCapability::Sgr,
-            ..Default::default()
-        },
+        TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
     );
     guard
 }
@@ -38,9 +35,7 @@ fn dark_theme() -> std::sync::MutexGuard<'static, ()> {
 fn add_message(state: &mut AppState, role: Role, content: &str, timestamp: f64, id: &str) {
     state.session.messages.push(ChatMessage {
         role,
-        parts: vec![Part::Text {
-            content: content.to_string(),
-        }],
+        parts: vec![Part::Text { content: content.to_string() }],
         timestamp,
         id: id.to_string(),
         ..Default::default()
@@ -341,9 +336,7 @@ fn assistant_text_has_no_glyph_feed_indent_and_neutral_gray() {
     let mut state = AppState::default();
     let mut msg = ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "Hello **world**".into(),
-        }],
+        parts: vec![Part::Text { content: "Hello **world**".into() }],
         timestamp: 1.0,
         id: "resp.0".into(),
         ..Default::default()
@@ -418,11 +411,7 @@ fn light_theme() -> std::sync::MutexGuard<'static, ()> {
     let guard = crate::theme::test_lock();
     crate::theme::set_current_theme_with_caps(
         "catppuccin-latte",
-        TermCaps {
-            truecolor: true,
-            mouse: MouseCapability::Sgr,
-            ..Default::default()
-        },
+        TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
     );
     guard
 }

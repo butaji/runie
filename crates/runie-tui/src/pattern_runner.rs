@@ -8,13 +8,14 @@
 //! - [`swarm_for_variant`] picks the swarm engine variant.
 //! - [`publish_worker_rows`] turns worker traces into feed rows.
 
+#![allow(clippy::too_many_lines)]
+
 use runie_core::actors::RactorProviderHandle;
 use runie_core::bus::EventBus;
 use runie_core::model::ThinkingLevel;
 use runie_core::Event;
 use runie_patterns::{
-    AgentTrace, PatternOutput, SwarmPattern, TerminationReason, TraceEvent, WorkerRunner,
-    WorkerTask,
+    AgentTrace, PatternOutput, SwarmPattern, TerminationReason, TraceEvent, WorkerRunner, WorkerTask,
 };
 
 /// Worker runner backed by the `ProviderActor`: each `run()` builds the
@@ -31,16 +32,8 @@ pub struct TuiWorkerRunner {
 impl TuiWorkerRunner {
     /// Create a runner that builds providers via `provider_handle` and runs
     /// subagents with the given thinking level and iteration cap.
-    pub fn new(
-        provider_handle: RactorProviderHandle,
-        thinking: ThinkingLevel,
-        max_iterations: usize,
-    ) -> Self {
-        Self {
-            provider_handle,
-            thinking,
-            max_iterations,
-        }
+    pub fn new(provider_handle: RactorProviderHandle, thinking: ThinkingLevel, max_iterations: usize) -> Self {
+        Self { provider_handle, thinking, max_iterations }
     }
 }
 
@@ -64,10 +57,7 @@ pub(crate) fn should_use_pattern(active: &str) -> bool {
 }
 
 /// Pattern engine for the active mode and session swarm variant.
-pub(crate) fn pattern_for_mode(
-    active: &str,
-    variant: Option<&str>,
-) -> Option<Box<dyn runie_patterns::Pattern>> {
+pub(crate) fn pattern_for_mode(active: &str, variant: Option<&str>) -> Option<Box<dyn runie_patterns::Pattern>> {
     match active {
         "swarm" => Some(Box::new(swarm_for_variant(variant))),
         "improve" => Some(Box::new(runie_patterns::ImprovePattern)),
@@ -108,11 +98,7 @@ fn is_visible_worker_trace(agent_id: &str) -> bool {
 /// post-hoc after `execute()` returns: each worker gets a Spawned row, a short
 /// visibility delay, then its Finished update. Live in-flight rows would need
 /// per-trace streaming, which the pattern crate does not offer yet.
-pub(crate) async fn publish_worker_rows(
-    bus: &EventBus<Event>,
-    traces: &[AgentTrace],
-    model: &str,
-) {
+pub(crate) async fn publish_worker_rows(bus: &EventBus<Event>, traces: &[AgentTrace], model: &str) {
     for trace in traces {
         if !is_visible_worker_trace(&trace.agent_id) {
             continue;
@@ -123,14 +109,12 @@ pub(crate) async fn publish_worker_rows(
             description: truncate_description(&trace.description),
             model: model.to_owned(),
         });
-        tokio::time::sleep(std::time::Duration::from_millis(WORKER_RUNNING_VISIBILITY_MS)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(
+            WORKER_RUNNING_VISIBILITY_MS,
+        ))
+        .await;
         let (status, output) = worker_outcome(trace);
-        bus.publish(Event::PatternWorkerFinished {
-            id,
-            status,
-            duration_ms: trace.duration_ms,
-            output,
-        });
+        bus.publish(Event::PatternWorkerFinished { id, status, duration_ms: trace.duration_ms, output });
     }
 }
 
@@ -155,9 +139,7 @@ fn worker_outcome(trace: &AgentTrace) -> (String, String) {
     let failed = trace.events.iter().any(|e| {
         matches!(
             e,
-            TraceEvent::Termination {
-                reason: TerminationReason::Error(_) | TerminationReason::Timeout
-            }
+            TraceEvent::Termination { reason: TerminationReason::Error(_) | TerminationReason::Timeout }
         )
     });
     if failed {
@@ -195,14 +177,19 @@ pub(crate) async fn publish_pattern_outcome(
     outcome: anyhow::Result<PatternOutput>,
     model: &str,
     start: std::time::Instant,
+    circuit_breaker_threshold: u32,
 ) {
     match outcome {
         Ok(output) => {
             publish_worker_rows(bus, &output.traces, model).await;
+            if output.circuit_breaker_tripped {
+                bus.publish(Event::CircuitBreakerTripped {
+                    failures: circuit_breaker_threshold,
+                    threshold: circuit_breaker_threshold,
+                });
+            }
             match output.termination {
-                TerminationReason::Completed
-                | TerminationReason::MaxRoundsReached
-                | TerminationReason::Approved => {
+                TerminationReason::Completed | TerminationReason::MaxRoundsReached | TerminationReason::Approved => {
                     if !output.result.is_empty() {
                         bus.publish(Event::Response {
                             id: id.to_owned(),
@@ -234,25 +221,19 @@ pub(crate) async fn publish_pattern_outcome(
 
 /// `Error` + `Done` — the same terminal pair the agent actor publishes.
 fn publish_error_and_done(bus: &EventBus<Event>, id: &str, message: String) {
-    bus.publish(Event::Error {
-        id: id.to_owned(),
-        message,
-    });
+    bus.publish(Event::Error { id: id.to_owned(), message });
     bus.publish(Event::Done { id: id.to_owned() });
 }
 
 #[async_trait::async_trait]
 impl WorkerRunner for TuiWorkerRunner {
     async fn run(&self, task: WorkerTask) -> anyhow::Result<String> {
-        let (provider_key, model) =
-            resolve_provider_model(&task, runie_core::provider::is_mock_enabled());
+        let (provider_key, model) = resolve_provider_model(&task, runie_core::provider::is_mock_enabled());
         let built = self
             .provider_handle
             .build(provider_key.clone(), model.clone())
             .await
-            .map_err(|e| {
-                anyhow::anyhow!("provider build failed for {provider_key}/{model}: {e}")
-            })?;
+            .map_err(|e| anyhow::anyhow!("provider build failed for {provider_key}/{model}: {e}"))?;
         let text = runie_agent::subagent::run_subagent(
             &task.prompt,
             &provider_key,
@@ -334,21 +315,12 @@ mod tests {
     }
 
     fn trace(id: &str, failed: bool) -> AgentTrace {
-        let mut events = vec![TraceEvent::Handoff {
-            from: "leader".into(),
-            to: id.into(),
-        }];
+        let mut events = vec![TraceEvent::Handoff { from: "leader".into(), to: id.into() }];
         if failed {
-            events.push(TraceEvent::Error {
-                error: "boom".into(),
-            });
-            events.push(TraceEvent::Termination {
-                reason: TerminationReason::Error("boom".into()),
-            });
+            events.push(TraceEvent::Error { error: "boom".into() });
+            events.push(TraceEvent::Termination { reason: TerminationReason::Error("boom".into()) });
         } else {
-            events.push(TraceEvent::Termination {
-                reason: TerminationReason::Completed,
-            });
+            events.push(TraceEvent::Termination { reason: TerminationReason::Completed });
         }
         AgentTrace {
             agent_id: id.into(),
@@ -432,21 +404,13 @@ mod tests {
             .collect();
         assert_eq!(
             spawned,
-            vec![
-                "improve-generate-1".to_string(),
-                "improve-review-1".to_string(),
-                "improve-revise-1".to_string(),
-            ],
+            vec!["improve-generate-1".to_string(), "improve-review-1".to_string(), "improve-revise-1".to_string(),],
             "improve traces must produce rows; leader trace must be hidden: {events:?}"
         );
     }
 
     fn output(result: &str, termination: TerminationReason) -> PatternOutput {
-        PatternOutput {
-            result: result.into(),
-            termination,
-            traces: Vec::new(),
-        }
+        PatternOutput { result: result.into(), termination, traces: Vec::new(), circuit_breaker_tripped: false }
     }
 
     fn drain(rx: &mut runie_core::bus::Receiver<Event>) -> Vec<Event> {
@@ -468,6 +432,7 @@ mod tests {
             Ok(output("final answer", TerminationReason::Completed)),
             "echo",
             std::time::Instant::now(),
+            3,
         )
         .await;
         let events = drain(&mut rx);
@@ -491,6 +456,7 @@ mod tests {
             Ok(output("", TerminationReason::MaxRoundsReached)),
             "echo",
             std::time::Instant::now(),
+            3,
         )
         .await;
         let events = drain(&mut rx);
@@ -514,6 +480,7 @@ mod tests {
             )),
             "echo",
             std::time::Instant::now(),
+            3,
         )
         .await;
         let events = drain(&mut rx);
@@ -536,6 +503,7 @@ mod tests {
             Err(anyhow::anyhow!("kaboom")),
             "echo",
             std::time::Instant::now(),
+            3,
         )
         .await;
         let events = drain(&mut rx);

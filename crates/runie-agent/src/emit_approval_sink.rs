@@ -52,11 +52,7 @@ impl EmitApprovalSink {
         timeout_secs: u64,
         cancel_token: CancellationToken,
     ) -> Self {
-        Self {
-            permission_handle,
-            timeout_secs,
-            cancel_token,
-        }
+        Self { permission_handle, timeout_secs, cancel_token }
     }
 
     /// Cancel pending permission requests by cancelling the abort token.

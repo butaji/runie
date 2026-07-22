@@ -10,10 +10,7 @@ fn hotkeys_opens_panel() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "/hotkeys should open a panel"
     );
@@ -26,10 +23,7 @@ fn hotkeys_alias_keys_works() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "/keys alias should open hotkeys panel"
     );

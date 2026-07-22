@@ -5,6 +5,7 @@
 //! item rendered as a dead "◆ Thought for 2.3s" — Enter and Ctrl+O did
 //! nothing to it, and on reasoning-only turns the reasoning was deleted
 //! together with the empty assistant message.
+#![allow(clippy::too_many_lines)]
 
 use runie_core::model::Role;
 use runie_core::view::elements::PostKind;
@@ -33,12 +34,7 @@ fn run_reasoning_tool_turn(state: &mut AppState) {
         name: "bash".into(),
         input: serde_json::json!({ "command": "ls -la" }),
     });
-    state.update(Event::ToolEnd {
-        id: REQ.into(),
-        duration_secs: 0.5,
-        output: "file1\nfile2".into(),
-        input: None,
-    });
+    state.update(Event::ToolEnd { id: REQ.into(), duration_secs: 0.5, output: "file1\nfile2".into(), input: None });
     state.update(Event::Done { id: REQ.into() });
 }
 
@@ -130,14 +126,8 @@ fn native_reasoning_moves_to_thought_and_answer_is_kept() {
     state.agent.streaming = true;
     state.update(Event::Thinking { id: REQ.into() });
     state.update(Event::ThinkingStart { id: REQ.into() });
-    state.update(Event::ThinkingDelta {
-        id: REQ.into(),
-        content: "I should read the README first.".into(),
-    });
-    state.update(Event::ResponseDelta {
-        id: REQ.into(),
-        content: "Here is the summary.".into(),
-    });
+    state.update(Event::ThinkingDelta { id: REQ.into(), content: "I should read the README first.".into() });
+    state.update(Event::ResponseDelta { id: REQ.into(), content: "Here is the summary.".into() });
     state.update(Event::ThoughtDone { id: REQ.into() });
     state.update(Event::Done { id: REQ.into() });
 
@@ -198,10 +188,7 @@ fn duration_only_thought_renders_without_expand_affordance() {
     let mut state = fresh_state();
     state.agent.streaming = true;
     state.update(Event::Thinking { id: REQ.into() });
-    state.update(Event::ResponseDelta {
-        id: REQ.into(),
-        content: "plain answer, no reasoning".into(),
-    });
+    state.update(Event::ResponseDelta { id: REQ.into(), content: "plain answer, no reasoning".into() });
     state.update(Event::ThoughtDone { id: REQ.into() });
     state.update(Event::Done { id: REQ.into() });
 

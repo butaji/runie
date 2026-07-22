@@ -17,12 +17,7 @@ fn cycle_rotates() {
 fn all_returns_all_levels_in_order() {
     assert_eq!(
         ThinkingLevel::all().to_vec(),
-        vec![
-            ThinkingLevel::Off,
-            ThinkingLevel::Low,
-            ThinkingLevel::Medium,
-            ThinkingLevel::High,
-        ]
+        vec![ThinkingLevel::Off, ThinkingLevel::Low, ThinkingLevel::Medium, ThinkingLevel::High,]
     );
 }
 
@@ -153,11 +148,7 @@ fn thinking_panel_contains_all_levels() {
     state.input.input.push_str("/thinking");
     state.update(Event::submit());
 
-    let Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
-    else {
+    let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog else {
         panic!("expected PanelStack dialog");
     };
     let panel = stack.current().expect("current panel");
@@ -194,11 +185,7 @@ fn thinking_panel_has_cli_usage_hint() {
     let mut state = AppState::default();
     state.input.input.push_str("/thinking");
     state.update(Event::submit());
-    let Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
-    else {
+    let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog else {
         panic!("expected panel");
     };
     let panel = stack.current().expect("panel");

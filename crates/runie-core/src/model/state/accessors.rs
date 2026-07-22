@@ -4,8 +4,7 @@
 //! private fields. Handlers and actors use these instead of direct field access.
 
 use crate::model::state::{
-    AgentState, AppState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState,
-    ViewState,
+    AgentState, AppState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState,
 };
 
 impl AppState {
@@ -63,9 +62,7 @@ impl AppState {
         &self.registry
     }
 
-    pub fn trust_decisions(
-        &self,
-    ) -> &indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision> {
+    pub fn trust_decisions(&self) -> &indexmap::IndexMap<camino::Utf8PathBuf, crate::trust::TrustDecision> {
         &self.trust_decisions
     }
 
@@ -266,6 +263,16 @@ impl AppState {
             .iter()
             .find(|m| m.provider == *provider && m.name == *model)
             .and_then(|m| m.context_window)
+    }
+
+    /// Get the pending model role (set when picking lead/worker from `/mode` dialog).
+    pub fn pending_model_role(&self) -> Option<&str> {
+        self.pending_model_role.as_deref()
+    }
+
+    /// Set the pending model role before opening the model picker.
+    pub fn set_pending_model_role(&mut self, role: Option<String>) {
+        self.pending_model_role = role;
     }
 }
 

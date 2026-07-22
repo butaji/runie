@@ -54,9 +54,7 @@ pub struct SessionConfig {
 impl SessionConfig {
     /// Create a session config with a model override.
     pub fn new(model: impl Into<String>) -> Self {
-        Self {
-            model: Some(model.into()),
-        }
+        Self { model: Some(model.into()) }
     }
 }
 
@@ -73,10 +71,7 @@ pub struct W3cTraceContext {
 impl W3cTraceContext {
     /// Create a trace context.
     pub fn new(trace_parent: impl Into<String>) -> Self {
-        Self {
-            trace_parent: trace_parent.into(),
-            trace_state: None,
-        }
+        Self { trace_parent: trace_parent.into(), trace_state: None }
     }
 
     /// Attach a tracestate value.
@@ -137,11 +132,7 @@ pub struct Submission {
 impl Submission {
     /// Create a new submission.
     pub fn new(id: SubmissionId, op: Op) -> Self {
-        Self {
-            id,
-            op,
-            trace: None,
-        }
+        Self { id, op, trace: None }
     }
 
     /// Attach a trace context.
@@ -158,22 +149,11 @@ mod tests {
     #[test]
     fn op_variant_roundtrip() {
         let variants = vec![
-            Op::UserTurn {
-                input: "hello".into(),
-                origin: PromptOrigin::User,
-            },
+            Op::UserTurn { input: "hello".into(), origin: PromptOrigin::User },
             Op::Interrupt,
-            Op::ExecApproval {
-                id: ApprovalId::new("a1"),
-                decision: ApprovalDecision::Allow,
-            },
-            Op::UserInputAnswer {
-                question_id: "q1".into(),
-                answer: "yes".into(),
-            },
-            Op::ConfigureSession {
-                config: SessionConfig::new("gpt-4"),
-            },
+            Op::ExecApproval { id: ApprovalId::new("a1"), decision: ApprovalDecision::Allow },
+            Op::UserInputAnswer { question_id: "q1".into(), answer: "yes".into() },
+            Op::ConfigureSession { config: SessionConfig::new("gpt-4") },
             Op::Shutdown,
         ];
         for op in variants {

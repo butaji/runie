@@ -16,6 +16,14 @@ const SWARM_VARIANTS: [&str; 3] = ["parallel", "delegation", "dag"];
 /// Register the mode handler with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
     registry.register("mode", NamedHandler::Handler(handle_mode));
+    registry.register(
+        "select-lead-model",
+        NamedHandler::Handler(handle_select_lead_model),
+    );
+    registry.register(
+        "select-worker-model",
+        NamedHandler::Handler(handle_select_worker_model),
+    );
 }
 
 pub fn handle_mode(state: &mut AppState, args: &str) -> CommandResult {
@@ -41,10 +49,7 @@ pub fn handle_mode(state: &mut AppState, args: &str) -> CommandResult {
 
 /// Emit the pattern-switch event; the model config update handler applies it.
 fn switch(active: &str, workers: Option<usize>) -> CommandResult {
-    CommandResult::Event(crate::Event::SetMode {
-        active: active.to_owned(),
-        workers,
-    })
+    CommandResult::Event(crate::Event::SetMode { active: active.to_owned(), workers })
 }
 
 /// Parse `<pattern> workers <n>`; `n` must be a usize >= 1.
@@ -67,4 +72,18 @@ fn set_swarm_variant(state: &mut AppState, variant: &str) -> CommandResult {
     }
     state.config_mut().swarm_variant = Some(variant.to_owned());
     switch("swarm", None)
+}
+
+/// Open the model selector for picking the swarm lead model.
+/// Sets `pending_model_role` so `SwitchModelWithLevel` routes to `set_lead_model`.
+fn handle_select_lead_model(state: &mut AppState, _args: &str) -> CommandResult {
+    state.set_pending_model_role(Some("lead".into()));
+    CommandResult::OpenDialog(DialogType::ModelSelector)
+}
+
+/// Open the model selector for picking the swarm worker model.
+/// Sets `pending_model_role` so `SwitchModelWithLevel` routes to `set_worker_model`.
+fn handle_select_worker_model(state: &mut AppState, _args: &str) -> CommandResult {
+    state.set_pending_model_role(Some("worker".into()));
+    CommandResult::OpenDialog(DialogType::ModelSelector)
 }

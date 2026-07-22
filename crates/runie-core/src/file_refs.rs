@@ -26,9 +26,8 @@ pub struct ParsedFileRef {
 /// - Exactly one hyphen between digits (the `\d+-\d+` sub-pattern).
 /// - Both start and end are non-zero (explicit check after capture).
 /// - Inverted ranges (`start > end`) fall through to plain-ref behavior.
-static FILE_REF_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(?<path>.+?):(?<start>\d+)-(?<end>\d+)$").expect("file-ref regex is valid")
-});
+static FILE_REF_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?<path>.+?):(?<start>\d+)-(?<end>\d+)$").expect("file-ref regex is valid"));
 
 /// Parse a file reference string, supporting optional `:start-end` line range suffix.
 ///
@@ -43,11 +42,7 @@ pub fn parse_file_ref(input: &str) -> Option<ParsedFileRef> {
 
     let Some(caps) = FILE_REF_RE.captures(input) else {
         // No range suffix (e.g. "file.txt", "file.txt:100", "file.txt:").
-        return Some(ParsedFileRef {
-            path: input.to_owned(),
-            range: None,
-            original: input.to_owned(),
-        });
+        return Some(ParsedFileRef { path: input.to_owned(), range: None, original: input.to_owned() });
     };
 
     let path = caps["path"].to_string();
@@ -61,18 +56,10 @@ pub fn parse_file_ref(input: &str) -> Option<ParsedFileRef> {
 
     if start > end {
         // Inverted range — treat as plain path.
-        return Some(ParsedFileRef {
-            path,
-            range: None,
-            original: input.to_owned(),
-        });
+        return Some(ParsedFileRef { path, range: None, original: input.to_owned() });
     }
 
-    Some(ParsedFileRef {
-        path,
-        range: Some(start..=end),
-        original: input.to_owned(),
-    })
+    Some(ParsedFileRef { path, range: Some(start..=end), original: input.to_owned() })
 }
 
 #[derive(Debug, Clone)]
@@ -229,10 +216,7 @@ pub fn read_file_ref(path: &str) -> Result<FileRef, String> {
 
 /// Read a file reference, optionally extracting only the given line range.
 /// Returns only those lines (1-indexed, inclusive), clamped to the file's actual bounds.
-pub fn read_file_ref_with_range(
-    path: &str,
-    range: Option<RangeInclusive<u32>>,
-) -> Result<FileRef, String> {
+pub fn read_file_ref_with_range(path: &str, range: Option<RangeInclusive<u32>>) -> Result<FileRef, String> {
     let is_image = is_image_file(path);
 
     if is_image {
@@ -245,19 +229,14 @@ pub fn read_file_ref_with_range(
         });
     }
 
-    let full_text =
-        std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
+    let full_text = std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
 
     let text = match range {
         None => full_text,
         Some(r) => extract_lines(&full_text, r)?,
     };
 
-    Ok(FileRef {
-        path: path.to_owned(),
-        text,
-        is_image: false,
-    })
+    Ok(FileRef { path: path.to_owned(), text, is_image: false })
 }
 
 /// Extract lines from a text string, given a 1-indexed inclusive range.

@@ -69,8 +69,45 @@ pub trait ToolDef: Send + Sync {
 }
 
 /// Generate JSON schema for a type implementing `JsonSchema`.
+///
+/// The schema is normalized for function-calling providers: schemars marks
+/// `Option<T>` fields as `"type": ["<T>", "null"]` with `"default": null`,
+/// which leads some providers (notably MiniMax) to send explicit `null`
+/// values instead of omitting the argument or providing a real value.
+/// Optional fields stay optional via `required`; we strip the null type and
+/// null defaults so models are guided toward real values.
 pub fn generate_schema<T: JsonSchema>() -> Value {
-    serde_json::to_value(schemars::schema_for!(T)).unwrap_or_default()
+    let mut schema = serde_json::to_value(schemars::schema_for!(T)).unwrap_or_default();
+    strip_null_types(&mut schema);
+    schema
+}
+
+/// Recursively remove `"null"` from `type` arrays and drop `"default": null`
+/// entries in a JSON Schema document.
+fn strip_null_types(value: &mut Value) {
+    match value {
+        Value::Object(map) => {
+            if let Some(Value::Array(types)) = map.get_mut("type") {
+                types.retain(|t| t.as_str() != Some("null"));
+                if types.len() == 1 {
+                    let single = types[0].clone();
+                    map.insert("type".to_string(), single);
+                }
+            }
+            if map.get("default").is_some_and(Value::is_null) {
+                map.remove("default");
+            }
+            for v in map.values_mut() {
+                strip_null_types(v);
+            }
+        }
+        Value::Array(items) => {
+            for v in items {
+                strip_null_types(v);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// Supported tool format output targets.
@@ -90,7 +127,7 @@ impl ToolFormat {
     /// Convert a `ToolDef` implementation to the target format.
     pub fn convert<T: ToolDef>(&self) -> Value {
         match self {
-            ToolFormat::Mcp => to_mcp_tool::<T>().into(),
+            ToolFormat::Mcp => to_mcp_tool::<T>(),
             ToolFormat::OpenAi => to_openai_function::<T>(),
             ToolFormat::Anthropic => to_anthropic_tool::<T>(),
             ToolFormat::Gemini => to_gemini_tool::<T>(),
@@ -165,14 +202,35 @@ pub fn parse_input<T: DeserializeOwned>(input: &Value) -> Result<T, serde_json::
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tool::ToolStatus;
     use schemars::JsonSchema;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Deserialize, JsonSchema)]
+    #[derive(Debug, Deserialize, Serialize, JsonSchema)]
     struct TestInput {
         path: String,
         #[serde(default)]
         limit: Option<u64>,
+    }
+
+    impl ToolDef for TestInput {
+        type Input = TestInput;
+
+        const NAME: &'static str = "test_input";
+        const DESCRIPTION: &'static str = "A test tool input";
+        const READ_ONLY: bool = true;
+        const REQUIRES_APPROVAL: bool = false;
+
+        async fn execute(input: Self::Input, _ctx: &ToolContext) -> ToolOutput {
+            ToolOutput {
+                tool_name: Self::NAME.to_string(),
+                tool_args: serde_json::to_value(&input).unwrap_or_default(),
+                content: format!("test input: {} {:?}", input.path, input.limit),
+                bytes_transferred: None,
+                duration: std::time::Duration::from_millis(1),
+                status: ToolStatus::Success,
+            }
+        }
     }
 
     #[test]
@@ -218,9 +276,15 @@ mod tests {
     fn openai_function_has_correct_structure() {
         let result = to_openai_function::<TestInput>();
         assert!(result.get("type").is_some(), "should have 'type' field");
-        assert!(result.get("function").is_some(), "should have 'function' wrapper");
+        assert!(
+            result.get("function").is_some(),
+            "should have 'function' wrapper"
+        );
         let func = result.get("function").unwrap().as_object().unwrap();
-        assert_eq!(func.get("name").and_then(|v| v.as_str()), Some(""));
+        assert_eq!(
+            func.get("name").and_then(|v| v.as_str()),
+            Some("test_input")
+        );
         assert!(func.get("description").is_some());
         assert!(func.get("parameters").is_some());
     }
@@ -230,24 +294,46 @@ mod tests {
         let result = to_anthropic_tool::<TestInput>();
         // Anthropic format has no 'type' or 'function' wrapper
         assert!(result.get("type").is_none(), "should NOT have 'type' field");
-        assert!(result.get("function").is_none(), "should NOT have 'function' wrapper");
+        assert!(
+            result.get("function").is_none(),
+            "should NOT have 'function' wrapper"
+        );
         assert!(result.get("name").is_some(), "should have 'name' field");
-        assert!(result.get("description").is_some(), "should have 'description' field");
-        assert!(result.get("input_schema").is_some(), "should have 'input_schema' field");
-        assert!(result.get("parameters").is_none(), "should NOT have 'parameters' field");
+        assert!(
+            result.get("description").is_some(),
+            "should have 'description' field"
+        );
+        assert!(
+            result.get("input_schema").is_some(),
+            "should have 'input_schema' field"
+        );
+        assert!(
+            result.get("parameters").is_none(),
+            "should NOT have 'parameters' field"
+        );
     }
 
     #[test]
     fn gemini_tool_has_correct_structure() {
         let result = to_gemini_tool::<TestInput>();
         // Gemini format wraps in function_declarations array
-        assert!(result.get("function_declarations").is_some(), "should have 'function_declarations' field");
-        let decls = result.get("function_declarations").unwrap().as_array().unwrap();
+        assert!(
+            result.get("function_declarations").is_some(),
+            "should have 'function_declarations' field"
+        );
+        let decls = result
+            .get("function_declarations")
+            .unwrap()
+            .as_array()
+            .unwrap();
         assert_eq!(decls.len(), 1);
         let decl = &decls[0];
         assert!(decl.get("name").is_some());
         assert!(decl.get("description").is_some());
-        assert!(decl.get("parameters").is_some(), "should have 'parameters' field");
+        assert!(
+            decl.get("parameters").is_some(),
+            "should have 'parameters' field"
+        );
     }
 
     #[test]
@@ -285,5 +371,69 @@ mod tests {
         let fmt = ToolFormat::Anthropic;
         let size = mem::size_of_val(&fmt);
         assert_eq!(size, 1, "ToolFormat should be 1 byte (copyable enum)");
+    }
+
+    #[test]
+    fn schema_strips_null_type_from_optional_fields() {
+        // `limit: Option<u64>` must not be advertised as nullable: some
+        // providers (MiniMax) then send explicit `null` instead of a value.
+        let schema = generate_schema::<TestInput>();
+        let limit = &schema["properties"]["limit"];
+        let ty = limit.get("type").expect("limit should have a type");
+        match ty {
+            Value::String(s) => assert_ne!(s, "null"),
+            Value::Array(arr) => assert!(
+                !arr.iter().any(|t| t.as_str() == Some("null")),
+                "null type must be stripped, got {ty}"
+            ),
+            other => panic!("unexpected type shape: {other}"),
+        }
+    }
+
+    #[test]
+    fn schema_strips_null_defaults() {
+        let schema = generate_schema::<TestInput>();
+        let limit = &schema["properties"]["limit"];
+        assert!(
+            limit.get("default").is_none(),
+            "null default must be stripped, got {limit}"
+        );
+    }
+
+    #[test]
+    fn schema_keeps_required_fields_required() {
+        let schema = generate_schema::<TestInput>();
+        let required = schema["required"].as_array().expect("required array");
+        assert!(
+            required.iter().any(|r| r.as_str() == Some("path")),
+            "path must stay required: {schema}"
+        );
+        assert!(
+            !required.iter().any(|r| r.as_str() == Some("limit")),
+            "limit must stay optional: {schema}"
+        );
+    }
+
+    #[test]
+    fn strip_null_types_recurses_into_nested_objects() {
+        let mut schema = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "nested": {
+                    "type": ["object", "null"],
+                    "default": null,
+                    "properties": {
+                        "leaf": { "type": ["string", "null"] }
+                    }
+                }
+            }
+        });
+        strip_null_types(&mut schema);
+        assert_eq!(schema["properties"]["nested"]["type"], "object");
+        assert!(schema["properties"]["nested"].get("default").is_none());
+        assert_eq!(
+            schema["properties"]["nested"]["properties"]["leaf"]["type"],
+            "string"
+        );
     }
 }

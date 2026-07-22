@@ -12,8 +12,8 @@
 //! API key has been successfully verified.
 
 pub use panels::{
-    build_done_panel, build_key_input, build_login_root, build_model_selector,
-    build_provider_picker, build_validating_panel,
+    build_done_panel, build_key_input, build_login_root, build_model_selector, build_provider_picker,
+    build_validating_panel,
 };
 pub use state::{LoginFlowState, LoginStep};
 

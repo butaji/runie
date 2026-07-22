@@ -22,12 +22,8 @@ static FIXTURES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|
 });
 
 /// All OpenAI fixture names.
-pub const ALL_FIXTURES: &[&str] = &[
-    "parallel_tool_calls.sse",
-    "rate_limit_error.sse",
-    "reasoning_content.sse",
-    "simple_text_delta.sse",
-];
+pub const ALL_FIXTURES: &[&str] =
+    &["parallel_tool_calls.sse", "rate_limit_error.sse", "reasoning_content.sse", "simple_text_delta.sse"];
 
 /// Load a fixture by name. Panics if the name is unknown.
 pub fn fixture(name: &str) -> String {

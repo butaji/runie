@@ -9,9 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use runie_core::harness_skills::{
-    HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult,
-};
+use runie_core::harness_skills::{HarnessSkill, SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult};
 
 /// Result type for mock tool execution.
 #[derive(Debug, Clone)]
@@ -108,11 +106,7 @@ impl MockToolSkill {
             .into_iter()
             .map(|(k, v)| (k, ToolResult::Success(v)))
             .collect();
-        Self {
-            results,
-            expected_calls: Arc::new(Mutex::new(Vec::new())),
-            expected_sequence: Vec::new(),
-        }
+        Self { results, expected_calls: Arc::new(Mutex::new(Vec::new())), expected_sequence: Vec::new() }
     }
 
     /// Build a skill using the builder API.
@@ -217,9 +211,7 @@ pub struct RecordingSkill {
 impl RecordingSkill {
     /// Build a recording skill.
     pub fn new() -> Self {
-        Self {
-            ctx: Arc::new(Mutex::new(None)),
-        }
+        Self { ctx: Arc::new(Mutex::new(None)) }
     }
 
     /// Take and return the last recorded context.

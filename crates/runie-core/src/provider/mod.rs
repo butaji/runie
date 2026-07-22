@@ -13,19 +13,18 @@ pub mod routing;
 
 // Re-exports for ergonomic access at the crate root.
 pub use config::{
-    get_provider_config, list_configured_providers, remove_provider_config, save_provider_config,
-    set_test_config_path, set_test_config_with_providers,
-};
-pub use provider_trait::{
-    Provider, ProviderError, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy,
-    CONNECT_TIMEOUT, REQUEST_TIMEOUT,
+    get_provider_config, list_configured_providers, remove_provider_config, save_provider_config, set_test_config_path,
+    set_test_config_with_providers,
 };
 pub use detection::{
-    detect_provider, detect_provider_from_api_base, is_known_provider,
-    normalize_model_name, parse_model_prefix, KNOWN_API_BASES,
+    detect_provider, detect_provider_from_api_base, is_known_provider, normalize_model_name, parse_model_prefix,
+    KNOWN_API_BASES,
+};
+pub use provider_trait::{
+    Provider, ProviderError, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy, CONNECT_TIMEOUT,
+    REQUEST_TIMEOUT,
 };
 pub use registry::{
-    display_name, find_model, find_provider, find_provider_by_env_var,
-    is_mock_enabled, is_mock_onboarding, known_providers, mock_model, ModelMeta, ProviderMeta,
-    set_mock_enabled, set_mock_onboarding,
+    display_name, find_model, find_provider, find_provider_by_env_var, is_mock_enabled, is_mock_onboarding,
+    known_providers, mock_model, set_mock_enabled, set_mock_onboarding, ModelMeta, ProviderMeta,
 };

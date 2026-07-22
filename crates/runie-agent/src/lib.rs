@@ -10,6 +10,7 @@ pub mod safety;
 pub mod stream_response;
 pub mod streaming_parser;
 pub mod subagent;
+pub mod subagent_coordinator;
 pub mod think_filter;
 pub mod tool;
 pub mod tool_registry;
@@ -19,13 +20,15 @@ pub mod turn;
 
 pub use actor::leader::{AgentActorFactoryImpl, LeaderAgentHandleImpl};
 pub use actor::{spawn_ractor_agent, AgentMsg, RactorAgentHandle};
-pub use headless::{
-    run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult,
-};
+pub use headless::{run_headless_cli, run_headless_turn, HeadlessCliOptions, HeadlessOptions, HeadlessResult};
 pub use runie_core::permissions::PermissionGate;
 pub use runie_core::tool::ToolOutput;
 pub use runie_core::tool::{has_tool_calls, parse_tool_calls, ParsedToolCall};
 pub use turn::{run_agent_turn, run_agent_turn_with_skills};
+pub use subagent_coordinator::{
+    CancelOutcome, ProgressSnapshot, SubagentCoordinator, SubagentHandle, SubagentMetadata, 
+    SubagentRequest, SubagentState, SubagentTracker,
+};
 
 #[derive(Debug, Clone)]
 pub struct AgentCommand {

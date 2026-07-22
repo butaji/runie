@@ -24,11 +24,7 @@ pub fn default_plans_dir() -> Option<PathBuf> {
 }
 
 /// Save a plan to the plan store and return its ID.
-pub fn save_plan(
-    plans_dir: &Path,
-    session_id: &str,
-    content: &str,
-) -> std::io::Result<Option<String>> {
+pub fn save_plan(plans_dir: &Path, session_id: &str, content: &str) -> std::io::Result<Option<String>> {
     let store = PlanStore::new(plans_dir.to_path_buf());
     let id = PlanId::new();
     let plan = Plan {

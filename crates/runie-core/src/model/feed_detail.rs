@@ -42,7 +42,7 @@ impl FeedElementKind {
             FeedElementKind::ToolRunning { .. } => "Tool Running",
             FeedElementKind::ToolDone { .. } => "Tool Done",
             FeedElementKind::ToolSummary { .. } => "Tool Summary",
-            FeedElementKind::ContextGroup { .. } => "Context Group",
+            FeedElementKind::ContextGroup => "Context Group",
             FeedElementKind::SubagentRow { .. } => "Subagent",
             FeedElementKind::TurnComplete { .. } => "Turn Complete",
             FeedElementKind::System { .. } => "System",
@@ -57,36 +57,20 @@ impl FeedElementDetail {
             element_index,
             scroll: 0,
             kind: match kind {
-                PostKind::UserInput => FeedElementKind::UserInput {
-                    content: String::new(),
-                },
-                PostKind::AgentResponse => FeedElementKind::AgentResponse {
-                    content: String::new(),
-                    provider: String::new(),
-                },
-                PostKind::Thought => FeedElementKind::Thought {
-                    content: String::new(),
-                },
-                PostKind::ToolRunning => FeedElementKind::ToolRunning {
-                    name: String::new(),
-                    args: String::new(),
-                },
-                PostKind::ToolDone => FeedElementKind::ToolDone {
-                    name: String::new(),
-                    args: String::new(),
-                    output: String::new(),
-                },
-                PostKind::ToolSummary => FeedElementKind::ToolSummary {
-                    name: String::new(),
-                },
+                PostKind::UserInput => FeedElementKind::UserInput { content: String::new() },
+                PostKind::AgentResponse => {
+                    FeedElementKind::AgentResponse { content: String::new(), provider: String::new() }
+                }
+                PostKind::Thought => FeedElementKind::Thought { content: String::new() },
+                PostKind::ToolRunning => FeedElementKind::ToolRunning { name: String::new(), args: String::new() },
+                PostKind::ToolDone => {
+                    FeedElementKind::ToolDone { name: String::new(), args: String::new(), output: String::new() }
+                }
+                PostKind::ToolSummary => FeedElementKind::ToolSummary { name: String::new() },
                 PostKind::ContextGroup => FeedElementKind::ContextGroup,
-                PostKind::SubagentRow => FeedElementKind::SubagentRow {
-                    worker_id: String::new(),
-                },
+                PostKind::SubagentRow => FeedElementKind::SubagentRow { worker_id: String::new() },
                 PostKind::TurnComplete => FeedElementKind::TurnComplete { duration_secs: 0.0 },
-                PostKind::System => FeedElementKind::System {
-                    content: String::new(),
-                },
+                PostKind::System => FeedElementKind::System { content: String::new() },
                 PostKind::Thinking => return None,
             },
         })

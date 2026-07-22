@@ -23,9 +23,7 @@ fn config_loaded_updates_keybindings() {
     let mut state = AppState::default();
     let initial_bindings = state.config.keybindings.clone();
     let config = crate::config::Config::default();
-    state.update(Event::ConfigLoaded {
-        config: Box::new(config),
-    });
+    state.update(Event::ConfigLoaded { config: Box::new(config) });
     // After applying config, keybindings should be refreshed (same content but new HashMap)
     assert_eq!(state.config.keybindings.len(), initial_bindings.len());
 }

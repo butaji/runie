@@ -25,18 +25,10 @@ pub fn agent_event(state: &mut AppState, event: crate::Event) {
         E::Thinking { id } => apply_and_order(state, |s| s.set_thinking(id)),
         E::ThoughtDone { id } => apply_and_order(state, |s| s.add_thought(id)),
         E::ToolStart { id, name, .. } => apply_and_order(state, |s| s.start_tool(id, name)),
-        E::ToolEnd {
-            duration_secs,
-            output,
-            ..
-        } => apply_and_order(state, |s| s.end_tool(duration_secs, output)),
+        E::ToolEnd { duration_secs, output, .. } => apply_and_order(state, |s| s.end_tool(duration_secs, output)),
         E::ResponseDelta { .. } => state.handle_llm_event(event),
-        E::Response { id, content, .. } => {
-            apply_and_order(state, |s| s.append_response(id, content))
-        }
-        E::TurnComplete { id, duration_secs } => {
-            apply_and_order(state, |s| s.complete_turn(id, duration_secs))
-        }
+        E::Response { id, content, .. } => apply_and_order(state, |s| s.append_response(id, content)),
+        E::TurnComplete { id, duration_secs } => apply_and_order(state, |s| s.complete_turn(id, duration_secs)),
         E::Done { id } => state.finish_turn(id),
         E::Error { id, message } => apply_and_order(state, |s| s.add_error(id, message)),
         // LLM lifecycle events — populate parts during streaming
@@ -71,10 +63,7 @@ mod tests {
         // Start a turn with thinking
         agent_event(
             &mut state,
-            crate::Event::TurnComplete {
-                id: "1".into(),
-                duration_secs: 1.0,
-            },
+            crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
         );
         agent_event(&mut state, crate::Event::Thinking { id: "2".into() });
         agent_event(&mut state, crate::Event::ThoughtDone { id: "2".into() });
@@ -91,18 +80,11 @@ mod tests {
 
         agent_event(
             &mut state,
-            crate::Event::TurnComplete {
-                id: "1".into(),
-                duration_secs: 1.0,
-            },
+            crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
         );
         agent_event(
             &mut state,
-            crate::Event::ToolStart {
-                id: "t1".into(),
-                name: "bash".into(),
-                input: Default::default(),
-            },
+            crate::Event::ToolStart { id: "t1".into(), name: "bash".into(), input: Default::default() },
         );
         agent_event(&mut state, crate::Event::tool_end("t1", 0.5, "done"));
 
@@ -117,10 +99,7 @@ mod tests {
 
         agent_event(
             &mut state,
-            crate::Event::TurnComplete {
-                id: "1".into(),
-                duration_secs: 1.0,
-            },
+            crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
         );
         agent_event(&mut state, crate::Event::response("2", "hello"));
 
@@ -135,17 +114,11 @@ mod tests {
 
         agent_event(
             &mut state,
-            crate::Event::TurnComplete {
-                id: "1".into(),
-                duration_secs: 1.0,
-            },
+            crate::Event::TurnComplete { id: "1".into(), duration_secs: 1.0 },
         );
         agent_event(
             &mut state,
-            crate::Event::Error {
-                id: "2".into(),
-                message: "oops".into(),
-            },
+            crate::Event::Error { id: "2".into(), message: "oops".into() },
         );
 
         state.ensure_turn_complete_last();

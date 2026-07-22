@@ -23,9 +23,7 @@ pub const DEFAULT_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_
 
 /// Parse one SSE data-line into either a protocol frame or an error.
 /// Handles regular SSE frames ("data: {...}") and fixture error lines ("error: {...}").
-fn parse_sse_line(
-    line: &str,
-) -> Option<Result<OpenAiFrame, runie_core::provider_event::ModelError>> {
+fn parse_sse_line(line: &str) -> Option<Result<OpenAiFrame, runie_core::provider_event::ModelError>> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return None;
@@ -113,10 +111,7 @@ fn openai_event_stream(
 /// Whole-request retry is handled by the caller via
 /// `crate::retry::with_retry_config`, which builds a *fresh* EventSource per
 /// attempt. Once SSE data starts flowing, errors surface immediately.
-async fn build_eventsource(
-    provider: &OpenAiProvider,
-    messages: &[ChatMessage],
-) -> anyhow::Result<EventSource> {
+async fn build_eventsource(provider: &OpenAiProvider, messages: &[ChatMessage]) -> anyhow::Result<EventSource> {
     let span = tracing::debug_span!("build_eventsource");
     async move {
         let body = build_request_body(provider, messages);
@@ -143,8 +138,7 @@ async fn build_eventsource(
         let builder = builder.try_clone().unwrap();
 
         tracing::trace!("creating EventSource");
-        let mut es = EventSource::new(builder)
-            .map_err(|e| anyhow::anyhow!("EventSource build error: {e}"))?;
+        let mut es = EventSource::new(builder).map_err(|e| anyhow::anyhow!("EventSource build error: {e}"))?;
         // Disable reqwest-eventsource's internal retry: whole-request retry is
         // handled by the caller, and SSE-streaming errors surface immediately.
         es.set_retry_policy(Box::new(Never));
@@ -158,9 +152,9 @@ async fn build_eventsource(
 /// provider event produced while parsing frames. Returning the events (rather
 /// than dropping them) ensures content survives a stream that ends without a
 /// terminal `data: [DONE]` frame.
+#[allow(clippy::too_many_lines)]
 async fn stream_sse_events(
-    es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>>
-              + Unpin),
+    es: &mut (impl futures::Stream<Item = Result<reqwest_eventsource::Event, reqwest_eventsource::Error>> + Unpin),
     idle_timeout: std::time::Duration,
 ) -> anyhow::Result<(OpenAiState, Vec<ProviderEvent>)> {
     let span = tracing::debug_span!("stream_sse_events");
@@ -171,12 +165,7 @@ async fn stream_sse_events(
         let mut event_count = 0usize;
 
         loop {
-            let result = match tokio::time::timeout(
-                idle_timeout,
-                futures::StreamExt::next(&mut *es),
-            )
-            .await
-            {
+            let result = match tokio::time::timeout(idle_timeout, futures::StreamExt::next(&mut *es)).await {
                 Ok(Some(r)) => r,
                 Ok(None) => break, // underlying stream ended
                 Err(_elapsed) => {
@@ -318,9 +307,7 @@ pub fn classify_error_value(val: &serde_json::Value) -> runie_core::provider_eve
     let type_ = err.type_();
 
     if code.contains("rate_limit") || type_.contains("rate_limit") {
-        return ModelError::RateLimit {
-            retry_after_secs: err.retry_after_secs(),
-        };
+        return ModelError::RateLimit { retry_after_secs: err.retry_after_secs() };
     }
     // Provider overload: Anthropic `overloaded_error`, HTTP 529, or an
     // explicit "overloaded"/"high load" message. Transient — retry.
@@ -329,17 +316,12 @@ pub fn classify_error_value(val: &serde_json::Value) -> runie_core::provider_eve
         || msg.to_lowercase().contains("overloaded")
         || msg.to_lowercase().contains("high load")
     {
-        return ModelError::Overloaded {
-            retry_after_secs: err.retry_after_secs(),
-        };
+        return ModelError::Overloaded { retry_after_secs: err.retry_after_secs() };
     }
     if code.contains("context_length") || code.contains("token_limit") {
         return ModelError::ContextLength { limit: 0, used: 0 };
     }
-    if code.contains("content_filter")
-        || code.contains("refusal")
-        || type_.contains("content_filter")
-    {
+    if code.contains("content_filter") || code.contains("refusal") || type_.contains("content_filter") {
         return ModelError::Refusal(msg.to_string());
     }
     ModelError::Other(msg.to_string())
@@ -441,6 +423,7 @@ pub mod tests {
     }
 
     /// Build an `Ok(Event::Message)` item carrying the given SSE data line.
+    #[allow(clippy::result_large_err)]
     fn sse_message(data: &str) -> Result<reqwest_eventsource::Event, reqwest_eventsource::Error> {
         let mut event = reqwest_eventsource::Event::Message(Default::default());
         if let reqwest_eventsource::Event::Message(ref mut m) = event {
@@ -465,10 +448,9 @@ pub mod tests {
         ];
         let mut stream = futures::stream::iter(items);
 
-        let (state, streamed_events) =
-            stream_sse_events(&mut stream, std::time::Duration::from_secs(60))
-                .await
-                .expect("a clean StreamEnded (no [DONE]) must not be an error");
+        let (state, streamed_events) = stream_sse_events(&mut stream, std::time::Duration::from_secs(60))
+            .await
+            .expect("a clean StreamEnded (no [DONE]) must not be an error");
         let mut all = streamed_events;
         all.extend(OpenAiProtocol::new().on_halt(state));
 
@@ -512,8 +494,7 @@ pub mod tests {
             .mount(&mock_server)
             .await;
 
-        let provider =
-            OpenAiProvider::new("sk-test".to_string(), "gpt-4o").with_base_url(mock_server.uri());
+        let provider = OpenAiProvider::new("sk-test".to_string(), "gpt-4o").with_base_url(mock_server.uri());
         let mut stream = provider.generate(vec![ChatMessage::user("hi".to_string())]);
 
         let mut items = Vec::new();
@@ -584,6 +565,7 @@ pub mod tests {
     /// cannot fail for network reasons, so a transient 503 was surfaced as an
     /// immediate error with no retry.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn openai_stream_retries_transient_http_then_succeeds() {
         use futures::StreamExt;
         use runie_core::proto::message::ChatMessage;
@@ -676,6 +658,7 @@ pub mod tests {
     /// retried like a transport-level transient failure: the first attempt
     /// carries the error frame, the second delivers content.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn openai_stream_retries_overloaded_sse_error_frame_then_succeeds() {
         use futures::StreamExt;
         use runie_core::proto::message::ChatMessage;
@@ -765,6 +748,7 @@ pub mod tests {
     /// A persistent 529 SSE error frame MUST surface as an error after the
     /// retry budget is exhausted — never as a silent empty Finish.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn openai_stream_surfaces_overloaded_after_retries_exhausted() {
         use futures::StreamExt;
         use runie_core::proto::message::ChatMessage;
@@ -841,6 +825,7 @@ pub mod tests {
     /// Non-retryable error frames (auth, invalid request) surface
     /// immediately as an Error event — no retry.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn openai_stream_does_not_retry_non_retryable_error_frame() {
         use futures::StreamExt;
         use runie_core::proto::message::ChatMessage;
@@ -903,9 +888,9 @@ pub mod tests {
             "auth errors must not be retried"
         );
         assert!(
-            items.iter().any(
-                |i| matches!(i, Ok(ProviderEvent::Error(e)) if e.to_string().contains("Invalid API key"))
-            ),
+            items
+                .iter()
+                .any(|i| matches!(i, Ok(ProviderEvent::Error(e)) if e.to_string().contains("Invalid API key"))),
             "expected the auth error to surface as an Error event, got: {items:?}"
         );
     }
@@ -954,6 +939,7 @@ pub mod tests {
     /// Regression: mock-openai-api `invalid_request` scenario was observed to
     /// issue 5 requests before giving up.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn openai_stream_does_not_retry_http_400() {
         use futures::StreamExt;
         use runie_core::proto::message::ChatMessage;

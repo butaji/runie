@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Build script for runie-core.
 //!
 //! This script performs checks:
@@ -204,9 +206,7 @@ fn needs_magic_number_lint(rel_path: &str) -> bool {
         "src/config/mod.rs",
         "src/actors/leader/actor.rs",
     ];
-    !is_test_file(rel_path)
-        && !rel_path.contains("/benches/")
-        && !exemptions.iter().any(|e| rel_path.ends_with(e))
+    !is_test_file(rel_path) && !rel_path.contains("/benches/") && !exemptions.iter().any(|e| rel_path.ends_with(e))
 }
 
 /// Check for magic numbers: numeric literals >= 1000 that aren't exempted.
@@ -229,6 +229,8 @@ fn needs_magic_number_lint(rel_path: &str) -> bool {
 /// - vec![] and similar macro literals
 /// - Lines with assert!, debug_assert!, panic!
 /// - Lines with doc comments (`///`, `//!`)
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>) {
     // Regex for numeric literals >= 1000 (4+ digits).
     let re = regex::Regex::new(r"\b(\d{4,}(?:_\d+)*)\b").unwrap();
@@ -262,10 +264,7 @@ fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>)
         }
 
         // Skip vec!, hashmap!, etc. literals.
-        if line.contains("vec!")
-            || line.contains("hashmap!")
-            || line.contains("HashMap!")
-            || line.contains("btreemap!")
+        if line.contains("vec!") || line.contains("hashmap!") || line.contains("HashMap!") || line.contains("btreemap!")
         {
             continue;
         }
@@ -289,10 +288,8 @@ fn check_magic_numbers(rel_path: &str, lines: &[&str], errors: &mut Vec<String>)
             }
 
             // Check if this looks like a named constant (preceded by =, :, ,, =>).
-            let looks_named = before.ends_with('=')
-                || before.ends_with(':')
-                || before.ends_with(',')
-                || before.ends_with("=>");
+            let looks_named =
+                before.ends_with('=') || before.ends_with(':') || before.ends_with(',') || before.ends_with("=>");
 
             if looks_named {
                 continue;
@@ -355,10 +352,10 @@ const SPAWN_EXEMPTIONS: &[&str] = &[
     "crates/runie-core/src/config/config_impl.rs", // Config watching - background service
     "crates/runie-core/src/session/store.rs",      // Session persistence - background service
     "crates/runie-core/src/tool/format.rs",        // Tool formatting - background service
-    "crates/runie-core/src/update/system.rs", // Abort signal routing - fire-and-forget by design
-    "crates/runie-core/src/shell.rs",         // Process execution - observed via channel
-    "crates/runie-core/src/tool/cache.rs",    // Background TTL eviction - runs to process exit
-    "crates/runie-core/src/bus.rs",           // Test bus implementation
+    "crates/runie-core/src/update/system.rs",      // Abort signal routing - fire-and-forget by design
+    "crates/runie-core/src/shell.rs",              // Process execution - observed via channel
+    "crates/runie-core/src/tool/cache.rs",         // Background TTL eviction - runs to process exit
+    "crates/runie-core/src/bus.rs",                // Test bus implementation
     // runie-tui spawns - managed by application lifecycle and shutdown signals
     "crates/runie-tui/src/bootstrap.rs", // Bootstrap spawns - managed by app lifecycle
     "crates/runie-tui/src/ui_actor/mod.rs", // Event forwarder - fire-and-forget by design
@@ -393,6 +390,7 @@ fn needs_spawn_lint(rel_path: &str) -> bool {
 ///
 /// INVALID (will be flagged):
 /// - `let _ = tokio::spawn(...)` - explicit discard is NOT a valid capture
+#[allow(clippy::too_many_lines)]
 fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) {
     /// Number of lines to look back when searching for `#[allow(...)]` above a spawn.
     const SPAWN_ALLOW_LOOKBACK: usize = 10;
@@ -415,12 +413,7 @@ fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) 
 
         // Check if this is a spawn call.
         // Pattern: identifier containing "spawn" followed by "("
-        let spawn_patterns = [
-            "tokio::spawn",
-            "::tokio::spawn",
-            "spawn_blocking",
-            "spawn_unchecked",
-        ];
+        let spawn_patterns = ["tokio::spawn", "::tokio::spawn", "spawn_blocking", "spawn_unchecked"];
 
         let is_spawn = spawn_patterns.iter().any(|p| line.contains(p));
         if !is_spawn {
@@ -467,9 +460,8 @@ fn check_orphan_spawns(rel_path: &str, content: &str, errors: &mut Vec<String>) 
         }
 
         // Check for fire-and-forget comment.
-        let fire_and_forget = trimmed.contains("fire-and-forget")
-            || trimmed.contains("fire_forget")
-            || trimmed.contains("ff");
+        let fire_and_forget =
+            trimmed.contains("fire-and-forget") || trimmed.contains("fire_forget") || trimmed.contains("ff");
         if fire_and_forget {
             continue;
         }

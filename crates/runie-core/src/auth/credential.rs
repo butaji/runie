@@ -64,13 +64,7 @@ impl CredentialResolver {
             .map(|(k, v)| (k, SecretString::from(v)))
             .collect();
         let dotenv = Self::load_dotenv();
-        Self {
-            env,
-            dotenv,
-            file_tokens: Self::load_auth_file(),
-            entries: HashMap::new(),
-            store: Self::default_store(),
-        }
+        Self { env, dotenv, file_tokens: Self::load_auth_file(), entries: HashMap::new(), store: Self::default_store() }
     }
 
     /// Create a resolver with an empty environment (for testing).
@@ -103,13 +97,7 @@ impl CredentialResolver {
             .map(|(k, v)| (k, SecretString::from(v)))
             .collect();
         let dotenv = Self::load_dotenv();
-        Self {
-            env,
-            dotenv,
-            file_tokens: Self::load_auth_file(),
-            entries: HashMap::new(),
-            store,
-        }
+        Self { env, dotenv, file_tokens: Self::load_auth_file(), entries: HashMap::new(), store }
     }
 
     /// Create a resolver with an injectable keyring store and empty environment.
@@ -163,7 +151,7 @@ impl CredentialResolver {
         Self::load_auth_file_from(&path)
     }
 
-    fn load_auth_file_from(path: &std::path::Path) -> HashMap<String, SecretString> {
+    pub(crate) fn load_auth_file_from(path: &std::path::Path) -> HashMap<String, SecretString> {
         let mut out = HashMap::new();
         let Ok(json) = std::fs::read_to_string(path) else {
             return out;
@@ -187,12 +175,7 @@ impl CredentialResolver {
     }
 
     /// Set a config entry for a provider.
-    pub fn set_config(
-        &mut self,
-        provider: &str,
-        api_key: Option<SecretString>,
-        base_url: Option<String>,
-    ) {
+    pub fn set_config(&mut self, provider: &str, api_key: Option<SecretString>, base_url: Option<String>) {
         self.entries
             .insert(provider.to_lowercase(), (api_key, base_url));
     }
@@ -210,11 +193,7 @@ impl CredentialResolver {
     /// hyphens in their key (e.g. `kimi-code`) declare a clean env var such as
     /// `KIMI_API_KEY` while still accepting the derived form for backwards
     /// compatibility.
-    pub fn resolve_api_key_with_env_vars(
-        &self,
-        provider: &str,
-        preferred_env_vars: &[String],
-    ) -> Option<SecretString> {
+    pub fn resolve_api_key_with_env_vars(&self, provider: &str, preferred_env_vars: &[String]) -> Option<SecretString> {
         let default_env_key = format!("{}_API_KEY", provider.to_uppercase());
         let mut env_keys: Vec<String> = preferred_env_vars.to_vec();
         if !env_keys.contains(&default_env_key) {

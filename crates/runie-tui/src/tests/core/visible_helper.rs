@@ -11,10 +11,7 @@ pub struct TestViewport {
 pub fn compute_viewport(state: &mut AppState, visible_height: usize) -> TestViewport {
     let snap = state.snapshot();
     if snap.elements.is_empty() || visible_height == 0 {
-        return TestViewport {
-            elements: vec![],
-            skip_lines: 0,
-        };
+        return TestViewport { elements: vec![], skip_lines: 0 };
     }
 
     let total = snap.total_lines;
@@ -22,10 +19,7 @@ pub fn compute_viewport(state: &mut AppState, visible_height: usize) -> TestView
     let (start_idx, skip_lines) = find_start_index(&snap.line_counts, viewport_start);
     let end_idx = find_end_index(&snap.line_counts, viewport_end, snap.elements.len());
 
-    TestViewport {
-        elements: snap.elements[start_idx..end_idx.min(snap.elements.len())].to_vec(),
-        skip_lines,
-    }
+    TestViewport { elements: snap.elements[start_idx..end_idx.min(snap.elements.len())].to_vec(), skip_lines }
 }
 
 fn viewport_bounds(total: usize, visible_height: usize, scroll: usize) -> (usize, usize) {

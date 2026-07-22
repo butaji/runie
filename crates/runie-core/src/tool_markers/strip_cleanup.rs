@@ -5,10 +5,7 @@ use serde_json::Value;
 use super::legacy_tools::strip_inline_legacy_tools;
 use super::{
     is_tool_call_value,
-    strip::{
-        strip_inline_fenced_tools, strip_inline_json_objects, strip_minimax_tool_calls,
-        strip_tool_call_markup,
-    },
+    strip::{strip_inline_fenced_tools, strip_inline_json_objects, strip_minimax_tool_calls, strip_tool_call_markup},
 };
 
 /// Run the full stripping pipeline (2 passes).
@@ -149,8 +146,7 @@ mod tests {
 
     #[test]
     fn test_strip_all_handles_valid_tool_call() {
-        let input =
-            "Here's the result:\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"/test\"}}";
+        let input = "Here's the result:\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"/test\"}}";
         let result = strip_all(input);
         assert_eq!(result, "Here's the result:");
     }
@@ -213,7 +209,8 @@ mod tests {
 
     #[test]
     fn test_strip_all_code_fenced_json() {
-        let input = "```json\n{\"name\": \"list_dir\", \"arguments\": {\"path\": \".\"}}\n```\nHere's the current directory.";
+        let input =
+            "```json\n{\"name\": \"list_dir\", \"arguments\": {\"path\": \".\"}}\n```\nHere's the current directory.";
         let result = strip_all(input);
         assert_eq!(result, "Here's the current directory.");
     }
@@ -268,8 +265,7 @@ mod unicode_bug_tests {
 
     #[test]
     fn strip_inline_json_objects_strips_tool_call_and_preserves_nonascii() {
-        let content =
-            "hola \u{1F600} {\"name\":\"bash\",\"arguments\":{\"command\":\"ls\"}} adios \u{1F609}";
+        let content = "hola \u{1F600} {\"name\":\"bash\",\"arguments\":{\"command\":\"ls\"}} adios \u{1F609}";
         let result = strip_inline_json_objects(content);
         assert_eq!(result, "hola \u{1F600}  adios \u{1F609}");
     }

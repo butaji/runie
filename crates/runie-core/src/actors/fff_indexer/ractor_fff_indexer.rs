@@ -15,8 +15,8 @@ use crate::event::Event;
 use crate::model::FffFileEntry;
 
 use super::{
-    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState, FileSearchResult,
-    SearchIndex, SearchIndexStateInner, DEFAULT_LIMIT, MAX_FILE_SIZE,
+    FffFileItem, FffSearchRequest, FffSearchResultPayload, FffSearchState, FileSearchResult, SearchIndex,
+    SearchIndexStateInner, DEFAULT_LIMIT, MAX_FILE_SIZE,
 };
 
 /// Ractor-based FffIndexerActor handle.
@@ -42,10 +42,7 @@ impl RactorFffIndexerHandle {
     }
 
     /// Try to send a message (non-blocking).
-    pub fn try_send(
-        &self,
-        msg: FffSearchRequest,
-    ) -> Result<(), ractor::MessagingErr<FffSearchRequest>> {
+    pub fn try_send(&self, msg: FffSearchRequest) -> Result<(), ractor::MessagingErr<FffSearchRequest>> {
         self.inner.send_message(msg)
     }
 }
@@ -65,12 +62,7 @@ pub struct FffIndexerActorState {
 
 impl RactorFffIndexerActor {
     fn new(root: PathBuf, _data_dir: PathBuf, bus: EventBus<Event>) -> Self {
-        Self {
-            root,
-            bus,
-            index: SearchIndex::new(),
-            scan_complete: Arc::new(AtomicBool::new(false)),
-        }
+        Self { root, bus, index: SearchIndex::new(), scan_complete: Arc::new(AtomicBool::new(false)) }
     }
 
     /// Spawn a `RactorFffIndexerActor` and return a handle + cell + join.
@@ -98,14 +90,8 @@ impl RactorFffIndexerActor {
             index.build(&scan_root);
 
             if !super::is_indexer_scan_cancelled() {
-                let global_state = FffSearchState {
-                    project_path,
-                    index: index.clone(),
-                    indexed: true,
-                };
-                *super::search_index_state().write() = Some(SearchIndexStateInner {
-                    state: global_state,
-                });
+                let global_state = FffSearchState { project_path, index: index.clone(), indexed: true };
+                *super::search_index_state().write() = Some(SearchIndexStateInner { state: global_state });
                 scan_complete.store(true, Ordering::Release);
 
                 tracing::debug!(
@@ -131,9 +117,7 @@ impl Actor for RactorFffIndexerActor {
         _myself: ActorRef<Self::Msg>,
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(FffIndexerActorState {
-            indexed: self.scan_complete.load(Ordering::Acquire),
-        })
+        Ok(FffIndexerActorState { indexed: self.scan_complete.load(Ordering::Acquire) })
     }
 
     async fn post_stop(
@@ -214,13 +198,7 @@ impl RactorFffIndexerActor {
                 .collect();
         }
 
-        FffSearchResultPayload {
-            request_id: req.request_id,
-            query: req.query.clone(),
-            items,
-            total_matched,
-            indexed,
-        }
+        FffSearchResultPayload { request_id: req.request_id, query: req.query.clone(), items, total_matched, indexed }
     }
 
     fn emit(&self, event: Event) {

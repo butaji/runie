@@ -23,8 +23,7 @@ impl ToolDef for WriteFileTool {
     type Input = WriteFileInput;
 
     const NAME: &'static str = "write_file";
-    const DESCRIPTION: &'static str =
-        "Write content to a file, creating parent directories as needed.";
+    const DESCRIPTION: &'static str = "Write content to a file, creating parent directories as needed.";
     const READ_ONLY: bool = false;
     const REQUIRES_APPROVAL: bool = true;
 
@@ -88,10 +87,7 @@ mod tests {
     async fn write_file_creates_file_and_parent_dirs() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("nested/dir/file.txt");
-        let input = WriteFileInput {
-            path: file.to_string_lossy().to_string(),
-            content: "hello".to_string(),
-        };
+        let input = WriteFileInput { path: file.to_string_lossy().to_string(), content: "hello".to_string() };
 
         let out = WriteFileTool::execute(input, &ctx()).await;
 
@@ -107,10 +103,7 @@ mod tests {
         let blocking = dir.path().join("blocking");
         std::fs::write(&blocking, "x").unwrap();
         let file = blocking.join("file.txt");
-        let input = WriteFileInput {
-            path: file.to_string_lossy().to_string(),
-            content: "hello".to_string(),
-        };
+        let input = WriteFileInput { path: file.to_string_lossy().to_string(), content: "hello".to_string() };
 
         let out = WriteFileTool::execute(input, &ctx()).await;
 

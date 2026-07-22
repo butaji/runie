@@ -4,10 +4,9 @@
 //! base URLs, API type, environment variable, and the models each provider supports.
 //!
 //! Provider and model metadata is loaded from YAML files in `resources/models/`.
+#![allow(clippy::too_many_lines)]
 
-use super::registry_data::{
-    mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml,
-};
+use super::registry_data::{mock_provider_yaml, parse_provider_yaml, provider_yaml_files, ProviderYaml};
 use derive_builder::Builder;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -283,13 +282,7 @@ mod tests {
         assert_eq!(p.env_var, "MINIMAX_API_KEY");
         assert_eq!(
             p.models.iter().map(|m| m.name.as_str()).collect::<Vec<_>>(),
-            vec![
-                "MiniMax-M3",
-                "MiniMax-M2.7",
-                "MiniMax-M2.7-highspeed",
-                "MiniMax-M2.5",
-                "MiniMax-M2.5-highspeed",
-            ]
+            vec!["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed",]
         );
     }
 
@@ -545,5 +538,13 @@ mod tests {
         set_mock_enabled(false);
         assert!(meta.is_some());
         assert_eq!(meta.unwrap().name, "echo");
+    }
+
+    #[test]
+    fn minimax_models_have_supports_tools() {
+        for name in ["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"] {
+            let meta = find_model_for_provider("minimax", name).expect(&format!("minimax/{name} should exist"));
+            assert!(meta.supports_tools, "minimax/{name} supports_tools should be true, got {}", meta.supports_tools);
+        }
     }
 }

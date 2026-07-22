@@ -63,14 +63,10 @@ pub fn validate_messages(messages: &[ChatMessage]) -> Vec<SanitizeError> {
         if msg.role == Role::Tool {
             if let Some(ref id) = msg.tool_call_id {
                 if !tool_call_ids.contains(id) {
-                    errors.push(SanitizeError::OrphanToolResult {
-                        tool_call_id: id.clone(),
-                    });
+                    errors.push(SanitizeError::OrphanToolResult { tool_call_id: id.clone() });
                 }
             } else {
-                errors.push(SanitizeError::OrphanToolResult {
-                    tool_call_id: "<missing>".to_owned(),
-                });
+                errors.push(SanitizeError::OrphanToolResult { tool_call_id: "<missing>".to_owned() });
             }
         }
 
@@ -79,10 +75,7 @@ pub fn validate_messages(messages: &[ChatMessage]) -> Vec<SanitizeError> {
             let has_text = !msg.content().trim().is_empty();
             let has_tc = !msg.tool_calls().is_empty();
             if !has_text && !has_tc {
-                errors.push(SanitizeError::RemovedMessage {
-                    role: Role::Assistant,
-                    reason: "empty message",
-                });
+                errors.push(SanitizeError::RemovedMessage { role: Role::Assistant, reason: "empty message" });
             }
         }
     }

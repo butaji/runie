@@ -17,21 +17,9 @@ fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: tool_output.into(),
-    });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: tool_output.into() });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 }
@@ -59,8 +47,7 @@ fn thought_pos(state: &AppState) -> Option<usize> {
         .position(|e| {
             matches!(
                 e,
-                runie_core::view::Element::ThoughtMarker { .. }
-                    | runie_core::view::Element::ThoughtSummary { .. }
+                runie_core::view::Element::ThoughtMarker { .. } | runie_core::view::Element::ThoughtSummary { .. }
             )
         })
 }
@@ -102,9 +89,10 @@ fn final_agent_visible_when_tool_overflows() {
     run_tool_turn(&mut state, "Done!", &big_output());
     state.view.scroll = 0;
     let region = crate::tests::core::visible_helper::compute_viewport(&mut state, 5);
-    let has_agent = region.elements.iter().any(
-        |e| matches!(e, runie_core::view::Element::AgentMessage { content, .. } if content == "Done!"),
-    );
+    let has_agent = region
+        .elements
+        .iter()
+        .any(|e| matches!(e, runie_core::view::Element::AgentMessage { content, .. } if content == "Done!"));
     assert!(has_agent, "Final agent 'Done!' must be visible at bottom");
 }
 
@@ -119,17 +107,8 @@ fn agent_before_tool_preserved_during_turn() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".into(),
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".into() });
     state.ensure_fresh();
     assert!(agent_pos(&state).is_some() && tool_pos(&state).is_some());
 }
@@ -141,17 +120,8 @@ fn no_reorder_when_no_tools() {
 
     state.update(Event::Thinking { id: "req.0".into() });
     state.update(Event::ThoughtDone { id: "req.0".into() });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".into(),
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".into() });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -159,16 +129,12 @@ fn no_reorder_when_no_tools() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     let kinds = agent_turn_complete_kinds(&state);
     assert!(
-        kinds.iter().position(|&k| k == "A").unwrap()
-            < kinds.iter().position(|&k| k == "T").unwrap(),
+        kinds.iter().position(|&k| k == "A").unwrap() < kinds.iter().position(|&k| k == "T").unwrap(),
         "Agent should be before TurnComplete: got {:?}",
         kinds
     );

@@ -21,9 +21,7 @@ impl Provider for MinimaxLikeProvider {
             Ok(ProviderEvent::TextDelta(
                 "<think>\nThe user is asking".into(),
             )),
-            Ok(ProviderEvent::ThinkingStart {
-                id: "reasoning".into(),
-            }),
+            Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() }),
             Ok(ProviderEvent::ThinkingDelta("The user is asking".into())),
             Ok(ProviderEvent::TextDelta(
                 " me to say hi. I will respond with a friendly greeting.".into(),
@@ -35,12 +33,8 @@ impl Provider for MinimaxLikeProvider {
                 "\n</think>\n\nHi there! How can I help you today?".into(),
             )),
             Ok(ProviderEvent::TextEnd { id: "text".into() }),
-            Ok(ProviderEvent::ThinkingEnd {
-                id: "reasoning".into(),
-            }),
-            Ok(ProviderEvent::Finish {
-                reason: StopReason::Stop,
-            }),
+            Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() }),
+            Ok(ProviderEvent::Finish { reason: StopReason::Stop }),
         ]))
     }
 

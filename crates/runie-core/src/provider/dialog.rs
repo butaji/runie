@@ -68,16 +68,11 @@ fn add_provider_section(
     let provider = provider_name.to_owned();
     for model in models {
         let label = model_label(model, is_active, model == current_model);
-        let evt = crate::Event::ProvidersSelectModel {
-            provider: provider.clone(),
-            model: model.clone(),
-        };
+        let evt = crate::Event::ProvidersSelectModel { provider: provider.clone(), model: model.clone() };
         panel = panel.item(label, ItemAction::Emit(evt));
     }
 
-    let edit_evt = crate::Event::ProvidersEditModels {
-        provider: provider.clone(),
-    };
+    let edit_evt = crate::Event::ProvidersEditModels { provider: provider.clone() };
     let disconnect_evt = crate::Event::ProvidersDisconnect { provider };
     panel
         .item("  ✎ Edit models", ItemAction::Emit(edit_evt))
@@ -105,8 +100,7 @@ fn model_label(model: &str, is_active: bool, is_current: bool) -> String {
 pub fn build_provider_models_editor(state: &AppState, provider: &str) -> PanelStack {
     let (saved, available) = crate::update::settings_dialog::provider_model_lists(state, provider);
     let saved: std::collections::HashSet<String> = saved.into_iter().collect();
-    let mut panel =
-        Panel::new("provider-models", format!(" Edit {} models ", provider)).with_filter();
+    let mut panel = Panel::new("provider-models", format!(" Edit {} models ", provider)).with_filter();
     for model in available {
         let key = format!("edit_provider:{}:{}", provider, model);
         panel = panel.toggle(&model, saved.contains(&model), ItemAction::Toggle(key));

@@ -2,6 +2,7 @@
 //!
 //! Ensures that input events go through the InputActor → InputChanged path,
 //! not direct `AppState.input` mutation.
+#![allow(clippy::too_many_lines)]
 
 use std::sync::Arc;
 
@@ -13,10 +14,7 @@ use runie_core::Event;
 struct MockAgentHandle;
 
 impl LeaderAgentHandle for MockAgentHandle {
-    fn run(
-        &self,
-        _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, _cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(async {})
     }
     fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
@@ -33,8 +31,7 @@ async fn input_event_routes_to_input_actor() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
@@ -113,8 +110,7 @@ async fn input_accumulates_via_input_actor() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
@@ -196,16 +192,13 @@ async fn input_event_routes_to_dialog_when_open() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     // Open the onboarding login flow key-input panel.
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
     let panel_id = state
         .open_dialog
         .as_ref()
@@ -278,8 +271,7 @@ async fn submit_event_routes_to_dialog_when_open() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     // Open the onboarding login flow provider picker.
     let mut state = runie_core::AppState::default();
@@ -358,16 +350,13 @@ async fn login_form_submit_publishes_submit_key_event() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     // Open the onboarding login flow key-input panel.
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
     let panel_id = state
         .open_dialog
         .as_ref()
@@ -437,8 +426,7 @@ async fn manual_ui_actor() -> (
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
@@ -498,13 +486,9 @@ async fn slash_after_text_does_not_open_palette() {
     for c in "src".chars() {
         ui.handle_event(Event::Input(c), effect_tx.clone()).await;
         typed.push(c);
-        let mut istate = runie_core::InputState::default();
-        istate.input = typed.clone();
-        istate.cursor_pos = typed.len();
+        let istate = runie_core::InputState { input: typed.clone(), cursor_pos: typed.len(), ..Default::default() };
         ui.handle_event(
-            Event::InputChanged {
-                state: Box::new(istate),
-            },
+            Event::InputChanged { state: Box::new(istate) },
             effect_tx.clone(),
         )
         .await;
@@ -514,13 +498,9 @@ async fn slash_after_text_does_not_open_palette() {
     // Now type '/' at the end of non-empty input.
     ui.handle_event(Event::Input('/'), effect_tx.clone()).await;
     typed.push('/');
-    let mut istate = runie_core::InputState::default();
-    istate.input = typed.clone();
-    istate.cursor_pos = typed.len();
+    let istate = runie_core::InputState { input: typed.clone(), cursor_pos: typed.len(), ..Default::default() };
     ui.handle_event(
-        Event::InputChanged {
-            state: Box::new(istate),
-        },
+        Event::InputChanged { state: Box::new(istate) },
         effect_tx.clone(),
     )
     .await;
@@ -552,13 +532,9 @@ async fn slash_after_space_mid_input_does_not_open_palette() {
     for c in "check ".chars() {
         ui.handle_event(Event::Input(c), effect_tx.clone()).await;
         typed.push(c);
-        let mut istate = runie_core::InputState::default();
-        istate.input = typed.clone();
-        istate.cursor_pos = typed.len();
+        let istate = runie_core::InputState { input: typed.clone(), cursor_pos: typed.len(), ..Default::default() };
         ui.handle_event(
-            Event::InputChanged {
-                state: Box::new(istate),
-            },
+            Event::InputChanged { state: Box::new(istate) },
             effect_tx.clone(),
         )
         .await;
@@ -569,13 +545,9 @@ async fn slash_after_space_mid_input_does_not_open_palette() {
     // a fresh command token and opened the palette, destroying "check ".
     ui.handle_event(Event::Input('/'), effect_tx.clone()).await;
     typed.push('/');
-    let mut istate = runie_core::InputState::default();
-    istate.input = typed.clone();
-    istate.cursor_pos = typed.len();
+    let istate = runie_core::InputState { input: typed.clone(), cursor_pos: typed.len(), ..Default::default() };
     ui.handle_event(
-        Event::InputChanged {
-            state: Box::new(istate),
-        },
+        Event::InputChanged { state: Box::new(istate) },
         effect_tx.clone(),
     )
     .await;
@@ -633,9 +605,7 @@ async fn submit_after_fast_typing_keeps_full_content() {
     // Deliver the cleared-input echo the InputActor emits on submit; this
     // triggers dispatch of the pending submit content.
     ui.handle_event(
-        Event::InputChanged {
-            state: Box::new(runie_core::InputState::default()),
-        },
+        Event::InputChanged { state: Box::new(runie_core::InputState::default()) },
         effect_tx.clone(),
     )
     .await;
@@ -663,9 +633,7 @@ async fn submit_after_fast_typing_keeps_full_content() {
 /// is live: every routed `InputMsg` makes it publish its authoritative state.
 /// Reading that echo is how production-path tests observe what the actor
 /// actually did (as opposed to a fabricated projection).
-async fn next_input_changed(
-    sub: &mut tokio::sync::broadcast::Receiver<Event>,
-) -> runie_core::InputState {
+async fn next_input_changed(sub: &mut tokio::sync::broadcast::Receiver<Event>) -> runie_core::InputState {
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {
         let evt = tokio::time::timeout_at(deadline, sub.recv())
@@ -755,9 +723,7 @@ async fn up_with_multiline_moves_cursor_not_history_in_production() {
     // Seed history: if Up recalled it, the draft would be replaced by "zzz".
     leader
         .input
-        .send_message(runie_core::actors::InputMsg::HistoryLoaded {
-            entries: vec!["zzz".to_string()],
-        })
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded { entries: vec!["zzz".to_string()] })
         .expect("input actor should accept HistoryLoaded");
     let _ = next_input_changed(&mut sub).await;
 
@@ -797,9 +763,7 @@ async fn up_down_with_single_line_moves_cursor_in_production() {
 
     leader
         .input
-        .send_message(runie_core::actors::InputMsg::HistoryLoaded {
-            entries: vec!["zzz".to_string()],
-        })
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded { entries: vec!["zzz".to_string()] })
         .expect("input actor should accept HistoryLoaded");
     let _ = next_input_changed(&mut sub).await;
 
@@ -836,13 +800,9 @@ async fn up_with_text_does_not_scroll_feed_in_production() {
 
     // Type 'x' and deliver its InputChanged echo so the projection is fresh.
     ui.handle_event(Event::Input('x'), effect_tx.clone()).await;
-    let mut istate = runie_core::InputState::default();
-    istate.input = "x".to_string();
-    istate.cursor_pos = 1;
+    let istate = runie_core::InputState { input: "x".to_string(), cursor_pos: 1, ..Default::default() };
     ui.handle_event(
-        Event::InputChanged {
-            state: Box::new(istate),
-        },
+        Event::InputChanged { state: Box::new(istate) },
         effect_tx.clone(),
     )
     .await;
@@ -923,10 +883,7 @@ async fn slash_model_selects_model_synchronously() {
     assert!(
         matches!(
             ui.state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::ModelSelector,
-                panels: _,
-            })
+            Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: _ })
         ),
         "/model should open the model selector, got {:?}",
         ui.state.open_dialog()
@@ -959,9 +916,7 @@ async fn at_file_pick_preserves_prefix_and_syncs_input_actor() {
 
     // Production ordering: the Clear echo arrives AFTER the picker opened.
     ui.handle_event(
-        Event::InputChanged {
-            state: Box::default(),
-        },
+        Event::InputChanged { state: Box::default() },
         effect_tx.clone(),
     )
     .await;

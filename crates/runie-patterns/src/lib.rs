@@ -25,14 +25,18 @@
 //! - The pattern returns `TerminationReason::Error("aborted")`.
 //! - Clean shutdown with no zombie tasks.
 
+pub mod doom_loop;
+pub mod goal;
 mod improve;
 pub mod primitives;
 mod single;
-mod swarm;
+pub mod swarm;
 
+pub use doom_loop::{DoomLoopDetector, DoomLoopSignal, DEFAULT_DOOM_LOOP_THRESHOLD};
+pub use goal::GoalPattern;
 pub use improve::ImprovePattern;
 pub use single::SinglePattern;
-pub use swarm::{SwarmPattern, SwarmVariant};
+pub use swarm::{SwarmPattern, SwarmVariant, SwarmWorkerStatus, OrphanedWorkerTracker, StatusCounts, DEFAULT_ORPHAN_TIMEOUT_SECS};
 
 use std::sync::Arc;
 
@@ -91,6 +95,8 @@ pub struct PatternConfig {
     pub max_retries: u32,
     /// Consecutive failures before fail-fast.
     pub circuit_breaker: u32,
+    /// Threshold for doom loop detection (consecutive same-tool calls).
+    pub doom_loop_threshold: usize,
 }
 
 impl Default for PatternConfig {
@@ -102,6 +108,7 @@ impl Default for PatternConfig {
             timeout_ms: 120_000,
             max_retries: 2,
             circuit_breaker: 3,
+            doom_loop_threshold: DEFAULT_DOOM_LOOP_THRESHOLD,
         }
     }
 }
@@ -143,6 +150,9 @@ pub struct PatternOutput {
     pub result: String,
     pub termination: TerminationReason,
     pub traces: Vec<AgentTrace>,
+    /// True when the swarm circuit breaker tripped during execution.
+    /// Used by the TUI to show UI feedback (toast, DISPATCH PAUSED overlay).
+    pub circuit_breaker_tripped: bool,
 }
 
 /// An orchestration strategy executable against a [`Context`].
@@ -161,9 +171,7 @@ pub struct PatternRegistry {
 impl PatternRegistry {
     /// Empty registry; register patterns manually.
     pub fn new() -> Self {
-        Self {
-            patterns: Vec::new(),
-        }
+        Self { patterns: Vec::new() }
     }
 
     pub fn register(&mut self, pattern: Box<dyn Pattern>) {

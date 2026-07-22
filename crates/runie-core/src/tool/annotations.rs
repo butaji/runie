@@ -47,14 +47,7 @@ mod tests {
 
     #[test]
     fn read_only_tools_have_read_only_hint() {
-        for tool in [
-            "read_file",
-            "grep",
-            "find",
-            "list_dir",
-            "search",
-            "find_definitions",
-        ] {
+        for tool in ["read_file", "grep", "find", "list_dir", "search", "find_definitions"] {
             let ann = get_tool_annotations(tool).expect(tool);
             assert_eq!(ann.read_only_hint, Some(true), "{tool} should be read-only");
         }

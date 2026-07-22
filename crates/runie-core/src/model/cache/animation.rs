@@ -15,7 +15,7 @@ impl AppState {
                 .pattern_workers
                 .iter()
                 .any(|w| w.status == crate::model::PatternWorkerStatus::Running);
-        drop(agent);
+        let _ = agent;
         if any_work_active {
             self.view_mut().animation_frame = self.view_mut().animation_frame.wrapping_add(1);
             self.update_speed();

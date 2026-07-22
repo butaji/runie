@@ -10,11 +10,7 @@ pub(crate) use runie_core::layout::word_wrap;
 /// Wrap a sequence of styled spans into rows, preserving styles at word-wrap
 /// boundaries. This lets the TUI render the unified markdown AST directly
 /// without re-parsing inline markdown for each wrapped chunk.
-pub(crate) fn wrap_styled_spans(
-    spans: &[MdSpan],
-    first_width: u16,
-    rest_width: u16,
-) -> Vec<Vec<MdSpan>> {
+pub(crate) fn wrap_styled_spans(spans: &[MdSpan], first_width: u16, rest_width: u16) -> Vec<Vec<MdSpan>> {
     let rows = split_spans_by_newline(spans);
     let mut out = Vec::new();
     let mut width = first_width;
@@ -38,10 +34,9 @@ fn split_spans_by_newline(spans: &[MdSpan]) -> Vec<Vec<MdSpan>> {
                     rows.push(Vec::new());
                 }
                 if !part.is_empty() {
-                    rows.last_mut().unwrap().push(MdSpan {
-                        content: part.to_owned(),
-                        style: span.style,
-                    });
+                    rows.last_mut()
+                        .unwrap()
+                        .push(MdSpan { content: part.to_owned(), style: span.style });
                 }
             }
         } else {
@@ -107,8 +102,5 @@ fn push_span(spans: &mut Vec<MdSpan>, text: &str, style: ratatui::style::Style) 
             return;
         }
     }
-    spans.push(MdSpan {
-        content: text.to_owned(),
-        style,
-    });
+    spans.push(MdSpan { content: text.to_owned(), style });
 }

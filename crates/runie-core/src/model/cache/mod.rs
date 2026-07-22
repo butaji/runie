@@ -90,10 +90,9 @@ impl AppState {
 
     fn refresh_session_tree_items(&mut self) {
         let filter = match self.open_dialog() {
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::SessionTree,
-                panels: _,
-            }) => crate::session::tree::SessionTreeFilter::All,
+            Some(crate::commands::DialogState::Active { kind: DialogKind::SessionTree, panels: _ }) => {
+                crate::session::tree::SessionTreeFilter::All
+            }
             _ => {
                 self.view_mut().cached_session_tree_valid = false;
                 if self.view_mut().cached_session_tree_items.is_empty() {
@@ -104,24 +103,23 @@ impl AppState {
             }
         };
         if !self.view_mut().cached_session_tree_valid {
-            self.view_mut().cached_session_tree_items =
-                match self.session_mut().session_tree.as_ref() {
-                    Some(tree) => tree
-                        .filtered_walk(filter)
-                        .into_iter()
-                        .map(|(depth, node_id)| {
-                            let node = tree.arena()[node_id].get();
-                            let preview = format!(
-                                "[{}] {}",
-                                node.message.role.as_str(),
-                                node.message.content().chars().take(60).collect::<String>()
-                            );
-                            (depth, preview)
-                        })
-                        .collect::<Vec<_>>()
-                        .into(),
-                    None => Arc::new([]),
-                };
+            self.view_mut().cached_session_tree_items = match self.session_mut().session_tree.as_ref() {
+                Some(tree) => tree
+                    .filtered_walk(filter)
+                    .into_iter()
+                    .map(|(depth, node_id)| {
+                        let node = tree.arena()[node_id].get();
+                        let preview = format!(
+                            "[{}] {}",
+                            node.message.role.as_str(),
+                            node.message.content().chars().take(60).collect::<String>()
+                        );
+                        (depth, preview)
+                    })
+                    .collect::<Vec<_>>()
+                    .into(),
+                None => Arc::new([]),
+            };
             self.view_mut().cached_session_tree_valid = true;
         }
     }
@@ -168,8 +166,7 @@ impl AppState {
 
     fn refresh_settings_items(&mut self) {
         if !self.view_mut().cached_settings_valid {
-            self.view_mut().cached_settings_items =
-                crate::update::settings_dialog::build_setting_items(self).into();
+            self.view_mut().cached_settings_items = crate::update::settings_dialog::build_setting_items(self).into();
             self.view_mut().cached_settings_valid = true;
         }
     }

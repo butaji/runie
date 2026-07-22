@@ -34,11 +34,7 @@ pub enum CommandKind {
     Msg { message: String },
     /// Form dialog with a named handler.
     #[serde(rename = "form_with_handler")]
-    FormWithHandler {
-        title: String,
-        fields: Vec<FormFieldDef>,
-        handler: String,
-    },
+    FormWithHandler { title: String, fields: Vec<FormFieldDef>, handler: String },
 }
 
 impl CommandKind {
@@ -104,8 +100,7 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    CommandCategory::parse_case_insensitive(&s)
-        .map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
+    CommandCategory::parse_case_insensitive(&s).map_err(|_| SerdeError::custom(format!("unknown category: {s}")))
 }
 
 /// Deserialize a YAML list of trigger strings into `Vec<Trigger>`.
@@ -255,41 +250,25 @@ mod tests {
 
     #[test]
     fn form_field_def_valid() {
-        let field = FormFieldDef {
-            label: "Name".into(),
-            placeholder: "session-name".into(),
-            key: "name".into(),
-        };
+        let field = FormFieldDef { label: "Name".into(), placeholder: "session-name".into(), key: "name".into() };
         assert!(field.validate().is_ok());
     }
 
     #[test]
     fn form_field_def_empty_label() {
-        let field = FormFieldDef {
-            label: "".into(),
-            placeholder: "session-name".into(),
-            key: "name".into(),
-        };
+        let field = FormFieldDef { label: "".into(), placeholder: "session-name".into(), key: "name".into() };
         assert!(field.validate().is_err());
     }
 
     #[test]
     fn form_field_def_empty_placeholder() {
-        let field = FormFieldDef {
-            label: "Name".into(),
-            placeholder: "".into(),
-            key: "name".into(),
-        };
+        let field = FormFieldDef { label: "Name".into(), placeholder: "".into(), key: "name".into() };
         assert!(field.validate().is_err());
     }
 
     #[test]
     fn form_field_def_empty_key() {
-        let field = FormFieldDef {
-            label: "Name".into(),
-            placeholder: "session-name".into(),
-            key: "".into(),
-        };
+        let field = FormFieldDef { label: "Name".into(), placeholder: "session-name".into(), key: "".into() };
         assert!(field.validate().is_err());
     }
 }

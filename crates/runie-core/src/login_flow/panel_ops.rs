@@ -6,8 +6,7 @@
 //! both read from `LoginFlowState` and modify `open_dialog`.
 
 use super::panels::{
-    build_key_input, build_login_root, build_model_selector, build_provider_picker,
-    build_validating_panel,
+    build_key_input, build_login_root, build_model_selector, build_provider_picker, build_validating_panel,
 };
 use super::state::LoginFlowState;
 use crate::commands::DialogKind;
@@ -37,10 +36,7 @@ pub(super) fn push_login_panel(state: &mut crate::model::AppState, panel: Panel)
             .unwrap_or(super::state::LoginStep::ProviderPicker),
     };
     stack.push(panel);
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    });
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
     if let Some(flow) = state.login_flow_mut().as_mut() {
         flow.step = new_step;
     }
@@ -56,10 +52,7 @@ pub(super) fn replace_top_login_panel_with(state: &mut crate::model::AppState, n
         stack.pop();
     }
     stack.push(new_top);
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    });
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
     state.view_mut().dirty = true;
 }
 
@@ -82,10 +75,7 @@ pub(super) fn pop_login_panel(state: &mut crate::model::AppState) {
             _ => flow.step.clone(),
         };
     }
-    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    });
+    *state.open_dialog_mut() = Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
     state.view_mut().dirty = true;
 }
 
@@ -108,10 +98,8 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
                 _ => flow.step.clone(),
             };
         }
-        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
-            kind: DialogKind::Generic,
-            panels: stack,
-        });
+        *state.open_dialog_mut() =
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
         state.view_mut().dirty = true;
     } else if login_root_closable(state) {
         // At the root: close the login flow and restore the previous
@@ -128,10 +116,8 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
     } else {
         // The root panel is marked non-closable: keep it open.
         tracing::debug!("blocking Esc/Cancel/Abort at login root: no connected model");
-        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
-            kind: DialogKind::Generic,
-            panels: stack,
-        });
+        *state.open_dialog_mut() =
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
         state.view_mut().dirty = true;
     }
 }
@@ -146,10 +132,8 @@ pub(super) fn pop_login_panel_or_close(state: &mut crate::model::AppState) {
 /// The root panel's `closable` flag is always refreshed from current state
 /// so onboarding stays locked until a real model is connected.
 fn take_or_create_login_stack(state: &mut crate::model::AppState) -> PanelStack {
-    if let Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: mut stack,
-    }) = state.open_dialog_mut().take()
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: mut stack }) =
+        state.open_dialog_mut().take()
     {
         if let Some(root) = stack.panels.first_mut() {
             root.closable = login_root_closable(state);
@@ -192,10 +176,8 @@ pub(crate) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
         let mut root = build_provider_picker();
         root.closable = login_root_closable(state);
         let stack = PanelStack::new(root);
-        *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
-            kind: DialogKind::Generic,
-            panels: stack,
-        });
+        *state.open_dialog_mut() =
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack });
         state.view_mut().dirty = true;
     }
 }

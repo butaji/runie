@@ -88,11 +88,7 @@ impl Diff {
     /// Uses `diffy` for both generation and parsing.
     pub fn generate(old_content: &str, new_content: &str) -> Self {
         if old_content == new_content {
-            return Diff {
-                old_path: "a".to_owned(),
-                new_path: "b".to_owned(),
-                hunks: Vec::new(),
-            };
+            return Diff { old_path: "a".to_owned(), new_path: "b".to_owned(), hunks: Vec::new() };
         }
 
         // Use diffy to generate unified diff format
@@ -162,6 +158,7 @@ impl Diff {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn diffy_to_canonical(p: &Patch<str>) -> Diff {
     let hunks = p
         .hunks()
@@ -206,15 +203,13 @@ fn diffy_to_canonical(p: &Patch<str>) -> Diff {
             }
         })
         .collect();
-    Diff {
-        old_path: "a".into(),
-        new_path: "b".into(),
-        hunks,
-    }
+    Diff { old_path: "a".into(), new_path: "b".into(), hunks }
 }
 
 /// Minimal fallback parser for imperfect agent output that diffy rejects.
 /// Does not validate hunk line counts; parses content as-is.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 fn fallback_parse_diff(text: &str) -> Diff {
     let mut old_path = String::new();
     let mut new_path = String::new();
@@ -268,9 +263,5 @@ fn fallback_parse_diff(text: &str) -> Diff {
         }
     }
 
-    Diff {
-        old_path,
-        new_path,
-        hunks,
-    }
+    Diff { old_path, new_path, hunks }
 }

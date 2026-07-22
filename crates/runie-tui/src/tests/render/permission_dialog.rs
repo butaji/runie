@@ -10,11 +10,7 @@ fn buffer_text(buf: &ratatui::buffer::Buffer) -> String {
 }
 
 /// Helper: check if the given text string appears anywhere in the rect.
-fn rect_contains_text(
-    buf: &ratatui::buffer::Buffer,
-    rect: ratatui::layout::Rect,
-    text: &str,
-) -> bool {
+fn rect_contains_text(buf: &ratatui::buffer::Buffer, rect: ratatui::layout::Rect, text: &str) -> bool {
     for y in rect.y..rect.y + rect.height {
         let line: String = (rect.x..rect.x + rect.width)
             .map(|x| buf[(x, y)].symbol())
@@ -36,9 +32,7 @@ fn permission_dialog_hides_underlying_messages() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "XYZZY_PLUGH".into(),
-        }],
+        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -56,12 +50,7 @@ fn permission_dialog_hides_underlying_messages() {
     let buf = terminal.backend().buffer();
 
     // The popup area should NOT contain the underlying message text
-    let popup_rect = ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    };
+    let popup_rect = ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
         "Permission dialog should hide underlying 'XYZZY_PLUGH' — transparent background bug"
@@ -80,11 +69,7 @@ fn renders_hosted_permission_panel() {
     };
     let dialog = runie_core::update::permission_dialog::open_permission_dialog(&req);
 
-    let snap = Snapshot {
-        dialog: Some(dialog),
-        permission_request: Some(req),
-        ..Default::default()
-    };
+    let snap = Snapshot { dialog: Some(dialog), permission_request: Some(req), ..Default::default() };
 
     terminal
         .draw(|f| crate::ui::draw_snapshot(f, &snap))
@@ -117,11 +102,7 @@ fn permission_dialog_buttons_never_wrap_mid_label() {
             input: serde_json::json!("echo hello"),
         };
         let dialog = runie_core::update::permission_dialog::open_permission_dialog(&req);
-        let snap = Snapshot {
-            dialog: Some(dialog),
-            permission_request: Some(req),
-            ..Default::default()
-        };
+        let snap = Snapshot { dialog: Some(dialog), permission_request: Some(req), ..Default::default() };
 
         terminal
             .draw(|f| crate::ui::draw_snapshot(f, &snap))
@@ -157,11 +138,7 @@ fn fieldless_form_does_not_show_fill_in_hint() {
         input: serde_json::json!("echo hello"),
     };
     let dialog = runie_core::update::permission_dialog::open_permission_dialog(&req);
-    let snap = Snapshot {
-        dialog: Some(dialog),
-        permission_request: Some(req),
-        ..Default::default()
-    };
+    let snap = Snapshot { dialog: Some(dialog), permission_request: Some(req), ..Default::default() };
 
     terminal
         .draw(|f| crate::ui::draw_snapshot(f, &snap))

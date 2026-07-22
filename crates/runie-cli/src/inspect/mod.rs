@@ -125,6 +125,7 @@ impl InspectReport {
     }
 
     /// Validate config and return error messages.
+    #[allow(clippy::too_many_lines)]
     fn validate_config(config: &Config) -> Vec<String> {
         let mut errors = Vec::new();
 
@@ -184,9 +185,7 @@ impl InspectReport {
 
         // Check if no providers are configured
         if config.model_providers.is_empty() {
-            hints.push(
-                "No providers configured. Run `runie login` to set up a provider.".to_string(),
-            );
+            hints.push("No providers configured. Run `runie login` to set up a provider.".to_string());
             hints.push("Or set a provider in ~/.runie/config.toml:".to_string());
             hints.push("  provider = \"openai\"".to_string());
             hints.push("  [model_providers.openai]".to_string());
@@ -236,10 +235,7 @@ impl InspectReport {
             if !seen.contains(&global) {
                 seen.insert(global.clone());
                 let loaded = std::path::Path::new(&global).exists();
-                sources.push(ConfigSource {
-                    path: global,
-                    loaded,
-                });
+                sources.push(ConfigSource { path: global, loaded });
             }
         }
 
@@ -248,10 +244,7 @@ impl InspectReport {
             if !seen.contains(&local) {
                 seen.insert(local.clone());
                 let loaded = std::path::Path::new(&local).exists();
-                sources.push(ConfigSource {
-                    path: local,
-                    loaded,
-                });
+                sources.push(ConfigSource { path: local, loaded });
             }
         }
 
@@ -519,13 +512,11 @@ impl InspectReport {
 
     fn print_model_entry(model: &ModelInfoEntry) {
         let context = model.context_window.map(|c| format!("{}k", c / 1000));
-        let flags: Vec<&str> = [
-            model.supports_thinking.then_some("thinking"),
-            model.supports_vision.then_some("vision"),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
+        let flags: Vec<&str> =
+            [model.supports_thinking.then_some("thinking"), model.supports_vision.then_some("vision")]
+                .into_iter()
+                .flatten()
+                .collect();
         let flags_str = if flags.is_empty() {
             String::new()
         } else {

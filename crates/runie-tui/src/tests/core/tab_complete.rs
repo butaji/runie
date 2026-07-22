@@ -106,11 +106,7 @@ fn file_picker_replaces_typed_prefix() {
 
 fn get_panel_selection(state: &AppState) -> usize {
     use runie_core::commands::{DialogKind, DialogState};
-    if let Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
-    {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         if let Some(panel) = stack.current() {
             return panel.selected;
         }
@@ -120,11 +116,7 @@ fn get_panel_selection(state: &AppState) -> usize {
 
 fn get_panel_items_count(state: &AppState) -> usize {
     use runie_core::commands::{DialogKind, DialogState};
-    if let Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
-    {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog {
         if let Some(panel) = stack.current() {
             return panel.items.len();
         }

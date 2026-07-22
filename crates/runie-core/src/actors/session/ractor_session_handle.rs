@@ -29,10 +29,9 @@ impl RactorSessionHandle {
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
         let path_utf8 = Utf8PathBuf::from_path_buf(path).unwrap_or_else(|_| Utf8PathBuf::from("."));
-        let _ = self.inner.send_message(SessionMsg::SetTrust {
-            path: path_utf8,
-            decision,
-        });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::SetTrust { path: path_utf8, decision });
     }
 
     /// Append an entry to the history file.
@@ -98,10 +97,9 @@ impl RactorSessionHandle {
 
     /// Try to update a tool message (fire-and-forget).
     pub fn try_update_tool_message(&self, id_contains: String, content: String) {
-        let _ = self.inner.send_message(SessionMsg::UpdateToolMessage {
-            id_contains,
-            content,
-        });
+        let _ = self
+            .inner
+            .send_message(SessionMsg::UpdateToolMessage { id_contains, content });
     }
 
     /// Try to add a turn-complete message (fire-and-forget).

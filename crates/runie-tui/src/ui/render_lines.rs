@@ -23,84 +23,49 @@ pub fn to_lines_internal(elem: &Element, content_width: u16) -> Vec<Line<'static
 /// Render an element and return both the lines and the number of terminal
 /// rows those lines occupy. The lines are already pre-wrapped during rendering,
 /// so the count is simply the number of lines returned.
-pub fn to_lines_and_count(
-    elem: &Element,
-    animation_frame: u32,
-    content_width: u16,
-) -> (Vec<Line<'static>>, usize) {
+pub fn to_lines_and_count(elem: &Element, animation_frame: u32, content_width: u16) -> (Vec<Line<'static>>, usize) {
     let lines = render_element(elem, animation_frame, content_width);
     let count = lines.len();
     (lines, count)
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> Vec<Line<'static>> {
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
-        UserMessage { content, timestamp } => {
-            msg::render_user_message(content, *timestamp, content_width)
-        }
-        AgentMessage {
-            content, timestamp, ..
-        } => msg::render_agent_message(content, *timestamp, content_width),
+        UserMessage { content, timestamp } => msg::render_user_message(content, *timestamp, content_width),
+        AgentMessage { content, timestamp, .. } => msg::render_agent_message(content, *timestamp, content_width),
         Thinking { started, .. } => msg::render_thinking(*started),
-        ThoughtSummary {
-            content,
-            duration_secs,
-            ..
-        } => msg::render_thought_summary(content, *duration_secs),
+        ThoughtSummary { content, duration_secs, .. } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
-        ContextGroup {
-            tools, collapsed, ..
-        } => msg::render_context_group(tools, *collapsed),
+        ContextGroup { tools, collapsed, .. } => msg::render_context_group(tools, *collapsed),
         SubagentRow { .. } => msg::render_subagent_row(elem, animation_frame),
-        AnthropicThinking {
-            content,
-            signature,
-            redacted,
-            timestamp,
-        } => msg::render_anthropic_thinking(content, signature.clone(), *redacted, *timestamp),
-        Image {
+        AnthropicThinking { content, signature, redacted, timestamp } => {
+            msg::render_anthropic_thinking(content, signature.clone(), *redacted, *timestamp)
+        }
+        Image { data, mime_type, width_cells, height_cells, protocol, timestamp } => msg::render_image(
             data,
             mime_type,
-            width_cells,
-            height_cells,
-            protocol,
-            timestamp,
-        } => msg::render_image(data, mime_type, *width_cells, *height_cells, *protocol, *timestamp),
-        DataPart {
-            data,
-            format_string,
-            timestamp,
-        } => msg::render_data_part(data, format_string.as_deref(), *timestamp),
-        MarkdownTable {
-            headers,
-            rows,
-            alignments,
-            timestamp,
-        } => msg::render_markdown_table(headers, rows, alignments, *timestamp),
-        DiffOutput {
-            content,
-            diff_type,
-            timestamp,
-        } => msg::render_diff_output(content, *diff_type, *timestamp),
-        WebSearchCall {
-            query,
-            results,
-            timestamp,
-        } => msg::render_web_search_call(query, results, *timestamp),
-        AnsiStyled {
-            raw_content,
-            plain_text,
-            timestamp,
-        } => msg::render_ansi_styled(raw_content, plain_text, *timestamp),
-        ToolConfirmation {
-            request_id,
-            name,
-            args,
-            description,
-            timestamp,
-        } => msg::render_tool_confirmation(request_id, name, args, description, *timestamp),
+            *width_cells,
+            *height_cells,
+            *protocol,
+            *timestamp,
+        ),
+        DataPart { data, format_string, timestamp } => {
+            msg::render_data_part(data, format_string.as_deref(), *timestamp)
+        }
+        MarkdownTable { headers, rows, alignments, timestamp } => {
+            msg::render_markdown_table(headers, rows, alignments, *timestamp)
+        }
+        DiffOutput { content, diff_type, timestamp } => msg::render_diff_output(content, *diff_type, *timestamp),
+        WebSearchCall { query, results, timestamp } => msg::render_web_search_call(query, results, *timestamp),
+        AnsiStyled { raw_content, plain_text, timestamp } => {
+            msg::render_ansi_styled(raw_content, plain_text, *timestamp)
+        }
+        ToolConfirmation { request_id, name, args, description, timestamp } => {
+            msg::render_tool_confirmation(request_id, name, args, description, *timestamp)
+        }
         _ => render_tool_element(elem, animation_frame, content_width),
     }
 }
@@ -108,36 +73,22 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
 fn render_tool_element(elem: &Element, animation_frame: u32, _content_width: u16) -> Vec<Line<'static>> {
     use runie_core::Element::*;
     match elem {
-        ToolRunning {
-            name,
-            args,
-            started,
-            ..
-        } => msg::render_tool_running(name, args, started.elapsed().as_secs_f64(), animation_frame),
-        ToolDone {
-            name,
-            args,
-            duration_secs,
-            output,
-            bytes_transferred,
-            error,
-            finished_at,
-            ..
-        } => msg::render_tool_done(
-            name,
-            args,
-            *duration_secs,
-            output,
-            *bytes_transferred,
-            *error,
-            finished_at,
-            animation_frame,
-        ),
-        ToolSummary {
-            name,
-            duration_secs,
-            ..
-        } => msg::render_tool_summary(name, "", *duration_secs),
+        ToolRunning { name, args, started, .. } => {
+            msg::render_tool_running(name, args, started.elapsed().as_secs_f64(), animation_frame)
+        }
+        ToolDone { name, args, duration_secs, output, bytes_transferred, error, finished_at, .. } => {
+            msg::render_tool_done(
+                name,
+                args,
+                *duration_secs,
+                output,
+                *bytes_transferred,
+                *error,
+                finished_at,
+                animation_frame,
+            )
+        }
+        ToolSummary { name, duration_secs, .. } => msg::render_tool_summary(name, "", *duration_secs),
         TurnComplete { duration_secs, .. } => msg::render_turn_complete(*duration_secs),
         _ => vec![Line::from("")],
     }

@@ -90,9 +90,7 @@ impl Clone for ProviderError {
             UnknownProvider(s) => UnknownProvider(s.clone()),
             MissingApiKey(e) => MissingApiKey((*e).clone()),
             ConfigNotLoaded => ConfigNotLoaded,
-            RateLimit { retry_after_secs } => RateLimit {
-                retry_after_secs: *retry_after_secs,
-            },
+            RateLimit { retry_after_secs } => RateLimit { retry_after_secs: *retry_after_secs },
             Network(s) => Network(s.clone()),
             Timeout => Timeout,
             Server(code, msg) => Server(*code, msg.clone()),
@@ -115,9 +113,7 @@ impl ProviderError {
             // HTTP 408 Request Timeout is transient — retry.
             Some(ProviderError::Server(code, Default::default()))
         } else if code == 429 {
-            Some(ProviderError::RateLimit {
-                retry_after_secs: None,
-            })
+            Some(ProviderError::RateLimit { retry_after_secs: None })
         } else if code >= 500 {
             Some(ProviderError::Server(code, Default::default()))
         } else if code >= 400 {
@@ -184,7 +180,9 @@ impl ProviderError {
 
 /// Helper error for displaying missing API key errors.
 #[derive(Debug, Error, Clone)]
-#[error("Missing API key for {provider}. Set {env_var} or add [model_providers.{provider}] api_key to ~/.runie/config.toml")]
+#[error(
+    "Missing API key for {provider}. Set {env_var} or add [model_providers.{provider}] api_key to ~/.runie/config.toml"
+)]
 pub struct MissingApiKeyError {
     pub env_var: String,
     pub provider: String,
@@ -300,18 +298,8 @@ impl Default for RetryConfig {
 
 impl RetryConfig {
     /// Create a new retry config with custom settings.
-    pub fn new(
-        max_attempts: u32,
-        initial_delay: Duration,
-        max_delay: Duration,
-        multiplier: f64,
-    ) -> Self {
-        Self {
-            max_attempts,
-            initial_delay,
-            max_delay,
-            multiplier,
-        }
+    pub fn new(max_attempts: u32, initial_delay: Duration, max_delay: Duration, multiplier: f64) -> Self {
+        Self { max_attempts, initial_delay, max_delay, multiplier }
     }
 
     /// Create a config that disables retries (max_attempts = 1).
@@ -371,29 +359,19 @@ impl RetryPolicy {
         context_window_retries: Option<u32>,
         bad_request_retries: Option<u32>,
     ) -> Self {
-        Self {
-            base,
-            rate_limit_retries,
-            timeout_retries,
-            context_window_retries,
-            bad_request_retries,
-        }
+        Self { base, rate_limit_retries, timeout_retries, context_window_retries, bad_request_retries }
     }
 
     /// Get the retry count for a typed ProviderError.
     /// Returns the base config's max_attempts if no override is set.
     pub fn max_attempts_for_error(&self, error: &ProviderError) -> u32 {
         match error {
-            ProviderError::RateLimit { .. } => {
-                self.rate_limit_retries.unwrap_or(self.base.max_attempts)
-            }
+            ProviderError::RateLimit { .. } => self.rate_limit_retries.unwrap_or(self.base.max_attempts),
             ProviderError::Timeout => self.timeout_retries.unwrap_or(self.base.max_attempts),
-            ProviderError::ContextLength(_) => {
-                self.context_window_retries.unwrap_or(self.base.max_attempts)
-            }
-            ProviderError::BadRequest(_, _) => {
-                self.bad_request_retries.unwrap_or(self.base.max_attempts)
-            }
+            ProviderError::ContextLength(_) => self
+                .context_window_retries
+                .unwrap_or(self.base.max_attempts),
+            ProviderError::BadRequest(_, _) => self.bad_request_retries.unwrap_or(self.base.max_attempts),
             // For other retryable errors (Server, Network, Source), use base config
             _ if error.is_retryable() => self.base.max_attempts,
             // Fatal errors use base config (though they won't be retried anyway)
@@ -408,10 +386,7 @@ impl RetryPolicy {
 /// This trait is dyn-compatible (no `async fn`, no generic parameters).
 pub trait Provider: Send + Sync {
     /// Generate a streaming response, returning a stream of LLM events.
-    fn generate(
-        &self,
-        messages: Vec<ChatMessage>,
-    ) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>>;
+    fn generate(&self, messages: Vec<ChatMessage>) -> Pin<Box<dyn Stream<Item = Result<ProviderEvent>> + Send + '_>>;
 
     /// Generate with a set of tool definitions that the model may invoke.
     ///

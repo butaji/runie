@@ -25,54 +25,31 @@ impl From<ProviderEvent> for Event {
             PE::ToolCallStart { id, name } => tool_start(id, name),
             PE::ToolCallInputDelta { id, delta } => tool_input_delta(id, delta),
             PE::ToolCallEnd { id } => tool_end(id),
-            PE::ToolExecutionStart { id, name } => Event::ToolStart {
-                id,
-                name,
-                input: Default::default(),
-            },
-            PE::ToolExecutionEnd { id } => Event::ToolEnd {
-                id,
-                input: None,
-                duration_secs: 0.0,
-                output: String::new(),
-            },
-            PE::ToolExecutionResult { id, result } => Event::ToolEnd {
-                id,
-                input: None,
-                duration_secs: 0.0,
-                output: result,
-            },
+            PE::ToolExecutionStart { id, name } => Event::ToolStart { id, name, input: Default::default() },
+            PE::ToolExecutionEnd { id } => {
+                Event::ToolEnd { id, input: None, duration_secs: 0.0, output: String::new() }
+            }
+            PE::ToolExecutionResult { id, result } => {
+                Event::ToolEnd { id, input: None, duration_secs: 0.0, output: result }
+            }
             PE::TurnEnd | PE::AgentEnd => Event::Done { id: String::new() },
             PE::Finish { reason: _ } => Event::Done { id: String::new() },
-            PE::Error(e) => Event::Error {
-                id: String::new(),
-                message: e.to_string(),
-            },
+            PE::Error(e) => Event::Error { id: String::new(), message: e.to_string() },
             PE::Usage { .. } => usage_event(),
         }
     }
 }
 
 fn text_delta(content: String) -> Event {
-    Event::ResponseDelta {
-        id: String::new(),
-        content,
-    }
+    Event::ResponseDelta { id: String::new(), content }
 }
 
 fn thinking_delta(content: String) -> Event {
-    Event::ThinkingDelta {
-        id: String::new(),
-        content,
-    }
+    Event::ThinkingDelta { id: String::new(), content }
 }
 
 fn tool_start(id: String, name: String) -> Event {
-    Event::ToolStart {
-        id,
-        name,
-        input: Default::default(),
-    }
+    Event::ToolStart { id, name, input: Default::default() }
 }
 
 fn tool_input_delta(id: String, delta: String) -> Event {
@@ -84,10 +61,7 @@ fn tool_end(id: String) -> Event {
 }
 
 fn usage_event() -> Event {
-    Event::ResponseDelta {
-        id: String::new(),
-        content: String::new(),
-    }
+    Event::ResponseDelta { id: String::new(), content: String::new() }
 }
 
 #[cfg(test)]
@@ -104,34 +78,17 @@ mod tests {
             ProviderEvent::ThinkingStart { id: "th1".into() },
             ProviderEvent::ThinkingDelta("thinking...".into()),
             ProviderEvent::ThinkingEnd { id: "th1".into() },
-            ProviderEvent::ToolCallStart {
-                id: "c1".into(),
-                name: "bash".into(),
-            },
-            ProviderEvent::ToolCallInputDelta {
-                id: "c1".into(),
-                delta: "-la".into(),
-            },
+            ProviderEvent::ToolCallStart { id: "c1".into(), name: "bash".into() },
+            ProviderEvent::ToolCallInputDelta { id: "c1".into(), delta: "-la".into() },
             ProviderEvent::ToolCallEnd { id: "c1".into() },
-            ProviderEvent::ToolExecutionStart {
-                id: "e1".into(),
-                name: "bash".into(),
-            },
+            ProviderEvent::ToolExecutionStart { id: "e1".into(), name: "bash".into() },
             ProviderEvent::ToolExecutionEnd { id: "e1".into() },
-            ProviderEvent::ToolExecutionResult {
-                id: "e1".into(),
-                result: "done".into(),
-            },
+            ProviderEvent::ToolExecutionResult { id: "e1".into(), result: "done".into() },
             ProviderEvent::TurnEnd,
             ProviderEvent::AgentEnd,
             ProviderEvent::Error(crate::provider_event::ModelError::Other("oops".into())),
-            ProviderEvent::Usage {
-                input_tokens: 100,
-                output_tokens: 50,
-            },
-            ProviderEvent::Finish {
-                reason: crate::provider_event::StopReason::Stop,
-            },
+            ProviderEvent::Usage { input_tokens: 100, output_tokens: 50 },
+            ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop },
         ];
 
         for event in cases {
@@ -150,10 +107,7 @@ mod tests {
             panic!("Expected TextStart");
         }
 
-        let tool_start = ProviderEvent::ToolCallStart {
-            id: "c99".into(),
-            name: "read".into(),
-        };
+        let tool_start = ProviderEvent::ToolCallStart { id: "c99".into(), name: "read".into() };
         let ev: Event = tool_start.into();
         if let Event::ToolStart { id, name, .. } = ev {
             assert_eq!(id, "c99");
@@ -166,10 +120,7 @@ mod tests {
     /// Verify ToolInputDelta maps to the new ToolInputDelta event (not ResponseDelta).
     #[test]
     fn tool_input_delta_maps_to_tool_input_delta_event() {
-        let tool_input = ProviderEvent::ToolCallInputDelta {
-            id: "c42".into(),
-            delta: "{\"command\": ".into(),
-        };
+        let tool_input = ProviderEvent::ToolCallInputDelta { id: "c42".into(), delta: "{\"command\": ".into() };
         let ev: Event = tool_input.into();
         if let Event::ToolInputDelta { id, content } = ev {
             assert_eq!(id, "c42");

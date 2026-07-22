@@ -1,8 +1,6 @@
 //! Layer 2 tests — verify keymap and terminal caps work after runie-term merge.
 
-use crossterm::event::{
-    Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
-};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 
 /// Verify capability detection is functional after the runie-term merge.
 #[test]

@@ -2,6 +2,7 @@
 //!
 //! Provides utilities for parsing provider/model strings and detecting the
 //! provider from API base URLs.
+#![allow(clippy::too_many_lines)]
 
 /// Known API base URLs for supported providers.
 ///
@@ -91,6 +92,7 @@ fn is_valid_provider_key(s: &str) -> bool {
 /// assert_eq!(detect_provider_from_api_base("https://my-resource.openai.azure.com"), Some("azure_openai"));
 /// assert_eq!(detect_provider_from_api_base("https://my-resource.openai.azure.com/v1"), Some("azure_openai"));
 /// ```
+#[allow(clippy::cognitive_complexity)]
 pub fn detect_provider_from_api_base(api_base: &str) -> Option<&'static str> {
     let normalized = api_base.trim_end_matches('/').to_lowercase();
 
@@ -326,9 +328,7 @@ mod tests {
             Some("azure_openai")
         );
         assert_eq!(
-            detect_provider_from_api_base(
-                "https://account.openai.azure.com/openai/deployments/gpt-4"
-            ),
+            detect_provider_from_api_base("https://account.openai.azure.com/openai/deployments/gpt-4"),
             Some("azure_openai")
         );
     }
@@ -344,9 +344,7 @@ mod tests {
     #[test]
     fn detect_google() {
         assert_eq!(
-            detect_provider_from_api_base(
-                "https://generativelanguage.googleapis.com/v1beta/openai"
-            ),
+            detect_provider_from_api_base("https://generativelanguage.googleapis.com/v1beta/openai"),
             Some("google")
         );
     }
@@ -491,11 +489,8 @@ mod tests {
     fn roundtrip_parse_and_detect() {
         // Test that parsing a provider/model string and then detecting the
         // provider gives consistent results for common patterns.
-        let cases = vec![
-            ("azure/gpt-4", "azure"),
-            ("openai/gpt-4o", "openai"),
-            ("anthropic/claude-sonnet-4-6", "anthropic"),
-        ];
+        let cases =
+            vec![("azure/gpt-4", "azure"), ("openai/gpt-4o", "openai"), ("anthropic/claude-sonnet-4-6", "anthropic")];
 
         for (model, expected_provider) in cases {
             let (prefix, _) = parse_model_prefix(model);
@@ -562,7 +557,10 @@ mod tests {
     fn parse_model_prefix_azure_gpt4() {
         // Azure uses azure/ prefix for explicit provider specification
         assert_eq!(parse_model_prefix("azure/gpt-4"), (Some("azure"), "gpt-4"));
-        assert_eq!(parse_model_prefix("azure/gpt-4o"), (Some("azure"), "gpt-4o"));
+        assert_eq!(
+            parse_model_prefix("azure/gpt-4o"),
+            (Some("azure"), "gpt-4o")
+        );
         assert_eq!(
             parse_model_prefix("azure/gpt-4-turbo"),
             (Some("azure"), "gpt-4-turbo")
@@ -591,6 +589,7 @@ mod tests {
     // ========================================================================
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn known_api_bases_contains_expected_providers() {
         let providers: Vec<_> = KNOWN_API_BASES.iter().map(|(k, _)| *k).collect();
 
@@ -650,12 +649,18 @@ mod tests {
 
     #[test]
     fn normalize_with_provider_prefix() {
-        assert_eq!(normalize_model_name("azure/gpt-4", Some("openai")), "azure/gpt-4");
+        assert_eq!(
+            normalize_model_name("azure/gpt-4", Some("openai")),
+            "azure/gpt-4"
+        );
     }
 
     #[test]
     fn normalize_adds_default_provider() {
-        assert_eq!(normalize_model_name("gpt-4", Some("openai")), "openai/gpt-4");
+        assert_eq!(
+            normalize_model_name("gpt-4", Some("openai")),
+            "openai/gpt-4"
+        );
     }
 
     #[test]

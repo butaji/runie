@@ -41,18 +41,11 @@ fn close_permission_dialog(state: &mut AppState) {
 }
 
 /// Project permission events to AppState.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn permission_event(state: &mut AppState, event: Event) {
     match event {
-        Event::PermissionRequest {
-            request_id,
-            tool,
-            input,
-        } => {
-            let req = PermissionRequestState {
-                request_id,
-                tool,
-                input,
-            };
+        Event::PermissionRequest { request_id, tool, input } => {
+            let req = PermissionRequestState { request_id, tool, input };
             *state.permission_request_mut() = Some(req.clone());
             *state.open_dialog_mut() = Some(open_permission_dialog(&req));
             state.view_mut().input_receiver = InputReceiver::Dialog;
@@ -62,10 +55,7 @@ pub(crate) fn permission_event(state: &mut AppState, event: Event) {
             state.agent_state_mut().streaming = false;
             state.view_mut().dirty = true;
         }
-        Event::PermissionResponse {
-            request_id,
-            action: _,
-        } => {
+        Event::PermissionResponse { request_id, action: _ } => {
             // Projection: the PermissionActor resolved the request.
             // Clear the request UI after resolution.
             clear_matching_request(state, &request_id);
@@ -206,9 +196,7 @@ mod tests {
         let mut state = AppState::default();
         open_sample_permission_dialog(&mut state);
 
-        state.update(Event::PermissionAllow {
-            request_id: "req-1".into(),
-        });
+        state.update(Event::PermissionAllow { request_id: "req-1".into() });
 
         assert!(state.permission_request_opt().is_none());
     }
@@ -218,9 +206,7 @@ mod tests {
         let mut state = AppState::default();
         open_sample_permission_dialog(&mut state);
 
-        state.update(Event::PermissionDeny {
-            request_id: "req-1".into(),
-        });
+        state.update(Event::PermissionDeny { request_id: "req-1".into() });
 
         assert!(state.permission_request_opt().is_none());
     }
@@ -230,10 +216,7 @@ mod tests {
         let mut state = AppState::default();
         open_sample_permission_dialog(&mut state);
 
-        state.update(Event::PermissionAlwaysAllow {
-            request_id: "req-1".into(),
-            tool: "list_dir".into(),
-        });
+        state.update(Event::PermissionAlwaysAllow { request_id: "req-1".into(), tool: "list_dir".into() });
 
         assert!(state.permission_request_opt().is_none());
     }
@@ -269,10 +252,7 @@ mod tests {
         open_sample_permission_dialog(&mut state);
         assert!(state.open_dialog().is_some());
 
-        state.update(Event::PermissionResponse {
-            request_id: "req-1".into(),
-            action: PermissionAction::Deny,
-        });
+        state.update(Event::PermissionResponse { request_id: "req-1".into(), action: PermissionAction::Deny });
 
         assert!(state.permission_request_opt().is_none());
         assert!(

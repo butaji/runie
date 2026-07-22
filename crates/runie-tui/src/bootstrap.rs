@@ -159,113 +159,44 @@ impl Keystroke {
     }
 
     /// Convert to a crossterm event (for advanced use).
+    #[allow(clippy::too_many_lines)]
     fn to_crossterm_event(&self) -> crossterm::event::Event {
         use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
         match self {
-            Keystroke::Char(c) => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char(*c),
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Enter => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty()))
+            Keystroke::Char(c) => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char(*c), KeyModifiers::empty())),
+            Keystroke::Enter => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::empty())),
+            Keystroke::Backspace => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::empty()))
             }
-            Keystroke::Backspace => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Backspace,
-                KeyModifiers::empty(),
-            )),
-            Keystroke::Escape => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()))
+            Keystroke::Escape => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty())),
+            Keystroke::Up => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::empty())),
+            Keystroke::Down => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty())),
+            Keystroke::Left => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::empty())),
+            Keystroke::Right => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::empty())),
+            Keystroke::Ctrl(c) => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char(*c), KeyModifiers::CONTROL)),
+            Keystroke::Alt(c) => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char(*c), KeyModifiers::ALT)),
+            Keystroke::Tab => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty())),
+            Keystroke::CtrlC => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlO => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlL => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlU => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlA => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlE => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlK => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlW => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlB => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlF => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlP => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('p'), KeyModifiers::CONTROL)),
+            Keystroke::CtrlN => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL)),
+            Keystroke::AltEnter => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT)),
+            Keystroke::CtrlBackslash => {
+                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char('\\'), KeyModifiers::CONTROL))
             }
-            Keystroke::Up => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::empty()))
-            }
-            Keystroke::Down => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::empty()))
-            }
-            Keystroke::Left => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::empty()))
-            }
-            Keystroke::Right => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::empty()))
-            }
-            Keystroke::Ctrl(c) => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char(*c),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::Alt(c) => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Char(*c), KeyModifiers::ALT))
-            }
-            Keystroke::Tab => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::empty()))
-            }
-            Keystroke::CtrlC => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('c'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlO => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('o'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlL => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('l'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlU => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('u'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlA => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('a'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlE => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('e'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlK => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('k'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlW => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('w'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlB => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('b'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlF => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('f'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlP => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('p'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::CtrlN => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('n'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::AltEnter => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT))
-            }
-            Keystroke::CtrlBackslash => crossterm::event::Event::Key(KeyEvent::new(
-                KeyCode::Char('\\'),
-                KeyModifiers::CONTROL,
-            )),
-            Keystroke::Home => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Home, KeyModifiers::empty()))
-            }
-            Keystroke::End => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::End, KeyModifiers::empty()))
-            }
-            Keystroke::Delete => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Delete, KeyModifiers::empty()))
-            }
+            Keystroke::Home => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Home, KeyModifiers::empty())),
+            Keystroke::End => crossterm::event::Event::Key(KeyEvent::new(KeyCode::End, KeyModifiers::empty())),
+            Keystroke::Delete => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Delete, KeyModifiers::empty())),
             // RawEvent is handled in to_event() directly
-            Keystroke::RawEvent(_) => {
-                crossterm::event::Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty()))
-            }
+            Keystroke::RawEvent(_) => crossterm::event::Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::empty())),
         }
     }
 }
@@ -293,10 +224,7 @@ impl Default for TuiRuntimeBuilder {
 
 impl TuiRuntimeBuilder {
     /// Set the provider factory.
-    pub fn provider_factory(
-        mut self,
-        factory: Arc<dyn runie_core::actors::provider::ProviderFactory>,
-    ) -> Self {
+    pub fn provider_factory(mut self, factory: Arc<dyn runie_core::actors::provider::ProviderFactory>) -> Self {
         self.provider_factory = factory;
         self
     }
@@ -454,6 +382,8 @@ impl TuiRuntime {
     }
 
     /// Test run with keystroke sequence.
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     async fn run_with_keystrokes(
         &self,
         mut state: AppState,
@@ -703,10 +633,7 @@ async fn async_render_loop(
 }
 
 /// Test render loop for deterministic testing.
-async fn test_render_loop(
-    mut terminal: ratatui::Terminal<TestBackend>,
-    mut render_rx: watch::Receiver<Snapshot>,
-) {
+async fn test_render_loop(mut terminal: ratatui::Terminal<TestBackend>, mut render_rx: watch::Receiver<Snapshot>) {
     while let Ok(()) = render_rx.changed().await {
         let snap = render_rx.borrow().clone();
         let _ = terminal.draw(|f| {
@@ -716,9 +643,7 @@ async fn test_render_loop(
 }
 
 /// Setup a test terminal with the given backend.
-fn setup_test_terminal(
-    backend: TestBackend,
-) -> (ratatui::Terminal<TestBackend>, terminal::caps::TermCaps) {
+fn setup_test_terminal(backend: TestBackend) -> (ratatui::Terminal<TestBackend>, terminal::caps::TermCaps) {
     let terminal = ratatui::Terminal::new(backend).expect("test terminal");
     let caps = terminal::caps::TermCaps::default();
     (terminal, caps)
@@ -749,10 +674,7 @@ fn spawn_ui_actor_with_external_rx(
     )
 }
 
-async fn input_reader(
-    input_tx: mpsc::Sender<Event>,
-    mut kb_rx: watch::Receiver<HashMap<String, String>>,
-) {
+async fn input_reader(input_tx: mpsc::Sender<Event>, mut kb_rx: watch::Receiver<HashMap<String, String>>) {
     let mut reader = crossterm::event::EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
         let bindings = kb_rx.borrow_and_update().clone();

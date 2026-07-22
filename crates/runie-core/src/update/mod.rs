@@ -115,6 +115,7 @@ pub(crate) use crate::message::now;
 
 impl AppState {
     /// Main event dispatcher — merged from update() and dispatch_event().
+    #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, event: Event) {
         if let Event::InputChanged { state } = event {
             // The InputActor owns text/cursor/history, but the file-picker
@@ -180,9 +181,7 @@ impl AppState {
             // while the login flow is still active. If a stale flag or bug somehow
             // closed it, reopen the dialog immediately.
             if self.login_flow().is_some() && self.open_dialog().is_none() {
-                tracing::warn!(
-                    "onboarding dialog was incorrectly closed by Esc/DialogBack; reopening"
-                );
+                tracing::warn!("onboarding dialog was incorrectly closed by Esc/DialogBack; reopening");
                 crate::login_flow::rebuild_login_dialog(self);
             }
             return;

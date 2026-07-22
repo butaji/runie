@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Agent turn execution.
 
 use crate::stream_response::{stream_response, EmitFn, StreamedResponse};
@@ -5,17 +7,13 @@ use crate::tool_registry::build_schemas as build_tool_registry;
 use crate::AgentCommand;
 use anyhow::Result;
 use runie_core::event::Event;
-use runie_core::harness_skills::{
-    SkillRegistry, TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult,
-};
+use runie_core::harness_skills::{SkillRegistry, TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult};
 use runie_core::message::{ChatMessage, Role};
 use runie_core::permissions::PermissionGate;
 use runie_core::provider::Provider;
 use runie_core::sanitize::sanitize_messages;
 use runie_core::tool::BUILTIN_TOOL_NAMES;
-use runie_core::tool::{
-    assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall,
-};
+use runie_core::tool::{assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall};
 use std::time::Instant;
 
 // Helper modules
@@ -78,11 +76,7 @@ pub async fn run_agent_turn_with_skills(
     Ok(())
 }
 
-fn check_turn_start(
-    skills: &SkillRegistry,
-    command: &AgentCommand,
-    emit: &EmitFn,
-) -> Option<Result<()>> {
+fn check_turn_start(skills: &SkillRegistry, command: &AgentCommand, emit: &EmitFn) -> Option<Result<()>> {
     let ctx = TurnStartCtx {
         message: command.content.clone(),
         system_prompt: command.system_prompt.clone(),
@@ -123,21 +117,14 @@ async fn emit_turn_end(
             .map(|m| m.content())
             .unwrap_or_default();
 
-        let ctx = TurnEndCtx {
-            assistant_message: assistant_msg,
-            tool_call_count,
-            success: true,
-        };
+        let ctx = TurnEndCtx { assistant_message: assistant_msg, tool_call_count, success: true };
         match skills.on_turn_end(&ctx).await {
             TurnEndResult::Continue | TurnEndResult::Abort(_) => {}
             TurnEndResult::RequestAnotherPass => {}
         }
     }
 
-    emit(Event::TurnComplete {
-        id: id.to_owned(),
-        duration_secs: turn_start.elapsed().as_secs_f64(),
-    });
+    emit(Event::TurnComplete { id: id.to_owned(), duration_secs: turn_start.elapsed().as_secs_f64() });
     emit(Event::Done { id: id.to_owned() });
 }
 
@@ -178,6 +165,7 @@ async fn run_iterations(
 
 // allow: `last_tool_signature` threads the repeat-guard state across iterations.
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines)]
 async fn run_agent_iteration(
     provider: &dyn Provider,
     command: &AgentCommand,
@@ -188,9 +176,7 @@ async fn run_agent_iteration(
     gate: &PermissionGate,
     last_tool_signature: &mut Option<Vec<(String, String)>>,
 ) -> Result<bool> {
-    emit(Event::Thinking {
-        id: command.id.clone(),
-    });
+    emit(Event::Thinking { id: command.id.clone() });
     let tools = build_tool_registry(command.read_only);
     let cancel_token = command.cancellation_token.clone();
     let response = match stream_response(
@@ -205,15 +191,11 @@ async fn run_agent_iteration(
     {
         Ok(r) => r,
         Err(e) => {
-            emit(Event::ThoughtDone {
-                id: command.id.clone(),
-            });
+            emit(Event::ThoughtDone { id: command.id.clone() });
             return Err(e);
         }
     };
-    emit(Event::ThoughtDone {
-        id: command.id.clone(),
-    });
+    emit(Event::ThoughtDone { id: command.id.clone() });
     if response.tool_calls.is_empty() {
         return Ok(false);
     }
@@ -265,10 +247,7 @@ fn tool_call_signature(tools: &[ParsedToolCall]) -> Vec<(String, String)> {
     sig
 }
 
-fn collect_parsed_tool_calls(
-    response: &StreamedResponse,
-    messages: &mut Vec<ChatMessage>,
-) -> Vec<ParsedToolCall> {
+fn collect_parsed_tool_calls(response: &StreamedResponse, messages: &mut Vec<ChatMessage>) -> Vec<ParsedToolCall> {
     let mut tools = response.tool_calls.clone();
     assign_tool_call_ids(&mut tools);
     messages.push(build_assistant_message(
@@ -296,10 +275,7 @@ fn build_tools_list(read_only: bool) -> String {
         .join(", ")
 }
 
-pub(crate) fn build_initial_messages(
-    command: &AgentCommand,
-    supports_tools: bool,
-) -> Vec<ChatMessage> {
+pub(crate) fn build_initial_messages(command: &AgentCommand, supports_tools: bool) -> Vec<ChatMessage> {
     let tools_list = if supports_tools {
         build_tools_list(command.read_only)
     } else {
@@ -319,10 +295,7 @@ pub(crate) fn build_initial_messages(
     if !command.skills_context.is_empty() {
         system.push_str(&command.skills_context);
     }
-    vec![
-        ChatMessage::system(system),
-        ChatMessage::user(command.content.clone()),
-    ]
+    vec![ChatMessage::system(system), ChatMessage::user(command.content.clone())]
 }
 
 // Re-export emit and tools for internal use

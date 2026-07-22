@@ -2,6 +2,7 @@
 //!
 //! Lists installed skills with actions: Create, Delete, Install, Show.
 //! Opens the skills wizard or handles inline operations via events.
+#![allow(clippy::too_many_lines)]
 
 use super::{ItemAction, Panel, PanelStack};
 use crate::Event;
@@ -15,27 +16,25 @@ pub fn skills(skill_rows: Vec<SkillRow>) -> PanelStack {
     if skill_rows.is_empty() {
         panel = panel.item(
             "Create your first skill",
-            ItemAction::Emit(Event::RunPaletteCommand {
-                name: "skills".to_string(),
-                args: "create".to_string(),
-            }),
+            ItemAction::Emit(Event::RunPaletteCommand { name: "skills".to_string(), args: "create".to_string() }),
         );
     } else {
-        panel = panel.header(&format!("{} skill(s) installed", skill_rows.len()));
+        panel = panel.header(format!("{} skill(s) installed", skill_rows.len()));
         for skill in skill_rows {
             let invocable_icon = if skill.user_invocable { "★" } else { "○" };
             let label = format!("{invocable_icon} {}", skill.name);
-            let desc = if skill.user_invocable {
-                format!("{} — /{}", skill.description.chars().take(50).collect::<String>(), skill.name)
+            let _desc = if skill.user_invocable {
+                format!(
+                    "{} — /{}",
+                    skill.description.chars().take(50).collect::<String>(),
+                    skill.name
+                )
             } else {
                 skill.description.chars().take(50).collect::<String>()
             };
             panel = panel.item(
                 label,
-                ItemAction::Emit(Event::SkillAction {
-                    name: skill.name.clone(),
-                    action: SkillActionKind::Select,
-                }),
+                ItemAction::Emit(Event::SkillAction { name: skill.name.clone(), action: SkillActionKind::Select }),
             );
         }
     }
@@ -43,17 +42,11 @@ pub fn skills(skill_rows: Vec<SkillRow>) -> PanelStack {
     panel = panel.separator();
     panel = panel.item(
         "+ Install skill from URL",
-        ItemAction::Emit(Event::RunPaletteCommand {
-            name: "skills".to_string(),
-            args: "install".to_string(),
-        }),
+        ItemAction::Emit(Event::RunPaletteCommand { name: "skills".to_string(), args: "install".to_string() }),
     );
     panel = panel.item(
         "+ Create new skill",
-        ItemAction::Emit(Event::RunPaletteCommand {
-            name: "skills".to_string(),
-            args: "create".to_string(),
-        }),
+        ItemAction::Emit(Event::RunPaletteCommand { name: "skills".to_string(), args: "create".to_string() }),
     );
 
     PanelStack::new(panel)

@@ -29,18 +29,10 @@ pub(crate) fn bracket_rows(buf: &ratatui::buffer::Buffer) -> Vec<u16> {
         .collect()
 }
 
-pub(crate) fn add_message(
-    state: &mut AppState,
-    role: Role,
-    content: &str,
-    timestamp: f64,
-    id: &str,
-) {
+pub(crate) fn add_message(state: &mut AppState, role: Role, content: &str, timestamp: f64, id: &str) {
     state.session.messages.push(ChatMessage {
         role,
-        parts: vec![Part::Text {
-            content: content.to_string(),
-        }],
+        parts: vec![Part::Text { content: content.to_string() }],
         timestamp,
         id: id.to_string(),
         ..Default::default()
@@ -124,18 +116,14 @@ pub(crate) fn state_with_selected_post() -> AppState {
     state.config.vim_mode = true;
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 0.0,
         id: "req.0".to_string(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "world".into(),
-        }],
+        parts: vec![Part::Text { content: "world".into() }],
         timestamp: 1.0,
         id: "resp.0".to_string(),
         provider: "mock".to_string(),

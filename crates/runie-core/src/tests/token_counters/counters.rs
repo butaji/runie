@@ -126,9 +126,7 @@ fn finish_turn_resets_turn_tokens() {
     let expected = crate::tokens::estimate_tokens("hello world");
     assert_eq!(state.agent.turn_tokens_out, expected);
 
-    state.update(crate::Event::Done {
-        id: "r1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "r1".to_string() });
     assert_eq!(
         state.agent.turn_tokens_out, 0,
         "Turn tokens reset on finish"
@@ -168,8 +166,7 @@ fn speed_updates_on_tick_with_new_tokens() {
     state.agent.speed_window.record(0); // Start at 0 tokens
     state.agent.tokens_at_last_speed = 0;
     // Set last_speed_update to past so elapsed >= 0.05
-    state.agent.last_speed_update =
-        Some(std::time::Instant::now() - std::time::Duration::from_millis(200));
+    state.agent.last_speed_update = Some(std::time::Instant::now() - std::time::Duration::from_millis(200));
 
     // Simulate tokens arriving
     state.agent.tokens_out = 10;
@@ -199,8 +196,7 @@ fn speed_decays_when_no_new_tokens() {
     state.agent.speed_tps = 100.0;
     state.agent.tokens_at_last_speed = state.agent.tokens_out;
     // Set to 2 seconds ago to ensure elapsed > 1.0
-    state.agent.last_speed_update =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
+    state.agent.last_speed_update = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
 
     state.update_speed();
 
@@ -219,8 +215,7 @@ fn speed_clamps_to_zero_after_long_idle() {
 
     state.agent.speed_tps = 50.0;
     state.agent.tokens_at_last_speed = state.agent.tokens_out;
-    state.agent.last_speed_update =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(10));
+    state.agent.last_speed_update = Some(std::time::Instant::now() - std::time::Duration::from_secs(10));
 
     // Decay happens per-call; one call decays by 50%, we need multiple calls
     for _ in 0..10 {
@@ -241,9 +236,7 @@ fn speed_clamps_to_zero_after_long_idle() {
 #[test]
 fn turn_start_initializes_speed_tracking() {
     let mut state = fresh_state();
-    state.update(crate::Event::Thinking {
-        id: "r1".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "r1".to_string() });
     assert!(
         state.agent.last_speed_update.is_some(),
         "Speed tracking should init on turn start"
@@ -263,9 +256,7 @@ fn new_turn_resets_speed() {
 
     // Finish turn
     state.agent_state_mut().current_request_id = Some("r1".to_string());
-    state.update(crate::Event::Done {
-        id: "r1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "r1".to_string() });
 
     assert_eq!(state.agent.speed_tps, 0.0, "Speed reset on turn end");
     assert_eq!(state.agent.turn_tokens_out, 0, "Turn tokens reset");

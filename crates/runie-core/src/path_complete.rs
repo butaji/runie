@@ -47,10 +47,7 @@ fn collect_completions(dir: &Path, prefix: &str) -> Vec<PathCompletion> {
             }
             let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
             let full = dir.join(&name);
-            results.push(PathCompletion {
-                path: full.to_string_lossy().to_string(),
-                is_dir,
-            });
+            results.push(PathCompletion { path: full.to_string_lossy().to_string(), is_dir });
         }
     }
     results.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then_with(|| a.path.cmp(&b.path)));
@@ -66,8 +63,7 @@ mod tests {
 
     fn tmp_dir_with(files: &[(&str, bool)]) -> (std::path::PathBuf, Vec<String>) {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir =
-            std::env::temp_dir().join(format!("runie_path_test_{}_{}", std::process::id(), n));
+        let dir = std::env::temp_dir().join(format!("runie_path_test_{}_{}", std::process::id(), n));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let mut names = Vec::new();

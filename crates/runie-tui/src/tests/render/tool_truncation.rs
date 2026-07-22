@@ -23,21 +23,12 @@ fn long_tool_output_truncated_with_ellipsis() {
     state.config.truncation.max_lines = 3;
     state.config.truncation.max_bytes = 10_000;
 
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "bash".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "bash".into(), input: serde_json::Value::Null });
     let output = (0..20)
         .map(|i| format!("line {}", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -55,11 +46,7 @@ fn truncated_tool_output_keeps_header() {
     state.config.truncation.max_lines = 2;
     state.config.truncation.max_bytes = 10_000;
 
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "list_files".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null });
     state.update(Event::ToolEnd {
         id: "".to_string(),
         input: None,

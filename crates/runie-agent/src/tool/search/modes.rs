@@ -1,8 +1,6 @@
 //! Search mode implementations backed by the runie search index.
 
-use crate::tool::search::types::{
-    build_search_item, SearchItem, SearchResult, DEFAULT_MAX_MATCHES,
-};
+use crate::tool::search::types::{build_search_item, SearchItem, SearchResult, DEFAULT_MAX_MATCHES};
 use crate::tool::{ToolOutput, ToolStatus};
 use runie_core::actors::fff_indexer::SearchIndex;
 use runie_core::location::parse_search_query;
@@ -87,11 +85,7 @@ fn build_search_output(
     indexed: bool,
     start: Instant,
 ) -> ToolOutput {
-    let result = SearchResult {
-        total,
-        items,
-        indexed,
-    };
+    let result = SearchResult { total, items, indexed };
     let tool_args = if let Some(m) = mode {
         serde_json::json!({ "query": query, "mode": m })
     } else {

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Turn-boundary filesystem snapshots with git/hunk deltas.
 
 use std::collections::HashMap;

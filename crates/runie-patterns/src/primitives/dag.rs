@@ -19,10 +19,7 @@ pub struct Dag {
 
 impl Dag {
     pub fn new() -> Self {
-        Self {
-            nodes: Vec::new(),
-            edges: Vec::new(),
-        }
+        Self { nodes: Vec::new(), edges: Vec::new() }
     }
 
     /// Append a task node; returns its id (insertion index).

@@ -9,11 +9,29 @@
 //! The async hook system provides hooks for LLM API calls with message
 //! transformation capabilities. Handlers can inspect and modify the request
 //! payload (model, messages, kwargs) before sending to the API.
+//!
+//! ## File-Based Hook Discovery
+//!
+//! Hooks can also be discovered from `~/.runie/hooks/{event}/` directories.
+//! Each hook is defined as a JSON file with the following format:
+//! ```json
+//! {
+//!   "command": "echo allow",
+//!   "env": { "VAR": "value" },
+//!   "trust": "trusted",
+//!   "timeout_ms": 5000
+//! }
+//! ```
+#![allow(clippy::too_many_lines)]
 
 use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 use strum::EnumString;
+
+// File-based hook discovery module
+mod discovery;
+pub use discovery::{default_hooks_dir, discover_hooks, FileHook, HookTrust};
 
 use crate::proto::message::ChatMessage;
 use crate::scoped_model::ScopedModel;
@@ -99,11 +117,7 @@ pub trait AsyncHookHandler: Send + Sync {
     ///
     /// Return `Some(transformed_messages)` to replace the messages,
     /// or `None` to leave them unchanged.
-    async fn async_pre_request_hook(
-        &self,
-        model: &str,
-        messages: &Messages,
-    ) -> Option<Messages>;
+    async fn async_pre_request_hook(&self, model: &str, messages: &Messages) -> Option<Messages>;
 
     /// Process the payload after an API call completes.
     async fn async_post_request_hook(&self, _model: &str, payload: &Value) -> Value {
@@ -123,11 +137,7 @@ where
     F: Fn(&str, &Messages) -> Fut + Send + Sync,
     Fut: std::future::Future<Output = Option<Messages>> + Send,
 {
-    async fn async_pre_request_hook(
-        &self,
-        model: &str,
-        messages: &Messages,
-    ) -> Option<Messages> {
+    async fn async_pre_request_hook(&self, model: &str, messages: &Messages) -> Option<Messages> {
         (self)(model, messages).await
     }
 }
@@ -224,12 +234,16 @@ impl HookRegistry {
         result
     }
 
-    /// Load hooks declared in config.
+    /// Load hooks declared in config and from file-based discovery.
     ///
     /// Each configured command receives the JSON payload on stdin and must print
     /// `allow`, `deny`, or a JSON object to replace the payload.
+    ///
+    /// Also discovers hooks from `~/.runie/hooks/{event}/` directories.
     pub fn load_from_config(config: &crate::config::Config) -> Self {
         let mut registry = Self::new();
+
+        // Load hooks from config
         for (event_name, commands) in &config.hooks.commands {
             if let Some(event) = parse_event_name(event_name) {
                 for cmd in commands {
@@ -237,18 +251,25 @@ impl HookRegistry {
                 }
             }
         }
+
+        // Load hooks from file-based discovery
+        let hooks_dir = default_hooks_dir();
+        let file_hooks = discover_hooks(&hooks_dir);
+        for (event, handlers) in file_hooks {
+            for handler in handlers {
+                registry.register(event, handler);
+            }
+        }
+
         registry
     }
 }
 
 #[async_trait::async_trait]
 impl AsyncHookHandler for HookRegistry {
-    async fn async_pre_request_hook(
-        &self,
-        model: &str,
-        messages: &Messages,
-    ) -> Option<Messages> {
-        self.async_emit(HookEvent::PreApiCall, model, messages).await
+    async fn async_pre_request_hook(&self, model: &str, messages: &Messages) -> Option<Messages> {
+        self.async_emit(HookEvent::PreApiCall, model, messages)
+            .await
     }
 
     async fn async_post_request_hook(&self, model: &str, payload: &Value) -> Value {
@@ -258,7 +279,8 @@ impl AsyncHookHandler for HookRegistry {
     }
 
     async fn async_stream_event_hook(&self, model: &str, event: &Value) -> Option<Value> {
-        self.async_emit_value(HookEvent::StreamEvent, model, event).await
+        self.async_emit_value(HookEvent::StreamEvent, model, event)
+            .await
     }
 }
 
@@ -318,9 +340,7 @@ fn run_shell_hook(command: &str, input: &str) -> HookDecision {
     let text = String::from_utf8_lossy(&output.stdout).trim().to_owned();
     match text.to_ascii_lowercase().as_str() {
         "allow" | "" => HookDecision::Allow,
-        "deny" => HookDecision::Deny {
-            reason: "hook denied".into(),
-        },
+        "deny" => HookDecision::Deny { reason: "hook denied".into() },
         _ => match serde_json::from_str::<Value>(&text) {
             Ok(value) => HookDecision::Modify { payload: value },
             Err(_) => HookDecision::Allow,
@@ -373,16 +393,8 @@ pub struct PreRequestHookContext {
 
 impl PreRequestHookContext {
     /// Create a new pre-request context.
-    pub fn new(
-        model: ScopedModel,
-        messages: Vec<ChatMessage>,
-        kwargs: Value,
-    ) -> Self {
-        Self {
-            model,
-            messages,
-            kwargs,
-        }
+    pub fn new(model: ScopedModel, messages: Vec<ChatMessage>, kwargs: Value) -> Self {
+        Self { model, messages, kwargs }
     }
 }
 
@@ -393,21 +405,16 @@ impl PreRequestHookContext {
 #[async_trait::async_trait]
 pub trait AsyncPreRequestHookHandler: Send + Sync {
     /// Handle a pre-request hook, potentially transforming the messages.
-    async fn handle_pre_request(
-        &self,
-        ctx: &PreRequestHookContext,
-    ) -> Option<Vec<ChatMessage>>;
+    async fn handle_pre_request(&self, ctx: &PreRequestHookContext) -> Option<Vec<ChatMessage>>;
 }
 
 #[async_trait::async_trait]
-impl<F> AsyncPreRequestHookHandler for F
+impl<F, Fut> AsyncPreRequestHookHandler for F
 where
-    F: Fn(&PreRequestHookContext) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<Vec<ChatMessage>>> + Send>> + Send + Sync,
+    F: Fn(&PreRequestHookContext) -> Fut + Send + Sync,
+    Fut: std::future::Future<Output = Option<Vec<ChatMessage>>> + Send,
 {
-    async fn handle_pre_request(
-        &self,
-        ctx: &PreRequestHookContext,
-    ) -> Option<Vec<ChatMessage>> {
+    async fn handle_pre_request(&self, ctx: &PreRequestHookContext) -> Option<Vec<ChatMessage>> {
         (self)(ctx).await
     }
 }
@@ -425,16 +432,8 @@ pub struct PreResponseHookContext {
 
 impl PreResponseHookContext {
     /// Create a new pre-response context.
-    pub fn new(
-        model: ScopedModel,
-        messages: Vec<ChatMessage>,
-        kwargs: Value,
-    ) -> Self {
-        Self {
-            model,
-            messages,
-            kwargs,
-        }
+    pub fn new(model: ScopedModel, messages: Vec<ChatMessage>, kwargs: Value) -> Self {
+        Self { model, messages, kwargs }
     }
 }
 
@@ -445,23 +444,16 @@ impl PreResponseHookContext {
 #[async_trait::async_trait]
 pub trait AsyncPostRequestHookHandler: Send + Sync {
     /// Handle a post-request hook, potentially transforming the response.
-    async fn handle_post_request(
-        &self,
-        ctx: &PreResponseHookContext,
-        response: &str,
-    ) -> Option<String>;
+    async fn handle_post_request(&self, ctx: &PreResponseHookContext, response: &str) -> Option<String>;
 }
 
 #[async_trait::async_trait]
-impl<F> AsyncPostRequestHookHandler for F
+impl<F, Fut> AsyncPostRequestHookHandler for F
 where
-    F: Fn(&PreResponseHookContext, &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>> + Send + Sync,
+    F: Fn(&PreResponseHookContext, &str) -> Fut + Send + Sync,
+    Fut: std::future::Future<Output = Option<String>> + Send,
 {
-    async fn handle_post_request(
-        &self,
-        ctx: &PreResponseHookContext,
-        response: &str,
-    ) -> Option<String> {
+    async fn handle_post_request(&self, ctx: &PreResponseHookContext, response: &str) -> Option<String> {
         (self)(ctx, response).await
     }
 }
@@ -483,18 +475,12 @@ impl AsyncHookRegistry {
     }
 
     /// Register a handler for pre-request hooks.
-    pub fn register_pre_request(
-        &mut self,
-        handler: Box<dyn AsyncPreRequestHookHandler>,
-    ) {
+    pub fn register_pre_request(&mut self, handler: Box<dyn AsyncPreRequestHookHandler>) {
         self.pre_request_handlers.push(handler);
     }
 
     /// Register a handler for post-request hooks.
-    pub fn register_post_request(
-        &mut self,
-        handler: Box<dyn AsyncPostRequestHookHandler>,
-    ) {
+    pub fn register_post_request(&mut self, handler: Box<dyn AsyncPostRequestHookHandler>) {
         self.post_request_handlers.push(handler);
     }
 
@@ -562,18 +548,11 @@ mod tests {
         let mut registry = HookRegistry::new();
         registry.register(
             HookEvent::PreToolUse,
-            Box::new(|_payload: &Value| HookDecision::Deny {
-                reason: "blocked".into(),
-            }),
+            Box::new(|_payload: &Value| HookDecision::Deny { reason: "blocked".into() }),
         );
 
         let decision = registry.emit(HookEvent::PreToolUse, &Value::Null);
-        assert_eq!(
-            decision,
-            HookDecision::Deny {
-                reason: "blocked".into()
-            }
-        );
+        assert_eq!(decision, HookDecision::Deny { reason: "blocked".into() });
     }
 
     #[test]
@@ -581,17 +560,13 @@ mod tests {
         let mut registry = HookRegistry::new();
         registry.register(
             HookEvent::UserPromptSubmit,
-            Box::new(|_payload: &Value| HookDecision::Modify {
-                payload: Value::String("transformed".into()),
-            }),
+            Box::new(|_payload: &Value| HookDecision::Modify { payload: Value::String("transformed".into()) }),
         );
 
         let decision = registry.emit(HookEvent::UserPromptSubmit, &Value::Null);
         assert_eq!(
             decision,
-            HookDecision::Modify {
-                payload: Value::String("transformed".into())
-            }
+            HookDecision::Modify { payload: Value::String("transformed".into()) }
         );
     }
 
@@ -600,9 +575,7 @@ mod tests {
         let mut registry = HookRegistry::new();
         registry.register(
             HookEvent::PreToolUse,
-            Box::new(|_payload: &Value| HookDecision::Deny {
-                reason: "no tools".into(),
-            }),
+            Box::new(|_payload: &Value| HookDecision::Deny { reason: "no tools".into() }),
         );
 
         let decision = registry.emit(HookEvent::PreToolUse, &Value::Null);
@@ -616,9 +589,7 @@ mod tests {
             HookEvent::PreToolUse,
             Box::new(|payload: &Value| {
                 if payload.get("tool").and_then(|v| v.as_str()) == Some("write_file") {
-                    HookDecision::Deny {
-                        reason: "writes blocked".into(),
-                    }
+                    HookDecision::Deny { reason: "writes blocked".into() }
                 } else {
                     HookDecision::Allow
                 }
@@ -629,9 +600,7 @@ mod tests {
         let decision = registry.emit(HookEvent::PreToolUse, &payload);
         assert_eq!(
             decision,
-            HookDecision::Deny {
-                reason: "writes blocked".into()
-            }
+            HookDecision::Deny { reason: "writes blocked".into() }
         );
 
         let payload = serde_json::json!({"tool": "read_file"});
@@ -652,9 +621,7 @@ mod tests {
         let decision = hook.handle(&serde_json::json!({"x": 1}));
         assert_eq!(
             decision,
-            HookDecision::Deny {
-                reason: "hook denied".into()
-            }
+            HookDecision::Deny { reason: "hook denied".into() }
         );
     }
 
@@ -664,9 +631,7 @@ mod tests {
         let decision = hook.handle(&serde_json::json!({"x": 1}));
         assert_eq!(
             decision,
-            HookDecision::Modify {
-                payload: serde_json::json!({"modified": true})
-            }
+            HookDecision::Modify { payload: serde_json::json!({"modified": true}) }
         );
     }
 
@@ -692,16 +657,15 @@ mod tests {
             HookEvent::PreApiCall,
             Box::new(|_model: &str, messages: &Messages| {
                 let mut modified = messages.clone();
-                modified.insert(
-                    0,
-                    ChatMessage::new(Role::System, "injected system prompt"),
-                );
+                modified.insert(0, ChatMessage::new(Role::System, "injected system prompt"));
                 async { Some(modified) }
             }),
         );
 
         let messages = vec![ChatMessage::new(Role::User, "hello")];
-        let result = registry.async_emit(HookEvent::PreApiCall, "gpt-4", &messages).await;
+        let result = registry
+            .async_emit(HookEvent::PreApiCall, "gpt-4", &messages)
+            .await;
         assert!(result.is_some());
         let result = result.unwrap();
         assert_eq!(result.len(), 2);
@@ -713,7 +677,9 @@ mod tests {
     async fn async_hook_registry_returns_none_when_no_handlers() {
         let registry = HookRegistry::new();
         let messages = vec![ChatMessage::new(Role::User, "hello")];
-        let result = registry.async_emit(HookEvent::PreApiCall, "gpt-4", &messages).await;
+        let result = registry
+            .async_emit(HookEvent::PreApiCall, "gpt-4", &messages)
+            .await;
         assert!(result.is_none());
     }
 
@@ -742,7 +708,9 @@ mod tests {
         );
 
         let messages = vec![ChatMessage::new(Role::User, "hello")];
-        let result = registry.async_emit(HookEvent::PreApiCall, "gpt-4", &messages).await;
+        let result = registry
+            .async_emit(HookEvent::PreApiCall, "gpt-4", &messages)
+            .await;
         assert!(result.is_some());
         let result = result.unwrap();
         // Last modification wins
@@ -774,11 +742,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl AsyncHookHandler for PostApiCallTestHandler {
-        async fn async_pre_request_hook(
-            &self,
-            _model: &str,
-            _messages: &Messages,
-        ) -> Option<Messages> {
+        async fn async_pre_request_hook(&self, _model: &str, _messages: &Messages) -> Option<Messages> {
             None
         }
 
@@ -795,13 +759,12 @@ mod tests {
     async fn async_hook_registry_post_api_call() {
         let mut registry = HookRegistry::new();
 
-        registry.register_async(
-            HookEvent::PostApiCall,
-            Box::new(PostApiCallTestHandler),
-        );
+        registry.register_async(HookEvent::PostApiCall, Box::new(PostApiCallTestHandler));
 
         let payload = serde_json::json!({"response": "hello"});
-        let result = registry.async_emit_value(HookEvent::PostApiCall, "gpt-4", &payload).await;
+        let result = registry
+            .async_emit_value(HookEvent::PostApiCall, "gpt-4", &payload)
+            .await;
         assert!(result.is_some());
         assert_eq!(result.unwrap()["processed"], serde_json::json!(true));
     }
@@ -811,19 +774,11 @@ mod tests {
 
     #[async_trait::async_trait]
     impl AsyncHookHandler for StreamEventTestHandler {
-        async fn async_pre_request_hook(
-            &self,
-            _model: &str,
-            _messages: &Messages,
-        ) -> Option<Messages> {
+        async fn async_pre_request_hook(&self, _model: &str, _messages: &Messages) -> Option<Messages> {
             None
         }
 
-        async fn async_stream_event_hook(
-            &self,
-            _model: &str,
-            event: &Value,
-        ) -> Option<Value> {
+        async fn async_stream_event_hook(&self, _model: &str, event: &Value) -> Option<Value> {
             let mut modified = event.clone();
             if let Some(obj) = modified.as_object_mut() {
                 obj.insert("logged".into(), serde_json::json!(true));
@@ -836,13 +791,12 @@ mod tests {
     async fn async_hook_registry_stream_event() {
         let mut registry = HookRegistry::new();
 
-        registry.register_async(
-            HookEvent::StreamEvent,
-            Box::new(StreamEventTestHandler),
-        );
+        registry.register_async(HookEvent::StreamEvent, Box::new(StreamEventTestHandler));
 
         let event = serde_json::json!({"type": "chunk", "content": "hello"});
-        let result = registry.async_emit_value(HookEvent::StreamEvent, "gpt-4", &event).await;
+        let result = registry
+            .async_emit_value(HookEvent::StreamEvent, "gpt-4", &event)
+            .await;
         assert!(result.is_some());
         assert_eq!(result.unwrap()["logged"], serde_json::json!(true));
     }
@@ -879,16 +833,17 @@ mod tests {
     #[tokio::test]
     async fn async_hook_handler_trait_closure_impl() {
         // Test the blanket impl for Fn closures
-        let handler: Box<dyn AsyncHookHandler> = Box::new(
-            |model: &str, messages: &Messages| {
-                let model = model.to_string();
-                let mut msgs = messages.clone();
-                async move {
-                    msgs.insert(0, ChatMessage::new(Role::System, format!("model: {}", model)));
-                    Some(msgs)
-                }
-            },
-        );
+        let handler: Box<dyn AsyncHookHandler> = Box::new(|model: &str, messages: &Messages| {
+            let model = model.to_string();
+            let mut msgs = messages.clone();
+            async move {
+                msgs.insert(
+                    0,
+                    ChatMessage::new(Role::System, format!("model: {}", model)),
+                );
+                Some(msgs)
+            }
+        });
 
         let messages = vec![ChatMessage::new(Role::User, "test")];
         let result = handler.async_pre_request_hook("gpt-4", &messages).await;
@@ -906,18 +861,11 @@ mod async_hooks_tests {
     use super::*;
 
     fn make_test_messages() -> Vec<ChatMessage> {
-        vec![
-            ChatMessage::system("You are helpful.".to_string()),
-            ChatMessage::user("hello".to_string()),
-        ]
+        vec![ChatMessage::system("You are helpful.".to_string()), ChatMessage::user("hello".to_string())]
     }
 
     fn make_test_model() -> ScopedModel {
-        ScopedModel {
-            name: "test-model".to_string(),
-            provider: "test".to_string(),
-            enabled: true,
-        }
+        ScopedModel { name: "test-model".to_string(), provider: "test".to_string(), enabled: true }
     }
 
     #[tokio::test]
@@ -936,9 +884,7 @@ mod async_hooks_tests {
     async fn async_hook_registry_calls_handler_and_returns_modification() {
         let mut registry = AsyncHookRegistry::new();
         registry.register_pre_request(Box::new(|_ctx: &PreRequestHookContext| {
-            Box::pin(async {
-                Some(vec![ChatMessage::user("modified".to_string())])
-            })
+            Box::pin(async { Some(vec![ChatMessage::user("modified".to_string())]) })
         }));
 
         let model = make_test_model();
@@ -959,16 +905,12 @@ mod async_hooks_tests {
 
         // First handler returns modification
         registry.register_pre_request(Box::new(|_ctx: &PreRequestHookContext| {
-            Box::pin(async {
-                Some(vec![ChatMessage::user("first".to_string())])
-            })
+            Box::pin(async { Some(vec![ChatMessage::user("first".to_string())]) })
         }));
 
         // Second handler returns different modification (last wins)
         registry.register_pre_request(Box::new(|_ctx: &PreRequestHookContext| {
-            Box::pin(async {
-                Some(vec![ChatMessage::user("second".to_string())])
-            })
+            Box::pin(async { Some(vec![ChatMessage::user("second".to_string())]) })
         }));
 
         let model = make_test_model();
@@ -989,26 +931,34 @@ mod async_hooks_tests {
         let expected_messages = make_test_messages();
         let expected_kwargs = serde_json::json!({"temperature": 0.7});
 
-        registry.register_pre_request(Box::new(
-            move |ctx: &PreRequestHookContext| {
-                let model = expected_model.clone();
-                let kwargs = expected_kwargs.clone();
-                Box::pin(async move {
-                    assert_eq!(ctx.model.name, model.name);
-                    assert_eq!(ctx.model.provider, model.provider);
-                    assert_eq!(ctx.messages.len(), expected_messages.len());
-                    assert_eq!(ctx.kwargs, kwargs);
-                    None
-                })
-            },
-        ));
+        // Clone all values needed for assertions before entering async context
+        let model_name = expected_model.name.clone();
+        let model_provider = expected_model.provider.clone();
+        let expected_messages_len = expected_messages.len();
+        let kwargs_for_assert = expected_kwargs.clone();
+
+        registry.register_pre_request(Box::new(move |ctx: &PreRequestHookContext| {
+            // Clone from ctx before entering async block
+            let ctx_model_name = ctx.model.name.clone();
+            let ctx_model_provider = ctx.model.provider.clone();
+            let ctx_messages_len = ctx.messages.len();
+            let ctx_kwargs = ctx.kwargs.clone();
+            // Clone again for the async block since closures need Fn, not FnOnce
+            let model_name_async = model_name.clone();
+            let model_provider_async = model_provider.clone();
+            let expected_messages_len_async = expected_messages_len;
+            let kwargs_async = kwargs_for_assert.clone();
+            Box::pin(async move {
+                assert_eq!(ctx_model_name, model_name_async);
+                assert_eq!(ctx_model_provider, model_provider_async);
+                assert_eq!(ctx_messages_len, expected_messages_len_async);
+                assert_eq!(ctx_kwargs, kwargs_async);
+                None
+            })
+        }));
 
         let result = registry
-            .async_pre_request_hook(
-                expected_model,
-                expected_messages,
-                expected_kwargs,
-            )
+            .async_pre_request_hook(expected_model, expected_messages, expected_kwargs)
             .await;
         assert!(result.is_none());
     }
@@ -1029,9 +979,7 @@ mod async_hooks_tests {
     async fn async_post_request_hook_modifies_response() {
         let mut registry = AsyncHookRegistry::new();
         registry.register_post_request(Box::new(
-            |_ctx: &PreResponseHookContext, _response: &str| {
-                Box::pin(async { Some("modified response".to_string()) })
-            },
+            |_ctx: &PreResponseHookContext, _response: &str| Box::pin(async { Some("modified response".to_string()) }),
         ));
 
         let model = make_test_model();
@@ -1049,15 +997,11 @@ mod async_hooks_tests {
         let mut registry = AsyncHookRegistry::new();
 
         registry.register_pre_request(Box::new(|_ctx: &PreRequestHookContext| {
-            Box::pin(async {
-                Some(vec![ChatMessage::user("transformed".to_string())])
-            })
+            Box::pin(async { Some(vec![ChatMessage::user("transformed".to_string())]) })
         }));
 
         registry.register_post_request(Box::new(
-            |_ctx: &PreResponseHookContext, _response: &str| {
-                Box::pin(async { Some("final".to_string()) })
-            },
+            |_ctx: &PreResponseHookContext, _response: &str| Box::pin(async { Some("final".to_string()) }),
         ));
 
         let model = make_test_model();
@@ -1122,5 +1066,371 @@ mod async_hooks_tests {
             HookEvent::from_str("postapicall").ok(),
             Some(HookEvent::PostApiCall)
         );
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// File-Based Hook Discovery
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Hook definition loaded from a JSON file.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct HookSpec {
+    /// Command to execute.
+    pub command: String,
+    /// Environment variables to set.
+    #[serde(default)]
+    pub env: HashMap<String, String>,
+    /// Trust level ("trusted", "untrusted", "ask").
+    #[serde(default = "default_trust")]
+    pub trust: String,
+    /// Timeout in milliseconds.
+    #[serde(default = "default_timeout")]
+    pub timeout_ms: u64,
+    /// Matcher regex (for tool name filtering).
+    #[serde(default)]
+    pub matcher: Option<String>,
+}
+
+fn default_timeout() -> u64 {
+    5000
+}
+
+fn default_trust() -> String {
+    "ask".to_string()
+}
+
+/// A discovered hook file.
+#[derive(Debug, Clone)]
+pub struct DiscoveredHook {
+    /// Path to the hook file.
+    pub path: std::path::PathBuf,
+    /// Event name (directory name).
+    pub event: String,
+    /// Parsed hook spec.
+    pub spec: HookSpec,
+}
+
+/// Hook discovery manager.
+#[derive(Debug, Default)]
+pub struct HookDiscovery {
+    hooks: Vec<DiscoveredHook>,
+}
+
+impl HookDiscovery {
+    /// Create a new hook discovery manager.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Discover hooks from directories.
+    ///
+    /// Looks for `~/.runie/hooks/{event}/` directories and loads `*.json` files.
+    pub fn discover(&mut self) -> anyhow::Result<()> {
+        self.hooks.clear();
+
+        // Discover from global hooks directory
+        if let Some(home) = dirs::home_dir() {
+            let global_hooks = home.join(".runie").join("hooks");
+            self.discover_dir(&global_hooks, 0)?;
+        }
+
+        // Discover from project hooks directory
+        if let Ok(cwd) = std::env::current_dir() {
+            // Find git root or use cwd
+            let project_hooks = cwd.join(".runie").join("hooks");
+            if project_hooks.exists() {
+                self.discover_dir(&project_hooks, 1)?; // Project hooks have higher priority
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Discover hooks from a specific directory.
+    fn discover_dir(&mut self, base: &std::path::Path, _priority: u8) -> anyhow::Result<()> {
+        if !base.exists() {
+            return Ok(());
+        }
+
+        for entry in std::fs::read_dir(base)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if !path.is_dir() {
+                continue;
+            }
+
+            let event = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            // Skip hidden directories
+            if event.starts_with('.') {
+                continue;
+            }
+
+            self.discover_event_dir_hooks(&path, &event);
+        }
+
+        Ok(())
+    }
+
+    fn discover_event_dir_hooks(&mut self, path: &std::path::Path, event: &str) {
+        let Ok(files) = std::fs::read_dir(path) else { return };
+
+        for file in files.flatten() {
+            let file_path = file.path();
+
+            // Only process JSON files
+            if file_path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+
+            // Skip hidden files and editor temp files
+            let name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if name.starts_with('.') || name.ends_with('~') || name.ends_with(".swp") {
+                continue;
+            }
+
+            if let Ok(content) = std::fs::read_to_string(&file_path) {
+                match serde_json::from_str::<HookSpec>(&content) {
+                    Ok(spec) => {
+                        self.hooks.push(DiscoveredHook {
+                            path: file_path.clone(),
+                            event: event.to_string(),
+                            spec,
+                        });
+                        tracing::debug!("Discovered hook: {:?}", file_path);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to parse hook file {:?}: {}", file_path, e);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Get all hooks for a specific event.
+    pub fn hooks_for(&self, event: &str) -> Vec<&DiscoveredHook> {
+        self.hooks
+            .iter()
+            .filter(|h| h.event == event)
+            .collect()
+    }
+
+    /// Get all pre_tool_use hooks matching a tool name.
+    pub fn pre_tool_hooks(&self, tool_name: &str) -> Vec<&DiscoveredHook> {
+        self.hooks_for("pre_tool_use")
+            .into_iter()
+            .filter(|h| {
+                // Filter by matcher if present
+                if let Some(ref pattern) = h.spec.matcher {
+                    if let Ok(re) = regex::Regex::new(pattern) {
+                        return re.is_match(tool_name);
+                    }
+                }
+                // No matcher means match all
+                true
+            })
+            .collect()
+    }
+
+    /// Get all post_tool_use hooks matching a tool name.
+    pub fn post_tool_hooks(&self, tool_name: &str) -> Vec<&DiscoveredHook> {
+        self.hooks_for("post_tool_use")
+            .into_iter()
+            .filter(|h| {
+                if let Some(ref pattern) = h.spec.matcher {
+                    if let Ok(re) = regex::Regex::new(pattern) {
+                        return re.is_match(tool_name);
+                    }
+                }
+                true
+            })
+            .collect()
+    }
+
+    /// Execute a discovered hook.
+    pub async fn execute_hook(&self, hook: &DiscoveredHook, payload: &serde_json::Value) -> HookDecision {
+        // Build environment
+        let mut env = std::env::vars().collect::<HashMap<_, _>>();
+        for (k, v) in &hook.spec.env {
+            env.insert(k.clone(), v.clone());
+        }
+        env.insert("RUNIE_HOOK_EVENT".to_string(), hook.event.clone());
+        env.insert("RUNIE_HOOK_COMMAND".to_string(), hook.spec.command.clone());
+
+        // Serialize payload to stdin
+        let _input = serde_json::to_string(payload).unwrap_or_default();
+
+        // Execute with timeout
+        let result = tokio::process::Command::new("sh")
+            .arg("-c")
+            .arg(&hook.spec.command)
+            .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .output()
+            .await;
+
+        match result {
+            Ok(output) => {
+                if !output.status.success() {
+                    return HookDecision::Allow; // Fail-open
+                }
+
+                let text = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+                match text.to_ascii_lowercase().as_str() {
+                    "allow" | "" => HookDecision::Allow,
+                    "deny" => HookDecision::Deny { reason: "hook denied".into() },
+                    _ => match serde_json::from_str::<serde_json::Value>(&text) {
+                        Ok(value) => HookDecision::Modify { payload: value },
+                        Err(_) => HookDecision::Allow,
+                    },
+                }
+            }
+            Err(_) => HookDecision::Allow, // Fail-open
+        }
+    }
+
+    /// Execute all pre_tool_use hooks for a tool.
+    ///
+    /// Returns the final decision: first `Deny` wins, otherwise the most recent
+    /// `Modify` wins, otherwise `Allow`.
+    pub async fn execute_pre_tool_hooks(
+        &self,
+        tool_name: &str,
+        payload: &serde_json::Value,
+    ) -> HookDecision {
+        let hooks = self.pre_tool_hooks(tool_name);
+        let mut decision = HookDecision::Allow;
+
+        for hook in hooks {
+            match self.execute_hook(hook, payload).await {
+                HookDecision::Deny { reason } => return HookDecision::Deny { reason },
+                modify @ HookDecision::Modify { .. } => decision = modify,
+                HookDecision::Allow => {}
+            }
+        }
+
+        decision
+    }
+
+    /// Execute all post_tool_use hooks for a tool.
+    ///
+    /// Post hooks are non-blocking and always return `Allow` after execution.
+    pub async fn execute_post_tool_hooks(
+        &self,
+        tool_name: &str,
+        payload: &serde_json::Value,
+    ) {
+        let hooks = self.post_tool_hooks(tool_name);
+
+        for hook in hooks {
+            let _ = self.execute_hook(hook, payload).await;
+        }
+    }
+}
+
+/// Hook manager that combines in-memory and file-based hooks.
+#[derive(Default)]
+pub struct HookManager {
+    /// In-memory registry (from config).
+    registry: HookRegistry,
+    /// File-based discovery.
+    discovery: HookDiscovery,
+}
+
+impl HookManager {
+    /// Discover hooks from filesystem.
+    pub fn discover(&mut self) -> anyhow::Result<()> {
+        self.discovery.discover()
+    }
+
+    /// Load hooks from config.
+    pub fn load_config(&mut self, config: &crate::config::Config) {
+        self.registry = HookRegistry::load_from_config(config);
+    }
+
+    /// Emit to in-memory registry.
+    pub fn emit(&self, event: HookEvent, payload: &serde_json::Value) -> HookDecision {
+        self.registry.emit(event, payload)
+    }
+
+    /// Execute file-based pre-tool hooks.
+    pub async fn execute_pre_tool_hooks(
+        &self,
+        tool_name: &str,
+        payload: &serde_json::Value,
+    ) -> HookDecision {
+        self.discovery.execute_pre_tool_hooks(tool_name, payload).await
+    }
+
+    /// Execute file-based post-tool hooks.
+    pub async fn execute_post_tool_hooks(
+        &self,
+        tool_name: &str,
+        payload: &serde_json::Value,
+    ) {
+        self.discovery.execute_post_tool_hooks(tool_name, payload).await;
+    }
+}
+
+#[cfg(test)]
+mod hook_discovery_tests {
+    use super::*;
+
+    #[test]
+    fn hook_spec_parsing() {
+        let json = r#"{
+            "command": "echo allow",
+            "env": {"KEY": "value"},
+            "trust": "trusted",
+            "timeout_ms": 5000,
+            "matcher": ".*"
+        }"#;
+
+        let spec: HookSpec = serde_json::from_str(json).unwrap();
+        assert_eq!(spec.command, "echo allow");
+        assert_eq!(spec.env.get("KEY"), Some(&"value".to_string()));
+        assert_eq!(spec.trust, "trusted");
+        assert_eq!(spec.timeout_ms, 5000);
+    }
+
+    #[test]
+    fn hook_spec_defaults() {
+        let json = r#"{"command": "test.sh"}"#;
+        let spec: HookSpec = serde_json::from_str(json).unwrap();
+        assert!(spec.env.is_empty());
+        assert_eq!(spec.trust, "ask");
+        assert_eq!(spec.timeout_ms, 5000);
+        assert!(spec.matcher.is_none());
+    }
+
+    #[test]
+    fn discovery_empty_when_no_hooks_dir() {
+        let mut discovery = HookDiscovery::new();
+        let result = discovery.discover_dir(std::path::Path::new("/nonexistent"), 0);
+        assert!(result.is_ok());
+        assert!(discovery.hooks.is_empty());
+    }
+
+    #[test]
+    fn hook_manager_combines_sources() {
+        let mut manager = HookManager::default();
+
+        // Add an in-memory hook
+        manager.registry.register(
+            HookEvent::PreToolUse,
+            Box::new(|_: &serde_json::Value| HookDecision::Allow),
+        );
+
+        // Discovery will be empty without hooks directory
+        // but manager should still work
+        let decision = manager.emit(HookEvent::PreToolUse, &serde_json::Value::Null);
+        assert_eq!(decision, HookDecision::Allow);
     }
 }

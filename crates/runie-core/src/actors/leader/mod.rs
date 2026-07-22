@@ -78,8 +78,7 @@ pub trait LeaderAgentHandle: Send + Sync {
 /// dependency cycle.
 pub trait AgentActorFactory: Send + Sync {
     /// Future type for spawn operation.
-    type SpawnFuture: std::future::Future<Output = Result<Arc<dyn LeaderAgentHandle>, ractor::SpawnErr>>
-        + Send;
+    type SpawnFuture: std::future::Future<Output = Result<Arc<dyn LeaderAgentHandle>, ractor::SpawnErr>> + Send;
 
     /// Spawn an agent actor connected to the given event bus and handles.
     fn spawn(
@@ -99,9 +98,5 @@ pub trait AgentActorFactory: Send + Sync {
 }
 
 /// Type alias for the spawn future return type.
-pub type AgentSpawnFuture = std::pin::Pin<
-    Box<
-        dyn std::future::Future<Output = Result<Arc<dyn LeaderAgentHandle>, ractor::SpawnErr>>
-            + Send,
-    >,
->;
+pub type AgentSpawnFuture =
+    std::pin::Pin<Box<dyn std::future::Future<Output = Result<Arc<dyn LeaderAgentHandle>, ractor::SpawnErr>> + Send>>;

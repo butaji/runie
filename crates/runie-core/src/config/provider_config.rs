@@ -37,10 +37,7 @@ impl crate::proto::provider::ProviderConfig for crate::config::Config {
         ))
     }
 
-    fn resolve_headers(
-        &self,
-        provider: &str,
-    ) -> Option<std::collections::HashMap<String, String>> {
+    fn resolve_headers(&self, provider: &str) -> Option<std::collections::HashMap<String, String>> {
         self.model_providers
             .get(provider)
             .map(|p| p.headers.clone())

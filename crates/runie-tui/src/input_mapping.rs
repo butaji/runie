@@ -4,6 +4,7 @@
 //! `UiActor::handle_input_event` (bus-published events) map the same
 //! key/command events to `InputMsg` variants.  This module provides the
 //! single canonical function so there is one place to maintain the mapping.
+#![allow(clippy::too_many_lines)]
 
 use runie_core::actors::{InputMsg, RactorInputHandle};
 

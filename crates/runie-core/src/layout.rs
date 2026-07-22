@@ -3,6 +3,7 @@
 //! These helpers are intentionally free of Ratatui types so that core can
 //! use them for scroll math while the TUI uses the same logic to produce
 //! actual rendered lines.
+#![allow(clippy::too_many_lines)]
 
 use crate::markdown::{extract_code_blocks, CodeBlock};
 use crate::view::elements::Element;
@@ -30,12 +31,8 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
 
     match element {
         Element::Spacer { .. } => 1,
-        Element::UserMessage { content, timestamp } => {
-            user_message_line_count(content, *timestamp, width)
-        }
-        Element::AgentMessage {
-            content, timestamp, ..
-        } => agent_message_line_count(content, *timestamp, width),
+        Element::UserMessage { content, timestamp } => user_message_line_count(content, *timestamp, width),
+        Element::AgentMessage { content, timestamp, .. } => agent_message_line_count(content, *timestamp, width),
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
@@ -44,18 +41,14 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
         Element::ToolConfirmation { .. } => 1,
-        Element::ContextGroup {
-            tools, collapsed, ..
-        } => {
+        Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
             } else {
                 tools.iter().map(|t| element_line_count(t, width)).sum()
             }
         }
-        Element::SubagentRow {
-            output, expanded, ..
-        } => subagent_row_line_count(output, *expanded),
+        Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
         Element::Image { .. } => 1, // Image placeholder height
         Element::DataPart { data, .. } => data.lines().count().max(1),
@@ -91,18 +84,14 @@ fn fallback_line_count(element: &Element) -> usize {
         }
         Element::ToolSummary { .. } => 1,
         Element::ToolConfirmation { .. } => 1,
-        Element::ContextGroup {
-            tools, collapsed, ..
-        } => {
+        Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
             } else {
                 tools.iter().map(fallback_line_count).sum()
             }
         }
-        Element::SubagentRow {
-            output, expanded, ..
-        } => subagent_row_line_count(output, *expanded),
+        Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
         Element::Image { .. } => 1,
         Element::DataPart { data, .. } => data.lines().count().max(1),

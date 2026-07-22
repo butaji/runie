@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 // AUTO-GENERATED from taxonomy.json — do not edit manually
 // Regenerate: python3 build_scripts/generate_event_taxonomy.py
 
@@ -5,6 +7,7 @@ use super::{Event, EventCategory, EventKind};
 
 impl Event {
     /// Return the [`EventKind`] for this event variant.
+    #[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
     pub fn kind(&self) -> EventKind {
         match self {
             Event::Abort => EventKind::Control,
@@ -67,11 +70,11 @@ impl Event {
             Event::GistShared { .. } => EventKind::Fact,
             Event::GoToBottom => EventKind::Intent,
             Event::GoToTop => EventKind::Intent,
-            Event::GoalCancel { .. } => EventKind::Intent,
+            Event::GoalCancel => EventKind::Intent,
             Event::GoalComplete { .. } => EventKind::Intent,
             Event::GoalCreate { .. } => EventKind::Intent,
-            Event::GoalPause { .. } => EventKind::Intent,
-            Event::GoalResume { .. } => EventKind::Intent,
+            Event::GoalPause => EventKind::Intent,
+            Event::GoalResume => EventKind::Intent,
             Event::GoalStatus { .. } => EventKind::Fact,
             Event::HistoryAppend { .. } => EventKind::Fact,
             Event::HistoryLoaded { .. } => EventKind::Fact,
@@ -115,6 +118,8 @@ impl Event {
             Event::PathCompletionUp => EventKind::Intent,
             Event::PatternWorkerFinished { .. } => EventKind::Fact,
             Event::PatternWorkerSpawned { .. } => EventKind::Fact,
+            Event::CircuitBreakerTripped { .. } => EventKind::Fact,
+            Event::CircuitBreakerReset => EventKind::Control,
             Event::PendingEdit { .. } => EventKind::Intent,
             Event::PermissionAllow { .. } => EventKind::Intent,
             Event::PermissionAlwaysAllow { .. } => EventKind::Intent,
@@ -186,11 +191,13 @@ impl Event {
             Event::SessionTreeFilterCycle => EventKind::Intent,
             Event::SessionTreeSelect { .. } => EventKind::Intent,
             Event::SessionTreeSnapshot { .. } => EventKind::Fact,
+            Event::SetLeadModel { .. } => EventKind::Intent,
             Event::SetMode { .. } => EventKind::Intent,
             Event::SetModeAndSwarmVariant { .. } => EventKind::Intent,
             Event::SetPrompt { .. } => EventKind::Fact,
             Event::SetSwarmVariant { .. } => EventKind::Intent,
             Event::SetThinkingLevel { .. } => EventKind::Intent,
+            Event::SetWorkerModel { .. } => EventKind::Intent,
             Event::SettingsClose => EventKind::Intent,
             Event::SettingsDown => EventKind::Intent,
             Event::SettingsLeft => EventKind::Intent,
@@ -226,7 +233,7 @@ impl Event {
             Event::ThoughtDone { .. } => EventKind::Fact,
             Event::ToggleCommandPalette => EventKind::Intent,
             Event::ToggleExpand => EventKind::Control,
-            Event::ToggleMcpServersDialog { .. } => EventKind::Intent,
+            Event::ToggleMcpServersDialog => EventKind::Intent,
             Event::ToggleModel { .. } => EventKind::Intent,
             Event::ToggleModelSelector => EventKind::Intent,
             Event::TogglePathCompletion => EventKind::Intent,
@@ -234,7 +241,7 @@ impl Event {
             Event::ToggleScopedModelsDialog => EventKind::Intent,
             Event::ToggleSessionTree => EventKind::Intent,
             Event::ToggleSettingsDialog => EventKind::Intent,
-            Event::ToggleSkillsDialog { .. } => EventKind::Intent,
+            Event::ToggleSkillsDialog => EventKind::Intent,
             Event::ToggleTasksPane => EventKind::Control,
             Event::ToggleVimMode => EventKind::Control,
             Event::ToggleWelcome => EventKind::Intent,
@@ -266,6 +273,7 @@ impl Event {
     }
 
     /// Return the [`EventCategory`] for this event variant.
+    #[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
     pub fn category(&self) -> EventCategory {
         match self {
             Event::Abort => EventCategory::Control,
@@ -328,11 +336,11 @@ impl Event {
             Event::GistShared { .. } => EventCategory::IO,
             Event::GoToBottom => EventCategory::Input,
             Event::GoToTop => EventCategory::Input,
-            Event::GoalCancel { .. } => EventCategory::Goal,
+            Event::GoalCancel => EventCategory::Goal,
             Event::GoalComplete { .. } => EventCategory::Goal,
             Event::GoalCreate { .. } => EventCategory::Goal,
-            Event::GoalPause { .. } => EventCategory::Goal,
-            Event::GoalResume { .. } => EventCategory::Goal,
+            Event::GoalPause => EventCategory::Goal,
+            Event::GoalResume => EventCategory::Goal,
             Event::GoalStatus { .. } => EventCategory::Goal,
             Event::HistoryAppend { .. } => EventCategory::Persistence,
             Event::HistoryLoaded { .. } => EventCategory::Persistence,
@@ -376,6 +384,8 @@ impl Event {
             Event::PathCompletionUp => EventCategory::Dialog,
             Event::PatternWorkerFinished { .. } => EventCategory::Agent,
             Event::PatternWorkerSpawned { .. } => EventCategory::Agent,
+            Event::CircuitBreakerTripped { .. } => EventCategory::Agent,
+            Event::CircuitBreakerReset => EventCategory::Control,
             Event::PendingEdit { .. } => EventCategory::Edit,
             Event::PermissionAllow { .. } => EventCategory::Permission,
             Event::PermissionAlwaysAllow { .. } => EventCategory::Permission,
@@ -447,11 +457,13 @@ impl Event {
             Event::SessionTreeFilterCycle => EventCategory::Session,
             Event::SessionTreeSelect { .. } => EventCategory::Session,
             Event::SessionTreeSnapshot { .. } => EventCategory::Session,
+            Event::SetLeadModel { .. } => EventCategory::ModelConfig,
             Event::SetMode { .. } => EventCategory::ModelConfig,
             Event::SetModeAndSwarmVariant { .. } => EventCategory::ModelConfig,
             Event::SetPrompt { .. } => EventCategory::Command,
             Event::SetSwarmVariant { .. } => EventCategory::ModelConfig,
             Event::SetThinkingLevel { .. } => EventCategory::ModelConfig,
+            Event::SetWorkerModel { .. } => EventCategory::ModelConfig,
             Event::SettingsClose => EventCategory::ModelConfig,
             Event::SettingsDown => EventCategory::ModelConfig,
             Event::SettingsLeft => EventCategory::ModelConfig,
@@ -487,7 +499,7 @@ impl Event {
             Event::ThoughtDone { .. } => EventCategory::Agent,
             Event::ToggleCommandPalette => EventCategory::Dialog,
             Event::ToggleExpand => EventCategory::Control,
-            Event::ToggleMcpServersDialog { .. } => EventCategory::Dialog,
+            Event::ToggleMcpServersDialog => EventCategory::Dialog,
             Event::ToggleModel { .. } => EventCategory::LoginFlow,
             Event::ToggleModelSelector => EventCategory::Dialog,
             Event::TogglePathCompletion => EventCategory::Dialog,
@@ -495,7 +507,7 @@ impl Event {
             Event::ToggleScopedModelsDialog => EventCategory::ModelConfig,
             Event::ToggleSessionTree => EventCategory::Session,
             Event::ToggleSettingsDialog => EventCategory::ModelConfig,
-            Event::ToggleSkillsDialog { .. } => EventCategory::Dialog,
+            Event::ToggleSkillsDialog => EventCategory::Dialog,
             Event::ToggleTasksPane => EventCategory::Control,
             Event::ToggleVimMode => EventCategory::Control,
             Event::ToggleWelcome => EventCategory::Dialog,
@@ -530,6 +542,7 @@ impl Event {
     ///
     /// Returns `None` for Fact variants. Control variants like Quit, Reset, Abort
     /// are also convertible to intent.
+    #[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
     pub fn into_intent(self) -> Option<Event> {
         match self {
             Event::RunCompactCommand { .. } => Some(self.clone()),
@@ -662,10 +675,12 @@ impl Event {
             Event::ScopedModelToggle { .. } => Some(self.clone()),
             Event::ScopedModelToggleProvider { .. } => Some(self.clone()),
             Event::SelectModel { .. } => Some(self.clone()),
+            Event::SetLeadModel { .. } => Some(self.clone()),
             Event::SetMode { .. } => Some(self.clone()),
             Event::SetModeAndSwarmVariant { .. } => Some(self.clone()),
             Event::SetSwarmVariant { .. } => Some(self.clone()),
             Event::SetThinkingLevel { .. } => Some(self.clone()),
+            Event::SetWorkerModel { .. } => Some(self.clone()),
             Event::SettingsClose => Some(self),
             Event::SettingsDown => Some(self),
             Event::SettingsLeft => Some(self),
@@ -709,11 +724,11 @@ impl Event {
 }
 
 /// Returns true if this event is a fact (not an intent or control).
+#[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
 pub fn is_fact_variant(e: &Event) -> bool {
     matches!(
         e,
-            | Event::AssistantMessageReady { .. }
-            | Event::CompactionTriggered { .. }
+        |Event::AssistantMessageReady { .. }| Event::CompactionTriggered { .. }
             | Event::Done { .. }
             | Event::Error { .. }
             | Event::FollowUpDelivered { .. }
@@ -721,6 +736,8 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::MessageDequeued { .. }
             | Event::PatternWorkerFinished { .. }
             | Event::PatternWorkerSpawned { .. }
+            | Event::CircuitBreakerTripped { .. }
+            | Event::CircuitBreakerReset
             | Event::QueueAborted { .. }
             | Event::QueueFollowUpAdded { .. }
             | Event::QueueSteeringAdded { .. }
@@ -874,7 +891,9 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("Cancel", || Event::Cancel),
     ("CycleModelNext", || Event::CycleModelNext),
     ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || Event::ToggleScopedModelsDialog),
+    ("ToggleScopedModelsDialog", || {
+        Event::ToggleScopedModelsDialog
+    }),
     ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
     ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
     ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),
@@ -932,16 +951,7 @@ impl Event {
     }
 
     /// Create a ToolEnd with default input field.
-    pub fn tool_end(
-        id: impl Into<String>,
-        duration_secs: f64,
-        output: impl Into<String>,
-    ) -> Self {
-        Event::ToolEnd {
-            id: id.into(),
-            input: None,
-            duration_secs,
-            output: output.into(),
-        }
+    pub fn tool_end(id: impl Into<String>, duration_secs: f64, output: impl Into<String>) -> Self {
+        Event::ToolEnd { id: id.into(), input: None, duration_secs, output: output.into() }
     }
 }

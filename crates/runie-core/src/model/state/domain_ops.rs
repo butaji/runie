@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Domain operation methods for `AppState`.
 //!
 //! These methods implement business logic that was previously in `app_state.rs`.
@@ -55,11 +57,7 @@ impl AppState {
         }
     }
 
-    pub(crate) fn set_trust_decision(
-        &mut self,
-        path: camino::Utf8PathBuf,
-        decision: crate::trust::TrustDecision,
-    ) {
+    pub(crate) fn set_trust_decision(&mut self, path: camino::Utf8PathBuf, decision: crate::trust::TrustDecision) {
         self.trust_decisions_mut().insert(path, decision);
     }
 
@@ -226,8 +224,7 @@ impl AppState {
         // the session flag prevents re-opening the picker when the saved config
         // reloads.
         let needs_onboarding = !self.onboarding_started
-            && ((!self.has_models() && !crate::provider::is_mock_enabled())
-                || crate::provider::is_mock_onboarding());
+            && ((!self.has_models() && !crate::provider::is_mock_enabled()) || crate::provider::is_mock_onboarding());
         if needs_onboarding {
             self.onboarding_started = true;
             self.update(crate::Event::Start);
@@ -243,8 +240,7 @@ impl AppState {
 
     fn apply_scoped_models(&mut self, config: &crate::config::Config) {
         if let Some(scoped) = config.scoped_models() {
-            self.config_mut().scoped_models =
-                scoped.iter().map(|s| self.parse_scoped_model(s)).collect();
+            self.config_mut().scoped_models = scoped.iter().map(|s| self.parse_scoped_model(s)).collect();
         } else {
             // Default scoped models to the first 10 models from providers that
             // actually have credentials. Without this filter, unconfigured
@@ -267,11 +263,7 @@ impl AppState {
     fn parse_scoped_model(&self, s: &str) -> crate::model::ScopedModel {
         let parts: Vec<&str> = s.split('/').collect();
         if parts.len() == 2 {
-            crate::model::ScopedModel {
-                provider: parts[0].to_owned(),
-                name: parts[1].to_owned(),
-                enabled: true,
-            }
+            crate::model::ScopedModel { provider: parts[0].to_owned(), name: parts[1].to_owned(), enabled: true }
         } else {
             crate::model::ScopedModel {
                 provider: self.config().current_provider.clone(),
@@ -315,9 +307,7 @@ impl AppState {
             // Honor the explicit default when it is a valid choice for this
             // provider; a stale default from another provider is ignored.
             let model = match cfg.default_model.as_deref() {
-                Some(def) if models.is_empty() || models.iter().any(|m| m == def) => {
-                    def.to_string()
-                }
+                Some(def) if models.is_empty() || models.iter().any(|m| m == def) => def.to_string(),
                 _ => models.first().cloned().unwrap_or_default(),
             };
             let provider_str = (&provider).to_string();
@@ -410,21 +400,14 @@ impl AppState {
             .config
             .command_usage
             .entry(name.to_owned())
-            .or_insert_with(|| CommandUsage {
-                count: 0,
-                last_used: now,
-            });
+            .or_insert_with(|| CommandUsage { count: 0, last_used: now });
         entry.count += 1;
         entry.last_used = now;
     }
 
     /// Rank commands by fuzzy match score, recency boost, and usage count.
     /// Returns commands in ranked order, limited to `limit`.
-    pub fn rank_commands(
-        &mut self,
-        query: &str,
-        limit: usize,
-    ) -> Vec<(&crate::commands::CommandDef, i32)> {
+    pub fn rank_commands(&mut self, query: &str, limit: usize) -> Vec<(&crate::commands::CommandDef, i32)> {
         let command_usage = self.config().command_usage.clone();
         let all: Vec<_> = self.registry_mut().list();
         let ranked_names: Vec<(String, i32)> = if query.is_empty() {
@@ -453,6 +436,16 @@ impl AppState {
     /// Returns the current model name.
     pub fn current_model(&self) -> &str {
         &self.config().current_model
+    }
+
+    /// Returns the configured lead (coordinator) model for swarm orchestration.
+    pub fn lead_model(&self) -> Option<&str> {
+        self.config().mode.lead_model.as_deref()
+    }
+
+    /// Returns the configured worker (executor) model for swarm orchestration.
+    pub fn worker_model(&self) -> Option<&str> {
+        self.config().mode.worker_model.as_deref()
     }
 
     /// Returns the current thinking level setting.
@@ -493,9 +486,9 @@ impl AppState {
         }
         // Fire-and-forget persist.  In tests without handles, mutation is already applied.
         if let Some(h) = self.actor_handles() {
-            let _ = h.config.try_send(ConfigMsg::SetMode {
-                section: self.config().mode.clone(),
-            });
+            let _ = h
+                .config
+                .try_send(ConfigMsg::SetMode { section: self.config().mode.clone() });
         }
         self.notify(format!("Pattern set to: {}", active), TransientLevel::Info);
     }
@@ -505,6 +498,24 @@ impl AppState {
         self.config_mut().swarm_variant = Some(variant.to_owned());
         self.notify(
             format!("Swarm variant set to: {}", variant),
+            TransientLevel::Info,
+        );
+    }
+
+    /// Set the lead (coordinator) model for swarm/delegation orchestration.
+    pub(crate) fn set_lead_model(&mut self, provider: &str, model: &str) {
+        self.config_mut().mode.lead_model = Some(format!("{provider}/{model}"));
+        self.notify(
+            format!("Lead model set to: {provider}/{model}"),
+            TransientLevel::Info,
+        );
+    }
+
+    /// Set the worker (task-executor) model for swarm/delegation orchestration.
+    pub(crate) fn set_worker_model(&mut self, provider: &str, model: &str) {
+        self.config_mut().mode.worker_model = Some(format!("{provider}/{model}"));
+        self.notify(
+            format!("Worker model set to: {provider}/{model}"),
             TransientLevel::Info,
         );
     }
@@ -627,6 +638,7 @@ mod tests {
                     base_url: "https://api.minimaxi.chat/v1".to_string(),
                     models: vec!["MiniMax-M2".to_string(), "MiniMax-M2.7".to_string()],
                     headers: std::collections::HashMap::new(),
+                    context_window_fallbacks: vec![],
                 },
             );
         }
@@ -645,6 +657,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn apply_scoped_models_filters_out_providers_without_credentials() {
         // When the config does not explicitly list [models.scoped], the default
         // scoped model list must not include providers that lack credentials.
@@ -671,6 +684,7 @@ mod tests {
                 base_url: "https://api.minimaxi.chat/v1".to_string(),
                 models: vec!["MiniMax-M3".to_string()],
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: vec![],
             },
         );
         config.model_providers.insert(
@@ -680,6 +694,7 @@ mod tests {
                 base_url: "https://api.anthropic.com/v1".to_string(),
                 models: vec!["claude-3-5-sonnet".to_string()],
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: vec![],
             },
         );
 

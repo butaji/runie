@@ -28,8 +28,7 @@ impl ToolDef for EditFileTool {
     type Input = EditFileInput;
 
     const NAME: &'static str = "edit_file";
-    const DESCRIPTION: &'static str =
-        "Replace the first occurrence of search text with replace text in a file.";
+    const DESCRIPTION: &'static str = "Replace the first occurrence of search text with replace text in a file.";
     const READ_ONLY: bool = false;
     const REQUIRES_APPROVAL: bool = true;
 
@@ -40,12 +39,7 @@ impl ToolDef for EditFileTool {
     }
 }
 
-async fn edit_file_impl(
-    path: &std::path::Path,
-    search: &str,
-    replace: &str,
-    start: Instant,
-) -> ToolOutput {
+async fn edit_file_impl(path: &std::path::Path, search: &str, replace: &str, start: Instant) -> ToolOutput {
     if search.is_empty() {
         return tool_error(
             "edit_file",

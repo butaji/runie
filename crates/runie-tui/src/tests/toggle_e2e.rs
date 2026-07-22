@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use super::*;
 use runie_core::Event;
 
@@ -40,17 +41,8 @@ fn run_tool(state: &mut AppState, output: &str) {
     dispatch(
         state,
         &[
-            Event::ToolStart {
-                id: "req.0".into(),
-                name: "list_dir".into(),
-                input: serde_json::Value::Null,
-            },
-            Event::ToolEnd {
-                id: "".to_string(),
-                input: None,
-                duration_secs: 0.5,
-                output: output.into(),
-            },
+            Event::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null },
+            Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: output.into() },
         ],
     );
 }
@@ -204,9 +196,7 @@ fn e2e_new_thought_respects_global_collapse() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "First.".to_string(),
@@ -214,16 +204,12 @@ fn e2e_new_thought_respects_global_collapse() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
 
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
-    state.update(Event::Thinking {
-        id: "req.1".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.1".to_string() });
     state.update(Event::Response {
         id: "req.1".to_string(),
         content: "Second.".to_string(),
@@ -231,9 +217,7 @@ fn e2e_new_thought_respects_global_collapse() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.1".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.1".to_string() });
 
     let after = render_content(&mut state);
     let marker_count = after.matches("Thought").count();
@@ -255,11 +239,7 @@ fn e2e_running_tool_always_expanded() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
     state.update(Event::ToggleExpand);
 
     assert!(
@@ -279,9 +259,7 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
     let mut state = AppState::default();
     state.agent.streaming = true;
 
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
@@ -289,21 +267,10 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
 
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "file1".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "file1".to_string() });
 
     state.update(Event::ToggleExpand);
     assert!(

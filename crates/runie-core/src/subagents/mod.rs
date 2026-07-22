@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Subagent Types — declarative built-in agent profiles.
 //!
 //! Subagent types are defined as markdown files with YAML frontmatter in
@@ -232,8 +234,7 @@ fn parse_subagent_content(name_hint: &str, content: &str) -> Option<SubagentType
         "compact" => PromptMode::Compact,
         _ => PromptMode::Full,
     };
-    let permission_mode =
-        crate::permissions::parse_permission_mode(&fm_str(&fm, "permission_mode"));
+    let permission_mode = crate::permissions::parse_permission_mode(&fm_str(&fm, "permission_mode"));
     let agents_md = fm_str(&fm, "agents_md").parse::<bool>().unwrap_or(false);
     let model = fm_str(&fm, "model");
     let model = if model.is_empty() {

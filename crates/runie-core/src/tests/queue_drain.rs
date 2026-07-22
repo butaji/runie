@@ -8,6 +8,7 @@
 //!
 //! These tests drive the exact fact sequence the TurnActor emits in production
 //! and assert enqueue/dequeue symmetry: the queue must drain on every turn
+#![allow(clippy::too_many_lines)]
 //! path, and queued content must be attributed to its own turn.
 
 use crate::model::{AppState, Role};
@@ -22,10 +23,7 @@ fn queue_count(state: &AppState) -> usize {
 fn turn_started_drains_request_queue() {
     let mut state = AppState::default();
 
-    state.update(Event::UserMessageSubmitted {
-        id: "req.0".to_string(),
-        content: "first".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: "req.0".to_string(), content: "first".to_string() });
     // Between submit and turn start the message is pending: count is 1.
     assert_eq!(queue_count(&state), 1, "submitted message is pending");
 
@@ -53,21 +51,14 @@ fn queue_count_does_not_grow_across_turns() {
         let id = format!("req.{turn}");
         let content = format!("message number {turn}");
 
-        state.update(Event::UserMessageSubmitted {
-            id: id.clone(),
-            content: content.clone(),
-        });
+        state.update(Event::UserMessageSubmitted { id: id.clone(), content: content.clone() });
         assert_eq!(
             queue_count(&state),
             1,
             "turn {turn}: exactly one pending message after submit"
         );
 
-        state.update(Event::TurnStarted {
-            id: id.clone(),
-            request_id: id.clone(),
-            content,
-        });
+        state.update(Event::TurnStarted { id: id.clone(), request_id: id.clone(), content });
         assert_eq!(
             queue_count(&state),
             0,
@@ -75,10 +66,7 @@ fn queue_count_does_not_grow_across_turns() {
         );
 
         // Turn completes: actor emits TurnComplete then TurnCompleted.
-        state.update(Event::TurnComplete {
-            id: id.clone(),
-            duration_secs: 0.1,
-        });
+        state.update(Event::TurnComplete { id: id.clone(), duration_secs: 0.1 });
         state.update(Event::TurnCompleted);
         assert_eq!(
             queue_count(&state),
@@ -96,10 +84,7 @@ fn steering_delivery_drains_and_attributes_to_own_turn() {
     let mut state = AppState::default();
 
     // Turn 1 runs.
-    state.update(Event::UserMessageSubmitted {
-        id: "req.0".to_string(),
-        content: "first".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: "req.0".to_string(), content: "first".to_string() });
     state.update(Event::TurnStarted {
         id: "req.0".to_string(),
         request_id: "req.0".to_string(),
@@ -107,22 +92,13 @@ fn steering_delivery_drains_and_attributes_to_own_turn() {
     });
 
     // User types steering while turn 1 is active.
-    state.update(Event::QueueSteeringAdded {
-        id: "q.steering.0".to_string(),
-        content: "steer me".to_string(),
-    });
+    state.update(Event::QueueSteeringAdded { id: "q.steering.0".to_string(), content: "steer me".to_string() });
     assert_eq!(queue_count(&state), 1, "steering is visibly queued");
 
     // Turn 1 completes; the steering message is delivered for the next turn.
-    state.update(Event::TurnComplete {
-        id: "req.0".to_string(),
-        duration_secs: 0.1,
-    });
+    state.update(Event::TurnComplete { id: "req.0".to_string(), duration_secs: 0.1 });
     state.update(Event::TurnCompleted);
-    state.update(Event::SteeringDelivered {
-        content: "steer me".to_string(),
-        id: "req.1".to_string(),
-    });
+    state.update(Event::SteeringDelivered { content: "steer me".to_string(), id: "req.1".to_string() });
     assert_eq!(
         state.agent_state().message_queue.len(),
         0,
@@ -183,23 +159,14 @@ fn next_id_skips_ids_already_in_session() {
     // Production fact sequence: turn 1 submits req.0, steering is delivered
     // under the TurnActor's own counter as req.1. AppState's session_msg_id
     // counter is never advanced by these facts.
-    state.update(Event::UserMessageSubmitted {
-        id: "req.0".to_string(),
-        content: "first".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: "req.0".to_string(), content: "first".to_string() });
     state.update(Event::TurnStarted {
         id: "req.0".to_string(),
         request_id: "req.0".to_string(),
         content: "first".to_string(),
     });
-    state.update(Event::QueueSteeringAdded {
-        id: "q.steering.0".to_string(),
-        content: "steer".to_string(),
-    });
-    state.update(Event::SteeringDelivered {
-        content: "steer".to_string(),
-        id: "req.1".to_string(),
-    });
+    state.update(Event::QueueSteeringAdded { id: "q.steering.0".to_string(), content: "steer".to_string() });
+    state.update(Event::SteeringDelivered { content: "steer".to_string(), id: "req.1".to_string() });
 
     let id = state.next_id();
     assert_eq!(
@@ -216,41 +183,26 @@ fn next_id_skips_ids_already_in_session() {
 #[test]
 fn fresh_submit_after_delivery_is_not_dropped() {
     let mut state = AppState::default();
-    state.update(Event::UserMessageSubmitted {
-        id: "req.0".to_string(),
-        content: "first".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: "req.0".to_string(), content: "first".to_string() });
     state.update(Event::TurnStarted {
         id: "req.0".to_string(),
         request_id: "req.0".to_string(),
         content: "first".to_string(),
     });
-    state.update(Event::QueueSteeringAdded {
-        id: "q.steering.0".to_string(),
-        content: "steer".to_string(),
-    });
-    state.update(Event::SteeringDelivered {
-        content: "steer".to_string(),
-        id: "req.1".to_string(),
-    });
+    state.update(Event::QueueSteeringAdded { id: "q.steering.0".to_string(), content: "steer".to_string() });
+    state.update(Event::SteeringDelivered { content: "steer".to_string(), id: "req.1".to_string() });
     state.update(Event::TurnStarted {
         id: "req.1".to_string(),
         request_id: "req.1".to_string(),
         content: "steer".to_string(),
     });
-    state.update(Event::TurnComplete {
-        id: "req.1".to_string(),
-        duration_secs: 0.1,
-    });
+    state.update(Event::TurnComplete { id: "req.1".to_string(), duration_secs: 0.1 });
     state.update(Event::TurnCompleted);
 
     // Production: submit_user_message generates the id via next_id, then the
     // TurnActor echoes it back in UserMessageSubmitted.
     let id = state.next_id();
-    state.update(Event::UserMessageSubmitted {
-        id: id.clone(),
-        content: "second".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: id.clone(), content: "second".to_string() });
 
     let msg = state
         .session()

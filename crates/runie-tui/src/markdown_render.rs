@@ -71,10 +71,7 @@ fn override_base_color(spans: Vec<MdSpan>, base_color: Color) -> Vec<MdSpan> {
             if let Some(b) = bg {
                 new_style = new_style.bg(b);
             }
-            MdSpan {
-                content: s.content,
-                style: new_style,
-            }
+            MdSpan { content: s.content, style: new_style }
         })
         .collect()
 }
@@ -89,10 +86,7 @@ fn push_span(spans: &mut Vec<MdSpan>, text: &str, style: ratatui::style::Style) 
             return;
         }
     }
-    spans.push(MdSpan {
-        content: text.to_owned(),
-        style,
-    });
+    spans.push(MdSpan { content: text.to_owned(), style });
 }
 
 /// Convert tui_markdown's Text output to our MdSpan format.
@@ -104,10 +98,7 @@ fn text_to_md_spans(text: &Text<'_>) -> Vec<MdSpan> {
             push_span(&mut result, "\n", ratatui::style::Style::default());
         }
         for span in line.spans.iter() {
-            result.push(MdSpan {
-                content: span.content.to_string(),
-                style: span.style,
-            });
+            result.push(MdSpan { content: span.content.to_string(), style: span.style });
         }
     }
     // Merge adjacent spans with the same style
@@ -156,13 +147,12 @@ mod tests {
         // Uses tui_markdown internally (via apply_color_to_inlines).
         let spans = apply_color_to_inlines("plain **bold** *italic* `code`", Color::White);
 
-        let has_bold = spans.iter().any(|s| {
-            s.content == "bold" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
-        });
-        let has_italic = spans.iter().any(|s| {
-            s.content == "italic"
-                && s.style.add_modifier(ratatui::style::Modifier::ITALIC) == s.style
-        });
+        let has_bold = spans
+            .iter()
+            .any(|s| s.content == "bold" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style);
+        let has_italic = spans
+            .iter()
+            .any(|s| s.content == "italic" && s.style.add_modifier(ratatui::style::Modifier::ITALIC) == s.style);
         let has_code = spans
             .iter()
             .any(|s| s.content == "code" && s.style.bg.is_some());
@@ -192,9 +182,9 @@ mod tests {
         // Test that parse_inline_markdown produces styled spans via tui_markdown.
         let result = parse_inline_markdown("This is **bold** and *italic*.");
         assert!(!result.is_empty());
-        let has_bold = result.iter().any(|s| {
-            s.content == "bold" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
-        });
+        let has_bold = result
+            .iter()
+            .any(|s| s.content == "bold" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style);
         assert!(has_bold, "bold span should have BOLD modifier");
     }
 
@@ -217,13 +207,12 @@ mod tests {
         // Verify apply_color_to_inlines uses tui_markdown by checking that it
         // correctly parses bold/italic from raw markdown text.
         let spans = apply_color_to_inlines("**strong** and *emphasis*", Color::Green);
-        let has_strong = spans.iter().any(|s| {
-            s.content == "strong" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style
-        });
-        let has_emphasis = spans.iter().any(|s| {
-            s.content == "emphasis"
-                && s.style.add_modifier(ratatui::style::Modifier::ITALIC) == s.style
-        });
+        let has_strong = spans
+            .iter()
+            .any(|s| s.content == "strong" && s.style.add_modifier(ratatui::style::Modifier::BOLD) == s.style);
+        let has_emphasis = spans
+            .iter()
+            .any(|s| s.content == "emphasis" && s.style.add_modifier(ratatui::style::Modifier::ITALIC) == s.style);
         assert!(has_strong, "missing strong span via tui_markdown");
         assert!(has_emphasis, "missing emphasis span via tui_markdown");
     }

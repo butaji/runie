@@ -55,8 +55,7 @@ pub fn set_current_theme_with_caps(name: &str, caps: crate::terminal::caps::Term
 
     *CURRENT_CAPS.write() = Some(caps);
     *CURRENT_THEME_NAME.lock() = name.to_owned();
-    let theme = loader::load_theme_with_caps(name, caps)
-        .unwrap_or_else(|_| loader::minimal_fallback_theme());
+    let theme = loader::load_theme_with_caps(name, caps).unwrap_or_else(|_| loader::minimal_fallback_theme());
     *CURRENT_THEME.write() = Some(Arc::new(theme));
 }
 

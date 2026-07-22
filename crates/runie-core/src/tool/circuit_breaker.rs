@@ -45,12 +45,7 @@ pub struct CircuitBreaker {
 
 impl Default for CircuitBreaker {
     fn default() -> Self {
-        Self {
-            failures: 0,
-            successes: 0,
-            state: CircuitState::Closed,
-            last_failure_time: None,
-        }
+        Self { failures: 0, successes: 0, state: CircuitState::Closed, last_failure_time: None }
     }
 }
 
@@ -117,7 +112,9 @@ impl CircuitBreaker {
     /// because the recovery timeout has elapsed.
     pub fn should_attempt_recovery(&self) -> bool {
         self.state == CircuitState::Open
-            && self.last_failure_time.is_some_and(|t| t.elapsed() >= RECOVERY_TIMEOUT)
+            && self
+                .last_failure_time
+                .is_some_and(|t| t.elapsed() >= RECOVERY_TIMEOUT)
     }
 
     /// Attempt to move from OPEN to HALF_OPEN.
@@ -149,9 +146,7 @@ pub struct CircuitBreakerRegistry {
 
 impl Default for CircuitBreakerRegistry {
     fn default() -> Self {
-        Self {
-            circuits: RwLock::new(HashMap::new()),
-        }
+        Self { circuits: RwLock::new(HashMap::new()) }
     }
 }
 
@@ -332,7 +327,10 @@ mod tests {
         let cb1 = registry.get_or_create("bash");
         let cb2 = registry.get_or_create("bash");
 
-        assert!(Arc::ptr_eq(&cb1, &cb2), "same tool must return same instance");
+        assert!(
+            Arc::ptr_eq(&cb1, &cb2),
+            "same tool must return same instance"
+        );
     }
 
     #[test]

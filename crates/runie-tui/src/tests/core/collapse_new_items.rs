@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use runie_core::model::{AppState, ChatMessage, Role};
 use runie_core::view::elements::Element;
 use runie_core::view::LazyCache;
@@ -15,9 +16,7 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 fn global_collapse_persists_after_agent_response() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
@@ -25,9 +24,7 @@ fn global_collapse_persists_after_agent_response() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
     state.update(Event::Response {
@@ -103,30 +100,12 @@ fn global_collapse_persists_after_second_thought() {
 fn global_collapse_persists_after_second_tool() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".to_string() });
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(Event::ToolStart {
-        id: "req.1".to_string(),
-        name: "cat".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.3,
-        output: "b".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.3, output: "b".to_string() });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
@@ -151,9 +130,7 @@ fn global_collapse_persists_after_second_tool() {
 fn new_thought_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
@@ -161,14 +138,10 @@ fn new_thought_respects_global_collapse_flag() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    state.update(Event::Thinking {
-        id: "req.1".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.1".to_string() });
     state.update(Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
@@ -176,9 +149,7 @@ fn new_thought_respects_global_collapse_flag() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.1".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.1".to_string() });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
@@ -198,34 +169,16 @@ fn new_tool_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".to_string() });
 
     // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     // New tool arrives while globally collapsed
-    state.update(Event::ToolStart {
-        id: "req.1".to_string(),
-        name: "cat".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.3,
-        output: "b".to_string(),
-    });
+    state.update(Event::ToolStart { id: "req.1".to_string(), name: "cat".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.3, output: "b".to_string() });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
@@ -246,9 +199,7 @@ fn expand_then_collapse_then_expand_same_state() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.2s\nline1\nline2".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.2s\nline1\nline2".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -313,9 +264,7 @@ fn reset_clears_global_collapse() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Thought".into(),
-        }],
+        parts: vec![Part::Text { content: "Thought".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -334,18 +283,14 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "Hello".into(),
-        }],
+        parts: vec![Part::Text { content: "Hello".into() }],
         timestamp: 0.0,
         id: "u1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "Hi".into(),
-        }],
+        parts: vec![Part::Text { content: "Hi".into() }],
         timestamp: 0.0,
         id: "a1".into(),
         ..Default::default()
@@ -369,9 +314,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "Done".into(),
-        }],
+        parts: vec![Part::Text { content: "Done".into() }],
         timestamp: 2.0,
         id: "a1".into(),
         ..Default::default()
@@ -384,18 +327,14 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
 fn add_thought_and_tool(state: &mut AppState) {
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s\nReasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nReasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "◆ Ran ls 0.5s\nfile1".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\nfile1".into() }],
         timestamp: 1.0,
         id: "x1".into(),
         ..Default::default()

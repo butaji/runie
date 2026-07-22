@@ -4,8 +4,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    add_provider_and_select_model, assert_panel_id, assert_step, clean_config, current_panel_id,
-    fetch_models, select_provider, start_login_flow, submit_key,
+    add_provider_and_select_model, assert_panel_id, assert_step, clean_config, current_panel_id, fetch_models,
+    select_provider, start_login_flow, submit_key,
 };
 
 fn disconnected_state() -> AppState {

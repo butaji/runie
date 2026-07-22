@@ -45,9 +45,7 @@ impl AppState {
         let (path, is_dir) = {
             let completion = self.completion();
             match (&completion.path_suggestions, completion.path_selected) {
-                (Some(items), Some(sel)) if sel < items.len() => {
-                    (items[sel].path.clone(), items[sel].is_dir)
-                }
+                (Some(items), Some(sel)) if sel < items.len() => (items[sel].path.clone(), items[sel].is_dir),
                 _ => return,
             }
         };

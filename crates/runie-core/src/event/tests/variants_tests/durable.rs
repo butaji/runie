@@ -20,11 +20,7 @@ fn durable_conversion_message_sent() {
 #[test]
 fn durable_conversion_tool_call() {
     let input = serde_json::json!({"command": "ls" });
-    let evt = Event::ToolStart {
-        id: "t1".into(),
-        name: "bash".into(),
-        input: input.clone(),
-    };
+    let evt = Event::ToolStart { id: "t1".into(), name: "bash".into(), input: input.clone() };
     let durable = evt.to_durable();
     assert!(
         matches!(durable, Some(DurableCoreEvent::ToolCalled { id, name, input: persisted }) if id == "t1" && name == "bash" && persisted == input)
@@ -33,12 +29,7 @@ fn durable_conversion_tool_call() {
 
 #[test]
 fn durable_conversion_tool_result_preserves_id() {
-    let evt = Event::ToolEnd {
-        id: "t1".into(),
-        duration_secs: 1.0,
-        output: "done".into(),
-        input: None,
-    };
+    let evt = Event::ToolEnd { id: "t1".into(), duration_secs: 1.0, output: "done".into(), input: None };
     let durable = evt.to_durable();
     // duration_secs is NOT stored in the durable form.
     assert!(

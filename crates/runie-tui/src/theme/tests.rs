@@ -4,15 +4,13 @@ use std::sync::Arc;
 
 use crate::terminal::caps::{MouseCapability, TermCaps};
 use crate::theme::glyph::{
-    BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT, BOX_HORIZONTAL, BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL,
-    GLYPH_BULLET, GLYPH_CHECK, GLYPH_CHECKED, GLYPH_DOWNLOAD, GLYPH_FILTER, GLYPH_SELECTED,
-    GLYPH_SPINNER, GLYPH_TOOL, GLYPH_UNCHECKED, GLYPH_UNSELECTED, GLYPH_X, INDICATOR_COLLAPSED,
-    INDICATOR_ERROR, PANEL_CHAT, PANEL_INPUT, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
+    BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT, BOX_HORIZONTAL, BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL, GLYPH_BULLET,
+    GLYPH_CHECK, GLYPH_CHECKED, GLYPH_DOWNLOAD, GLYPH_FILTER, GLYPH_SELECTED, GLYPH_SPINNER, GLYPH_TOOL,
+    GLYPH_UNCHECKED, GLYPH_UNSELECTED, GLYPH_X, INDICATOR_COLLAPSED, INDICATOR_ERROR, PANEL_CHAT, PANEL_INPUT,
+    SCROLLBAR_THUMB, SCROLLBAR_TRACK,
 };
 use crate::theme::loader::{default_theme, minimal_fallback_theme};
-use crate::theme::{
-    current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES,
-};
+use crate::theme::{current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES};
 
 #[test]
 fn theme_cache_returns_same_instance() {
@@ -25,19 +23,11 @@ fn theme_cache_returns_same_instance() {
 }
 
 fn truecolor_caps() -> TermCaps {
-    TermCaps {
-        truecolor: true,
-        mouse: MouseCapability::Sgr,
-        ..Default::default()
-    }
+    TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() }
 }
 
 fn ansi256_caps() -> TermCaps {
-    TermCaps {
-        truecolor: false,
-        mouse: MouseCapability::Legacy,
-        ..Default::default()
-    }
+    TermCaps { truecolor: false, mouse: MouseCapability::Legacy, ..Default::default() }
 }
 
 #[test]
@@ -48,13 +38,7 @@ fn truecolor_theme_keeps_rgb_colors() {
 
     // All key semantic tokens should resolve without falling back to FALLBACK.
     // Tokens that actually exist in the DEFAULT_THEME_TOML.
-    for token in [
-        "accent.primary",
-        "success",
-        "error",
-        "text.primary",
-        "accent.secondary",
-    ] {
+    for token in ["accent.primary", "success", "error", "text.primary", "accent.secondary"] {
         let c = theme.color(token);
         assert!(
             c != opaline::OpalineColor::FALLBACK,
@@ -70,13 +54,7 @@ fn non_truecolor_quantizes_to_indexed_approximations() {
     let theme = current_theme();
 
     // Quantized theme should still resolve all key tokens without falling back.
-    for token in [
-        "accent.primary",
-        "success",
-        "error",
-        "text.primary",
-        "accent.secondary",
-    ] {
+    for token in ["accent.primary", "success", "error", "text.primary", "accent.secondary"] {
         let c = theme.color(token);
         assert!(
             c != opaline::OpalineColor::FALLBACK,

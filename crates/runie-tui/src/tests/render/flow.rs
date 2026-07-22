@@ -46,21 +46,9 @@ fn test_formatted_labels_short_names() {
         &[
             Event::Thinking { id: "req.0".into() },
             Event::ThoughtDone { id: "req.0".into() },
-            Event::ToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-                input: serde_json::Value::Null,
-            },
-            Event::ToolEnd {
-                id: "".to_string(),
-                input: None,
-                duration_secs: 0.3,
-                output: String::new(),
-            },
-            Event::TurnComplete {
-                id: "req.0".into(),
-                duration_secs: 5.1,
-            },
+            Event::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+            Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.3, output: String::new() },
+            Event::TurnComplete { id: "req.0".into(), duration_secs: 5.1 },
         ],
     );
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -86,17 +74,8 @@ fn full_tool_flow_events() -> Vec<Event> {
     vec![
         Event::Thinking { id: "req.0".into() },
         Event::ThoughtDone { id: "req.0".into() },
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "list_files".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: String::new(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: String::new() },
         Event::Thinking { id: "req.0".into() },
         Event::ThoughtDone { id: "req.0".into() },
         Event::Response {
@@ -106,10 +85,7 @@ fn full_tool_flow_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 5.1,
-        },
+        Event::TurnComplete { id: "req.0".into(), duration_secs: 5.1 },
     ]
 }
 

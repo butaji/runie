@@ -42,9 +42,9 @@ impl LazyCache {
                 // Running workers have no body, so they are never collapsible;
                 // finished workers collapse to the one-line summary unless the
                 // post was individually expanded.
-                Element::SubagentRow {
-                    status, expanded, ..
-                } => *expanded || matches!(status, crate::model::PatternWorkerStatus::Running),
+                Element::SubagentRow { status, expanded, .. } => {
+                    *expanded || matches!(status, crate::model::PatternWorkerStatus::Running)
+                }
                 _ => true,
             };
 
@@ -54,8 +54,7 @@ impl LazyCache {
                 .get(i + 1)
                 .map(|(e, _)| Self::post_kind(e) == PostKind::SubagentRow)
                 .unwrap_or(false);
-            let trailing_spacer =
-                !(kind == PostKind::SubagentRow && next_is_subagent);
+            let trailing_spacer = !(kind == PostKind::SubagentRow && next_is_subagent);
 
             feed.push_post(
                 crate::view::posts::PostBuilder::new(kind)
@@ -165,8 +164,7 @@ impl LazyCache {
                     row.description.clone(),
                     row.model.clone(),
                     row.status,
-                    matches!(row.status, crate::model::PatternWorkerStatus::Running)
-                        .then_some(row.started),
+                    matches!(row.status, crate::model::PatternWorkerStatus::Running).then_some(row.started),
                     row.duration_ms,
                     row.activity.clone(),
                     row.output.clone(),
@@ -288,37 +286,27 @@ impl LazyCache {
             .collect()
     }
 
-    fn part_to_element(
-        part: &Part,
-        state: &AppState,
-        ts: f64,
-        provider: &str,
-    ) -> Option<(Element, bool)> {
+    fn part_to_element(part: &Part, state: &AppState, ts: f64, provider: &str) -> Option<(Element, bool)> {
         match part {
             Part::Text { content } => Some((Self::text_elem(content, ts, provider), false)),
             Part::Reasoning { content } => Some((Self::reasoning_elem(content, state, ts), true)),
-            Part::ToolCall { name, args, .. } => {
-                Some((Self::tool_call_elem(name, args, ts), false))
-            }
-            Part::ReasoningEncrypted { data, signature } => {
-                Some((Self::redacted_thinking_elem(data, signature.as_deref(), ts), true))
-            }
-            Part::AnthropicThinking { content, signature } => {
-                Some((Self::anthropic_thinking_elem(content, signature.as_deref(), ts), true))
-            }
+            Part::ToolCall { name, args, .. } => Some((Self::tool_call_elem(name, args, ts), false)),
+            Part::ReasoningEncrypted { data, signature } => Some((
+                Self::redacted_thinking_elem(data, signature.as_deref(), ts),
+                true,
+            )),
+            Part::AnthropicThinking { content, signature } => Some((
+                Self::anthropic_thinking_elem(content, signature.as_deref(), ts),
+                true,
+            )),
             Part::ToolResult { output, .. } => Some((Self::tool_result_elem(output, ts), false)),
-            Part::ToolConfirmation { id, name, args, description, .. } => {
-                Some((Self::tool_confirmation_elem(id, name, args, description.as_deref(), ts), false))
-            }
-            Part::Image { data, mime_type } => {
-                Some((Self::image_elem(data, mime_type, ts), false))
-            }
-            Part::Data { data, format } => {
-                Some((Self::data_part_elem(data, format.as_deref(), ts), false))
-            }
-            Part::WebSearch { query } => {
-                Some((Self::web_search_elem(query, ts), false))
-            }
+            Part::ToolConfirmation { id, name, args, description, .. } => Some((
+                Self::tool_confirmation_elem(id, name, args, description.as_deref(), ts),
+                false,
+            )),
+            Part::Image { data, mime_type } => Some((Self::image_elem(data, mime_type, ts), false)),
+            Part::Data { data, format } => Some((Self::data_part_elem(data, format.as_deref(), ts), false)),
+            Part::WebSearch { query } => Some((Self::web_search_elem(query, ts), false)),
             Part::Diff { content, diff_type } => {
                 let dt = match diff_type.as_str() {
                     "side_by_side" => crate::view::elements::DiffType::SideBySide,
@@ -327,9 +315,7 @@ impl LazyCache {
                 };
                 Some((Self::diff_output_elem(content, dt, ts), false))
             }
-            Part::Ansi { raw, plain } => {
-                Some((Self::ansi_styled_elem(raw, plain, ts), false))
-            }
+            Part::Ansi { raw, plain } => Some((Self::ansi_styled_elem(raw, plain, ts), false)),
         }
     }
 
@@ -373,7 +359,9 @@ impl LazyCache {
         ts: f64,
     ) -> Element {
         let args_compact = crate::tool::compact_json_args(args);
-        let desc = description.map(|s| s.to_owned()).unwrap_or_else(|| format!("Run {} with args", name));
+        let desc = description
+            .map(|s| s.to_owned())
+            .unwrap_or_else(|| format!("Run {} with args", name));
         Element::tool_confirmation(request_id, name, args_compact, desc).at(ts)
     }
 
@@ -403,11 +391,7 @@ impl LazyCache {
         if Self::is_duration_only_thought(&content) {
             // Duration-only thoughts have no body: show the summary line
             // without a (dead) expand affordance, even when collapsed.
-            return Element::thought_summary_static(
-                content.clone(),
-                Self::parse_thought_dur(&content),
-            )
-            .at(ts);
+            return Element::thought_summary_static(content.clone(), Self::parse_thought_dur(&content)).at(ts);
         }
         // Full body here; `build()` collapses per-post as needed.
         Element::thought(content).at(ts)
@@ -424,8 +408,7 @@ impl LazyCache {
         match elem {
             Element::ThoughtMarker { content, timestamp } => {
                 let first_line = content.lines().next().unwrap_or(&content).to_owned();
-                Element::thought_summary(first_line, Self::parse_thought_dur(&content))
-                    .at(timestamp)
+                Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(timestamp)
             }
             Element::AnthropicThinking { content, signature, redacted, timestamp } => {
                 let first_line = content.lines().next().unwrap_or(&content).to_owned();
@@ -434,12 +417,7 @@ impl LazyCache {
                 } else {
                     first_line
                 };
-                Element::AnthropicThinking {
-                    content: summary,
-                    signature,
-                    redacted,
-                    timestamp,
-                }
+                Element::AnthropicThinking { content: summary, signature, redacted, timestamp }
             }
             _ => elem,
         }
@@ -448,10 +426,7 @@ impl LazyCache {
     /// Mark a subagent row expanded when its post was individually expanded
     /// with Enter in feed navigation. Running rows never expand (no output).
     fn maybe_expand_subagent(mut elem: Element, state: &AppState, post_index: usize) -> Element {
-        if let Element::SubagentRow {
-            expanded, status, ..
-        } = &mut elem
-        {
+        if let Element::SubagentRow { expanded, status, .. } = &mut elem {
             *expanded = !matches!(status, crate::model::PatternWorkerStatus::Running)
                 && state.view().expanded_posts.contains(&post_index);
         }

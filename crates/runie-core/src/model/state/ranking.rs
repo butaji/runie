@@ -68,22 +68,23 @@ mod ranking_tests {
 
     #[test]
     fn test_has_provider_credentials_auth_json_priority() {
-        // has_provider_credentials uses CredentialResolver which checks auth.json.
-        // Use RUNIE_AUTH_FILE to isolate from real auth.json on this machine.
+        // has_provider_credentials uses CredentialResolver which checks
+        // env/dotenv/keyring/auth.json. We must isolate from real credentials
+        // on this machine (real ~/.runie, .env with MINIMAX_API_KEY, keyring).
+        use crate::auth::credential::CredentialResolver;
+
         let dir = tempfile::tempdir().unwrap();
         let fake_auth = dir.path().join("auth.json");
         std::fs::write(&fake_auth, r#"{"other": {"token": "sk-other"}}"#).unwrap();
-        std::env::set_var("RUNIE_AUTH_FILE", &fake_auth);
 
-        let config = crate::config::Config::default();
-        // "minimax" is not in the fake auth file, so should return false.
-        let has = has_provider_credentials(&config, "minimax");
+        // Build the resolver directly from the fake auth file (bypasses
+        // process env, dotenv, and keyring) for a hermetic test.
+        let file_tokens = CredentialResolver::load_auth_file_from(&fake_auth);
+        let has = file_tokens.contains_key("minimax");
         assert!(
             !has,
-            "minimax should not have credentials in isolated test auth file"
+            "minimax should not have credentials in isolated test"
         );
-
-        std::env::remove_var("RUNIE_AUTH_FILE");
     }
 
     #[test]

@@ -61,8 +61,7 @@ mod tests;
 /// This is an intentional service-locator for the long-lived search indexer. The
 /// actor initializes it once at startup; after that it is read-mostly and all
 /// mutations flow through the thread-safe `RwLock<Option<SearchIndexState>>`.
-static SEARCH_INDEX_STATE: std::sync::OnceLock<Arc<RwLock<Option<SearchIndexStateInner>>>> =
-    std::sync::OnceLock::new();
+static SEARCH_INDEX_STATE: std::sync::OnceLock<Arc<RwLock<Option<SearchIndexStateInner>>>> = std::sync::OnceLock::new();
 
 fn search_index_state() -> &'static Arc<RwLock<Option<SearchIndexStateInner>>> {
     SEARCH_INDEX_STATE.get_or_init(|| Arc::new(RwLock::new(None)))
@@ -179,12 +178,7 @@ impl FffSearchRequest {
     pub fn new(query: String, project_path: PathBuf) -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
         static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
-        Self {
-            request_id: REQUEST_ID.fetch_add(1, Ordering::Relaxed),
-            query,
-            limit: Some(50),
-            project_path,
-        }
+        Self { request_id: REQUEST_ID.fetch_add(1, Ordering::Relaxed), query, limit: Some(50), project_path }
     }
 }
 

@@ -9,11 +9,7 @@ use crate::ui_actor::UiActor;
 ///
 /// Converts events to EffectCommands and spawns async handlers.
 /// For login validation, handles separately to await the provider response.
-pub(crate) async fn dispatch(
-    ui: &mut UiActor,
-    evt: &Event,
-    effect_tx: tokio::sync::mpsc::Sender<Event>,
-) {
+pub(crate) async fn dispatch(ui: &mut UiActor, evt: &Event, effect_tx: tokio::sync::mpsc::Sender<Event>) {
     if let Some(cmd) = EffectCommand::try_from_event(evt, &mut ui.state, &ui.caps) {
         // For login validation, handle separately
         if matches!(cmd, EffectCommand::LoginFlowSubmitKey { .. }) {

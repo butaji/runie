@@ -3,21 +3,14 @@
 use crate::model::{AppState, ScopedModel};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
-    ScopedModel {
-        provider: provider.into(),
-        name: name.into(),
-        enabled,
-    }
+    ScopedModel { provider: provider.into(), name: name.into(), enabled }
 }
 
 #[test]
 fn cycle_next_increments() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-        sm("anthropic", "claude-3-sonnet", true),
-    ];
+    state.config.scoped_models =
+        vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true), sm("anthropic", "claude-3-sonnet", true)];
     state.config.scoped_index = 0;
 
     state.update(crate::Event::CycleModelNext);
@@ -27,11 +20,8 @@ fn cycle_next_increments() {
 #[test]
 fn cycle_prev_decrements() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-        sm("anthropic", "claude-3-sonnet", true),
-    ];
+    state.config.scoped_models =
+        vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true), sm("anthropic", "claude-3-sonnet", true)];
     state.config.scoped_index = 1;
 
     state.update(crate::Event::CycleModelPrev);
@@ -96,11 +86,8 @@ fn cycle_emits_switch_model() {
 #[test]
 fn cycle_skips_disabled_models() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", false),
-        sm("anthropic", "claude-3", true),
-    ];
+    state.config.scoped_models =
+        vec![sm("mock", "echo", true), sm("openai", "gpt-4o", false), sm("anthropic", "claude-3", true)];
     state.config.scoped_index = 0;
 
     state.update(crate::Event::CycleModelNext);

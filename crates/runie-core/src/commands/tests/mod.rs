@@ -40,10 +40,7 @@ pub(super) fn exec_handler(state: &mut AppState, name: &str, args: &str) -> Comm
 
 pub(super) fn palette_stack(state: &AppState) -> Option<&crate::dialog::PanelStack> {
     match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::CommandPalette,
-            panels: stack,
-        }) => Some(stack),
+        Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: stack }) => Some(stack),
         _ => None,
     }
 }

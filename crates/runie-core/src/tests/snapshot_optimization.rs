@@ -15,9 +15,7 @@ fn test_snapshot_contains_expected_fields() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -43,9 +41,7 @@ fn test_cached_feed_reuse_on_gen_match() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -67,9 +63,7 @@ fn test_cached_feed_reuse_on_gen_match() {
         role: Role::User,
         timestamp: 2.0,
         id: "u2".into(),
-        parts: vec![Part::Text {
-            content: "world".into(),
-        }],
+        parts: vec![Part::Text { content: "world".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -132,9 +126,7 @@ fn test_render_receives_valid_snapshot() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg{}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -161,9 +153,7 @@ fn test_elements_built_correctly() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -188,9 +178,7 @@ fn test_elements_correct_after_state_mutation() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "first".into(),
-        }],
+        parts: vec![Part::Text { content: "first".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -273,9 +261,7 @@ fn test_refresh_after_message_change_updates_flags() {
         role: Role::User,
         timestamp: 1.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
 

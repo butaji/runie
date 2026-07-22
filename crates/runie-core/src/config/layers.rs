@@ -136,11 +136,7 @@ pub fn load_layers_from_paths(global: PathBuf, local: PathBuf) -> Config {
     // deserialization is case-sensitive while figment preserves the uppercase key
     // from the env var name (PROVIDER vs provider). We use Serialized::default
     // to explicitly set the correctly-cased keys in the Default profile.
-    for (env_var, field) in [
-        ("RUNIE_PROVIDER", "provider"),
-        ("RUNIE_MODEL", "model"),
-        ("RUNIE_THEME", "theme"),
-    ] {
+    for (env_var, field) in [("RUNIE_PROVIDER", "provider"), ("RUNIE_MODEL", "model"), ("RUNIE_THEME", "theme")] {
         if let Ok(value) = std::env::var(env_var) {
             figment = figment.merge(Serialized::default(field, value));
         }
@@ -231,9 +227,7 @@ mod tests {
     #[test]
     fn figment_env_overrides_take_precedence() {
         // Verify RUNIE_PROVIDER/MODEL/THEME override config file values via Figment
-        let (dir, path) = tmp_file(
-            "provider = \"file-provider\"\nmodel = \"file-model\"\ntheme = \"file-theme\"\n",
-        );
+        let (dir, path) = tmp_file("provider = \"file-provider\"\nmodel = \"file-model\"\ntheme = \"file-theme\"\n");
 
         // Set env vars that should override file values
         std::env::set_var("RUNIE_PROVIDER", "env-provider");

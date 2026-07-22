@@ -116,18 +116,12 @@ pub struct ProviderEventWithHiddenParams {
 impl ProviderEventWithHiddenParams {
     /// Wrap a `ProviderEvent` with no hidden parameters.
     pub fn new(event: ProviderEvent) -> Self {
-        Self {
-            event,
-            hidden: Arc::new(HiddenParams::default()),
-        }
+        Self { event, hidden: Arc::new(HiddenParams::default()) }
     }
 
     /// Wrap a `ProviderEvent` with the given hidden parameters.
     pub fn with_params(event: ProviderEvent, params: HiddenParams) -> Self {
-        Self {
-            event,
-            hidden: Arc::new(params),
-        }
+        Self { event, hidden: Arc::new(params) }
     }
 
     /// Wrap a `ProviderEvent` with the given hidden parameters (arc form).
@@ -150,10 +144,7 @@ impl ProviderEventWithHiddenParams {
     where
         F: FnOnce(ProviderEvent) -> ProviderEvent,
     {
-        Self {
-            event: f(self.event),
-            hidden: self.hidden,
-        }
+        Self { event: f(self.event), hidden: self.hidden }
     }
 
     /// Returns a reference to the wrapped `ProviderEvent`.
@@ -216,22 +207,25 @@ mod tests {
     #[test]
     fn hidden_params_builder_full() {
         let params = HiddenParams::builder()
-            .response_cost(ResponseCost {
-                input_cost: 0.001,
-                output_cost: 0.003,
-            })
+            .response_cost(ResponseCost { input_cost: 0.001, output_cost: 0.003 })
             .api_base("https://api.anthropic.com")
             .original_model("claude-3-5-sonnet-20241022")
             .insert_header("X-Custom", "value")
             .build();
 
         assert!(params.response_cost.is_some());
-        assert_eq!(params.api_base.as_deref(), Some("https://api.anthropic.com"));
+        assert_eq!(
+            params.api_base.as_deref(),
+            Some("https://api.anthropic.com")
+        );
         assert_eq!(
             params.original_model.as_deref(),
             Some("claude-3-5-sonnet-20241022")
         );
-        assert_eq!(params.additional_headers.get("X-Custom"), Some(&"value".into()));
+        assert_eq!(
+            params.additional_headers.get("X-Custom"),
+            Some(&"value".into())
+        );
     }
 
     #[test]
@@ -254,15 +248,9 @@ mod tests {
 
     #[test]
     fn provider_event_wrapper_with_params() {
-        let event = ProviderEvent::Usage {
-            input_tokens: 100,
-            output_tokens: 50,
-        };
+        let event = ProviderEvent::Usage { input_tokens: 100, output_tokens: 50 };
         let params = HiddenParams::builder()
-            .response_cost(ResponseCost {
-                input_cost: 0.001,
-                output_cost: 0.002,
-            })
+            .response_cost(ResponseCost { input_cost: 0.001, output_cost: 0.002 })
             .api_base("https://api.anthropic.com/v1")
             .original_model("claude-3-sonnet-4-20250514")
             .build();
@@ -271,10 +259,7 @@ mod tests {
 
         assert!(wrapped.has_hidden_params());
         let hp = wrapped.hidden_params().unwrap();
-        assert_eq!(
-            hp.response_cost.as_ref().map(|c| c.input_cost),
-            Some(0.001)
-        );
+        assert_eq!(hp.response_cost.as_ref().map(|c| c.input_cost), Some(0.001));
         assert_eq!(hp.api_base.as_deref(), Some("https://api.anthropic.com/v1"));
         assert_eq!(
             hp.original_model.as_deref(),
@@ -295,15 +280,17 @@ mod tests {
 
         assert!(wrapped.has_hidden_params());
         let hp = wrapped.hidden_params().unwrap();
-        assert_eq!(hp.additional_headers.get("X-Trace-Id"), Some(&"abc123".into()));
+        assert_eq!(
+            hp.additional_headers.get("X-Trace-Id"),
+            Some(&"abc123".into())
+        );
     }
 
     #[test]
     fn provider_event_wrapper_map_preserves_hidden_params() {
         let event = ProviderEvent::TextStart { id: "a".into() };
         let params = HiddenParams::builder().api_base("http://foo").build_arc();
-        let wrapped =
-            ProviderEventWithHiddenParams::with_params_arc(event, params);
+        let wrapped = ProviderEventWithHiddenParams::with_params_arc(event, params);
 
         let mapped = wrapped.map(|e| match e {
             ProviderEvent::TextStart { id } => ProviderEvent::TextDelta(format!("id={}", id)),
@@ -319,17 +306,13 @@ mod tests {
     #[test]
     fn provider_event_wrapper_into_inner() {
         let event = ProviderEvent::ThinkingDelta("reasoning".into());
-        let wrapped =
-            ProviderEventWithHiddenParams::with_params(event.clone(), HiddenParams::default());
+        let wrapped = ProviderEventWithHiddenParams::with_params(event.clone(), HiddenParams::default());
         assert_eq!(wrapped.into_inner(), event);
     }
 
     #[test]
     fn provider_event_wrapper_deref() {
-        let event = ProviderEvent::ToolCallStart {
-            id: "call_1".into(),
-            name: "bash".into(),
-        };
+        let event = ProviderEvent::ToolCallStart { id: "call_1".into(), name: "bash".into() };
         let wrapped = ProviderEventWithHiddenParams::new(event.clone());
         // Deref to ProviderEvent
         assert_eq!(&*wrapped, &event);
@@ -337,9 +320,7 @@ mod tests {
 
     #[test]
     fn provider_event_wrapper_from() {
-        let event = ProviderEvent::Finish {
-            reason: crate::provider_event::StopReason::Stop,
-        };
+        let event = ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop };
         let wrapped: ProviderEventWithHiddenParams = event.clone().into();
         assert_eq!(wrapped.event, event);
         assert!(!wrapped.has_hidden_params());
@@ -348,8 +329,7 @@ mod tests {
     #[test]
     fn as_hidden_params_trait_has_hidden_params() {
         let event = ProviderEvent::TextEnd { id: "1".into() };
-        let wrapped =
-            ProviderEventWithHiddenParams::with_params(event, HiddenParams::default());
+        let wrapped = ProviderEventWithHiddenParams::with_params(event, HiddenParams::default());
         assert!(
             !wrapped.has_hidden_params(),
             "empty HiddenParams should return false for has_hidden_params"

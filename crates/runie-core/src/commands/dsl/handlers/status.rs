@@ -53,11 +53,22 @@ fn build_status_panel(state: &AppState) -> Panel {
         )
     };
 
+    let lead_model = state
+        .lead_model()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "(not set)".to_string());
+    let worker_model = state
+        .worker_model()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "(not set)".to_string());
+
     Panel::new("status", " Status ")
-        .header(format!("Provider:  {provider}"))
+        .header(format!("Provider:   {provider}"))
         .header(format!("Model:     {model}"))
         .header(format!("Thinking:  {thinking}"))
         .header(format!("Access:    {access}"))
         .header(format!("Queued:    {queued}"))
         .header(format!("Context:   {ctx}"))
+        .header(format!("Lead:      {lead_model}"))
+        .header(format!("Worker:    {worker_model}"))
 }

@@ -12,8 +12,8 @@ use runie_core::dialog::{Panel, PanelItem};
 use tui_input::Input;
 
 use crate::theme::{
-    color_accent, style_hint, style_placeholder, style_thinking, BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT,
-    BOX_HORIZONTAL, BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL, GLYPH_CHECKED, GLYPH_UNCHECKED,
+    color_accent, style_hint, style_placeholder, style_thinking, BOX_BOTTOM_LEFT, BOX_BOTTOM_RIGHT, BOX_HORIZONTAL,
+    BOX_TOP_LEFT, BOX_TOP_RIGHT, BOX_VERTICAL, GLYPH_CHECKED, GLYPH_UNCHECKED,
 };
 use crate::ui::parse_hint_spans;
 
@@ -111,9 +111,7 @@ fn push_body_item<'a>(
     nav_idx: &mut usize,
 ) {
     match item {
-        PanelItem::Header(text) => {
-            body.push(Line::from(format!("  {}", text)).style(style_thinking()))
-        }
+        PanelItem::Header(text) => body.push(Line::from(format!("  {}", text)).style(style_thinking())),
         PanelItem::Separator => body.push(Line::from("")),
         PanelItem::FormField { .. } => {
             push_form_field_body(
@@ -130,9 +128,7 @@ fn push_body_item<'a>(
         PanelItem::Toggle { .. } => {
             push_toggle_body(body, selected, nav_idx, item);
         }
-        PanelItem::Action { .. } | PanelItem::Command { .. } | PanelItem::FormSubmit => {
-            *nav_idx += 1
-        }
+        PanelItem::Action { .. } | PanelItem::Command { .. } | PanelItem::FormSubmit => *nav_idx += 1,
         PanelItem::Select { .. } => {}
     }
 }
@@ -148,14 +144,7 @@ fn push_form_field_body<'a>(
     nav_idx: &mut usize,
     item: &'a PanelItem,
 ) {
-    if let PanelItem::FormField {
-        label,
-        value,
-        placeholder,
-        cursor_pos,
-        ..
-    } = item
-    {
+    if let PanelItem::FormField { label, value, placeholder, cursor_pos, .. } = item {
         let field_pos = field_indices.iter().position(|&i| i == raw_i).unwrap_or(0);
         push_field(
             body,
@@ -173,12 +162,7 @@ fn push_form_field_body<'a>(
     }
 }
 
-fn push_toggle_body<'a>(
-    body: &mut Vec<Line<'a>>,
-    selected: usize,
-    nav_idx: &mut usize,
-    item: &'a PanelItem,
-) {
+fn push_toggle_body<'a>(body: &mut Vec<Line<'a>>, selected: usize, nav_idx: &mut usize, item: &'a PanelItem) {
     if let PanelItem::Toggle { label, value, .. } = item {
         push_toggle_item(body, label, *value, *nav_idx == selected);
         *nav_idx += 1;
@@ -241,6 +225,7 @@ fn make_button_spans(label: &str, is_active: bool) -> Vec<Span<'_>> {
 /// next line BETWEEN buttons so a label is never split across lines (the
 /// permission dialog's four options overflowed a single row at common
 /// terminal widths and wrapped mid-label).
+#[allow(clippy::too_many_lines)]
 fn build_button_lines(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
     let mut buttons: Vec<Vec<Span>> = Vec::new();
     let mut nav_idx = 0usize;
@@ -352,12 +337,7 @@ fn push_field<'a>(
     lines.push(Line::from(bot).style(style_border()));
 }
 
-fn field_label_line<'a>(
-    field_num: usize,
-    total: usize,
-    label: &'a str,
-    is_active: bool,
-) -> Line<'a> {
+fn field_label_line<'a>(field_num: usize, total: usize, label: &'a str, is_active: bool) -> Line<'a> {
     let text = if total > 1 {
         format!("  {}. {} ({}/{})", field_num, label, field_num, total)
     } else {
@@ -402,22 +382,15 @@ fn build_input_box<'a>(
     let inner_w = box_w.saturating_sub(4);
     let spans = render_tui_input(&input, placeholder, is_active, inner_w);
 
-    let mut all_spans = vec![Span::styled(
-        "  ".to_string() + &BOX_VERTICAL.to_string(),
-        style_border(),
-    )];
+    let mut all_spans = vec![Span::styled("  ".to_string() + &BOX_VERTICAL.to_string(), style_border())];
     all_spans.extend(spans);
     all_spans.push(Span::styled(BOX_VERTICAL.to_string(), style_border()));
     (top, all_spans, bot)
 }
 
 /// Render tui-input text content with cursor and placeholder.
-fn render_tui_input<'a>(
-    input: &Input,
-    placeholder: &str,
-    is_active: bool,
-    avail: usize,
-) -> Vec<Span<'a>> {
+#[allow(clippy::too_many_lines)]
+fn render_tui_input<'a>(input: &Input, placeholder: &str, is_active: bool, avail: usize) -> Vec<Span<'a>> {
     let value = input.value();
     let cursor = input.cursor();
 
@@ -427,10 +400,7 @@ fn render_tui_input<'a>(
         } else {
             placeholder.to_owned()
         };
-        return vec![Span::styled(
-            pad_to_width(&text, avail),
-            style_placeholder(),
-        )];
+        return vec![Span::styled(pad_to_width(&text, avail), style_placeholder())];
     }
 
     let cursor_pos = cursor.min(value.len());

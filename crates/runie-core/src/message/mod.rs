@@ -8,9 +8,7 @@
 //! Use [`validate_messages`] to check a sequence for dangling tool calls and orphan
 //! results. Use [`sanitize_messages`] to validate AND trim whitespace.
 
-pub use crate::proto::message::{
-    ChatMessage, MessageMetadata, MessageOrigin, Part, Role, ToolCall,
-};
+pub use crate::proto::message::{ChatMessage, MessageMetadata, MessageOrigin, Part, Role, ToolCall};
 
 pub use crate::proto::message::{validate_message, validate_messages, SanitizeError};
 
@@ -23,11 +21,7 @@ pub use crate::sanitize::sanitize_messages;
 
 impl From<crate::tool::ParsedToolCall> for ToolCall {
     fn from(call: crate::tool::ParsedToolCall) -> Self {
-        ToolCall {
-            id: call.id.unwrap_or_default(),
-            name: call.name,
-            args: call.args,
-        }
+        ToolCall { id: call.id.unwrap_or_default(), name: call.name, args: call.args }
     }
 }
 
@@ -47,15 +41,9 @@ mod tests {
     fn chat_message_content_getter_concatenates_text_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "a".into(),
-                },
-                Part::Reasoning {
-                    content: "r".into(),
-                },
-                Part::Text {
-                    content: "b".into(),
-                },
+                Part::Text { content: "a".into() },
+                Part::Reasoning { content: "r".into() },
+                Part::Text { content: "b".into() },
             ],
             ..Default::default()
         };
@@ -66,14 +54,8 @@ mod tests {
     fn chat_message_tool_calls_getter_extracts_from_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "hi".into(),
-                },
-                Part::ToolCall {
-                    id: "c1".into(),
-                    name: "bash".into(),
-                    args: serde_json::json!({}),
-                },
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) },
             ],
             ..Default::default()
         };
@@ -92,11 +74,7 @@ mod tests {
     #[test]
     fn chat_message_no_text_parts_returns_empty_content() {
         let msg = ChatMessage {
-            parts: vec![Part::ToolCall {
-                id: "c1".into(),
-                name: "bash".into(),
-                args: serde_json::json!({}),
-            }],
+            parts: vec![Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) }],
             ..Default::default()
         };
         assert_eq!(msg.content(), "");
@@ -112,9 +90,8 @@ mod tests {
             metadata: MessageMetadata::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::Text {
-                content: "hello".into(),
-            }],
+            parts: vec![Part::Text { content: "hello".into() }],
+            hidden_params: None,
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
@@ -130,14 +107,8 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text {
-                    content: "hello".into(),
-                },
-                Part::ToolCall {
-                    id: "call_1".into(),
-                    name: "list_dir".into(),
-                    args: serde_json::json!({"path": "."}),
-                },
+                Part::Text { content: "hello".into() },
+                Part::ToolCall { id: "call_1".into(), name: "list_dir".into(), args: serde_json::json!({"path": "."}) },
             ],
             ..Default::default()
         };
@@ -154,14 +125,8 @@ mod tests {
         let msg = ChatMessage {
             role: Role::Assistant,
             parts: vec![
-                Part::Text {
-                    content: "hi".into(),
-                },
-                Part::ToolCall {
-                    id: "c1".into(),
-                    name: "bash".into(),
-                    args: serde_json::json!({"cmd": "ls"}),
-                },
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({"cmd": "ls"}) },
             ],
             ..Default::default()
         };
@@ -213,14 +178,8 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text {
-                    content: "hello".into(),
-                },
-                Part::ToolCall {
-                    id: "call_1".into(),
-                    name: "list_dir".into(),
-                    args: serde_json::json!({"path": "."}),
-                },
+                Part::Text { content: "hello".into() },
+                Part::ToolCall { id: "call_1".into(), name: "list_dir".into(), args: serde_json::json!({"path": "."}) },
             ],
             ..Default::default()
         };

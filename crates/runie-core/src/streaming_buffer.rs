@@ -35,13 +35,7 @@ pub struct StreamingBuffer {
 impl StreamingBuffer {
     /// Create a new empty streaming buffer.
     pub fn new() -> Self {
-        Self {
-            stable: Vec::new(),
-            tail: String::new(),
-            in_open_fence: false,
-            in_open_table: false,
-            last_flush: None,
-        }
+        Self { stable: Vec::new(), tail: String::new(), in_open_fence: false, in_open_table: false, last_flush: None }
     }
 
     /// Append a text delta to the buffer and resolve stable lines.
@@ -164,11 +158,7 @@ fn heal_line(line: &str) -> String {
 
 /// Classify lines using pulldown_cmark to detect fence/table boundaries.
 /// Returns (stable_line_count, fence_still_open, table_still_open).
-fn classify_lines_with_pulldown(
-    lines: &[&str],
-    mut in_fence: bool,
-    mut in_table: bool,
-) -> (usize, bool, bool) {
+fn classify_lines_with_pulldown(lines: &[&str], mut in_fence: bool, mut in_table: bool) -> (usize, bool, bool) {
     let mut stable_count = 0usize;
     let mut in_open_construct = in_fence || in_table;
 

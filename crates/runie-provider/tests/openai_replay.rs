@@ -16,12 +16,9 @@ fn simple_text_delta_emits_text_deltas() {
         })
         .collect();
     assert_eq!(texts, &["Hello", " world", "!"]);
-    assert!(events.iter().any(|e| matches!(
-        e,
-        ProviderEvent::Finish {
-            reason: StopReason::Stop
-        }
-    )));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::Stop })));
 }
 
 #[test]
@@ -68,12 +65,9 @@ fn parallel_tool_calls_emits_two_tools() {
         })
         .collect();
     assert_eq!(tool_end_ids.len(), 2);
-    assert!(events.iter().any(|e| matches!(
-        e,
-        ProviderEvent::Finish {
-            reason: StopReason::ToolCalls
-        }
-    )));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::ToolCalls })));
 }
 
 #[test]
@@ -81,8 +75,6 @@ fn rate_limit_error_emits_error_event() {
     let events = replay_sse(&fixture("rate_limit_error.sse"));
     assert!(events.iter().any(|e| matches!(
         e,
-        ProviderEvent::Error(runie_core::provider_event::ModelError::RateLimit {
-            retry_after_secs: _
-        })
+        ProviderEvent::Error(runie_core::provider_event::ModelError::RateLimit { retry_after_secs: _ })
     )));
 }

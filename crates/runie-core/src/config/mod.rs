@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Canonical config types for `~/.runie/config.toml`.
 //!
 //! This module defines the shared TOML schema that both `runie-core`
@@ -112,11 +114,7 @@ pub struct UiSection {
 
 impl Default for UiSection {
     fn default() -> Self {
-        Self {
-            vim_mode: true,
-            history_max_entries: 1000,
-            page_size: 5,
-        }
+        Self { vim_mode: true, history_max_entries: 1000, page_size: 5 }
     }
 }
 
@@ -189,6 +187,14 @@ pub struct ModeSection {
     pub max_retries: u32,
     /// Consecutive failures before fail-fast.
     pub circuit_breaker: u32,
+    /// Lead (coordinator) model for swarm/delegation patterns.
+    /// Format: "provider/model". Uses current model if None.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lead_model: Option<String>,
+    /// Worker (task-executor) model for swarm/delegation patterns.
+    /// Format: "provider/model". Uses current model if None.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub worker_model: Option<String>,
 }
 
 impl Default for ModeSection {
@@ -200,6 +206,8 @@ impl Default for ModeSection {
             timeout_ms: 120_000,
             max_retries: 2,
             circuit_breaker: 3,
+            lead_model: None,
+            worker_model: None,
         }
     }
 }
@@ -219,10 +227,7 @@ pub struct TruncationSection {
 
 impl Default for TruncationSection {
     fn default() -> Self {
-        Self {
-            max_lines: 2000,
-            max_bytes: 50 * 1024,
-        }
+        Self { max_lines: 2000, max_bytes: 50 * 1024 }
     }
 }
 
@@ -267,10 +272,7 @@ fn http_connect_timeout_default() -> u64 {
 
 impl Default for HttpSection {
     fn default() -> Self {
-        Self {
-            request_timeout_secs: 120,
-            connect_timeout_secs: 10,
-        }
+        Self { request_timeout_secs: 120, connect_timeout_secs: 10 }
     }
 }
 
@@ -308,12 +310,7 @@ fn retry_multiplier_default() -> f64 {
 
 impl Default for RetrySection {
     fn default() -> Self {
-        Self {
-            max_attempts: 5,
-            initial_delay_ms: 100,
-            max_delay_ms: 30_000,
-            multiplier: 2.0,
-        }
+        Self { max_attempts: 5, initial_delay_ms: 100, max_delay_ms: 30_000, multiplier: 2.0 }
     }
 }
 
@@ -347,11 +344,7 @@ fn fff_max_file_size_default() -> usize {
 
 impl Default for FffSection {
     fn default() -> Self {
-        Self {
-            scan_timeout_secs: 30,
-            default_limit: 50,
-            max_file_size_bytes: 2 * 1024 * 1024,
-        }
+        Self { scan_timeout_secs: 30, default_limit: 50, max_file_size_bytes: 2 * 1024 * 1024 }
     }
 }
 
@@ -368,6 +361,25 @@ pub struct SandboxSection {
     /// When enabled, bash commands are wrapped in platform-specific sandbox.
     /// Defaults to false.
     pub enabled: bool,
+}
+
+// ============================================================================
+// Skills Section
+// ============================================================================
+
+/// Skills configuration for skill discovery and management.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[derive(JsonSchema)]
+pub struct SkillsConfig {
+    /// Additional skill locations to load. Each entry is a `SKILL.md` file or
+    /// a directory walked recursively. Supports `~` expansion.
+    pub paths: Vec<String>,
+    /// Path prefixes to exclude from skill discovery.
+    pub ignore: Vec<String>,
+    /// List of disabled skill names. Disabled skills are excluded from the
+    /// system prompt and skill tool invocation but remain discoverable.
+    pub disabled: Vec<String>,
 }
 
 // ============================================================================
@@ -401,15 +413,48 @@ pub struct PermissionsSection {
 impl PermissionsSection {
     /// Get the default permissions section.
     pub fn default_section() -> Self {
-        Self {
-            mode: crate::permissions::PermissionMode::Default,
-            rules: Vec::new(),
-        }
+        Self { mode: crate::permissions::PermissionMode::Default, rules: Vec::new() }
     }
 
     /// Convert rules into a PermissionSet.
     pub fn to_permission_set(&self) -> crate::permissions::PermissionSet {
         crate::permissions::PermissionSet::new(self.rules.clone())
+    }
+}
+
+// ============================================================================
+// Goal Section
+// ============================================================================
+
+/// Goal mode configuration section.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+#[derive(JsonSchema)]
+pub struct GoalSection {
+    /// Enable goal mode.
+    pub enabled: bool,
+    /// Max verification rounds before pausing.
+    pub max_rounds: usize,
+    /// Auto-verify after each task completion.
+    pub auto_verify: bool,
+    /// Token budget for goal execution (None = unlimited).
+    pub token_budget: Option<u64>,
+    /// Show goal pane in UI.
+    pub show_pane: bool,
+    /// Max checkpoints to track.
+    pub max_checkpoints: usize,
+}
+
+impl Default for GoalSection {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_rounds: 10,
+            auto_verify: true,
+            token_budget: None,
+            show_pane: true,
+            max_checkpoints: 20,
+        }
     }
 }
 
@@ -477,6 +522,12 @@ pub struct Config {
     /// OS-level sandbox settings for bash tool execution.
     #[serde(default)]
     pub sandbox: SandboxSection,
+    /// Skills configuration.
+    #[serde(default)]
+    pub skills: SkillsConfig,
+    /// Goal mode configuration.
+    #[serde(default)]
+    pub goal: GoalSection,
 }
 
 #[cfg(test)]

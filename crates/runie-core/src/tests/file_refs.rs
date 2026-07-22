@@ -1,7 +1,6 @@
 #![allow(clippy::all)]
 use crate::file_refs::{
-    extract_lines, find_files, is_image_file, parse_file_ref, read_file_ref,
-    read_file_ref_with_range,
+    extract_lines, find_files, is_image_file, parse_file_ref, read_file_ref, read_file_ref_with_range,
 };
 
 #[test]

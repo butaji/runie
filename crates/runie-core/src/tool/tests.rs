@@ -1,21 +1,22 @@
-#![allow(clippy::all)]
-use std::time::Duration;
+#![allow(clippy::disallowed_names)]
 
 use crate::tool::resolve_path;
-use crate::tool::{
-    format_bytes, format_duration, format_tool_label, tool_error, tool_status_line, ToolContext,
-    ToolStatus,
-};
+#[cfg(not(feature = "mcp"))]
+use crate::tool::ToolStatus;
+use crate::tool::{format_bytes, format_duration, format_tool_label, tool_error, tool_status_line};
 #[cfg(feature = "mcp")]
-use crate::tool::{ToolDef, ToolOutput};
+use crate::tool::{ToolContext, ToolDef, ToolOutput, ToolStatus};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "mcp")]
+use std::time::Duration;
 
 // Test tool definition (requires mcp feature for ToolDef trait)
 #[cfg(feature = "mcp")]
 struct TestTool;
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[allow(dead_code)]
 struct TestToolInput {
     input: String,
 }
@@ -53,6 +54,7 @@ impl ToolDef for TestTool {
 struct ReadOnlyTestTool;
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[allow(dead_code)]
 struct ReadOnlyToolInput {}
 
 #[cfg(feature = "mcp")]
@@ -237,9 +239,7 @@ fn tool_error_warning_flag_reports_success() {
 #[cfg(feature = "mcp")]
 #[tokio::test]
 async fn tool_def_executes_and_returns_output() {
-    let input = TestToolInput {
-        input: "hello".to_string(),
-    };
+    let input = TestToolInput { input: "hello".to_string() };
     let ctx = ToolContext::default();
     let output = TestTool::execute(input, &ctx).await;
     assert_eq!(output.tool_name, "test_tool");
@@ -249,6 +249,7 @@ async fn tool_def_executes_and_returns_output() {
 
 #[cfg(feature = "mcp")]
 #[test]
+#[allow(clippy::assertions_on_constants)]
 fn tool_def_constants_are_accessible() {
     assert_eq!(TestTool::NAME, "test_tool");
     assert_eq!(ReadOnlyTestTool::NAME, "read_only_test");

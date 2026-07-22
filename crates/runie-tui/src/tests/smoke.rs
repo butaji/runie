@@ -96,12 +96,8 @@ fn agent_response_renders() {
     let mut state = AppState::default();
     connect_model(&mut state);
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
@@ -122,12 +118,7 @@ fn tool_done_renders() {
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: String::new(),
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: String::new() });
     let content = draw_state(&mut state);
     assert!(content.contains("◆"), "Should render tool done diamond");
     assert!(content.contains("list_files"), "Should show tool name");

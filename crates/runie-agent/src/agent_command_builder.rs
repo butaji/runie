@@ -41,10 +41,7 @@ pub struct AgentCommandBuilder {
 impl AgentCommandBuilder {
     /// Create a new builder with the required `content` field.
     pub fn new(content: impl Into<String>) -> Self {
-        Self {
-            content: content.into(),
-            ..Default::default()
-        }
+        Self { content: content.into(), ..Default::default() }
     }
 
     /// Set the request id. Defaults to `"req.0"`.

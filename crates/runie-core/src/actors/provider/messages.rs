@@ -34,20 +34,12 @@ pub enum ProviderMsg {
 impl Clone for ProviderMsg {
     fn clone(&self) -> Self {
         match self {
-            ProviderMsg::Build {
-                provider,
-                model,
-                reply: _,
-            } => ProviderMsg::Build {
+            ProviderMsg::Build { provider, model, reply: _ } => ProviderMsg::Build {
                 provider: provider.clone(),
                 model: model.clone(),
                 reply: None, // Fire-and-forget; original reply not usable after move.
             },
-            ProviderMsg::ValidateKey {
-                provider,
-                api_key,
-                reply: _,
-            } => ProviderMsg::ValidateKey {
+            ProviderMsg::ValidateKey { provider, api_key, reply: _ } => ProviderMsg::ValidateKey {
                 provider: provider.clone(),
                 api_key: api_key.clone(),
                 reply: None, // Fire-and-forget.
@@ -63,18 +55,12 @@ impl Clone for ProviderMsg {
 impl fmt::Debug for ProviderMsg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProviderMsg::Build {
-                provider, model, ..
-            } => f
+            ProviderMsg::Build { provider, model, .. } => f
                 .debug_struct("ProviderMsg::Build")
                 .field("provider", provider)
                 .field("model", model)
                 .finish(),
-            ProviderMsg::ValidateKey {
-                provider,
-                api_key: _,
-                ..
-            } => f
+            ProviderMsg::ValidateKey { provider, .. } => f
                 .debug_struct("ProviderMsg::ValidateKey")
                 .field("provider", provider)
                 .field("api_key", &"***")

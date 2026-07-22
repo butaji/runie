@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Central event dispatcher.
 
 use crate::actors::turn::TurnMsg;
@@ -8,6 +10,23 @@ use crate::Event;
 pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
     if try_handle_early_events(state, &event) {
         return;
+    }
+    // Handle circuit breaker events before category routing.
+    match &event {
+        Event::CircuitBreakerTripped { failures: _, threshold } => {
+            state.circuit_breaker_tripped = true;
+            state.circuit_breaker_threshold = *threshold;
+            state.notify(
+                "Circuit breaker tripped — too many failures. Dispatch paused.".to_string(),
+                crate::event::TransientLevel::Warning,
+            );
+        }
+        Event::CircuitBreakerReset => {
+            state.circuit_breaker_tripped = false;
+            state.circuit_breaker_threshold = 0;
+            state.notify("Circuit breaker reset. Dispatch resumed.".to_string(), crate::event::TransientLevel::Success);
+        }
+        _ => {}
     }
     match event.category() {
         EventCategory::Input => super::input::input_event(state, event),
@@ -36,14 +55,7 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
 }
 
 fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
-    if let Event::MessageReplayed {
-        id,
-        role,
-        content,
-        timestamp,
-        provider,
-    } = event
-    {
+    if let Event::MessageReplayed { id, role, content, timestamp, provider } = event {
         state.replay_message(
             id.clone(),
             role.clone(),
@@ -63,6 +75,7 @@ fn try_handle_early_events(state: &mut AppState, event: &Event) -> bool {
         || handle_io_events(state, event)
 }
 
+#[allow(clippy::too_many_lines)]
 fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
     match event {
         Event::TurnAborted => {
@@ -85,10 +98,7 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_turn_errored();
             true
         }
-        Event::TokenStatsUpdated {
-            tokens_in,
-            tokens_out,
-        } => {
+        Event::TokenStatsUpdated { tokens_in, tokens_out } => {
             state.apply_token_stats(*tokens_in, *tokens_out);
             // Check if compaction should be triggered based on token ratio.
             if let Some(ctx) = state.current_model_context_window() {
@@ -107,11 +117,7 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             }
             true
         }
-        Event::CompactionTriggered {
-            tokens_in: _,
-            context_window,
-            ..
-        } => {
+        Event::CompactionTriggered { tokens_in: _, context_window, .. } => {
             // Compaction keeps roughly COMPACT_TOKEN_RATIO of the context window.
             use crate::session::store::COMPACT_TOKEN_RATIO;
             let keep = (*context_window as f64 * COMPACT_TOKEN_RATIO) as usize;
@@ -147,43 +153,21 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.start_tool(id.clone(), name.clone());
             true
         }
-        Event::ToolEnd {
-            id: _,
-            duration_secs,
-            output,
-            ..
-        } => {
+        Event::ToolEnd { id: _, duration_secs, output, .. } => {
             state.end_tool(*duration_secs, output.clone());
             true
         }
         // Swarm pattern worker lifecycle — transient feed rows (GROK.md §26).
-        Event::PatternWorkerSpawned {
-            id,
-            description,
-            model,
-        } => {
+        Event::PatternWorkerSpawned { id, description, model } => {
             state.apply_pattern_worker_spawned(id.clone(), description.clone(), model.clone());
             true
         }
-        Event::PatternWorkerFinished {
-            id,
-            status,
-            duration_ms,
-            output,
-        } => {
-            state.apply_pattern_worker_finished(
-                id.clone(),
-                status.clone(),
-                *duration_ms,
-                output.clone(),
-            );
+        Event::PatternWorkerFinished { id, status, duration_ms, output } => {
+            state.apply_pattern_worker_finished(id.clone(), status.clone(), *duration_ms, output.clone());
             true
         }
         Event::ResponseDelta { id, content } => {
-            state.handle_llm_event(Event::ResponseDelta {
-                id: id.clone(),
-                content: content.clone(),
-            });
+            state.handle_llm_event(Event::ResponseDelta { id: id.clone(), content: content.clone() });
             true
         }
         Event::TurnComplete { id, duration_secs } => {
@@ -247,41 +231,26 @@ fn to_turn_msg(event: &Event) -> Option<TurnMsg> {
     match event {
         Event::Thinking { id } => Some(TurnMsg::Thinking { id: id.clone() }),
         Event::ThoughtDone { id } => Some(TurnMsg::ThoughtDone { id: id.clone() }),
-        Event::ToolStart { id, name, .. } => Some(TurnMsg::ToolStart {
-            id: id.clone(),
-            name: name.clone(),
-        }),
-        Event::ToolEnd {
-            id,
-            duration_secs,
-            output,
-            ..
-        } => Some(TurnMsg::ToolEnd {
-            id: id.clone(),
-            duration_secs: *duration_secs,
-            output: output.clone(),
-        }),
-        Event::ResponseDelta { id, content } => Some(TurnMsg::ResponseDelta {
-            id: id.clone(),
-            content: content.clone(),
-        }),
-        Event::TurnComplete { id, duration_secs } => Some(TurnMsg::TurnComplete {
-            id: id.clone(),
-            duration_secs: *duration_secs,
-        }),
+        Event::ToolStart { id, name, .. } => Some(TurnMsg::ToolStart { id: id.clone(), name: name.clone() }),
+        Event::ToolEnd { id, duration_secs, output, .. } => {
+            Some(TurnMsg::ToolEnd { id: id.clone(), duration_secs: *duration_secs, output: output.clone() })
+        }
+        Event::ResponseDelta { id, content } => {
+            Some(TurnMsg::ResponseDelta { id: id.clone(), content: content.clone() })
+        }
+        Event::TurnComplete { id, duration_secs } => {
+            Some(TurnMsg::TurnComplete { id: id.clone(), duration_secs: *duration_secs })
+        }
         Event::Done { id } => Some(TurnMsg::Done { id: id.clone() }),
-        Event::Error { id, message } => Some(TurnMsg::Error {
-            id: id.clone(),
-            message: message.clone(),
-        }),
-        Event::TurnConstraintError { id, .. } => Some(TurnMsg::Error {
-            id: id.clone(),
-            message: "Tool constraint violation".to_string(),
-        }),
+        Event::Error { id, message } => Some(TurnMsg::Error { id: id.clone(), message: message.clone() }),
+        Event::TurnConstraintError { id, .. } => {
+            Some(TurnMsg::Error { id: id.clone(), message: "Tool constraint violation".to_string() })
+        }
         _ => None,
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
@@ -319,9 +288,7 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
             if let Some(handles) = state.actor_handles() {
                 let _ = handles
                     .input
-                    .send_message(crate::actors::InputMsg::HistoryLoaded {
-                        entries: entries.clone(),
-                    });
+                    .send_message(crate::actors::InputMsg::HistoryLoaded { entries: entries.clone() });
             }
             true
         }
@@ -329,14 +296,11 @@ fn handle_persistence_events(state: &mut AppState, event: &Event) -> bool {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn handle_session_store_events(state: &mut AppState, event: &Event) -> bool {
     use crate::event::TransientLevel;
     match event {
-        Event::SessionLoaded {
-            name,
-            events,
-            metadata,
-        } => {
+        Event::SessionLoaded { name, events, metadata } => {
             apply_session_loaded(state, name, events, metadata);
             true
         }
@@ -430,11 +394,7 @@ fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
             state.set_cwd_name(cwd_name.clone());
             true
         }
-        Event::FffSearchResult {
-            request_id,
-            entries,
-            ..
-        } => {
+        Event::FffSearchResult { request_id, entries, .. } => {
             if *request_id == state.fff_debounce() {
                 *state.fff_file_results_mut() = entries.clone();
                 // Rebuild the file picker panel so new results appear immediately.
@@ -605,9 +565,7 @@ fn plan_mode_event(state: &mut AppState, event: crate::Event) {
                 }
             }
 
-            state.add_system_msg(
-                "Plan mode enabled. Write tools are blocked until plan is approved.".to_string(),
-            );
+            state.add_system_msg("Plan mode enabled. Write tools are blocked until plan is approved.".to_string());
         }
         crate::Event::PlanModeDisabled => {
             state.view_mut().plan_mode = false;

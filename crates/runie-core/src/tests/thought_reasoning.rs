@@ -2,6 +2,7 @@
 //! ThinkingDelta / ThinkingEnd, as forwarded by runie-agent for MiniMax and
 //! other reasoning providers) must land in the Thought message so the feed
 //! renders an expandable summary — not a duration-only dead `[+]`.
+#![allow(clippy::too_many_lines)]
 
 use crate::model::AppState;
 use crate::view::{Element, LazyCache, PostKind};
@@ -14,21 +15,12 @@ fn drive_reasoning_turn(state: &mut AppState, reasoning: &str, answer: &str) {
     let id = "req.0".to_string();
     state.update(crate::Event::Thinking { id: id.clone() });
     state.update(crate::Event::ThinkingStart { id: id.clone() });
-    state.update(crate::Event::ThinkingDelta {
-        id: id.clone(),
-        content: reasoning.to_string(),
-    });
+    state.update(crate::Event::ThinkingDelta { id: id.clone(), content: reasoning.to_string() });
     state.update(crate::Event::ThinkingEnd { id: id.clone() });
     state.update(crate::Event::TextStart { id: id.clone() });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: answer.to_string(),
-    });
+    state.update(crate::Event::ResponseDelta { id: id.clone(), content: answer.to_string() });
     state.update(crate::Event::ThoughtDone { id: id.clone() });
-    state.update(crate::Event::TurnComplete {
-        id,
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id, duration_secs: 1.0 });
 }
 
 #[test]
@@ -55,28 +47,16 @@ fn collapsed_feed_shows_expandable_thought_summary() {
     state.view.all_collapsed = true;
     drive_reasoning_turn(&mut state, "Let me think about this.", "The answer");
 
-    let has_expandable = feed_elements(&state).iter().any(|e| {
-        matches!(
-            e,
-            Element::ThoughtSummary {
-                expandable: true,
-                ..
-            }
-        )
-    });
+    let has_expandable = feed_elements(&state)
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtSummary { expandable: true, .. }));
     assert!(
         has_expandable,
         "collapsed feed must show an EXPANDABLE thought summary when reasoning exists"
     );
-    let has_dead_summary = feed_elements(&state).iter().any(|e| {
-        matches!(
-            e,
-            Element::ThoughtSummary {
-                expandable: false,
-                ..
-            }
-        )
-    });
+    let has_dead_summary = feed_elements(&state)
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtSummary { expandable: false, .. }));
     assert!(
         !has_dead_summary,
         "a reasoning turn must not render a duration-only dead summary"
@@ -114,16 +94,11 @@ fn multi_iteration_turn_gives_each_reasoning_its_own_thought_message() {
     // Iteration 1: reasoning + "I'll verify" + tool call.
     state.update(crate::Event::Thinking { id: id.clone() });
     state.update(crate::Event::ThinkingStart { id: id.clone() });
-    state.update(crate::Event::ThinkingDelta {
-        id: id.clone(),
-        content: "Checking primality.".into(),
-    });
+    state.update(crate::Event::ThinkingDelta { id: id.clone(), content: "Checking primality.".into() });
     state.update(crate::Event::ThinkingEnd { id: id.clone() });
     state.update(crate::Event::TextStart { id: id.clone() });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: "I'll verify this with a quick check.".into(),
-    });
+    state
+        .update(crate::Event::ResponseDelta { id: id.clone(), content: "I'll verify this with a quick check.".into() });
     state.update(crate::Event::ThoughtDone { id: id.clone() });
 
     // Tool call + execution between iterations.
@@ -142,21 +117,13 @@ fn multi_iteration_turn_gives_each_reasoning_its_own_thought_message() {
     // loop reuses the command id across iterations).
     state.update(crate::Event::Thinking { id: id.clone() });
     state.update(crate::Event::ThinkingStart { id: id.clone() });
-    state.update(crate::Event::ThinkingDelta {
-        id: id.clone(),
-        content: "I'll verify this with a quick check.".into(),
-    });
+    state
+        .update(crate::Event::ThinkingDelta { id: id.clone(), content: "I'll verify this with a quick check.".into() });
     state.update(crate::Event::ThinkingEnd { id: id.clone() });
     state.update(crate::Event::TextStart { id: id.clone() });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: "Yes, 97 is prime.".into(),
-    });
+    state.update(crate::Event::ResponseDelta { id: id.clone(), content: "Yes, 97 is prime.".into() });
     state.update(crate::Event::ThoughtDone { id: id.clone() });
-    state.update(crate::Event::TurnComplete {
-        id: id.clone(),
-        duration_secs: 2.0,
-    });
+    state.update(crate::Event::TurnComplete { id: id.clone(), duration_secs: 2.0 });
     state.update(crate::Event::Done { id });
 
     let thoughts: Vec<_> = state
@@ -209,23 +176,17 @@ fn thought_is_collapsed_by_default_and_expands_individually() {
     drive_reasoning_turn(&mut state, "Let me think about this.", "The answer");
 
     // Default: one-line expandable summary, body hidden.
-    let has_summary = feed_elements(&state).iter().any(|e| {
-        matches!(
-            e,
-            Element::ThoughtSummary {
-                expandable: true,
-                ..
-            }
-        )
-    });
+    let has_summary = feed_elements(&state)
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtSummary { expandable: true, .. }));
     assert!(
         has_summary,
         "thought must default to an expandable one-line summary (grok parity), got: {:?}",
         feed_elements(&state)
     );
-    let body_visible = feed_elements(&state).iter().any(
-        |e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think")),
-    );
+    let body_visible = feed_elements(&state)
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think")));
     assert!(
         !body_visible,
         "thought body must be hidden by default, got: {:?}",
@@ -241,9 +202,9 @@ fn thought_is_collapsed_by_default_and_expands_individually() {
         .expect("thought post must exist");
     state.view_mut().expanded_posts.insert(thought_post);
 
-    let body_visible = feed_elements(&state).iter().any(
-        |e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think")),
-    );
+    let body_visible = feed_elements(&state)
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think")));
     assert!(
         body_visible,
         "individually expanded thought must show its body, got: {:?}",
@@ -262,23 +223,14 @@ fn thought_sorts_before_the_answer_like_grok() {
     let id = "req.0".to_string();
     state.update(crate::Event::Thinking { id: id.clone() });
     state.update(crate::Event::ThinkingStart { id: id.clone() });
-    state.update(crate::Event::ThinkingDelta {
-        id: id.clone(),
-        content: "reasoning".into(),
-    });
+    state.update(crate::Event::ThinkingDelta { id: id.clone(), content: "reasoning".into() });
     state.update(crate::Event::ThinkingEnd { id: id.clone() });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: "The answer".into(),
-    });
+    state.update(crate::Event::ResponseDelta { id: id.clone(), content: "The answer".into() });
     // Real streams take time: the last text append bumps the assistant
     // timestamp strictly before ThoughtDone fires.
     std::thread::sleep(std::time::Duration::from_millis(2));
     state.update(crate::Event::ThoughtDone { id: id.clone() });
-    state.update(crate::Event::TurnComplete {
-        id: id.clone(),
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id: id.clone(), duration_secs: 1.0 });
     state.update(crate::Event::Done { id });
 
     let elements = feed_elements(&state);
@@ -322,19 +274,13 @@ fn reasoning_marker_tool_turn_keeps_all_assistant_text_in_feed() {
     // MiniMax text-parsed tool path, not a native ToolCall event).
     state.update(crate::Event::Thinking { id: id.clone() });
     state.update(crate::Event::ThinkingStart { id: id.clone() });
-    state.update(crate::Event::ThinkingDelta {
-        id: id.clone(),
-        content: "Deciding to run a check.".into(),
-    });
+    state.update(crate::Event::ThinkingDelta { id: id.clone(), content: "Deciding to run a check.".into() });
     state.update(crate::Event::ThinkingEnd { id: id.clone() });
     state.update(crate::Event::ResponseDelta {
         id: id.clone(),
         content: "I'll verify this with a quick check.\n".into(),
     });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: "TOOL:list_dir:.".into(),
-    });
+    state.update(crate::Event::ResponseDelta { id: id.clone(), content: "TOOL:list_dir:.".into() });
     state.update(crate::Event::ThoughtDone { id: id.clone() });
 
     state.update(crate::Event::ToolStart {
@@ -352,20 +298,11 @@ fn reasoning_marker_tool_turn_keeps_all_assistant_text_in_feed() {
     // second `Thinking` for the same id is idempotent-skipped).
     state.update(crate::Event::Thinking { id: id.clone() });
     state.update(crate::Event::ThinkingStart { id: id.clone() });
-    state.update(crate::Event::ThinkingDelta {
-        id: id.clone(),
-        content: "The check confirmed it.".into(),
-    });
+    state.update(crate::Event::ThinkingDelta { id: id.clone(), content: "The check confirmed it.".into() });
     state.update(crate::Event::ThinkingEnd { id: id.clone() });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: "Yes, verified.\n".into(),
-    });
+    state.update(crate::Event::ResponseDelta { id: id.clone(), content: "Yes, verified.\n".into() });
     state.update(crate::Event::ThoughtDone { id: id.clone() });
-    state.update(crate::Event::TurnComplete {
-        id: id.clone(),
-        duration_secs: 2.0,
-    });
+    state.update(crate::Event::TurnComplete { id: id.clone(), duration_secs: 2.0 });
     state.update(crate::Event::Done { id });
 
     // Session state: the assistant message must not retain a tool marker and

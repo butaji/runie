@@ -1,4 +1,5 @@
 //! MCP server lifecycle management (from Grok Build)
+#![allow(clippy::too_many_lines)]
 
 use std::collections::HashSet;
 use std::time::{Duration, Instant};

@@ -3,6 +3,7 @@
 //! This module tests that UiActor::handle_event_inner guards against duplicate
 //! agent runs when TurnStarted arrives multiple times or when a queued
 //! TurnStarted arrives before the previous agent completes.
+#![allow(clippy::too_many_lines)]
 
 use std::sync::Arc;
 
@@ -29,10 +30,7 @@ impl TestAgentHandle {
 }
 
 impl LeaderAgentHandle for TestAgentHandle {
-    fn run(
-        &self,
-        cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         self.run_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         self.commands.lock().push(cmd);
@@ -53,8 +51,7 @@ fn make_ui_with_test_agent() -> (crate::ui_actor::UiActor, TestAgentHandle) {
     use crate::ui_actor_agent_handles::AgentHandleBox;
 
     let agent = TestAgentHandle::new();
-    let handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
+    let handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
 
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
@@ -82,11 +79,7 @@ async fn turn_started_spawns_agent_once() {
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
     // First TurnStarted: agent should run
-    let evt = Event::TurnStarted {
-        request_id: "req.0".into(),
-        content: "hello".into(),
-        id: "req.0".into(),
-    };
+    let evt = Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() };
     ui.handle_event(evt, effect_tx.clone()).await;
 
     // Agent handle recorded exactly one run
@@ -105,11 +98,7 @@ async fn second_turn_started_blocked_by_guard() {
 
     // First TurnStarted
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.0".into(),
-            content: "hello".into(),
-            id: "req.0".into(),
-        },
+        Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() },
         effect_tx.clone(),
     )
     .await;
@@ -122,11 +111,7 @@ async fn second_turn_started_blocked_by_guard() {
 
     // Second TurnStarted (e.g., from queue delivery while first is still running)
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.1".into(),
-            content: "follow-up".into(),
-            id: "req.1".into(),
-        },
+        Event::TurnStarted { request_id: "req.1".into(), content: "follow-up".into(), id: "req.1".into() },
         effect_tx.clone(),
     )
     .await;
@@ -157,11 +142,7 @@ async fn agent_command_uses_effective_thinking_level() {
     );
 
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.0".into(),
-            content: "hello".into(),
-            id: "req.0".into(),
-        },
+        Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() },
         effect_tx.clone(),
     )
     .await;
@@ -183,11 +164,7 @@ async fn done_does_not_clear_guard() {
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.0".into(),
-            content: "hello".into(),
-            id: "req.0".into(),
-        },
+        Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() },
         effect_tx.clone(),
     )
     .await;
@@ -211,11 +188,7 @@ async fn done_does_not_clear_guard() {
 
     // Next TurnStarted: agent runs again
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.1".into(),
-            content: "second".into(),
-            id: "req.1".into(),
-        },
+        Event::TurnStarted { request_id: "req.1".into(), content: "second".into(), id: "req.1".into() },
         effect_tx.clone(),
     )
     .await;
@@ -238,11 +211,7 @@ async fn done_then_queued_turn_started_blocked_by_guard() {
 
     // TurnStarted for "hello" — agent spawned
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.0".into(),
-            content: "hello".into(),
-            id: "req.0".into(),
-        },
+        Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() },
         effect_tx.clone(),
     )
     .await;
@@ -261,11 +230,7 @@ async fn done_then_queued_turn_started_blocked_by_guard() {
     // run_if_queued would emit TurnStarted(req.1, ...) here.
     // UiActor processes it — guard blocks the spawn.
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.1".into(),
-            content: "hello".into(),
-            id: "req.1".into(),
-        },
+        Event::TurnStarted { request_id: "req.1".into(), content: "hello".into(), id: "req.1".into() },
         effect_tx.clone(),
     )
     .await;
@@ -284,11 +249,7 @@ async fn done_then_queued_turn_started_blocked_by_guard() {
 
     // Next real user message: agent runs again
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.2".into(),
-            content: "world".into(),
-            id: "req.2".into(),
-        },
+        Event::TurnStarted { request_id: "req.2".into(), content: "world".into(), id: "req.2".into() },
         effect_tx.clone(),
     )
     .await;
@@ -311,8 +272,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
 
     // Spawn UiActor with the shared bus
     let agent = TestAgentHandle::new();
-    let handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
+    let handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
     let (shutdown_tx, _) = tokio::sync::oneshot::channel();
@@ -341,11 +301,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     use runie_core::actors::TurnMsg;
     let turn_handle = _turn_handle;
     turn_handle
-        .send(TurnMsg::SubmitUserMessage {
-            content: "hello".into(),
-            id: "req.0".into(),
-            source: MessageSource::Fresh,
-        })
+        .send(TurnMsg::SubmitUserMessage { content: "hello".into(), id: "req.0".into(), source: MessageSource::Fresh })
         .await;
     turn_handle.send(TurnMsg::RunIfQueued).await;
 
@@ -379,11 +335,7 @@ async fn turn_actor_turn_started_reaches_uiactor_via_shared_bus() {
     );
 
     // Now process the TurnStarted event through UiActor
-    let evt = Event::TurnStarted {
-        request_id: "req.0".into(),
-        content: "hello".into(),
-        id: "req.0".into(),
-    };
+    let evt = Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() };
     ui.handle_event(evt, effect_tx.clone()).await;
 
     // Agent was spawned exactly once
@@ -402,8 +354,7 @@ async fn done_from_shared_bus_does_not_clear_guard() {
 
     let bus = EventBus::<Event>::new(16);
     let agent = TestAgentHandle::new();
-    let handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
+    let handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(agent.clone()));
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
     let (shutdown_tx, _) = tokio::sync::oneshot::channel();
@@ -422,11 +373,7 @@ async fn done_from_shared_bus_does_not_clear_guard() {
 
     // Simulate TurnStarted arriving via shared bus
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.0".into(),
-            content: "hello".into(),
-            id: "req.0".into(),
-        },
+        Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() },
         effect_tx.clone(),
     )
     .await;
@@ -458,11 +405,7 @@ async fn turn_errored_clears_guard() {
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
     ui.handle_event(
-        Event::TurnStarted {
-            request_id: "req.0".into(),
-            content: "hello".into(),
-            id: "req.0".into(),
-        },
+        Event::TurnStarted { request_id: "req.0".into(), content: "hello".into(), id: "req.0".into() },
         effect_tx.clone(),
     )
     .await;
@@ -473,10 +416,7 @@ async fn turn_errored_clears_guard() {
     );
 
     ui.handle_event(
-        Event::TurnErrored {
-            id: "req.0".into(),
-            message: "boom".into(),
-        },
+        Event::TurnErrored { id: "req.0".into(), message: "boom".into() },
         effect_tx.clone(),
     )
     .await;

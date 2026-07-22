@@ -6,8 +6,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use runie_patterns::{
-    AgentTrace, Context, Pattern, PatternConfig, PatternOutput, PatternRegistry, SwarmPattern,
-    SwarmVariant, TerminationReason, TraceEvent, WorkerRunner, WorkerTask,
+    AgentTrace, Context, Pattern, PatternConfig, PatternOutput, PatternRegistry, SwarmPattern, SwarmVariant,
+    TerminationReason, TraceEvent, WorkerRunner, WorkerTask,
 };
 use tokio::sync::{mpsc, Semaphore};
 use tokio_util::sync::CancellationToken;
@@ -32,10 +32,7 @@ struct MockRunner {
 
 impl MockRunner {
     fn new(responses: Vec<Result<String, String>>) -> Self {
-        Self {
-            responses: Arc::new(Mutex::new(responses.into())),
-            ..Self::default()
-        }
+        Self { responses: Arc::new(Mutex::new(responses.into())), ..Self::default() }
     }
 
     fn with_sleep(mut self, d: Duration) -> Self {
@@ -89,6 +86,7 @@ fn test_config() -> PatternConfig {
         timeout_ms: 5_000,
         max_retries: 2,
         circuit_breaker: 3,
+        doom_loop_threshold: 5,
     }
 }
 
@@ -132,13 +130,7 @@ async fn swarm_parallel_happy_path() -> Result<()> {
 
     let ids = trace_ids(&out);
     assert_eq!(ids.len(), 5);
-    for expected in [
-        "leader-plan-1",
-        "worker-1-0",
-        "worker-1-1",
-        "worker-1-2",
-        "leader-synthesize",
-    ] {
+    for expected in ["leader-plan-1", "worker-1-0", "worker-1-1", "worker-1-2", "leader-synthesize"] {
         assert!(
             ids.contains(&expected.to_string()),
             "missing trace {expected} in {ids:?}"
@@ -238,11 +230,7 @@ async fn swarm_worker_retry_on_failure() -> Result<()> {
 async fn swarm_circuit_breaker_stops_dispatch() -> Result<()> {
     let mut responses = vec![ok(r#"["t1","t2","t3","t4","t5"]"#)];
     responses.extend((0..12).map(|_| err("boom")));
-    let config = PatternConfig {
-        workers: 2,
-        circuit_breaker: 3,
-        ..test_config()
-    };
+    let config = PatternConfig { workers: 2, circuit_breaker: 3, ..test_config() };
     let runner = Arc::new(MockRunner::new(responses));
     let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
 
@@ -266,14 +254,9 @@ async fn swarm_circuit_breaker_stops_dispatch() -> Result<()> {
 
 #[tokio::test]
 async fn swarm_worker_timeout_counts_as_failure() -> Result<()> {
-    let config = PatternConfig {
-        timeout_ms: 50,
-        max_retries: 1,
-        ..test_config()
-    };
+    let config = PatternConfig { timeout_ms: 50, max_retries: 1, ..test_config() };
     let runner = Arc::new(
-        MockRunner::new(vec![ok(r#"["slow task"]"#), ok("late"), ok("late")])
-            .with_sleep(Duration::from_millis(300)),
+        MockRunner::new(vec![ok(r#"["slow task"]"#), ok("late"), ok("late")]).with_sleep(Duration::from_millis(300)),
     );
     let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
     let start = Instant::now();
@@ -312,11 +295,7 @@ async fn swarm_worker_timeout_counts_as_failure() -> Result<()> {
 async fn swarm_leader_timeout_fails_fast() -> Result<()> {
     // The leader planning/synthesis calls must respect timeout_ms so that a
     // slow provider cannot hang the pattern indefinitely.
-    let config = PatternConfig {
-        timeout_ms: 50,
-        max_retries: 0,
-        ..test_config()
-    };
+    let config = PatternConfig { timeout_ms: 50, max_retries: 0, ..test_config() };
     let runner = Arc::new(
         MockRunner::new(vec![ok("never")]) // leader plan sleeps past timeout
             .with_sleep(Duration::from_millis(500)),
@@ -408,10 +387,7 @@ async fn swarm_delegation_early_finish_on_empty_plan() -> Result<()> {
 
 #[tokio::test]
 async fn swarm_delegation_max_rounds() -> Result<()> {
-    let config = PatternConfig {
-        max_rounds: 2,
-        ..test_config()
-    };
+    let config = PatternConfig { max_rounds: 2, ..test_config() };
     let runner = Arc::new(MockRunner::new(vec![
         ok(r#"["t"]"#),
         ok("r1"),
@@ -482,6 +458,7 @@ async fn swarm_workers_fall_back_to_leader_model() -> Result<()> {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn swarm_dag_two_waves_dependency_context() -> Result<()> {
     let runner = Arc::new(MockRunner::new(vec![
         ok(r#"[{"task": "research", "deps": []}, {"task": "summarize", "deps": [0]}]"#),
@@ -498,12 +475,7 @@ async fn swarm_dag_two_waves_dependency_context() -> Result<()> {
     assert_eq!(out.result, "final");
     assert_eq!(out.termination, TerminationReason::Completed);
     let ids = trace_ids(&out);
-    for expected in [
-        "leader-plan-1",
-        "worker-1-0",
-        "worker-2-1",
-        "leader-synthesize",
-    ] {
+    for expected in ["leader-plan-1", "worker-1-0", "worker-2-1", "leader-synthesize"] {
         assert!(
             ids.contains(&expected.to_string()),
             "missing trace {expected} in {ids:?}"
@@ -584,9 +556,10 @@ async fn swarm_dag_skips_dependent_on_failed_dependency() -> Result<()> {
         .find(|t| t.agent_id == "worker-2-1")
         .expect("skipped task still gets a trace");
     assert!(
-        skipped.events.iter().any(
-            |e| matches!(e, TraceEvent::Error { error } if error == "skipped: dependency failed")
-        ),
+        skipped
+            .events
+            .iter()
+            .any(|e| matches!(e, TraceEvent::Error { error } if error == "skipped: dependency failed")),
         "skip is traced with an Error event: {:?}",
         skipped.events
     );
@@ -653,11 +626,10 @@ async fn swarm_dag_out_of_range_dependency_dropped_not_failed() -> Result<()> {
     assert_eq!(workers.len(), 1);
     assert_eq!(workers[0].prompt, "solo", "dropped dep adds no context");
     assert!(
-        out.traces
+        out.traces.iter().any(|t| t
+            .events
             .iter()
-            .any(|t| t.events.iter().any(
-                |e| matches!(e, TraceEvent::Error { error } if error.contains("out-of-range"))
-            )),
+            .any(|e| matches!(e, TraceEvent::Error { error } if error.contains("out-of-range")))),
         "dropped dependency is logged via a trace Error event"
     );
     Ok(())
@@ -687,6 +659,41 @@ async fn swarm_dag_workers_fall_back_to_leader_model() -> Result<()> {
             task.id
         );
     }
+    Ok(())
+}
+
+/// swarm_circuit_breaker_with_partial_success: partial success (some tasks fail,
+/// others succeed) completes without the circuit breaker tripping.  circuit_breaker=100
+/// prevents tripping; workers=1 forces sequential FIFO so the queue is deterministic.
+#[tokio::test]
+async fn swarm_circuit_breaker_with_partial_success() -> Result<()> {
+    // Expected drain (workers=1, max_retries=1):
+    // 0: plan ok, 1-2: t1 fail+fail, 3-4: t2 fail+fail, 5: t3 ok, 6: synthesis ok
+    let mut responses = Vec::new();
+    responses.push(ok(r#"["t1","t2","t3"]"#));
+    responses.extend(vec![err("boom"); 4]); // t1: 2 fails, t2: 2 fails
+    responses.push(ok("ok3")); // t3 succeeds
+    responses.push(ok("final")); // synthesis
+    let config = PatternConfig { workers: 1, circuit_breaker: 100, max_retries: 1, ..test_config() };
+    let runner = Arc::new(MockRunner::new(responses));
+    let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
+
+    let out = SwarmPattern::parallel()
+        .execute(&ctx, "partial success")
+        .await?;
+
+    assert_eq!(out.termination, TerminationReason::Completed);
+    // Distinct worker IDs: t1 and t2 each fail once and retry once (2 calls each),
+    // t3 succeeds once (1 call) = 5 raw task calls but 3 distinct workers dispatched.
+    let workers = runner.calls_with_prefix("worker-");
+    let distinct_workers: std::collections::HashSet<_> = workers.iter().map(|t| t.id.clone()).collect();
+    assert_eq!(
+        distinct_workers.len(),
+        3,
+        "all 3 distinct workers dispatched"
+    );
+    // synthesis was called once (not tripped by circuit_breaker=100)
+    assert_eq!(runner.calls_with_prefix("leader-synthesize").len(), 1);
     Ok(())
 }
 

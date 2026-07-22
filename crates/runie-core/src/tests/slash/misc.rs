@@ -66,10 +66,7 @@ fn help_opens_reference_panel() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: _
-            })
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "/help should open the reference panel"
     );

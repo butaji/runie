@@ -41,15 +41,9 @@ impl CommandKind {
     pub fn to_action(&self) -> Action {
         match self {
             CommandKind::Handler(f) => Action::Handler(*f),
-            CommandKind::FormWithHandler {
-                title,
-                fields,
-                handler,
-            } => Action::Form {
-                title,
-                fields,
-                handler: *handler,
-            },
+            CommandKind::FormWithHandler { title, fields, handler } => {
+                Action::Form { title, fields, handler: *handler }
+            }
             CommandKind::Msg(m) => Action::Msg(m),
         }
     }
@@ -90,12 +84,7 @@ impl Command {
         }
         // FormWithHandler commands need the cmd_name set on the panel so the
         // form submission can be routed back through the command registry.
-        if let CommandKind::FormWithHandler {
-            title,
-            fields,
-            handler,
-        } = &spec.kind
-        {
+        if let CommandKind::FormWithHandler { title, fields, handler } = &spec.kind {
             return cmd.form_with_handler(title, |f| add_fields(f, fields), *handler);
         }
         let action = spec.kind.to_action();
@@ -116,6 +105,7 @@ pub fn build_cmd(spec: &CommandSpec) -> CommandDef {
 }
 
 /// Build a `CommandDef` from a YAML definition and handler registry.
+#[allow(clippy::too_many_lines)]
 pub fn build_cmd_from_yaml(
     yaml: &crate::declarative::types::DeclarativeCommandYaml,
     handler_registry: &super::handlers::registry::HandlerRegistry,
@@ -140,12 +130,7 @@ pub fn build_cmd_from_yaml(
             if let Some(kind) = handler_registry.to_command_kind(handler) {
                 // FormWithHandler registry entries must use the form builder so
                 // the panel carries the command name for submission routing.
-                if let CommandKind::FormWithHandler {
-                    title,
-                    fields,
-                    handler: form_handler,
-                } = &kind
-                {
+                if let CommandKind::FormWithHandler { title, fields, handler: form_handler } = &kind {
                     cmd = cmd.form_with_handler(title, |f| add_fields(f, fields), *form_handler);
                 } else {
                     let action = kind.to_action();
@@ -157,11 +142,7 @@ pub fn build_cmd_from_yaml(
                 }
             }
         }
-        YamlKind::FormWithHandler {
-            title,
-            fields,
-            handler,
-        } => {
+        YamlKind::FormWithHandler { title, fields, handler } => {
             if let Some(kind) = handler_registry.to_command_kind(handler) {
                 let title_static: &'static str = Box::leak(title.clone().into_boxed_str());
                 let fields_vec: Vec<(&'static str, &'static str, &'static str)> = fields
@@ -173,8 +154,7 @@ pub fn build_cmd_from_yaml(
                         (label, ph, key)
                     })
                     .collect();
-                let fields_box: Box<[(&'static str, &'static str, &'static str)]> =
-                    fields_vec.into();
+                let fields_box: Box<[(&'static str, &'static str, &'static str)]> = fields_vec.into();
                 let fields_ptr: &'static [_] = Box::leak(fields_box);
                 cmd = cmd.form_with_handler(
                     title_static,
@@ -202,10 +182,7 @@ fn get_form_handler_from_kind(kind: &CommandKind) -> FormHandler {
 }
 
 /// Add fields to a form panel.
-fn add_fields(
-    mut builder: FormPanel,
-    fields: &[(&'static str, &'static str, &'static str)],
-) -> FormPanel {
+fn add_fields(mut builder: FormPanel, fields: &[(&'static str, &'static str, &'static str)]) -> FormPanel {
     for (label, placeholder, key) in fields {
         builder = builder.field(*label, *placeholder, *key);
     }
@@ -215,10 +192,7 @@ fn add_fields(
 // ── Register Commands ──────────────────────────────────────────────────────────
 
 /// Register every command from a spec table.
-pub fn register_commands(
-    registry: &mut crate::commands::CommandRegistry,
-    commands: &[CommandSpec],
-) {
+pub fn register_commands(registry: &mut crate::commands::CommandRegistry, commands: &[CommandSpec]) {
     for spec in commands {
         registry.register(Command::from_spec(spec));
     }
@@ -330,9 +304,7 @@ mod tests {
             aliases: &[],
             category: CommandCategory::System,
             sub: false,
-            kind: CommandKind::Handler(|_state, args| {
-                CommandResult::Message(format!("Hello, {}!", args))
-            }),
+            kind: CommandKind::Handler(|_state, args| CommandResult::Message(format!("Hello, {}!", args))),
         };
         let cmd = Command::from_spec(&spec);
         let mut state = AppState::default();

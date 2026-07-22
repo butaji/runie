@@ -1,13 +1,11 @@
 //! Single pattern: direct execution — one agent handles the task end to end.
+#![allow(clippy::too_many_lines)]
 
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
 
-use crate::{
-    model_for, AgentTrace, Context, Pattern, PatternOutput, TerminationReason, TraceEvent,
-    WorkerTask,
-};
+use crate::{model_for, AgentTrace, Context, Pattern, PatternOutput, TerminationReason, TraceEvent, WorkerTask};
 
 /// Direct execution — one agent handles the task end to end.
 pub struct SinglePattern;
@@ -31,13 +29,7 @@ impl Pattern for SinglePattern {
             (String::new(), TerminationReason::Error("aborted".into()))
         } else {
             let (provider, model) = model_for(&ctx.models, 0);
-            let task = WorkerTask {
-                id: "leader".into(),
-                prompt: input.to_string(),
-                provider,
-                model,
-                read_only: false,
-            };
+            let task = WorkerTask { id: "leader".into(), prompt: input.to_string(), provider, model, read_only: false };
 
             // Race the runner against abort and the per-task timeout;
             // whichever fires first decides the termination reason.
@@ -62,17 +54,11 @@ impl Pattern for SinglePattern {
             output: result.clone(),
             start_time,
             duration_ms: start.elapsed().as_millis() as u64,
-            events: vec![TraceEvent::Termination {
-                reason: termination.clone(),
-            }],
+            events: vec![TraceEvent::Termination { reason: termination.clone() }],
         };
         // Observers may have gone away; a failed send must not fail the run.
         let _ = ctx.trace_tx.send(trace.clone());
 
-        Ok(PatternOutput {
-            result,
-            termination,
-            traces: vec![trace],
-        })
+        Ok(PatternOutput { result, termination, traces: vec![trace], circuit_breaker_tripped: false })
     }
 }

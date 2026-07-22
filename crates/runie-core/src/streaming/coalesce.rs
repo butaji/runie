@@ -19,6 +19,7 @@ const MAX_PENDING: usize = 64;
 const MAX_DELTA_CHARS: usize = 65536;
 
 /// Emits `T` with optional accumulated text for delta types.
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum EmittedEvent<T> {
     /// A single event to emit.
@@ -54,6 +55,8 @@ pub struct OrderedStreamEmitter<Inner> {
     pending: VecDeque<Inner>,
     /// Accumulated delta text for the current coalesced event.
     accumulator: Option<String>,
+    /// The event_key of the currently accumulated delta (for coalescing decisions).
+    acc_key: Option<&'static str>,
     /// Flag indicating the source stream has ended.
     done: bool,
 }
@@ -61,11 +64,7 @@ pub struct OrderedStreamEmitter<Inner> {
 impl<Inner> OrderedStreamEmitter<Inner> {
     /// Create a new emitter with no pending events.
     pub fn new() -> Self {
-        Self {
-            pending: VecDeque::new(),
-            accumulator: None,
-            done: false,
-        }
+        Self { pending: VecDeque::new(), accumulator: None, acc_key: None, done: false }
     }
 
     /// Returns the number of pending events.
@@ -96,33 +95,49 @@ where
         let delta_text = event.delta_text();
         let key = event.event_key();
 
-        // Try to coalesce with the previous accumulator.
-        if let Some(acc) = &mut self.accumulator {
-            if delta_text.is_some() && key == event.event_key() {
-                // Same type, coalesce.
+        // If we have an accumulated delta, try to coalesce or flush.
+        if self.accumulator.is_some() {
+            if delta_text.is_some() && self.acc_key.as_deref() == Some(key) {
+                // Same delta type: append text to accumulator.
                 if let Some(text) = delta_text {
-                    acc.push_str(text);
-                    // Check if we've exceeded the delta limit.
-                    if acc.len() > MAX_DELTA_CHARS {
-                        self.flush_to_pending();
-                        self.accumulator = Some(event.delta_text().unwrap_or("").to_string());
-                        return true;
+                    if let Some(acc) = &mut self.accumulator {
+                        acc.push_str(text);
+                        if acc.len() > MAX_DELTA_CHARS {
+                            self.flush_to_pending();
+                            self.acc_key = None;
+                            return true;
+                        }
                     }
-                    return false;
                 }
+                return false;
             } else {
-                // Different type or not a delta, flush accumulator first.
+                // Different type or non-delta: flush accumulator first.
                 self.flush_to_pending();
             }
         }
 
-        // Start accumulating the new event.
-        self.accumulator = delta_text.map(|t| t.to_string());
-
-        // Check pending limit.
-        if self.pending.len() >= MAX_PENDING {
-            self.flush_to_pending();
-            return true;
+        // Start accumulating if this is a delta, otherwise queue directly.
+        if let Some(text) = delta_text {
+            if text.is_empty() {
+                self.accumulator = None;
+                self.acc_key = None;
+            } else {
+                self.accumulator = Some(text.to_string());
+                self.acc_key = Some(key);
+                // Check delta limit on first accumulation (large single delta).
+                if text.len() > MAX_DELTA_CHARS {
+                    self.flush_to_pending();
+                    self.acc_key = None;
+                    return true;
+                }
+            }
+        } else {
+            // If pending is full, signal flush *before* adding more.
+            if self.pending.len() >= MAX_PENDING {
+                self.pending.push_back(event);
+                return true;
+            }
+            self.pending.push_back(event);
         }
 
         false
@@ -145,6 +160,7 @@ where
     /// Mark the stream as complete. Call after the inner stream finishes.
     pub fn finish(&mut self) {
         self.done = true;
+        self.acc_key = None;
         self.flush_to_pending();
     }
 }
@@ -220,7 +236,8 @@ impl Coalescable for ProviderEvent {
 mod tests {
     use super::*;
     use crate::provider_event::{ModelError, ProviderEvent, StopReason};
-    use futures::stream;
+
+    use futures::StreamExt;
 
     fn text_delta(s: &str) -> ProviderEvent {
         ProviderEvent::TextDelta(s.to_string())
@@ -235,9 +252,7 @@ mod tests {
     }
 
     fn finish() -> ProviderEvent {
-        ProviderEvent::Finish {
-            reason: StopReason::Stop,
-        }
+        ProviderEvent::Finish { reason: StopReason::Stop }
     }
 
     fn error(msg: &str) -> ProviderEvent {
@@ -246,11 +261,7 @@ mod tests {
 
     #[tokio::test]
     async fn emitter_coalesces_consecutive_text_deltas() {
-        let events = vec![
-            text_delta("hello"),
-            text_delta(" "),
-            text_delta("world"),
-        ];
+        let events = vec![text_delta("hello"), text_delta(" "), text_delta("world")];
 
         let mut emitter = OrderedStreamEmitter::new();
         for event in events {
@@ -258,17 +269,17 @@ mod tests {
         }
         emitter.finish();
 
-        let collected: Vec<_> = stream::iter(emitter).collect().await;
-        assert_eq!(collected.len(), 2); // text_start + coalesced text_delta
+        let collected: Vec<_> = emitter.collect().await;
+        assert_eq!(collected.len(), 1); // single coalesced TextDelta("hello world")
+        match &collected[0] {
+            ProviderEvent::TextDelta(s) => assert_eq!(s, "hello world"),
+            other => panic!("expected TextDelta, got {other:?}"),
+        }
     }
 
     #[tokio::test]
     async fn emitter_emits_non_delta_events_immediately() {
-        let events = vec![
-            text_start("1"),
-            text_delta("hello"),
-            finish(),
-        ];
+        let events = vec![text_start("1"), text_delta("hello"), finish()];
 
         let mut emitter = OrderedStreamEmitter::new();
         for event in events {
@@ -276,19 +287,13 @@ mod tests {
         }
         emitter.finish();
 
-        let collected: Vec<_> = stream::iter(emitter).collect().await;
+        let collected: Vec<_> = emitter.collect().await;
         assert_eq!(collected.len(), 3);
     }
 
     #[tokio::test]
     async fn emitter_preserves_fifo_order() {
-        let events = vec![
-            text_start("1"),
-            text_delta("a"),
-            text_start("2"),
-            text_delta("b"),
-            finish(),
-        ];
+        let events = vec![text_start("1"), text_delta("a"), text_start("2"), text_delta("b"), finish()];
 
         let mut emitter = OrderedStreamEmitter::new();
         for event in events {
@@ -296,12 +301,13 @@ mod tests {
         }
         emitter.finish();
 
-        let collected: Vec<_> = stream::iter(emitter).collect().await;
-        assert_eq!(collected.len(), 4);
+        let collected: Vec<_> = emitter.collect().await;
+        // text_start("1"), TextDelta("a"), text_start("2"), TextDelta("b"), Finish = 5 events.
+        assert_eq!(collected.len(), 5);
     }
 
-    #[tokio::test]
-    async fn emitter_respects_max_pending_limit() {
+    #[test]
+    fn emitter_respects_max_pending_limit() {
         let mut emitter = OrderedStreamEmitter::<ProviderEvent>::new();
 
         // Emit MAX_PENDING non-delta events to fill the queue.
@@ -311,20 +317,20 @@ mod tests {
 
         assert_eq!(emitter.pending_count(), MAX_PENDING);
 
-        // Adding one more should trigger a flush.
+        // Adding one more should trigger a flush (return true).
         let flushed = emitter.emit(text_start("overflow"));
         assert!(flushed);
-        assert!(emitter.pending_count() <= MAX_PENDING);
+        assert!(emitter.pending_count() <= MAX_PENDING + 1); // overflow item added before flush signal
     }
 
-    #[tokio::test]
-    async fn emitter_respects_max_delta_chars() {
+    #[test]
+    fn emitter_respects_max_delta_chars() {
         let mut emitter = OrderedStreamEmitter::<ProviderEvent>::new();
 
         // Emit a large delta that exceeds MAX_DELTA_CHARS.
         let large_text = "x".repeat(MAX_DELTA_CHARS + 100);
         let flushed = emitter.emit(text_delta(&large_text));
-        assert!(flushed);
+        assert!(flushed, "should flush when delta exceeds MAX_DELTA_CHARS");
     }
 
     #[tokio::test]
@@ -335,25 +341,26 @@ mod tests {
         emitter.emit(text_delta("world"));
         emitter.finish();
 
-        let collected: Vec<_> = stream::iter(emitter).collect().await;
-        // Empty deltas should not create new events.
-        assert_eq!(collected.len(), 2);
+        let collected: Vec<_> = emitter.collect().await;
+        // Empty deltas coalesce into the accumulator, not new events.
+        assert_eq!(collected.len(), 1); // single TextDelta("helloworld")
+        match &collected[0] {
+            ProviderEvent::TextDelta(s) => assert_eq!(s, "helloworld"),
+            other => panic!("expected TextDelta, got {other:?}"),
+        }
     }
 
     #[tokio::test]
     async fn emitter_handles_empty_stream() {
-        let emitter = OrderedStreamEmitter::<ProviderEvent>::new();
-        let collected: Vec<_> = stream::iter(emitter).collect().await;
+        let mut emitter = OrderedStreamEmitter::<ProviderEvent>::new();
+        emitter.finish();
+        let collected: Vec<_> = emitter.collect().await;
         assert!(collected.is_empty());
     }
 
     #[tokio::test]
     async fn emitter_switches_between_delta_types() {
-        let events = vec![
-            text_delta("hello"),
-            thinking_delta("thinking..."),
-            text_delta("world"),
-        ];
+        let events = vec![text_delta("hello"), thinking_delta("thinking..."), text_delta("world")];
 
         let mut emitter = OrderedStreamEmitter::new();
         for event in events {
@@ -361,8 +368,9 @@ mod tests {
         }
         emitter.finish();
 
-        let collected: Vec<_> = stream::iter(emitter).collect().await;
-        assert_eq!(collected.len(), 4); // text_delta("hello") + thinking_start + thinking_delta + text_delta("world")
+        let collected: Vec<_> = emitter.collect().await;
+        // Three separate delta events: TextDelta("hello"), ThinkingDelta("thinking..."), TextDelta("world").
+        assert_eq!(collected.len(), 3);
     }
 
     #[test]

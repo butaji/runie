@@ -42,11 +42,7 @@ impl AppState {
         } else {
             "Esc abort"
         };
-        vec![
-            "Enter steer".to_owned(),
-            "Alt+Enter follow-up".to_owned(),
-            esc.to_owned(),
-        ]
+        vec!["Enter steer".to_owned(), "Alt+Enter follow-up".to_owned(), esc.to_owned()]
     }
 
     pub(crate) fn insert_char(&mut self, c: char) {
@@ -64,8 +60,7 @@ impl AppState {
             (input.cursor_pos, input.input.len(), input.input.clone())
         };
 
-        let should_backspace =
-            cursor_pos > 0 || (cursor_pos == 0 && input_len > 0 && input_text.starts_with('\n'));
+        let should_backspace = cursor_pos > 0 || (cursor_pos == 0 && input_len > 0 && input_text.starts_with('\n'));
         if should_backspace {
             try_send_input(self, crate::actors::InputMsg::Backspace);
             self.handle_at_trigger();

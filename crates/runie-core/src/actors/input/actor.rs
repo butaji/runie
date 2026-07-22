@@ -30,9 +30,8 @@ impl InputActorState {
     /// Publish an InputChanged event with the current input state.
     fn publish_input_changed(&self) {
         let state = self.input.clone();
-        self.bus.publish(Event::InputChanged {
-            state: Box::new(state),
-        });
+        self.bus
+            .publish(Event::InputChanged { state: Box::new(state) });
     }
 }
 
@@ -54,10 +53,7 @@ impl Actor for InputActor {
         _myself: ActorRef<Self::Msg>,
         bus: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(InputActorState {
-            input: InputState::default(),
-            bus,
-        })
+        Ok(InputActorState { input: InputState::default(), bus })
     }
 
     #[instrument(name = "input_actor", skip_all, fields(msg = ?msg))]
@@ -69,8 +65,8 @@ impl Actor for InputActor {
     ) -> Result<(), ActorProcessingErr> {
         // Detect quit commands before Submit clears the authoritative input,
         // so the app can exit immediately without waiting for UiActor projection.
-        let is_quit_submit = matches!(&msg, InputMsg::Submit { .. })
-            && crate::update::input::is_quit_command(state.input.input());
+        let is_quit_submit =
+            matches!(&msg, InputMsg::Submit { .. }) && crate::update::input::is_quit_command(state.input.input());
 
         InputMsg::apply_to(&msg, &mut state.input);
         // Always emit InputChanged: UiActor uses this as the single source of
@@ -163,9 +159,7 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _cell, _) = InputActor::spawn(bus).await.unwrap();
 
-        let _ = handle.send_message(InputMsg::HistoryLoaded {
-            entries: vec!["first".into(), "second".into()],
-        });
+        let _ = handle.send_message(InputMsg::HistoryLoaded { entries: vec!["first".into(), "second".into()] });
         let _ = handle.send_message(InputMsg::HistoryPrev);
         drop(handle);
     }
@@ -219,9 +213,7 @@ mod tests {
         for c in "hello".chars() {
             let _ = handle.send_message(InputMsg::InsertChar(c));
         }
-        let _ = handle.send_message(InputMsg::Submit {
-            content: "hello".into(),
-        });
+        let _ = handle.send_message(InputMsg::Submit { content: "hello".into() });
 
         // Wait for the submit's InputChanged (cleared input).
         let cleared = wait_for_event(

@@ -13,9 +13,12 @@ pub const SENSITIVE_PATH_PATTERNS: &[&str] = &[
     "**/id_rsa",
     "**/id_ed25519",
     "**/.aws/credentials",
+    "**/.aws/config",
     "**/.azure/*",
-    "**/kubeconfig",
+    "**/.kube/config",
     "**/.docker/config.json",
+    "**/docker/config.json",
+    "**/.git/objects/**",
     "**/.git/objects",
 ];
 
@@ -111,8 +114,6 @@ mod tests {
     #[test]
     fn sensitive_path_kubeconfig() {
         assert!(is_sensitive_path("/home/user/.kube/config"));
-        assert!(is_sensitive_path("/project/kubeconfig"));
-        assert!(is_sensitive_path("kubeconfig"));
     }
 
     #[test]

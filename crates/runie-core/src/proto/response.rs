@@ -21,22 +21,12 @@ pub struct Response {
 impl Response {
     /// Create a successful response with the current protocol version.
     pub fn ok(id: Option<Value>, result: Value) -> Self {
-        Self {
-            id,
-            result: Some(result),
-            error: None,
-            version: Version::current(),
-        }
+        Self { id, result: Some(result), error: None, version: Version::current() }
     }
 
     /// Create an error response with the current protocol version.
     pub fn err(id: Option<Value>, error: Error) -> Self {
-        Self {
-            id,
-            result: None,
-            error: Some(error),
-            version: Version::current(),
-        }
+        Self { id, result: None, error: Some(error), version: Version::current() }
     }
 }
 

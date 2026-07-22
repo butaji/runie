@@ -11,10 +11,7 @@ mod tests {
         let config = crate::config::Config::default();
         state.apply_config(&config);
 
-        state.update(Event::UserMessageSubmitted {
-            id: "req.0".into(),
-            content: "list files".into(),
-        });
+        state.update(Event::UserMessageSubmitted { id: "req.0".into(), content: "list files".into() });
         state.update(Event::Thinking { id: "req.0".into() });
         state.update(Event::ThoughtDone { id: "req.0".into() });
         state.update(Event::ToolStart {

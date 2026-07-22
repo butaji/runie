@@ -116,6 +116,7 @@ fn panel_selected_item_returns_correct_item() {
 // ─── Panel builder ──────────────────────────────────────────────────────
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn panel_builder_chains() {
     let panel = Panel::new("test", "Test")
         .item("Do thing", ItemAction::Close)
@@ -167,23 +168,16 @@ fn stack_push_then_pop_returns_top() {
 
 #[test]
 fn stack_activate_on_toggle_returns_toggle_action() {
-    let mut stack = PanelStack::new(Panel::new("test", "Test").toggle(
-        "Flag",
-        false,
-        ItemAction::Toggle("flag_key".into()),
-    ));
+    let mut stack =
+        PanelStack::new(Panel::new("test", "Test").toggle("Flag", false, ItemAction::Toggle("flag_key".into())));
     let action = stack.activate();
     assert!(matches!(action, Some(ItemAction::Toggle(k)) if k == "flag_key"));
 }
 
 #[test]
 fn stack_activate_on_select_returns_cycle_action() {
-    let mut stack = PanelStack::new(Panel::new("test", "Test").select(
-        "Choice",
-        "a",
-        vec!["a".into(), "b".into()],
-        "choice_key",
-    ));
+    let mut stack =
+        PanelStack::new(Panel::new("test", "Test").select("Choice", "a", vec!["a".into(), "b".into()], "choice_key"));
     let action = stack.activate();
     assert!(matches!(action, Some(ItemAction::Cycle(k)) if k == "choice_key"));
 }

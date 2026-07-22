@@ -5,11 +5,7 @@ use runie_core::commands::DialogKind;
 use runie_core::Event;
 
 /// Helper: check if the given text string appears anywhere in the rect.
-fn rect_contains_text(
-    buf: &ratatui::buffer::Buffer,
-    rect: ratatui::layout::Rect,
-    text: &str,
-) -> bool {
+fn rect_contains_text(buf: &ratatui::buffer::Buffer, rect: ratatui::layout::Rect, text: &str) -> bool {
     for y in rect.y..rect.y + rect.height {
         let line: String = (rect.x..rect.x + rect.width)
             .map(|x| buf[(x, y)].symbol())
@@ -31,9 +27,7 @@ fn command_palette_hides_underlying_messages() {
     // Add a visible message that would show through if popup is transparent
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "XYZZY_PLUGH".into(),
-        }],
+        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -49,12 +43,7 @@ fn command_palette_hides_underlying_messages() {
     let buf = terminal.backend().buffer();
 
     // The popup area should NOT contain the underlying message text
-    let popup_rect = ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    };
+    let popup_rect = ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
         "Popup should hide underlying 'XYZZY_PLUGH' — transparent background bug"
@@ -69,9 +58,7 @@ fn settings_dialog_hides_underlying_messages() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "XYZZY_PLUGH".into(),
-        }],
+        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -85,12 +72,7 @@ fn settings_dialog_hides_underlying_messages() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
 
-    let popup_rect = ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    };
+    let popup_rect = ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
         "Settings dialog should hide underlying content"
@@ -105,9 +87,7 @@ fn model_selector_hides_underlying_messages() {
 
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "XYZZY_PLUGH".into(),
-        }],
+        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -121,12 +101,7 @@ fn model_selector_hides_underlying_messages() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
 
-    let popup_rect = ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    };
+    let popup_rect = ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
         "Model selector should hide underlying content"
@@ -141,12 +116,7 @@ fn draw_state_buffer(state: &mut AppState, width: u16, height: u16) -> ratatui::
 }
 
 fn standard_popup_rect() -> ratatui::layout::Rect {
-    ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    }
+    ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 }
 }
 
 /// Default theme uses the terminal background for both the app and popup
@@ -158,9 +128,7 @@ fn command_palette_uses_terminal_background() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "XYZZY_PLUGH".into(),
-        }],
+        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -193,9 +161,7 @@ fn panel_dialog_hides_underlying_messages() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "XYZZY_PLUGH".into(),
-        }],
+        parts: vec![Part::Text { content: "XYZZY_PLUGH".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -207,10 +173,7 @@ fn panel_dialog_hides_underlying_messages() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(runie_core::commands::DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: _
-            })
+            Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "PanelStack dialog should be open"
     );
@@ -218,12 +181,7 @@ fn panel_dialog_hides_underlying_messages() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let popup_rect = ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    };
+    let popup_rect = ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
         "Panel dialog should hide underlying 'XYZZY_PLUGH'"

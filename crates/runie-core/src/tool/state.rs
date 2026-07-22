@@ -27,78 +27,36 @@ use serde_json::json;
 #[derive(Debug, Clone)]
 pub enum ToolCallState {
     /// Tool call has been invoked, waiting for first response.
-    Pending {
-        id: String,
-        name: String,
-        input: Value,
-    },
+    Pending { id: String, name: String, input: Value },
     /// Tool is currently executing.
-    Running {
-        id: String,
-        name: String,
-        input: Value,
-        started: Instant,
-    },
+    Running { id: String, name: String, input: Value, started: Instant },
     /// Tool completed successfully.
-    Completed {
-        id: String,
-        name: String,
-        output: String,
-        bytes: Option<u64>,
-        duration_secs: f64,
-    },
+    Completed { id: String, name: String, output: String, bytes: Option<u64>, duration_secs: f64 },
     /// Tool encountered an error.
-    Error {
-        id: String,
-        name: String,
-        error: String,
-        duration_secs: f64,
-    },
+    Error { id: String, name: String, error: String, duration_secs: f64 },
 }
 
 impl ToolCallState {
     /// Start the tool (transition from Pending to Running).
     pub fn start(&mut self) {
         if let ToolCallState::Pending { id, name, input } = self.clone() {
-            *self = ToolCallState::Running {
-                id,
-                name,
-                input,
-                started: Instant::now(),
-            };
+            *self = ToolCallState::Running { id, name, input, started: Instant::now() };
         }
     }
 
     /// Complete the tool (transition from Running to Completed).
     pub fn complete(&mut self, output: String, bytes: Option<u64>) {
-        if let ToolCallState::Running {
-            id, name, started, ..
-        } = self.clone()
-        {
+        if let ToolCallState::Running { id, name, started, .. } = self.clone() {
             let duration_secs = started.elapsed().as_secs_f64();
-            *self = ToolCallState::Completed {
-                id,
-                name,
-                output,
-                bytes,
-                duration_secs,
-            };
+            *self = ToolCallState::Completed { id, name, output, bytes, duration_secs };
         }
     }
 
     /// Mark tool as errored (transition from Running to Error).
     pub fn fail(&mut self, error: String) {
-        if let ToolCallState::Running {
-            id, name, started, ..
-        } = self.clone()
-        {
+        if let ToolCallState::Running { id, name, started, .. } = self.clone() {
             let duration_secs = started.elapsed().as_secs_f64();
-            *self = ToolCallState::Error {
-                id,
-                name,
-                error,
-                duration_secs,
-            };
+            *self = ToolCallState::Error { id, name, error, duration_secs };
         }
     }
 
@@ -138,12 +96,8 @@ impl ToolCallState {
     /// Check if this tool call matches another (for coalescing).
     pub fn matches(&self, name: &str, input: &Value) -> bool {
         match self {
-            ToolCallState::Pending {
-                name: n, input: i, ..
-            } => n == name && i == input,
-            ToolCallState::Running {
-                name: n, input: i, ..
-            } => n == name && i == input,
+            ToolCallState::Pending { name: n, input: i, .. } => n == name && i == input,
+            ToolCallState::Running { name: n, input: i, .. } => n == name && i == input,
             _ => false,
         }
     }
@@ -212,19 +166,11 @@ mod tests {
 
     #[test]
     fn tool_state_transitions_pending_to_running() {
-        let mut state = ToolCallState::Pending {
-            id: "call.1".into(),
-            name: "bash".into(),
-            input: json!({"command": "ls"}),
-        };
+        let mut state =
+            ToolCallState::Pending { id: "call.1".into(), name: "bash".into(), input: json!({"command": "ls"}) };
         state.start();
         match state {
-            ToolCallState::Running {
-                id,
-                name,
-                started: _,
-                ..
-            } => {
+            ToolCallState::Running { id, name, .. } => {
                 assert_eq!(id, "call.1");
                 assert_eq!(name, "bash");
             }
@@ -242,12 +188,7 @@ mod tests {
         };
         state.complete("files listed".into(), None);
         match state {
-            ToolCallState::Completed {
-                id,
-                output,
-                duration_secs,
-                ..
-            } => {
+            ToolCallState::Completed { id, output, duration_secs, .. } => {
                 assert_eq!(id, "call.1");
                 assert_eq!(output, "files listed");
                 assert!(duration_secs >= 0.0);
@@ -260,12 +201,8 @@ mod tests {
     fn tool_state_records_duration() {
         // Create a Running state with started time 100ms in the past
         let started = Instant::now() - std::time::Duration::from_millis(100);
-        let mut state = ToolCallState::Running {
-            id: "call.1".into(),
-            name: "sleep".into(),
-            input: json!({"seconds": 1}),
-            started,
-        };
+        let mut state =
+            ToolCallState::Running { id: "call.1".into(), name: "sleep".into(), input: json!({"seconds": 1}), started };
         state.complete("done".into(), None);
         if let ToolCallState::Completed { duration_secs, .. } = state {
             // Duration should be approximately 0.1s (within 50ms tolerance)
@@ -282,11 +219,7 @@ mod tests {
     #[test]
     fn identical_calls_match() {
         let input = json!({"path": "src/lib.rs"});
-        let state = ToolCallState::Pending {
-            id: "c1".into(),
-            name: "read_file".into(),
-            input: input.clone(),
-        };
+        let state = ToolCallState::Pending { id: "c1".into(), name: "read_file".into(), input: input.clone() };
         assert!(state.matches("read_file", &input));
         assert!(!state.matches("bash", &input));
     }
@@ -344,11 +277,7 @@ mod tests {
 
     #[test]
     fn tool_state_pending_has_no_status() {
-        let state = ToolCallState::Pending {
-            id: "call.1".into(),
-            name: "bash".into(),
-            input: json!({"cmd": "ls"}),
-        };
+        let state = ToolCallState::Pending { id: "call.1".into(), name: "bash".into(), input: json!({"cmd": "ls"}) };
         assert_eq!(state.to_status(), None);
     }
 

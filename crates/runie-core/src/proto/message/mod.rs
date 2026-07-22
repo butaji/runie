@@ -49,15 +49,9 @@ mod tests {
     fn chat_message_content_getter_concatenates_text_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "a".into(),
-                },
-                Part::Reasoning {
-                    content: "r".into(),
-                },
-                Part::Text {
-                    content: "b".into(),
-                },
+                Part::Text { content: "a".into() },
+                Part::Reasoning { content: "r".into() },
+                Part::Text { content: "b".into() },
             ],
             ..Default::default()
         };
@@ -68,14 +62,8 @@ mod tests {
     fn chat_message_tool_calls_getter_extracts_from_parts() {
         let msg = ChatMessage {
             parts: vec![
-                Part::Text {
-                    content: "hi".into(),
-                },
-                Part::ToolCall {
-                    id: "c1".into(),
-                    name: "bash".into(),
-                    args: serde_json::json!({}),
-                },
+                Part::Text { content: "hi".into() },
+                Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) },
             ],
             ..Default::default()
         };
@@ -94,11 +82,7 @@ mod tests {
     #[test]
     fn chat_message_no_text_parts_returns_empty_content() {
         let msg = ChatMessage {
-            parts: vec![Part::ToolCall {
-                id: "c1".into(),
-                name: "bash".into(),
-                args: serde_json::json!({}),
-            }],
+            parts: vec![Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) }],
             ..Default::default()
         };
         assert_eq!(msg.content(), "");
@@ -116,9 +100,8 @@ mod tests {
             metadata: MessageMetadata::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::Text {
-                content: "hello".into(),
-            }],
+            parts: vec![Part::Text { content: "hello".into() }],
+            hidden_params: None,
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ChatMessage = serde_json::from_str(&json).unwrap();
@@ -134,14 +117,8 @@ mod tests {
             timestamp: 1.0,
             id: "a1".into(),
             parts: vec![
-                Part::Text {
-                    content: "hello".into(),
-                },
-                Part::ToolCall {
-                    id: "call_1".into(),
-                    name: "list_dir".into(),
-                    args: serde_json::json!({"path": "."}),
-                },
+                Part::Text { content: "hello".into() },
+                Part::ToolCall { id: "call_1".into(), name: "list_dir".into(), args: serde_json::json!({"path": "."}) },
             ],
             ..Default::default()
         };
@@ -330,10 +307,7 @@ mod tests {
 
     #[test]
     fn validate_messages_user_assistant_is_valid() {
-        let msgs = vec![
-            ChatMessageBuilder::user("hi").build(),
-            ChatMessageBuilder::assistant("hello").build(),
-        ];
+        let msgs = vec![ChatMessageBuilder::user("hi").build(), ChatMessageBuilder::assistant("hello").build()];
         assert!(validate_messages(&msgs).is_empty());
     }
 

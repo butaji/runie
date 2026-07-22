@@ -3,6 +3,7 @@
 //! Verifies selected items get a full-width active background, inverted
 //! high-contrast foreground for the command name, and a lower-contrast
 //! style for the description.
+#![allow(clippy::too_many_lines)]
 
 use super::*;
 use ratatui::style::{Color, Modifier};
@@ -20,19 +21,11 @@ use crate::ui::view;
 fn content_rect() -> ratatui::layout::Rect {
     // Popup is 60x18 centered in an 80x24 terminal → outer at (10,3).
     // Block borders shave 1 col/row; setup_popup adds another 1-cell margin.
-    ratatui::layout::Rect {
-        x: 12,
-        y: 5,
-        width: 56,
-        height: 14,
-    }
+    ratatui::layout::Rect { x: 12, y: 5, width: 56, height: 14 }
 }
 
 fn open_panel(state: &mut AppState, panel: Panel) {
-    state.open_dialog = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: PanelStack::new(panel),
-    });
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 }
 
 fn render(state: &mut AppState) -> ratatui::buffer::Buffer {
@@ -227,11 +220,7 @@ fn unselected_action_does_not_fill_full_width_with_active_bg() {
         .item("second Second item", runie_core::dialog::ItemAction::Close);
     open_panel(&mut state, panel);
     // Move selection down to the second item so the first is unselected.
-    if let Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: ref mut stack,
-    }) = state.open_dialog
-    {
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels: ref mut stack }) = state.open_dialog {
         stack.select_down();
     }
 
@@ -394,8 +383,7 @@ fn popup_list_renders_selection() {
     let first_item_y = item_y(&buf, "help").expect("should find 'help' item");
 
     // Selected item should have accent background
-    let selected_has_accent_bg =
-        (r.x..r.x + r.width).any(|x| buf[(x, first_item_y)].style().bg == Some(accent));
+    let selected_has_accent_bg = (r.x..r.x + r.width).any(|x| buf[(x, first_item_y)].style().bg == Some(accent));
     assert!(
         selected_has_accent_bg,
         "Selected item should have accent background color"

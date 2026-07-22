@@ -22,11 +22,7 @@ mod tests {
     #[test]
     fn tool_and_message_events_become_durable() {
         // Tool call → durable
-        let event = Event::ToolStart {
-            id: "c1".into(),
-            name: "bash".into(),
-            input: serde_json::json!({"cmd": "ls"}),
-        };
+        let event = Event::ToolStart { id: "c1".into(), name: "bash".into(), input: serde_json::json!({"cmd": "ls"}) };
         let durable = event.to_durable();
         assert!(durable.is_some());
         let durable = durable.unwrap();
@@ -37,22 +33,12 @@ mod tests {
         ));
 
         // Tool result → durable
-        let event = Event::ToolEnd {
-            id: "c1".into(),
-            duration_secs: 1.5,
-            output: "result".into(),
-
-            input: None,
-        };
+        let event = Event::ToolEnd { id: "c1".into(), duration_secs: 1.5, output: "result".into(), input: None };
         let durable = event.to_durable();
         assert!(durable.is_some());
 
         // Model switch → durable
-        let event = Event::SwitchModel {
-            provider: "anthropic".into(),
-            model: "claude-3".into(),
-            explicit: true,
-        };
+        let event = Event::SwitchModel { provider: "anthropic".into(), model: "claude-3".into(), explicit: true };
         let durable = event.to_durable();
         assert!(durable.is_some());
     }
@@ -61,16 +47,10 @@ mod tests {
     #[test]
     fn transient_events_skip_durable() {
         let transient = vec![
-            Event::ResponseDelta {
-                id: "r1".into(),
-                content: "hello".into(),
-            },
+            Event::ResponseDelta { id: "r1".into(), content: "hello".into() },
             Event::TextStart { id: "t1".into() },
             Event::TextEnd { id: "t1".into() },
-            Event::ThinkingDelta {
-                id: "th1".into(),
-                content: "thinking".into(),
-            },
+            Event::ThinkingDelta { id: "th1".into(), content: "thinking".into() },
         ];
 
         for event in transient {

@@ -98,8 +98,7 @@ fn apply_config_ignores_stale_top_level_provider() {
     // store reads the host's real auth.json (it holds an openai token on
     // dev machines) and the model wrongly restores.
     let prev_auth_file = std::env::var("RUNIE_AUTH_FILE").ok();
-    let empty_auth =
-        std::env::temp_dir().join(format!("runie_no_model_test_{}.json", std::process::id()));
+    let empty_auth = std::env::temp_dir().join(format!("runie_no_model_test_{}.json", std::process::id()));
     std::env::set_var("RUNIE_AUTH_FILE", &empty_auth);
 
     let _path = clean_config();

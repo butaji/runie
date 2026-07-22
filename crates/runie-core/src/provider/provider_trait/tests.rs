@@ -16,9 +16,7 @@ fn missing_api_key_display_names_provider_and_env_var() {
 
 #[test]
 fn typed_error_display_rate_limit() {
-    let err = ProviderError::RateLimit {
-        retry_after_secs: Some(60),
-    };
+    let err = ProviderError::RateLimit { retry_after_secs: Some(60) };
     let msg = err.to_string();
     assert!(msg.contains("Rate limited"), "{msg}");
     assert!(err.is_retryable());
@@ -31,9 +29,7 @@ fn typed_error_display_rate_limit() {
 /// must be omitted entirely; the error kind/severity must stay intact.
 #[test]
 fn rate_limit_display_without_retry_after_omits_parenthetical() {
-    let err = ProviderError::RateLimit {
-        retry_after_secs: None,
-    };
+    let err = ProviderError::RateLimit { retry_after_secs: None };
     let msg = err.to_string();
     assert_eq!(msg, "Rate limited", "unexpected rendering: {msg}");
     assert!(
@@ -46,9 +42,7 @@ fn rate_limit_display_without_retry_after_omits_parenthetical() {
 
 #[test]
 fn rate_limit_display_with_retry_after_shows_seconds() {
-    let err = ProviderError::RateLimit {
-        retry_after_secs: Some(5),
-    };
+    let err = ProviderError::RateLimit { retry_after_secs: Some(5) };
     let msg = err.to_string();
     assert_eq!(msg, "Rate limited (retry after 5s)", "{msg}");
     assert!(err.is_retryable());
@@ -106,9 +100,7 @@ fn typed_error_display_context_length() {
 #[test]
 fn retryable_is_true_for_transient_errors() {
     let transient = [
-        ProviderError::RateLimit {
-            retry_after_secs: None,
-        },
+        ProviderError::RateLimit { retry_after_secs: None },
         ProviderError::Network("connection refused".into()),
         ProviderError::Timeout,
         ProviderError::Server(500, Default::default()),
@@ -144,14 +136,10 @@ fn clone_preserves_variant_and_data() {
     let auth_err = ProviderError::Auth(401);
     assert!(matches!(auth_err.clone(), ProviderError::Auth(401)));
 
-    let rate_err = ProviderError::RateLimit {
-        retry_after_secs: Some(30),
-    };
+    let rate_err = ProviderError::RateLimit { retry_after_secs: Some(30) };
     assert!(matches!(
         rate_err.clone(),
-        ProviderError::RateLimit {
-            retry_after_secs: Some(30)
-        }
+        ProviderError::RateLimit { retry_after_secs: Some(30) }
     ));
 }
 
@@ -370,16 +358,11 @@ fn retry_policy_max_attempts_for_rate_limit() {
     let policy = RetryPolicy::new(base, Some(10), None, None, None);
 
     assert_eq!(
-        policy.max_attempts_for_error(&ProviderError::RateLimit {
-            retry_after_secs: None
-        }),
+        policy.max_attempts_for_error(&ProviderError::RateLimit { retry_after_secs: None }),
         10
     );
     // Other errors use base config
-    assert_eq!(
-        policy.max_attempts_for_error(&ProviderError::Timeout),
-        3
-    );
+    assert_eq!(policy.max_attempts_for_error(&ProviderError::Timeout), 3);
 }
 
 #[test]
@@ -387,15 +370,10 @@ fn retry_policy_max_attempts_for_timeout() {
     let base = RetryConfig::new(2, Duration::from_secs(1), Duration::from_secs(30), 2.0);
     let policy = RetryPolicy::new(base, None, Some(7), None, None);
 
-    assert_eq!(
-        policy.max_attempts_for_error(&ProviderError::Timeout),
-        7
-    );
+    assert_eq!(policy.max_attempts_for_error(&ProviderError::Timeout), 7);
     // Other errors use base config
     assert_eq!(
-        policy.max_attempts_for_error(&ProviderError::RateLimit {
-            retry_after_secs: None
-        }),
+        policy.max_attempts_for_error(&ProviderError::RateLimit { retry_after_secs: None }),
         2
     );
 }

@@ -16,9 +16,7 @@ use crate::model::AppState;
 pub fn run_name(_state: &mut AppState, name: &str) -> CommandResult {
     let name = name.trim();
     // Emit intent event; handle_command_event contains the actual mutation logic
-    CommandResult::Event(crate::Event::RunNameCommand {
-        name: name.to_owned(),
-    })
+    CommandResult::Event(crate::Event::RunNameCommand { name: name.to_owned() })
 }
 
 /// Default fork index: the most recent user message. 0 if no user messages.
@@ -42,18 +40,14 @@ pub fn run_fork(state: &mut AppState, index_raw: &str) -> CommandResult {
             Ok(n) => n,
             Err(_) => {
                 // Emit event for invalid input; handler will show error
-                return CommandResult::Event(crate::Event::RunForkCommand {
-                    message_index: index_raw.to_string(),
-                });
+                return CommandResult::Event(crate::Event::RunForkCommand { message_index: index_raw.to_string() });
             }
         }
     };
     let msg_count = state.session().messages.len();
     if message_index >= msg_count {
         // Emit event; handler will show range error
-        return CommandResult::Event(crate::Event::RunForkCommand {
-            message_index: index_raw.to_string(),
-        });
+        return CommandResult::Event(crate::Event::RunForkCommand { message_index: index_raw.to_string() });
     }
     // Emit ForkSession intent; owning actor handles the mutation
     CommandResult::Event(crate::Event::ForkSession { message_index })
@@ -102,9 +96,7 @@ pub fn run_auto(state: &mut AppState, args: &str) -> CommandResult {
     };
 
     if enable && current_project_untrusted(state) {
-        return CommandResult::Message(
-            "Auto-approve requires a trusted project — run /trust first.".into(),
-        );
+        return CommandResult::Message("Auto-approve requires a trusted project — run /trust first.".into());
     }
 
     *state.view_mut().auto_mode_mut() = enable;
@@ -118,8 +110,7 @@ pub fn run_auto(state: &mut AppState, args: &str) -> CommandResult {
     }
     if enable {
         CommandResult::Message(
-            "Auto-approve mode enabled — read, edit and shell tools run without confirmation."
-                .into(),
+            "Auto-approve mode enabled — read, edit and shell tools run without confirmation.".into(),
         )
     } else {
         CommandResult::Message("Auto-approve mode disabled (manual approvals).".into())
@@ -130,8 +121,7 @@ pub fn run_auto(state: &mut AppState, args: &str) -> CommandResult {
 /// No decision (`None`) and `Trusted` both allow enabling auto-approve.
 fn current_project_untrusted(state: &AppState) -> bool {
     let cwd = std::env::current_dir().unwrap_or_default();
-    let cwd_utf8 =
-        camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
     matches!(
         state.trust_decisions().get(&cwd_utf8),
         Some(crate::trust::TrustDecision::Untrusted)
@@ -183,10 +173,9 @@ pub fn run_save(state: &mut AppState, name: &str) -> CommandResult {
     let session = crate::session::Session::from_state(state, name_owned.clone());
     // Route through SessionActor in production; fall back to direct save in tests.
     if let Some(h) = state.actor_handles() {
-        let _ = h.session.try_send(SessionMsg::Save {
-            name: name_owned.clone(),
-            session,
-        });
+        let _ = h
+            .session
+            .try_send(SessionMsg::Save { name: name_owned.clone(), session });
         CommandResult::Message(s::saving_session(&name_owned))
     } else {
         match crate::session::replay::save_session(&name_owned, state) {
@@ -203,12 +192,7 @@ pub fn run_load(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message(s::LOAD_USAGE.into());
     }
-    if send_session_msg(
-        state,
-        SessionMsg::Load {
-            name: name.to_owned(),
-        },
-    ) {
+    if send_session_msg(state, SessionMsg::Load { name: name.to_owned() }) {
         return CommandResult::None;
     }
     match crate::session::replay::load_session(name, state) {
@@ -224,12 +208,7 @@ pub fn run_delete(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message(s::DELETE_USAGE.into());
     }
-    if send_session_msg(
-        state,
-        SessionMsg::Delete {
-            name: name.to_owned(),
-        },
-    ) {
+    if send_session_msg(state, SessionMsg::Delete { name: name.to_owned() }) {
         return CommandResult::None;
     }
     match crate::session::replay::delete_session(name) {
@@ -260,9 +239,7 @@ pub fn run_import(state: &mut AppState, path: &str) -> CommandResult {
             // Emit SessionImported event; dispatch.rs::apply_session_imported handles
             // state.restore_session() and adds a confirmation message, keeping the
             // event-driven pattern consistent.
-            CommandResult::Event(crate::Event::SessionImported {
-                session: Box::new(session),
-            })
+            CommandResult::Event(crate::Event::SessionImported { session: Box::new(session) })
         }
         Err(_) => CommandResult::Message(s::import_error(path)),
     }
@@ -284,10 +261,9 @@ pub fn run_export(state: &mut AppState, path: &str) -> CommandResult {
     let path_buf = std::path::PathBuf::from(path);
     // Route through SessionActor in production; fall back to direct export in tests.
     if let Some(h) = state.actor_handles() {
-        let _ = h.session.try_send(SessionMsg::Export {
-            path: path_buf,
-            session,
-        });
+        let _ = h
+            .session
+            .try_send(SessionMsg::Export { path: path_buf, session });
         return CommandResult::Message(s::exporting_session(path));
     }
     let json = serde_json::to_string_pretty(&session).unwrap_or_default();

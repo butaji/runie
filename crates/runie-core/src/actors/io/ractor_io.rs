@@ -3,7 +3,9 @@
 //! Migrated from custom Actor trait to ractor for consistency with the rest
 //! of the actor system.
 
-use std::path::{Path, PathBuf};
+#[allow(unused_imports)]
+use std::path::Path;
+use std::path::PathBuf;
 
 use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -58,10 +60,9 @@ impl RactorIoHandle {
 
     /// Request sharing session to gist.
     pub async fn share_session(&self, messages: Vec<ChatMessage>, display_name: Option<String>) {
-        let _ = self.inner.send_message(IoMsg::ShareSession {
-            messages,
-            display_name,
-        });
+        let _ = self
+            .inner
+            .send_message(IoMsg::ShareSession { messages, display_name });
     }
 
     /// Request opening external editor.
@@ -137,7 +138,7 @@ impl Actor for RactorIoActor {
 
     async fn pre_start(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         Ok(())
@@ -146,7 +147,7 @@ impl Actor for RactorIoActor {
     #[instrument(name = "io_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
@@ -154,10 +155,7 @@ impl Actor for RactorIoActor {
             IoMsg::RunBash { command, shell } => self.run_bash(command, shell).await,
             IoMsg::WriteFiles { edits } => self.write_files(edits).await,
             IoMsg::DetectEnv => self.detect_env().await,
-            IoMsg::ShareSession {
-                messages,
-                display_name,
-            } => {
+            IoMsg::ShareSession { messages, display_name } => {
                 self.share_session(messages, display_name).await;
             }
             IoMsg::OpenExternalEditor { text } => {
@@ -193,11 +191,10 @@ impl RactorIoActor {
     }
 
     async fn write_files(&self, edits: Vec<(PathBuf, String)>) {
-        let (count, errors) =
-            match tokio::task::spawn_blocking(move || write_files_sync(&edits)).await {
-                Ok(res) => res,
-                Err(e) => (0, vec![format!("write task failed: {e}")]),
-            };
+        let (count, errors) = match tokio::task::spawn_blocking(move || write_files_sync(&edits)).await {
+            Ok(res) => res,
+            Err(e) => (0, vec![format!("write task failed: {e}")]),
+        };
         self.emit(Event::FilesWritten { count, errors });
     }
 
@@ -252,10 +249,9 @@ impl RactorIoActor {
 
     #[cfg(feature = "clipboard")]
     async fn write_clipboard(&self, text: String) {
-        let success =
-            tokio::task::spawn_blocking(move || super::effects::write_clipboard_sync(&text))
-                .await
-                .unwrap_or(false);
+        let success = tokio::task::spawn_blocking(move || super::effects::write_clipboard_sync(&text))
+            .await
+            .unwrap_or(false);
         self.emit(Event::ClipboardWritten { success });
     }
 
@@ -271,14 +267,11 @@ impl RactorIoActor {
     async fn suspend_process(&self) {
         let bus = self.bus.clone();
         tokio::task::spawn_blocking(move || {
-            let _ =
-                crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen,);
+            let _ = crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen,);
             let _ = crossterm::terminal::disable_raw_mode();
-            let _ =
-                nix::sys::signal::kill(nix::unistd::Pid::this(), nix::sys::signal::Signal::SIGTSTP);
+            let _ = nix::sys::signal::kill(nix::unistd::Pid::this(), nix::sys::signal::Signal::SIGTSTP);
             let _ = crossterm::terminal::enable_raw_mode();
-            let _ =
-                crossterm::execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen,);
+            let _ = crossterm::execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen,);
             bus.publish(Event::ProcessResumed);
         });
     }
@@ -352,12 +345,7 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
         None
     };
 
-    Some(GitInfo {
-        repo_name,
-        branch,
-        is_worktree,
-        worktree_source,
-    })
+    Some(GitInfo { repo_name, branch, is_worktree, worktree_source })
 }
 
 #[cfg(test)]

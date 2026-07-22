@@ -121,10 +121,7 @@ fn quantize_theme(
 }
 
 /// Quantize an opaline color to the given depth, returning the nearest ANSI color.
-fn quantize_opaline_color(
-    c: opaline::OpalineColor,
-    depth: crate::quantize::ColorDepth,
-) -> opaline::OpalineColor {
+fn quantize_opaline_color(c: opaline::OpalineColor, depth: crate::quantize::ColorDepth) -> opaline::OpalineColor {
     let rat = ratatui::style::Color::Rgb(c.r, c.g, c.b);
     let quantized = crate::quantize::quantize(rat, depth);
     match quantized {

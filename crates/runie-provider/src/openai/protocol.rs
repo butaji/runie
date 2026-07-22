@@ -76,10 +76,7 @@ mod lifecycle_tests {
         let events = state.text_delta("b1", "hi");
         assert_eq!(
             events,
-            vec![
-                ProviderEvent::TextStart { id: "b1".into() },
-                ProviderEvent::TextDelta("hi".into())
-            ]
+            vec![ProviderEvent::TextStart { id: "b1".into() }, ProviderEvent::TextDelta("hi".into())]
         );
     }
 
@@ -101,9 +98,7 @@ mod lifecycle_tests {
         assert!(events.contains(&ProviderEvent::TextEnd { id: "t1".into() }));
         assert!(events.contains(&ProviderEvent::TextEnd { id: "t2".into() }));
         assert!(events.contains(&ProviderEvent::ThinkingEnd { id: "r1".into() }));
-        assert!(events.contains(&ProviderEvent::Finish {
-            reason: StopReason::Stop
-        }));
+        assert!(events.contains(&ProviderEvent::Finish { reason: StopReason::Stop }));
         assert_eq!(events.len(), 4); // 3 End + 1 Finish
     }
 
@@ -113,10 +108,7 @@ mod lifecycle_tests {
         let events = state.thinking_delta("r1", "reasoning");
         assert_eq!(
             events,
-            vec![
-                ProviderEvent::ThinkingStart { id: "r1".into() },
-                ProviderEvent::ThinkingDelta("reasoning".into())
-            ]
+            vec![ProviderEvent::ThinkingStart { id: "r1".into() }, ProviderEvent::ThinkingDelta("reasoning".into())]
         );
     }
 
@@ -285,12 +277,8 @@ impl ContentFilter {
             // Buffer now starts with the marker.
             let consumed = match kind {
                 Marker::Think => self.consume_think(&mut out),
-                Marker::Minimax => {
-                    self.consume_xml_tool(OPEN_MINIMAX, CLOSE_MINIMAX, suppress_tools, &mut out)
-                }
-                Marker::ToolCall => {
-                    self.consume_xml_tool(OPEN_TOOL_CALL, CLOSE_TOOL_CALL, suppress_tools, &mut out)
-                }
+                Marker::Minimax => self.consume_xml_tool(OPEN_MINIMAX, CLOSE_MINIMAX, suppress_tools, &mut out),
+                Marker::ToolCall => self.consume_xml_tool(OPEN_TOOL_CALL, CLOSE_TOOL_CALL, suppress_tools, &mut out),
                 Marker::Json => self.consume_json_tool(suppress_tools, &mut out),
             };
             if !consumed {
@@ -443,14 +431,8 @@ fn segment_to_events(seg: ContentSegment, state: &mut OpenAiState) -> Vec<Provid
             let id = state.content_filter.next_tool_id();
             let args = serde_json::to_string(&tc.args).unwrap_or_else(|_| "{}".to_owned());
             vec![
-                ProviderEvent::ToolCallStart {
-                    id: id.clone(),
-                    name: tc.name,
-                },
-                ProviderEvent::ToolCallInputDelta {
-                    id: id.clone(),
-                    delta: args,
-                },
+                ProviderEvent::ToolCallStart { id: id.clone(), name: tc.name },
+                ProviderEvent::ToolCallInputDelta { id: id.clone(), delta: args },
                 ProviderEvent::ToolCallEnd { id },
             ]
         }
@@ -560,13 +542,8 @@ pub struct ToolAccum {
 
 impl From<ToolAccum> for runie_core::proto::message::ToolCall {
     fn from(acc: ToolAccum) -> Self {
-        let args: serde_json::Value =
-            serde_json::from_str(&acc.arguments).unwrap_or(serde_json::Value::Null);
-        runie_core::proto::message::ToolCall {
-            id: acc.id,
-            name: acc.name,
-            args,
-        }
+        let args: serde_json::Value = serde_json::from_str(&acc.arguments).unwrap_or(serde_json::Value::Null);
+        runie_core::proto::message::ToolCall { id: acc.id, name: acc.name, args }
     }
 }
 
@@ -656,11 +633,7 @@ fn parse_chunk(json: &serde_json::Value) -> Option<Chunk> {
         .collect();
 
     Some(Chunk {
-        delta: Delta {
-            content: choice.delta.content,
-            reasoning: choice.delta.reasoning_content,
-            tool_calls,
-        },
+        delta: Delta { content: choice.delta.content, reasoning: choice.delta.reasoning_content, tool_calls },
         finish_reason: choice.finish_reason,
         usage: json_chunk
             .usage
@@ -669,14 +642,10 @@ fn parse_chunk(json: &serde_json::Value) -> Option<Chunk> {
 }
 
 fn tool_call_json_to_delta(tc: ToolCallJson) -> ToolCallDelta {
-    ToolCallDelta {
-        index: tc.index,
-        id: tc.id,
-        name: tc.function.name,
-        arguments: tc.function.arguments,
-    }
+    ToolCallDelta { index: tc.index, id: tc.id, name: tc.function.name, arguments: tc.function.arguments }
 }
 
+#[allow(clippy::too_many_lines)]
 fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEvent> {
     let mut events = Vec::new();
 
@@ -724,10 +693,7 @@ fn process_openai_chunk(chunk: Chunk, state: &mut OpenAiState) -> Vec<ProviderEv
     }
 
     if let Some((input, output)) = chunk.usage {
-        events.push(ProviderEvent::Usage {
-            input_tokens: input,
-            output_tokens: output,
-        });
+        events.push(ProviderEvent::Usage { input_tokens: input, output_tokens: output });
     }
 
     events
@@ -751,10 +717,7 @@ fn process_tool_call_delta(delta: ToolCallDelta, state: &mut OpenAiState) -> Vec
     let id = acc.id.clone();
     let name = acc.name.clone();
     let args = std::mem::take(&mut acc.arguments);
-    let mut events = vec![ProviderEvent::ToolCallStart {
-        id: id.clone(),
-        name,
-    }];
+    let mut events = vec![ProviderEvent::ToolCallStart { id: id.clone(), name }];
     if !args.is_empty() {
         events.push(ProviderEvent::ToolCallInputDelta { id, delta: args });
     }
@@ -785,10 +748,7 @@ fn emit_args_delta(acc: &mut ToolAccum) -> Vec<ProviderEvent> {
     let id = acc.id.clone();
     let delta_str = acc.arguments.clone();
     acc.arguments.clear();
-    vec![ProviderEvent::ToolCallInputDelta {
-        id,
-        delta: delta_str,
-    }]
+    vec![ProviderEvent::ToolCallInputDelta { id, delta: delta_str }]
 }
 
 fn flush_tool_calls(state: &mut OpenAiState) -> Vec<ProviderEvent> {
@@ -799,16 +759,10 @@ fn flush_tool_calls(state: &mut OpenAiState) -> Vec<ProviderEvent> {
         }
         if !state.started.contains(&acc.id) {
             state.started.insert(acc.id.clone());
-            events.push(ProviderEvent::ToolCallStart {
-                id: acc.id.clone(),
-                name: acc.name.clone(),
-            });
+            events.push(ProviderEvent::ToolCallStart { id: acc.id.clone(), name: acc.name.clone() });
         }
         if !acc.arguments.is_empty() {
-            events.push(ProviderEvent::ToolCallInputDelta {
-                id: acc.id.clone(),
-                delta: acc.arguments.clone(),
-            });
+            events.push(ProviderEvent::ToolCallInputDelta { id: acc.id.clone(), delta: acc.arguments.clone() });
         }
         state.ended.insert(acc.id.clone());
         events.push(ProviderEvent::ToolCallEnd { id: acc.id.clone() });
@@ -909,13 +863,12 @@ mod tests {
                 "index": 0
             }]
         });
-        let frame =
-            OpenAiFrame::Chunk(parse_chunk(&json).expect("gemini tool-call chunk must parse"));
+        let frame = OpenAiFrame::Chunk(parse_chunk(&json).expect("gemini tool-call chunk must parse"));
         let (state, events) = protocol.step(state, frame);
         assert!(
-            events.iter().any(
-                |e| matches!(e, ProviderEvent::ToolCallStart { name, .. } if name == "get_weather")
-            ),
+            events
+                .iter()
+                .any(|e| matches!(e, ProviderEvent::ToolCallStart { name, .. } if name == "get_weather")),
             "ToolCallStart missing: {events:?}"
         );
         // finish_reason "stop" must still flush the pending tool call.
@@ -973,12 +926,9 @@ mod tests {
         assert!(events.iter().any(|e| matches!(
             e, ProviderEvent::ToolCallEnd { id } if id == "call_1"
         )));
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Finish {
-                reason: StopReason::ToolCalls
-            }
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::ToolCalls })));
         assert!(final_state.ended.contains("call_1"));
     }
 
@@ -1011,6 +961,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn minimax_dual_source_reasoning_emitted_exactly_once() {
         let protocol = OpenAiProtocol::new();
         let state = OpenAiState::default();
@@ -1025,8 +976,7 @@ mod tests {
             minimax_dual_chunk(" about this.", Some(" about this.")),
         );
         all.extend(ev);
-        let (state, ev) =
-            protocol.step(state, minimax_dual_chunk("\n</think>\n\nThe answer", None));
+        let (state, ev) = protocol.step(state, minimax_dual_chunk("\n</think>\n\nThe answer", None));
         all.extend(ev);
         let (_state, ev) = protocol.step(state, chunk_with_finish("stop"));
         all.extend(ev);
@@ -1141,9 +1091,7 @@ mod tests {
     #[test]
     fn error_frame_is_terminal() {
         let protocol = OpenAiProtocol::new();
-        let frame = OpenAiFrame::Error(ModelError::Overloaded {
-            retry_after_secs: None,
-        });
+        let frame = OpenAiFrame::Error(ModelError::Overloaded { retry_after_secs: None });
         assert!(protocol.terminal(&frame));
     }
 

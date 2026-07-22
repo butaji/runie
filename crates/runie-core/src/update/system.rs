@@ -48,8 +48,7 @@ impl AppState {
             ..Default::default()
         });
         self.messages_changed();
-        *self.transient_until_mut() =
-            Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
+        *self.transient_until_mut() = Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
     }
 
     /// Emit a transient notification in the hints line (not in the feed).
@@ -460,9 +459,7 @@ pub(super) fn handle_system_event(state: &mut AppState, event: Event) {
     match event {
         Event::SystemMessage { content } => state.add_system_msg(content),
         Event::TransientMessage { content, level } => state.set_transient(content, level),
-        Event::TransientError { content } => {
-            state.set_transient(content, crate::event::TransientLevel::Error)
-        }
+        Event::TransientError { content } => state.set_transient(content, crate::event::TransientLevel::Error),
         Event::ClearTransient => state.clear_transient(),
         Event::ShowDiagnostics => state.show_diagnostics(),
         Event::ToggleReadOnly => state.toggle_read_only(),

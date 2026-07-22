@@ -26,13 +26,7 @@ impl Panel {
 
     /// Update the value of a form field by its index.
     pub fn set_form_value(&mut self, field_index: usize, value: String) {
-        if let Some(PanelItem::FormField {
-            value: v,
-            key,
-            cursor_pos,
-            ..
-        }) = self.items.get_mut(field_index)
-        {
+        if let Some(PanelItem::FormField { value: v, key, cursor_pos, .. }) = self.items.get_mut(field_index) {
             *v = value.clone();
             *cursor_pos = v.len();
             self.form_values.insert(key.clone(), value);

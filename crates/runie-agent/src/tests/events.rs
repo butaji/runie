@@ -3,9 +3,7 @@ use runie_core::Event;
 
 #[test]
 fn test_agent_thinking_event() {
-    let evt = Event::Thinking {
-        id: "req.0".to_string(),
-    };
+    let evt = Event::Thinking { id: "req.0".to_string() };
     match evt {
         Event::Thinking { id } => assert_eq!(id, "req.0"),
         _ => panic!("Expected Event::Thinking"),
@@ -32,17 +30,9 @@ fn test_agent_response_event() {
 
 #[test]
 fn test_agent_tool_start_event() {
-    let evt = Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "bash".to_string(),
-        input: serde_json::Value::Null,
-    };
+    let evt = Event::ToolStart { id: "req.0".to_string(), name: "bash".to_string(), input: serde_json::Value::Null };
     match evt {
-        Event::ToolStart {
-            id,
-            name,
-            input: serde_json::Value::Null,
-        } => {
+        Event::ToolStart { id, name, input: serde_json::Value::Null } => {
             assert_eq!(id, "req.0");
             assert_eq!(name, "bash");
         }
@@ -52,19 +42,9 @@ fn test_agent_tool_start_event() {
 
 #[test]
 fn test_agent_tool_end_event() {
-    let evt = Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 1.5,
-        output: "result".to_string(),
-    };
+    let evt = Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 1.5, output: "result".to_string() };
     match evt {
-        Event::ToolEnd {
-            id: _,
-            duration_secs,
-            output,
-            ..
-        } => {
+        Event::ToolEnd { id: _, duration_secs, output, .. } => {
             assert!((duration_secs - 1.5).abs() < 0.001);
             assert_eq!(output, "result");
         }
@@ -74,9 +54,7 @@ fn test_agent_tool_end_event() {
 
 #[test]
 fn test_agent_done_event() {
-    let evt = Event::Done {
-        id: "req.0".to_string(),
-    };
+    let evt = Event::Done { id: "req.0".to_string() };
     match evt {
         Event::Done { id } => assert_eq!(id, "req.0"),
         _ => panic!("Expected Event::Done"),
@@ -85,10 +63,7 @@ fn test_agent_done_event() {
 
 #[test]
 fn test_agent_turn_complete_event() {
-    let evt = Event::TurnComplete {
-        id: "req.0".to_string(),
-        duration_secs: 2.5,
-    };
+    let evt = Event::TurnComplete { id: "req.0".to_string(), duration_secs: 2.5 };
     match evt {
         Event::TurnComplete { id, duration_secs } => {
             assert_eq!(id, "req.0");

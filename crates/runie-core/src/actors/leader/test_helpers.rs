@@ -1,4 +1,5 @@
 //! Test helpers for constructing a `LeaderHandle` with all actors spawned.
+#![allow(clippy::too_many_lines)]
 
 use crate::actors::provider::{BuiltProvider, ProviderFactory};
 use crate::bus::EventBus;
@@ -23,8 +24,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
     use crate::actors::turn::RactorTurnActor;
     use crate::actors::InputActor;
     use crate::actors::{
-        RactorConfigActor, RactorFffIndexerActor, RactorIoActor, RactorPermissionActor,
-        RactorProviderActor, RactorSessionActor,
+        RactorConfigActor, RactorFffIndexerActor, RactorIoActor, RactorPermissionActor, RactorProviderActor,
+        RactorSessionActor,
     };
 
     struct NoOpAgentHandle;
@@ -42,8 +43,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
         fn generate(
             &self,
             _: Vec<crate::message::ChatMessage>,
-        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-        {
+        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
             Box::pin(futures::stream::empty())
         }
     }
@@ -52,12 +52,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
 
     #[async_trait]
     impl ProviderFactory for TestProviderFactory {
-        fn build(
-            &self,
-            provider: &str,
-            model: &str,
-            _config: &crate::Config,
-        ) -> Result<BuiltProvider, ProviderError> {
+        fn build(&self, provider: &str, model: &str, _config: &crate::Config) -> Result<BuiltProvider, ProviderError> {
             Ok(BuiltProvider::new(
                 Box::new(NoOpProvider),
                 provider.into(),
@@ -73,21 +68,18 @@ pub async fn test_leader_handle() -> LeaderHandle {
     }
 
     let bus = EventBus::<CoreEvent>::new(16);
-    let (config_h, config_cell, config_join) =
-        RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+    let (config_h, config_cell, config_join) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
     let factory: Arc<dyn ProviderFactory> = Arc::new(TestProviderFactory);
-    let (provider_h, provider_cell, provider_join) =
-        RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
-            .await
-            .expect("provider spawn");
+    let (provider_h, provider_cell, provider_join) = RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
+        .await
+        .expect("provider spawn");
     let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
     let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone())
         .await
         .expect("session spawn");
-    let (permission_h, permission_cell, permission_join) =
-        RactorPermissionActor::spawn(bus.clone(), config_h.clone())
-            .await
-            .unwrap();
+    let (permission_h, permission_cell, permission_join) = RactorPermissionActor::spawn(bus.clone(), config_h.clone())
+        .await
+        .unwrap();
     let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
     let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await.unwrap();
     let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(

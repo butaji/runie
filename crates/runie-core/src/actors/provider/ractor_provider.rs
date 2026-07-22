@@ -38,19 +38,11 @@ impl RactorProviderHandle {
     }
 
     /// Build a provider for the given registry key and model.
-    pub async fn build(
-        &self,
-        provider: String,
-        model: String,
-    ) -> Result<BuiltProvider, ProviderError> {
+    pub async fn build(&self, provider: String, model: String) -> Result<BuiltProvider, ProviderError> {
         match self
             .inner
             .call(
-                |tx| ProviderMsg::Build {
-                    provider,
-                    model,
-                    reply: Some(tx),
-                },
+                |tx| ProviderMsg::Build { provider, model, reply: Some(tx) },
                 None,
             )
             .await
@@ -61,19 +53,11 @@ impl RactorProviderHandle {
     }
 
     /// Validate an API key for a provider, resolving base URL from config.
-    pub async fn validate_key(
-        &self,
-        provider: String,
-        api_key: String,
-    ) -> anyhow::Result<Vec<String>> {
+    pub async fn validate_key(&self, provider: String, api_key: String) -> anyhow::Result<Vec<String>> {
         match self
             .inner
             .call(
-                |tx| ProviderMsg::ValidateKey {
-                    provider,
-                    api_key,
-                    reply: Some(tx),
-                },
+                |tx| ProviderMsg::ValidateKey { provider, api_key, reply: Some(tx) },
                 None,
             )
             .await
@@ -88,10 +72,7 @@ impl RactorProviderHandle {
         match self
             .inner
             .call(
-                |tx| ProviderMsg::ListModels {
-                    provider,
-                    reply: Some(tx),
-                },
+                |tx| ProviderMsg::ListModels { provider, reply: Some(tx) },
                 None,
             )
             .await
@@ -109,15 +90,8 @@ pub struct RactorProviderActor {
 }
 
 impl RactorProviderActor {
-    fn new(
-        _bus: EventBus<Event>,
-        config_handle: RactorConfigHandle,
-        factory: Arc<dyn ProviderFactory>,
-    ) -> Self {
-        Self {
-            config_handle,
-            factory,
-        }
+    fn new(_bus: EventBus<Event>, config_handle: RactorConfigHandle, factory: Arc<dyn ProviderFactory>) -> Self {
+        Self { config_handle, factory }
     }
 
     /// Spawn a `RactorProviderActor` on the given event bus.
@@ -140,6 +114,7 @@ impl RactorProviderActor {
 
     /// Spawn a minimal provider actor for testing (no real config/factory needed).
     #[cfg(test)]
+    #[allow(clippy::too_many_lines)]
     pub async fn minimal_spawn_for_test(
         bus: EventBus<Event>,
     ) -> (
@@ -158,13 +133,8 @@ impl RactorProviderActor {
             fn generate(
                 &self,
                 _: Vec<crate::ChatMessage>,
-            ) -> Pin<
-                Box<
-                    dyn futures::Stream<Item = Result<crate::provider_event::ProviderEvent>>
-                        + Send
-                        + '_,
-                >,
-            > {
+            ) -> Pin<Box<dyn futures::Stream<Item = Result<crate::provider_event::ProviderEvent>> + Send + '_>>
+            {
                 Box::pin(futures::stream::empty())
             }
         }
@@ -172,12 +142,7 @@ impl RactorProviderActor {
 
         #[async_trait]
         impl ProviderFactory for TestFactory {
-            fn build(
-                &self,
-                _provider: &str,
-                model: &str,
-                _config: &Config,
-            ) -> Result<BuiltProvider, ProviderError> {
+            fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
                 Ok(BuiltProvider::new(
                     Box::new(EchoProvider),
                     "test".into(),
@@ -199,11 +164,7 @@ impl RactorProviderActor {
     }
 
     /// Build a provider for the given registry key and model.
-    pub async fn build_provider(
-        &self,
-        provider: &str,
-        model: &str,
-    ) -> Result<BuiltProvider, ProviderError> {
+    pub async fn build_provider(&self, provider: &str, model: &str) -> Result<BuiltProvider, ProviderError> {
         let config = self.config().await?;
         self.factory.build(provider, model, &config)
     }
@@ -259,11 +220,7 @@ impl Actor for RactorProviderActor {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             // Build is fast (no network) so we await inline.
-            ProviderMsg::Build {
-                provider,
-                model,
-                reply,
-            } => {
+            ProviderMsg::Build { provider, model, reply } => {
                 let result = self.build_provider(&provider, &model).await;
                 if let Some(reply) = reply {
                     let _ = reply.send(result);
@@ -272,14 +229,9 @@ impl Actor for RactorProviderActor {
             // Network calls are awaited directly — ractor actors are async so the
             // mailbox is only blocked while waiting for a message, not while awaiting
             // the network call. No `tokio::spawn` handles are lost.
-            ProviderMsg::ValidateKey {
-                provider,
-                api_key,
-                reply,
-            } => {
+            ProviderMsg::ValidateKey { provider, api_key, reply } => {
                 let config = self.config().await;
-                let result =
-                    Self::call_validate_key(&provider, &api_key, config, &*self.factory).await;
+                let result = Self::call_validate_key(&provider, &api_key, config, &*self.factory).await;
                 if let Some(reply) = reply {
                     let _ = reply.send(result);
                 }
@@ -366,8 +318,7 @@ mod tests {
         fn generate(
             &self,
             _: Vec<ChatMessage>,
-        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-        {
+        ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
             Box::pin(futures::stream::empty())
         }
     }
@@ -376,12 +327,7 @@ mod tests {
 
     #[async_trait]
     impl ProviderFactory for MockFactory {
-        fn build(
-            &self,
-            _provider: &str,
-            model: &str,
-            _config: &Config,
-        ) -> Result<BuiltProvider, ProviderError> {
+        fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
             Ok(BuiltProvider::new(
                 Box::new(MockProvider),
                 "mock".into(),
@@ -399,8 +345,7 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_actor_spawns() {
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell, _join) =
-            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
             .await
@@ -411,8 +356,7 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_build() {
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell, _join) =
-            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
 
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
@@ -428,8 +372,7 @@ mod tests {
     #[tokio::test]
     async fn ractor_provider_handle_validate_key() {
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell, _join) =
-            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
         let factory = Arc::new(MockFactory);
 
         let (handle, _cell, _) = RactorProviderActor::spawn(bus.clone(), config_handle, factory)
@@ -445,23 +388,18 @@ mod tests {
     /// While `ListModels` (slow network) is in flight, `ValidateKey` can also be
     /// processed without blocking.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn provider_actor_mailbox_not_blocked_by_validate() {
         use std::time::Duration;
 
         let bus = EventBus::<Event>::new(16);
-        let (config_handle, _cell, _join) =
-            RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
+        let (config_handle, _cell, _join) = RactorConfigActor::spawn_default(bus.clone()).await.unwrap();
 
         // Factory that delays validate_key by 100ms to simulate network latency.
         struct SlowFactory;
         #[async_trait]
         impl ProviderFactory for SlowFactory {
-            fn build(
-                &self,
-                _provider: &str,
-                model: &str,
-                _config: &Config,
-            ) -> Result<BuiltProvider, ProviderError> {
+            fn build(&self, _provider: &str, model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
                 Ok(BuiltProvider::new(
                     Box::new(MockProvider),
                     "mock".into(),

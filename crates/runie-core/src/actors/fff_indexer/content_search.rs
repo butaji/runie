@@ -33,12 +33,7 @@ pub(super) fn find_regex_matches(
 }
 
 /// Perform a literal content search and return matches.
-pub(super) fn find_literal_matches(
-    content: &str,
-    query: &str,
-    max_per_file: usize,
-    path: &str,
-) -> Vec<ContentMatch> {
+pub(super) fn find_literal_matches(content: &str, query: &str, max_per_file: usize, path: &str) -> Vec<ContentMatch> {
     let query_lower = query.to_lowercase();
     let mut matches = Vec::new();
     for (line_num, line) in content.lines().enumerate() {

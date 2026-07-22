@@ -12,10 +12,9 @@ use tokio::sync::mpsc;
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
-    InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor,
-    RactorFffIndexerHandle, RactorInputHandle, RactorIoActor, RactorIoHandle,
-    RactorPermissionActor, RactorPermissionHandle, RactorProviderActor, RactorProviderHandle,
-    RactorSessionActor, RactorSessionHandle, LEADER_CMD_CHANNEL_CAPACITY,
+    InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor, RactorFffIndexerHandle,
+    RactorInputHandle, RactorIoActor, RactorIoHandle, RactorPermissionActor, RactorPermissionHandle,
+    RactorProviderActor, RactorProviderHandle, RactorSessionActor, RactorSessionHandle, LEADER_CMD_CHANNEL_CAPACITY,
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
@@ -71,9 +70,7 @@ impl Leader {
     /// Create a new leader in **embedded mode** (no TCP listener).
     /// This is the default for TUI and CLI usage.
     pub fn new() -> Self {
-        Self {
-            config: LeaderConfig::default(),
-        }
+        Self { config: LeaderConfig::default() }
     }
 
     /// Create a leader with explicit configuration.
@@ -83,9 +80,7 @@ impl Leader {
 
     /// Use a custom TCP address (enables server mode).
     pub fn with_tcp_addr<A: ToString>(self, addr: A) -> Self {
-        Self {
-            config: self.config.with_tcp_addr(addr),
-        }
+        Self { config: self.config.with_tcp_addr(addr) }
     }
 
     /// Start the leader and spawn all actors.
@@ -122,8 +117,7 @@ impl Leader {
     ) -> anyhow::Result<LeaderHandle> {
         let (cmd_tx, cmd_rx) = mpsc::channel(LEADER_CMD_CHANNEL_CAPACITY);
 
-        let handles =
-            Self::spawn_actors(&bus, &self.config, provider_factory, agent_factory).await?;
+        let handles = Self::spawn_actors(&bus, &self.config, provider_factory, agent_factory).await?;
 
         // Capture join handles for graceful shutdown.
         let coordinator_join = tokio::spawn(Self::coordinator(cmd_rx, bus.clone()));
@@ -148,19 +142,18 @@ impl Leader {
     }
 
     /// Spawn all child actors and capture all cells and join handles for graceful shutdown.
+    #[allow(clippy::too_many_lines)]
     async fn spawn_actors(
         bus: &EventBus<CoreEvent>,
         config: &LeaderConfig,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<super::SpawnedHandles> {
-        let (config_h, config_cell, config_join) =
-            RactorConfigActor::spawn_default(bus.clone()).await?;
+        let (config_h, config_cell, config_join) = RactorConfigActor::spawn_default(bus.clone()).await?;
         let (provider_h, provider_cell, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
         let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await?;
-        let (session_h, session_cell, session_join) =
-            RactorSessionActor::spawn(bus.clone()).await?;
+        let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone()).await?;
         let (permission_h, permission_cell, permission_join) =
             RactorPermissionActor::spawn(bus.clone(), config_h.clone()).await?;
         let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await?;
@@ -172,11 +165,7 @@ impl Leader {
         )
         .await
         .map_err(|e| anyhow::anyhow!("FffIndexerActor spawn failed: {}", e))?;
-        let SpawnedAgent {
-            handle: agent_handle,
-            join: agent_join,
-            cell: agent_cell,
-        } = agent_factory
+        let SpawnedAgent { handle: agent_handle, join: agent_join, cell: agent_cell } = agent_factory
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
         let all_joins = vec![

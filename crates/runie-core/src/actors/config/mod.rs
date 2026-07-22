@@ -15,8 +15,7 @@ pub use ractor_config::RactorConfigActor;
 
 /// Trait for config actor handles.
 pub trait ConfigHandle: Send + Sync + Clone {
-    fn get_config(&self)
-        -> impl std::future::Future<Output = Option<crate::config::Config>> + Send;
+    fn get_config(&self) -> impl std::future::Future<Output = Option<crate::config::Config>> + Send;
     fn get_configured_providers(
         &self,
     ) -> impl std::future::Future<Output = Option<Vec<(String, String, Vec<String>)>>> + Send;

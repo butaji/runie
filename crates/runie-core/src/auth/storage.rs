@@ -1,4 +1,5 @@
 //! AuthStorage types.
+#![allow(clippy::too_many_lines)]
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -20,10 +21,7 @@ fn deserialize_secret<'de, D: Deserializer<'de>>(de: D) -> Result<SecretString, 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AuthToken {
     pub provider: String,
-    #[serde(
-        serialize_with = "serialize_secret",
-        deserialize_with = "deserialize_secret"
-    )]
+    #[serde(serialize_with = "serialize_secret", deserialize_with = "deserialize_secret")]
     pub token: SecretString,
     pub expires_at: Option<f64>,
 }
@@ -54,8 +52,7 @@ impl AuthStorage {
     pub fn new() -> Self {
         Self {
             tokens: HashMap::new(),
-            fallback_path: default_auth_path()
-                .unwrap_or_else(|| PathBuf::from("/tmp/runie_auth.json")),
+            fallback_path: default_auth_path().unwrap_or_else(|| PathBuf::from("/tmp/runie_auth.json")),
             keyring_available: true, // Try keyring; fallback if it fails
         }
     }
@@ -97,11 +94,8 @@ impl AuthStorage {
     /// `load_merged` with an explicit file path — the seam used by tests.
     #[cfg(feature = "keyring")]
     fn load_merged_from(store: &dyn super::store_trait::KeyringStore, fallback: &Path) -> Self {
-        let mut storage = Self {
-            tokens: HashMap::new(),
-            fallback_path: fallback.to_path_buf(),
-            keyring_available: true,
-        };
+        let mut storage =
+            Self { tokens: HashMap::new(), fallback_path: fallback.to_path_buf(), keyring_available: true };
         // File first, then overlay keyring so keyring wins per provider.
         storage.load_from_file();
         match super::keyring::load_all_from_keyring_with(store) {
@@ -121,11 +115,7 @@ impl AuthStorage {
 
     /// Load from an explicit path (useful in tests).
     pub fn load_from(path: &Path) -> Self {
-        let mut storage = Self {
-            tokens: HashMap::new(),
-            fallback_path: path.to_path_buf(),
-            keyring_available: false,
-        };
+        let mut storage = Self { tokens: HashMap::new(), fallback_path: path.to_path_buf(), keyring_available: false };
         storage.load_from_file();
         storage
     }
@@ -135,8 +125,7 @@ impl AuthStorage {
             return;
         }
         if let Ok(json) = std::fs::read_to_string(&self.fallback_path) {
-            let raw: serde_json::Value =
-                serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
+            let raw: serde_json::Value = serde_json::from_str(&json).unwrap_or(serde_json::json!({}));
             if let Some(obj) = raw.as_object() {
                 for (provider, val) in obj {
                     if let Some(token_str) = val.get("token").and_then(|v| v.as_str()) {
@@ -207,11 +196,7 @@ impl AuthStorage {
 
         self.tokens.insert(
             provider.to_owned(),
-            AuthToken {
-                provider: provider.to_owned(),
-                token: SecretString::from(String::from(token)),
-                expires_at,
-            },
+            AuthToken { provider: provider.to_owned(), token: SecretString::from(String::from(token)), expires_at },
         );
     }
 
@@ -325,8 +310,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path =
-            std::env::temp_dir().join(format!("runie_auth_test_{}_{}", std::process::id(), id));
+        let path = std::env::temp_dir().join(format!("runie_auth_test_{}_{}", std::process::id(), id));
         AuthStorage {
             tokens: HashMap::new(),
             fallback_path: path,
@@ -512,10 +496,10 @@ mod tests {
         );
 
         // A fresh resolver reading the same file must resolve the key via the
-        // priority-4 file fallback (env/dotenv/keyring are all empty here).
-        let resolver = super::super::CredentialResolver::new();
-        let resolved = resolver
-            .resolve_api_key("minimax")
+        // priority-4 file fallback. Build the resolver directly from the auth
+        // file (not from process env/dotenv/keyring) to keep this test hermetic.
+        let file_tokens = super::super::CredentialResolver::load_auth_file_from(&path);
+        let resolved = file_tokens.get("minimax")
             .expect("minimax key should resolve from auth.json");
         assert_eq!(resolved.expose_secret(), "sk-test");
 

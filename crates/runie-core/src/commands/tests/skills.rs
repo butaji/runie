@@ -11,15 +11,16 @@ fn rust_skill(user_invocable: bool) -> Skill {
         context: "Use clippy".into(),
         user_invocable,
         file_path: camino::Utf8PathBuf::from("rust.md"),
+        scope: crate::skills::SkillScope::Local,
+        enabled: true,
+        plugin_name: None,
+        ignore_paths: vec![],
     }
 }
 
 #[test]
 fn skills_lists_loaded() {
-    let mut state = AppState {
-        skills: vec![rust_skill(false)],
-        ..Default::default()
-    };
+    let mut state = AppState { skills: vec![rust_skill(false)], ..Default::default() };
     let result = exec_handler(&mut state, "skills", "");
     if let CommandResult::Message(msg) = result {
         assert!(msg.contains("rust"), "Should list skill name, got: {}", msg);
@@ -69,10 +70,7 @@ fn slash_skills_empty_emits_warning_transient() {
 
 #[test]
 fn skill_shows_info() {
-    let mut state = AppState {
-        skills: vec![rust_skill(true)],
-        ..Default::default()
-    };
+    let mut state = AppState { skills: vec![rust_skill(true)], ..Default::default() };
     let result = exec_handler(&mut state, "skill", "rust");
     if let CommandResult::Message(msg) = result {
         assert!(msg.contains("rust"), "Should show skill name, got: {}", msg);
@@ -106,10 +104,7 @@ fn skill_unknown_returns_error() {
 
 #[test]
 fn palette_shows_user_invocable_skills() {
-    let mut state = AppState {
-        skills: vec![rust_skill(true)],
-        ..Default::default()
-    };
+    let mut state = AppState { skills: vec![rust_skill(true)], ..Default::default() };
     state.update(crate::Event::ToggleCommandPalette);
     let snap = state.snapshot();
     assert!(
@@ -123,10 +118,7 @@ fn palette_shows_user_invocable_skills() {
 
 #[test]
 fn palette_select_skill_emits_message() {
-    let mut state = AppState {
-        skills: vec![rust_skill(true)],
-        ..Default::default()
-    };
+    let mut state = AppState { skills: vec![rust_skill(true)], ..Default::default() };
     state.update(crate::Event::ToggleCommandPalette);
     let snap = state.snapshot();
     let skill_pos = snap

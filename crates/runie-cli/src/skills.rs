@@ -61,7 +61,10 @@ pub async fn show(name: &str) -> Result<()> {
             println!("\nFile: {}", s.file_path);
         }
         None => {
-            anyhow::bail!("Skill '{}' not found. Use `runie skill list` to see available skills.", name);
+            anyhow::bail!(
+                "Skill '{}' not found. Use `runie skill list` to see available skills.",
+                name
+            );
         }
     }
     Ok(())
@@ -192,7 +195,11 @@ pub async fn install(url: &str, name: Option<&str>) -> Result<()> {
     }
 
     std::fs::write(&skill_path, &content)?;
-    println!("Installed skill '{}' to: {}", skill_name, skill_path.display());
+    println!(
+        "Installed skill '{}' to: {}",
+        skill_name,
+        skill_path.display()
+    );
     Ok(())
 }
 
@@ -202,7 +209,7 @@ fn derive_name_from_url(url: &str) -> String {
     let url_path = url.split('?').next().unwrap_or(url);
     let filename = url_path
         .split('/')
-        .last()
+        .next_back()
         .unwrap_or("skill")
         .trim_end_matches(".md")
         .trim_end_matches("/SKILL.md")
@@ -220,6 +227,62 @@ fn derive_name_from_url(url: &str) -> String {
     } else {
         name
     }
+}
+
+/// Run the `skill disable` subcommand.
+pub async fn disable(name: &str) -> Result<()> {
+    let mut config = runie_core::config::Config::load(None);
+    if config.skills.disabled.contains(&name.to_string()) {
+        println!("Skill '{}' is already disabled.", name);
+        return Ok(());
+    }
+    config.skills.disabled.push(name.to_string());
+    config.save()?;
+    println!("Disabled skill '{}'.", name);
+    Ok(())
+}
+
+/// Run the `skill enable` subcommand.
+pub async fn enable(name: &str) -> Result<()> {
+    let mut config = runie_core::config::Config::load(None);
+    let original_len = config.skills.disabled.len();
+    config.skills.disabled.retain(|s| s != name);
+    if config.skills.disabled.len() == original_len {
+        println!("Skill '{}' is not in the disabled list.", name);
+    } else {
+        config.save()?;
+        println!("Enabled skill '{}'.", name);
+    }
+    Ok(())
+}
+
+/// Run the `skill toggle` subcommand.
+pub async fn toggle(name: &str) -> Result<()> {
+    let mut config = runie_core::config::Config::load(None);
+    if config.skills.disabled.contains(&name.to_string()) {
+        config.skills.disabled.retain(|s| s != name);
+        config.save()?;
+        println!("Enabled skill '{}'.", name);
+    } else {
+        config.skills.disabled.push(name.to_string());
+        config.save()?;
+        println!("Disabled skill '{}'.", name);
+    }
+    Ok(())
+}
+
+/// Run the `skill reset` subcommand.
+pub async fn reset() -> Result<()> {
+    let mut config = runie_core::config::Config::load(None);
+    let count = config.skills.disabled.len();
+    config.skills.disabled.clear();
+    config.save()?;
+    if count > 0 {
+        println!("Reset {} disabled skill(s).", count);
+    } else {
+        println!("No disabled skills to reset.");
+    }
+    Ok(())
 }
 
 #[cfg(test)]

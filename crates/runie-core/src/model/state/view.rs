@@ -4,7 +4,7 @@ use crate::model::view_cache::ViewCache;
 use crate::model::FeedElementDetail;
 use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
-use crate::view::turns::{ViewMode, Turn};
+use crate::view::turns::{Turn, ViewMode};
 
 /// View state — scroll, animation, and UI dimensions.
 ///

@@ -8,16 +8,16 @@
 use std::sync::Arc;
 
 use ratatui::{
-    layout::Rect,
     prelude::Text,
     style::Style,
     text::{Line, Span},
+    widgets::Paragraph,
     Frame,
 };
 use runie_core::Snapshot;
-use tui_popup::Popup;
 
 use crate::popups::palette_popup_rect;
+use crate::popups::panel::setup_popup;
 use crate::theme::{color_accent, color_bg_panel, color_dim};
 use crate::Stylize;
 
@@ -25,27 +25,14 @@ use crate::Stylize;
 // allow: vec![] then push is necessary — initial content is not statically known
 #[allow(clippy::vec_init_then_push)]
 pub fn render_welcome(f: &mut Frame, snap: &Snapshot) {
-    let area = palette_popup_rect(f.area());
-    let bg = color_bg_panel();
+    // setup_popup handles border + bg + 1-cell inner margin.
+    let _area = palette_popup_rect(f.area());
+    let inner = setup_popup(f, "Runie");
 
     // Build welcome content lines.
     let lines = build_welcome_content(snap);
-
-    // Use tui-popup for the shell (border + title + centering).
-    let content = Text::from(lines).style(Style::default().bg(bg));
-    let popup = Popup::new(content)
-        .title("Runie")
-        .style(Style::default().bg(bg));
-    f.render_widget(popup, area);
-
-    // Explicitly set inner background (tui-popup uses Clear which resets to terminal bg).
-    let inner = Rect {
-        x: area.x + 1,
-        y: area.y + 1,
-        width: area.width.saturating_sub(2),
-        height: area.height.saturating_sub(2),
-    };
-    f.buffer_mut().set_style(inner, Style::default().bg(bg));
+    let content = Text::from(lines).style(Style::default().bg(color_bg_panel()));
+    f.render_widget(Paragraph::new(content), inner);
 }
 
 fn build_welcome_content(snap: &Snapshot) -> Vec<Line<'static>> {

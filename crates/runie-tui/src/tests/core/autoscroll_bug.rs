@@ -14,9 +14,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
     // User message + spacer = 2 lines
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "list files".into(),
-        }],
+        parts: vec![Part::Text { content: "list files".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -55,9 +53,7 @@ fn viewport_never_exceeds_height() {
 
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into() }],
         timestamp: 1.0,
         id: "t1".into(),
         ..Default::default()
@@ -105,9 +101,7 @@ fn last_element_lines_clipped_to_fit_viewport() {
 fn add_user_and_huge_thought(state: &mut AppState) {
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "hi".into(),
-        }],
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
@@ -126,10 +120,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     state.messages_changed();
 }
 
-fn count_visible_lines(
-    region: &crate::tests::core::visible_helper::TestViewport,
-    width: u16,
-) -> usize {
+fn count_visible_lines(region: &crate::tests::core::visible_helper::TestViewport, width: u16) -> usize {
     let mut total = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
         let count = element_line_count(elem, width);
@@ -151,21 +142,12 @@ fn submit_then_large_response_stays_at_bottom() {
     state.ensure_fresh();
     assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
     // Agent tool with large output
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.ensure_fresh();
     // Scroll must still be 0 (at bottom) — user didn't scroll
     assert_eq!(state.view.scroll, 0, "Scroll must stay at 0 after response");

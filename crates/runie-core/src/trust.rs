@@ -142,8 +142,7 @@ mod tests {
         // Verify file was created at expected path
         assert!(path.exists(), "trust.json should exist after save");
 
-        let loaded: TrustManager =
-            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let loaded: TrustManager = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
 
         assert_eq!(
             loaded.decision_for(&Utf8PathBuf::from("/project/a")),

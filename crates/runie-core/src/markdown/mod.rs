@@ -80,10 +80,7 @@ pub fn parse_markdown(text: &str) -> Vec<CodeBlock> {
     let mut blocks = parsing::extract_blocks(parse_text);
     if let Some(t) = trailing {
         let inlines = parsing::parse_inline_spans(t);
-        blocks.push(CodeBlock::Text {
-            content: t.to_owned(),
-            inlines,
-        });
+        blocks.push(CodeBlock::Text { content: t.to_owned(), inlines });
     }
     blocks
 }

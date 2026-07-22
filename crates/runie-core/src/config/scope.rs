@@ -7,20 +7,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 /// Config scope for operations that can target global or project config.
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-    Default,
-    Serialize,
-    Deserialize,
-    Display,
-    EnumString,
-    JsonSchema,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, Display, EnumString, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum ConfigScope {

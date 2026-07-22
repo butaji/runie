@@ -1,10 +1,9 @@
 //! End-to-end tests for the terminal application
+#![allow(clippy::too_many_lines)] // test helpers are intentionally comprehensive
 
 pub use crate::ui::view;
 pub use ratatui::{backend::TestBackend, Terminal};
-pub use runie_core::{
-    commands::DialogKind, AppState, ChatMessage, Element, Event, Part, Role, ScopedModel, Snapshot,
-};
+pub use runie_core::{commands::DialogKind, AppState, ChatMessage, Element, Event, Part, Role, ScopedModel, Snapshot};
 
 #[cfg(test)]
 mod core;
@@ -132,8 +131,7 @@ pub fn configure_test_providers(providers: &[(String, Vec<String>)]) {
     ));
     runie_core::provider::config::set_test_config_path(path);
     for (name, models) in providers {
-        let _ =
-            runie_core::provider::config::save_provider_config(name, "http://test", "key", models);
+        let _ = runie_core::provider::config::save_provider_config(name, "http://test", "key", models);
     }
 }
 
@@ -146,29 +144,16 @@ pub fn apply_test_config_to_state(state: &mut runie_core::AppState) {
 
 /// Helper: simulate full tool flow
 pub fn simulate_list_files_flow(state: &mut AppState) {
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 1.0,
-        output: String::new(),
-    });
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 1.0, output: String::new() });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "src/main.rs\nlib.rs".to_string(),
@@ -176,13 +161,8 @@ pub fn simulate_list_files_flow(state: &mut AppState) {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::TurnComplete {
-        id: "req.0".to_string(),
-        duration_secs: 3.0,
-    });
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::TurnComplete { id: "req.0".to_string(), duration_secs: 3.0 });
+    state.update(Event::Done { id: "req.0".to_string() });
 }
 
 /// Helper: simulate one tool call turn
@@ -194,17 +174,8 @@ pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.agent.streaming = true;
     state.update(Event::Thinking { id: id.clone() });
     state.update(Event::ThoughtDone { id: id.clone() });
-    state.update(Event::ToolStart {
-        id: id.clone(),
-        name: "list_files".to_string(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: String::new(),
-    });
+    state.update(Event::ToolStart { id: id.clone(), name: "list_files".to_string(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: String::new() });
     state.update(Event::Thinking { id: id.clone() });
     state.update(Event::ThoughtDone { id: id.clone() });
     state.update(Event::Response {

@@ -15,23 +15,16 @@
 use serde_json::Value;
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool,
-    ReadFileTool, SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
+    SearchTool, WriteFileTool,
 };
 use runie_core::tool::to_openai_function;
 
 // ── Tool categories ────────────────────────────────────────────────────────────
 
 /// Read-only tools (no write side effects — allowed in read-only mode).
-pub const READ_ONLY_TOOL_NAMES: &[&str] = &[
-    "read_file",
-    "list_dir",
-    "grep",
-    "find",
-    "fetch_docs",
-    "search",
-    "find_definitions",
-];
+pub const READ_ONLY_TOOL_NAMES: &[&str] =
+    &["read_file", "list_dir", "grep", "find", "fetch_docs", "search", "find_definitions"];
 
 /// Write tools (require trust / read-write mode).
 pub const WRITE_TOOL_NAMES: &[&str] = &["bash", "write_file", "edit_file"];
@@ -64,6 +57,7 @@ pub const TOOL_NAMES: &[&str] = &[
 // It must be kept in sync with TOOL_NAMES and BUILTIN_TOOL_NAMES.
 // Adding a tool means adding it to this list AND to the macro invocation below.
 
+#[allow(clippy::cognitive_complexity)]
 pub(crate) async fn dispatch_tool_impl(
     name: &str,
     args: &serde_json::Value,

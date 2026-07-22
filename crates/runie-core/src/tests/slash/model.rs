@@ -123,10 +123,7 @@ fn slash_opens_palette_and_typing_filters_commands() {
 
     // Verify the palette is open with "model" as filter
     let stack = match &state.open_dialog {
-        Some(crate::commands::DialogState::Active {
-            kind: DialogKind::CommandPalette,
-            panels: s,
-        }) => s,
+        Some(crate::commands::DialogState::Active { kind: DialogKind::CommandPalette, panels: s }) => s,
         _ => panic!("Expected command palette"),
     };
     let panel = stack.current().expect("panel");
@@ -156,10 +153,7 @@ fn model_no_args_opens_selector() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::ModelSelector,
-                ..
-            })
+            Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, .. })
         ),
         "no args should open model selector dialog"
     );
@@ -206,8 +200,7 @@ fn save_creates_session_file() {
         exec(&mut state, "/save mysession"); // Opens form with pre-filled name
         state.update(Event::submit()); // Submits the form
 
-        let jsonl_path =
-            crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
+        let jsonl_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("mysession");
         assert!(jsonl_path.exists(), "session file created");
 
         let sys_msgs: Vec<_> = state
@@ -257,10 +250,7 @@ fn save_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog
     {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "save", "should be save form");

@@ -9,8 +9,8 @@ use crate::Event;
 
 pub(crate) mod helpers;
 pub(crate) use helpers::{
-    assert_panel_id, assert_step, assert_transient_contains, current_panel, current_panel_id,
-    fetch_models, fetch_models_for, save_login_flow, select_provider, start_login_flow, submit_key,
+    assert_panel_id, assert_step, assert_transient_contains, current_panel, current_panel_id, fetch_models,
+    fetch_models_for, save_login_flow, select_provider, start_login_flow, submit_key,
 };
 
 pub(crate) fn clean_config() {
@@ -40,10 +40,7 @@ pub(crate) fn add_minimax_provider(state: &mut crate::model::AppState) {
 }
 
 pub(crate) fn select_minimax_model(state: &mut crate::model::AppState) {
-    state.update(Event::ProvidersSelectModel {
-        provider: "minimax".into(),
-        model: "MiniMax-M3".into(),
-    });
+    state.update(Event::ProvidersSelectModel { provider: "minimax".into(), model: "MiniMax-M3".into() });
 }
 
 pub(crate) fn add_provider_and_select_model(
@@ -58,10 +55,7 @@ pub(crate) fn add_provider_and_select_model(
     submit_key(state, key);
     validate_provider(state, provider, key);
     save_login_flow(state);
-    state.update(Event::ProvidersSelectModel {
-        provider: provider.into(),
-        model: model.into(),
-    });
+    state.update(Event::ProvidersSelectModel { provider: provider.into(), model: model.into() });
 }
 
 mod add_provider;

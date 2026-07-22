@@ -124,21 +124,12 @@ fn scrollbar_visible_when_content_overflows() {
 #[test]
 fn tool_output_latest_lines_visible() {
     let mut state = AppState::default();
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=10)
         .map(|i| format!("file{}", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.ensure_fresh();
     state.view.scroll = 0;
 

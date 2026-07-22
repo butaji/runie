@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Model catalog for the model selector dialog.
 
 use crate::model::ModelSelectorItem;
@@ -20,10 +22,7 @@ pub struct ModelCapabilities {
 
 impl ModelCapabilities {
     pub fn streaming() -> Self {
-        Self {
-            streaming: true,
-            ..Default::default()
-        }
+        Self { streaming: true, ..Default::default() }
     }
 
     pub fn with_vision(mut self) -> Self {
@@ -465,8 +464,7 @@ mod tests {
     #[test]
     fn model_catalog_groups_by_provider() {
         let catalog = model_catalog();
-        let mut provider_positions: std::collections::HashMap<String, Vec<usize>> =
-            std::collections::HashMap::new();
+        let mut provider_positions: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
         for (i, m) in catalog.iter().enumerate() {
             provider_positions
                 .entry(m.provider.clone())

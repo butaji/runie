@@ -132,9 +132,7 @@ fn input_changed_preserves_chips_while_picker_open() {
     paste(&mut state, "a\nb\nc\nd");
     assert_eq!(state.input.chips.len(), 1);
     state.input.file_picker_backup = Some(("read @".to_string(), 6, 6, false));
-    state.update(crate::Event::InputChanged {
-        state: Box::new(crate::model::InputState::default()),
-    });
+    state.update(crate::Event::InputChanged { state: Box::new(crate::model::InputState::default()) });
     assert_eq!(
         state.input.chips.len(),
         1,
@@ -156,9 +154,7 @@ fn input_changed_takes_actor_chips_outside_picker() {
         end: echoed.input.len(),
         label: Some("[Pasted: 4 lines]".to_string()),
     }];
-    state.update(crate::Event::InputChanged {
-        state: Box::new(echoed),
-    });
+    state.update(crate::Event::InputChanged { state: Box::new(echoed) });
     assert_eq!(state.input.chips.len(), 1);
     assert_eq!(
         state.input.chips[0].label.as_deref(),

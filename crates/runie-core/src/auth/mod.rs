@@ -11,12 +11,12 @@ pub mod store_trait;
 pub use credential::CredentialResolver;
 #[cfg(feature = "keyring")]
 pub use keyring::{
-    delete_keyring_entry, get_keyring, load_all_from_keyring, migrate_legacy_auth,
-    set_and_verify_keyring, set_keyring, set_keyring_value,
+    delete_keyring_entry, get_keyring, load_all_from_keyring, migrate_legacy_auth, set_and_verify_keyring, set_keyring,
+    set_keyring_value,
 };
 pub use storage::{persist_provider_api_key, AuthStorage, AuthToken};
 #[cfg(feature = "keyring")]
 pub use store_trait::OsKeyringStore;
 pub use store_trait::{KeyringStore, MockKeyringStore};
 
-mod credential;
+pub(crate) mod credential;

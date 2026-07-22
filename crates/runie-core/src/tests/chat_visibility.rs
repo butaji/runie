@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tests::fresh_state;
@@ -115,13 +116,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output,
-
-        input: None,
-    });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output, input: None });
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(
@@ -150,10 +145,7 @@ fn verify_final_response_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_turn_complete_last(state: &mut AppState, height: usize) {
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 2.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(
@@ -167,22 +159,12 @@ fn large_tool_output_bottom_lines_visible() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output,
-
-        input: None,
-    });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output, input: None });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -231,9 +213,7 @@ fn add_small_messages(state: &mut AppState) {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg{}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -264,8 +244,7 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
     let has_thought = region.elements.iter().any(|e| {
         matches!(
             e,
-            crate::view::Element::ThoughtMarker { .. }
-                | crate::view::Element::ThoughtSummary { .. }
+            crate::view::Element::ThoughtMarker { .. } | crate::view::Element::ThoughtSummary { .. }
         )
     });
     assert!(has_thought, "Thought must be visible after overflow");
@@ -420,19 +399,9 @@ fn streaming_response_appends_not_replaces() {
 fn tool_end_does_not_duplicate_messages() {
     let mut state = fresh_state();
 
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let before_count = state.session.messages.len();
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: "a".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(), input: None });
     let after_count = state.session.messages.len();
 
     assert_eq!(

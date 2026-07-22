@@ -1,4 +1,5 @@
 //! Unit tests for `TurnActor`.
+#![allow(clippy::too_many_lines)]
 
 use crate::actors::turn::messages::MessageSource;
 use crate::actors::turn::RactorTurnActor;
@@ -58,10 +59,7 @@ async fn error_emits_turned_errored() {
     let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
     let mut sub = bus.subscribe();
     handle
-        .send(crate::actors::turn::TurnMsg::Error {
-            id: "req.0".into(),
-            message: "oops".into(),
-        })
+        .send(crate::actors::turn::TurnMsg::Error { id: "req.0".into(), message: "oops".into() })
         .await;
     let mut found = false;
     while let Ok(evt) = sub.recv().await {
@@ -104,9 +102,7 @@ async fn queue_follow_up_after_done_starts_queued_turn() {
 
     // Queue a follow-up while first turn is active
     handle
-        .send(crate::actors::turn::TurnMsg::QueueFollowUp {
-            content: "second".into(),
-        })
+        .send(crate::actors::turn::TurnMsg::QueueFollowUp { content: "second".into() })
         .await;
 
     // First turn completes
@@ -346,9 +342,7 @@ async fn contract_crash_recovery_preserves_queued() {
 
     // Queue follow-up while first turn is active
     handle
-        .send(crate::actors::turn::TurnMsg::QueueFollowUp {
-            content: "second".into(),
-        })
+        .send(crate::actors::turn::TurnMsg::QueueFollowUp { content: "second".into() })
         .await;
 
     // Complete the first turn
@@ -480,10 +474,7 @@ async fn sequential_turns_drain_queue_with_correct_attribution() {
         .send(crate::actors::turn::TurnMsg::Done { id: "req.0".into() })
         .await;
     handle
-        .send(crate::actors::turn::TurnMsg::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 0.1,
-        })
+        .send(crate::actors::turn::TurnMsg::TurnComplete { id: "req.0".into(), duration_secs: 0.1 })
         .await;
 
     // Turn 2: submit and start — content must be "second", not stale "first".
@@ -518,10 +509,7 @@ async fn sequential_turns_drain_queue_with_correct_attribution() {
         .send(crate::actors::turn::TurnMsg::Done { id: "req.1".into() })
         .await;
     handle
-        .send(crate::actors::turn::TurnMsg::TurnComplete {
-            id: "req.1".into(),
-            duration_secs: 0.1,
-        })
+        .send(crate::actors::turn::TurnMsg::TurnComplete { id: "req.1".into(), duration_secs: 0.1 })
         .await;
 
     // Drain events emitted so far, then poke the actor: no third turn may start.

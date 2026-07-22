@@ -32,9 +32,7 @@ pub struct HandlerRegistry {
 impl HandlerRegistry {
     /// Create a new empty registry.
     pub fn new() -> Self {
-        Self {
-            handlers: HashMap::new(),
-        }
+        Self { handlers: HashMap::new() }
     }
 
     /// Register a handler.
@@ -56,15 +54,9 @@ impl HandlerRegistry {
     pub fn to_command_kind(&self, name: &str) -> Option<CommandKind> {
         self.get(name).map(|h| match h {
             NamedHandler::Handler(f) => CommandKind::Handler(*f),
-            NamedHandler::FormWithHandler {
-                title,
-                fields,
-                handler,
-            } => CommandKind::FormWithHandler {
-                title,
-                fields,
-                handler: *handler,
-            },
+            NamedHandler::FormWithHandler { title, fields, handler } => {
+                CommandKind::FormWithHandler { title, fields, handler: *handler }
+            }
         })
     }
 }

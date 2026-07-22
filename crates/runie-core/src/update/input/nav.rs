@@ -136,12 +136,10 @@ impl AppState {
 
     pub(crate) fn handle_vim_nav_char(&mut self, c: char) {
         // Close feed element detail overlay on Esc/q
-        if self.view().feed_element_detail.is_some() {
-            if c == 'q' || c == 'Q' {
-                self.view_mut().feed_element_detail = None;
-                self.view_mut().dirty = true;
-                return;
-            }
+        if self.view().feed_element_detail.is_some() && (c == 'q' || c == 'Q') {
+            self.view_mut().feed_element_detail = None;
+            self.view_mut().dirty = true;
+            return;
         }
         if c == ' ' {
             self.view_mut().vim_nav_mode = false;
@@ -237,6 +235,7 @@ impl AppState {
         true
     }
 
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn handle_vim_nav_event(&mut self, event: &crate::Event) -> Option<bool> {
         match event {
             crate::Event::Up | crate::Event::HistoryPrev => {
@@ -247,18 +246,12 @@ impl AppState {
                 self.vim_nav_down();
                 Some(false)
             }
-            crate::Event::PageUp
-            | crate::Event::PageDown
-            | crate::Event::GoToTop
-            | crate::Event::GoToBottom => {
+            crate::Event::PageUp | crate::Event::PageDown | crate::Event::GoToTop | crate::Event::GoToBottom => {
                 crate::update::input::scroll_event(self, event.clone());
                 Some(false)
             }
             crate::Event::ToggleCommandPalette => {
-                crate::update::dialog::dialog_toggle_event(
-                    self,
-                    crate::Event::ToggleCommandPalette,
-                );
+                crate::update::dialog::dialog_toggle_event(self, crate::Event::ToggleCommandPalette);
                 Some(false)
             }
             // Enter in vim nav mode: on a subagent row open the subagent detail
@@ -279,10 +272,7 @@ impl AppState {
                                 snap.elements.get(post.start)
                             {
                                 self.view_mut().subagent_detail =
-                                    Some(crate::model::SubagentDetail {
-                                        worker_id: id.clone(),
-                                        scroll: 0,
-                                    });
+                                    Some(crate::model::SubagentDetail { worker_id: id.clone(), scroll: 0 });
                                 self.view_mut().dirty = true;
                                 return Some(true);
                             }
@@ -291,9 +281,7 @@ impl AppState {
                         // Skip elements that already have their own dedicated overlay
                         // (SubagentRow above) and skip non-visual kinds (Thinking).
                         use crate::model::feed_detail::FeedElementDetail;
-                        if let Some(detail) =
-                            FeedElementDetail::from_postkind(post.kind, post.start)
-                        {
+                        if let Some(detail) = FeedElementDetail::from_postkind(post.kind, post.start) {
                             self.view_mut().feed_element_detail = Some(detail);
                             self.view_mut().dirty = true;
                             return Some(true);

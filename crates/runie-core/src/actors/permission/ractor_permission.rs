@@ -49,12 +49,7 @@ impl RactorPermissionHandle {
         input: serde_json::Value,
     ) -> tokio::sync::oneshot::Receiver<PermissionAction> {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        let msg = PermissionMsg::AskPermission {
-            request_id,
-            tool,
-            input,
-            reply: Some(tx),
-        };
+        let msg = PermissionMsg::AskPermission { request_id, tool, input, reply: Some(tx) };
         let _ = self.inner.send_message(msg);
         rx
     }
@@ -201,10 +196,7 @@ pub struct PermissionActorArgs {
 }
 
 impl RactorPermissionActor {
-    fn handle_get_current_request(
-        state: &PermissionActorState,
-        reply: Option<ractor::RpcReplyPort<Option<String>>>,
-    ) {
+    fn handle_get_current_request(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<Option<String>>>) {
         if let Some(reply) = reply {
             let _ = reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
         }
@@ -222,24 +214,13 @@ impl RactorPermissionActor {
             state.pending.insert(request_id.clone(), reply);
         }
 
-        state.current_request = Some(PermissionRequestState {
-            request_id: request_id.clone(),
-            tool: tool.clone(),
-            input: input.clone(),
-        });
+        state.current_request =
+            Some(PermissionRequestState { request_id: request_id.clone(), tool: tool.clone(), input: input.clone() });
 
-        state.emit(Event::PermissionRequest {
-            request_id,
-            tool,
-            input,
-        });
+        state.emit(Event::PermissionRequest { request_id, tool, input });
     }
 
-    fn handle_resolve_permission(
-        state: &mut PermissionActorState,
-        request_id: String,
-        action: PermissionAction,
-    ) {
+    fn handle_resolve_permission(state: &mut PermissionActorState, request_id: String, action: PermissionAction) {
         // Look up and resolve the pending reply channel.
         if let Some(reply) = state.pending.remove(&request_id) {
             let _ = reply.send(action);
@@ -278,10 +259,7 @@ impl RactorPermissionActor {
         state.emit(Event::PermissionRequestDismissed);
     }
 
-    fn handle_get_rules(
-        state: &PermissionActorState,
-        reply: Option<ractor::RpcReplyPort<PermissionSet>>,
-    ) {
+    fn handle_get_rules(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<PermissionSet>>) {
         if let Some(reply) = reply {
             let _ = reply.send(state.rules.clone());
         }
@@ -291,10 +269,7 @@ impl RactorPermissionActor {
         state.mode = mode;
     }
 
-    fn handle_get_mode(
-        state: &PermissionActorState,
-        reply: Option<ractor::RpcReplyPort<PermissionMode>>,
-    ) {
+    fn handle_get_mode(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<PermissionMode>>) {
         if let Some(reply) = reply {
             let _ = reply.send(state.mode);
         }
@@ -304,16 +279,13 @@ impl RactorPermissionActor {
         // Rules are loaded from ConfigLoaded events; this is a no-op trigger
         // for the actor's own re-evaluation. The actual loading happens in
         // pre_start via ConfigActor, or explicitly after config changes.
-        tracing::debug!(
-            "LoadRules received (rules already initialized or updated via ConfigLoaded)"
-        );
+        tracing::debug!("LoadRules received (rules already initialized or updated via ConfigLoaded)");
     }
 
     async fn handle_trust_project(state: &mut PermissionActorState) {
         let result = tokio::task::spawn_blocking(|| {
             let cwd = std::env::current_dir().unwrap_or_default();
-            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
-                .unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
             let mut tm = crate::trust::TrustManager::load();
             tm.set(&cwd_utf8, crate::trust::TrustDecision::Trusted);
             let _ = tm.save();
@@ -334,8 +306,7 @@ impl RactorPermissionActor {
     async fn handle_untrust_project(state: &mut PermissionActorState) {
         let result = tokio::task::spawn_blocking(|| {
             let cwd = std::env::current_dir().unwrap_or_default();
-            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
-                .unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
             let mut tm = crate::trust::TrustManager::load();
             tm.set(&cwd_utf8, crate::trust::TrustDecision::Untrusted);
             let _ = tm.save();
@@ -353,20 +324,12 @@ impl RactorPermissionActor {
         }
     }
 
-    fn handle_upsert_rule(
-        state: &mut PermissionActorState,
-        tool: String,
-        action: PermissionAction,
-    ) {
+    fn handle_upsert_rule(state: &mut PermissionActorState, tool: String, action: PermissionAction) {
         let rule = crate::permissions::PermissionRule::new(action, tool);
         state.rules.add_rule(rule);
     }
 
-    fn handle_upsert_session_rule(
-        state: &mut PermissionActorState,
-        tool: String,
-        action: PermissionAction,
-    ) {
+    fn handle_upsert_session_rule(state: &mut PermissionActorState, tool: String, action: PermissionAction) {
         let rule = crate::permissions::PermissionRule::new(action, tool)
             .with_scope(crate::permissions::PermissionScope::Session);
         state.rules.add_rule(rule);
@@ -384,12 +347,12 @@ impl Actor for RactorPermissionActor {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        // Load permission rules from the config actor so the agent can use them.
-        let rules = match args.config_h.get_config().await {
-            Some(cfg) => cfg.permissions.to_permission_set(),
+        // Load permission rules AND mode from the config actor so the agent can use them.
+        let (rules, mode) = match args.config_h.get_config().await {
+            Some(cfg) => (cfg.permissions.to_permission_set(), cfg.permissions.mode),
             None => {
                 tracing::warn!("PermissionActor: config not available, using default rules");
-                PermissionSet::default_rules()
+                (PermissionSet::default_rules(), PermissionMode::default())
             }
         };
         Ok(PermissionActorState {
@@ -397,7 +360,7 @@ impl Actor for RactorPermissionActor {
             current_request: None,
             bus: args.bus,
             rules,
-            mode: PermissionMode::default(),
+            mode,
         })
     }
 
@@ -409,12 +372,7 @@ impl Actor for RactorPermissionActor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            PermissionMsg::AskPermission {
-                request_id,
-                tool,
-                input,
-                reply,
-            } => {
+            PermissionMsg::AskPermission { request_id, tool, input, reply } => {
                 Self::handle_ask_permission(state, request_id, tool, input, reply);
             }
             PermissionMsg::ResolvePermission { request_id, action } => {
@@ -473,10 +431,7 @@ impl RactorPermissionActor {
         ractor::ActorCell,
         tokio::task::JoinHandle<()>,
     )> {
-        let args = PermissionActorArgs {
-            bus: bus.clone(),
-            config_h,
-        };
+        let args = PermissionActorArgs { bus: bus.clone(), config_h };
         let (handle, join, cell) = spawn_ractor(None, Self, args)
             .await
             .map_err(|e| anyhow::anyhow!("RactorPermissionActor spawn failed: {}", e))?;
@@ -495,9 +450,13 @@ impl RactorPermissionActor {
         ractor::ActorCell,
         tokio::task::JoinHandle<()>,
     )> {
-        // Spawn a minimal ConfigActor just for the config handle.
+        // Spawn with a hermetic temp config so the real ~/.runie/config.toml
+        // (which may set bypass_permissions or custom rules) doesn't leak in.
+        let dir = tempfile::tempdir()?;
+        let config_path = dir.path().join("config.toml");
+        std::fs::write(&config_path, "")?;
         let (config_h, _cfg_cell, _cfg_join) =
-            crate::actors::RactorConfigActor::spawn_default(bus.clone()).await?;
+            crate::actors::RactorConfigActor::spawn(bus.clone(), Some(config_path), None).await?;
         Self::spawn(bus, config_h).await
     }
 }

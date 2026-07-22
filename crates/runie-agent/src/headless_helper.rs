@@ -10,9 +10,7 @@ use std::sync::Arc;
 use runie_core::event::headless::HeadlessEvent;
 use runie_core::message::ChatMessage;
 use runie_core::permissions::build_sink as core_sink;
-use runie_core::prompts::{
-    build_system_prompt as core_system_prompt, DEFAULT_PROMPT, DEFAULT_TOOLS,
-};
+use runie_core::prompts::{build_system_prompt as core_system_prompt, DEFAULT_PROMPT, DEFAULT_TOOLS};
 
 use crate::constants::DEFAULT_MAX_TOOL_ROUNDS;
 use crate::HeadlessCliOptions;
@@ -24,10 +22,7 @@ pub fn build_system_prompt() -> String {
 
 /// Build a chat message list from a single user prompt.
 pub fn build_messages(user_prompt: &str) -> Vec<ChatMessage> {
-    vec![
-        ChatMessage::system(build_system_prompt()),
-        ChatMessage::user(user_prompt.to_owned()),
-    ]
+    vec![ChatMessage::system(build_system_prompt()), ChatMessage::user(user_prompt.to_owned())]
 }
 
 /// Build `HeadlessCliOptions` with common defaults for headless mode.
@@ -41,12 +36,7 @@ pub fn build_options(
     on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
     on_event: Option<Box<dyn FnMut(HeadlessEvent) + Send>>,
 ) -> HeadlessCliOptions {
-    HeadlessCliOptions {
-        execute_tools: true,
-        max_tool_rounds: DEFAULT_MAX_TOOL_ROUNDS,
-        on_chunk,
-        on_event,
-    }
+    HeadlessCliOptions { execute_tools: true, max_tool_rounds: DEFAULT_MAX_TOOL_ROUNDS, on_chunk, on_event }
 }
 
 /// Build a permission sink for headless mode.

@@ -10,36 +10,28 @@ fn four_messages() -> Vec<ChatMessage> {
             role: Role::User,
             timestamp: 0.0,
             id: "u1".into(),
-            parts: vec![Part::Text {
-                content: "hi".into(),
-            }],
+            parts: vec![Part::Text { content: "hi".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
             timestamp: 0.0,
             id: "a1".into(),
-            parts: vec![Part::Text {
-                content: "hello".into(),
-            }],
+            parts: vec![Part::Text { content: "hello".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Tool,
             timestamp: 0.0,
             id: "t1".into(),
-            parts: vec![Part::Text {
-                content: "tool out".into(),
-            }],
+            parts: vec![Part::Text { content: "tool out".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::User,
             timestamp: 0.0,
             id: "u2".into(),
-            parts: vec![Part::Text {
-                content: "again".into(),
-            }],
+            parts: vec![Part::Text { content: "again".into() }],
             ..Default::default()
         },
     ]
@@ -68,9 +60,7 @@ fn session_info_shows_tokens() {
         role: Role::User,
         timestamp: 0.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "hello world".into(),
-        }],
+        parts: vec![Part::Text { content: "hello world".into() }],
         ..Default::default()
     }];
     let result = exec_handler(&mut state, "session", "");
@@ -92,9 +82,7 @@ fn slash_session_dispatches() {
         role: Role::User,
         timestamp: 0.0,
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "test".into(),
-        }],
+        parts: vec![Part::Text { content: "test".into() }],
         ..Default::default()
     });
     run_slash(&mut state, "/session");

@@ -2,17 +2,11 @@ use ratatui::{layout::Rect, Frame};
 use runie_core::Snapshot;
 use runie_core::{view::PostKind, Element};
 
-pub(crate) fn compute_scroll_offset(
-    snap: &Snapshot,
-    row_to_element: &[usize],
-    visible_height: usize,
-) -> u16 {
+pub(crate) fn compute_scroll_offset(snap: &Snapshot, row_to_element: &[usize], visible_height: usize) -> u16 {
     let mut offset = snap.scroll_offset(visible_height);
     if snap.vim_nav_mode {
         if let Some(selected_post) = snap.selected_post {
-            if let Some(post_offset) =
-                post_actual_offset(snap, row_to_element, visible_height, selected_post)
-            {
+            if let Some(post_offset) = post_actual_offset(snap, row_to_element, visible_height, selected_post) {
                 offset = post_offset;
             }
         }
@@ -45,8 +39,7 @@ fn draw_post_background(
     offset: u16,
     selected_post: usize,
 ) {
-    let Some((visible_start, visible_end)) = visible_row_range(row_to_element, offset, area.height)
-    else {
+    let Some((visible_start, visible_end)) = visible_row_range(row_to_element, offset, area.height) else {
         return;
     };
     let Some((start, end)) = selected_post_row_range(snap, row_to_element, selected_post) else {
@@ -83,8 +76,7 @@ fn draw_post_left_line(
     offset: u16,
     selected_post: usize,
 ) {
-    let Some((visible_start, visible_end)) = visible_row_range(row_to_element, offset, area.height)
-    else {
+    let Some((visible_start, visible_end)) = visible_row_range(row_to_element, offset, area.height) else {
         return;
     };
     let Some((start, end)) = selected_post_row_range(snap, row_to_element, selected_post) else {
@@ -116,11 +108,7 @@ fn draw_post_left_line(
     }
 }
 
-fn visible_row_range(
-    row_to_element: &[usize],
-    offset: u16,
-    area_height: u16,
-) -> Option<(usize, usize)> {
+fn visible_row_range(row_to_element: &[usize], offset: u16, area_height: u16) -> Option<(usize, usize)> {
     let visible_start = offset as usize;
     let visible_end = (offset as usize + area_height as usize).min(row_to_element.len());
     if visible_start >= visible_end {
@@ -133,11 +121,7 @@ fn visible_row_range(
 /// post's highlight area. This includes the post's content rows plus the
 /// adjacent spacer/margin rows that the highlight extends into, so the
 /// returned range is exactly the height of the selection.
-fn selected_post_row_range(
-    snap: &Snapshot,
-    row_to_element: &[usize],
-    selected_post: usize,
-) -> Option<(usize, usize)> {
+fn selected_post_row_range(snap: &Snapshot, row_to_element: &[usize], selected_post: usize) -> Option<(usize, usize)> {
     let post = snap.posts.get(selected_post)?;
     let (elem_start_rows, elem_line_counts) = element_row_map(row_to_element);
     let (start, end) = post_content_range(snap, post, &elem_start_rows, &elem_line_counts)?;
@@ -210,8 +194,8 @@ fn post_actual_offset(
 ) -> Option<u16> {
     let post = snap.posts.get(selected_post)?;
     let (starts, _) = element_row_map(row_to_element);
-    let first_content = (post.start..post.end)
-        .find(|&i| !matches!(snap.elements.get(i), Some(Element::Spacer { .. })))?;
+    let first_content =
+        (post.start..post.end).find(|&i| !matches!(snap.elements.get(i), Some(Element::Spacer { .. })))?;
     // Scroll so the full bracket is visible. Non-user posts extend into
     // the spacer above them (leading spacer for the first post, trailing
     // spacer of the previous post otherwise). User messages already have

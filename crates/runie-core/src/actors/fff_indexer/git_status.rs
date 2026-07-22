@@ -7,16 +7,10 @@ use git2::Status as GitStatus;
 /// Returns true if the git status matches the given filter string.
 pub(super) fn git_status_matches(status: GitStatus, filter: &str) -> bool {
     match filter {
-        "modified" => {
-            status.contains(GitStatus::WT_MODIFIED) || status.contains(GitStatus::INDEX_MODIFIED)
-        }
+        "modified" => status.contains(GitStatus::WT_MODIFIED) || status.contains(GitStatus::INDEX_MODIFIED),
         "untracked" => status.contains(GitStatus::WT_NEW) || status.contains(GitStatus::INDEX_NEW),
-        "deleted" => {
-            status.contains(GitStatus::WT_DELETED) || status.contains(GitStatus::INDEX_DELETED)
-        }
-        "renamed" => {
-            status.contains(GitStatus::WT_RENAMED) || status.contains(GitStatus::INDEX_RENAMED)
-        }
+        "deleted" => status.contains(GitStatus::WT_DELETED) || status.contains(GitStatus::INDEX_DELETED),
+        "renamed" => status.contains(GitStatus::WT_RENAMED) || status.contains(GitStatus::INDEX_RENAMED),
         "staged" => {
             status.contains(GitStatus::INDEX_MODIFIED)
                 || status.contains(GitStatus::INDEX_NEW)

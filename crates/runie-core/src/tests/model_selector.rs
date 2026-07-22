@@ -8,10 +8,9 @@ use crate::model_catalog::{build_model_selector_items, filter_models, model_cata
 
 fn selector_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current().map(|p| (p.filter.clone(), p.selected)),
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
+            stack.current().map(|p| (p.filter.clone(), p.selected))
+        }
         _ => None,
     }
 }
@@ -44,6 +43,7 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
                 base_url: String::new(),
                 models: models.clone(),
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: vec![],
             },
         );
     }
@@ -217,10 +217,9 @@ fn empty_current_marker_when_no_active_model() {
     state.update(crate::Event::ToggleModelSelector);
 
     let items = match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current().map(|p| p.items.clone()).unwrap_or_default(),
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
+            stack.current().map(|p| p.items.clone()).unwrap_or_default()
+        }
         _ => Vec::new(),
     };
     assert!(
@@ -293,10 +292,9 @@ fn selector_wraps_down() {
     );
     state.update(crate::Event::ToggleModelSelector);
     let count = match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current().map(|p| p.navigable_count()).unwrap_or(0),
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
+            stack.current().map(|p| p.navigable_count()).unwrap_or(0)
+        }
         _ => 0,
     };
     for _ in 0..count {
@@ -318,11 +316,7 @@ fn cycle_model_next_uses_unified_catalog() {
     state.config.scoped_models = catalog
         .iter()
         .take(10)
-        .map(|m| ScopedModel {
-            provider: m.provider.clone(),
-            name: m.name.clone(),
-            enabled: true,
-        })
+        .map(|m| ScopedModel { provider: m.provider.clone(), name: m.name.clone(), enabled: true })
         .collect();
     state.config.scoped_index = 0;
     let first = &state.config.scoped_models[0];

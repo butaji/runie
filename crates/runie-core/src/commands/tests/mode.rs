@@ -38,11 +38,7 @@ fn mode_list_shows_all_patterns_with_descriptions_and_config() {
     if let CommandResult::Message(msg) = result {
         assert!(msg.contains("single"), "missing single: {}", msg);
         assert!(msg.contains("swarm"), "missing swarm: {}", msg);
-        assert!(
-            msg.contains("improve"),
-            "missing improve: {}",
-            msg
-        );
+        assert!(msg.contains("improve"), "missing improve: {}", msg);
         assert!(
             msg.contains("Direct execution"),
             "missing single description: {}",
@@ -59,11 +55,7 @@ fn mode_list_shows_all_patterns_with_descriptions_and_config() {
             msg
         );
         assert!(msg.contains("workers: 3"), "missing workers: {}", msg);
-        assert!(
-            msg.contains("max_rounds: 5"),
-            "missing max_rounds: {}",
-            msg
-        );
+        assert!(msg.contains("max_rounds: 5"), "missing max_rounds: {}", msg);
     } else {
         panic!("expected Message, got {:?}", result);
     }
@@ -211,10 +203,7 @@ fn set_mode_event_updates_state_via_model_config_event() {
     let mut state = AppState::default();
     crate::update::agent::model_config_event(
         &mut state,
-        crate::Event::SetMode {
-            active: "swarm".into(),
-            workers: None,
-        },
+        crate::Event::SetMode { active: "swarm".into(), workers: None },
     );
     assert_eq!(state.config().mode.active, "swarm");
     // workers untouched when None
@@ -222,10 +211,7 @@ fn set_mode_event_updates_state_via_model_config_event() {
 
     crate::update::agent::model_config_event(
         &mut state,
-        crate::Event::SetMode {
-            active: "improve".into(),
-            workers: Some(7),
-        },
+        crate::Event::SetMode { active: "improve".into(), workers: Some(7) },
     );
     assert_eq!(state.config().mode.active, "improve");
     assert_eq!(state.config().mode.workers, 7);

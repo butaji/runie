@@ -25,10 +25,7 @@ impl MockAgentHandle {
     fn new() -> (Arc<Self>, tokio::sync::mpsc::Receiver<LeaderAgentCmd>) {
         let (_tx, rx) = tokio::sync::mpsc::channel(16);
         (
-            Arc::new(Self {
-                run_count: Arc::new(AtomicUsize::new(0)),
-                abort_count: Arc::new(AtomicUsize::new(0)),
-            }),
+            Arc::new(Self { run_count: Arc::new(AtomicUsize::new(0)), abort_count: Arc::new(AtomicUsize::new(0)) }),
             rx,
         )
     }
@@ -39,10 +36,7 @@ impl MockAgentHandle {
 }
 
 impl LeaderAgentHandle for MockAgentHandle {
-    fn run(
-        &self,
-        _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, _cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         self.run_count.fetch_add(1, Ordering::SeqCst);
         Box::pin(async {})
     }
@@ -54,12 +48,9 @@ impl LeaderAgentHandle for MockAgentHandle {
 
 fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     let (agent, _rx) = MockAgentHandle::new();
-    let agent_arc = Arc::new(MockAgentHandle {
-        run_count: agent.run_count.clone(),
-        abort_count: agent.abort_count.clone(),
-    });
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_arc =
+        Arc::new(MockAgentHandle { run_count: agent.run_count.clone(), abort_count: agent.abort_count.clone() });
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());

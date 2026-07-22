@@ -25,8 +25,7 @@ pub fn load_keybindings(config: Option<&crate::config::Config>) -> HashMap<Strin
         Some(cfg) => merged_keybindings(cfg),
         None => {
             // Legacy path: try loading from keybindings.json if it exists
-            let json_path = default_keybindings_path()
-                .unwrap_or_else(|| PathBuf::from("/tmp/runie_keybindings.json"));
+            let json_path = default_keybindings_path().unwrap_or_else(|| PathBuf::from("/tmp/runie_keybindings.json"));
             if json_path.exists() {
                 match fs::read_to_string(&json_path) {
                     Ok(content) => parse_keybindings_json(&content).unwrap_or_else(|e| {
@@ -57,8 +56,7 @@ pub fn merged_keybindings(config: &crate::config::Config) -> HashMap<String, Str
 
 /// Parse keybindings from JSON string
 pub fn parse_keybindings_json(content: &str) -> Result<HashMap<String, String>> {
-    let value: serde_json::Value =
-        serde_json::from_str(content).context("parse keybindings JSON")?;
+    let value: serde_json::Value = serde_json::from_str(content).context("parse keybindings JSON")?;
 
     let obj = value.as_object().context("keybindings must be an object")?;
 

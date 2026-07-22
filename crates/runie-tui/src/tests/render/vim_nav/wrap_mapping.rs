@@ -18,13 +18,7 @@ fn snapshot_with_element(element: Element, width: u16) -> Snapshot {
         total_lines: 1,
         last_visible_height: 30,
         content_width: width,
-        posts: Arc::new([Post {
-            index: 0,
-            start: 0,
-            end: 1,
-            kind: PostKind::AgentResponse,
-            expanded: true,
-        }]),
+        posts: Arc::new([Post { index: 0, start: 0, end: 1, kind: PostKind::AgentResponse, expanded: true }]),
         ..Snapshot::default()
     }
 }

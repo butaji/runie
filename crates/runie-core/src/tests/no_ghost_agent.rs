@@ -16,23 +16,17 @@ use crate::view::LazyCache;
 /// so `should_skip_msg` kept the assistant message hidden even after the turn
 /// completed — the "ghost agent message" bug. This test reproduces that scenario.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn no_ghost_agent_after_turn_completed() {
     let mut state = fresh_state();
 
     // Production-style sequence via TurnActor:
     // TurnStarted → set_thinking (thinking_started_at + current_request_id)
     //   → ResponseDelta → TurnCompleted → apply_turn_completed
-    state.update(Event::TurnStarted {
-        id: "req.0".into(),
-        request_id: "req.0".into(),
-        content: "hello".into(),
-    });
+    state.update(Event::TurnStarted { id: "req.0".into(), request_id: "req.0".into(), content: "hello".into() });
     state.update(Event::Thinking { id: "req.0".into() });
     state.update(Event::TextStart { id: "req.0".into() });
-    state.update(Event::ResponseDelta {
-        id: "req.0".into(),
-        content: "Hello, world!\n".into(),
-    });
+    state.update(Event::ResponseDelta { id: "req.0".into(), content: "Hello, world!\n".into() });
 
     // During streaming with thinking_started_at set: thinking marker is shown
     // (correct) and assistant IS hidden (correct — it's part of the thought).
@@ -93,20 +87,14 @@ fn no_ghost_agent_after_turn_completed() {
 /// `on_response_delta` where the assistant message is created directly from
 /// the streaming buffer (no Part::Text opened by TextStart).
 #[test]
+#[allow(clippy::too_many_lines)]
 fn no_ghost_agent_after_turn_completed_no_text_start() {
     let mut state = fresh_state();
 
-    state.update(Event::TurnStarted {
-        id: "req.0".into(),
-        request_id: "req.0".into(),
-        content: "say hi".into(),
-    });
+    state.update(Event::TurnStarted { id: "req.0".into(), request_id: "req.0".into(), content: "say hi".into() });
     state.update(Event::Thinking { id: "req.0".into() });
     // No TextStart — ResponseDelta creates assistant directly from buffer
-    state.update(Event::ResponseDelta {
-        id: "req.0".into(),
-        content: "Hi there!\n".into(),
-    });
+    state.update(Event::ResponseDelta { id: "req.0".into(), content: "Hi there!\n".into() });
 
     // During streaming with thinking: assistant is hidden
     {

@@ -4,6 +4,7 @@
 //! must NOT call the agent handle; instead UiActor runs the pattern and
 //! publishes the same terminal events the agent actor would (Thinking,
 //! Response, TurnComplete, Done) plus worker feed rows for swarm.
+#![allow(clippy::too_many_lines)]
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -22,10 +23,7 @@ struct TestAgentHandle {
 }
 
 impl LeaderAgentHandle for TestAgentHandle {
-    fn run(
-        &self,
-        _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, _cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         self.run_count.fetch_add(1, Ordering::SeqCst);
         Box::pin(async {})
     }
@@ -81,11 +79,7 @@ fn make_ui(agent: &TestAgentHandle, bus: &EventBus<Event>) -> crate::ui_actor::U
 }
 
 fn turn_started(id: &str, content: &str) -> Event {
-    Event::TurnStarted {
-        request_id: id.into(),
-        content: content.into(),
-        id: id.into(),
-    }
+    Event::TurnStarted { request_id: id.into(), content: content.into(), id: id.into() }
 }
 
 /// Drain bus events until `stop` matches, bounded by a deadline so a missing
@@ -138,9 +132,7 @@ async fn swarm_turn_runs_pattern_not_agent() {
     let mut bus_rx = bus.subscribe();
     let agent = TestAgentHandle::default();
     let mut ui = make_ui(&agent, &bus);
-    ui.set_pattern_executor(Arc::new(EchoRunner {
-        output: "pattern-result".into(),
-    }));
+    ui.set_pattern_executor(Arc::new(EchoRunner { output: "pattern-result".into() }));
     ui.state.config_mut().mode.active = "swarm".into();
 
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
@@ -179,9 +171,9 @@ async fn swarm_turn_runs_pattern_not_agent() {
         "worker finish row must be published: {events:?}"
     );
     assert!(
-        events.iter().any(
-            |e| matches!(e, Event::Response { id, content, .. } if id == "req.0" && content == "pattern-result")
-        ),
+        events
+            .iter()
+            .any(|e| matches!(e, Event::Response { id, content, .. } if id == "req.0" && content == "pattern-result")),
         "final assistant response must be published: {events:?}"
     );
     let turn_complete = events
@@ -243,9 +235,9 @@ async fn improve_runs_through_pattern_engine() {
         "thinking row must show for the whole pattern run: {events:?}"
     );
     assert!(
-        events.iter().any(
-            |e| matches!(e, Event::Response { id, content, .. } if id == "req.0" && content == "x")
-        ),
+        events
+            .iter()
+            .any(|e| matches!(e, Event::Response { id, content, .. } if id == "req.0" && content == "x")),
         "last draft must be published as the response: {events:?}"
     );
     let turn_complete = events

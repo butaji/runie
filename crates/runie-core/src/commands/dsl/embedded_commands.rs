@@ -13,8 +13,7 @@ use include_dir::Dir;
 
 /// Embed resources/commands/ at compile time via include_dir.
 /// This avoids a hand-maintained list: adding a new .yaml file is enough.
-static COMMANDS_DIR: Dir<'static> =
-    include_dir::include_dir!("$CARGO_MANIFEST_DIR/resources/commands");
+static COMMANDS_DIR: Dir<'static> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/resources/commands");
 
 /// Load all embedded commands as `Command`.
 pub fn load_embedded_commands() -> Vec<Command> {
@@ -38,18 +37,17 @@ fn load_single_command_file(
 
     // Safe: YAML files in resources/commands/ are always UTF-8.
     let yaml_contents = std::str::from_utf8(f.contents()).ok()?;
-    let yaml: crate::declarative::types::DeclarativeCommandYaml =
-        match serde_yaml::from_str(yaml_contents) {
-            Ok(y) => y,
-            Err(e) => {
-                tracing::warn!(
-                    "Failed to parse {:?}: {}",
-                    path.file_name().and_then(|n| n.to_str()),
-                    e
-                );
-                return None;
-            }
-        };
+    let yaml: crate::declarative::types::DeclarativeCommandYaml = match serde_yaml::from_str(yaml_contents) {
+        Ok(y) => y,
+        Err(e) => {
+            tracing::warn!(
+                "Failed to parse {:?}: {}",
+                path.file_name().and_then(|n| n.to_str()),
+                e
+            );
+            return None;
+        }
+    };
 
     match build_cmd_from_yaml(&yaml, handler_registry) {
         Some(cmd) => Some(cmd),
@@ -108,6 +106,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn command_names_are_valid() {
         let cmds = load_embedded_commands();
 

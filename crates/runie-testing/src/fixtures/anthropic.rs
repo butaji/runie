@@ -7,8 +7,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 /// The fixture directory.
-static FIXTURE_DIR: Dir<'_> =
-    include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/fixtures/anthropic");
+static FIXTURE_DIR: Dir<'_> = include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/fixtures/anthropic");
 
 /// Lazy-loaded fixture contents.
 static FIXTURES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {

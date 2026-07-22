@@ -1,0 +1,9 @@
+# Swarm command - manage swarm workers
+name: swarm
+description: Clean up orphaned swarm workers or show swarm status
+category: Session
+sub: false
+triggers:
+  - /swarm
+type: handler
+handler: swarm

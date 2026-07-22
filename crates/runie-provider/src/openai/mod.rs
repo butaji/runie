@@ -11,6 +11,9 @@ use secrecy::SecretString;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[cfg(test)]
+use runie_core::proto::message::ChatMessageBuilder;
+
 /// OpenAI-compatible provider.
 ///
 /// The `client` field holds an `Arc<reqwest::Client>` so multiple
@@ -54,11 +57,7 @@ impl OpenAiProvider {
     }
 
     /// Create from an explicit HTTP client (shared across providers).
-    pub fn from_http_client(
-        client: Arc<reqwest::Client>,
-        api_key: String,
-        model: impl Into<String>,
-    ) -> Self {
+    pub fn from_http_client(client: Arc<reqwest::Client>, api_key: String, model: impl Into<String>) -> Self {
         Self {
             client,
             api_key: SecretString::from(crate::http::normalize_api_key(&api_key)),
@@ -139,19 +138,14 @@ impl OpenAiProvider {
 
 impl crate::Provider for OpenAiProvider {
     fn metadata(&self) -> crate::ProviderMetadata {
-        crate::ProviderMetadata::default()
-            .with_retry_config(self.retry_config.clone().unwrap_or_default())
+        crate::ProviderMetadata::default().with_retry_config(self.retry_config.clone().unwrap_or_default())
     }
 
     fn generate(
         &self,
         messages: Vec<runie_core::proto::message::ChatMessage>,
     ) -> std::pin::Pin<
-        Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
-                + Send
-                + '_,
-        >,
+        Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_>,
     > {
         stream::openai_stream(self.clone(), messages)
     }
@@ -161,11 +155,7 @@ impl crate::Provider for OpenAiProvider {
         messages: Vec<runie_core::proto::message::ChatMessage>,
         tools: Vec<serde_json::Value>,
     ) -> std::pin::Pin<
-        Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>>
-                + Send
-                + '_,
-        >,
+        Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider_event::ProviderEvent>> + Send + '_>,
     > {
         let provider = self
             .clone()
@@ -180,7 +170,7 @@ mod tests {
     use super::protocol::OpenAiFrame;
     use super::*;
     use request::build_request_body;
-    use runie_core::proto::message::{ChatMessage, Part, Role};
+    use runie_core::proto::message::ChatMessage;
     use runie_core::provider_event::{ProviderEvent, StopReason};
 
     fn test_provider() -> OpenAiProvider {
@@ -220,25 +210,14 @@ mod tests {
     fn assistant_tool_message_has_empty_content() {
         let messages = vec![
             ChatMessage::user("read it".to_string()),
-            ChatMessage {
-                role: Role::Assistant,
-                timestamp: 0.0,
-                id: String::new(),
-                provider: String::new(),
-                metadata: Default::default(),
-                tool_call_id: None,
-                provider_metadata: None,
-                parts: vec![
-                    Part::Text {
-                        content: "Reading...".into(),
-                    },
-                    Part::ToolCall {
-                        id: "call_1".into(),
-                        name: "read_file".into(),
-                        args: serde_json::json!({"path":"README.md"}),
-                    },
-                ],
-            },
+            ChatMessageBuilder::assistant("")
+                .text("Reading...")
+                .tool_call(
+                    "call_1",
+                    "read_file",
+                    serde_json::json!({"path":"README.md"}),
+                )
+                .build(),
         ];
         let body = build_request_body(&test_provider(), &messages);
         let serialized = &body["messages"].as_array().unwrap()[1];
@@ -256,22 +235,14 @@ mod tests {
     fn serializes_tool_role_with_call_id_when_present() {
         // Tool result with matching tool_call_id serializes as role="tool".
         // Needs user message first so sanitize doesn't add system placeholder.
-        let assistant = ChatMessage {
-            role: Role::Assistant,
-            timestamp: 0.0,
-            id: String::new(),
-            provider: String::new(),
-            metadata: Default::default(),
-            tool_call_id: None,
-            provider_metadata: None,
-            parts: vec![Part::ToolCall {
-                id: "call_abc".into(),
-                name: "read_file".into(),
-                args: serde_json::json!({"path":"README.md"}),
-            }],
-        };
-        let result =
-            ChatMessage::tool("read_file result:\nhello".to_string()).with_tool_call_id("call_abc");
+        let assistant = ChatMessageBuilder::assistant("")
+            .tool_call(
+                "call_abc",
+                "read_file",
+                serde_json::json!({"path":"README.md"}),
+            )
+            .build();
+        let result = ChatMessage::tool("read_file result:\nhello".to_string()).with_tool_call_id("call_abc");
         let body = build_request_body(
             &test_provider(),
             &[ChatMessage::user("read it".to_string()), assistant, result],
@@ -301,20 +272,13 @@ mod tests {
         // Assistant message with tool call (empty id = not tracked as dangling).
         let messages = vec![
             ChatMessage::user("hi".to_string()),
-            ChatMessage {
-                role: Role::Assistant,
-                timestamp: 0.0,
-                id: String::new(),
-                provider: String::new(),
-                metadata: Default::default(),
-                tool_call_id: None,
-                provider_metadata: None,
-                parts: vec![Part::ToolCall {
-                    id: String::new(), // empty = not tracked as dangling
-                    name: "read_file".into(),
-                    args: serde_json::json!({"path":"Cargo.toml"}),
-                }],
-            },
+            ChatMessageBuilder::assistant("")
+                .tool_call(
+                    String::new(),
+                    "read_file",
+                    serde_json::json!({"path":"Cargo.toml"}),
+                )
+                .build(),
         ];
         let body = build_request_body(&test_provider(), &messages);
         let serialized = body["messages"].as_array().unwrap();
@@ -366,12 +330,9 @@ mod tests {
         assert!(events
             .iter()
             .any(|e| matches!(e, ProviderEvent::TextDelta(t) if t == " world")));
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Finish {
-                reason: StopReason::Stop
-            }
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::Stop })));
     }
 
     #[test]
@@ -381,12 +342,9 @@ mod tests {
             "data: [DONE]",
         ]);
 
-        assert!(events.iter().any(|e| matches!(
-            e,
-            ProviderEvent::Finish {
-                reason: StopReason::ToolCalls
-            }
-        )));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::ToolCalls })));
     }
 
     #[test]
@@ -398,10 +356,7 @@ mod tests {
 
         assert!(events.iter().any(|e| matches!(
             e,
-            ProviderEvent::Usage {
-                input_tokens: 10,
-                output_tokens: 5
-            }
+            ProviderEvent::Usage { input_tokens: 10, output_tokens: 5 }
         )));
     }
 
@@ -455,16 +410,15 @@ mod tests {
     #[test]
     fn provider_trims_api_key_and_base_url() {
         use secrecy::ExposeSecret;
-        let p = OpenAiProvider::new("  sk-padded\n ".to_string(), "gpt-4o")
-            .with_base_url("https://api.example.com/v1/");
+        let p =
+            OpenAiProvider::new("  sk-padded\n ".to_string(), "gpt-4o").with_base_url("https://api.example.com/v1/");
         assert_eq!(p.api_key.expose_secret(), "sk-padded");
         assert_eq!(p.base_url, "https://api.example.com/v1");
     }
 
     #[test]
     fn request_url_normalizes_base_url_trailing_slash() {
-        let p = OpenAiProvider::new("sk".to_string(), "gpt-4o")
-            .with_base_url("https://api.example.com/v1/");
+        let p = OpenAiProvider::new("sk".to_string(), "gpt-4o").with_base_url("https://api.example.com/v1/");
         let url = format!("{}/chat/completions", p.base_url);
         assert_eq!(url, "https://api.example.com/v1/chat/completions");
     }

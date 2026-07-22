@@ -8,16 +8,8 @@ use crate::prompts::{PromptSource, PromptTemplate};
 fn state_with_prompts() -> crate::model::AppState {
     crate::model::AppState {
         prompts: vec![
-            PromptTemplate {
-                name: "default".into(),
-                content: "Be helpful.".into(),
-                source: PromptSource::BuiltIn,
-            },
-            PromptTemplate {
-                name: "custom".into(),
-                content: "Be concise.".into(),
-                source: PromptSource::BuiltIn,
-            },
+            PromptTemplate { name: "default".into(), content: "Be helpful.".into(), source: PromptSource::BuiltIn },
+            PromptTemplate { name: "custom".into(), content: "Be concise.".into(), source: PromptSource::BuiltIn },
         ],
         ..Default::default()
     }

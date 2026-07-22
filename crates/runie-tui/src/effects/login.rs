@@ -11,12 +11,7 @@ use tokio::sync::mpsc;
 /// * `key` - API key
 /// * `tx` - Channel to send result events
 /// * `provider_handle` - Handle to the provider actor
-pub async fn run(
-    provider: String,
-    key: String,
-    tx: mpsc::Sender<CoreEvent>,
-    provider_handle: RactorProviderHandle,
-) {
+pub async fn run(provider: String, key: String, tx: mpsc::Sender<CoreEvent>, provider_handle: RactorProviderHandle) {
     if provider.is_empty() || key.is_empty() {
         return;
     }
@@ -28,20 +23,12 @@ pub async fn run(
     match result {
         Ok(models) => {
             let _ = tx
-                .send(CoreEvent::ModelsFetched {
-                    provider,
-                    key,
-                    models,
-                })
+                .send(CoreEvent::ModelsFetched { provider, key, models })
                 .await;
         }
         Err(e) => {
             let _ = tx
-                .send(CoreEvent::ValidationFailed {
-                    provider,
-                    key,
-                    error: e.to_string(),
-                })
+                .send(CoreEvent::ValidationFailed { provider, key, error: e.to_string() })
                 .await;
         }
     }

@@ -89,9 +89,7 @@ fn login_panel_cancel_navigates_sub_panels_but_does_not_close() {
     clean_config();
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(flow.step, crate::login_flow::LoginStep::KeyInput);
@@ -115,9 +113,7 @@ fn login_panel_dialog_back_blocked_at_root_after_sub_panel_navigation() {
     clean_config();
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
 
     // Esc / DialogBack from the key input panel should pop back to the provider
     // picker, not close the whole onboarding dialog.
@@ -153,13 +149,8 @@ fn login_panel_close_allowed_once_model_connected() {
     clean_config();
     let mut state = disconnected_state();
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 

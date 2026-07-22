@@ -1,4 +1,5 @@
 //! Core TUI integration tests moved from runie-core.
+#![allow(clippy::too_many_lines)] // test files contain many test cases
 
 // Re-export types used by child test modules so they can `use super::*;`
 pub use super::{AppState, DialogKind};

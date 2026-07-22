@@ -27,21 +27,12 @@ fn latest_user_message_visible_after_submit() {
 fn large_tool_output_latest_visible_at_bottom() {
     let mut state = AppState::default();
 
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -53,6 +44,7 @@ fn large_tool_output_latest_visible_at_bottom() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn final_response_visible_after_full_turn() {
     let mut state = AppState::default();
     state.set_streaming(true);
@@ -66,21 +58,12 @@ fn final_response_visible_after_full_turn() {
         provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
     let output = (1..=15)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
@@ -88,10 +71,7 @@ fn final_response_visible_after_full_turn() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 2.0,
-    });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;

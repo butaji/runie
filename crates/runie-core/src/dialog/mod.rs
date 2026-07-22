@@ -60,8 +60,7 @@ mod tests;
 
 pub use crate::settings::SettingValue;
 pub use builders::{
-    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
-    settings, theme_picker,
+    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree, settings, theme_picker,
 };
 pub use item::{parse_accel, strip_accel, EventLabel, ItemAction, PanelItem};
 pub use panel::{Panel, PanelView};

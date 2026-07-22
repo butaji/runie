@@ -106,7 +106,16 @@ fn render_tool_done_shows_label() {
 
 #[test]
 fn render_tool_done_shows_bytes() {
-    let lines = render_tool_done("bash", "echo hello", 1.0, "hello", Some(5_000_000), false, &None, 0);
+    let lines = render_tool_done(
+        "bash",
+        "echo hello",
+        1.0,
+        "hello",
+        Some(5_000_000),
+        false,
+        &None,
+        0,
+    );
     let output = render_to_string(lines, 80, 5);
     assert!(
         output.contains("⇣") && output.contains("5.0M"),
@@ -150,7 +159,16 @@ fn render_tool_done_no_bytes_when_none() {
 
 #[test]
 fn render_tool_done_shows_error_text() {
-    let lines = render_tool_done("bash", "exit 1", 0.5, "command not found", None, true, &None, 0);
+    let lines = render_tool_done(
+        "bash",
+        "exit 1",
+        0.5,
+        "command not found",
+        None,
+        true,
+        &None,
+        0,
+    );
     let output = render_to_string(lines, 80, 5);
     assert!(
         output.contains("✗"),

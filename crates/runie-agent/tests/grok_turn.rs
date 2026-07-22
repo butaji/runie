@@ -14,10 +14,7 @@ use runie_testing::{allow_all_gate, grok_replay_from_fixtures, GrokReplayProvide
 #[tokio::test]
 async fn grok_replay_provider_emits_text_deltas() {
     let provider = grok_replay_from_fixtures(&["sample.sse"]);
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("say hello"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("say hello")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,
@@ -37,10 +34,7 @@ async fn grok_replay_provider_emits_text_deltas() {
 #[tokio::test]
 async fn grok_replay_cycles_fixtures() {
     let provider = grok_replay_from_fixtures(&["sample.sse", "sample.sse"]);
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("hello"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("hello")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,
@@ -59,10 +53,7 @@ async fn grok_replay_cycles_fixtures() {
 #[tokio::test]
 async fn grok_replay_provider_construction() {
     let provider = GrokReplayProvider::from_fixture_names(&["sample.sse"]);
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("hello"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("hello")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,
@@ -80,10 +71,7 @@ async fn grok_replay_provider_construction() {
 #[tokio::test]
 async fn grok_replay_provider_empty_fixtures() {
     let provider = GrokReplayProvider::new(vec![]);
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("hello"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("hello")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,
@@ -132,10 +120,7 @@ async fn grok_replay_built_provider_has_correct_metadata() {
 #[tokio::test]
 async fn grok_replay_result_messages_include_response() {
     let provider = grok_replay_from_fixtures(&["sample.sse"]);
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("say hello"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("say hello")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,

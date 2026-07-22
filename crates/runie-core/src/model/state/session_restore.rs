@@ -64,8 +64,7 @@ impl AppState {
         self.config_mut().theme_name = session.theme_name.clone();
         self.config_mut().thinking_level = session.thinking_level;
         self.config_mut().read_only = session.read_only;
-        self.session_mut().session_display_name =
-            session.display_name.clone().or(Some(session.name.clone()));
+        self.session_mut().session_display_name = session.display_name.clone().or(Some(session.name.clone()));
         self.session_mut().session_created_at = session.created_at;
         self.session_mut().session_updated_at = session.updated_at;
         self.session_mut().session_tree = session.session_tree.clone();

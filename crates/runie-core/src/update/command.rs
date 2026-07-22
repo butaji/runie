@@ -13,21 +13,11 @@ use crate::commands::CommandResult;
 pub(super) fn handle_command_event(state: &mut AppState, event: crate::Event) {
     match &event {
         // Session IO (save/load/delete/import/export)
-        crate::Event::RunLoadCommand { name } => {
-            session_dispatch(state, |s| session_run::run_load(s, name.trim()))
-        }
-        crate::Event::RunSaveCommand { name } => {
-            session_dispatch(state, |s| session_run::run_save(s, name.trim()))
-        }
-        crate::Event::RunDeleteCommand { name } => {
-            session_dispatch(state, |s| session_run::run_delete(s, name.trim()))
-        }
-        crate::Event::RunImportCommand { path } => {
-            session_dispatch(state, |s| session_run::run_import(s, path.trim()))
-        }
-        crate::Event::RunExportCommand { path } => {
-            session_dispatch(state, |s| session_run::run_export(s, path.trim()))
-        }
+        crate::Event::RunLoadCommand { name } => session_dispatch(state, |s| session_run::run_load(s, name.trim())),
+        crate::Event::RunSaveCommand { name } => session_dispatch(state, |s| session_run::run_save(s, name.trim())),
+        crate::Event::RunDeleteCommand { name } => session_dispatch(state, |s| session_run::run_delete(s, name.trim())),
+        crate::Event::RunImportCommand { path } => session_dispatch(state, |s| session_run::run_import(s, path.trim())),
+        crate::Event::RunExportCommand { path } => session_dispatch(state, |s| session_run::run_export(s, path.trim())),
 
         // Session state commands
         crate::Event::RunNameCommand { name } => run_name_command(state, name),
@@ -112,9 +102,11 @@ fn run_fork_command(state: &mut AppState, message_index_raw: &str) {
         ));
         return;
     }
-    let mut tree = state.session_mut().session_tree.take().unwrap_or_else(|| {
-        crate::session::tree::SessionTree::from_messages(&state.session().messages)
-    });
+    let mut tree = state
+        .session_mut()
+        .session_tree
+        .take()
+        .unwrap_or_else(|| crate::session::tree::SessionTree::from_messages(&state.session().messages));
     match tree.fork_at(message_index) {
         Some(path) => {
             tree.navigate_to(&path);
@@ -164,9 +156,7 @@ fn run_prompt_command(state: &mut AppState, name: &str) {
         return;
     }
     if state.prompts().iter().any(|p| p.name == name) {
-        state.update(crate::Event::SetPrompt {
-            name: name.to_owned(),
-        });
+        state.update(crate::Event::SetPrompt { name: name.to_owned() });
         state.add_system_msg(format!("Prompt switched to '{}'", name));
     } else {
         state.add_system_msg(format!("Prompt '{}' not found.", name));

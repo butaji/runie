@@ -73,8 +73,7 @@ pub(crate) fn strip_inline_fenced_tools(content: &str) -> String {
         if let Some(idx) = line.find("```") {
             let rest = &line[idx + 3..];
             let after_lang = strip_language_prefix(rest).trim_start();
-            if !after_lang.is_empty() && !after_lang.starts_with('{') && !after_lang.contains("```")
-            {
+            if !after_lang.is_empty() && !after_lang.starts_with('{') && !after_lang.contains("```") {
                 result.push_str(after_lang);
                 continue;
             }

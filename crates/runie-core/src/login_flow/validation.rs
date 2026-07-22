@@ -17,9 +17,7 @@ mod tests {
     fn drive_to_model_select(provider: &str) -> AppState {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: provider.into(),
-        });
+        state.update(Event::SelectProvider { provider: provider.into() });
         let defaults: Vec<String> = crate::provider::find_provider(provider)
             .map(|m| {
                 m.models
@@ -28,10 +26,7 @@ mod tests {
                     .collect()
             })
             .unwrap_or_default();
-        state.update(Event::SubmitKey {
-            provider: provider.into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SubmitKey { provider: provider.into(), key: "sk-test".into() });
         assert_flow_step(&state, LoginStep::Validating);
         state.update(Event::ModelsFetched {
             provider: provider.into(),
@@ -68,14 +63,9 @@ mod tests {
     fn key_input_esc_pops_to_provider_picker_not_close() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
         match &state.open_dialog_mut() {
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: s,
-            }) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
                 assert_eq!(s.len(), 2, "stack should be [provider, key_input]");
                 assert_eq!(s.current().unwrap().id, "login-key");
             }
@@ -83,10 +73,7 @@ mod tests {
         }
         state.update(Event::dialog_back());
         match &state.open_dialog_mut() {
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: s,
-            }) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
                 assert_eq!(s.len(), 1, "Esc must pop to root, not close");
                 assert_eq!(s.current().unwrap().id, "login-provider");
             }
@@ -107,9 +94,7 @@ mod tests {
     fn login_select_provider_pushes_key_input() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
         assert_flow_step(&state, LoginStep::KeyInput);
         assert_eq!(state.login_flow().unwrap().provider, "minimax");
     }
@@ -118,18 +103,11 @@ mod tests {
     fn login_switching_providers_clears_previous_key() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "moonshotai".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "moonshotai".into(),
-            key: "sk-secret".into(),
-        });
+        state.update(Event::SelectProvider { provider: "moonshotai".into() });
+        state.update(Event::SubmitKey { provider: "moonshotai".into(), key: "sk-secret".into() });
         assert_eq!(state.login_flow().unwrap().key, "sk-secret");
 
-        state.update(Event::SelectProvider {
-            provider: "deepseek".into(),
-        });
+        state.update(Event::SelectProvider { provider: "deepseek".into() });
         assert!(
             state.login_flow().unwrap().key.is_empty(),
             "switching providers must not carry the previous provider's key \
@@ -141,17 +119,10 @@ mod tests {
     fn login_reselecting_same_provider_keeps_key() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "moonshotai".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "moonshotai".into(),
-            key: "sk-secret".into(),
-        });
+        state.update(Event::SelectProvider { provider: "moonshotai".into() });
+        state.update(Event::SubmitKey { provider: "moonshotai".into(), key: "sk-secret".into() });
 
-        state.update(Event::SelectProvider {
-            provider: "moonshotai".into(),
-        });
+        state.update(Event::SelectProvider { provider: "moonshotai".into() });
         assert_eq!(
             state.login_flow().unwrap().key,
             "sk-secret",
@@ -163,19 +134,11 @@ mod tests {
     fn login_submit_key_goes_to_validating() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
         assert_flow_step(&state, LoginStep::Validating);
         match &state.open_dialog_mut() {
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: s,
-            }) => {
+            Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: s }) => {
                 assert_eq!(s.current().unwrap().id, "login-validating");
             }
             other => panic!("expected validating panel, got {other:?}"),
@@ -186,13 +149,8 @@ mod tests {
     fn login_submit_key_preserves_provider_when_empty() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "".into(), key: "sk-test".into() });
         assert_flow_step(&state, LoginStep::Validating);
         state.update(Event::ModelsFetched {
             provider: "minimax".into(),
@@ -209,13 +167,8 @@ mod tests {
     fn login_validation_failure_returns_to_key_input() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-bad".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-bad".into() });
         assert_flow_step(&state, LoginStep::Validating);
         state.update(Event::ValidationFailed {
             provider: "minimax".into(),
@@ -236,9 +189,7 @@ mod tests {
             .unwrap()
             .selected_models
             .contains(&first));
-        state.update(Event::ToggleModel {
-            model: first.clone(),
-        });
+        state.update(Event::ToggleModel { model: first.clone() });
         assert!(!state
             .login_flow
             .as_ref()
@@ -264,13 +215,8 @@ mod tests {
     fn s1_submit_key_shows_validating_panel() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
         assert_flow_step(&state, LoginStep::Validating);
     }
 
@@ -278,13 +224,8 @@ mod tests {
     fn s1_models_fetched_reaches_model_select() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
         state.update(Event::ModelsFetched {
             provider: "minimax".into(),
             key: "sk-test".into(),
@@ -302,13 +243,8 @@ mod tests {
     fn s3_validation_failed_returns_to_key_input() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
         state.update(Event::ValidationFailed {
             provider: "minimax".into(),
             key: "sk-test".into(),
@@ -322,13 +258,8 @@ mod tests {
     fn s4_invalid_key_shows_transient_not_error_panel() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
         state.update(Event::ValidationFailed {
             provider: "minimax".into(),
             key: "sk-test".into(),
@@ -342,13 +273,8 @@ mod tests {
     fn s6_save_before_validation_is_rejected() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
         assert_flow_step(&state, LoginStep::Validating);
         state.update(Event::Save);
         assert!(
@@ -366,13 +292,8 @@ mod tests {
         // registry, in registry order, so the default lands on a live model.
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "google".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "google".into(),
-            key: "test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "google".into() });
+        state.update(Event::SubmitKey { provider: "google".into(), key: "test".into() });
         state.update(Event::ModelsFetched {
             provider: "google".into(),
             key: "test".into(),
@@ -400,13 +321,8 @@ mod tests {
         // models are in the curated list, show the raw fetched list.
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "google".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "google".into(),
-            key: "test".into(),
-        });
+        state.update(Event::SelectProvider { provider: "google".into() });
+        state.update(Event::SubmitKey { provider: "google".into(), key: "test".into() });
         state.update(Event::ModelsFetched {
             provider: "google".into(),
             key: "test".into(),
@@ -420,18 +336,9 @@ mod tests {
     fn s8_empty_fetch_reaches_model_select_with_no_models() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-        });
-        state.update(Event::ModelsFetched {
-            provider: "minimax".into(),
-            key: "sk-test".into(),
-            models: vec![],
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
+        state.update(Event::ModelsFetched { provider: "minimax".into(), key: "sk-test".into(), models: vec![] });
         let flow = state.login_flow().unwrap();
         assert_eq!(flow.step, LoginStep::ModelSelect);
         assert!(flow.available_models.is_empty());
@@ -442,13 +349,8 @@ mod tests {
     fn s9_unknown_provider_no_defaults() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "ghost".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "ghost".into(),
-            key: "k".into(),
-        });
+        state.update(Event::SelectProvider { provider: "ghost".into() });
+        state.update(Event::SubmitKey { provider: "ghost".into(), key: "k".into() });
         let login_flow = state.login_flow();
         let flow = login_flow.as_ref().unwrap();
         assert_eq!(flow.step, LoginStep::Validating);
@@ -459,13 +361,8 @@ mod tests {
     fn s13_empty_key_is_rejected() {
         let mut state = AppState::default();
         state.update(Event::Start);
-        state.update(Event::SelectProvider {
-            provider: "minimax".into(),
-        });
-        state.update(Event::SubmitKey {
-            provider: "minimax".into(),
-            key: "".into(),
-        });
+        state.update(Event::SelectProvider { provider: "minimax".into() });
+        state.update(Event::SubmitKey { provider: "minimax".into(), key: "".into() });
         let login_flow = state.login_flow();
         let flow = login_flow.as_ref().unwrap();
         assert_eq!(flow.step, LoginStep::KeyInput);

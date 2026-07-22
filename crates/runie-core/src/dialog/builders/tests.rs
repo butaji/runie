@@ -1,6 +1,6 @@
+#![allow(clippy::too_many_lines)]
 use crate::dialog::builders::{
-    command_palette, model_selector, scoped_models, session_list, session_tree, settings,
-    theme_picker, SessionRow,
+    command_palette, model_selector, scoped_models, session_list, session_tree, settings, theme_picker, SessionRow,
 };
 use crate::dialog::PanelItem;
 use crate::Event;
@@ -15,8 +15,7 @@ fn command_palette_builds() {
     let stack = command_palette(vec![
         CommandRow::new("Commands", "/save", "Save session", dummy_evt()),
         CommandRow::new("Commands", "/load", "Load session", dummy_evt()),
-        CommandRow::new("Skills", "test-skill", "A skill", dummy_evt())
-            .with_aliases(vec!["ts".into()]),
+        CommandRow::new("Skills", "test-skill", "A skill", dummy_evt()).with_aliases(vec!["ts".into()]),
     ]);
     assert_eq!(stack.len(), 1);
     let panel = stack.current().unwrap();
@@ -46,6 +45,9 @@ fn model_selector_groups_by_provider() {
         ],
         "gpt-4o",
         &std::collections::HashMap::new(),
+        None,
+        None,
+        None,
     );
     let panel = stack.current().unwrap();
     // Has headers for both providers

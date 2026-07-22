@@ -8,6 +8,7 @@
 //! 2. Scan the original text character-by-character → track openers that
 //!    were explicitly opened but never closed.
 //! 3. Output the original text + closers for the unclosed openers from (2).
+#![allow(clippy::too_many_lines)]
 
 /// Close unclosed inline markdown syntax in `text`.
 ///
@@ -44,6 +45,7 @@ enum StyleMarker {
 }
 
 /// Scan the original text to track which markers were opened but never closed.
+#[allow(clippy::cognitive_complexity)]
 fn scan_raw_openers(text: &str) -> RawOpeners {
     let mut openers = RawOpeners::default();
     let mut chars = text.chars().peekable();

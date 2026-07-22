@@ -268,14 +268,8 @@ fn history_nav_mode_selects_path_complete_when_suggestions_open() {
 
     let mut state = AppState::default();
     state.completion.path_suggestions = Some(vec![
-        PathCompletion {
-            path: "/src".to_string(),
-            is_dir: true,
-        },
-        PathCompletion {
-            path: "/tests".to_string(),
-            is_dir: true,
-        },
+        PathCompletion { path: "/src".to_string(), is_dir: true },
+        PathCompletion { path: "/tests".to_string(), is_dir: true },
     ]);
 
     let mode = get_history_nav_mode(&mut state);

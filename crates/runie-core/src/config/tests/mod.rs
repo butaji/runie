@@ -1,4 +1,6 @@
 #![allow(clippy::all)]
+#![allow(clippy::too_many_lines)]
+
 use super::*;
 use std::fs;
 use std::sync::Mutex;
@@ -17,10 +19,7 @@ fn ui_section_has_tunable_history_max_entries() {
     assert_eq!(section.history_max_entries, 1000);
     assert_eq!(section.history_max(), 1000);
 
-    let custom = UiSection {
-        history_max_entries: 500,
-        ..UiSection::default()
-    };
+    let custom = UiSection { history_max_entries: 500, ..UiSection::default() };
     assert_eq!(custom.history_max(), 500);
 }
 
@@ -30,10 +29,7 @@ fn ui_section_has_tunable_page_size() {
     assert_eq!(section.page_size, 5);
     assert_eq!(section.page_size(), 5);
 
-    let custom = UiSection {
-        page_size: 10,
-        ..UiSection::default()
-    };
+    let custom = UiSection { page_size: 10, ..UiSection::default() };
     assert_eq!(custom.page_size(), 10);
 }
 
@@ -43,11 +39,7 @@ fn http_section_has_tunable_timeouts() {
     assert_eq!(section.request_timeout_secs, 120);
     assert_eq!(section.connect_timeout_secs, 10);
 
-    let custom = HttpSection {
-        request_timeout_secs: 60,
-        connect_timeout_secs: 5,
-        ..HttpSection::default()
-    };
+    let custom = HttpSection { request_timeout_secs: 60, connect_timeout_secs: 5, ..HttpSection::default() };
     assert_eq!(custom.request_timeout_secs, 60);
     assert_eq!(custom.connect_timeout_secs, 5);
 }
@@ -101,11 +93,7 @@ fn mode_section_has_tunable_defaults() {
     assert_eq!(section.max_retries, 2);
     assert_eq!(section.circuit_breaker, 3);
 
-    let custom = ModeSection {
-        active: "swarm".into(),
-        workers: 5,
-        ..ModeSection::default()
-    };
+    let custom = ModeSection { active: "swarm".into(), workers: 5, ..ModeSection::default() };
     assert_eq!(custom.active, "swarm");
     assert_eq!(custom.workers, 5);
     assert_eq!(custom.max_rounds, 5);
@@ -172,6 +160,8 @@ fn mode_section_roundtrips_through_toml() {
             timeout_ms: 30_000,
             max_retries: 4,
             circuit_breaker: 6,
+            lead_model: Some("openai/gpt-4".into()),
+            worker_model: Some("minimax/M3".into()),
         },
         ..Config::default()
     };
@@ -335,10 +325,7 @@ x-mock-latency-ms = "500"
         headers.get("x-mock-scenario"),
         Some(&"tool_call".to_string())
     );
-    assert_eq!(
-        headers.get("x-mock-latency-ms"),
-        Some(&"500".to_string())
-    );
+    assert_eq!(headers.get("x-mock-latency-ms"), Some(&"500".to_string()));
 }
 
 fn make_test_config(dir: &tempfile::TempDir, content: &str) -> std::path::PathBuf {
@@ -446,32 +433,18 @@ fn classify_change_detects_model_change() {
     // reads is_mock_enabled(), whose global atomic is flipped by unrelated
     // parallel tests.
     crate::provider::set_mock_enabled(false);
-    let prev = Config {
-        provider: Some("openai".to_string()),
-        ..Config::default()
-    };
-    let curr = Config {
-        provider: Some("anthropic".to_string()),
-        ..Config::default()
-    };
+    let prev = Config { provider: Some("openai".to_string()), ..Config::default() };
+    let curr = Config { provider: Some("anthropic".to_string()), ..Config::default() };
     let changes = curr.classify_change(&prev);
-    assert!(
-        matches!(changes.as_slice(), [ConfigChange::Model { provider, .. }] if provider == "anthropic")
-    );
+    assert!(matches!(changes.as_slice(), [ConfigChange::Model { provider, .. }] if provider == "anthropic"));
 }
 
 #[test]
 fn classify_change_detects_theme_change() {
     // See classify_change_detects_model_change for why the override is pinned.
     crate::provider::set_mock_enabled(false);
-    let prev = Config {
-        theme: Some("dark".to_string()),
-        ..Config::default()
-    };
-    let curr = Config {
-        theme: Some("light".to_string()),
-        ..Config::default()
-    };
+    let prev = Config { theme: Some("dark".to_string()), ..Config::default() };
+    let curr = Config { theme: Some("light".to_string()), ..Config::default() };
     let changes = curr.classify_change(&prev);
     assert!(matches!(changes.as_slice(), [ConfigChange::Theme { name }] if name == "light"));
 }
@@ -480,11 +453,7 @@ fn classify_change_detects_theme_change() {
 fn classify_change_returns_empty_when_identical() {
     // See classify_change_detects_model_change for why the override is pinned.
     crate::provider::set_mock_enabled(false);
-    let prev = Config {
-        provider: Some("openai".to_string()),
-        theme: Some("dark".to_string()),
-        ..Config::default()
-    };
+    let prev = Config { provider: Some("openai".to_string()), theme: Some("dark".to_string()), ..Config::default() };
     let curr = prev.clone();
     assert!(curr.classify_change(&prev).is_empty());
 }
@@ -594,6 +563,7 @@ fn resolve_default_model_prefers_explicit_default_over_first_model() {
             // Deliberately ordered so "MiniMax-M2" is models[0].
             models: vec!["MiniMax-M2".to_string(), "MiniMax-M2.7".to_string()],
             headers: std::collections::HashMap::new(),
+            context_window_fallbacks: vec![],
         },
     );
 

@@ -22,25 +22,13 @@ fn agent_response_visible_after_large_tool() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -65,25 +53,13 @@ fn agent_at_bottom_tool_files_above() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=15)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -115,21 +91,9 @@ fn turn_complete_always_last_visible() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a\nb\nc".into(),
-    });
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a\nb\nc".into() });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;

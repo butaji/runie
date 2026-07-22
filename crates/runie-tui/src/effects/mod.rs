@@ -19,10 +19,7 @@ pub enum EffectPayload {
     /// Copy the given text to the clipboard.
     CopyToClipboard { text: String },
     /// Share the given session messages.
-    ShareSession {
-        messages: Vec<runie_core::ChatMessage>,
-        display_name: Option<String>,
-    },
+    ShareSession { messages: Vec<runie_core::ChatMessage>, display_name: Option<String> },
     /// Validate a provider API key.
     LoginValidateKey { provider: String, key: String },
     /// Suspend the terminal process.
@@ -32,12 +29,10 @@ pub enum EffectPayload {
 /// Extract an effect payload from an event and the current state.
 fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
     match event {
-        CoreEvent::OpenExternalEditor => Some(EffectPayload::OpenExternalEditor {
-            text: state.input().input().to_string(),
-        }),
-        CoreEvent::CopyToClipboard(text) => {
-            Some(EffectPayload::CopyToClipboard { text: text.clone() })
+        CoreEvent::OpenExternalEditor => {
+            Some(EffectPayload::OpenExternalEditor { text: state.input().input().to_string() })
         }
+        CoreEvent::CopyToClipboard(text) => Some(EffectPayload::CopyToClipboard { text: text.clone() }),
         CoreEvent::CopyLastResponse => {
             let text = last_assistant_text(state.session().messages());
             if text.is_empty() {
@@ -56,10 +51,9 @@ fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
             display_name: state.session().session_display_name().map(String::from),
         }),
         CoreEvent::Suspend => Some(EffectPayload::Suspend),
-        CoreEvent::SubmitKey { provider, key } => Some(EffectPayload::LoginValidateKey {
-            provider: provider.clone(),
-            key: key.clone(),
-        }),
+        CoreEvent::SubmitKey { provider, key } => {
+            Some(EffectPayload::LoginValidateKey { provider: provider.clone(), key: key.clone() })
+        }
         _ => None,
     }
 }
@@ -78,21 +72,11 @@ fn last_assistant_text(messages: &[runie_core::ChatMessage]) -> String {
 // ---------------------------------------------------------------------------
 
 pub enum EffectCommand {
-    OpenExternalEditor {
-        text: String,
-    },
-    CopyToClipboard {
-        text: String,
-    },
-    ShareSession {
-        messages: Vec<runie_core::ChatMessage>,
-        display_name: Option<String>,
-    },
+    OpenExternalEditor { text: String },
+    CopyToClipboard { text: String },
+    ShareSession { messages: Vec<runie_core::ChatMessage>, display_name: Option<String> },
     Suspend,
-    LoginFlowSubmitKey {
-        provider: String,
-        key: String,
-    },
+    LoginFlowSubmitKey { provider: String, key: String },
 }
 
 impl EffectCommand {
@@ -106,16 +90,8 @@ impl EffectCommand {
         Some(match payload {
             EffectPayload::OpenExternalEditor { text } => Self::OpenExternalEditor { text },
             EffectPayload::CopyToClipboard { text } => Self::CopyToClipboard { text },
-            EffectPayload::ShareSession {
-                messages,
-                display_name,
-            } => Self::ShareSession {
-                messages,
-                display_name,
-            },
-            EffectPayload::LoginValidateKey { provider, key } => {
-                Self::LoginFlowSubmitKey { provider, key }
-            }
+            EffectPayload::ShareSession { messages, display_name } => Self::ShareSession { messages, display_name },
+            EffectPayload::LoginValidateKey { provider, key } => Self::LoginFlowSubmitKey { provider, key },
             EffectPayload::Suspend => Self::Suspend,
         })
     }
@@ -134,10 +110,7 @@ impl EffectCommand {
             Self::CopyToClipboard { text } => {
                 handle.write_clipboard(text).await;
             }
-            Self::ShareSession {
-                messages,
-                display_name,
-            } => {
+            Self::ShareSession { messages, display_name } => {
                 handle.share_session(messages, display_name).await;
             }
             Self::Suspend => {
@@ -171,9 +144,7 @@ mod tests {
             .messages
             .push(ChatMessage::assistant("the answer".to_string()));
         let payload = extract(&CoreEvent::CopyLastResponse, &mut state);
-        assert!(
-            matches!(payload, Some(EffectPayload::CopyToClipboard { text }) if text == "the answer")
-        );
+        assert!(matches!(payload, Some(EffectPayload::CopyToClipboard { text }) if text == "the answer"));
     }
 
     #[test]

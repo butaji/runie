@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use super::*;
 use crate::ui::draw_snapshot;
 use ratatui::{backend::TestBackend, Terminal};
@@ -173,12 +174,7 @@ fn ui_actor_snapshot_after_events() {
         name: "bash".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 1.5,
-        output: "done".to_string(),
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 1.5, output: "done".to_string() });
 
     state.ensure_fresh();
     let snap = state.snapshot();
@@ -213,15 +209,10 @@ fn response_delta_renders_in_feed() {
 
     // Simulate a streaming response: "hello\n"
     // newline makes the line "stable" in the streaming buffer
-    state.update(Event::ResponseDelta {
-        id: "req.0".to_string(),
-        content: "hello\n".to_string(),
-    });
+    state.update(Event::ResponseDelta { id: "req.0".to_string(), content: "hello\n".to_string() });
 
     // Done flushes any remaining tail
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Done { id: "req.0".to_string() });
 
     state.ensure_fresh();
     let snap = state.snapshot();
@@ -258,15 +249,10 @@ fn response_delta_without_trailing_newline_renders_after_done() {
     let mut state = AppState::default();
 
     // Send content WITHOUT trailing newline - debounce would prevent flush
-    state.update(Event::ResponseDelta {
-        id: "req.0".to_string(),
-        content: "hello".to_string(),
-    });
+    state.update(Event::ResponseDelta { id: "req.0".to_string(), content: "hello".to_string() });
 
     // Done calls force_flush which should push remaining tail
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Done { id: "req.0".to_string() });
 
     state.ensure_fresh();
     let snap = state.snapshot();
@@ -305,10 +291,7 @@ fn text_start_response_delta_done_renders_agent_text() {
     // 1. TextStart begins a new Part::Text (no id in production)
     state.update(Event::TextStart { id: String::new() });
     // 2. ResponseDelta streams content (empty id from TurnActor in production)
-    state.update(Event::ResponseDelta {
-        id: String::new(),
-        content: "hello world\n".to_string(),
-    });
+    state.update(Event::ResponseDelta { id: String::new(), content: "hello world\n".to_string() });
     // 3. Done finalizes (empty id from TurnActor in production)
     state.update(Event::Done { id: String::new() });
 
@@ -368,10 +351,7 @@ fn diagnostic_production_flow_elements() {
     }
 
     // Step 2: ResponseDelta
-    state.update(Event::ResponseDelta {
-        id: String::new(),
-        content: "hello world\n".to_string(),
-    });
+    state.update(Event::ResponseDelta { id: String::new(), content: "hello world\n".to_string() });
     state.ensure_fresh();
     let snap2 = state.snapshot();
     eprintln!("After ResponseDelta: elements={:?}", snap2.elements);

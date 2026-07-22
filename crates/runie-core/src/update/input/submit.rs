@@ -129,11 +129,9 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(h) = handles {
             let id = self.next_id();
-            let _ = h.turn.try_send(TurnMsg::SubmitUserMessage {
-                content,
-                id,
-                source: MessageSource::Fresh,
-            });
+            let _ = h
+                .turn
+                .try_send(TurnMsg::SubmitUserMessage { content, id, source: MessageSource::Fresh });
         } else {
             self.apply_user_message_sync(content);
         }
@@ -148,9 +146,7 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![runie_core::message::Part::Text {
-                content: content.clone(),
-            }],
+            parts: vec![runie_core::message::Part::Text { content: content.clone() }],
             ..Default::default()
         });
         // Update AgentState projection directly.
@@ -206,9 +202,7 @@ impl AppState {
         // Add confirmation system message for command-specific events.
         // Transient notifications (via notify) are added by the update handler.
         match &evt {
-            crate::Event::SwitchModel {
-                provider, model, ..
-            } => {
+            crate::Event::SwitchModel { provider, model, .. } => {
                 self.add_system_msg(format!("Switched to {}/{}", provider, model));
             }
             crate::Event::SetThinkingLevel(level) => {
@@ -229,10 +223,7 @@ impl AppState {
         if let Some(ref h) = handles {
             // Production mode: send to IoActor (non-blocking)
             let command = command.to_owned();
-            let _ = h.io.try_send(IoMsg::RunBash {
-                command,
-                shell: true,
-            });
+            let _ = h.io.try_send(IoMsg::RunBash { command, shell: true });
             return;
         }
         // Test-only fallback: no actor handles, so we must run synchronously.

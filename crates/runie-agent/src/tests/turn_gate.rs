@@ -21,8 +21,7 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let cmd = agent_cmd("list files").build();
 
     let (events, emit) = capture_events();
-    let mut policies: Vec<Box<dyn runie_core::permissions::PermissionPolicy>> =
-        vec![Box::new(FileAccessAsk::new())];
+    let mut policies: Vec<Box<dyn runie_core::permissions::PermissionPolicy>> = vec![Box::new(FileAccessAsk::new())];
     #[cfg(feature = "mcp")]
     policies.push(Box::new(DefaultToolApprove::new()));
     #[cfg(feature = "git")]

@@ -29,6 +29,7 @@ use futures::future::join_all;
 use tokio::sync::Semaphore;
 use tokio::task::JoinError;
 
+use chrono::DateTime;
 use crate::primitives::dag::{CycleError, Dag};
 use crate::{
     model_for, AgentTrace, Context, Pattern, PatternConfig, PatternOutput, TerminationReason,
@@ -57,34 +58,50 @@ pub enum SwarmVariant {
 /// synthesizes. All variants report [`Pattern::name`] as `"swarm"`.
 pub struct SwarmPattern {
     variant: SwarmVariant,
+    /// Session-level worker tracker for orphan reconciliation across session resumes.
+    worker_tracker: Arc<OrphanedWorkerTracker>,
 }
 
 impl SwarmPattern {
     /// Fan-out variant: a single plan → execute → synthesize cycle.
     pub fn parallel() -> Self {
-        Self {
-            variant: SwarmVariant::Parallel,
-        }
+        Self { variant: SwarmVariant::Parallel, worker_tracker: Arc::new(OrphanedWorkerTracker::new()) }
     }
 
     /// Delegation variant: leader assigns tasks over up to `max_rounds` rounds.
     pub fn delegation() -> Self {
-        Self {
-            variant: SwarmVariant::Delegation,
-        }
+        Self { variant: SwarmVariant::Delegation, worker_tracker: Arc::new(OrphanedWorkerTracker::new()) }
     }
 
     /// Dag variant: leader plans a dependency graph; workers execute in
     /// topological waves with dependency outputs as context.
     pub fn dag() -> Self {
-        Self {
-            variant: SwarmVariant::Dag,
-        }
+        Self { variant: SwarmVariant::Dag, worker_tracker: Arc::new(OrphanedWorkerTracker::new()) }
     }
 
     /// The configured execution variant.
     pub fn variant(&self) -> &SwarmVariant {
         &self.variant
+    }
+
+    /// Returns the session-level worker tracker for orphan reconciliation.
+    pub fn worker_tracker(&self) -> &Arc<OrphanedWorkerTracker> {
+        &self.worker_tracker
+    }
+
+    /// Reconcile orphaned workers on session resume.
+    ///
+    /// Call this when loading a session: it marks any workers that were
+    /// `Running` but are no longer in `live_worker_ids` as `Orphaned`.
+    /// Returns the count of workers marked orphaned.
+    pub fn reconcile_orphans(&self, live_worker_ids: &[String]) -> usize {
+        self.worker_tracker.reconcile_orphans(live_worker_ids)
+    }
+
+    /// Clean up orphaned and cancelled workers from the tracker.
+    /// Returns the number of workers removed.
+    pub fn cleanup_orphaned_workers(&self) -> usize {
+        self.worker_tracker.cleanup_orphaned_workers()
     }
 
     /// Run the plan → execute loop; the caller handles synthesis.
@@ -110,7 +127,7 @@ impl SwarmPattern {
                 // empty/invalid plan on a later round.
                 PlanSignal::Done => return outcome,
                 PlanSignal::Tasks(tasks) => {
-                    let round_outcome = execute_round(ctx, state, round, tasks).await;
+                    let round_outcome = execute_round(ctx, state, round, tasks, &self.worker_tracker).await;
                     if round_outcome.aborted {
                         outcome.aborted = true;
                         return outcome;
@@ -132,6 +149,7 @@ impl SwarmPattern {
 }
 
 #[async_trait::async_trait]
+#[allow(clippy::too_many_lines)]
 impl Pattern for SwarmPattern {
     fn name(&self) -> &'static str {
         "swarm"
@@ -148,10 +166,8 @@ impl Pattern for SwarmPattern {
         }
 
         let rounds = match self.variant {
-            SwarmVariant::Parallel | SwarmVariant::Delegation => {
-                self.run_rounds(ctx, &state, input).await
-            }
-            SwarmVariant::Dag => run_dag(ctx, &state, input).await,
+            SwarmVariant::Parallel | SwarmVariant::Delegation => self.run_rounds(ctx, &state, input).await,
+            SwarmVariant::Dag => run_dag(ctx, &state, input, &self.worker_tracker).await,
         };
         if rounds.aborted {
             return Ok(finish(&state, String::new(), aborted()));
@@ -198,11 +214,7 @@ fn aborted() -> TerminationReason {
 }
 
 fn finish(state: &SwarmState, result: String, termination: TerminationReason) -> PatternOutput {
-    PatternOutput {
-        result,
-        termination,
-        traces: state.traces.lock().unwrap().clone(),
-    }
+    PatternOutput { result, termination, traces: state.traces.lock().unwrap().clone(), circuit_breaker_tripped: state.is_tripped() }
 }
 
 /// Shared mutable state across all agents of one swarm execution.
@@ -261,12 +273,7 @@ struct LoopOutcome {
 
 impl Default for LoopOutcome {
     fn default() -> Self {
-        Self {
-            successes: Vec::new(),
-            errors: Vec::new(),
-            termination: TerminationReason::Completed,
-            aborted: false,
-        }
+        Self { successes: Vec::new(), errors: Vec::new(), termination: TerminationReason::Completed, aborted: false }
     }
 }
 
@@ -287,18 +294,14 @@ struct WorkerEnv {
     config: PatternConfig,
     models: Vec<(String, String)>,
     state: Arc<SwarmState>,
+    worker_tracker: Arc<OrphanedWorkerTracker>,
 }
 
 /// One leader runner call with abort race and trace recording.
+#[allow(clippy::too_many_lines)]
 async fn call_leader(ctx: &Context, state: &SwarmState, id: &str, prompt: String) -> LeaderCall {
     let (provider, model) = model_for(&ctx.models, 0);
-    let task = WorkerTask {
-        id: id.to_string(),
-        prompt,
-        provider,
-        model,
-        read_only: true,
-    };
+    let task = WorkerTask { id: id.to_string(), prompt, provider, model, read_only: true };
     let start_time = Utc::now();
     let start = Instant::now();
 
@@ -385,6 +388,7 @@ async fn execute_round(
     state: &Arc<SwarmState>,
     round: usize,
     tasks: Vec<String>,
+    worker_tracker: &Arc<OrphanedWorkerTracker>,
 ) -> RoundOutcome {
     let env = WorkerEnv {
         runner: Arc::clone(&ctx.runner),
@@ -393,13 +397,12 @@ async fn execute_round(
         config: ctx.config.clone(),
         models: ctx.models.clone(),
         state: Arc::clone(state),
+        worker_tracker: Arc::clone(worker_tracker),
     };
     let handles: Vec<_> = tasks
         .into_iter()
         .enumerate()
-        .map(|(index, task_text)| {
-            tokio::spawn(run_worker(env.clone(), round, index, task_text, None))
-        })
+        .map(|(index, task_text)| tokio::spawn(run_worker(env.clone(), round, index, task_text, None)))
         .collect();
 
     // On abort the join is dropped, detaching in-flight worker spawns; their
@@ -428,6 +431,7 @@ async fn execute_round(
 /// completion trace. `description` overrides the trace/feed-row label;
 /// defaults to `task_text`. Dag tasks pass the bare task so injected
 /// dependency context does not leak into the feed row.
+#[allow(clippy::too_many_lines)]
 async fn run_worker(
     env: WorkerEnv,
     round: usize,
@@ -436,6 +440,7 @@ async fn run_worker(
     description: Option<String>,
 ) -> Result<(String, String), String> {
     let worker_id = format!("worker-{round}-{index}");
+    env.worker_tracker.spawn(worker_id.clone(), task_text.clone());
     let permit = env
         .semaphore
         .acquire()
@@ -445,25 +450,17 @@ async fn run_worker(
     // Queued tasks are skipped once the circuit breaker has tripped —
     // "stop dispatching new tasks"; already-running tasks finish.
     if env.state.is_tripped() {
+        env.worker_tracker.cancel(&worker_id);
         return Err(format!("{worker_id}: skipped (circuit breaker tripped)"));
     }
 
     let start_time = Utc::now();
     let start = Instant::now();
-    let mut events = vec![TraceEvent::Handoff {
-        from: "leader".into(),
-        to: worker_id.clone(),
-    }];
+    let mut events = vec![TraceEvent::Handoff { from: "leader".into(), to: worker_id.clone() }];
 
     let (provider, model) = model_for(&env.models, index + 1);
     let task_description = description.unwrap_or_else(|| task_text.clone());
-    let task = WorkerTask {
-        id: worker_id.clone(),
-        prompt: task_text,
-        provider,
-        model,
-        read_only: false,
-    };
+    let task = WorkerTask { id: worker_id.clone(), prompt: task_text, provider, model, read_only: false };
     let timeout = Duration::from_millis(env.config.timeout_ms);
 
     let mut last_error = String::new();
@@ -477,29 +474,25 @@ async fn run_worker(
             Ok(Err(error)) => last_error = error.to_string(),
             Err(_) => last_error = format!("timed out after {} ms", env.config.timeout_ms),
         }
-        events.push(TraceEvent::Error {
-            error: last_error.clone(),
-        });
+        events.push(TraceEvent::Error { error: last_error.clone() });
     }
     drop(permit);
 
     let result = match output {
         Some(text) => {
             env.state.record_success();
-            events.push(TraceEvent::Termination {
-                reason: TerminationReason::Completed,
-            });
+            env.worker_tracker.complete(&worker_id);
+            events.push(TraceEvent::Termination { reason: TerminationReason::Completed });
             Ok((worker_id.clone(), text))
         }
         None => {
             env.state.record_failure(env.config.circuit_breaker);
+            env.worker_tracker.fail(&worker_id);
             let message = format!(
                 "{worker_id}: failed after {} attempts: {last_error}",
                 env.config.max_retries + 1
             );
-            events.push(TraceEvent::Termination {
-                reason: TerminationReason::Error(message.clone()),
-            });
+            events.push(TraceEvent::Termination { reason: TerminationReason::Error(message.clone()) });
             Err(message)
         }
     };
@@ -522,12 +515,7 @@ async fn run_worker(
 }
 
 /// Synthesis round: the leader consolidates all worker outputs.
-async fn synthesize(
-    ctx: &Context,
-    state: &SwarmState,
-    input: &str,
-    successes: &[(String, String)],
-) -> LeaderCall {
+async fn synthesize(ctx: &Context, state: &SwarmState, input: &str, successes: &[(String, String)]) -> LeaderCall {
     call_leader(
         ctx,
         state,
@@ -569,13 +557,7 @@ fn task_from_value(value: &serde_json::Value) -> Option<String> {
     field.as_str().map(str::to_string)
 }
 
-fn build_plan_prompt(
-    variant: &SwarmVariant,
-    workers: usize,
-    input: &str,
-    round: usize,
-    prior_summary: &str,
-) -> String {
+fn build_plan_prompt(variant: &SwarmVariant, workers: usize, input: &str, round: usize, prior_summary: &str) -> String {
     let (marker, instruction) = match variant {
         SwarmVariant::Parallel => (
             "[swarm-plan parallel]",
@@ -585,8 +567,7 @@ fn build_plan_prompt(
         ),
         SwarmVariant::Delegation => (
             "[swarm-plan delegation]",
-            "Assign the task below to specialist workers, with clear instructions per task."
-                .to_string(),
+            "Assign the task below to specialist workers, with clear instructions per task.".to_string(),
         ),
         SwarmVariant::Dag => (
             "[swarm-plan dag]",
@@ -656,7 +637,13 @@ fn truncate(text: &str, max_chars: usize) -> String {
 /// A dependency cycle or an aborted/failed leader call ends the pattern
 /// before synthesis; an unparseable plan falls back to a single task, like
 /// the parallel variant.
-async fn run_dag(ctx: &Context, state: &Arc<SwarmState>, input: &str) -> LoopOutcome {
+#[allow(clippy::too_many_lines)]
+async fn run_dag(
+    ctx: &Context,
+    state: &Arc<SwarmState>,
+    input: &str,
+    worker_tracker: &Arc<OrphanedWorkerTracker>,
+) -> LoopOutcome {
     let mut outcome = LoopOutcome::default();
     let prompt = build_plan_prompt(&SwarmVariant::Dag, ctx.config.workers, input, 1, "");
     let response = match call_leader(ctx, state, "leader-plan-1", prompt).await {
@@ -690,6 +677,7 @@ async fn run_dag(ctx: &Context, state: &Arc<SwarmState>, input: &str) -> LoopOut
         config: ctx.config.clone(),
         models: ctx.models.clone(),
         state: Arc::clone(state),
+        worker_tracker: Arc::clone(worker_tracker),
     };
     let mut run = DagRun::new(tasks, &edges);
     for (wave_index, wave) in waves.iter().enumerate() {
@@ -775,9 +763,7 @@ fn build_waves(
         let events: Vec<TraceEvent> = dropped
             .iter()
             .map(|(task, dependency)| TraceEvent::Error {
-                error: format!(
-                    "dropped out-of-range dependency: task {task} depends on {dependency}"
-                ),
+                error: format!("dropped out-of-range dependency: task {task} depends on {dependency}"),
             })
             .collect();
         state.finish_trace(
@@ -815,12 +801,7 @@ impl DagRun {
             }
         }
         let node_count = tasks.len();
-        Self {
-            tasks,
-            deps,
-            outputs: vec![None; node_count],
-            failed: vec![false; node_count],
-        }
+        Self { tasks, deps, outputs: vec![None; node_count], failed: vec![false; node_count] }
     }
 }
 
@@ -848,8 +829,7 @@ async fn run_wave(
             ));
             continue;
         }
-        let prompt =
-            build_dag_task_prompt(&run.tasks[node], &run.deps[node], &run.tasks, &run.outputs);
+        let prompt = build_dag_task_prompt(&run.tasks[node], &run.deps[node], &run.tasks, &run.outputs);
         let worker_env = env.clone();
         let bare_task = run.tasks[node].clone();
         handles.push(tokio::spawn(async move {
@@ -872,13 +852,7 @@ async fn run_wave(
 
 /// Skip a task whose dependency failed: trace an Error event, count the
 /// failure toward the circuit breaker, and return the error message.
-fn skip_failed_dependency(
-    ctx: &Context,
-    state: &SwarmState,
-    wave: usize,
-    node: usize,
-    task_text: &str,
-) -> String {
+fn skip_failed_dependency(ctx: &Context, state: &SwarmState, wave: usize, node: usize, task_text: &str) -> String {
     let worker_id = format!("worker-{wave}-{node}");
     let message = format!("{worker_id}: skipped: dependency failed");
     state.record_failure(ctx.config.circuit_breaker);
@@ -891,12 +865,8 @@ fn skip_failed_dependency(
             start_time: Utc::now(),
             duration_ms: 0,
             events: vec![
-                TraceEvent::Error {
-                    error: "skipped: dependency failed".into(),
-                },
-                TraceEvent::Termination {
-                    reason: TerminationReason::Error(message.clone()),
-                },
+                TraceEvent::Error { error: "skipped: dependency failed".into() },
+                TraceEvent::Termination { reason: TerminationReason::Error(message.clone()) },
             ],
         },
     );
@@ -935,12 +905,7 @@ fn collect_wave_results(
 /// Worker prompt for a dag task: the task text plus a `Context from previous
 /// steps` section listing each completed dependency's output (truncated to
 /// 1000 chars). Omitted entirely when no dependency produced output.
-fn build_dag_task_prompt(
-    task_text: &str,
-    deps: &[usize],
-    tasks: &[String],
-    outputs: &[Option<String>],
-) -> String {
+fn build_dag_task_prompt(task_text: &str, deps: &[usize], tasks: &[String], outputs: &[Option<String>]) -> String {
     let context: Vec<String> = deps
         .iter()
         .filter_map(|&dep| {
@@ -957,4 +922,294 @@ fn build_dag_task_prompt(
             context.join("\n")
         )
     }
+}
+
+// ============================================================================
+// Orphan Subagent Reconciliation (Task 26)
+// ============================================================================
+
+/// Default orphan timeout: 5 minutes.
+pub const DEFAULT_ORPHAN_TIMEOUT_SECS: u64 = 300;
+
+/// Status of a swarm worker over its lifetime.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default)]
+pub enum SwarmWorkerStatus {
+    /// Worker is actively running.
+    #[default]
+    Running,
+    /// Worker completed successfully with output.
+    Completed,
+    /// Worker failed after all retries.
+    Failed,
+    /// Worker was explicitly cancelled by user or parent.
+    Cancelled,
+    /// Worker is orphaned — parent session died/crashed while running.
+    /// Detected on session resume when a worker shows `Running` but no live
+    /// coordinator tracks it.
+    Orphaned,
+}
+
+
+/// One tracked swarm worker with metadata.
+#[derive(Debug, Clone)]
+pub struct SwarmWorker {
+    pub id: String,
+    pub task: String,
+    pub status: SwarmWorkerStatus,
+    pub started_at: DateTime<Utc>,
+    pub finished_at: Option<DateTime<Utc>>,
+    /// Heartbeat timeout duration.
+    pub heartbeat_timeout: Duration,
+    /// Last heartbeat timestamp.
+    pub last_heartbeat: Instant,
+}
+
+impl SwarmWorker {
+    fn new(id: String, task: String) -> Self {
+        let now = Instant::now();
+        Self {
+            id,
+            task,
+            status: SwarmWorkerStatus::Running,
+            started_at: Utc::now(),
+            finished_at: None,
+            heartbeat_timeout: Duration::from_secs(DEFAULT_ORPHAN_TIMEOUT_SECS),
+            last_heartbeat: now,
+        }
+    }
+
+    fn with_timeout(id: String, task: String, timeout: Duration) -> Self {
+        let now = Instant::now();
+        Self {
+            id,
+            task,
+            status: SwarmWorkerStatus::Running,
+            started_at: Utc::now(),
+            finished_at: None,
+            heartbeat_timeout: timeout,
+            last_heartbeat: now,
+        }
+    }
+
+    fn mark_completed(&mut self) {
+        self.status = SwarmWorkerStatus::Completed;
+        self.finished_at = Some(Utc::now());
+    }
+
+    fn mark_failed(&mut self) {
+        self.status = SwarmWorkerStatus::Failed;
+        self.finished_at = Some(Utc::now());
+    }
+
+    fn mark_cancelled(&mut self) {
+        self.status = SwarmWorkerStatus::Cancelled;
+        self.finished_at = Some(Utc::now());
+    }
+
+    fn mark_orphaned(&mut self) {
+        self.status = SwarmWorkerStatus::Orphaned;
+        self.finished_at = Some(Utc::now());
+    }
+
+    /// Update heartbeat timestamp.
+    fn heartbeat(&mut self) {
+        self.last_heartbeat = Instant::now();
+    }
+
+    /// Check if worker has exceeded its heartbeat timeout.
+    pub fn is_stale(&self) -> bool {
+        self.last_heartbeat.elapsed() > self.heartbeat_timeout
+    }
+}
+
+/// Tracks all workers in a swarm session for orphan detection.
+///
+/// On session resume, `reconcile_orphans()` walks workers still in `Running`
+/// state that are not present in `live_worker_ids` and marks them `Orphaned`.
+/// This handles crash/Ctrl+C/network-loss scenarios where the parent process
+/// died while workers were in-flight.
+#[derive(Default)]
+pub struct OrphanedWorkerTracker {
+    workers: std::sync::Mutex<Vec<SwarmWorker>>,
+}
+
+impl Clone for OrphanedWorkerTracker {
+    fn clone(&self) -> Self {
+        Self {
+            workers: std::sync::Mutex::new(
+                self.workers.lock().unwrap().clone()
+            ),
+        }
+    }
+}
+
+impl OrphanedWorkerTracker {
+    /// Create a new tracker.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Register a new running worker with default timeout.
+    pub fn spawn(&self, id: String, task: String) {
+        let worker = SwarmWorker::new(id, task);
+        self.workers.lock().unwrap().push(worker);
+    }
+
+    /// Register a new running worker with custom heartbeat timeout.
+    pub fn spawn_with_timeout(&self, id: String, task: String, timeout: Duration) {
+        let worker = SwarmWorker::with_timeout(id, task, timeout);
+        self.workers.lock().unwrap().push(worker);
+    }
+
+    /// Mark a worker as completed.
+    pub fn complete(&self, id: &str) {
+        if let Some(w) = self.workers.lock().unwrap().iter_mut().find(|w| w.id == id) {
+            w.mark_completed();
+        }
+    }
+
+    /// Mark a worker as failed.
+    pub fn fail(&self, id: &str) {
+        if let Some(w) = self.workers.lock().unwrap().iter_mut().find(|w| w.id == id) {
+            w.mark_failed();
+        }
+    }
+
+    /// Mark a worker as cancelled.
+    pub fn cancel(&self, id: &str) {
+        if let Some(w) = self.workers.lock().unwrap().iter_mut().find(|w| w.id == id) {
+            w.mark_cancelled();
+        }
+    }
+
+    /// Update heartbeat for a worker.
+    pub fn heartbeat(&self, id: &str) {
+        if let Some(w) = self.workers.lock().unwrap().iter_mut().find(|w| w.id == id) {
+            w.heartbeat();
+        }
+    }
+
+    /// Mark all workers that are still `Running` but not in `live_worker_ids`
+    /// as `Orphaned`. Call this on session resume to heal workers that the
+    /// parent process left in a stuck running state.
+    ///
+    /// Returns the count of workers marked orphaned.
+    pub fn reconcile_orphans(&self, live_worker_ids: &[String]) -> usize {
+        let live: std::collections::HashSet<_> = live_worker_ids.iter().collect();
+        let mut count = 0;
+        let mut workers = self.workers.lock().unwrap();
+        for w in workers.iter_mut() {
+            if w.status == SwarmWorkerStatus::Running && !live.contains(&w.id) {
+                w.mark_orphaned();
+                count += 1;
+            }
+        }
+        count
+    }
+
+    /// Reconcile orphaned workers based on heartbeat timeout.
+    /// Marks workers with no heartbeat for longer than `max_age` as Orphaned.
+    /// Call this on session resume.
+    ///
+    /// Returns the count of workers marked orphaned.
+    pub fn reconcile_orphans_by_max_age(&self, max_age: Duration) -> usize {
+        let now = Instant::now();
+        let mut count = 0;
+        let mut workers = self.workers.lock().unwrap();
+        for w in workers.iter_mut() {
+            if w.status == SwarmWorkerStatus::Running && now.duration_since(w.last_heartbeat) > max_age {
+                w.mark_orphaned();
+                count += 1;
+            }
+        }
+        count
+    }
+
+    /// Reconcile all orphans: both missing from live ids and stale heartbeats.
+    /// This is the main entry point for session resume reconciliation.
+    /// Returns (count_marked_orphaned, count_still_running).
+    pub fn reconcile_orphans_full(&self, live_worker_ids: &[String], max_age: Duration) -> (usize, usize) {
+        let live: std::collections::HashSet<_> = live_worker_ids.iter().collect();
+        let now = Instant::now();
+        let mut orphaned_count = 0;
+        let mut running_count = 0;
+        let mut workers = self.workers.lock().unwrap();
+        for w in workers.iter_mut() {
+            if w.status == SwarmWorkerStatus::Running {
+                if !live.contains(&w.id) || now.duration_since(w.last_heartbeat) > max_age {
+                    w.mark_orphaned();
+                    orphaned_count += 1;
+                } else {
+                    running_count += 1;
+                }
+            }
+        }
+        (orphaned_count, running_count)
+    }
+
+    /// Remove all workers in `Orphaned` or `Cancelled` state.
+    /// Returns the count of workers cleaned up.
+    pub fn cleanup_orphaned_workers(&self) -> usize {
+        let prev_len = self.workers.lock().unwrap().len();
+        self.workers.lock().unwrap().retain(|w| {
+            w.status != SwarmWorkerStatus::Orphaned && w.status != SwarmWorkerStatus::Cancelled
+        });
+        prev_len - self.workers.lock().unwrap().len()
+    }
+
+    /// Returns all workers currently tracked.
+    pub fn workers(&self) -> Vec<SwarmWorker> {
+        self.workers.lock().unwrap().clone()
+    }
+
+    /// Returns workers filtered by status.
+    pub fn workers_by_status(&self, status: &SwarmWorkerStatus) -> Vec<SwarmWorker> {
+        self.workers.lock().unwrap()
+            .iter()
+            .filter(|w| w.status == *status)
+            .cloned()
+            .collect()
+    }
+
+    /// Returns the count of workers in each status.
+    pub fn status_counts(&self) -> StatusCounts {
+        let workers = self.workers.lock().unwrap();
+        let mut counts = StatusCounts::default();
+        for w in workers.iter() {
+            match &w.status {
+                SwarmWorkerStatus::Running => counts.running += 1,
+                SwarmWorkerStatus::Completed => counts.completed += 1,
+                SwarmWorkerStatus::Failed => counts.failed += 1,
+                SwarmWorkerStatus::Cancelled => counts.cancelled += 1,
+                SwarmWorkerStatus::Orphaned => counts.orphaned += 1,
+            }
+        }
+        counts
+    }
+
+    /// Check if any workers are orphaned.
+    pub fn has_orphans(&self) -> bool {
+        self.workers.lock().unwrap().iter().any(|w| w.status == SwarmWorkerStatus::Orphaned)
+    }
+
+    /// Get orphaned workers.
+    pub fn orphaned_workers(&self) -> Vec<SwarmWorker> {
+        self.workers_by_status(&SwarmWorkerStatus::Orphaned)
+    }
+
+    /// Reset the tracker, removing all workers.
+    pub fn reset(&self) {
+        self.workers.lock().unwrap().clear();
+    }
+}
+
+/// Counts of workers per status bucket.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct StatusCounts {
+    pub running: usize,
+    pub completed: usize,
+    pub failed: usize,
+    pub cancelled: usize,
+    pub orphaned: usize,
 }

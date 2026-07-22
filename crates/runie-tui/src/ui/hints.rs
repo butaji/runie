@@ -8,9 +8,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::theme::{
-    color_bg, color_bg_panel, color_error, color_success, color_warning, style_hint, style_hint_key,
-};
+use crate::theme::{color_bg, color_bg_panel, color_error, color_success, color_warning, style_hint, style_hint_key};
 
 pub(crate) fn hints(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect) {
     if let Some(ref msg) = snap.transient_message {

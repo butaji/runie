@@ -16,7 +16,9 @@ pub async fn run(prompt: &str, sandbox: bool) -> Result<()> {
     }
 
     let messages = build_messages(prompt);
-    let sink = build_sink(false);
+    // Auto-allow tools in print mode (yolo=true) so the CLI is useful out of the box.
+    // The config.toml [permissions] section can still restrict specific tools.
+    let sink = build_sink(true);
     let opts = build_options(
         None,
         Some(Box::new(|event: HeadlessEvent| {
@@ -39,15 +41,13 @@ mod tests {
 
     /// Smoke: run_headless_cli produces HeadlessEvents via the on_event callback.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn print_mode_emits_jsonl_events() {
         // Capture HeadlessEvents emitted during the turn.
         let events: Arc<Mutex<Vec<HeadlessEvent>>> = Arc::new(Mutex::new(Vec::new()));
         let captured = events.clone();
 
-        let messages = vec![
-            ChatMessage::system("You are helpful."),
-            ChatMessage::user("say hello"),
-        ];
+        let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("say hello")];
 
         let provider = MockProvider::default();
         let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
@@ -59,10 +59,7 @@ mod tests {
             on_event: Some(Box::new(move |evt: HeadlessEvent| {
                 captured.lock().unwrap().push(evt);
             })),
-            permission_gate: runie_agent::PermissionGate::new(
-                PermissionManager::default(),
-                sink.clone(),
-            ),
+            permission_gate: runie_agent::PermissionGate::new(PermissionManager::default(), sink.clone()),
         };
 
         run_headless_turn(messages, &provider, options)
@@ -89,9 +86,8 @@ mod tests {
         // Every event must round-trip through JSONL serialization.
         for evt in events.iter() {
             let line = evt.to_json_line();
-            let parsed: HeadlessEvent = serde_json::from_str(&line).unwrap_or_else(|e| {
-                panic!("HeadlessEvent failed to round-trip as JSONL: {e}, line: {line}")
-            });
+            let parsed: HeadlessEvent = serde_json::from_str(&line)
+                .unwrap_or_else(|e| panic!("HeadlessEvent failed to round-trip as JSONL: {e}, line: {line}"));
             // Variants must match after round-trip.
             let evt_ref = evt;
             let same_variant = std::mem::discriminant(evt_ref) == std::mem::discriminant(&parsed);

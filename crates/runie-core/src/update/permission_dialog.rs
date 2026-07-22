@@ -27,25 +27,17 @@ pub fn build_permission_dialog(req: &PermissionRequestState) -> PanelStack {
         // Always (1) — persists across sessions
         .item(
             "_1. Always",
-            ItemAction::Emit(Event::PermissionAlwaysAllow {
-                request_id: request_id.clone(),
-                tool: tool.clone(),
-            }),
+            ItemAction::Emit(Event::PermissionAlwaysAllow { request_id: request_id.clone(), tool: tool.clone() }),
         )
         // This session (2) — persists for current session only
         .item(
             "_2. This session",
-            ItemAction::Emit(Event::PermissionSessionAllow {
-                request_id: request_id.clone(),
-                tool: tool.clone(),
-            }),
+            ItemAction::Emit(Event::PermissionSessionAllow { request_id: request_id.clone(), tool: tool.clone() }),
         )
         // Once (3) — single use
         .item(
             "_3. Once",
-            ItemAction::Emit(Event::PermissionOnce {
-                request_id: request_id.clone(),
-            }),
+            ItemAction::Emit(Event::PermissionOnce { request_id: request_id.clone() }),
         )
         // Deny (4) — reject
         .item(
@@ -58,10 +50,7 @@ pub fn build_permission_dialog(req: &PermissionRequestState) -> PanelStack {
 
 /// Build and wrap a hosted permission dialog as an open `DialogState`.
 pub fn open_permission_dialog(req: &PermissionRequestState) -> DialogState {
-    DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: build_permission_dialog(req),
-    }
+    DialogState::Active { kind: DialogKind::Generic, panels: build_permission_dialog(req) }
 }
 
 #[cfg(test)]

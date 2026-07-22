@@ -19,8 +19,7 @@ use runie_core::markdown::{extract_code_blocks, inlines_to_text, CodeBlock};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_agent_text, color_user_text, style_agent, style_feed_timestamp, style_user, GLYPH_INDENT,
-    GLYPH_USER,
+    color_agent_text, color_user_text, style_agent, style_feed_timestamp, style_user, GLYPH_INDENT, GLYPH_USER,
 };
 
 mod code;
@@ -31,22 +30,17 @@ pub(crate) use wrap::word_wrap;
 pub(crate) use wrap::wrap_styled_spans;
 
 pub use support::{
-    render_anthropic_thinking, render_ansi_styled, render_context_group, render_data_part,
-    render_diff_output, render_image, render_list_item_from_spans, render_markdown_table,
-    render_subagent_row, render_thinking, render_thought_marker, render_thought_summary,
-    render_tool_confirmation, render_tool_done, render_tool_running, render_tool_summary,
-    render_turn_complete, render_web_search_call,
+    render_ansi_styled, render_anthropic_thinking, render_context_group, render_data_part, render_diff_output,
+    render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row, render_thinking,
+    render_thought_marker, render_thought_summary, render_tool_confirmation, render_tool_done, render_tool_running,
+    render_tool_summary, render_turn_complete, render_web_search_call,
 };
 
 fn span_width(spans: &[Span<'_>]) -> u16 {
     spans.iter().map(|s| str_width(&s.content)).sum()
 }
 
-pub fn render_user_message(
-    content: &str,
-    timestamp: f64,
-    content_width: u16,
-) -> Vec<Line<'static>> {
+pub fn render_user_message(content: &str, timestamp: f64, content_width: u16) -> Vec<Line<'static>> {
     let ts_str = format_timestamp(timestamp);
     let base_style = style_user();
     let inner_width = content_width;
@@ -70,12 +64,7 @@ pub fn render_user_message(
         content,
         first_w,
         rest_w,
-        &UserLineParams {
-            inner_width,
-            ts_str,
-            ts_width,
-            base_style,
-        },
+        &UserLineParams { inner_width, ts_str, ts_width, base_style },
     ));
     lines.push(Line::from(""));
     lines
@@ -89,12 +78,7 @@ struct UserLineParams {
     base_style: Style,
 }
 
-fn build_user_body(
-    content: &str,
-    first_w: u16,
-    rest_w: u16,
-    params: &UserLineParams,
-) -> Vec<Line<'static>> {
+fn build_user_body(content: &str, first_w: u16, rest_w: u16, params: &UserLineParams) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling (applies inline styles + base color).
     // tui_markdown drops inline HTML entirely, so "<think>"-like user text
     // would vanish; escape '<' to keep user content verbatim (pulldown
@@ -145,11 +129,7 @@ fn build_user_line_from_spans(
     Line::from(line_spans)
 }
 
-pub fn render_agent_message(
-    content: &str,
-    timestamp: f64,
-    content_width: u16,
-) -> Vec<Line<'static>> {
+pub fn render_agent_message(content: &str, timestamp: f64, content_width: u16) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let ts_str = format_timestamp(timestamp);
     let ts_width = str_width(&ts_str) + 1;

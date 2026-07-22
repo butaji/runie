@@ -41,6 +41,7 @@ impl Default for ExceptionClassifier {
 
 impl ExceptionClassifier {
     /// Create a new classifier with comprehensive error patterns.
+    #[allow(clippy::too_many_lines)]
     pub fn new() -> Self {
         Self {
             // Rate limiting patterns
@@ -209,10 +210,7 @@ impl ExceptionClassifier {
 
         // Priority 2: Content policy violations (fatal - won't be fixed by retry)
         if self.matches_any(&msg, &self.content_policy_patterns) {
-            return ProviderError::Source(anyhow::anyhow!(
-                "Content policy violation: {}",
-                error_msg
-            ));
+            return ProviderError::Source(anyhow::anyhow!("Content policy violation: {}", error_msg));
         }
 
         // Priority 3: Rate limit errors (retryable)
@@ -278,28 +276,26 @@ impl ExceptionClassifier {
         if let Some(pos) = msg.find("retry after") {
             let after = &msg[pos..];
             // Try to extract number
-            if let Some(num) = after
+            if let Ok(num) = after
                 .chars()
                 .skip(11) // Skip "retry after "
                 .take(10)
                 .filter(|c| c.is_ascii_digit())
                 .collect::<String>()
                 .parse::<u32>()
-                .ok()
             {
                 return Some(num);
             }
         }
         if let Some(pos) = msg.find("retry_after") {
             let after = &msg[pos..];
-            if let Some(num) = after
+            if let Ok(num) = after
                 .chars()
                 .skip(12) // Skip "retry_after: "
                 .take(10)
                 .filter(|c| c.is_ascii_digit())
                 .collect::<String>()
                 .parse::<u32>()
-                .ok()
             {
                 return Some(num);
             }
@@ -325,6 +321,7 @@ impl ExceptionClassifier {
 }
 
 /// Check if the message matches any of the given patterns (standalone helper).
+#[allow(dead_code)]
 fn matches_pattern(msg: &str, patterns: &[&str]) -> bool {
     patterns.iter().any(|p| msg.contains(p))
 }
@@ -428,15 +425,12 @@ pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
         // HTTP status code error (5xx, 429, 401, 403) — use shared classifier
         SseErr::InvalidStatusCode(status, _) => {
             let code = status.as_u16();
-            ProviderError::classify_http_status(code)
-                .unwrap_or_else(|| ProviderError::Source(anyhow::anyhow!("{err}")))
+            ProviderError::classify_http_status(code).unwrap_or_else(|| ProviderError::Source(anyhow::anyhow!("{err}")))
         }
         // Invalid Last-Event-ID header
         SseErr::InvalidLastEventId(_) => ProviderError::Source(anyhow::anyhow!("{err}")),
         // Stream ended unexpectedly
-        SseErr::StreamEnded => {
-            ProviderError::Source(anyhow::anyhow!("SSE stream ended unexpectedly"))
-        }
+        SseErr::StreamEnded => ProviderError::Source(anyhow::anyhow!("SSE stream ended unexpectedly")),
     }
 }
 
@@ -524,11 +518,7 @@ where
 ///
 /// with_retry_policy(operation, &config, &policy).await;
 /// ```
-pub async fn with_retry_policy<F, Fut, T>(
-    f: F,
-    config: &RetryConfig,
-    policy: &RetryPolicy,
-) -> Result<T, Error>
+pub async fn with_retry_policy<F, Fut, T>(f: F, config: &RetryConfig, policy: &RetryPolicy) -> Result<T, Error>
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<T, Error>>,
@@ -541,6 +531,7 @@ where
 /// Uses a custom retry condition that checks both:
 /// 1. Whether the error is retryable at all (`is_retryable`)
 /// 2. Whether we've exceeded the per-error-type retry limit
+#[allow(clippy::too_many_lines)]
 async fn with_retry_policy_internal<F, Fut, T, FIsRetryable>(
     f: F,
     config: &RetryConfig,
@@ -598,22 +589,24 @@ where
             }
 
             // Try to classify the error
-            let (category, counter, max_retries) = if let Some(typed) =
-                err.downcast_ref::<ProviderError>()
-            {
+            let (category, counter, max_retries) = if let Some(typed) = err.downcast_ref::<ProviderError>() {
                 match typed {
-                    ProviderError::RateLimit { .. } => {
-                        ("rate_limit", &rate_limit_retries, &policy.rate_limit_retries)
-                    }
-                    ProviderError::Timeout => {
-                        ("timeout", &timeout_retries, &policy.timeout_retries)
-                    }
-                    ProviderError::ContextLength(_) => {
-                        ("context_window", &context_window_retries, &policy.context_window_retries)
-                    }
-                    ProviderError::Auth(_) => {
-                        ("bad_request", &bad_request_retries, &policy.bad_request_retries)
-                    }
+                    ProviderError::RateLimit { .. } => (
+                        "rate_limit",
+                        &rate_limit_retries,
+                        &policy.rate_limit_retries,
+                    ),
+                    ProviderError::Timeout => ("timeout", &timeout_retries, &policy.timeout_retries),
+                    ProviderError::ContextLength(_) => (
+                        "context_window",
+                        &context_window_retries,
+                        &policy.context_window_retries,
+                    ),
+                    ProviderError::Auth(_) => (
+                        "bad_request",
+                        &bad_request_retries,
+                        &policy.bad_request_retries,
+                    ),
                     _ => return true, // Use global config for other error types
                 }
             } else {
@@ -680,6 +673,7 @@ mod tests {
     #[test_case(400, "None", false)] // 4xx other than 401/403/429 returns None
     #[test_case(404, "None", false)]
     #[test_case(418, "None", false)] // Additional 4xx cases
+    #[allow(clippy::cognitive_complexity)]
     fn classify_http_status(code: u16, _variant: &str, retryable: bool) {
         let err = ProviderError::classify_http_status(code);
         match code {
@@ -721,12 +715,7 @@ mod tests {
         let test_cases = [
             (401, ProviderError::Auth(401)),
             (403, ProviderError::Auth(403)),
-            (
-                429,
-                ProviderError::RateLimit {
-                    retry_after_secs: None,
-                },
-            ),
+            (429, ProviderError::RateLimit { retry_after_secs: None }),
             (500, ProviderError::Server(500, String::new())),
             (502, ProviderError::Server(502, String::new())),
             (503, ProviderError::Server(503, String::new())),
@@ -793,8 +782,7 @@ mod tests {
 
     #[tokio::test]
     async fn with_retry_fails_after_max_attempts() {
-        let result: Result<i32, _> =
-            with_retry(|| async { Err(anyhow::anyhow!("persistent error")) }).await;
+        let result: Result<i32, _> = with_retry(|| async { Err(anyhow::anyhow!("persistent error")) }).await;
         assert!(result.is_err());
     }
 
@@ -932,19 +920,19 @@ mod tests {
 
     // ── ExceptionClassifier: Rate Limit Patterns ─────────────────────────────────
 
-    #[test_case("rate limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("Rate limit: too many requests", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("rate_limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("429 Too Many Requests", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("quota exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("quota limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("monthly quota exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("daily quota exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("service tier limit", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("try again later", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("try again in a moment", ProviderError::RateLimit { retry_after_secs: None }, true)]
-    #[test_case("retry after 60 seconds", ProviderError::RateLimit { retry_after_secs: Some(60) }, true)]
+    #[test_case("rate limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "rate_limit_exceeded")]
+    #[test_case("Rate limit: too many requests", ProviderError::RateLimit { retry_after_secs: None }, true; "rate_limit_colon")]
+    #[test_case("rate_limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "rate_underscore_exceeded")]
+    #[test_case("429 Too Many Requests", ProviderError::RateLimit { retry_after_secs: None }, true; "429_too_many")]
+    #[test_case("quota exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "quota_exceeded")]
+    #[test_case("quota limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "quota_limit_exceeded")]
+    #[test_case("monthly quota exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "monthly_quota_exceeded")]
+    #[test_case("daily quota exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "daily_quota_exceeded")]
+    #[test_case("service tier limit", ProviderError::RateLimit { retry_after_secs: None }, true; "service_tier_limit")]
+    #[test_case("limit exceeded", ProviderError::RateLimit { retry_after_secs: None }, true; "limit_exceeded")]
+    #[test_case("try again later", ProviderError::RateLimit { retry_after_secs: None }, true; "try_again_later")]
+    #[test_case("try again in a moment", ProviderError::RateLimit { retry_after_secs: None }, true; "try_again_moment")]
+    #[test_case("retry after 60 seconds", ProviderError::RateLimit { retry_after_secs: Some(60) }, true; "retry_60_secs")]
     fn classify_rate_limit_errors(msg: &str, expected: ProviderError, _retryable: bool) {
         let classifier = ExceptionClassifier::new();
         let result = classifier.classify(msg);
@@ -954,7 +942,7 @@ mod tests {
             }
             _ => panic!("Expected RateLimit, got {:?}", result),
         }
-        assert_eq!(result.is_retryable(), true);
+        assert!(result.is_retryable());
     }
 
     // ── ExceptionClassifier: Context Window Patterns ─────────────────────────────
@@ -982,7 +970,7 @@ mod tests {
             }
             _ => panic!("Expected ContextLength, got {:?}", result),
         }
-        assert_eq!(result.is_retryable(), false);
+        assert!(!result.is_retryable());
     }
 
     // ── ExceptionClassifier: Content Policy Violations ───────────────────────────
@@ -1003,7 +991,10 @@ mod tests {
         let classifier = ExceptionClassifier::new();
         let result = classifier.classify(msg);
         // Content policy violations should not be retryable
-        assert!(!result.is_retryable(), "Content policy error should not be retryable");
+        assert!(
+            !result.is_retryable(),
+            "Content policy error should not be retryable"
+        );
     }
 
     // ── ExceptionClassifier: Network Errors ─────────────────────────────────────
@@ -1039,14 +1030,14 @@ mod tests {
 
     // ── ExceptionClassifier: Auth Errors ────────────────────────────────────────
 
-    #[test_case("401 Unauthorized", true)]
-    #[test_case("403 Forbidden", true)]
-    #[test_case("invalid api key", true)]
-    #[test_case("invalid api_key", true)]
-    #[test_case("authentication failed", true)]
-    #[test_case("auth error", true)]
-    #[test_case("api key required", true)]
-    #[test_case("unauthorized access", true)]
+    #[test_case("401 Unauthorized", true; "unauthorized_401")]
+    #[test_case("403 Forbidden", true; "forbidden_403")]
+    #[test_case("invalid api key", true; "invalid_api_key_space")]
+    #[test_case("invalid api_key", true; "invalid_api_key_underscore")]
+    #[test_case("authentication failed", true; "auth_failed")]
+    #[test_case("auth error", true; "auth_error")]
+    #[test_case("api key required", true; "api_key_required")]
+    #[test_case("unauthorized access", true; "unauthorized_access")]
     fn classify_auth_errors(msg: &str, retryable: bool) {
         let classifier = ExceptionClassifier::new();
         let result = classifier.classify(msg);
@@ -1078,7 +1069,10 @@ mod tests {
     fn is_retryable_uses_classifier_for_unknown_errors() {
         // Unknown errors should be wrapped in Source and treated as retryable (conservative)
         let err = anyhow::anyhow!("some unknown error");
-        assert!(is_retryable(&err), "Unknown errors should be retryable by default");
+        assert!(
+            is_retryable(&err),
+            "Unknown errors should be retryable by default"
+        );
 
         // Context window errors should NOT be retryable
         let err = anyhow::anyhow!("context window exceeded");
@@ -1128,17 +1122,33 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn classify_case_insensitive() {
         let classifier = ExceptionClassifier::new();
 
         // Test various cases for rate limit
-        assert!(matches!(classifier.classify("RATE LIMIT"), ProviderError::RateLimit { .. }));
-        assert!(matches!(classifier.classify("Rate Limit"), ProviderError::RateLimit { .. }));
-        assert!(matches!(classifier.classify("RateLimit"), ProviderError::RateLimit { .. }));
+        assert!(matches!(
+            classifier.classify("RATE LIMIT"),
+            ProviderError::RateLimit { .. }
+        ));
+        assert!(matches!(
+            classifier.classify("Rate Limit"),
+            ProviderError::RateLimit { .. }
+        ));
+        assert!(matches!(
+            classifier.classify("RateLimit"),
+            ProviderError::RateLimit { .. }
+        ));
 
         // Test various cases for context window
-        assert!(matches!(classifier.classify("CONTEXT LENGTH"), ProviderError::ContextLength(_)));
-        assert!(matches!(classifier.classify("Context Length"), ProviderError::ContextLength(_)));
+        assert!(matches!(
+            classifier.classify("CONTEXT LENGTH"),
+            ProviderError::ContextLength(_)
+        ));
+        assert!(matches!(
+            classifier.classify("Context Length"),
+            ProviderError::ContextLength(_)
+        ));
     }
 
     #[test]
@@ -1265,7 +1275,7 @@ mod tests {
     #[test]
     fn retry_policy_zero_retries_disables_error_type() {
         let policy = RetryPolicy::new()
-            .with_rate_limit_retries(Some(0))  // Disable rate limit retries
+            .with_rate_limit_retries(Some(0)) // Disable rate limit retries
             .with_timeout_retries(Some(5));
 
         let err: anyhow::Error = ProviderError::RateLimit { retry_after_secs: None }.into();
@@ -1448,10 +1458,10 @@ mod tests {
                 async move {
                     let n = c.fetch_add(1, Ordering::SeqCst);
                     match n {
-                        0 => Err(anyhow::anyhow!("rate limit")),         // retry
-                        1 => Err(anyhow::anyhow!("timeout")),           // retry
-                        2 => Err(anyhow::anyhow!("timeout")),           // retry
-                        3 => Err(anyhow::anyhow!("rate limit")),         // stops here (rate limit exceeded its 1 retry)
+                        0 => Err(anyhow::anyhow!("rate limit")), // retry
+                        1 => Err(anyhow::anyhow!("timeout")),    // retry
+                        2 => Err(anyhow::anyhow!("timeout")),    // retry
+                        3 => Err(anyhow::anyhow!("rate limit")), // stops here (rate limit exceeded its 1 retry)
                         _ => Ok::<_, Error>(42),
                     }
                 }

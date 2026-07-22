@@ -56,13 +56,8 @@ fn test_backend_configured_correctly() {
 /// Verify keystroke sequence is preserved in runtime.
 #[test]
 fn keystroke_sequence_preserved_in_runtime() {
-    let keystrokes = vec![
-        Keystroke::Char('t'),
-        Keystroke::Char('e'),
-        Keystroke::Char('s'),
-        Keystroke::Char('t'),
-        Keystroke::Enter,
-    ];
+    let keystrokes =
+        vec![Keystroke::Char('t'), Keystroke::Char('e'), Keystroke::Char('s'), Keystroke::Char('t'), Keystroke::Enter];
 
     let runtime = TuiRuntime::builder().keystrokes(keystrokes.clone()).build();
 

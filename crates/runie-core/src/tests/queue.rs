@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 use crate::model::state::AgentState;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
@@ -64,9 +66,7 @@ fn deliver_queue_at_turn_end() {
     state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
 
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].content(), "hi");
@@ -117,9 +117,7 @@ fn steering_delivered_before_follow_up() {
     state.update(crate::Event::Input('f'));
     state.update(crate::Event::FollowUp);
 
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
     let user_msgs: Vec<&ChatMessage> = state
         .session
         .messages
@@ -129,9 +127,7 @@ fn steering_delivered_before_follow_up() {
     assert_eq!(user_msgs.len(), 1);
     assert_eq!(user_msgs[0].content(), "s");
 
-    state.update(crate::Event::Done {
-        id: "req.1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.1".to_string() });
     let user_msgs: Vec<&ChatMessage> = state
         .session
         .messages
@@ -176,9 +172,7 @@ fn steering_mode_all_batches_messages() {
     assert_eq!(state.agent.message_queue.len(), 3);
 
     // Trigger delivery
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
 
     // All three should be batched into one request
     assert!(state.agent.message_queue.is_empty());
@@ -211,9 +205,7 @@ fn follow_up_mode_all_batches_messages() {
         4,
         "Expected 4 queued messages before turn done"
     );
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
     // All three follow-ups should be batched into one request
     assert!(
         state.agent.message_queue.is_empty(),
@@ -244,18 +236,14 @@ fn one_at_a_time_delivers_separately() {
     assert_eq!(state.agent.message_queue.len(), 3);
 
     // Trigger first delivery
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
 
     // Only one should be delivered
     assert_eq!(state.agent.message_queue.len(), 2);
     assert_eq!(state.agent.request_queue.len(), 1);
 
     // Second delivery
-    state.update(crate::Event::Done {
-        id: "req.1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.1".to_string() });
     assert_eq!(state.agent.message_queue.len(), 1);
     assert_eq!(state.agent.request_queue.len(), 2);
 }
@@ -280,18 +268,14 @@ fn steering_and_follow_up_modes_independent() {
     state.update(crate::Event::FollowUp);
 
     // Complete a turn - steering should batch, follow-up should not
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
 
     assert_eq!(state.agent.message_queue.len(), 2); // Two follow-ups still queued
     assert_eq!(state.agent.request_queue.len(), 1); // One batched steering
     assert_eq!(state.agent.request_queue[0].0, "a\nb"); // Batched content
 
     // Complete second turn - first follow-up delivered
-    state.update(crate::Event::Done {
-        id: "req.1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.1".to_string() });
     assert_eq!(state.agent.message_queue.len(), 1); // One follow-up left
     assert_eq!(state.agent.request_queue.len(), 2);
 }
@@ -518,9 +502,7 @@ fn steering_message_has_steering_origin() {
     state.update(Event::submit());
 
     // Complete turn to trigger delivery
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
 
     // Dump session messages for debugging
     eprintln!("Session messages: {:?}", state.session.messages);
@@ -554,9 +536,7 @@ fn follow_up_message_has_follow_up_origin() {
     state.update(crate::Event::FollowUp);
 
     // Complete turn to trigger delivery
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
 
     // Dump session messages for debugging
     eprintln!("Session messages: {:?}", state.session.messages);

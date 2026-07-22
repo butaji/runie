@@ -146,10 +146,7 @@ impl SseParser {
 }
 
 /// Append more raw bytes to the parser and extract any complete events.
-pub fn parse_events(
-    parser: &mut SseParser,
-    input: &mut BytesMut,
-) -> Vec<Result<SseEvent, SseError>> {
+pub fn parse_events(parser: &mut SseParser, input: &mut BytesMut) -> Vec<Result<SseEvent, SseError>> {
     let mut events = Vec::new();
     while let Some(event) = parser.next_event(input) {
         events.push(event);

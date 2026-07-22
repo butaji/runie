@@ -43,12 +43,7 @@ impl DeploymentCooldown {
 
     /// Create a cooldown tracker with custom settings.
     pub fn with_config(allowed_fails: u32, cooldown_duration: Duration) -> Self {
-        Self {
-            failed_attempts: HashMap::new(),
-            cooldown_until: HashMap::new(),
-            allowed_fails,
-            cooldown_duration,
-        }
+        Self { failed_attempts: HashMap::new(), cooldown_until: HashMap::new(), allowed_fails, cooldown_duration }
     }
 
     /// Record a failed attempt for a deployment.
@@ -56,7 +51,10 @@ impl DeploymentCooldown {
     /// If the number of consecutive failures reaches `allowed_fails`,
     /// the deployment enters a cooldown period.
     pub fn mark_failed(&mut self, deployment: &str) {
-        let count = self.failed_attempts.entry(deployment.to_owned()).or_insert(0);
+        let count = self
+            .failed_attempts
+            .entry(deployment.to_owned())
+            .or_insert(0);
         *count += 1;
 
         if *count >= self.allowed_fails {
@@ -220,20 +218,14 @@ pub struct BuiltProviderFactory {
 impl BuiltProviderFactory {
     /// Create a new factory using the OS keyring.
     pub fn new() -> Self {
-        Self {
-            keyring_store: None,
-            deployment_cooldown: DeploymentCooldown::new(),
-        }
+        Self { keyring_store: None, deployment_cooldown: DeploymentCooldown::new() }
     }
 
     /// Create a factory with an injectable keyring store.
     ///
     /// Use this in tests to avoid hitting the OS keyring.
     pub fn with_keyring_store(store: Arc<dyn KeyringStore>) -> Self {
-        Self {
-            keyring_store: Some(store),
-            deployment_cooldown: DeploymentCooldown::new(),
-        }
+        Self { keyring_store: Some(store), deployment_cooldown: DeploymentCooldown::new() }
     }
 
     /// Create a factory with custom cooldown settings.
@@ -325,12 +317,7 @@ impl BuiltProviderFactory {
 
 #[async_trait]
 impl ProviderFactory for BuiltProviderFactory {
-    fn build(
-        &self,
-        provider: &str,
-        model: &str,
-        config: &Config,
-    ) -> Result<BuiltProvider, ProviderError> {
+    fn build(&self, provider: &str, model: &str, config: &Config) -> Result<BuiltProvider, ProviderError> {
         // Check for replay mode first.
         #[cfg(feature = "replay")]
         if let Some(replay_provider) = Self::try_build_replay_provider(provider, model) {

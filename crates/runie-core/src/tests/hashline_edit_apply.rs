@@ -3,8 +3,7 @@
 use std::io::Write;
 
 use runie_core::harness_skills::{
-    HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill, ToolCallCtx, ToolCallPhase,
-    ToolCallResult,
+    HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill, ToolCallCtx, ToolCallPhase, ToolCallResult,
 };
 
 fn make_skill() -> HashlineEditSkill {
@@ -80,11 +79,8 @@ fn hashline_edit_emits_tool_result_event() {
         .write_all(b"alpha\nbeta\n")
         .unwrap();
 
-    let edits = vec![HashlineEdit {
-        line: 1,
-        hash: HashlineEditSkill::compute_hash("alpha", 6),
-        content: "ALPHA".into(),
-    }];
+    let edits =
+        vec![HashlineEdit { line: 1, hash: HashlineEditSkill::compute_hash("alpha", 6), content: "ALPHA".into() }];
 
     let result = make_skill().on_tool_call(&edit_ctx(path.to_str().unwrap(), edits));
 

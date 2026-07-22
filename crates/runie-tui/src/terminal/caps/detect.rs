@@ -85,9 +85,7 @@ fn is_modern_terminal(env: &HashMap<String, String>) -> bool {
     // Check for known terminal programs
     if let Some(program) = env.get("TERM_PROGRAM") {
         match program.as_str() {
-            "iTerm.app" | "vscode" | "WezTerm" | "Apple_Terminal" | "WarpTerminal" | "ghostty" => {
-                return true
-            }
+            "iTerm.app" | "vscode" | "WezTerm" | "Apple_Terminal" | "WarpTerminal" | "ghostty" => return true,
             _ => {}
         }
     }

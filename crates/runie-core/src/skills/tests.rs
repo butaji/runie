@@ -25,10 +25,8 @@ fn load_skills_from_dir_parses_markdown() {
 fn skill_not_user_invocable_without_invocation_section() {
     let dir = tempdir().unwrap();
     let mut file = std::fs::File::create(dir.path().join("quiet.md")).unwrap();
-    file.write_all(
-        b"# Quiet\n\n## Description\n\nBe concise.\n\n## Context\n\nKeep answers short.\n",
-    )
-    .unwrap();
+    file.write_all(b"# Quiet\n\n## Description\n\nBe concise.\n\n## Context\n\nKeep answers short.\n")
+        .unwrap();
 
     let skills = load_from_dir(dir.path());
     assert_eq!(skills.len(), 1);
@@ -56,6 +54,10 @@ fn skill_injects_context() {
         context: "Use clippy.".into(),
         user_invocable: false,
         file_path: Utf8PathBuf::from("rust.md"),
+        scope: SkillScope::Local,
+        enabled: true,
+        plugin_name: None,
+        ignore_paths: vec![],
     }];
     let ctx = build_skills_context(&skills);
     assert!(ctx.contains("Use clippy."));
@@ -70,6 +72,10 @@ fn empty_context_returns_empty_string() {
         context: "".into(),
         user_invocable: false,
         file_path: Utf8PathBuf::from("empty.md"),
+        scope: SkillScope::Local,
+        enabled: true,
+        plugin_name: None,
+        ignore_paths: vec![],
     }];
     let ctx = build_skills_context(&skills);
     assert!(ctx.is_empty());
@@ -83,6 +89,10 @@ fn user_invocable_shown_in_summary() {
         context: "".into(),
         user_invocable: true,
         file_path: Utf8PathBuf::from("test.md"),
+        scope: SkillScope::Local,
+        enabled: true,
+        plugin_name: None,
+        ignore_paths: vec![],
     };
     assert!(skill.summary().contains("(invocable)"));
 }
@@ -122,10 +132,8 @@ fn subdirectory_skill_loads() {
     let skill_dir = dir.path().join("rust");
     std::fs::create_dir(&skill_dir).unwrap();
     let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
-    file.write_all(
-        b"# Rust Skill\n\n## Description\n\nBest practices for Rust.\n\n## Context\n\nUse clippy.\n",
-    )
-    .unwrap();
+    file.write_all(b"# Rust Skill\n\n## Description\n\nBest practices for Rust.\n\n## Context\n\nUse clippy.\n")
+        .unwrap();
 
     let skills = load_from_dir(dir.path());
     assert_eq!(skills.len(), 1);
@@ -197,10 +205,8 @@ fn yaml_frontmatter_falls_back_to_sections() {
 fn flat_md_file_still_works() {
     let dir = tempdir().unwrap();
     let mut file = std::fs::File::create(dir.path().join("flat.md")).unwrap();
-    file.write_all(
-        b"# Flat Skill\n\n## Description\n\nA flat skill.\n\n## Context\n\nFlat context.\n",
-    )
-    .unwrap();
+    file.write_all(b"# Flat Skill\n\n## Description\n\nA flat skill.\n\n## Context\n\nFlat context.\n")
+        .unwrap();
 
     let skills = load_from_dir(dir.path());
     assert_eq!(skills.len(), 1);
@@ -214,10 +220,8 @@ fn build_skills_context_includes_subdir_skill() {
     let skill_dir = dir.path().join("code-review");
     std::fs::create_dir(&skill_dir).unwrap();
     let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
-    file.write_all(
-        b"# Code Review\n\n## Description\n\nReview code.\n\n## Context\n\nRun clippy before review.\n",
-    )
-    .unwrap();
+    file.write_all(b"# Code Review\n\n## Description\n\nReview code.\n\n## Context\n\nRun clippy before review.\n")
+        .unwrap();
 
     let skills = load_from_dir(dir.path());
     let ctx = build_skills_context(&skills);

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Centralized Event Types
 //!
 //! ## Architecture
@@ -206,6 +208,14 @@ pub enum Event {
         duration_ms: u64,
         output: String,
     },
+    /// Swarm circuit breaker tripped — dispatch paused.
+    /// Number of consecutive failures that triggered the trip.
+    CircuitBreakerTripped {
+        failures: u32,
+        threshold: u32,
+    },
+    /// Swarm circuit breaker manually reset by the user via `/swarm reset`.
+    CircuitBreakerReset,
 
     // ── Command variants ─────────────────────────────────────────────────────
     SetPrompt {
@@ -540,11 +550,23 @@ pub enum Event {
         workers: Option<usize>,
     },
     /// Set the swarm execution variant (`parallel`, `delegation`, `dag`).
-    SetSwarmVariant { variant: String },
+    SetSwarmVariant {
+        variant: String,
+    },
     /// Switch to swarm and set its variant in one action (used by the mode picker).
     SetModeAndSwarmVariant {
         active: String,
         swarm_variant: String,
+    },
+    /// Set the lead (coordinator) model for swarm/delegation orchestration.
+    SetLeadModel {
+        provider: String,
+        model: String,
+    },
+    /// Set the worker (task-executor) model for swarm/delegation orchestration.
+    SetWorkerModel {
+        provider: String,
+        model: String,
     },
     ToggleReadOnly,
     TrustProject,
@@ -740,17 +762,7 @@ pub enum Event {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Event category — routing taxonomy for the dispatcher.
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Default,
-    strum::Display,
-    strum::IntoStaticStr,
-    strum::VariantNames,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::IntoStaticStr, strum::VariantNames)]
 pub enum EventCategory {
     Agent,
     Command,

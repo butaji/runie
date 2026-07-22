@@ -20,9 +20,8 @@ use crate::model::AppState;
 pub use feed_nav::{next_response, next_turn, prev_response, prev_turn, sync_current_turn};
 pub use scroll::{element_jump_down, element_jump_up, scroll_event};
 pub use support::{
-    at_suggestion_hints, empty_input_hints, find_word_boundary_left, find_word_boundary_right,
-    input_active_hints, is_quit_command, modal_hints, next_grapheme_boundary,
-    prev_grapheme_boundary, vim_nav_hints,
+    at_suggestion_hints, empty_input_hints, find_word_boundary_left, find_word_boundary_right, input_active_hints,
+    is_quit_command, modal_hints, next_grapheme_boundary, prev_grapheme_boundary, vim_nav_hints,
 };
 
 pub fn input_event(state: &mut AppState, event: crate::Event) {

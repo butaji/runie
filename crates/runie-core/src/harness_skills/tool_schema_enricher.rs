@@ -17,10 +17,7 @@ pub struct ToolSchemaEnricherConfig {
 
 impl Default for ToolSchemaEnricherConfig {
     fn default() -> Self {
-        Self {
-            enabled: true,
-            skip_tools: Vec::new(),
-        }
+        Self { enabled: true, skip_tools: Vec::new() }
     }
 }
 
@@ -43,10 +40,7 @@ impl ToolSchemaEnricherSkill {
                 serde_json::json!({"command": "cargo test"}),
                 serde_json::json!({"command": "git status"}),
             ],
-            "read_file" => vec![
-                serde_json::json!({"path": "src/main.rs"}),
-                serde_json::json!({"path": "README.md"}),
-            ],
+            "read_file" => vec![serde_json::json!({"path": "src/main.rs"}), serde_json::json!({"path": "README.md"})],
             "write_file" => vec![serde_json::json!({"path": "f.txt", "content": "hi"})],
             "edit_file" => vec![serde_json::json!({"path": "f.rs", "search": "a", "replace": "b"})],
             "list_dir" => vec![serde_json::json!({"path": "."})],

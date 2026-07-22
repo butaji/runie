@@ -18,10 +18,7 @@ pub struct TurnActorState {
 
 impl TurnActorState {
     pub fn new(bus: EventBus<Event>) -> Self {
-        Self {
-            turn_state: TurnState::default(),
-            bus,
-        }
+        Self { turn_state: TurnState::default(), bus }
     }
 }
 
@@ -59,20 +56,14 @@ impl RactorTurnHandle {
         match self
             .inner
             .call(
-                |tx| TurnMsg::DeliverQueued {
-                    steering_mode,
-                    follow_up_mode,
-                    reply: Some(tx),
-                },
+                |tx| TurnMsg::DeliverQueued { steering_mode, follow_up_mode, reply: Some(tx) },
                 None,
             )
             .await
         {
             Ok(CallResult::Success(r)) => DeliverQueuedRpcResult::Delivered(r),
             Ok(CallResult::SenderError) => DeliverQueuedRpcResult::SenderError,
-            Ok(CallResult::Timeout) => {
-                DeliverQueuedRpcResult::ActorError("RPC timeout".to_string())
-            }
+            Ok(CallResult::Timeout) => DeliverQueuedRpcResult::ActorError("RPC timeout".to_string()),
             Err(e) => DeliverQueuedRpcResult::ActorError(e.to_string()),
         }
     }

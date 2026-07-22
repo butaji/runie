@@ -5,9 +5,7 @@ use crate::view::{Element, LazyCache};
 fn tool_message(name: &str, output: &str, ts: f64) -> ChatMessage {
     ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: format!("✓ {} 0.5s\n{}", name, output),
-        }],
+        parts: vec![Part::Text { content: format!("✓ {} 0.5s\n{}", name, output) }],
         timestamp: ts,
         id: format!("tool.{}.{}", name, ts),
         ..Default::default()
@@ -126,30 +124,19 @@ fn assistant_parts_render_into_elements() {
         timestamp: 1.0,
         id: "a1".into(),
         parts: vec![
-            Part::Text {
-                content: "Let me search.".into(),
-            },
-            Part::Reasoning {
-                content: "I need files first.".into(),
-            },
-            Part::ToolCall {
-                id: "call_1".into(),
-                name: "list_dir".into(),
-                args: serde_json::json!({"path": "."}),
-            },
-            Part::ToolResult {
-                id: "call_1".into(),
-                output: "a.txt".into(),
-            },
+            Part::Text { content: "Let me search.".into() },
+            Part::Reasoning { content: "I need files first.".into() },
+            Part::ToolCall { id: "call_1".into(), name: "list_dir".into(), args: serde_json::json!({"path": "."}) },
+            Part::ToolResult { id: "call_1".into(), output: "a.txt".into() },
         ],
         ..Default::default()
     });
     state.messages_changed();
 
     let elems = LazyCache::rebuild(&state);
-    assert!(elems.iter().any(
-        |e| matches!(e, Element::AgentMessage { content, .. } if content == "Let me search.")
-    ));
+    assert!(elems
+        .iter()
+        .any(|e| matches!(e, Element::AgentMessage { content, .. } if content == "Let me search.")));
     // Reasoning renders as a thought element: a one-line summary by default
     // (grok parity); single-line reasoning keeps its full text in the summary.
     assert!(elems.iter().any(|e| matches!(

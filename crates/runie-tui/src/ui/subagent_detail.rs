@@ -8,7 +8,7 @@ use ratatui::{
     layout::{Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 use runie_core::model::{PatternWorkerRow, PatternWorkerStatus};
@@ -32,71 +32,64 @@ pub fn render_subagent_detail(f: &mut Frame, snap: &Snapshot, area: Rect) {
         return;
     };
 
-    let title = build_title(worker, snap.animation_frame);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(crate::theme::style_border())
-        .title(Line::from(title));
+    let popup_title = " Subagent ";
+    let popup_area = crate::popups::palette_popup_rect(area);
+    crate::popups::clear_panel_bg(f, popup_area);
+    let block = crate::theme::block_popup(popup_title);
+    let inner = block.inner(popup_area);
+    f.render_widget(Paragraph::new("").block(block), popup_area);
 
-    f.render_widget(block.clone(), area);
-
-    let inner = block.inner(area);
     if inner.height < 3 {
         return;
     }
 
+    // Same body/footer split as original: body takes all but the last row.
     let body_height = inner.height - 1;
-    let body_area = Rect {
-        x: inner.x,
-        y: inner.y,
-        width: inner.width,
-        height: body_height,
-    };
-    let footer_area = Rect {
-        x: inner.x,
-        y: inner.y + body_height,
-        width: inner.width,
-        height: 1,
-    };
+    let body_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: body_height };
+    let footer_area =
+        Rect { x: inner.x, y: inner.y + body_height, width: inner.width, height: 1 };
 
-    render_body(f, worker, detail.scroll, body_area);
+    render_body(f, worker, snap.animation_frame, detail.scroll, body_area);
     render_footer(f, footer_area);
 }
 
-fn build_title(worker: &PatternWorkerRow, frame: u32) -> Vec<Span<'static>> {
-    let (icon, label_style) = match worker.status {
-        PatternWorkerStatus::Completed => (
-            crate::theme::GLYPH_CHECK.to_string(),
+fn build_title(worker: &PatternWorkerRow, frame: u32) -> String {
+    let icon = match worker.status {
+        PatternWorkerStatus::Completed => crate::theme::GLYPH_CHECK.to_string(),
+        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => {
+            crate::theme::GLYPH_X.to_string()
+        }
+        PatternWorkerStatus::Running => {
+            let symbols = runie_core::labels::BRAILLE_TEN;
+            symbols[frame as usize % symbols.len()].to_string()
+        }
+    };
+    format!(
+        "{} General {} {} {} [✗]",
+        icon,
+        worker.description,
+        worker.model,
+        format_duration(worker)
+    )
+}
+
+fn build_status_icon(worker: &PatternWorkerRow, frame: u32) -> Span<'static> {
+    match worker.status {
+        PatternWorkerStatus::Completed => Span::styled(
+            crate::theme::GLYPH_CHECK,
             Style::default().fg(crate::theme::color_subagent_completed()),
         ),
-        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => (
-            crate::theme::GLYPH_X.to_string(),
+        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => Span::styled(
+            crate::theme::GLYPH_X,
             Style::default().fg(crate::theme::color_subagent_failed()),
         ),
         PatternWorkerStatus::Running => {
             let symbols = runie_core::labels::BRAILLE_TEN;
             let icon = symbols[frame as usize % symbols.len()].to_string();
             let base = crate::theme::color_subagent_running();
-            (icon, Style::default().fg(pulse_color(base, frame)))
+            Span::styled(icon, Style::default().fg(pulse_color(base, frame)))
         }
-    };
-
-    let duration = format_duration(worker);
-
-    vec![
-        Span::styled(icon, label_style),
-        Span::styled(" General ", label_style),
-        Span::styled(
-            worker.description.clone(),
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
-        Span::raw(" "),
-        Span::styled(worker.model.clone(), crate::theme::style_hint()),
-        Span::raw("  "),
-        Span::styled(duration, crate::theme::style_hint()),
-        Span::raw(" "),
-        Span::styled("[✗]", crate::theme::style_hint()),
-    ]
+    }
 }
 
 fn format_duration(worker: &PatternWorkerRow) -> String {
@@ -120,12 +113,33 @@ fn pulse_color(base: Color, frame: u32) -> Color {
     Color::Rgb(adjust(r), adjust(g), adjust(b))
 }
 
-fn render_body(f: &mut Frame, worker: &PatternWorkerRow, scroll: usize, area: Rect) {
+fn render_body(
+    f: &mut Frame,
+    worker: &PatternWorkerRow,
+    frame: u32,
+    scroll: usize,
+    area: Rect,
+) {
+    // Build header row: status icon + General + description + model + duration + [✗]
+    let header_spans = vec![
+        build_status_icon(worker, frame),
+        Span::styled(" General ", Style::default().fg(pulse_color_for_status(worker.status, frame))),
+        Span::styled(
+            worker.description.clone(),
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" "),
+        Span::styled(worker.model.clone(), crate::theme::style_hint()),
+        Span::raw("  "),
+        Span::styled(format_duration(worker), crate::theme::style_hint()),
+        Span::raw(" "),
+        Span::styled("[✗]", crate::theme::style_hint()),
+    ];
+    let header = Line::from(header_spans);
+
     let content_width = area.width.saturating_sub(2).max(1);
-    let spans = crate::markdown_render::apply_color_to_inlines(
-        &worker.output,
-        crate::theme::color_agent_text(),
-    );
+    let spans =
+        crate::markdown_render::apply_color_to_inlines(&worker.output, crate::theme::color_agent_text());
     let rows = crate::message::wrap_styled_spans(&spans, content_width, content_width);
 
     let mut lines: Vec<Line<'static>> = rows
@@ -135,6 +149,10 @@ fn render_body(f: &mut Frame, worker: &PatternWorkerRow, scroll: usize, area: Re
     if lines.is_empty() {
         lines.push(Line::from(""));
     }
+
+    // Prepend header to content
+    lines.insert(0, header);
+    lines.insert(1, Line::from("")); // blank line after header
 
     let max_scroll = lines.len().saturating_sub(area.height as usize);
     let offset = scroll.min(max_scroll);
@@ -147,6 +165,17 @@ fn render_body(f: &mut Frame, worker: &PatternWorkerRow, scroll: usize, area: Re
     let margin = Margin::new(1, 0);
     let padded = area.inner(margin);
     f.render_widget(Paragraph::new(Text::from(visible)), padded);
+}
+
+/// Get the color for status styling (used for "General" label in header).
+fn pulse_color_for_status(status: PatternWorkerStatus, frame: u32) -> Color {
+    match status {
+        PatternWorkerStatus::Completed => crate::theme::color_subagent_completed(),
+        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => {
+            crate::theme::color_subagent_failed()
+        }
+        PatternWorkerStatus::Running => pulse_color(crate::theme::color_subagent_running(), frame),
+    }
 }
 
 fn render_footer(f: &mut Frame, area: Rect) {
@@ -166,16 +195,12 @@ mod tests {
     use crate::terminal::caps::{MouseCapability, TermCaps};
     use crate::theme::set_current_theme_with_caps;
     use ratatui::{backend::TestBackend, Terminal};
-    use runie_core::model::SubagentDetail;
     use runie_core::model::PatternWorkerStatus;
+    use runie_core::model::SubagentDetail;
     use std::sync::Arc;
 
     fn truecolor_caps() -> TermCaps {
-        TermCaps {
-            truecolor: true,
-            mouse: MouseCapability::Sgr,
-            ..Default::default()
-        }
+        TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() }
     }
 
     fn worker(status: PatternWorkerStatus, output: &str) -> PatternWorkerRow {
@@ -192,11 +217,7 @@ mod tests {
     }
 
     fn snapshot_with_worker(worker: PatternWorkerRow, detail: Option<SubagentDetail>) -> Snapshot {
-        Snapshot {
-            pattern_workers: Arc::new([worker]),
-            subagent_detail: detail,
-            ..Default::default()
-        }
+        Snapshot { pattern_workers: Arc::new([worker]), subagent_detail: detail, ..Default::default() }
     }
 
     fn buffer_string(terminal: &Terminal<TestBackend>) -> String {
@@ -212,16 +233,14 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn completed_worker_title_shows_check_description_model_duration() {
         let _lock = crate::theme::test_lock();
         set_current_theme_with_caps("runie", truecolor_caps());
 
         let snap = snapshot_with_worker(
             worker(PatternWorkerStatus::Completed, "first line\nsecond line"),
-            Some(SubagentDetail {
-                worker_id: "w.1".into(),
-                scroll: 0,
-            }),
+            Some(SubagentDetail { worker_id: "w.1".into(), scroll: 0 }),
         );
         let backend = TestBackend::new(80, 12);
         let mut terminal = Terminal::new(backend).unwrap();
@@ -268,10 +287,7 @@ mod tests {
 
         let snap = snapshot_with_worker(
             worker(PatternWorkerStatus::Failed, "something went wrong"),
-            Some(SubagentDetail {
-                worker_id: "w.1".into(),
-                scroll: 0,
-            }),
+            Some(SubagentDetail { worker_id: "w.1".into(), scroll: 0 }),
         );
         let backend = TestBackend::new(80, 10);
         let mut terminal = Terminal::new(backend).unwrap();
@@ -300,6 +316,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn running_worker_title_shows_braille_spinner_and_pulsed_purple() {
         let _lock = crate::theme::test_lock();
         set_current_theme_with_caps("runie", truecolor_caps());
@@ -308,10 +325,7 @@ mod tests {
         worker.duration_ms = Some(0);
         let mut snap = snapshot_with_worker(
             worker,
-            Some(SubagentDetail {
-                worker_id: "w.1".into(),
-                scroll: 0,
-            }),
+            Some(SubagentDetail { worker_id: "w.1".into(), scroll: 0 }),
         );
         snap.animation_frame = 0;
 
@@ -363,8 +377,7 @@ mod tests {
             .draw(|f| render_subagent_detail(f, &snap, f.area()))
             .unwrap();
         let buf_dim = terminal.backend().buffer();
-        let dim_symbol = runie_core::labels::BRAILLE_TEN
-            [dim_frame as usize % runie_core::labels::BRAILLE_TEN.len()];
+        let dim_symbol = runie_core::labels::BRAILLE_TEN[dim_frame as usize % runie_core::labels::BRAILLE_TEN.len()];
         let dim_cell = buf_dim
             .content()
             .iter()
@@ -391,10 +404,7 @@ mod tests {
 
         let snap = snapshot_with_worker(
             worker(PatternWorkerStatus::Completed, "body"),
-            Some(SubagentDetail {
-                worker_id: "w.1".into(),
-                scroll: 0,
-            }),
+            Some(SubagentDetail { worker_id: "w.1".into(), scroll: 0 }),
         );
         let backend = TestBackend::new(80, 8);
         let mut terminal = Terminal::new(backend).unwrap();

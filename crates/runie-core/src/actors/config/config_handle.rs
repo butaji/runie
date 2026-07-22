@@ -68,19 +68,10 @@ impl RactorConfigHandle {
     }
 
     /// Save a provider configuration.
-    pub async fn save_provider(
-        &self,
-        name: String,
-        base_url: String,
-        api_key: String,
-        models: Vec<String>,
-    ) {
-        let _ = self.inner.send_message(ConfigMsg::SaveProvider {
-            name,
-            base_url,
-            api_key,
-            models,
-        });
+    pub async fn save_provider(&self, name: String, base_url: String, api_key: String, models: Vec<String>) {
+        let _ = self
+            .inner
+            .send_message(ConfigMsg::SaveProvider { name, base_url, api_key, models });
     }
 
     /// Remove a provider configuration.
@@ -149,12 +140,7 @@ impl RactorConfigHandle {
         let _ = self
             .inner
             .call(
-                |tx| ConfigMsg::AddMcpServer {
-                    scope,
-                    name,
-                    server,
-                    reply: Some(tx),
-                },
+                |tx| ConfigMsg::AddMcpServer { scope, name, server, reply: Some(tx) },
                 None,
             )
             .await;
@@ -167,11 +153,7 @@ impl RactorConfigHandle {
         let _ = self
             .inner
             .call(
-                |tx| ConfigMsg::RemoveMcpServer {
-                    scope,
-                    name,
-                    reply: Some(tx),
-                },
+                |tx| ConfigMsg::RemoveMcpServer { scope, name, reply: Some(tx) },
                 None,
             )
             .await;
@@ -182,10 +164,7 @@ impl RactorConfigHandle {
         match self
             .inner
             .call(
-                |tx| ConfigMsg::ListMcpServers {
-                    scope,
-                    reply: Some(tx),
-                },
+                |tx| ConfigMsg::ListMcpServers { scope, reply: Some(tx) },
                 None,
             )
             .await

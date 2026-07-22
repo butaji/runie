@@ -17,15 +17,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// Read-only tool names that can be cached.
-pub const CACHEABLE_TOOL_NAMES: &[&str] = &[
-    "read_file",
-    "list_dir",
-    "grep",
-    "find",
-    "fetch_docs",
-    "search",
-    "find_definitions",
-];
+pub const CACHEABLE_TOOL_NAMES: &[&str] =
+    &["read_file", "list_dir", "grep", "find", "fetch_docs", "search", "find_definitions"];
 
 /// Check if a tool can be cached.
 #[inline]
@@ -54,10 +47,7 @@ pub struct ToolResultCache {
 impl ToolResultCache {
     /// Create a new cache with the given TTL in seconds.
     pub fn new(ttl_secs: u64) -> Arc<Self> {
-        Arc::new(Self {
-            cache: RwLock::new(HashMap::new()),
-            ttl_secs,
-        })
+        Arc::new(Self { cache: RwLock::new(HashMap::new()), ttl_secs })
     }
 
     /// Spawn a background sweep task that evicts expired entries every `max(1, ttl_secs / 2)`.
@@ -96,9 +86,7 @@ impl ToolResultCache {
         });
         let canonical = serde_json::to_string(&payload).unwrap_or_default();
         let hash = Sha256::digest(canonical.as_bytes());
-        u64::from_le_bytes([
-            hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7],
-        ])
+        u64::from_le_bytes([hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7]])
     }
 
     /// Check if the cache is enabled (TTL > 0).
@@ -227,8 +215,7 @@ mod tests {
     #[tokio::test]
     async fn cache_hit_returns_stored_output() {
         let cache = ToolResultCache::new(300);
-        let key =
-            ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
+        let key = ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
         let entry = CacheEntry {
             tool_name: "read_file".to_string(),
             output: "version = \"0.1\"".to_string(),
@@ -337,8 +324,7 @@ mod tests {
     #[tokio::test]
     async fn cache_disabled_when_ttl_zero() {
         let cache = ToolResultCache::new(0);
-        let key =
-            ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
+        let key = ToolResultCache::compute_key("read_file", &serde_json::json!({"path": "Cargo.toml"}));
         let entry = CacheEntry {
             tool_name: "read_file".to_string(),
             output: "version".to_string(),

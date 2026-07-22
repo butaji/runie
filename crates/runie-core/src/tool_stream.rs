@@ -60,11 +60,7 @@ impl ToolStream {
         } else {
             repair_partial_json(&acc.arguments)?
         };
-        Some(ParsedToolCall {
-            name: acc.name,
-            args,
-            id: Some(id.to_owned()),
-        })
+        Some(ParsedToolCall { name: acc.name, args, id: Some(id.to_owned()) })
     }
 
     /// Finish all pending tool calls, draining the stream.

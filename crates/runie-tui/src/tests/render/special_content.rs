@@ -5,9 +5,8 @@
 use ratatui::{backend::TestBackend, widgets::Paragraph, Terminal};
 
 use crate::message::{
-    render_ansi_styled, render_anthropic_thinking, render_data_part, render_diff_output,
-    render_image, render_list_item_from_spans, render_markdown_table, render_tool_confirmation,
-    render_web_search_call,
+    render_ansi_styled, render_anthropic_thinking, render_data_part, render_diff_output, render_image,
+    render_list_item_from_spans, render_markdown_table, render_tool_confirmation, render_web_search_call,
 };
 use runie_core::view::elements::{DiffType, ImageProtocol, WebSearchResult};
 
@@ -70,11 +69,7 @@ mod images {
             0.0,
         );
         let output = render_to_string(lines, 80, 5);
-        assert!(
-            output.contains("Kitty"),
-            "Should show protocol: {}",
-            output
-        );
+        assert!(output.contains("Kitty"), "Should show protocol: {}", output);
     }
 
     #[test]
@@ -174,11 +169,7 @@ mod anthropic_thinking {
         let sig = "abc123def456xyz789".to_string();
         let lines = render_anthropic_thinking("content", Some(sig), false, 0.0);
         let output = render_to_string(lines, 80, 10);
-        assert!(
-            output.contains("sig:"),
-            "Should show signature: {}",
-            output
-        );
+        assert!(output.contains("sig:"), "Should show signature: {}", output);
         assert!(
             output.contains("xyz789"),
             "Should show signature tail: {}",
@@ -188,12 +179,7 @@ mod anthropic_thinking {
 
     #[test]
     fn redacted_hides_content() {
-        let lines = render_anthropic_thinking(
-            "This should not appear",
-            None,
-            true,
-            0.0,
-        );
+        let lines = render_anthropic_thinking("This should not appear", None, true, 0.0);
         let output = render_to_string(lines, 80, 10);
         assert!(
             output.contains("[Redacted Thinking]"),
@@ -298,37 +284,18 @@ mod markdown_tables {
         let rows = vec![vec!["Alice".to_string(), "30".to_string()]];
         let lines = render_markdown_table(&headers, &rows, &[None, None], 0.0);
         let output = render_to_string(lines, 80, 10);
-        assert!(
-            output.contains("Name"),
-            "Should show header: {}",
-            output
-        );
-        assert!(
-            output.contains("Age"),
-            "Should show header: {}",
-            output
-        );
+        assert!(output.contains("Name"), "Should show header: {}", output);
+        assert!(output.contains("Age"), "Should show header: {}", output);
     }
 
     #[test]
     fn table_shows_rows() {
         let headers = vec!["Fruit".to_string()];
-        let rows = vec![
-            vec!["Apple".to_string()],
-            vec!["Banana".to_string()],
-        ];
+        let rows = vec![vec!["Apple".to_string()], vec!["Banana".to_string()]];
         let lines = render_markdown_table(&headers, &rows, &[None], 0.0);
         let output = render_to_string(lines, 80, 10);
-        assert!(
-            output.contains("Apple"),
-            "Should show Apple: {}",
-            output
-        );
-        assert!(
-            output.contains("Banana"),
-            "Should show Banana: {}",
-            output
-        );
+        assert!(output.contains("Apple"), "Should show Apple: {}", output);
+        assert!(output.contains("Banana"), "Should show Banana: {}", output);
     }
 
     #[test]
@@ -349,10 +316,7 @@ mod markdown_tables {
         let headers: Vec<String> = vec![];
         let rows: Vec<Vec<String>> = vec![];
         let lines = render_markdown_table(&headers, &rows, &[], 0.0);
-        assert!(
-            lines.is_empty(),
-            "Empty table should return no lines"
-        );
+        assert!(lines.is_empty(), "Empty table should return no lines");
     }
 
     #[test]
@@ -363,11 +327,7 @@ mod markdown_tables {
         let lines = render_markdown_table(&headers, &rows, &[Some(true)], 0.0);
         let output = render_to_string(lines, 80, 10);
         // Right-aligned content should have trailing space padding
-        assert!(
-            output.contains("42"),
-            "Should show number: {}",
-            output
-        );
+        assert!(output.contains("42"), "Should show number: {}", output);
     }
 }
 
@@ -422,11 +382,7 @@ mod diff_output {
         let content = "@@ -1,3 +1,4 @@ context";
         let lines = render_diff_output(content, DiffType::Unified, 0.0);
         let output = render_to_string(lines, 80, 10);
-        assert!(
-            output.contains("@@"),
-            "Should show hunk header: {}",
-            output
-        );
+        assert!(output.contains("@@"), "Should show hunk header: {}", output);
     }
 
     #[test]
@@ -528,11 +484,7 @@ mod web_search {
         }];
         let lines = render_web_search_call("query", &results, 0.0);
         let output = render_to_string(lines, 80, 20);
-        assert!(
-            output.contains("1."),
-            "Should number results: {}",
-            output
-        );
+        assert!(output.contains("1."), "Should number results: {}", output);
     }
 
     #[test]
@@ -660,13 +612,7 @@ mod tool_confirmation {
 
     #[test]
     fn confirmation_shows_header() {
-        let lines = render_tool_confirmation(
-            "req-123",
-            "bash",
-            "rm -rf /",
-            "Delete everything",
-            0.0,
-        );
+        let lines = render_tool_confirmation("req-123", "bash", "rm -rf /", "Delete everything", 0.0);
         let output = render_to_string(lines, 80, 20);
         assert!(
             output.contains("[CONFIRM]"),
@@ -682,13 +628,7 @@ mod tool_confirmation {
 
     #[test]
     fn confirmation_shows_tool_name() {
-        let lines = render_tool_confirmation(
-            "req-456",
-            "read_file",
-            "/path/to/file",
-            "Read a file",
-            0.0,
-        );
+        let lines = render_tool_confirmation("req-456", "read_file", "/path/to/file", "Read a file", 0.0);
         let output = render_to_string(lines, 80, 20);
         assert!(
             output.contains("read_file"),
@@ -699,13 +639,7 @@ mod tool_confirmation {
 
     #[test]
     fn confirmation_shows_description() {
-        let lines = render_tool_confirmation(
-            "req-789",
-            "bash",
-            "ls -la",
-            "List directory contents",
-            0.0,
-        );
+        let lines = render_tool_confirmation("req-789", "bash", "ls -la", "List directory contents", 0.0);
         let output = render_to_string(lines, 80, 20);
         assert!(
             output.contains("List directory contents"),
@@ -716,13 +650,7 @@ mod tool_confirmation {
 
     #[test]
     fn confirmation_shows_request_id() {
-        let lines = render_tool_confirmation(
-            "abc-123-xyz",
-            "test",
-            "",
-            "",
-            0.0,
-        );
+        let lines = render_tool_confirmation("abc-123-xyz", "test", "", "", 0.0);
         let output = render_to_string(lines, 80, 20);
         assert!(
             output.contains("Request ID:"),
@@ -738,34 +666,16 @@ mod tool_confirmation {
 
     #[test]
     fn confirmation_shows_hint() {
-        let lines = render_tool_confirmation(
-            "req-1",
-            "test",
-            "args",
-            "desc",
-            0.0,
-        );
+        let lines = render_tool_confirmation("req-1", "test", "args", "desc", 0.0);
         let output = render_to_string(lines, 80, 20);
-        assert!(
-            output.contains("y"),
-            "Should show 'y' hint: {}",
-            output
-        );
-        assert!(
-            output.contains("n"),
-            "Should show 'n' hint: {}",
-            output
-        );
+        assert!(output.contains("y"), "Should show 'y' hint: {}", output);
+        assert!(output.contains("n"), "Should show 'n' hint: {}", output);
         assert!(
             output.contains("confirm"),
             "Should show confirm hint: {}",
             output
         );
-        assert!(
-            output.contains("deny"),
-            "Should show deny hint: {}",
-            output
-        );
+        assert!(output.contains("deny"), "Should show deny hint: {}", output);
     }
 
     #[test]
@@ -808,10 +718,7 @@ mod list_item {
 
     #[test]
     fn list_item_bullet() {
-        let row = vec![MdSpan {
-            content: "First item".to_string(),
-            style: Style::default(),
-        }];
+        let row = vec![MdSpan { content: "First item".to_string(), style: Style::default() }];
         let line = render_list_item_from_spans(&row, false, 0, true, "", "12:00", 5, 70);
         let text = line.to_string();
         assert!(
@@ -823,31 +730,17 @@ mod list_item {
 
     #[test]
     fn list_item_ordered_number() {
-        let row = vec![MdSpan {
-            content: "Third".to_string(),
-            style: Style::default(),
-        }];
+        let row = vec![MdSpan { content: "Third".to_string(), style: Style::default() }];
         let line = render_list_item_from_spans(&row, true, 2, true, "", "12:00", 5, 70);
         let text = line.to_string();
-        assert!(
-            text.contains("3."),
-            "Should show ordered number: {}",
-            text
-        );
+        assert!(text.contains("3."), "Should show ordered number: {}", text);
     }
 
     #[test]
     fn list_item_with_prefix() {
-        let row = vec![MdSpan {
-            content: "Item".to_string(),
-            style: Style::default(),
-        }];
+        let row = vec![MdSpan { content: "Item".to_string(), style: Style::default() }];
         let line = render_list_item_from_spans(&row, false, 0, true, "A", "12:00", 5, 70);
         let text = line.to_string();
-        assert!(
-            text.contains("A"),
-            "Should show prefix: {}",
-            text
-        );
+        assert!(text.contains("A"), "Should show prefix: {}", text);
     }
 }

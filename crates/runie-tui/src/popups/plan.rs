@@ -2,11 +2,10 @@
 //!
 //! Displays the current plan markdown and indicates that write tools are blocked.
 
-use ratatui::{layout::Rect, prelude::Text, style::Style, text::Line, Frame};
+use ratatui::{layout::Rect, style::Style, text::Line, widgets::Paragraph, Frame};
 use runie_core::Snapshot;
-use tui_popup::Popup;
 
-use crate::popups::palette_popup_rect;
+use crate::popups::panel::{hotkey_area, hotkey_area_height, setup_popup};
 use crate::theme::{color_accent, color_bg_panel, style_hint};
 
 /// Render the plan mode overlay if plan mode is active.
@@ -15,38 +14,39 @@ pub fn render_plan_panel(f: &mut Frame, snap: &Snapshot) {
         return;
     }
 
-    let area = palette_popup_rect(f.area());
+    let inner = setup_popup(f, " Plan Mode ");
     let bg = color_bg_panel();
-    let lines = build_plan_lines(snap);
 
-    let content = Text::from(lines).style(Style::default().bg(bg));
-    let popup = Popup::new(content)
-        .title(" Plan Mode ")
-        .style(Style::default().bg(bg));
-    f.render_widget(popup, area);
+    let header_height = 2u16;
+    let content_height = inner.height.saturating_sub(header_height + hotkey_area_height());
 
-    // Explicitly set inner background (tui-popup uses Clear which resets to terminal bg).
-    let inner = Rect {
-        x: area.x + 1,
-        y: area.y + 1,
-        width: area.width.saturating_sub(2),
-        height: area.height.saturating_sub(2),
+    let header_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: header_height };
+    let content_area = Rect {
+        x: inner.x,
+        y: inner.y + header_height,
+        width: inner.width,
+        height: content_height,
     };
-    f.buffer_mut().set_style(inner, Style::default().bg(bg));
+
+    let mut header_lines = Vec::new();
+    header_lines.push(Line::from(vec![
+        ratatui::text::Span::styled("✦ ", Style::default().fg(color_accent())),
+        ratatui::text::Span::raw("Plan mode active — write tools blocked"),
+    ]));
+    header_lines.push(Line::from(""));
+    f.render_widget(Paragraph::new(header_lines).style(Style::default().bg(bg)), header_area);
+
+    let content_lines = build_plan_lines(snap);
+    f.render_widget(Paragraph::new(content_lines).style(Style::default().bg(bg)), content_area);
+
+    let footer_line = Line::from("[Enter] Approve plan   [Esc] /plan off").style(style_hint());
+    f.render_widget(Paragraph::new(footer_line), hotkey_area(&inner));
 }
 
 fn build_plan_lines(snap: &Snapshot) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
-
-    // Header with status
-    lines.push(Line::from(vec![
-        ratatui::text::Span::styled("✦ ", Style::default().fg(color_accent())),
-        ratatui::text::Span::raw("Plan mode active — write tools blocked"),
-    ]));
-    lines.push(Line::from(""));
-
-    // Plan content (truncated if too long)
     let content = &snap.active_plan_content;
+
     if content.is_empty() {
         lines.push(Line::from("No plan content yet.").style(style_hint()));
     } else {
@@ -63,7 +63,5 @@ fn build_plan_lines(snap: &Snapshot) -> Vec<Line<'static>> {
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from("[Enter] Approve plan   [Esc] /plan off").style(style_hint()));
-
     lines
 }

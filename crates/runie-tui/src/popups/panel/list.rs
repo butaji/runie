@@ -10,20 +10,14 @@ use ratatui::{
 use runie_core::dialog::{Panel, PanelItem};
 
 use crate::theme::{
-    color_accent, color_bg, color_bg_panel, color_dim, style_chevron, style_hint,
-    style_popup_unselected, style_thinking, BOX_HORIZONTAL, GLYPH_CHECKED, GLYPH_FILTER,
-    GLYPH_SELECTED, GLYPH_UNCHECKED, GLYPH_UNSELECTED,
+    color_accent, color_bg, color_bg_panel, color_dim, style_chevron, style_hint, style_popup_unselected,
+    style_thinking, BOX_HORIZONTAL, GLYPH_CHECKED, GLYPH_FILTER, GLYPH_SELECTED, GLYPH_UNCHECKED, GLYPH_UNSELECTED,
 };
 use crate::ui::{parse_hint_spans, render_scrollbar};
 
 use super::{compute_scrolling, hotkey_area, hotkey_area_height, setup_popup, ScrollLayout};
 
-pub(super) fn render_list(
-    f: &mut Frame,
-    panel: &Panel,
-    show_breadcrumb: bool,
-    root_closable: bool,
-) {
+pub(super) fn render_list(f: &mut Frame, panel: &Panel, show_breadcrumb: bool, root_closable: bool) {
     let inner = setup_popup(f, &panel.title);
     let inner_w = inner.width as usize;
     let (header_lines, header_height) = build_header(panel, inner_w);
@@ -55,17 +49,8 @@ fn item_width(panel: &Panel, items_area: &Rect, inner_w: usize) -> usize {
     }
 }
 
-fn render_header(
-    f: &mut Frame,
-    header_lines: Vec<Line<'_>>,
-    header_height: u16,
-    inner: Rect,
-    bg: Style,
-) {
-    let header_area = Rect {
-        height: header_height,
-        ..inner
-    };
+fn render_header(f: &mut Frame, header_lines: Vec<Line<'_>>, header_height: u16, inner: Rect, bg: Style) {
+    let header_area = Rect { height: header_height, ..inner };
     f.render_widget(Paragraph::new(header_lines).style(bg), header_area);
 }
 
@@ -99,13 +84,7 @@ fn render_item_list(
     }
 }
 
-fn render_hotkeys(
-    f: &mut Frame,
-    show_breadcrumb: bool,
-    root_closable: bool,
-    inner: Rect,
-    bg: Style,
-) {
+fn render_hotkeys(f: &mut Frame, show_breadcrumb: bool, root_closable: bool, inner: Rect, bg: Style) {
     let hotkey_text = match (show_breadcrumb, root_closable) {
         (true, true) => "↑↓ navigate · enter select · ← back · esc close",
         (true, false) => "↑↓ navigate · enter select · ← back",
@@ -178,21 +157,12 @@ fn push_static_item(lines: &mut Vec<Line>, item: &PanelItem) {
     }
 }
 
-fn push_navigable_item<'a>(
-    lines: &mut Vec<Line<'a>>,
-    item: &'a PanelItem,
-    selected: bool,
-    width: usize,
-) {
+fn push_navigable_item<'a>(lines: &mut Vec<Line<'a>>, item: &'a PanelItem, selected: bool, width: usize) {
     match item {
         PanelItem::Action { label, .. } => push_action(lines, label, selected, width),
         PanelItem::Command { name, desc, .. } => push_command(lines, name, desc, selected, width),
-        PanelItem::Toggle { label, value, .. } => {
-            push_toggle(lines, label, *value, selected, width)
-        }
-        PanelItem::Select { label, current, .. } => {
-            push_select(lines, label, current, selected, width)
-        }
+        PanelItem::Toggle { label, value, .. } => push_toggle(lines, label, *value, selected, width),
+        PanelItem::Select { label, current, .. } => push_select(lines, label, current, selected, width),
         _ => {}
     }
 }
@@ -205,13 +175,7 @@ fn split_label(label: &str) -> (&str, &str) {
     }
 }
 
-fn push_command<'a>(
-    lines: &mut Vec<Line<'a>>,
-    name: &'a str,
-    desc: &'a str,
-    selected: bool,
-    width: usize,
-) {
+fn push_command<'a>(lines: &mut Vec<Line<'a>>, name: &'a str, desc: &'a str, selected: bool, width: usize) {
     push_named_item(lines, name, desc, selected, width);
 }
 
@@ -220,13 +184,7 @@ fn push_action<'a>(lines: &mut Vec<Line<'a>>, label: &'a str, selected: bool, wi
     push_named_item(lines, name, desc, selected, width);
 }
 
-fn push_named_item<'a>(
-    lines: &mut Vec<Line<'a>>,
-    name: &'a str,
-    desc: &'a str,
-    selected: bool,
-    width: usize,
-) {
+fn push_named_item<'a>(lines: &mut Vec<Line<'a>>, name: &'a str, desc: &'a str, selected: bool, width: usize) {
     let prefix = selection_glyph(selected);
     if selected {
         let bg = color_accent();
@@ -245,10 +203,7 @@ fn push_named_item<'a>(
     } else {
         let name_st = style_popup_unselected().add_modifier(Modifier::BOLD);
         let desc_st = Style::default().fg(color_dim());
-        let mut spans = vec![
-            Span::styled(prefix, style_popup_unselected()),
-            Span::styled(name, name_st),
-        ];
+        let mut spans = vec![Span::styled(prefix, style_popup_unselected()), Span::styled(name, name_st)];
         if !desc.is_empty() {
             spans.push(Span::styled(format!(" {}", desc), desc_st));
         }
@@ -276,13 +231,7 @@ fn push_toggle(lines: &mut Vec<Line>, label: &str, value: bool, selected: bool, 
     }
 }
 
-fn push_select<'a>(
-    lines: &mut Vec<Line<'a>>,
-    label: &'a str,
-    current: &'a str,
-    selected: bool,
-    width: usize,
-) {
+fn push_select<'a>(lines: &mut Vec<Line<'a>>, label: &'a str, current: &'a str, selected: bool, width: usize) {
     let prefix = selection_glyph(selected);
     if selected {
         let bg = color_accent();

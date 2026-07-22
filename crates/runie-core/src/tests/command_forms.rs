@@ -230,9 +230,7 @@ fn no_command_with_required_args_shows_message() {
 // Helper: extract handler from CommandDef
 // ============================================================================
 
-fn get_handler(
-    def: &crate::commands::CommandDef,
-) -> Option<fn(&mut AppState, &str) -> CommandResult> {
+fn get_handler(def: &crate::commands::CommandDef) -> Option<fn(&mut AppState, &str) -> CommandResult> {
     use crate::commands::CommandFlow;
     match def.flow() {
         CommandFlow::Handler(f) => Some(f),

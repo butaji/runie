@@ -61,8 +61,8 @@ fn has_recursive_rm(text: &str) -> bool {
     let lower = text.to_lowercase();
     // Block rm -rf on system/home directories or glob patterns.
     let blocked = [
-        " /", "/boot", "/dev", "/etc", "/home", "/lib", "/opt", "/proc", "/root", "/run", "/sbin",
-        "/sys", "/tmp", "/usr", "/var", " ~", "/~", "\"~", "'~", // home directory variants
+        " /", "/boot", "/dev", "/etc", "/home", "/lib", "/opt", "/proc", "/root", "/run", "/sbin", "/sys", "/tmp",
+        "/usr", "/var", " ~", "/~", "\"~", "'~", // home directory variants
     ];
     blocked.iter().any(|p| lower.contains(p)) || lower.contains("$home") || lower.contains("${home")
 }
@@ -93,9 +93,8 @@ fn has_block_device_write(text: &str) -> bool {
 /// Check whether `text` escalates permissions.
 fn has_permission_escalation(text: &str) -> bool {
     // chmod 777/000 on root paths
-    let chmod_on_root = text.contains("chmod")
-        && text.contains(" 777 ")
-        && (text.contains(" /") || text.contains("/root"));
+    let chmod_on_root =
+        text.contains("chmod") && text.contains(" 777 ") && (text.contains(" /") || text.contains("/root"));
     // sudo without path restriction
     let sudo_nopasswd = text.contains("sudo") && text.contains("-n ") && text.contains("rm");
     chmod_on_root || sudo_nopasswd
@@ -105,8 +104,7 @@ fn has_permission_escalation(text: &str) -> bool {
 fn has_fork_bomb(text: &str) -> bool {
     // :(){:|:&};: and variants
     let t = text.replace(' ', "");
-    (t.contains(":(){:|:") && (t.contains("};") || t.contains("};&")))
-        || t.contains(":(){ :|: & };:")
+    (t.contains(":(){:|:") && (t.contains("};") || t.contains("};&"))) || t.contains(":(){ :|: & };:")
 }
 
 /// Check whether `text` contains partition/filesystem tools.
@@ -129,30 +127,12 @@ fn has_find_exec_rm(text: &str) -> bool {
 }
 
 const DENY_LIST_CHECKS: &[DenyEntry] = &[
-    DenyEntry {
-        pattern: has_recursive_rm,
-        reason: "recursive rm on system/home directory is blocked",
-    },
-    DenyEntry {
-        pattern: has_block_device_write,
-        reason: "writing to block devices is blocked",
-    },
-    DenyEntry {
-        pattern: has_permission_escalation,
-        reason: "permission escalation pattern is blocked",
-    },
-    DenyEntry {
-        pattern: has_fork_bomb,
-        reason: "fork bombs are blocked",
-    },
-    DenyEntry {
-        pattern: has_partition_tools,
-        reason: "partition/filesystem tools are blocked",
-    },
-    DenyEntry {
-        pattern: has_find_exec_rm,
-        reason: "find with rm exec is blocked",
-    },
+    DenyEntry { pattern: has_recursive_rm, reason: "recursive rm on system/home directory is blocked" },
+    DenyEntry { pattern: has_block_device_write, reason: "writing to block devices is blocked" },
+    DenyEntry { pattern: has_permission_escalation, reason: "permission escalation pattern is blocked" },
+    DenyEntry { pattern: has_fork_bomb, reason: "fork bombs are blocked" },
+    DenyEntry { pattern: has_partition_tools, reason: "partition/filesystem tools are blocked" },
+    DenyEntry { pattern: has_find_exec_rm, reason: "find with rm exec is blocked" },
 ];
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -186,6 +166,7 @@ mod tests {
     // ── Evasive variants ───────────────────────────────────────────────────
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn blocks_evasive_variants() {
         // BASH-253: Interpreter bypass — bash -c embeds the destructive pattern
         // in a string argument. The joined tokens preserve the pattern, so
@@ -201,10 +182,7 @@ mod tests {
         assert!(check_bash_safety("python -c 'import os; os.system(\"rm -rf /\")'").is_some());
         assert!(check_bash_safety("ruby -e 'system(\"rm -rf /\")'").is_some());
         assert!(check_bash_safety("perl -e 'system(\"rm -rf /\")'").is_some());
-        assert!(
-            check_bash_safety("node -e \"require('child_process').execSync('rm -rf /')\"")
-                .is_some()
-        );
+        assert!(check_bash_safety("node -e \"require('child_process').execSync('rm -rf /')\"").is_some());
         // Shred / find exec rm
         assert!(check_bash_safety("shred -n1 /dev/sda").is_some());
         assert!(check_bash_safety("find / -name '*.tmp' -exec rm {} \\;").is_some());
@@ -216,6 +194,7 @@ mod tests {
     // ── Safe commands ──────────────────────────────────────────────────────
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn allows_safe_commands() {
         assert!(check_bash_safety("echo hello").is_none());
         assert!(check_bash_safety("ls -la").is_none());

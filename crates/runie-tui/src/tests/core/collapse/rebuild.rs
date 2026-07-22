@@ -12,18 +12,14 @@ fn toggle_expand_affects_all_items() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "older thought".into(),
-        }],
+        parts: vec![Part::Text { content: "older thought".into() }],
         timestamp: 0.0,
         id: "old".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
         timestamp: 1.0,
         id: "new".into(),
         ..Default::default()
@@ -40,9 +36,7 @@ fn expand_thought_post_rebuilds_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Deep reasoning\nline two".into(),
-        }],
+        parts: vec![Part::Text { content: "Deep reasoning\nline two".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -74,9 +68,7 @@ fn collapse_thought_post_restores_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Deep reasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "Deep reasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -108,9 +100,7 @@ fn global_toggle_leaves_thought_summarized() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Deep reasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "Deep reasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -135,9 +125,7 @@ fn toggle_tool_rebuilds_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -162,9 +150,7 @@ fn toggle_tool_twice_restores_cache() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -184,9 +170,7 @@ fn toggle_tool_twice_restores_cache() {
 fn thought_captures_assistant_reasoning() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list the files.\n".to_string(),
@@ -201,9 +185,7 @@ fn thought_captures_assistant_reasoning() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
 
     let thought = state
         .session
@@ -226,9 +208,7 @@ fn thought_captures_assistant_reasoning() {
 fn assistant_preserved_when_no_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Here is the answer.".to_string(),
@@ -236,9 +216,7 @@ fn assistant_preserved_when_no_tools() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
 
     let assistants: Vec<_> = state
         .session
@@ -293,9 +271,7 @@ fn collapsed_thought_hides_reasoning() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.2s\nI'll list the files.".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.2s\nI'll list the files.".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -319,9 +295,7 @@ fn expanded_thought_shows_reasoning() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.2s\nI'll list the files.".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.2s\nI'll list the files.".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -348,9 +322,7 @@ fn collapsed_tool_hides_output() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s\nfile1\nfile2".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s\nfile1\nfile2".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -376,9 +348,7 @@ fn expanded_tool_shows_output() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s\nfile1\nfile2".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s\nfile1\nfile2".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()

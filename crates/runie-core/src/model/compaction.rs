@@ -10,10 +10,8 @@ use crate::model::Role;
 
 // Lazy-initialized regex patterns (compiled once at first use).
 // The patterns are hardcoded and syntactically valid — unwrap documents this invariant.
-static FENCE_PAT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap());
-static DETAILS_PAT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)<details>\s*\n?([\s\S]*?)</details>").unwrap());
+static FENCE_PAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(```[a-zA-Z0-9_-]*)\n([\s\S]*?)\n```").unwrap());
+static DETAILS_PAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)<details>\s*\n?([\s\S]*?)</details>").unwrap());
 
 impl AppState {
     /// Total tokens across all messages.
@@ -43,8 +41,7 @@ impl AppState {
             }
             for part in msg.parts.iter_mut() {
                 if let Part::Text { content } = part {
-                    let (truncated_count, did_truncate) =
-                        truncate_structural(content, TRUNCATE_KEEP_LINES);
+                    let (truncated_count, did_truncate) = truncate_structural(content, TRUNCATE_KEEP_LINES);
                     if did_truncate {
                         total_truncated += truncated_count;
                         truncated_parts += 1;
@@ -160,11 +157,7 @@ impl AppState {
             role: Role::System,
             timestamp: now(),
             id: "compaction".to_owned(),
-            metadata: MessageMetadata {
-                compacted: true,
-                origin: MessageOrigin::Compaction,
-                ..Default::default()
-            },
+            metadata: MessageMetadata { compacted: true, origin: MessageOrigin::Compaction, ..Default::default() },
             parts: vec![runie_core::message::Part::Text { content: summary }],
             ..Default::default()
         });
@@ -319,8 +312,7 @@ mod tests {
 
     #[test]
     fn truncate_structural_details_long() {
-        let mut s =
-            "<details>\nline1\nline2\nline3\nline4\nline5\nline6\nline7\n</details>".to_string();
+        let mut s = "<details>\nline1\nline2\nline3\nline4\nline5\nline6\nline7\n</details>".to_string();
         let (removed, modified) = truncate_structural(&mut s, 1);
         assert!(modified);
         assert!(removed > 0);
@@ -333,9 +325,7 @@ mod tests {
     #[test]
     fn truncate_structural_code_block_actually_truncates() {
         // Verify that a code block long enough IS truncated.
-        let mut s =
-            "```\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\n```"
-                .to_string();
+        let mut s = "```\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\n```".to_string();
         let (removed, modified) = truncate_structural(&mut s, 2);
         assert!(modified);
         assert!(removed > 0);

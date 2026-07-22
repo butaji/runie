@@ -17,10 +17,7 @@ pub enum PermissionMsg {
         reply: Option<oneshot::Sender<PermissionAction>>,
     },
     /// User resolves a pending permission request.
-    ResolvePermission {
-        request_id: String,
-        action: PermissionAction,
-    },
+    ResolvePermission { request_id: String, action: PermissionAction },
     /// Cancel a pending request (e.g., when starting new session).
     CancelPermission { request_id: String },
     /// Dismiss the permission request UI without resolving.
@@ -36,15 +33,9 @@ pub enum PermissionMsg {
     /// Mark the current project as untrusted.
     UntrustProject,
     /// Add or update a permission rule.
-    UpsertRule {
-        tool: String,
-        action: PermissionAction,
-    },
+    UpsertRule { tool: String, action: PermissionAction },
     /// Add or update a permission rule with Session scope (lives for current session only).
-    UpsertSessionRule {
-        tool: String,
-        action: PermissionAction,
-    },
+    UpsertSessionRule { tool: String, action: PermissionAction },
     /// Set the session permission mode (e.g. auto-approve). Session-scoped only.
     SetMode { mode: PermissionMode },
     /// Query the current permission mode.
@@ -54,26 +45,18 @@ pub enum PermissionMsg {
 impl Clone for PermissionMsg {
     fn clone(&self) -> Self {
         match self {
-            PermissionMsg::AskPermission {
-                request_id,
-                tool,
-                input,
-                reply: _,
-            } => PermissionMsg::AskPermission {
+            PermissionMsg::AskPermission { request_id, tool, input, reply: _ } => PermissionMsg::AskPermission {
                 request_id: request_id.clone(),
                 tool: tool.clone(),
                 input: input.clone(),
                 reply: None, // Fire-and-forget; the original sender is not usable after move.
             },
             PermissionMsg::ResolvePermission { request_id, action } => {
-                PermissionMsg::ResolvePermission {
-                    request_id: request_id.clone(),
-                    action: *action,
-                }
+                PermissionMsg::ResolvePermission { request_id: request_id.clone(), action: *action }
             }
-            PermissionMsg::CancelPermission { request_id } => PermissionMsg::CancelPermission {
-                request_id: request_id.clone(),
-            },
+            PermissionMsg::CancelPermission { request_id } => {
+                PermissionMsg::CancelPermission { request_id: request_id.clone() }
+            }
             PermissionMsg::DismissRequest => PermissionMsg::DismissRequest,
             PermissionMsg::GetCurrentRequest(_reply) => {
                 PermissionMsg::GetCurrentRequest(None) // Fire-and-forget.
@@ -82,14 +65,12 @@ impl Clone for PermissionMsg {
             PermissionMsg::GetRules(_reply) => PermissionMsg::GetRules(None), // Fire-and-forget.
             PermissionMsg::TrustProject => PermissionMsg::TrustProject,
             PermissionMsg::UntrustProject => PermissionMsg::UntrustProject,
-            PermissionMsg::UpsertRule { tool, action } => PermissionMsg::UpsertRule {
-                tool: tool.clone(),
-                action: *action,
-            },
-            PermissionMsg::UpsertSessionRule { tool, action } => PermissionMsg::UpsertSessionRule {
-                tool: tool.clone(),
-                action: *action,
-            },
+            PermissionMsg::UpsertRule { tool, action } => {
+                PermissionMsg::UpsertRule { tool: tool.clone(), action: *action }
+            }
+            PermissionMsg::UpsertSessionRule { tool, action } => {
+                PermissionMsg::UpsertSessionRule { tool: tool.clone(), action: *action }
+            }
             PermissionMsg::SetMode { mode } => PermissionMsg::SetMode { mode: *mode },
             PermissionMsg::GetMode(_reply) => PermissionMsg::GetMode(None), // Fire-and-forget.
         }

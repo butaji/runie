@@ -64,17 +64,9 @@ fn build_json_messages(req: &JsonRequest) -> Vec<ChatMessage> {
         .map(|t| t.join(", "))
         .unwrap_or_else(|| default_tools_list_for_model(req.model.as_deref()));
 
-    let system = runie_core::prompts::build_system_prompt(
-        runie_core::prompts::DEFAULT_PROMPT,
-        &tools_list,
-        false,
-        "",
-    );
+    let system = runie_core::prompts::build_system_prompt(runie_core::prompts::DEFAULT_PROMPT, &tools_list, false, "");
 
-    vec![
-        ChatMessage::system(system),
-        ChatMessage::user(req.prompt.clone()),
-    ]
+    vec![ChatMessage::system(system), ChatMessage::user(req.prompt.clone())]
 }
 
 /// Return the default tool list only when the requested model is known to
@@ -140,12 +132,7 @@ mod tests {
 
     #[test]
     fn json_mode_outputs_valid_json() {
-        let resp = JsonResponse {
-            content: "hi".into(),
-            tool_calls: vec![],
-            tokens_used: 1,
-            duration_ms: 100,
-        };
+        let resp = JsonResponse { content: "hi".into(), tool_calls: vec![], tokens_used: 1, duration_ms: 100 };
         let s = serde_json::to_string(&resp).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&s).unwrap();
         assert_eq!(parsed["content"], "hi");
@@ -170,12 +157,7 @@ mod tests {
 
     #[test]
     fn json_mode_includes_default_tools_for_tool_model() {
-        let req = JsonRequest {
-            prompt: "hello".into(),
-            model: Some("gpt-4o".into()),
-            provider: None,
-            tools: None,
-        };
+        let req = JsonRequest { prompt: "hello".into(), model: Some("gpt-4o".into()), provider: None, tools: None };
         let msgs = build_json_messages(&req);
         let system = &msgs[0];
         assert!(

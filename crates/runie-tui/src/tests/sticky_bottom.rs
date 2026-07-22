@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use super::*;
 use runie_core::Event;
 
@@ -64,9 +65,7 @@ fn latest_thought_visible_when_at_bottom() {
     add_messages(&mut state, 30);
     state.view.scroll = 0;
 
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.\n".to_string(),
@@ -81,9 +80,7 @@ fn latest_thought_visible_when_at_bottom() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     // Thoughts are summarized by default; expand the thought post (the
     // latest, bottom post) so its reasoning participates in sticky-bottom.
     let thought_idx = state.snapshot().posts.len() - 1;
@@ -128,9 +125,7 @@ fn latest_tool_visible_when_at_bottom() {
 fn sticky_bottom_clips_top_not_bottom() {
     let mut state = AppState::default();
     add_messages(&mut state, 5);
-    state.update(Event::Thinking {
-        id: "req.99".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.99".to_string() });
     state.update(Event::Response { id: "req.99".to_string(), content: "Reasoning line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\n".to_string(), role: String::new(), timestamp: 0.0, provider: String::new() });
     state.update(Event::Response {
         id: "req.99".to_string(),
@@ -139,9 +134,7 @@ fn sticky_bottom_clips_top_not_bottom() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.99".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.99".to_string() });
     // Thoughts are summarized by default; expand the thought post (the
     // latest, bottom post) so its body overflows the viewport.
     let thought_idx = state.snapshot().posts.len() - 1;
@@ -203,9 +196,7 @@ fn scroll_down_to_bottom_shows_latest() {
 fn mixed_content_latest_visible() {
     let mut state = AppState::default();
     add_messages(&mut state, 20);
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "◆ Thought 1.0s\nReasoning line 1\nReasoning line 2".to_string(),
@@ -213,14 +204,8 @@ fn mixed_content_latest_visible() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ToolStart {
-        id: "req.0".to_string(),
-        name: "ls".to_string(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
+    state.update(Event::ToolStart { id: "req.0".to_string(), name: "ls".to_string(), input: serde_json::Value::Null });
     state.update(Event::ToolEnd {
         id: "".to_string(),
         input: None,

@@ -21,10 +21,7 @@ use crate::ui_actor_agent_handles::AgentHandleBox;
 struct MockAgentHandle;
 
 impl LeaderAgentHandle for MockAgentHandle {
-    fn run(
-        &self,
-        _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, _cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(async {})
     }
     fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
@@ -33,8 +30,7 @@ impl LeaderAgentHandle for MockAgentHandle {
 }
 
 fn make_ui_actor() -> UiActor {
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(MockAgentHandle));
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(MockAgentHandle));
     let state = AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
     let bus = runie_core::bus::EventBus::<Event>::new(16);
@@ -58,9 +54,7 @@ fn make_ui_actor() -> UiActor {
 fn push_message(ui: &mut UiActor, role: Role, content: &str, timestamp: f64, id: &str) {
     ui.state.session.messages.push(ChatMessage {
         role,
-        parts: vec![Part::Text {
-            content: content.into(),
-        }],
+        parts: vec![Part::Text { content: content.into() }],
         timestamp,
         id: id.to_string(),
         ..Default::default()

@@ -3,9 +3,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate::tool::constants::FIND_DEFINITIONS_DEFAULT_LIMIT;
-use crate::tool::search::fff_helpers::{
-    build_error_json, build_error_json_with_instant, with_search_index,
-};
+use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_search_index};
 use crate::tool::{ToolContext, ToolOutput, ToolStatus};
 use regex::Regex;
 use runie_core::actors::fff_indexer::SearchIndex;
@@ -86,63 +84,45 @@ static PATTERNS: &[PatternEntry] = &[
 // Single-keyword patterns use \b to avoid matching keywords inside other language constructs
 // (e.g., "type MyStruct struct {" should match Go struct, not Rust enum).
 static RUST_STRUCT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bstruct\s+")
-        .unwrap()
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bstruct\s+").unwrap()
 });
 static RUST_FN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?async\s+fn\b|^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?fn\b").unwrap()
 });
 static RUST_ENUM: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\benum\s+")
-        .unwrap()
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\benum\s+").unwrap()
 });
 static RUST_TRAIT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\btrait\s+")
-        .unwrap()
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\btrait\s+").unwrap()
 });
 static RUST_IMPL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl\s+")
-        .unwrap()
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl\s+").unwrap()
 });
 static IMPL_GENERIC: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl<[^>]+>\s+",
-    )
-    .unwrap()
+    Regex::new(r"^\s*(?:(?:pub(?:\s*\(\s*crate\s*\)|\s*\(\s*super\s*\))?|crate)\s+)?\bimpl<[^>]+>\s+").unwrap()
 });
 static PY_CLASS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\bclass\s").unwrap());
 // Python `def`: matches the original starts_with("def ") / "pub def " / "async def " behavior.
-static PY_DEF: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:pub\s+)?(?:async\s+)?def\s").unwrap());
-static TS_CLASS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\s*(?:export\s+)?(?:abstract\s+)?(?:pub\s+)?\bclass\s").unwrap()
-});
-static TS_INTERFACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?\binterface\s").unwrap());
+static PY_DEF: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*(?:pub\s+)?(?:async\s+)?def\s").unwrap());
+static TS_CLASS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?(?:abstract\s+)?(?:pub\s+)?\bclass\s").unwrap());
+static TS_INTERFACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?\binterface\s").unwrap());
 // TS_TYPE: requires "=" or "<" after the identifier to distinguish from Go's
 // "type X struct {" pattern. Matches: "type Foo =", "type Foo<", "type Foo<T> =".
-static TS_TYPE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?type\s+\w+.*(?:=|<)").unwrap());
+static TS_TYPE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*(?:export\s+)?type\s+\w+.*(?:=|<)").unwrap());
 static TS_ENUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\benum\s").unwrap());
 
-static GO_STRUCT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s+struct\s*\{").unwrap());
-static GO_FUNC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*func\s+(?:\([^)]+\)\s*)?").unwrap());
-static GO_INTERFACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s+interface\s*\{").unwrap());
+static GO_STRUCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s+struct\s*\{").unwrap());
+static GO_FUNC: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*func\s+(?:\([^)]+\)\s*)?").unwrap());
+static GO_INTERFACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s+interface\s*\{").unwrap());
 static GO_TYPE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*type\s+\w+\s*=").unwrap());
-static RUBY_DEF: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\bdef\s+(?:self\.)?").unwrap());
+static RUBY_DEF: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\bdef\s+(?:self\.)?").unwrap());
 static RUBY_CLASS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\bclass\s").unwrap());
 static JAVA_CLASS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?(?:abstract\s+|final\s+)?class\s+").unwrap());
-static JAVA_INTERFACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?interface\s+").unwrap());
-static JAVA_ENUM: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?enum\s+").unwrap());
-static C_STRUCT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:typedef\s+)?struct\s+").unwrap());
+static JAVA_INTERFACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?interface\s+").unwrap());
+static JAVA_ENUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*(?:public\s+)?enum\s+").unwrap());
+static C_STRUCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*(?:typedef\s+)?struct\s+").unwrap());
 static C_ENUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*enum\s+").unwrap());
 static C_TYPEDEF: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*typedef\s+").unwrap());
 static SH_FUNC: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\w+\s*\(\)\s*\{").unwrap());
@@ -153,10 +133,7 @@ fn detect_kind(line: &str) -> &'static str {
     // Special-case `impl<` generics: strip the generic portion before matching.
     if let Some(pos) = t.find('<') {
         let stripped = &t[..pos];
-        if RUST_IMPL.is_match(stripped)
-            || stripped.starts_with("impl ")
-            || stripped.starts_with("pub impl ")
-        {
+        if RUST_IMPL.is_match(stripped) || stripped.starts_with("impl ") || stripped.starts_with("pub impl ") {
             return "impl";
         }
     }
@@ -185,10 +162,12 @@ impl ToolDef for FindDefinitionsTool {
     type Input = FindDefinitionsInput;
 
     const NAME: &'static str = "find_definitions";
-    const DESCRIPTION: &'static str = "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase.";
+    const DESCRIPTION: &'static str =
+        "Find symbol definitions (struct, fn, class, def, impl, enum, trait, etc.) in the codebase.";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 
+    #[allow(clippy::too_many_lines)]
     async fn execute(input: Self::Input, _ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
         let state = match FffSearchState::get() {
@@ -268,7 +247,9 @@ fn search_definitions(
             line: m.line_number,
             col: m.col,
             kind: detect_kind(&m.line_content).to_owned(),
-            content: m.line_content,
+            // Cap line length like `search` does: a single minified line
+            // can be megabytes and stalls providers when sent back.
+            content: runie_core::tool::truncate_output(&m.line_content, 500, 1),
         })
         .take(limit)
         .collect();
@@ -289,12 +270,7 @@ fn is_definition_line(line: &str) -> bool {
     detect_kind(line) != "definition"
 }
 
-fn build_definitions_output(
-    symbol: &str,
-    defs: Vec<DefResult>,
-    indexed: bool,
-    start: Instant,
-) -> ToolOutput {
+fn build_definitions_output(symbol: &str, defs: Vec<DefResult>, indexed: bool, start: Instant) -> ToolOutput {
     ToolOutput {
         tool_name: "find_definitions".to_owned(),
         tool_args: serde_json::json!({ "symbol": symbol }),
@@ -485,12 +461,8 @@ mod tests {
 
     #[tokio::test]
     async fn find_definitions_uninitialized_returns_error() {
-        let input = FindDefinitionsInput {
-            symbol: "Foo_xyz_nonexistent".to_string(),
-            glob: None,
-            path: None,
-            limit: None,
-        };
+        let input =
+            FindDefinitionsInput { symbol: "Foo_xyz_nonexistent".to_string(), glob: None, path: None, limit: None };
         let ctx = ToolContext::default();
         let output = FindDefinitionsTool::execute(input, &ctx).await;
         assert!(

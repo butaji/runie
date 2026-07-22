@@ -9,32 +9,13 @@ use crate::permissions::PermissionAction;
 #[test]
 fn fact_events_return_none() {
     let facts: Vec<Event> = vec![
-        Event::ConfigLoaded {
-            config: Box::new(crate::config::Config::default()),
-        },
-        Event::TrustLoaded {
-            decisions: Default::default(),
-        },
-        Event::SessionSaved {
-            name: "test".into(),
-        },
-        Event::BashOutput {
-            command: "ls".into(),
-            output: "/".into(),
-        },
+        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
+        Event::TrustLoaded { decisions: Default::default() },
+        Event::SessionSaved { name: "test".into() },
+        Event::BashOutput { command: "ls".into(), output: "/".into() },
         Event::Thinking { id: "t1".into() },
-        Event::ToolEnd {
-            id: "t1".into(),
-            duration_secs: 0.5,
-            output: "ok".into(),
-
-            input: None,
-        },
-        Event::ValidationFailed {
-            provider: "openai".into(),
-            key: "sk-xxx".into(),
-            error: "invalid".into(),
-        },
+        Event::ToolEnd { id: "t1".into(), duration_secs: 0.5, output: "ok".into(), input: None },
+        Event::ValidationFailed { provider: "openai".into(), key: "sk-xxx".into(), error: "invalid".into() },
     ];
     for e in facts {
         assert!(
@@ -47,9 +28,7 @@ fn fact_events_return_none() {
 
 #[test]
 fn intent_events_return_some() {
-    let e = Event::SwitchTheme {
-        name: "dark".into(),
-    };
+    let e = Event::SwitchTheme { name: "dark".into() };
     let i = e.into_intent().expect("SwitchTheme must convert to intent");
     assert!(matches!(i, Event::SwitchTheme { .. }));
 
@@ -68,10 +47,7 @@ fn intent_events_return_some() {
         "SetThinkingLevel must convert to Intent"
     );
 
-    let e = Event::PermissionResponse {
-        request_id: "r1".into(),
-        action: PermissionAction::Allow,
-    };
+    let e = Event::PermissionResponse { request_id: "r1".into(), action: PermissionAction::Allow };
     assert!(
         e.into_intent().is_some(),
         "PermissionResponse must convert to Intent"
@@ -80,9 +56,7 @@ fn intent_events_return_some() {
 
 #[test]
 fn switch_theme_is_intent_not_fact() {
-    let e = Event::SwitchTheme {
-        name: "dracula".into(),
-    };
+    let e = Event::SwitchTheme { name: "dracula".into() };
     assert_eq!(e.kind(), crate::event::EventKind::Intent);
     assert!(e.into_intent().is_some());
 }
@@ -103,21 +77,14 @@ fn agent_event_has_agent_category() {
 
 #[test]
 fn command_event_has_command_category() {
-    let e = Event::RunCompactCommand {
-        keep: "last".into(),
-        focus: "focused".into(),
-    };
+    let e = Event::RunCompactCommand { keep: "last".into(), focus: "focused".into() };
     assert_eq!(e.category(), crate::event::EventCategory::Command);
 }
 
 #[test]
 fn lifecycle_events_classified_as_fact() {
     // Turn lifecycle events should be Facts, not Intents
-    let e = Event::TurnStarted {
-        id: "t1".into(),
-        request_id: "r1".into(),
-        content: "hi".into(),
-    };
+    let e = Event::TurnStarted { id: "t1".into(), request_id: "r1".into(), content: "hi".into() };
     assert_eq!(e.kind(), crate::event::EventKind::Fact);
     assert!(e.into_intent().is_none());
 }
@@ -162,19 +129,11 @@ fn check_agent_category() {
 fn check_command_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::RunCompactCommand {
-            keep: "x".into(),
-            focus: "y".into()
-        }
-        .kind(),
+        Event::RunCompactCommand { keep: "x".into(), focus: "y".into() }.kind(),
         EventKind::Intent,
     );
     assert_eq!(
-        Event::RunCompactCommand {
-            keep: "x".into(),
-            focus: "y".into()
-        }
-        .category(),
+        Event::RunCompactCommand { keep: "x".into(), focus: "y".into() }.category(),
         crate::event::EventCategory::Command,
     );
 }
@@ -197,21 +156,11 @@ fn check_dialog_category() {
 fn check_edit_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::PendingEdit {
-            path: "x".into(),
-            original: "y".into(),
-            proposed: "z".into()
-        }
-        .kind(),
+        Event::PendingEdit { path: "x".into(), original: "y".into(), proposed: "z".into() }.kind(),
         EventKind::Intent,
     );
     assert_eq!(
-        Event::PendingEdit {
-            path: "x".into(),
-            original: "y".into(),
-            proposed: "z".into()
-        }
-        .category(),
+        Event::PendingEdit { path: "x".into(), original: "y".into(), proposed: "z".into() }.category(),
         crate::event::EventCategory::Edit,
     );
 }
@@ -219,19 +168,11 @@ fn check_edit_category() {
 fn check_io_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::BashOutput {
-            command: "x".into(),
-            output: "y".into()
-        }
-        .kind(),
+        Event::BashOutput { command: "x".into(), output: "y".into() }.kind(),
         EventKind::Fact,
     );
     assert_eq!(
-        Event::BashOutput {
-            command: "x".into(),
-            output: "y".into()
-        }
-        .category(),
+        Event::BashOutput { command: "x".into(), output: "y".into() }.category(),
         crate::event::EventCategory::IO,
     );
 }
@@ -295,19 +236,11 @@ fn check_other_category() {
 fn check_permission_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::PermissionResponse {
-            request_id: "x".into(),
-            action: PermissionAction::Allow
-        }
-        .kind(),
+        Event::PermissionResponse { request_id: "x".into(), action: PermissionAction::Allow }.kind(),
         EventKind::Intent,
     );
     assert_eq!(
-        Event::PermissionResponse {
-            request_id: "x".into(),
-            action: PermissionAction::Allow
-        }
-        .category(),
+        Event::PermissionResponse { request_id: "x".into(), action: PermissionAction::Allow }.category(),
         crate::event::EventCategory::Permission,
     );
 }
@@ -315,17 +248,11 @@ fn check_permission_category() {
 fn check_persistence_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::InputChanged {
-            state: Box::new(crate::model::InputState::default())
-        }
-        .kind(),
+        Event::InputChanged { state: Box::new(crate::model::InputState::default()) }.kind(),
         EventKind::Fact,
     );
     assert_eq!(
-        Event::InputChanged {
-            state: Box::new(crate::model::InputState::default())
-        }
-        .category(),
+        Event::InputChanged { state: Box::new(crate::model::InputState::default()) }.category(),
         crate::event::EventCategory::Persistence,
     );
 }
@@ -333,17 +260,11 @@ fn check_persistence_category() {
 fn check_plan_mode_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::PlanModeEnabled {
-            content: "x".into()
-        }
-        .kind(),
+        Event::PlanModeEnabled { content: "x".into() }.kind(),
         EventKind::Intent
     );
     assert_eq!(
-        Event::PlanModeEnabled {
-            content: "x".into()
-        }
-        .category(),
+        Event::PlanModeEnabled { content: "x".into() }.category(),
         crate::event::EventCategory::PlanMode,
     );
 }
@@ -369,34 +290,24 @@ fn check_session_category() {
 fn check_system_category() {
     use crate::event::EventKind;
     assert_eq!(
-        Event::ConfigLoaded {
-            config: Box::new(crate::config::Config::default())
-        }
-        .kind(),
+        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) }.kind(),
         EventKind::Fact,
     );
     assert_eq!(
-        Event::ConfigLoaded {
-            config: Box::new(crate::config::Config::default())
-        }
-        .category(),
+        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) }.category(),
         crate::event::EventCategory::System,
     );
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn is_fact_variant_matches_kind() {
     use crate::event::is_fact_variant;
     use crate::event::EventKind;
     // Every fact event should return true from is_fact_variant
     let fact_samples: Vec<Event> = vec![
         Event::Thinking { id: "x".into() },
-        Event::ToolEnd {
-            id: "x".into(),
-            duration_secs: 1.0,
-            output: "y".into(),
-            input: None,
-        },
+        Event::ToolEnd { id: "x".into(), duration_secs: 1.0, output: "y".into(), input: None },
         Event::Response {
             id: "x".into(),
             content: "y".into(),
@@ -404,13 +315,8 @@ fn is_fact_variant_matches_kind() {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::BashOutput {
-            command: "x".into(),
-            output: "y".into(),
-        },
-        Event::ConfigLoaded {
-            config: Box::new(crate::config::Config::default()),
-        },
+        Event::BashOutput { command: "x".into(), output: "y".into() },
+        Event::ConfigLoaded { config: Box::new(crate::config::Config::default()) },
     ];
     for e in &fact_samples {
         assert!(is_fact_variant(e), "{:?} must be fact", e);
@@ -422,10 +328,7 @@ fn is_fact_variant_matches_kind() {
         Event::Quit,
         Event::Submit,
         Event::Input('x'),
-        Event::RunCompactCommand {
-            keep: "x".into(),
-            focus: "y".into(),
-        },
+        Event::RunCompactCommand { keep: "x".into(), focus: "y".into() },
     ];
     for e in &non_fact_samples {
         assert!(!is_fact_variant(e), "{:?} must not be fact", e);
@@ -457,23 +360,16 @@ mod variants_tests;
 fn permission_intent_events_classify_correctly() {
     use crate::event::{EventCategory, EventKind};
 
-    let allow = Event::PermissionAllow {
-        request_id: "r1".into(),
-    };
+    let allow = Event::PermissionAllow { request_id: "r1".into() };
     assert_eq!(allow.kind(), EventKind::Intent);
     assert_eq!(allow.category(), EventCategory::Permission);
     assert!(allow.clone().into_intent().is_some());
 
-    let deny = Event::PermissionDeny {
-        request_id: "r1".into(),
-    };
+    let deny = Event::PermissionDeny { request_id: "r1".into() };
     assert_eq!(deny.kind(), EventKind::Intent);
     assert_eq!(deny.category(), EventCategory::Permission);
 
-    let always = Event::PermissionAlwaysAllow {
-        request_id: "r1".into(),
-        tool: "bash".into(),
-    };
+    let always = Event::PermissionAlwaysAllow { request_id: "r1".into(), tool: "bash".into() };
     assert_eq!(always.kind(), EventKind::Intent);
     assert_eq!(always.category(), EventCategory::Permission);
     assert!(always.clone().into_intent().is_some());

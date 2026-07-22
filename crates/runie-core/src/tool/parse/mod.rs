@@ -4,9 +4,8 @@
 //! for MiniMax XML parsing and a single-pass JSON detector.
 
 pub use super::shim::{
-    assign_tool_call_ids, has_tool_calls, is_known_tool, is_tool_call_value,
-    is_tool_call_value_check, parse_inline_json_tools, parse_minimax_tool_calls, parse_tool_calls,
-    parse_tool_calls_fallible, OPEN_M2, OPEN_M3,
+    assign_tool_call_ids, has_tool_calls, is_known_tool, is_tool_call_value, is_tool_call_value_check,
+    parse_inline_json_tools, parse_minimax_tool_calls, parse_tool_calls, parse_tool_calls_fallible, OPEN_M2, OPEN_M3,
 };
 pub use super::types::{ParsedToolCall, ToolParseError};
 
@@ -102,16 +101,8 @@ mod tests {
     #[test]
     fn assign_ids() {
         let mut tools = vec![
-            ParsedToolCall {
-                name: "bash".into(),
-                args: serde_json::json!({}),
-                id: None,
-            },
-            ParsedToolCall {
-                name: "read".into(),
-                args: serde_json::json!({}),
-                id: Some("call_0".into()),
-            },
+            ParsedToolCall { name: "bash".into(), args: serde_json::json!({}), id: None },
+            ParsedToolCall { name: "read".into(), args: serde_json::json!({}), id: Some("call_0".into()) },
         ];
         assign_tool_call_ids(&mut tools);
         assert_eq!(tools[0].id, Some("call_0".into()));

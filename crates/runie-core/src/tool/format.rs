@@ -44,12 +44,7 @@ pub async fn which_tool_async(name: &str) -> Option<String> {
 ///
 /// The `is_warning` flag reports success semantics while still surfacing the
 /// message, which is useful for recoverable failures such as "no matches found".
-pub fn tool_error(
-    tool_name: &str,
-    msg: &str,
-    start: std::time::Instant,
-    is_warning: bool,
-) -> ToolOutput {
+pub fn tool_error(tool_name: &str, msg: &str, start: std::time::Instant, is_warning: bool) -> ToolOutput {
     ToolOutput {
         tool_name: tool_name.to_owned(),
         tool_args: serde_json::Value::Null,
@@ -234,12 +229,7 @@ fn truncate_to_lines(s: &str, max_lines: usize) -> String {
 /// - Running: `"⠋ Run ls . 1.8s"`
 /// - Done with bytes: `"✓ Run ls . 5.7s ⇣21.2k"`
 /// - Done with error: `"✗ Run bash 0.5s [✗]"`
-pub fn tool_status_line(
-    label: &str,
-    duration_secs: f64,
-    bytes: Option<u64>,
-    status: &str,
-) -> String {
+pub fn tool_status_line(label: &str, duration_secs: f64, bytes: Option<u64>, status: &str) -> String {
     let dur = format_duration(duration_secs);
     let bytes_str = bytes
         .map(|b| format!(" ⇣{}", format_bytes(b)))

@@ -13,8 +13,9 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
             // A thought post renders as a full marker or (by default) a
             // one-line summary — both are the same post for ordering.
-            runie_core::view::Element::ThoughtMarker { .. }
-            | runie_core::view::Element::ThoughtSummary { .. } => "Thought".to_string(),
+            runie_core::view::Element::ThoughtMarker { .. } | runie_core::view::Element::ThoughtSummary { .. } => {
+                "Thought".to_string()
+            }
             runie_core::view::Element::AnthropicThinking { .. } => "Thinking".to_string(),
             runie_core::view::Element::ToolRunning { .. } => "ToolRun".to_string(),
             runie_core::view::Element::ToolDone { .. } => "ToolDone".to_string(),
@@ -44,9 +45,7 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
 fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
     ChatMessage {
         role,
-        parts: vec![Part::Text {
-            content: content.into(),
-        }],
+        parts: vec![Part::Text { content: content.into() }],
         timestamp,
         id: id.into(),
         ..Default::default()
@@ -58,27 +57,21 @@ fn elements_ordered_by_timestamp_strict() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ ls 0.5s\noutput".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ ls 0.5s\noutput".into() }],
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "world".into(),
-        }],
+        parts: vec![Part::Text { content: "world".into() }],
         timestamp: 3.0,
         id: "req.0".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s\nhello".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nhello".into() }],
         timestamp: 4.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
@@ -98,18 +91,14 @@ fn newer_assistant_appears_after_older_thought() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s".into() }],
         timestamp: 1.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "updated later".into(),
-        }],
+        parts: vec![Part::Text { content: "updated later".into() }],
         timestamp: 5.0,
         id: "req.0".into(),
         ..Default::default()
@@ -129,18 +118,14 @@ fn thinking_indicator_is_always_last_when_newest() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 1.0,
         id: "u0".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "hi".into(),
-        }],
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 2.0,
         id: "req.0".into(),
         ..Default::default()
@@ -186,18 +171,14 @@ fn tool_end_bump_moves_tool_after_later_messages() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "Running ls...".into(),
-        }],
+        parts: vec![Part::Text { content: "Running ls...".into() }],
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "next".into(),
-        }],
+        parts: vec![Part::Text { content: "next".into() }],
         timestamp: 3.0,
         id: "u1".into(),
         ..Default::default()
@@ -259,18 +240,14 @@ fn thought_before_agent_when_older_timestamp() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s\nreasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s\nreasoning".into() }],
         timestamp: 2.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "response".into(),
-        }],
+        parts: vec![Part::Text { content: "response".into() }],
         timestamp: 3.0,
         id: "req.0".into(),
         ..Default::default()
@@ -290,18 +267,14 @@ fn agent_before_thought_when_agent_newer() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "◆ Thought 1.0s".into(),
-        }],
+        parts: vec![Part::Text { content: "◆ Thought 1.0s".into() }],
         timestamp: 5.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
-        parts: vec![Part::Text {
-            content: "response".into(),
-        }],
+        parts: vec![Part::Text { content: "response".into() }],
         timestamp: 3.0,
         id: "req.0".into(),
         ..Default::default()
@@ -327,17 +300,8 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "file1".into(),
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "file1".into() });
     // This next response should append to the SAME assistant message, not create a new one
     state.update(Event::Response {
         id: "req.0".into(),

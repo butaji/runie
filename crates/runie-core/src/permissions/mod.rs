@@ -31,6 +31,7 @@ pub mod format;
 pub mod gate;
 #[cfg(feature = "git")]
 pub mod git_tracked_write;
+pub mod read_only_tool_approve;
 pub mod rules;
 mod sink;
 
@@ -42,6 +43,7 @@ pub use file_access_ask::FileAccessAsk;
 pub use gate::PermissionGate;
 #[cfg(feature = "git")]
 pub use git_tracked_write::GitTrackedWriteApprove;
+pub use read_only_tool_approve::ReadOnlyToolApprove;
 pub use rules::{PermissionRule, PermissionScope, PermissionSet, PermissionSetPolicy};
 pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprovalSink};
 
@@ -90,16 +92,7 @@ impl From<PermissionResult> for PermissionAction {
 
 /// Global permission mode.
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Default,
-    Serialize,
-    Deserialize,
-    schemars::JsonSchema,
-    strum::EnumString,
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema, strum::EnumString,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionMode {
@@ -196,7 +189,7 @@ impl PermissionManager {
     fn build_policies(mode: PermissionMode) -> Vec<Box<dyn PermissionPolicy>> {
         // Sensitive path blocklist is always first: ask for sensitive paths before any mode policy.
         let blocklist: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(SensitivePathBlocklist::ask())];
-        let mut chain: Vec<Box<dyn PermissionPolicy>> = match mode {
+        let chain: Vec<Box<dyn PermissionPolicy>> = match mode {
             PermissionMode::BypassPermissions => {
                 // Auto-approve everything.
                 vec![Box::new(BypassAllPolicy)]
@@ -242,6 +235,20 @@ impl PermissionManager {
         self.policies.push(policy);
     }
 
+    /// Returns a manager that bypasses all permissions (always allows everything except
+    /// sensitive paths that are always checked first via SensitivePathBlocklist).
+    pub fn bypass_all() -> Self {
+        let blocklist: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(SensitivePathBlocklist::ask())];
+        let chain: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(BypassAllPolicy)];
+        Self { policies: blocklist.into_iter().chain(chain).collect() }
+    }
+
+    /// Consume the manager and return its policy chain.
+    #[allow(clippy::vec_box)]
+    pub fn into_policies(self) -> Vec<Box<dyn PermissionPolicy>> {
+        self.policies
+    }
+
     /// Evaluate the context against the policy chain.
     pub async fn evaluate(&self, ctx: &PermissionContext<'_>) -> PermissionResult {
         for policy in &self.policies {
@@ -259,7 +266,7 @@ impl PermissionManager {
 // These policies are used by PermissionManager when built with a PermissionMode.
 
 /// Auto-approve all operations (BypassPermissions mode).
-struct BypassAllPolicy;
+pub(crate) struct BypassAllPolicy;
 
 #[async_trait]
 impl PermissionPolicy for BypassAllPolicy {

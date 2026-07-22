@@ -6,8 +6,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    add_minimax_provider, assert_step, assert_transient_contains, clean_config, current_panel,
-    fetch_models, save_login_flow, select_minimax_model, select_provider, submit_key,
+    add_minimax_provider, assert_step, assert_transient_contains, clean_config, current_panel, fetch_models,
+    save_login_flow, select_minimax_model, select_provider, submit_key,
 };
 
 // ---------------------------------------------------------------------------

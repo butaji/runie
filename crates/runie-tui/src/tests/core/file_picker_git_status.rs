@@ -2,6 +2,7 @@
 //!
 //! Verifies that file picker panel items include git status labels
 //! (e.g. "modified lib.rs") when git status is present.
+#![allow(clippy::too_many_lines)]
 
 use super::*;
 use ratatui::{backend::TestBackend, Terminal};
@@ -23,12 +24,7 @@ fn render_to_buffer(state: &mut AppState) -> ratatui::buffer::Buffer {
 
 /// Find a line in the buffer that contains the given text substring.
 fn find_line(buf: &ratatui::buffer::Buffer, text: &str) -> Option<String> {
-    let rect = ratatui::layout::Rect {
-        x: 0,
-        y: 0,
-        width: 80,
-        height: 24,
-    };
+    let rect = ratatui::layout::Rect { x: 0, y: 0, width: 80, height: 24 };
     for y in rect.y..rect.y + rect.height {
         let line: String = (rect.x..rect.x + rect.width)
             .map(|x| buf[(x, y)].symbol())
@@ -44,17 +40,12 @@ fn find_line(buf: &ratatui::buffer::Buffer, text: &str) -> Option<String> {
 
 /// Open a panel dialog on top of AppState.
 fn open_panel(state: &mut AppState, panel: Panel) {
-    state.open_dialog = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: PanelStack::new(panel),
-    });
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 }
 
 /// Build a file picker panel using the same label logic as `build_file_picker_panel`.
 /// This mirrors the label construction so we can test that git status is included.
-fn build_file_picker_items(
-    entries: &[runie_core::model::FffFileEntry],
-) -> Vec<(String, ItemAction)> {
+fn build_file_picker_items(entries: &[runie_core::model::FffFileEntry]) -> Vec<(String, ItemAction)> {
     entries
         .iter()
         .map(|entry| {
@@ -254,12 +245,7 @@ fn fff_picker_disambiguates_duplicate_basenames_in_render() {
 /// Helper: extract all non-empty lines from the buffer for debugging.
 fn extract_panel_content(buf: &ratatui::buffer::Buffer) -> Vec<String> {
     let mut lines = Vec::new();
-    let rect = ratatui::layout::Rect {
-        x: 0,
-        y: 0,
-        width: 80,
-        height: 24,
-    };
+    let rect = ratatui::layout::Rect { x: 0, y: 0, width: 80, height: 24 };
     for y in rect.y..rect.y + rect.height {
         let line: String = (rect.x..rect.x + rect.width)
             .map(|x| buf[(x, y)].symbol())

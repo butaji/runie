@@ -20,9 +20,7 @@ fn transient_message_sets_content_and_expiry() {
 #[test]
 fn transient_error_sets_content_without_expiry() {
     let mut state = fresh_state();
-    state.update(crate::Event::TransientError {
-        content: "err".to_string(),
-    });
+    state.update(crate::Event::TransientError { content: "err".to_string() });
     assert_eq!(state.transient_message, Some("err".to_string()));
     assert!(
         state.transient_until.is_none(),
@@ -33,9 +31,7 @@ fn transient_error_sets_content_without_expiry() {
 #[test]
 fn clear_transient_unsets_message() {
     let mut state = fresh_state();
-    state.update(crate::Event::TransientError {
-        content: "err".to_string(),
-    });
+    state.update(crate::Event::TransientError { content: "err".to_string() });
     state.update(crate::Event::ClearTransient);
     assert!(state.transient_message.is_none());
     assert!(state.transient_until.is_none());
@@ -87,9 +83,7 @@ fn transient_success_has_expiry() {
 #[test]
 fn transient_error_has_no_expiry() {
     let mut state = fresh_state();
-    state.update(crate::Event::TransientError {
-        content: "error".to_string(),
-    });
+    state.update(crate::Event::TransientError { content: "error".to_string() });
     assert!(
         state.transient_until.is_none(),
         "Error message should NOT have expiry"
@@ -99,9 +93,7 @@ fn transient_error_has_no_expiry() {
 #[test]
 fn transient_system_message_has_expiry() {
     let mut state = fresh_state();
-    state.update(crate::Event::SystemMessage {
-        content: "info".to_string(),
-    });
+    state.update(crate::Event::SystemMessage { content: "info".to_string() });
     assert!(
         state.transient_until.is_some(),
         "System message should have expiry"

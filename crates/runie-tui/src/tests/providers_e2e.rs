@@ -33,9 +33,7 @@ fn disconnect_active_provider_switches_to_fallback() {
     state.config.current_model = "gpt-4o".into();
 
     state.update(Event::ProvidersDialog);
-    state.update(Event::ProvidersDisconnect {
-        provider: "openai".into(),
-    });
+    state.update(Event::ProvidersDisconnect { provider: "openai".into() });
 
     assert!(
         state.has_models(),
@@ -59,6 +57,7 @@ fn disconnect_active_provider_switches_to_fallback() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
     clean_config();
     configure_test_providers(&[("openai".into(), vec!["gpt-4o".into()])]);
@@ -70,13 +69,8 @@ fn add_provider_via_providers_dialog_keeps_active_model_unchanged() {
 
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),

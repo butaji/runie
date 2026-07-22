@@ -45,9 +45,7 @@ pub(crate) fn element_text(elem: &Element) -> Option<String> {
                 Some(format!("{} {}", name, args))
             }
         }
-        Element::ToolDone {
-            name, args, output, ..
-        } => {
+        Element::ToolDone { name, args, output, .. } => {
             let head = if args.is_empty() {
                 name.clone()
             } else {
@@ -72,37 +70,19 @@ pub(crate) fn element_text(elem: &Element) -> Option<String> {
 pub(crate) fn element_metadata(elem: &Element) -> Option<String> {
     match elem {
         Element::UserMessage { timestamp, .. } => Some(format!("user {:.0}s", timestamp)),
-        Element::AgentMessage {
-            provider,
-            timestamp,
-            ..
-        } => Some(format!("{} {:.0}s", provider, timestamp)),
+        Element::AgentMessage { provider, timestamp, .. } => Some(format!("{} {:.0}s", provider, timestamp)),
         Element::Thinking { timestamp, .. } => Some(format!("thinking {:.0}s", timestamp)),
-        Element::ThoughtSummary {
-            duration_secs,
-            timestamp,
-            ..
-        } => Some(thought_metadata(*timestamp, *duration_secs)),
-        Element::ToolRunning {
-            name, timestamp, ..
-        } => Some(format!("{} running at {:.0}s", name, timestamp)),
-        Element::ToolDone {
-            name,
-            duration_secs,
-            timestamp,
-            ..
-        } => Some(tool_done_metadata(name, *duration_secs, *timestamp)),
-        Element::ToolSummary {
-            name,
-            duration_secs,
-            timestamp,
-            ..
-        } => Some(tool_summary_metadata(name, *duration_secs, *timestamp)),
-        Element::TurnComplete {
-            duration_secs,
-            timestamp,
-            ..
-        } => Some(format!("turn {:.1}s at {:.0}s", duration_secs, timestamp)),
+        Element::ThoughtSummary { duration_secs, timestamp, .. } => Some(thought_metadata(*timestamp, *duration_secs)),
+        Element::ToolRunning { name, timestamp, .. } => Some(format!("{} running at {:.0}s", name, timestamp)),
+        Element::ToolDone { name, duration_secs, timestamp, .. } => {
+            Some(tool_done_metadata(name, *duration_secs, *timestamp))
+        }
+        Element::ToolSummary { name, duration_secs, timestamp, .. } => {
+            Some(tool_summary_metadata(name, *duration_secs, *timestamp))
+        }
+        Element::TurnComplete { duration_secs, timestamp, .. } => {
+            Some(format!("turn {:.1}s at {:.0}s", duration_secs, timestamp))
+        }
         _ => None,
     }
 }

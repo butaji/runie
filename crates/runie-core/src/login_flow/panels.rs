@@ -13,9 +13,7 @@ pub fn build_provider_picker() -> Panel {
 
     for provider in known_providers() {
         let label = provider.display_name.to_owned();
-        let evt = crate::Event::SelectProvider {
-            provider: provider.key.to_owned(),
-        };
+        let evt = crate::Event::SelectProvider { provider: provider.key.to_owned() };
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
 
@@ -58,9 +56,7 @@ pub fn build_model_selector(state: &LoginFlowState) -> Panel {
 
     for model in &state.available_models {
         let enabled = state.selected_models.contains(model);
-        let evt = crate::Event::ToggleModel {
-            model: model.clone(),
-        };
+        let evt = crate::Event::ToggleModel { model: model.clone() };
         panel = panel.toggle(model, enabled, ItemAction::Emit(evt));
     }
 

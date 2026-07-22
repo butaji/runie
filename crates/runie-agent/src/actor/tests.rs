@@ -1,4 +1,5 @@
 //! Tests for AgentActor.
+#![allow(clippy::too_many_lines)]
 
 use std::pin::Pin;
 use std::sync::Arc;
@@ -30,13 +31,8 @@ impl Provider for SimpleTextProvider {
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         let stream = futures::stream::iter([
             Ok(ProviderEvent::TextDelta("hello".into())),
-            Ok(ProviderEvent::Usage {
-                input_tokens: 1,
-                output_tokens: 1,
-            }),
-            Ok(ProviderEvent::Finish {
-                reason: StopReason::Stop,
-            }),
+            Ok(ProviderEvent::Usage { input_tokens: 1, output_tokens: 1 }),
+            Ok(ProviderEvent::Finish { reason: StopReason::Stop }),
         ]);
         Box::pin(stream)
     }
@@ -46,12 +42,7 @@ struct TestFactory;
 
 #[async_trait::async_trait]
 impl ProviderFactory for TestFactory {
-    fn build(
-        &self,
-        _provider: &str,
-        _model: &str,
-        _config: &Config,
-    ) -> Result<BuiltProvider, ProviderError> {
+    fn build(&self, _provider: &str, _model: &str, _config: &Config) -> Result<BuiltProvider, ProviderError> {
         Ok(BuiltProvider::new(
             Box::new(SimpleTextProvider),
             "test".into(),
@@ -75,13 +66,10 @@ async fn agent_actor_accepts_second_turn_after_first_completes() {
     let (config_handle, _, _) = runie_core::actors::RactorConfigActor::spawn_default(bus.clone())
         .await
         .unwrap();
-    let (provider_handle, _, _) = runie_core::actors::provider::RactorProviderActor::spawn(
-        bus.clone(),
-        config_handle,
-        Arc::new(TestFactory),
-    )
-    .await
-    .unwrap();
+    let (provider_handle, _, _) =
+        runie_core::actors::provider::RactorProviderActor::spawn(bus.clone(), config_handle, Arc::new(TestFactory))
+            .await
+            .unwrap();
 
     let (permission_handle, _, _) = RactorPermissionActor::spawn_for_testing(bus.clone())
         .await

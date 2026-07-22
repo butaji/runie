@@ -8,6 +8,7 @@ mod tests {
     /// HistoryPrev/HistoryNext navigate the input history when the input box is
     /// active, but they are consumed by vim nav mode to move the feed selection.
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn history_events_navigate_feed_in_vim_nav() {
         let mut state = AppState::default();
 

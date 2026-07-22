@@ -33,8 +33,7 @@ impl ToolDef for FindTool {
     type Input = FindInput;
 
     const NAME: &'static str = "find";
-    const DESCRIPTION: &'static str =
-        "Find files matching a pattern using native Rust directory traversal.";
+    const DESCRIPTION: &'static str = "Find files matching a pattern using native Rust directory traversal.";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 
@@ -67,6 +66,7 @@ fn determine_find_status(content: &str) -> ToolStatus {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_find(pattern: &str, path: &Path, limit: usize) -> String {
     // Build walker for directory traversal
     let walker = WalkBuilder::new(path)
@@ -123,7 +123,11 @@ fn run_find(pattern: &str, path: &Path, limit: usize) -> String {
     } else {
         // Sort results for consistent output
         results.sort();
-        results.join("\n")
+        let mut out = results.join("\n");
+        if results.len() >= limit {
+            out.push_str(&format!("\n... (showing first {limit} matches; narrow the pattern)"));
+        }
+        out
     }
 }
 
@@ -211,7 +215,11 @@ fn run_find_simple(pattern: &str, path: &Path, limit: usize) -> String {
         "No files found matching pattern".to_string()
     } else {
         results.sort();
-        results.join("\n")
+        let mut out = results.join("\n");
+        if results.len() >= limit {
+            out.push_str(&format!("\n... (showing first {limit} matches; narrow the pattern)"));
+        }
+        out
     }
 }
 
@@ -289,7 +297,12 @@ mod tests {
 
         let result = run_find("*.txt", temp_dir.path(), 3);
         let lines: Vec<&str> = result.lines().collect();
-        assert_eq!(lines.len(), 3, "Got: {}", result);
+        assert_eq!(lines.len(), 4, "3 matches + truncation note, got: {}", result);
+        assert!(
+            lines[3].contains("showing first 3 matches"),
+            "truncation note missing: {}",
+            result
+        );
     }
 
     #[tokio::test]

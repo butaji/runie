@@ -24,8 +24,13 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
     state.view.scroll = 0;
 
     let region = crate::tests::core::visible_helper::compute_viewport(state, height);
-    assert!(region.elements.iter().any(|e| matches!(e, runie_core::view::Element::UserMessage { content, .. } if content == "list files")),
-        "User message must be visible after submit");
+    assert!(
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, runie_core::view::Element::UserMessage { content, .. } if content == "list files")),
+        "User message must be visible after submit"
+    );
 }
 
 fn verify_thought_visible(state: &mut AppState, height: usize) {
@@ -46,29 +51,19 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
     assert!(
         region.elements.iter().any(|e| matches!(
             e,
-            runie_core::view::Element::ThoughtMarker { .. }
-                | runie_core::view::Element::ThoughtSummary { .. }
+            runie_core::view::Element::ThoughtMarker { .. } | runie_core::view::Element::ThoughtSummary { .. }
         )),
         "Thought must be visible"
     );
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
     let output = (1..=20)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -98,9 +93,10 @@ fn verify_final_done_visible(state: &mut AppState, height: usize) {
 
     let region = crate::tests::core::visible_helper::compute_viewport(state, height);
     assert!(
-        region.elements.iter().any(
-            |e| matches!(e, runie_core::view::Element::AgentMessage { content, .. } if content == "Done!")
-        ),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, runie_core::view::Element::AgentMessage { content, .. } if content == "Done!")),
         "Final 'Done!' must be visible at bottom"
     );
 }
@@ -157,9 +153,7 @@ fn viewport_never_empty_when_content_exists() {
     for i in 0..10 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg{}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -185,9 +179,7 @@ fn scroll_zero_always_shows_latest() {
     for i in 0..3 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg{}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -199,9 +191,10 @@ fn scroll_zero_always_shows_latest() {
 
     let region = crate::tests::core::visible_helper::compute_viewport(&mut state, height);
     // Latest message (msg2) should be visible
-    let has_latest = region.elements.iter().any(
-        |e| matches!(e, runie_core::view::Element::UserMessage { content, .. } if content == "msg2"),
-    );
+    let has_latest = region
+        .elements
+        .iter()
+        .any(|e| matches!(e, runie_core::view::Element::UserMessage { content, .. } if content == "msg2"));
     assert!(has_latest, "Latest message must be visible when scroll=0");
 }
 
@@ -210,21 +203,12 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
     let output = (1..=50)
         .map(|i| format!("file{}.txt", i))
         .collect::<Vec<_>>()
         .join("\n");
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output,
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output });
     state.ensure_fresh();
     state.view.scroll = 0;
 

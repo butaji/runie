@@ -187,8 +187,8 @@ impl InputState {
             let dstart = (chip.start as isize + shift) as usize;
             let dend = (chip.end as isize + shift) as usize;
             if self.cursor_pos >= chip.end {
-                display_cursor = (display_cursor as isize - (chip.end - chip.start) as isize
-                    + label.len() as isize) as usize;
+                display_cursor =
+                    (display_cursor as isize - (chip.end - chip.start) as isize + label.len() as isize) as usize;
             } else if self.cursor_pos > chip.start {
                 // Cursor inside a chip: clamp to just after the label.
                 display_cursor = dstart + label.len();

@@ -131,11 +131,7 @@ fn register_diff_styles(theme: &mut opaline::Theme) {
 }
 
 /// Blend two opaline colors at the given opacity (0.0–1.0).
-fn blend_opaline(
-    bg: opaline::OpalineColor,
-    fg: opaline::OpalineColor,
-    opacity: f32,
-) -> opaline::OpalineColor {
+fn blend_opaline(bg: opaline::OpalineColor, fg: opaline::OpalineColor, opacity: f32) -> opaline::OpalineColor {
     bg.lerp(fg, opacity)
 }
 

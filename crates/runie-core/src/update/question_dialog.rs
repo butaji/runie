@@ -40,13 +40,13 @@ fn build_question_panel(
     current_index: usize,
     request_id: &str,
 ) -> Panel {
-    let mut panel = Panel::new("question", &format!(" {} ", progress))
+    let mut panel = Panel::new("question", format!(" {} ", progress))
         .form()
         .non_closable()
         .header(question_text);
 
     // Map options: 1→_1, 2→_2, 3→_3, S→_S
-    for (i, opt) in questions[current_index].options.iter().enumerate() {
+    for opt in questions[current_index].options.iter() {
         let shortcut = match opt.id.as_str() {
             "_1" => "1",
             "_2" => "2",
@@ -58,20 +58,19 @@ fn build_question_panel(
 
         panel = panel.item(
             label,
-            ItemAction::Emit(Event::QuestionAnswer {
-                request_id: request_id.to_string(),
-                option_id: opt.id.clone(),
-            }),
+            ItemAction::Emit(Event::QuestionAnswer { request_id: request_id.to_string(), option_id: opt.id.clone() }),
         );
     }
 
     // Add skip hint and submit (only shown when all questions are done)
-    if questions[current_index].options.iter().any(|o| o.id == "_S") {
+    if questions[current_index]
+        .options
+        .iter()
+        .any(|o| o.id == "_S")
+    {
         panel = panel.item(
             "  Press S to skip",
-            ItemAction::Emit(Event::QuestionSkip {
-                request_id: request_id.to_string(),
-            }),
+            ItemAction::Emit(Event::QuestionSkip { request_id: request_id.to_string() }),
         );
     }
 
@@ -86,9 +85,7 @@ fn build_complete_dialog(request_id: &str) -> PanelStack {
         .header("All questions answered!")
         .item(
             "Enter Submit answers",
-            ItemAction::Emit(Event::QuestionSubmit {
-                request_id: request_id.to_string(),
-            }),
+            ItemAction::Emit(Event::QuestionSubmit { request_id: request_id.to_string() }),
         );
 
     PanelStack::new(panel)
@@ -96,8 +93,5 @@ fn build_complete_dialog(request_id: &str) -> PanelStack {
 
 /// Build and wrap a hosted question dialog as an open `DialogState`.
 pub fn open_question_dialog(state: &QuestionState) -> DialogState {
-    DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: build_question_dialog(state),
-    }
+    DialogState::Active { kind: DialogKind::Generic, panels: build_question_dialog(state) }
 }

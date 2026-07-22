@@ -94,12 +94,8 @@ pub enum ThinkingLevel {
 impl ThinkingLevel {
     /// All thinking levels in cycle order (low → high).
     /// Single source of truth for UI selectors.
-    pub const ALL: &'static [ThinkingLevel] = &[
-        ThinkingLevel::Off,
-        ThinkingLevel::Low,
-        ThinkingLevel::Medium,
-        ThinkingLevel::High,
-    ];
+    pub const ALL: &'static [ThinkingLevel] =
+        &[ThinkingLevel::Off, ThinkingLevel::Low, ThinkingLevel::Medium, ThinkingLevel::High];
 
     /// All thinking levels in cycle order. See [`ALL`](Self::ALL).
     pub fn all() -> &'static [ThinkingLevel] {
@@ -198,12 +194,7 @@ pub struct QuestionState {
 impl QuestionState {
     /// Create a new question state.
     pub fn new(request_id: String, questions: Vec<Question>) -> Self {
-        Self {
-            request_id,
-            questions,
-            current_index: 0,
-            answers: Vec::new(),
-        }
+        Self { request_id, questions, current_index: 0, answers: Vec::new() }
     }
 
     /// Get the current question, if any.
@@ -214,10 +205,8 @@ impl QuestionState {
     /// Record an answer for the current question and advance.
     pub fn answer(&mut self, option_id: String) {
         if self.current_index < self.questions.len() {
-            self.answers.push(Answer {
-                question_id: self.questions[self.current_index].id.clone(),
-                option_id,
-            });
+            self.answers
+                .push(Answer { question_id: self.questions[self.current_index].id.clone(), option_id });
             self.current_index += 1;
         }
     }

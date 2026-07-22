@@ -15,10 +15,7 @@ pub struct LoopDetectorConfig {
 
 impl Default for LoopDetectorConfig {
     fn default() -> Self {
-        Self {
-            max_repeats: 3,
-            enabled: true,
-        }
+        Self { max_repeats: 3, enabled: true }
     }
 }
 
@@ -34,10 +31,7 @@ pub struct LoopDetectorSkill {
 
 impl LoopDetectorSkill {
     pub fn new(config: LoopDetectorConfig) -> Self {
-        Self {
-            config,
-            recent_calls: parking_lot::Mutex::new(Vec::new()),
-        }
+        Self { config, recent_calls: parking_lot::Mutex::new(Vec::new()) }
     }
 
     /// Record a tool call outcome.

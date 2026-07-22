@@ -25,9 +25,7 @@ fn imported_session() -> crate::session::Session {
             role: Role::Assistant,
             timestamp: 0.0,
             id: "resp.0".into(),
-            parts: vec![Part::Text {
-                content: "imported msg".into(),
-            }],
+            parts: vec![Part::Text { content: "imported msg".into() }],
             ..Default::default()
         }],
         provider: "openai".into(),
@@ -113,9 +111,7 @@ fn export_creates_file() {
         role: Role::User,
         timestamp: 0.0,
         id: "req.0".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     let tmp = std::env::temp_dir().join(format!("runie_export_{}.json", std::process::id()));

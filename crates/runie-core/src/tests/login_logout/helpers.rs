@@ -8,16 +8,11 @@ pub fn start_login_flow(state: &mut AppState) {
 }
 
 pub fn select_provider(state: &mut AppState, provider: &str) {
-    state.update(crate::Event::SelectProvider {
-        provider: provider.into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: provider.into() });
 }
 
 pub fn submit_key(state: &mut AppState, key: &str) {
-    state.update(crate::Event::SubmitKey {
-        provider: String::new(),
-        key: key.into(),
-    });
+    state.update(crate::Event::SubmitKey { provider: String::new(), key: key.into() });
 }
 
 pub fn fetch_models(state: &mut AppState, models: &[String]) {
@@ -33,11 +28,7 @@ pub fn fetch_models(state: &mut AppState, models: &[String]) {
 }
 
 pub fn fetch_models_for(state: &mut AppState, provider: &str, key: &str, models: &[String]) {
-    state.update(crate::Event::ModelsFetched {
-        provider: provider.into(),
-        key: key.into(),
-        models: models.to_vec(),
-    });
+    state.update(crate::Event::ModelsFetched { provider: provider.into(), key: key.into(), models: models.to_vec() });
 }
 
 pub fn save_login_flow(state: &mut AppState) {

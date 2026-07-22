@@ -1,8 +1,7 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
 use crate::{
-    agent_command_builder::agent_cmd, run_agent_turn, run_agent_turn_with_skills,
-    turn::build_initial_messages,
+    agent_command_builder::agent_cmd, run_agent_turn, run_agent_turn_with_skills, turn::build_initial_messages,
 };
 use anyhow::Result;
 use runie_core::event::Event;
@@ -451,6 +450,7 @@ async fn stream_error_emits_thought_done() {
 /// denial. The mock provider re-emits the same native bash call every round,
 /// so without the guard this would spin to `max_iterations`.
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn denied_tool_does_not_loop_in_turn() {
     use runie_core::permissions::{DenyAllSink, PermissionManager};
     use std::sync::Arc;

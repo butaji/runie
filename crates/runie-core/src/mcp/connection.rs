@@ -1,6 +1,7 @@
 //! Central MCP Connection Manager
 //!
 //! Owns MCP server lifecycles with parallel startup and clean shutdown.
+#![allow(clippy::too_many_lines)]
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -8,7 +9,7 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::{SinkExt, StreamExt};
+use futures::StreamExt;
 use rmcp::model::Tool;
 use rmcp::transport::TokioChildProcess;
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,6 @@ use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "mcp")]
 use {
-    futures::FutureExt,
     rmcp::service::{RoleClient, RxJsonRpcMessage, TxJsonRpcMessage},
     std::future::Future,
     tokio_tungstenite::{connect_async, tungstenite::Message},
@@ -48,8 +48,17 @@ pub enum WsTransportError {
 /// message serialization/deserialization automatically.
 #[cfg(feature = "mcp")]
 pub struct WsMcpTransport {
-    sink: std::sync::Arc<tokio::sync::Mutex<futures::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, Message>>>,
-    stream: futures::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+    sink: std::sync::Arc<
+        tokio::sync::Mutex<
+            futures::stream::SplitSink<
+                tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+                Message,
+            >,
+        >,
+    >,
+    stream: futures::stream::SplitStream<
+        tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+    >,
 }
 
 #[cfg(feature = "mcp")]
@@ -58,10 +67,7 @@ impl WsMcpTransport {
     pub async fn connect(url: &str) -> Result<Self, WsTransportError> {
         let (ws, _) = connect_async(url).await?;
         let (sink, stream) = ws.split();
-        Ok(Self {
-            sink: std::sync::Arc::new(tokio::sync::Mutex::new(sink)),
-            stream,
-        })
+        Ok(Self { sink: std::sync::Arc::new(tokio::sync::Mutex::new(sink)), stream })
     }
 }
 
@@ -146,12 +152,7 @@ struct ServerHandle {
 
 impl ServerHandle {
     fn new(name: String, config: McpServer, cancellation_token: CancellationToken) -> Self {
-        Self {
-            name,
-            config,
-            state: ServerState::Starting,
-            cancellation_token,
-        }
+        Self { name, config, state: ServerState::Starting, cancellation_token }
     }
 }
 
@@ -198,6 +199,8 @@ impl McpConnectionManager {
     }
 
     /// Start a single server.
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     pub async fn start_server(&self, name: String, config: McpServer) -> Result<()> {
         // Check cache first
         if let Some(cached) = self.cache.get(&name, &config).await {
@@ -278,10 +281,7 @@ impl McpConnectionManager {
                     .into_iter()
                     .map(|tool| {
                         let desc = tool.description.map(|d| d.to_string()).unwrap_or_default();
-                        McpTool {
-                            server_name: name.clone(),
-                            tool: Tool::new(tool.name, desc, tool.input_schema),
-                        }
+                        McpTool { server_name: name.clone(), tool: Tool::new(tool.name, desc, tool.input_schema) }
                     })
                     .collect();
 
@@ -344,10 +344,7 @@ impl McpConnectionManager {
                     .into_iter()
                     .map(|tool| {
                         let desc = tool.description.map(|d| d.to_string()).unwrap_or_default();
-                        McpTool {
-                            server_name: name.clone(),
-                            tool: Tool::new(tool.name, desc, tool.input_schema),
-                        }
+                        McpTool { server_name: name.clone(), tool: Tool::new(tool.name, desc, tool.input_schema) }
                     })
                     .collect();
 
@@ -405,10 +402,7 @@ impl McpConnectionManager {
                     .into_iter()
                     .map(|tool| {
                         let desc = tool.description.map(|d| d.to_string()).unwrap_or_default();
-                        McpTool {
-                            server_name: name.clone(),
-                            tool: Tool::new(tool.name, desc, tool.input_schema),
-                        }
+                        McpTool { server_name: name.clone(), tool: Tool::new(tool.name, desc, tool.input_schema) }
                     })
                     .collect();
 
@@ -489,6 +483,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn start_server_creates_handle() {
         let temp_dir = tempfile::tempdir().unwrap();
         let manager = McpConnectionManager::new(temp_dir.path().to_path_buf())
@@ -522,10 +517,7 @@ for _ in range(5):
 
         let config = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec![
-                "python3".to_string(),
-                script_path.to_string_lossy().to_string(),
-            ],
+            command: vec!["python3".to_string(), script_path.to_string_lossy().to_string()],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,
@@ -550,6 +542,7 @@ for _ in range(5):
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn stop_server_updates_state() {
         let temp_dir = tempfile::tempdir().unwrap();
         let manager = McpConnectionManager::new(temp_dir.path().to_path_buf())
@@ -583,10 +576,7 @@ for _ in range(5):
 
         let config = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec![
-                "python3".to_string(),
-                script_path.to_string_lossy().to_string(),
-            ],
+            command: vec!["python3".to_string(), script_path.to_string_lossy().to_string()],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,

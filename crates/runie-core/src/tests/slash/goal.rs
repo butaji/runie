@@ -46,9 +46,12 @@ fn goal_status_no_goal_returns_message() {
 
     // No open dialog — CommandResult::Message returned
     assert!(state.open_dialog().is_none());
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| {
-        m.role == crate::model::Role::System
-    }).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == crate::model::Role::System)
+        .collect();
     assert!(!sys_msgs.is_empty(), "should have a system message");
 }
 
@@ -65,10 +68,7 @@ fn goal_status_with_goal_opens_panel() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: _,
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "/goal status should open a panel"
     );
@@ -199,5 +199,8 @@ fn goal_empty_objective_warns() {
 
     // Should warn about empty objective
     assert!(state.open_dialog().is_none());
-    assert!(state.goal_state().is_none(), "empty goal should not be created");
+    assert!(
+        state.goal_state().is_none(),
+        "empty goal should not be created"
+    );
 }

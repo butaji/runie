@@ -11,9 +11,7 @@ use runie_testing::fresh_state;
 fn thought_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.\n".to_string(),
@@ -28,9 +26,7 @@ fn thought_created_via_pipeline_is_expanded() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     assert!(
         !state.view.all_collapsed,
         "Thoughts should be expanded by default"
@@ -62,9 +58,7 @@ fn tool_created_via_pipeline_is_expanded() {
 fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "I'll list files.".to_string(),
@@ -72,9 +66,7 @@ fn toggle_expand_collapses_all_thoughts() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
@@ -93,12 +85,7 @@ fn toggle_expand_collapses_all_tools() {
         name: "list_dir".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "file1".to_string(),
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "file1".to_string() });
 
     assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
@@ -113,9 +100,7 @@ fn thought_summarized_by_default_and_expandable() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Thinking...".into(),
-        }],
+        parts: vec![Part::Text { content: "Thinking...".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -123,11 +108,7 @@ fn thought_summarized_by_default_and_expandable() {
     // Grok parity: a thought renders as a one-line summary by default.
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
-        Element::ThoughtSummary {
-            content,
-            expandable,
-            ..
-        } => Some((content.as_str(), *expandable)),
+        Element::ThoughtSummary { content, expandable, .. } => Some((content.as_str(), *expandable)),
         _ => None,
     });
     assert_eq!(
@@ -157,9 +138,7 @@ fn toggle_expand_hides_thought() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Deep reasoning here\nline two".into(),
-        }],
+        parts: vec![Part::Text { content: "Deep reasoning here\nline two".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -173,9 +152,7 @@ fn toggle_expand_restores_thought() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Deep reasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "Deep reasoning".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -190,9 +167,7 @@ fn collapsed_thought_renders_one_line_summary() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Thought,
-        parts: vec![Part::Text {
-            content: "Deep reasoning\nline two\nline three".into(),
-        }],
+        parts: vec![Part::Text { content: "Deep reasoning\nline two\nline three".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -218,9 +193,7 @@ fn tool_collapsed_by_toggle() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -234,9 +207,7 @@ fn toggle_expand_restores_tool() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -251,9 +222,7 @@ fn collapsed_tool_renders_one_line_summary() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::Tool,
-        parts: vec![Part::Text {
-            content: "✓ list_files 0.5s".into(),
-        }],
+        parts: vec![Part::Text { content: "✓ list_files 0.5s".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()

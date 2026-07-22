@@ -1,9 +1,8 @@
 //! TUI rendering tests — visuals, margins, styling
+#![allow(clippy::too_many_lines)] // test files contain many test cases
 
 // Re-export types used by child test modules so they can `use super::*;`
-pub use super::{
-    view, AppState, ChatMessage, DialogKind, Event, Part, Role, ScopedModel, Snapshot,
-};
+pub use super::{view, AppState, ChatMessage, DialogKind, Event, Part, Role, ScopedModel, Snapshot};
 
 mod feed_style;
 mod render_at;
@@ -61,11 +60,7 @@ fn row_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
 }
 
 fn is_border_line(line: &str) -> bool {
-    line.contains('─')
-        || line.contains('┌')
-        || line.contains('└')
-        || line.contains('┐')
-        || line.contains('┘')
+    line.contains('─') || line.contains('┌') || line.contains('└') || line.contains('┐') || line.contains('┘')
 }
 
 mod flow;

@@ -40,8 +40,10 @@ impl std::fmt::Display for ModelId {
 /// Routing strategy for selecting among multiple model deployments.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Default)]
 pub enum RoutingStrategy {
     /// Round-robin or random shuffle across available deployments.
+    #[default]
     SimpleShuffle,
     /// Route to the lowest-latency deployment based on recent measurements.
     LatencyBased,
@@ -49,12 +51,6 @@ pub enum RoutingStrategy {
     CostBased,
     /// Route based on current usage/capacity load.
     UsageBased,
-}
-
-impl Default for RoutingStrategy {
-    fn default() -> Self {
-        Self::SimpleShuffle
-    }
 }
 
 /// Configuration for a single model's routing behaviour.
@@ -108,10 +104,7 @@ impl RouterStrategy {
 
     /// Iterate through context-window fallback models, returning the first
     /// one that exists in `available`.
-    pub fn select_fallback(
-        fallbacks: &[ModelId],
-        available: &[ModelId],
-    ) -> Option<ModelId> {
+    pub fn select_fallback(fallbacks: &[ModelId], available: &[ModelId]) -> Option<ModelId> {
         fallbacks.iter().find(|f| available.contains(f)).cloned()
     }
 }
@@ -194,14 +187,8 @@ mod tests {
 
     #[test]
     fn select_fallback_finds_first_match() {
-        let fallbacks = vec![
-            ModelId::new("openai/gpt-4o"),
-            ModelId::new("anthropic/claude-3-5-sonnet"),
-        ];
-        let available = vec![
-            ModelId::new("anthropic/claude-3-5-sonnet"),
-            ModelId::new("openai/gpt-4o-mini"),
-        ];
+        let fallbacks = vec![ModelId::new("openai/gpt-4o"), ModelId::new("anthropic/claude-3-5-sonnet")];
+        let available = vec![ModelId::new("anthropic/claude-3-5-sonnet"), ModelId::new("openai/gpt-4o-mini")];
         assert_eq!(
             RouterStrategy::select_fallback(&fallbacks, &available),
             Some(ModelId::new("anthropic/claude-3-5-sonnet"))

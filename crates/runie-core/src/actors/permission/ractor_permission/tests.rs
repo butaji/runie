@@ -66,7 +66,7 @@ async fn permission_actor_awaits_resolution() {
     // Use try_recv to verify the channel is NOT yet complete
     // (would return Ok(Ready) if already resolved)
     let resolved = match rx.try_recv() {
-        Ok(_) => true, // Got a value = already resolved
+        Ok(_) => true,                                                  // Got a value = already resolved
         Err(tokio::sync::oneshot::error::TryRecvError::Empty) => false, // Still pending
         Err(tokio::sync::oneshot::error::TryRecvError::Closed) => true, // Closed = also resolved
     };
@@ -201,9 +201,7 @@ async fn resolve_permission_clears_request() {
 /// consulting the approval sink (no dialog).
 #[tokio::test]
 async fn agent_gate_uses_user_trust_rules() {
-    use crate::permissions::{
-        PermissionContext, PermissionPolicy, PermissionSet, PermissionSetPolicy,
-    };
+    use crate::permissions::{PermissionContext, PermissionPolicy, PermissionSet, PermissionSetPolicy};
 
     // Simulate user configured: [[permissions]] action = "allow", tool = "bash"
     let mut rules = PermissionSet::default_rules();

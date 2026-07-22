@@ -32,10 +32,7 @@ pub fn init() {
 #[inline]
 pub fn record_model_switch(provider: &str, model: &str) {
     let name = String::from("runie.model_switch");
-    let labels = vec![
-        (String::from("provider"), provider.to_owned()),
-        (String::from("model"), model.to_owned()),
-    ];
+    let labels = vec![(String::from("provider"), provider.to_owned()), (String::from("model"), model.to_owned())];
     let counter = ::metrics::counter!(name, &labels);
     counter.increment(1);
 }
@@ -53,10 +50,7 @@ pub fn record_tool_usage(tool_name: &str) {
 #[inline]
 pub fn record_input_tokens(provider: &str, model: &str, tokens: u64) {
     let name = String::from("runie.input_tokens");
-    let labels = vec![
-        (String::from("provider"), provider.to_owned()),
-        (String::from("model"), model.to_owned()),
-    ];
+    let labels = vec![(String::from("provider"), provider.to_owned()), (String::from("model"), model.to_owned())];
     let hist = ::metrics::histogram!(name, &labels);
     hist.record(tokens as f64);
 }
@@ -65,10 +59,7 @@ pub fn record_input_tokens(provider: &str, model: &str, tokens: u64) {
 #[inline]
 pub fn record_output_tokens(provider: &str, model: &str, tokens: u64) {
     let name = String::from("runie.output_tokens");
-    let labels = vec![
-        (String::from("provider"), provider.to_owned()),
-        (String::from("model"), model.to_owned()),
-    ];
+    let labels = vec![(String::from("provider"), provider.to_owned()), (String::from("model"), model.to_owned())];
     let hist = ::metrics::histogram!(name, &labels);
     hist.record(tokens as f64);
 }

@@ -84,23 +84,13 @@ impl SharedStreamState {
     }
 
     /// Start a named tool call and notify the handler.
-    pub fn on_tool_start<H: StreamingHandler>(
-        &mut self,
-        handler: &mut H,
-        id: String,
-        name: String,
-    ) {
+    pub fn on_tool_start<H: StreamingHandler>(&mut self, handler: &mut H, id: String, name: String) {
         self.start_tool(&id, &name);
         handler.on_tool_start(id, name);
     }
 
     /// Append input to an in-progress tool call and notify the handler.
-    pub fn on_tool_input<H: StreamingHandler>(
-        &mut self,
-        handler: &mut H,
-        id: String,
-        delta: String,
-    ) {
+    pub fn on_tool_input<H: StreamingHandler>(&mut self, handler: &mut H, id: String, delta: String) {
         self.append_tool_input(&id, &delta);
         handler.on_tool_input(id, delta);
     }
@@ -142,11 +132,7 @@ impl SharedStreamState {
             }
         }
         let text = strip_tool_markers(&self.text);
-        SharedResponse {
-            text,
-            tool_calls,
-            parse_errors,
-        }
+        SharedResponse { text, tool_calls, parse_errors }
     }
 }
 
@@ -162,6 +148,7 @@ pub struct SharedResponse {
 ///
 /// The `is_cancelled()` method is polled each iteration so that
 /// cancellation (e.g. via `/new` → `AbortTurn`) exits immediately.
+#[allow(clippy::too_many_lines)]
 pub async fn stream_with_handler<H: StreamingHandler>(
     provider: &dyn Provider,
     messages: &[ChatMessage],

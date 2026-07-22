@@ -15,9 +15,7 @@ use super::store_trait::{KeyringStore, OsKeyringStore};
 /// stored token is never sliced or interpolated, so a mismatch cannot leak part
 /// of the secret into logs or crash reports.
 fn format_keyring_mismatch(stored_len: usize, expected_len: usize) -> String {
-    format!(
-        "keyring returned a different token (stored len={stored_len}, expected len={expected_len})"
-    )
+    format!("keyring returned a different token (stored len={stored_len}, expected len={expected_len})")
 }
 
 /// Set a provider token directly in the keyring (no instance state needed).
@@ -98,19 +96,13 @@ const KEYRING_PROVIDERS: &[&str] = &[
 
 /// Load all known provider tokens from the given keyring store.
 /// Exposed for tests (with `MockKeyringStore`).
-pub fn load_all_from_keyring_with(
-    store: &dyn KeyringStore,
-) -> anyhow::Result<HashMap<String, AuthToken>> {
+pub fn load_all_from_keyring_with(store: &dyn KeyringStore) -> anyhow::Result<HashMap<String, AuthToken>> {
     let mut tokens = HashMap::new();
     for provider in KEYRING_PROVIDERS {
         if let Some(token) = store.get(provider)? {
             tokens.insert(
                 provider.to_string(),
-                AuthToken {
-                    provider: provider.to_string(),
-                    token,
-                    expires_at: None,
-                },
+                AuthToken { provider: provider.to_string(), token, expires_at: None },
             );
         }
     }
@@ -147,10 +139,7 @@ pub fn migrate_legacy_auth_from(path: &std::path::Path) -> anyhow::Result<()> {
 }
 
 /// Migration with an explicit store — the seam used by tests.
-pub fn migrate_legacy_auth_with(
-    path: &std::path::Path,
-    store: &dyn KeyringStore,
-) -> anyhow::Result<()> {
+pub fn migrate_legacy_auth_with(path: &std::path::Path, store: &dyn KeyringStore) -> anyhow::Result<()> {
     if !path.exists() {
         return Ok(());
     }
@@ -330,27 +319,13 @@ mod tests {
     #[test]
     fn load_all_from_keyring_with_loads_all_supported_providers() {
         let store = MockKeyringStore::new();
-        for provider in [
-            "deepseek",
-            "fireworks",
-            "minimax",
-            "moonshotai",
-            "openrouter",
-            "together",
-        ] {
+        for provider in ["deepseek", "fireworks", "minimax", "moonshotai", "openrouter", "together"] {
             store.set(provider, "sk-FAKE").unwrap();
         }
 
         let tokens = load_all_from_keyring_with(&store).unwrap();
 
-        for provider in [
-            "deepseek",
-            "fireworks",
-            "minimax",
-            "moonshotai",
-            "openrouter",
-            "together",
-        ] {
+        for provider in ["deepseek", "fireworks", "minimax", "moonshotai", "openrouter", "together"] {
             assert!(
                 tokens.contains_key(provider),
                 "{provider} must load from the keyring"

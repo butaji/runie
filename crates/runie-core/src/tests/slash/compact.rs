@@ -10,18 +10,14 @@ fn add_messages(state: &mut crate::model::AppState, count: usize) {
     for i in 0..count {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("Question {} with lots of text to make tokens", i),
-            }],
+            parts: vec![Part::Text { content: format!("Question {} with lots of text to make tokens", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text {
-                content: format!("Answer {} with lots of text to make tokens", i),
-            }],
+            parts: vec![Part::Text { content: format!("Answer {} with lots of text to make tokens", i) }],
             timestamp: i as f64 + 0.5,
             id: format!("a{}", i),
             ..Default::default()

@@ -5,11 +5,11 @@ use std::sync::Arc;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
-use crate::hidden_params::{AsHiddenParams, HiddenParams};
 use super::metadata::MessageMetadata;
 use super::parts::Part;
 use super::role::Role;
 use super::tool_call::ToolCall;
+use crate::hidden_params::{AsHiddenParams, HiddenParams};
 
 /// Current Unix timestamp in seconds.
 pub fn now() -> f64 {
@@ -53,8 +53,8 @@ pub struct ChatMessage {
     pub parts: Vec<Part>,
     /// Hidden parameters attached to this message (not serialized).
     #[builder(default, setter(name = "set_hidden_params"))]
-    #[serde(skip)]
-    pub(crate) hidden_params: Option<Arc<HiddenParams>>,
+    #[serde(skip, default)]
+    pub hidden_params: Option<Arc<HiddenParams>>,
 }
 
 impl ChatMessage {
@@ -98,11 +98,9 @@ impl ChatMessage {
         self.parts
             .iter()
             .filter_map(|p| match p {
-                Part::ToolCall { id, name, args } => Some(ToolCall {
-                    id: id.clone(),
-                    name: name.clone(),
-                    args: args.clone(),
-                }),
+                Part::ToolCall { id, name, args } => {
+                    Some(ToolCall { id: id.clone(), name: name.clone(), args: args.clone() })
+                }
                 _ => None,
             })
             .collect()
@@ -116,9 +114,7 @@ impl ChatMessage {
         if let Some(Part::Text { content: last }) = self.parts.last_mut() {
             last.push_str(content);
         } else {
-            self.parts.push(Part::Text {
-                content: content.to_owned(),
-            });
+            self.parts.push(Part::Text { content: content.to_owned() });
         }
     }
 
@@ -168,11 +164,8 @@ impl ChatMessage {
 
     pub fn with_tool_calls(mut self, calls: Vec<ToolCall>) -> Self {
         for tc in calls {
-            self.parts.push(Part::ToolCall {
-                id: tc.id,
-                name: tc.name,
-                args: tc.args,
-            });
+            self.parts
+                .push(Part::ToolCall { id: tc.id, name: tc.name, args: tc.args });
         }
         self
     }
@@ -259,12 +252,7 @@ impl ChatMessageBuilder {
         self
     }
 
-    pub fn tool_call(
-        mut self,
-        id: impl Into<String>,
-        name: impl Into<String>,
-        args: serde_json::Value,
-    ) -> Self {
+    pub fn tool_call(mut self, id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
         let parts = self.parts.get_or_insert_with(Vec::new);
         parts.push(Part::tool_call(id, name, args));
         self

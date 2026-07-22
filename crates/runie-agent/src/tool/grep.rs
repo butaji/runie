@@ -43,8 +43,7 @@ impl ToolDef for GrepTool {
     type Input = GrepInput;
 
     const NAME: &'static str = "grep";
-    const DESCRIPTION: &'static str =
-        "Search for patterns in files using native Rust regex matching.";
+    const DESCRIPTION: &'static str = "Search for patterns in files using native Rust regex matching.";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 
@@ -64,6 +63,8 @@ impl ToolDef for GrepTool {
     }
 }
 
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 async fn run_grep_impl(
     pattern: &str,
     path: &Path,
@@ -135,6 +136,9 @@ async fn run_grep_impl(
                     if regex.is_match(&content) {
                         match_count += 1;
                         if match_count <= limit {
+                            // Cap line length: a single minified line can be
+                            // megabytes and stalls providers when sent back.
+                            let content = runie_core::tool::truncate_output(&content, 500, 1);
                             results.push(format!(
                                 "{}:{}:{}",
                                 file_path.display(),

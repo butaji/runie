@@ -16,8 +16,7 @@ use runie_core::permissions::{PermissionAction, PermissionContext};
 use runie_core::tool::annotations::get_tool_annotations;
 use runie_core::tool::ParsedToolCall;
 use runie_core::tool::{
-    is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext, ToolOutput, ToolResultCache,
-    ToolStatus,
+    is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext, ToolOutput, ToolResultCache, ToolStatus,
 };
 use tokio::time::timeout;
 
@@ -28,6 +27,8 @@ const DEFAULT_TOOL_TIMEOUT_SECS: u64 = 30;
 ///
 /// If `cache` is `Some`, read-only tool results are cached by
 /// `SHA256(tool_name + canonical_json(args))` and served from cache on repeated calls.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 pub async fn execute_tool_call(
     tool_call: &ParsedToolCall,
     ctx: &ToolContext,
@@ -50,11 +51,10 @@ pub async fn execute_tool_call(
             }
 
             let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);
-            let output =
-                match timeout(duration, dispatch_tool(tool_name, &tool_call.args, ctx)).await {
-                    Ok(o) => o,
-                    Err(_) => timeout_error(tool_name),
-                };
+            let output = match timeout(duration, dispatch_tool(tool_name, &tool_call.args, ctx)).await {
+                Ok(o) => o,
+                Err(_) => timeout_error(tool_name),
+            };
 
             // Cache successful read-only results.
             if let (Some(ref c), ToolStatus::Success) = (&cache, &output.status) {
@@ -76,9 +76,7 @@ pub async fn execute_tool_call(
 
             output
         }
-        PermissionAction::Deny | PermissionAction::Ask => {
-            blocked_output(tool_name, tool_call.args.clone())
-        }
+        PermissionAction::Deny | PermissionAction::Ask => blocked_output(tool_name, tool_call.args.clone()),
     }
 }
 
@@ -141,11 +139,7 @@ fn blocked_output(tool_name: &str, args: serde_json::Value) -> ToolOutput {
 }
 
 /// Build a `ToolOutput` from a cached entry.
-fn cached_output(
-    tool_name: &str,
-    args: serde_json::Value,
-    entry: runie_core::tool::CacheEntry,
-) -> ToolOutput {
+fn cached_output(tool_name: &str, args: serde_json::Value, entry: runie_core::tool::CacheEntry) -> ToolOutput {
     ToolOutput {
         tool_name: tool_name.to_string(),
         tool_args: args,
@@ -157,11 +151,43 @@ fn cached_output(
 }
 
 /// Build a tool-result chat message carrying the matching tool-call id.
+///
+/// The message keeps a `Part::Text` with the result content so
+/// `ChatMessage::content()` (used by the OpenAI request serializer, history
+/// rendering, and compaction) sees the output; the `Part::ToolResult` part
+/// is appended for structured consumers. Replacing the text part with only a
+/// `ToolResult` part leaves `content()` empty and the model receives a blank
+/// tool result.
+///
+/// Output is capped as a safety net for all tools: an unbounded tool result
+/// (huge `bash` output, large file read) can stall providers for minutes.
+/// Individual tools should apply their own caps with richer notes; this is
+/// the last line of defense.
 pub fn tool_result_message(tool_call: &ParsedToolCall, output: &ToolOutput) -> ChatMessage {
     let id = tool_call.id.clone().unwrap_or_default();
-    ChatMessage::tool_result(format!("{} result:\n{}", tool_call.name, output.content))
-        .with_tool_call_id(id.clone())
-        .with_parts(vec![Part::tool_result(id, &output.content)])
+    let content = cap_tool_result_content(&output.content);
+    let mut message = ChatMessage::tool_result(format!("{} result:\n{}", tool_call.name, content))
+        .with_tool_call_id(id.clone());
+    message.parts.push(Part::tool_result(id, content));
+    message
+}
+
+/// Maximum tool-result size sent back to the model (matches pi's 50KB/2000 lines).
+const MAX_TOOL_RESULT_BYTES: usize = 50_000;
+const MAX_TOOL_RESULT_LINES: usize = 2_000;
+
+/// Cap tool-result content, appending a note the model can act on.
+fn cap_tool_result_content(content: &str) -> String {
+    let total_lines = content.lines().count();
+    if content.len() <= MAX_TOOL_RESULT_BYTES && total_lines <= MAX_TOOL_RESULT_LINES {
+        return content.to_owned();
+    }
+    let truncated = runie_core::tool::truncate_output(content, MAX_TOOL_RESULT_BYTES, MAX_TOOL_RESULT_LINES);
+    format!(
+        "{truncated}\n[output truncated: {} bytes / {} lines total; narrow the query or read a smaller range]",
+        content.len(),
+        total_lines
+    )
 }
 
 /// Observer for tool execution events.
@@ -188,9 +214,7 @@ pub async fn execute_tools_with_observer(
 ) -> Vec<ToolOutput> {
     let mut outputs = Vec::with_capacity(tools.len());
     for tool_call in tools {
-        let output =
-            execute_single_with_observer(tool_call, ctx, gate, observer, hooks, cache.clone())
-                .await;
+        let output = execute_single_with_observer(tool_call, ctx, gate, observer, hooks, cache.clone()).await;
         outputs.push(output);
     }
     outputs
@@ -255,10 +279,7 @@ fn abort_output(tool_call: &ParsedToolCall, reason: &str) -> ToolOutput {
 
 /// Run before-hook for skill interception. Returns Some(output) if a skill
 /// intercepted the call (skip or abort), None to continue.
-pub(crate) fn run_skill_before_hook(
-    skills: Option<&SkillRegistry>,
-    tool_call: &ParsedToolCall,
-) -> Option<ToolOutput> {
+pub(crate) fn run_skill_before_hook(skills: Option<&SkillRegistry>, tool_call: &ParsedToolCall) -> Option<ToolOutput> {
     let skills = skills?;
     let tool_ctx = ToolCallCtx {
         tool_name: tool_call.name.clone(),
@@ -275,11 +296,7 @@ pub(crate) fn run_skill_before_hook(
 }
 
 /// Fire after-hook for skill notification.
-pub(crate) fn fire_skill_after_hook(
-    skills: Option<&SkillRegistry>,
-    tool_call: &ParsedToolCall,
-    output: &ToolOutput,
-) {
+pub(crate) fn fire_skill_after_hook(skills: Option<&SkillRegistry>, tool_call: &ParsedToolCall, output: &ToolOutput) {
     if let Some(skills) = skills {
         skills.on_tool_call(&ToolCallCtx {
             tool_name: tool_call.name.clone(),
@@ -345,6 +362,64 @@ mod tests {
             has_tool_result,
             "Expected ToolResult part with output content"
         );
+        // The OpenAI request serializer (and history rendering) use
+        // `content()`, which only reads Text parts — it must not be empty.
+        assert!(
+            msg.content().contains("[Lines 1-5]"),
+            "content() must carry the tool output, got: {:?}",
+            msg.content()
+        );
+    }
+
+    // Safety net: unbounded tool output is capped before reaching the model.
+    #[test]
+    fn tool_result_message_caps_unbounded_output() {
+        let tool_call = ParsedToolCall {
+            name: "bash".to_string(),
+            args: serde_json::json!({"command": "cat huge.log"}),
+            id: Some("call_2".to_string()),
+        };
+        let huge = "x".repeat(200_000);
+        let output = ToolOutput {
+            tool_name: "bash".to_string(),
+            tool_args: serde_json::json!({}),
+            content: huge,
+            bytes_transferred: None,
+            duration: Duration::from_millis(10),
+            status: ToolStatus::Success,
+        };
+        let msg = tool_result_message(&tool_call, &output);
+        let content = msg.content();
+        assert!(
+            content.len() < 60_000,
+            "tool result must be capped, got {} bytes",
+            content.len()
+        );
+        assert!(
+            content.contains("output truncated: 200000 bytes"),
+            "truncation note missing: {}",
+            &content[content.len().saturating_sub(200)..]
+        );
+    }
+
+    #[test]
+    fn tool_result_message_passes_small_output_through() {
+        let tool_call = ParsedToolCall {
+            name: "bash".to_string(),
+            args: serde_json::json!({}),
+            id: Some("call_3".to_string()),
+        };
+        let output = ToolOutput {
+            tool_name: "bash".to_string(),
+            tool_args: serde_json::json!({}),
+            content: "hello".to_string(),
+            bytes_transferred: None,
+            duration: Duration::from_millis(1),
+            status: ToolStatus::Success,
+        };
+        let msg = tool_result_message(&tool_call, &output);
+        assert!(msg.content().contains("hello"));
+        assert!(!msg.content().contains("output truncated"));
     }
 
     // Layer 2: with observer, ToolStart/ToolEnd are emitted.
@@ -398,9 +473,7 @@ mod tests {
         let ctx = ToolContext::default();
         let mut observer: () = ();
 
-        let outputs =
-            execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None, None)
-                .await;
+        let outputs = execute_tools_with_observer(&tools, "req.0", &ctx, &gate, &mut observer, None, None).await;
         assert_eq!(outputs.len(), 1);
         assert_eq!(outputs[0].tool_name, "list_dir");
         assert_eq!(outputs[0].status, ToolStatus::Success);

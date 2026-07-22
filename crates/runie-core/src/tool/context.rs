@@ -32,10 +32,7 @@ impl Default for ToolContext {
 /// Only well-known, non-sensitive variables needed by typical shell commands
 /// are included. Secrets such as API keys, tokens, and passwords are excluded.
 fn minimal_tool_env() -> HashMap<String, String> {
-    let allowed = [
-        "PATH", "HOME", "USER", "SHELL", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE",
-        "PWD",
-    ];
+    let allowed = ["PATH", "HOME", "USER", "SHELL", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE", "PWD"];
     let mut env = HashMap::new();
     for key in allowed {
         if let Ok(value) = std::env::var(key) {
@@ -72,8 +69,7 @@ mod tests {
 
     #[test]
     fn tool_output_success_with_bytes() {
-        let output =
-            ToolOutput::success_with_bytes("test", serde_json::json!({}), "content".into(), 100);
+        let output = ToolOutput::success_with_bytes("test", serde_json::json!({}), "content".into(), 100);
         assert_eq!(output.status, ToolStatus::Success);
         assert_eq!(output.bytes_transferred, Some(100));
     }
@@ -146,12 +142,7 @@ impl ToolOutput {
     }
 
     /// Create a successful tool output with byte count.
-    pub fn success_with_bytes(
-        tool_name: &str,
-        tool_args: Value,
-        content: String,
-        bytes: u64,
-    ) -> Self {
+    pub fn success_with_bytes(tool_name: &str, tool_args: Value, content: String, bytes: u64) -> Self {
         Self {
             tool_name: tool_name.to_owned(),
             tool_args,

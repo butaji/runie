@@ -11,6 +11,7 @@ fn seed_provider(state: &mut AppState, name: &str, models: Vec<String>) {
             base_url: String::new(),
             models,
             headers: std::collections::HashMap::new(),
+            context_window_fallbacks: vec![],
         },
     );
 }

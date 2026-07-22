@@ -2,6 +2,7 @@
 //!
 //! Shell execution tests have been moved to the shell module where they belong.
 //! The actor tests here use deterministic timing with TestTimeGuard.
+#![allow(clippy::too_many_lines)]
 
 use super::*;
 use runie_core::shell::format_command_output;
@@ -141,13 +142,7 @@ fn detect_git_in_tmp_git_repo() {
 
     // Configure git
     let _ = Command::new("git")
-        .args([
-            "-C",
-            &tmp.to_string_lossy(),
-            "config",
-            "user.email",
-            "test@test.com",
-        ])
+        .args(["-C", &tmp.to_string_lossy(), "config", "user.email", "test@test.com"])
         .output();
     let _ = Command::new("git")
         .args(["-C", &tmp.to_string_lossy(), "config", "user.name", "Test"])
@@ -159,14 +154,7 @@ fn detect_git_in_tmp_git_repo() {
         .args(["-C", &tmp.to_string_lossy(), "add", "."])
         .output();
     let _ = Command::new("git")
-        .args([
-            "-C",
-            &tmp.to_string_lossy(),
-            "commit",
-            "-m",
-            "init",
-            "--quiet",
-        ])
+        .args(["-C", &tmp.to_string_lossy(), "commit", "-m", "init", "--quiet"])
         .output();
 
     let info = detect_git_info_sync(&tmp);
@@ -206,13 +194,7 @@ fn detect_git_detached_head() {
 
     // Configure and commit
     let _ = Command::new("git")
-        .args([
-            "-C",
-            &tmp.to_string_lossy(),
-            "config",
-            "user.email",
-            "test@test.com",
-        ])
+        .args(["-C", &tmp.to_string_lossy(), "config", "user.email", "test@test.com"])
         .output();
     let _ = Command::new("git")
         .args(["-C", &tmp.to_string_lossy(), "config", "user.name", "Test"])
@@ -222,26 +204,12 @@ fn detect_git_detached_head() {
         .args(["-C", &tmp.to_string_lossy(), "add", "."])
         .output();
     let _ = Command::new("git")
-        .args([
-            "-C",
-            &tmp.to_string_lossy(),
-            "commit",
-            "-m",
-            "init",
-            "--quiet",
-        ])
+        .args(["-C", &tmp.to_string_lossy(), "commit", "-m", "init", "--quiet"])
         .output();
 
     // Detach HEAD
     let _ = Command::new("git")
-        .args([
-            "-C",
-            &tmp.to_string_lossy(),
-            "checkout",
-            "--detach",
-            "HEAD",
-            "--quiet",
-        ])
+        .args(["-C", &tmp.to_string_lossy(), "checkout", "--detach", "HEAD", "--quiet"])
         .output();
 
     let info = detect_git_info_sync(&tmp);

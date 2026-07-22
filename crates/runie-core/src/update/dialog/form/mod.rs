@@ -1,4 +1,5 @@
 //! Form Action Types and panel form handling (merged from dialog_form.rs).
+#![allow(clippy::too_many_lines)]
 
 use std::collections::HashMap;
 
@@ -18,11 +19,7 @@ pub enum FormAction {
     /// Close the form and dispatch through the command registry.
     /// Carries command name, ordered field keys, and form values so that
     /// the handler can deserialize positional arguments correctly.
-    SubmitCommand {
-        name: String,
-        keys: Vec<String>,
-        values: HashMap<String, String>,
-    },
+    SubmitCommand { name: String, keys: Vec<String>, values: HashMap<String, String> },
     /// Go back one step: if the stack is deeper than the root, pop the
     /// current panel and keep the dialog open; if at the root, close
     /// the dialog. This is the semantic of ESC / back.
@@ -33,9 +30,7 @@ pub enum FormAction {
 pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) -> FormAction {
     use FormAction as A;
     match &event {
-        crate::Event::SettingsClose | crate::Event::CommandFormClose | crate::Event::DialogBack => {
-            A::Back
-        }
+        crate::Event::SettingsClose | crate::Event::CommandFormClose | crate::Event::DialogBack => A::Back,
         crate::Event::CommandFormUp
         | crate::Event::HistoryPrev
         | crate::Event::SettingsUp
@@ -85,12 +80,8 @@ fn form_panel_edit_action(panel: &mut Panel, event: &Event) -> FormAction {
         crate::Event::DeleteToStart => form_panel_delete_to_start(panel),
         crate::Event::CursorLeft => form_panel_move_cursor(panel, CursorDir::Left),
         crate::Event::CursorRight => form_panel_move_cursor(panel, CursorDir::Right),
-        crate::Event::CursorStart | crate::Event::CursorWordLeft => {
-            form_panel_move_cursor(panel, CursorDir::Start)
-        }
-        crate::Event::CursorEnd | crate::Event::CursorWordRight => {
-            form_panel_move_cursor(panel, CursorDir::End)
-        }
+        crate::Event::CursorStart | crate::Event::CursorWordLeft => form_panel_move_cursor(panel, CursorDir::Start),
+        crate::Event::CursorEnd | crate::Event::CursorWordRight => form_panel_move_cursor(panel, CursorDir::End),
         // intentionally ignored: other input events fall through
         _ => {}
     }
@@ -141,13 +132,7 @@ fn form_panel_paste(panel: &mut Panel, text: &str) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     value.insert_str(*cursor_pos, text);
@@ -162,6 +147,7 @@ fn is_empty_submit_key(evt: &crate::Event, panel: &Panel) -> bool {
     )
 }
 
+#[allow(clippy::too_many_lines)]
 fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
     use FormAction as A;
     if panel.id == "login-key" && key_field_empty(panel) {
@@ -169,15 +155,11 @@ fn handle_form_submit(state: &mut AppState, panel: &mut Panel) -> FormAction {
         return A::KeepOpen;
     }
     match panel.selected_item().cloned() {
-        Some(PanelItem::Action {
-            action: ItemAction::Emit(evt),
-            ..
-        }) => A::Submit(Some(evt)),
+        Some(PanelItem::Action { action: ItemAction::Emit(evt), .. }) => A::Submit(Some(evt)),
         Some(PanelItem::Action { .. }) => A::Submit(None),
-        Some(PanelItem::Toggle {
-            action: ItemAction::Emit(crate::Event::ToggleModel { model }),
-            ..
-        }) if panel.id == "login-models" => {
+        Some(PanelItem::Toggle { action: ItemAction::Emit(crate::Event::ToggleModel { model }), .. })
+            if panel.id == "login-models" =>
+        {
             if let Some(flow) = state.login_flow_mut().as_mut() {
                 flow.selected_models.insert(model);
             }
@@ -243,13 +225,7 @@ fn form_panel_edit_char(panel: &mut Panel, c: char) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     value.insert(*cursor_pos, c);
@@ -261,13 +237,7 @@ fn form_panel_delete_before_cursor(panel: &mut Panel) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     if *cursor_pos == 0 {
@@ -283,13 +253,7 @@ fn form_panel_delete_at_cursor(panel: &mut Panel) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     if *cursor_pos >= value.len() {
@@ -304,13 +268,7 @@ fn form_panel_delete_word_before(panel: &mut Panel) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     if *cursor_pos == 0 {
@@ -326,13 +284,7 @@ fn form_panel_delete_to_end(panel: &mut Panel) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     value.truncate(*cursor_pos);
@@ -343,13 +295,7 @@ fn form_panel_delete_to_start(panel: &mut Panel) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value,
-        key,
-        cursor_pos,
-        ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, key, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     if *cursor_pos == 0 {
@@ -372,10 +318,7 @@ fn form_panel_move_cursor(panel: &mut Panel, dir: CursorDir) {
     let Some(idx) = panel.selected_form_field() else {
         return;
     };
-    let PanelItem::FormField {
-        value, cursor_pos, ..
-    } = &mut panel.items[idx]
-    else {
+    let PanelItem::FormField { value, cursor_pos, .. } = &mut panel.items[idx] else {
         return;
     };
     *cursor_pos = match dir {
@@ -436,12 +379,7 @@ fn close_dialog(state: &mut AppState) {
 /// Dispatch a form submission through the command registry.
 /// Replicates the logic of `run_palette_command` but for form values
 /// instead of parsed slash-command arguments.
-fn dispatch_form_to_registry(
-    state: &mut AppState,
-    name: &str,
-    keys: &[String],
-    values: HashMap<String, String>,
-) {
+fn dispatch_form_to_registry(state: &mut AppState, name: &str, keys: &[String], values: HashMap<String, String>) {
     if name.is_empty() {
         // Panels without cmd_name are handled in handle_form_submit.
         // This is a defensive check.

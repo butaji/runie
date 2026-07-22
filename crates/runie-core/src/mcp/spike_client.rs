@@ -35,6 +35,7 @@ use rmcp::transport::{ConfigureCommandExt, TokioChildProcess};
 use tempfile::TempDir;
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn rmcp_client_connects_to_echo_server() -> Result<()> {
     // Minimal echo Python MCP server for offline testing.
     let python_script = r#"
@@ -67,13 +68,12 @@ for _ in range(5):
     let script_path = temp.path().join("echo.py");
     std::fs::write(&script_path, python_script)?;
 
-    let transport =
-        TokioChildProcess::new(tokio::process::Command::new("python3").configure(|c| {
-            c.arg(script_path);
-            c.stdout(Stdio::piped());
-            c.stdin(Stdio::piped());
-            c.stderr(Stdio::piped());
-        }))?;
+    let transport = TokioChildProcess::new(tokio::process::Command::new("python3").configure(|c| {
+        c.arg(script_path);
+        c.stdout(Stdio::piped());
+        c.stdin(Stdio::piped());
+        c.stderr(Stdio::piped());
+    }))?;
 
     // `()` implements `ClientHandler` and therefore `Service<RoleClient>`.
     // `serve_client((), transport)` connects and performs MCP handshake.

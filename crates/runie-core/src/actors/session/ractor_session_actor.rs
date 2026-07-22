@@ -50,16 +50,9 @@ impl Actor for RactorSessionActor {
         let store = SessionStore::default_store()
             .unwrap_or_else(|| SessionStore::new(std::env::temp_dir().join("runie_sessions")));
 
-        let state = SessionActorState {
-            bus,
-            trust: trust.clone(),
-            store,
-            session_state: SessionState::default(),
-            next_id: 0,
-        };
-        state.emit(Event::TrustLoaded {
-            decisions: trust.decisions(),
-        });
+        let state =
+            SessionActorState { bus, trust: trust.clone(), store, session_state: SessionState::default(), next_id: 0 };
+        state.emit(Event::TrustLoaded { decisions: trust.decisions() });
         let entries = tokio::task::spawn_blocking(crate::input_history::load_history)
             .await
             .ok()

@@ -11,12 +11,12 @@ use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 
 #[cfg(feature = "watch")]
-use ractor::ActorRef;
-#[cfg(feature = "watch")]
 use crate::actors::CONFIG_WATCHER_DEBOUNCE_MS;
 use crate::config::{Config, McpServer, ModeSection, TruncationSection};
 use crate::event::Event;
 use crate::model::ThinkingLevel;
+#[cfg(feature = "watch")]
+use ractor::ActorRef;
 use ractor::RpcReplyPort;
 
 use super::config_handle::ConfigActorState;
@@ -26,11 +26,9 @@ use crate::config::ConfigScope;
 
 /// Load layered config asynchronously.
 pub(super) async fn load_layers_async(global: PathBuf, local: Option<PathBuf>) -> Config {
-    tokio::task::spawn_blocking(move || {
-        Config::load_layers_from_paths(global, local.unwrap_or_default())
-    })
-    .await
-    .unwrap_or_default()
+    tokio::task::spawn_blocking(move || Config::load_layers_from_paths(global, local.unwrap_or_default()))
+        .await
+        .unwrap_or_default()
 }
 
 /// Load layered config synchronously (for use in spawn_blocking).
@@ -39,16 +37,13 @@ pub(super) fn load_layers_sync(global: &Path, local: &Option<PathBuf>) -> Config
 }
 
 /// Dispatch incoming config messages to their handlers.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
     match msg {
         ConfigMsg::Load => load_and_emit(state).await,
         ConfigMsg::Reload => reload_and_emit(state).await,
-        ConfigMsg::SaveProvider {
-            name,
-            base_url,
-            api_key,
-            models,
-        } => {
+        ConfigMsg::SaveProvider { name, base_url, api_key, models } => {
             save_provider(state, &name, &base_url, &api_key, &models).await;
         }
         ConfigMsg::RemoveProvider { name } => remove_provider(state, &name).await,
@@ -64,11 +59,9 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
         ConfigMsg::SetTruncation { limits } => set_truncation(state, &limits).await,
         ConfigMsg::SetThinkingLevel { level } => set_thinking_level(state, &level).await,
         ConfigMsg::SetMode { section } => set_mode(state, &section).await,
-        ConfigMsg::SetModelThinking {
-            provider,
-            model,
-            level,
-        } => set_model_thinking(state, &provider, &model, level).await,
+        ConfigMsg::SetModelThinking { provider, model, level } => {
+            set_model_thinking(state, &provider, &model, level).await
+        }
         ConfigMsg::GetConfig(reply) => {
             let cfg = state.cfg.clone();
             let _ = reply.send(cfg);
@@ -80,12 +73,7 @@ pub(super) async fn handle_msg(state: &mut ConfigActorState, msg: ConfigMsg) {
             let effective = load_layers_sync(&state.path, &state.project_path);
             let _ = reply.send(effective);
         }
-        ConfigMsg::AddMcpServer {
-            scope,
-            name,
-            server,
-            reply,
-        } => {
+        ConfigMsg::AddMcpServer { scope, name, server, reply } => {
             add_mcp_server(state, scope, &name, server, reply).await;
         }
         ConfigMsg::RemoveMcpServer { scope, name, reply } => {
@@ -127,9 +115,7 @@ pub(super) async fn load_and_emit(state: &mut ConfigActorState) {
     }
 
     state.cfg = effective.clone();
-    state.emit(Event::ConfigLoaded {
-        config: Box::new(effective),
-    });
+    state.emit(Event::ConfigLoaded { config: Box::new(effective) });
 }
 
 /// Reload config from disk and emit `ConfigLoaded` if changed.
@@ -152,9 +138,7 @@ pub(super) async fn reload_and_emit(state: &mut ConfigActorState) {
     let changed = new_config != state.cfg;
     if changed {
         state.cfg = new_config.clone();
-        state.emit(Event::ConfigLoaded {
-            config: Box::new(new_config),
-        });
+        state.emit(Event::ConfigLoaded { config: Box::new(new_config) });
     }
 }
 
@@ -182,9 +166,7 @@ pub(super) async fn save_provider(
 pub(super) async fn remove_provider(state: &mut ConfigActorState, name: &str) {
     let path = state.path.clone();
     let name = name.to_owned();
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::remove_provider_from_path(&path, &name))
-            .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::remove_provider_from_path(&path, &name)).await;
     handle_write_result(state, result).await;
 }
 
@@ -193,26 +175,18 @@ pub(super) async fn set_default_model(state: &mut ConfigActorState, provider: &s
     let path = state.path.clone();
     let provider = provider.to_owned();
     let model = model.to_owned();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::set_default_model_at_path(&path, &provider, &model)
-    })
-    .await;
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::set_default_model_at_path(&path, &provider, &model)).await;
     handle_write_result(state, result).await;
 }
 
 /// Set the models list for a provider.
-pub(super) async fn set_provider_models(
-    state: &mut ConfigActorState,
-    name: &str,
-    models: &[String],
-) {
+pub(super) async fn set_provider_models(state: &mut ConfigActorState, name: &str, models: &[String]) {
     let path = state.path.clone();
     let name = name.to_owned();
     let models = models.to_vec();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::set_provider_models_at_path(&path, &name, &models)
-    })
-    .await;
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::set_provider_models_at_path(&path, &name, &models)).await;
     handle_write_result(state, result).await;
 }
 
@@ -220,26 +194,21 @@ pub(super) async fn set_provider_models(
 pub(super) async fn set_theme(state: &mut ConfigActorState, name: &str) {
     let path = state.path.clone();
     let name = name.to_owned();
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::set_theme_at_path(&path, &name)).await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::set_theme_at_path(&path, &name)).await;
     handle_write_result(state, result).await;
 }
 
 /// Set vim mode preference.
 pub(super) async fn set_vim_mode(state: &mut ConfigActorState, enabled: bool) {
     let path = state.path.clone();
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::set_vim_mode_at_path(&path, enabled))
-            .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::set_vim_mode_at_path(&path, enabled)).await;
     handle_write_result(state, result).await;
 }
 
 /// Set telemetry preference.
 pub(super) async fn set_telemetry(state: &mut ConfigActorState, enabled: bool) {
     let path = state.path.clone();
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::set_telemetry_at_path(&path, enabled))
-            .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::set_telemetry_at_path(&path, enabled)).await;
     handle_write_result(state, result).await;
 }
 
@@ -247,9 +216,7 @@ pub(super) async fn set_telemetry(state: &mut ConfigActorState, enabled: bool) {
 pub(super) async fn set_truncation(state: &mut ConfigActorState, limits: &TruncationSection) {
     let path = state.path.clone();
     let limits = limits.clone();
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::set_truncation_at_path(&path, &limits))
-            .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::set_truncation_at_path(&path, &limits)).await;
     handle_write_result(state, result).await;
 }
 
@@ -257,9 +224,7 @@ pub(super) async fn set_truncation(state: &mut ConfigActorState, limits: &Trunca
 pub(super) async fn set_thinking_level(state: &mut ConfigActorState, level: &ThinkingLevel) {
     let path = state.path.clone();
     let level = *level;
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level))
-            .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::set_thinking_level_at_path(&path, level)).await;
     handle_write_result(state, result).await;
 }
 
@@ -267,8 +232,7 @@ pub(super) async fn set_thinking_level(state: &mut ConfigActorState, level: &Thi
 pub(super) async fn set_mode(state: &mut ConfigActorState, section: &ModeSection) {
     let path = state.path.clone();
     let section = section.clone();
-    let result =
-        tokio::task::spawn_blocking(move || file_helpers::set_mode_at_path(&path, &section)).await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::set_mode_at_path(&path, &section)).await;
     handle_write_result(state, result).await;
 }
 
@@ -282,10 +246,9 @@ pub(super) async fn set_model_thinking(
     let path = state.path.clone();
     let provider = provider.to_owned();
     let model = model.to_owned();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::set_model_thinking_at_path(&path, &provider, &model, level)
-    })
-    .await;
+    let result =
+        tokio::task::spawn_blocking(move || file_helpers::set_model_thinking_at_path(&path, &provider, &model, level))
+            .await;
     handle_write_result(state, result).await;
 }
 
@@ -298,25 +261,17 @@ pub(super) async fn handle_write_result(
         Ok(Ok(())) => load_and_emit(state).await,
         Ok(Err(e)) => {
             tracing::error!("config write failed: {e:?}");
-            state.emit(Event::Error {
-                id: "config".to_owned(),
-                message: format!("Config write failed: {e}"),
-            });
+            state.emit(Event::Error { id: "config".to_owned(), message: format!("Config write failed: {e}") });
         }
         Err(thread_id) => {
             tracing::error!("config write task panicked in thread: {:?}", thread_id);
-            state.emit(Event::Error {
-                id: "config".to_owned(),
-                message: "Config write task panicked".to_owned(),
-            });
+            state.emit(Event::Error { id: "config".to_owned(), message: "Config write task panicked".to_owned() });
         }
     }
 }
 
 /// List configured providers from current state.
-pub(super) fn list_configured_providers(
-    state: &ConfigActorState,
-) -> Vec<(String, String, Vec<String>)> {
+pub(super) fn list_configured_providers(state: &ConfigActorState) -> Vec<(String, String, Vec<String>)> {
     let mut result: Vec<_> = state
         .cfg
         .model_providers
@@ -338,10 +293,7 @@ pub(super) async fn add_mcp_server(
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let name = name.to_owned();
     let server = server.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::add_mcp_server_to_path(&path, &name, &server)
-    })
-    .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::add_mcp_server_to_path(&path, &name, &server)).await;
     match result {
         Ok(Ok(())) => {
             if let Some(reply) = reply {
@@ -351,10 +303,7 @@ pub(super) async fn add_mcp_server(
         }
         Ok(Err(e)) => {
             tracing::error!("add mcp server failed: {:?}", e);
-            state.emit(Event::Error {
-                id: "config".to_owned(),
-                message: format!("Failed to add MCP server: {e}"),
-            });
+            state.emit(Event::Error { id: "config".to_owned(), message: format!("Failed to add MCP server: {e}") });
             if let Some(reply) = reply {
                 let _ = reply.send(());
             }
@@ -377,10 +326,7 @@ pub(super) async fn remove_mcp_server(
 ) {
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let name = name.to_owned();
-    let result = tokio::task::spawn_blocking(move || {
-        file_helpers::remove_mcp_server_from_path(&path, &name)
-    })
-    .await;
+    let result = tokio::task::spawn_blocking(move || file_helpers::remove_mcp_server_from_path(&path, &name)).await;
     match result {
         Ok(Ok(())) => {
             if let Some(reply) = reply {
@@ -390,10 +336,7 @@ pub(super) async fn remove_mcp_server(
         }
         Ok(Err(e)) => {
             tracing::error!("remove mcp server failed: {:?}", e);
-            state.emit(Event::Error {
-                id: "config".to_owned(),
-                message: format!("Failed to remove MCP server: {e}"),
-            });
+            state.emit(Event::Error { id: "config".to_owned(), message: format!("Failed to remove MCP server: {e}") });
             if let Some(reply) = reply {
                 let _ = reply.send(());
             }
@@ -408,21 +351,14 @@ pub(super) async fn remove_mcp_server(
 }
 
 /// List MCP servers from config file for a given scope.
-pub(super) fn list_mcp_servers_from_state(
-    state: &ConfigActorState,
-    scope: ConfigScope,
-) -> Vec<(String, McpServer)> {
+pub(super) fn list_mcp_servers_from_state(state: &ConfigActorState, scope: ConfigScope) -> Vec<(String, McpServer)> {
     let path = path_for_scope(&state.path, &state.project_path, scope);
     let config = Config::load(Some(&path));
     config.mcp.servers.into_iter().collect()
 }
 
 /// Resolve the config file path for a given scope.
-pub(super) fn path_for_scope(
-    global: &Path,
-    project: &Option<PathBuf>,
-    scope: ConfigScope,
-) -> PathBuf {
+pub(super) fn path_for_scope(global: &Path, project: &Option<PathBuf>, scope: ConfigScope) -> PathBuf {
     match scope {
         ConfigScope::Global => global.to_path_buf(),
         ConfigScope::Project => project.clone().unwrap_or_else(|| {

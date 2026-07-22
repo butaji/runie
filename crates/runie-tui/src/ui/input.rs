@@ -19,8 +19,7 @@ use ratatui::{
 use runie_core::Snapshot;
 
 use crate::theme::{
-    block_input, style_agent, style_chevron, style_hint, style_input_cursor,
-    style_input_cursor_disabled, GLYPH_USER,
+    block_input, style_agent, style_chevron, style_hint, style_input_cursor, style_input_cursor_disabled, GLYPH_USER,
 };
 
 /// Render the input box.
@@ -53,13 +52,7 @@ pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
 /// Render the empty input state with cursor only (no placeholder).
 /// Matches grok's behavior: shows "❯ " with a blinking cursor when focused.
-fn render_empty_input(
-    f: &mut Frame,
-    snap: &Snapshot,
-    area: Rect,
-    block: &Block<'_>,
-    token_held: bool,
-) {
+fn render_empty_input(f: &mut Frame, snap: &Snapshot, area: Rect, block: &Block<'_>, token_held: bool) {
     let chevron_style = style_chevron(token_held);
     let cursor_style = if token_held {
         style_input_cursor()
@@ -86,13 +79,8 @@ fn render_empty_input(
 }
 
 /// Render input content with cursor.
-fn render_input_content(
-    f: &mut Frame,
-    snap: &Snapshot,
-    area: Rect,
-    block: &Block<'_>,
-    token_held: bool,
-) {
+#[allow(clippy::too_many_lines)]
+fn render_input_content(f: &mut Frame, snap: &Snapshot, area: Rect, block: &Block<'_>, token_held: bool) {
     let chevron_style = style_chevron(token_held);
     let text_style = if token_held {
         style_agent()
@@ -239,11 +227,7 @@ fn build_line_with_cursor_and_ghost_owned(
 }
 
 /// Build a trailing cursor line (shown when cursor is after the last character).
-fn build_trailing_cursor_line(
-    chevron_style: &Style,
-    is_empty: bool,
-    token_held: bool,
-) -> Line<'static> {
+fn build_trailing_cursor_line(chevron_style: &Style, is_empty: bool, token_held: bool) -> Line<'static> {
     let prefix = if is_empty { GLYPH_USER } else { "  " };
     let mut spans = vec![Span::styled(prefix, *chevron_style)];
     if token_held {

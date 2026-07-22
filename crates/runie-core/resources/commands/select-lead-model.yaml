@@ -1,0 +1,7 @@
+# Select lead model for swarm orchestration
+name: select-lead-model
+description: Pick the lead (coordinator) model for swarm mode
+category: System
+sub: false
+type: handler
+handler: select-lead-model

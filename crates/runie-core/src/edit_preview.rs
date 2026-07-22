@@ -27,12 +27,7 @@ impl EditPreview {
     /// Panics if `path` is not valid UTF-8. All project paths should be valid UTF-8.
     pub fn new(path: Utf8PathBuf, original: String, proposed: String) -> Self {
         let diff = Diff::generate(&original, &proposed);
-        Self {
-            path,
-            original,
-            proposed,
-            diff,
-        }
+        Self { path, original, proposed, diff }
     }
 
     /// Build from a `String` path (e.g. from event data).
@@ -86,11 +81,7 @@ mod tests {
 
     #[test]
     fn edit_preview_from_string_path() {
-        let preview = EditPreview::new_from_string(
-            "src/main.rs".into(),
-            "original".into(),
-            "modified".into(),
-        );
+        let preview = EditPreview::new_from_string("src/main.rs".into(), "original".into(), "modified".into());
         assert_eq!(preview.path.as_str(), "src/main.rs");
         assert_eq!(preview.original, "original");
         assert_eq!(preview.proposed, "modified");

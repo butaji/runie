@@ -65,9 +65,7 @@ fn edit_models_opens_dedicated_panel() {
     .unwrap();
     let mut state = AppState::default();
     state.update(crate::Event::ProvidersDialog);
-    state.update(crate::Event::ProvidersEditModels {
-        provider: "openai".into(),
-    });
+    state.update(crate::Event::ProvidersEditModels { provider: "openai".into() });
 
     let stack = state
         .open_dialog
@@ -97,9 +95,7 @@ fn edit_models_selects_active_mock_model() {
     state.config_mut().current_model = "echo".into();
 
     state.update(crate::Event::ProvidersDialog);
-    state.update(crate::Event::ProvidersEditModels {
-        provider: "mock".into(),
-    });
+    state.update(crate::Event::ProvidersEditModels { provider: "mock".into() });
 
     let panel = state
         .open_dialog
@@ -142,9 +138,7 @@ fn login_flow_state_machine_key_input() {
     let mut state = AppState::default();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(flow.step, crate::login_flow::LoginStep::KeyInput);
@@ -157,13 +151,8 @@ fn login_flow_state_machine_validating() {
     let mut state = AppState::default();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(flow.step, crate::login_flow::LoginStep::Validating);
@@ -176,13 +165,8 @@ fn login_flow_state_machine_model_select_after_validation() {
     let mut state = AppState::default();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -200,13 +184,8 @@ fn login_flow_toggle_model() {
     let mut state = AppState::default();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(crate::Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -217,9 +196,7 @@ fn login_flow_toggle_model() {
     let initial_model = flow.available_models[0].clone();
     let was_selected = flow.selected_models.contains(&initial_model);
 
-    state.update(crate::Event::ToggleModel {
-        model: initial_model.clone(),
-    });
+    state.update(crate::Event::ToggleModel { model: initial_model.clone() });
 
     let flow = state.login_flow.as_ref().unwrap();
     let is_selected = flow.selected_models.contains(&initial_model);
@@ -239,13 +216,8 @@ fn login_flow_with_unknown_provider() {
     let mut state = AppState::default();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "unknown".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "unknown".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "unknown".into() });
+    state.update(crate::Event::SubmitKey { provider: "unknown".into(), key: "sk-test".into() });
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(flow.step, crate::login_flow::LoginStep::Validating);
@@ -279,9 +251,7 @@ fn disconnect_active_provider_switches_to_another() {
     state.dialog_back_stack.clear();
 
     state.update(crate::Event::ProvidersDialog);
-    state.update(crate::Event::ProvidersDisconnect {
-        provider: "openai".into(),
-    });
+    state.update(crate::Event::ProvidersDisconnect { provider: "openai".into() });
 
     assert_ne!(
         state.config.current_provider, "openai",

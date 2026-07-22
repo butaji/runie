@@ -1,4 +1,5 @@
 //! DSL tests — Element building and feed construction
+#![allow(clippy::too_many_lines)]
 
 #[cfg(test)]
 mod tests {
@@ -10,9 +11,7 @@ mod tests {
     fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
         ChatMessage {
             role,
-            parts: vec![Part::Text {
-                content: content.into(),
-            }],
+            parts: vec![Part::Text { content: content.into() }],
             timestamp,
             id: id.into(),
             ..Default::default()
@@ -24,9 +23,7 @@ mod tests {
         let mut state = AppState::default();
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: "Hello".to_string(),
-            }],
+            parts: vec![Part::Text { content: "Hello".to_string() }],
             timestamp: 0.0,
             id: "req.0".to_string(),
             ..Default::default()
@@ -38,15 +35,9 @@ mod tests {
     #[test]
     fn test_visible_slices_correctly() {
         let cache = vec![
-            Element::UserMessage {
-                content: "a".to_string(),
-                timestamp: 0.0,
-            },
+            Element::UserMessage { content: "a".to_string(), timestamp: 0.0 },
             Element::Spacer { timestamp: 0.0 },
-            Element::UserMessage {
-                content: "b".to_string(),
-                timestamp: 1.0,
-            },
+            Element::UserMessage { content: "b".to_string(), timestamp: 1.0 },
         ];
         let visible = LazyCache::visible(&cache, 0, 2);
         assert_eq!(visible.len(), 2);
@@ -54,10 +45,7 @@ mod tests {
 
     #[test]
     fn test_visible_bounds_check() {
-        let cache = vec![Element::UserMessage {
-            content: "a".to_string(),
-            timestamp: 0.0,
-        }];
+        let cache = vec![Element::UserMessage { content: "a".to_string(), timestamp: 0.0 }];
         let visible = LazyCache::visible(&cache, 10, 5);
         assert!(visible.is_empty());
     }
@@ -172,10 +160,10 @@ mod tests {
     #[test]
     fn test_thought_ordered_by_timestamp() {
         let mut state = AppState::default();
-        state.session.messages.extend([
-            msg(Role::Assistant, "Hello", 1.0, "same"),
-            msg(Role::Thought, "Thinking...", 2.0, "same"),
-        ]);
+        state
+            .session
+            .messages
+            .extend([msg(Role::Assistant, "Hello", 1.0, "same"), msg(Role::Thought, "Thinking...", 2.0, "same")]);
         let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
@@ -189,18 +177,14 @@ mod tests {
         let mut state = AppState::default();
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: "First".into(),
-            }],
+            parts: vec![Part::Text { content: "First".into() }],
             timestamp: 1.0,
             id: "u1".into(),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: "Second".into(),
-            }],
+            parts: vec![Part::Text { content: "Second".into() }],
             timestamp: 1.0,
             id: "u2".into(),
             ..Default::default()
@@ -262,9 +246,7 @@ mod tests {
     fn element_from_user_chat_message() {
         let user_msg = ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: "Hello, world!".into(),
-            }],
+            parts: vec![Part::Text { content: "Hello, world!".into() }],
             timestamp: 1.0,
             id: "u1".into(),
             ..Default::default()
@@ -300,9 +282,7 @@ mod tests {
         // Format expected by transform.rs: "Ran <tool_name> <duration>\n<output>"
         let tool_msg = ChatMessage {
             role: Role::Tool,
-            parts: vec![Part::Text {
-                content: "Ran bash 1.5s\nfile1.txt\nfile2.txt".into(),
-            }],
+            parts: vec![Part::Text { content: "Ran bash 1.5s\nfile1.txt\nfile2.txt".into() }],
             timestamp: 2.0,
             id: "tool.0".into(),
             tool_call_id: Some("call_abc".into()),
@@ -325,14 +305,7 @@ mod tests {
             1,
             "Expected exactly one ToolDone element"
         );
-        if let Element::ToolDone {
-            name,
-            duration_secs,
-            output,
-            error,
-            ..
-        } = tool_elements[0]
-        {
+        if let Element::ToolDone { name, duration_secs, output, error, .. } = tool_elements[0] {
             assert_eq!(name, "bash", "Tool name should be 'bash'");
             assert!(
                 (duration_secs - 1.5).abs() < 0.01,
@@ -353,9 +326,7 @@ mod tests {
     fn element_from_assistant_chat_message() {
         let assistant_msg = ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text {
-                content: "I'll help you with that.".into(),
-            }],
+            parts: vec![Part::Text { content: "I'll help you with that.".into() }],
             timestamp: 3.0,
             id: "a1".into(),
             provider: "openai".into(),
@@ -377,12 +348,7 @@ mod tests {
             1,
             "Expected exactly one AgentMessage element"
         );
-        if let Element::AgentMessage {
-            content,
-            timestamp,
-            provider,
-        } = agent_elements[0]
-        {
+        if let Element::AgentMessage { content, timestamp, provider } = agent_elements[0] {
             assert_eq!(content, "I'll help you with that.");
             assert_eq!(*timestamp, 3.0);
             assert_eq!(provider, "openai");
@@ -398,9 +364,7 @@ mod tests {
     fn element_from_thought_chat_message() {
         let thought_msg = ChatMessage {
             role: Role::Thought,
-            parts: vec![Part::Text {
-                content: "Let me think about this 2.0s".into(),
-            }],
+            parts: vec![Part::Text { content: "Let me think about this 2.0s".into() }],
             timestamp: 4.0,
             id: "thought.0".into(),
             ..Default::default()
@@ -416,10 +380,7 @@ mod tests {
             .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
             .collect();
         assert_eq!(summaries.len(), 1, "Expected exactly one ThoughtSummary");
-        if let Element::ThoughtSummary {
-            content, timestamp, ..
-        } = summaries[0]
-        {
+        if let Element::ThoughtSummary { content, timestamp, .. } = summaries[0] {
             assert_eq!(content, "Let me think about this 2.0s");
             assert_eq!(*timestamp, 4.0);
         } else {
@@ -440,7 +401,10 @@ mod tests {
     fn swarm_worker_rows_render_before_assistant_response() {
         let mut state = AppState::default();
         // User message at t=1 starts the turn.
-        state.session.messages.push(msg(Role::User, "hello", 1.0, "req.0"));
+        state
+            .session
+            .messages
+            .push(msg(Role::User, "hello", 1.0, "req.0"));
         // Worker row emitted by the pattern before the final Response.
         state.update(crate::Event::PatternWorkerSpawned {
             id: "worker-1".into(),
@@ -468,14 +432,18 @@ mod tests {
             .enumerate()
             .filter_map(|(i, e)| match e {
                 Element::SubagentRow { id, .. } if id == "worker-1" => Some(("worker", i)),
-                Element::AgentMessage { content, .. } if content == "Final answer" => {
-                    Some(("response", i))
-                }
+                Element::AgentMessage { content, .. } if content == "Final answer" => Some(("response", i)),
                 _ => None,
             })
             .collect();
-        let worker_pos = positions.iter().find(|(k, _)| *k == "worker").map(|(_, i)| *i);
-        let response_pos = positions.iter().find(|(k, _)| *k == "response").map(|(_, i)| *i);
+        let worker_pos = positions
+            .iter()
+            .find(|(k, _)| *k == "worker")
+            .map(|(_, i)| *i);
+        let response_pos = positions
+            .iter()
+            .find(|(k, _)| *k == "response")
+            .map(|(_, i)| *i);
         assert!(
             worker_pos.is_some() && response_pos.is_some(),
             "both worker row and response must be present: {positions:?}"
@@ -485,5 +453,4 @@ mod tests {
             "worker row must appear before final response"
         );
     }
-
 }

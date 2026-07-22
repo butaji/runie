@@ -7,12 +7,7 @@ use crate::snapshot::Snapshot;
 /// Build the input box title string.
 /// Format: `mode · provider/model · read-only` when non-single mode and read-only,
 /// `mode · provider/model` when non-single mode, and `provider/model` otherwise.
-pub(crate) fn build_input_title(
-    provider: &str,
-    model: &str,
-    read_only: bool,
-    mode_active: &str,
-) -> String {
+pub(crate) fn build_input_title(provider: &str, model: &str, read_only: bool, mode_active: &str) -> String {
     // Models are sometimes stored with their provider prefix (e.g. "minimax/MiniMax-M3");
     // avoid rendering "minimax/minimax/MiniMax-M3".
     let base = if let Some(stripped) = model.strip_prefix(&format!("{}/", provider)) {
@@ -120,6 +115,9 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.pattern_workers = state.agent_state().pattern_workers.clone().into();
     s.follow_mode = state.view().follow_mode;
     s.scroll_margin = state.view().scroll_margin;
+    // Circuit breaker state
+    s.circuit_breaker_tripped = state.circuit_breaker_tripped;
+    s.circuit_breaker_threshold = state.circuit_breaker_threshold;
 }
 
 #[cfg(test)]

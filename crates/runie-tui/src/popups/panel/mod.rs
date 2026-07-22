@@ -38,12 +38,29 @@ pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
 }
 
 /// Clear/popup rect + block border + 1-cell inner margin.
-pub(super) fn setup_popup(f: &mut Frame, title: &str) -> Rect {
+pub(crate) fn setup_popup(f: &mut Frame, title: &str) -> Rect {
     let popup_area = palette_popup_rect(f.area());
     clear_panel_bg(f, popup_area);
     let block = block_popup(title);
     let inner = block.inner(popup_area);
     f.render_widget(Paragraph::new("").block(block), popup_area);
+    f.buffer_mut()
+        .set_style(inner, Style::default().bg(color_bg_panel()));
+    // 1-symbol / 1-line empty margin on all sides
+    Rect {
+        x: inner.x + 1,
+        y: inner.y + 1,
+        width: inner.width.saturating_sub(2),
+        height: inner.height.saturating_sub(2),
+    }
+}
+
+/// Apply panel styling to a given area, return inner rect with 1-cell margin.
+pub(crate) fn setup_panel(f: &mut Frame, area: Rect, title: &str) -> Rect {
+    clear_panel_bg(f, area);
+    let block = block_popup(title);
+    let inner = block.inner(area);
+    f.render_widget(Paragraph::new("").block(block), area);
     f.buffer_mut()
         .set_style(inner, Style::default().bg(color_bg_panel()));
     // 1-symbol / 1-line empty margin on all sides
@@ -77,11 +94,7 @@ pub(super) struct ScrollLayout {
     pub total: usize,
 }
 
-pub(super) fn compute_scrolling(
-    area: &Rect,
-    total: usize,
-    selected: Option<usize>,
-) -> ScrollLayout {
+pub(super) fn compute_scrolling(area: &Rect, total: usize, selected: Option<usize>) -> ScrollLayout {
     let visible = area.height as usize;
     let show_bar = total > visible;
     let items_width = if show_bar {
@@ -98,16 +111,8 @@ pub(super) fn compute_scrolling(
         }
     });
     ScrollLayout {
-        area: Rect {
-            width: items_width,
-            ..*area
-        },
-        bar_area: Rect {
-            x: area.x + items_width,
-            y: area.y,
-            width: 1,
-            height: area.height,
-        },
+        area: Rect { width: items_width, ..*area },
+        bar_area: Rect { x: area.x + items_width, y: area.y, width: 1, height: area.height },
         show_bar,
         offset,
         total,

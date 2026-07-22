@@ -6,9 +6,7 @@
 
 pub mod constants;
 pub mod ractor_adapter;
-pub use constants::{
-    CONFIG_WATCHER_DEBOUNCE_MS, LEADER_CMD_CHANNEL_CAPACITY, SHUTDOWN_TIMEOUT_SECS,
-};
+pub use constants::{CONFIG_WATCHER_DEBOUNCE_MS, LEADER_CMD_CHANNEL_CAPACITY, SHUTDOWN_TIMEOUT_SECS};
 pub use ractor_adapter::spawn_ractor;
 
 pub mod config;
@@ -28,15 +26,13 @@ pub use config::{ConfigMsg, RactorConfigActor, RactorConfigHandle};
 #[cfg(feature = "git")]
 pub use fff_indexer::format_git_status;
 pub use fff_indexer::{
-    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState,
-    RactorFffIndexerActor, RactorFffIndexerHandle,
+    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState, RactorFffIndexerActor,
+    RactorFffIndexerHandle,
 };
 pub use input::{InputActor, InputMsg, RactorInputHandle};
 pub use io::{IoMsg, RactorIoActor, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};
 pub use permission::{PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
-pub use provider::{
-    BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderActor, RactorProviderHandle,
-};
+pub use provider::{BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderActor, RactorProviderHandle};
 pub use session::{RactorSessionActor, RactorSessionHandle, SessionMsg};
 pub use turn::{RactorTurnActor, RactorTurnHandle, TurnMsg};

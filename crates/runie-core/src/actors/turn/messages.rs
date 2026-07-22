@@ -31,11 +31,7 @@ pub enum TurnMsg {
     /// Submit a user message to the queue.
     /// `source` indicates whether this is a fresh submit (should emit UserMessageSubmitted)
     /// or a queued/delivered message (content already in session via FollowUpDelivered).
-    SubmitUserMessage {
-        content: String,
-        id: String,
-        source: MessageSource,
-    },
+    SubmitUserMessage { content: String, id: String, source: MessageSource },
     /// Queue a steering message.
     QueueSteering { content: String },
     /// Queue a follow-up message.
@@ -61,11 +57,7 @@ pub enum TurnMsg {
     /// LLM event: tool started.
     ToolStart { id: String, name: String },
     /// LLM event: tool ended.
-    ToolEnd {
-        id: String,
-        duration_secs: f64,
-        output: String,
-    },
+    ToolEnd { id: String, duration_secs: f64, output: String },
     /// LLM event: response delta.
     ResponseDelta { id: String, content: String },
     /// LLM event: turn complete.
@@ -85,32 +77,19 @@ pub enum TurnMsg {
 }
 
 impl Clone for TurnMsg {
+    #[allow(clippy::too_many_lines)]
     fn clone(&self) -> Self {
         match self {
             TurnMsg::RunIfQueued => TurnMsg::RunIfQueued,
             TurnMsg::AbortTurn => TurnMsg::AbortTurn,
-            TurnMsg::SubmitUserMessage {
-                content,
-                id,
-                source,
-            } => TurnMsg::SubmitUserMessage {
-                content: content.clone(),
-                id: id.clone(),
-                source: *source,
-            },
-            TurnMsg::QueueSteering { content } => TurnMsg::QueueSteering {
-                content: content.clone(),
-            },
-            TurnMsg::QueueFollowUp { content } => TurnMsg::QueueFollowUp {
-                content: content.clone(),
-            },
+            TurnMsg::SubmitUserMessage { content, id, source } => {
+                TurnMsg::SubmitUserMessage { content: content.clone(), id: id.clone(), source: *source }
+            }
+            TurnMsg::QueueSteering { content } => TurnMsg::QueueSteering { content: content.clone() },
+            TurnMsg::QueueFollowUp { content } => TurnMsg::QueueFollowUp { content: content.clone() },
             TurnMsg::AbortQueue => TurnMsg::AbortQueue,
             TurnMsg::ClearQueues => TurnMsg::ClearQueues,
-            TurnMsg::DeliverQueued {
-                steering_mode,
-                follow_up_mode,
-                ..
-            } => TurnMsg::DeliverQueued {
+            TurnMsg::DeliverQueued { steering_mode, follow_up_mode, .. } => TurnMsg::DeliverQueued {
                 steering_mode: *steering_mode,
                 follow_up_mode: *follow_up_mode,
                 reply: None, // Fire-and-forget; the original reply is not cloned.
@@ -118,40 +97,23 @@ impl Clone for TurnMsg {
             TurnMsg::Dequeue => TurnMsg::Dequeue,
             TurnMsg::Thinking { id } => TurnMsg::Thinking { id: id.clone() },
             TurnMsg::ThoughtDone { id } => TurnMsg::ThoughtDone { id: id.clone() },
-            TurnMsg::ToolStart { id, name } => TurnMsg::ToolStart {
-                id: id.clone(),
-                name: name.clone(),
-            },
-            TurnMsg::ToolEnd {
-                id,
-                duration_secs,
-                output,
-            } => TurnMsg::ToolEnd {
-                id: id.clone(),
-                duration_secs: *duration_secs,
-                output: output.clone(),
-            },
-            TurnMsg::ResponseDelta { id, content } => TurnMsg::ResponseDelta {
-                id: id.clone(),
-                content: content.clone(),
-            },
-            TurnMsg::TurnComplete { id, duration_secs } => TurnMsg::TurnComplete {
-                id: id.clone(),
-                duration_secs: *duration_secs,
-            },
+            TurnMsg::ToolStart { id, name } => TurnMsg::ToolStart { id: id.clone(), name: name.clone() },
+            TurnMsg::ToolEnd { id, duration_secs, output } => {
+                TurnMsg::ToolEnd { id: id.clone(), duration_secs: *duration_secs, output: output.clone() }
+            }
+            TurnMsg::ResponseDelta { id, content } => {
+                TurnMsg::ResponseDelta { id: id.clone(), content: content.clone() }
+            }
+            TurnMsg::TurnComplete { id, duration_secs } => {
+                TurnMsg::TurnComplete { id: id.clone(), duration_secs: *duration_secs }
+            }
             TurnMsg::Done { id } => TurnMsg::Done { id: id.clone() },
-            TurnMsg::Error { id, message } => TurnMsg::Error {
-                id: id.clone(),
-                message: message.clone(),
-            },
-            TurnMsg::UpdateSpeed { tokens_out } => TurnMsg::UpdateSpeed {
-                tokens_out: *tokens_out,
-            },
+            TurnMsg::Error { id, message } => TurnMsg::Error { id: id.clone(), message: message.clone() },
+            TurnMsg::UpdateSpeed { tokens_out } => TurnMsg::UpdateSpeed { tokens_out: *tokens_out },
             TurnMsg::NextId => TurnMsg::NextId,
-            TurnMsg::ConfigureTokenTracker { provider, model } => TurnMsg::ConfigureTokenTracker {
-                provider: provider.clone(),
-                model: model.clone(),
-            },
+            TurnMsg::ConfigureTokenTracker { provider, model } => {
+                TurnMsg::ConfigureTokenTracker { provider: provider.clone(), model: model.clone() }
+            }
         }
     }
 }

@@ -6,9 +6,7 @@ use std::path::Path;
 
 #[cfg(test)]
 use crate::resource_loader::parse_resource_md;
-use crate::resource_loader::{
-    extract_section, is_user_invocable, load_resources_from_dir, resolve_name,
-};
+use crate::resource_loader::{extract_section, is_user_invocable, load_resources_from_dir, resolve_name};
 
 use super::Skill;
 
@@ -42,6 +40,11 @@ fn record_to_skill(record: crate::resource_loader::ResourceRecord) -> Option<Ski
         .unwrap_or_else(|| extract_section(&record.content, "Invocation").unwrap_or_default());
 
     let user_invocable = is_user_invocable(&invocation);
+    let ignore_paths = record
+        .frontmatter
+        .get("ignore_paths")
+        .map(|v| v.split(',').map(str::trim).map(String::from).collect())
+        .unwrap_or_default();
 
     Some(Skill {
         name,
@@ -49,6 +52,10 @@ fn record_to_skill(record: crate::resource_loader::ResourceRecord) -> Option<Ski
         context,
         user_invocable,
         file_path: record.file_path,
+        scope: super::SkillScope::User, // Will be overwritten by load_all
+        enabled: true,
+        plugin_name: None,
+        ignore_paths,
     })
 }
 

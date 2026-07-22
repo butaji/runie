@@ -19,9 +19,7 @@ pub fn compute_viewport(state: &mut AppState, visible_height: usize) -> TestView
     let end_idx = find_end_index(&snap.line_counts, viewport_end, snap.elements.len());
     let end_idx = trim_trailing_spacers(&snap.elements, start_idx, end_idx);
 
-    TestViewport {
-        elements: snap.elements[start_idx..end_idx.min(snap.elements.len())].to_vec(),
-    }
+    TestViewport { elements: snap.elements[start_idx..end_idx.min(snap.elements.len())].to_vec() }
 }
 
 fn trim_trailing_spacers(cache: &[Element], start_idx: usize, end_idx: usize) -> usize {

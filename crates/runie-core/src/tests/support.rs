@@ -28,6 +28,7 @@ pub fn seed_providers(state: &mut AppState, providers: &[(String, String, String
                 base_url: base_url.clone(),
                 models: models.clone(),
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: vec![],
             },
         );
     }

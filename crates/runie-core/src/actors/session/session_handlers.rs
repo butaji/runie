@@ -41,9 +41,7 @@ impl SessionActorState {
 
     pub fn emit_changed(&self) {
         let state = self.session_state.clone();
-        self.emit(Event::SessionChanged {
-            state: Box::new(state),
-        });
+        self.emit(Event::SessionChanged { state: Box::new(state) });
     }
 }
 
@@ -54,11 +52,7 @@ fn bump_time(state: &mut crate::model::SessionState) {
 
 impl RactorSessionActor {
     /// Handle add user message.
-    pub fn handle_add_user_message(
-        state: &mut SessionActorState,
-        content: String,
-        images: Vec<String>,
-    ) {
+    pub fn handle_add_user_message(state: &mut SessionActorState, content: String, images: Vec<String>) {
         let id = {
             let id = format!("req.{}", state.next_id);
             state.next_id += 1;
@@ -69,22 +63,13 @@ impl RactorSessionActor {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text {
-                content: content.clone(),
-            }],
-            metadata: MessageMetadata {
-                origin: MessageOrigin::User,
-                ..Default::default()
-            },
+            parts: vec![Part::Text { content: content.clone() }],
+            metadata: MessageMetadata { origin: MessageOrigin::User, ..Default::default() },
             ..Default::default()
         });
         bump_time(&mut state.session_state);
         // Emit fine-grained event instead of whole-state SessionChanged.
-        state.emit(Event::SessionMessageAdded {
-            id,
-            role: "user".into(),
-            content,
-        });
+        state.emit(Event::SessionMessageAdded { id, role: "user".into(), content });
         state.emit_changed();
     }
 
@@ -95,10 +80,7 @@ impl RactorSessionActor {
             timestamp: now(),
             id: "system".to_owned(),
             parts: vec![Part::Text { content }],
-            metadata: MessageMetadata {
-                origin: MessageOrigin::System,
-                ..Default::default()
-            },
+            metadata: MessageMetadata { origin: MessageOrigin::System, ..Default::default() },
             ..Default::default()
         });
         bump_time(&mut state.session_state);
@@ -106,42 +88,24 @@ impl RactorSessionActor {
     }
 
     /// Handle add tool message.
-    pub fn handle_add_tool_message(
-        state: &mut SessionActorState,
-        id: String,
-        name: String,
-        content: String,
-    ) {
+    pub fn handle_add_tool_message(state: &mut SessionActorState, id: String, name: String, content: String) {
         state.session_state.messages.push(ChatMessage {
             role: Role::Tool,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text {
-                content: content.clone(),
-            }],
+            parts: vec![Part::Text { content: content.clone() }],
             tool_call_id: Some(name),
-            metadata: MessageMetadata {
-                origin: MessageOrigin::Tool,
-                ..Default::default()
-            },
+            metadata: MessageMetadata { origin: MessageOrigin::Tool, ..Default::default() },
             ..Default::default()
         });
         bump_time(&mut state.session_state);
         // Emit fine-grained event.
-        state.emit(Event::SessionMessageAdded {
-            id,
-            role: "tool".into(),
-            content,
-        });
+        state.emit(Event::SessionMessageAdded { id, role: "tool".into(), content });
         state.emit_changed();
     }
 
     /// Handle update tool message.
-    pub fn handle_update_tool_message(
-        state: &mut SessionActorState,
-        id_contains: &str,
-        content: &str,
-    ) {
+    pub fn handle_update_tool_message(state: &mut SessionActorState, id_contains: &str, content: &str) {
         if let Some(idx) = state
             .session_state
             .messages
@@ -253,28 +217,19 @@ impl RactorSessionActor {
     }
 
     /// Handle set trust decision.
-    pub async fn handle_set_trust(
-        state: &mut SessionActorState,
-        path: Utf8PathBuf,
-        decision: TrustDecision,
-    ) {
+    pub async fn handle_set_trust(state: &mut SessionActorState, path: Utf8PathBuf, decision: TrustDecision) {
         state.trust.set(&path, decision);
         let trust = state.trust.clone();
         let path_clone = path.clone();
         let decision_clone = decision;
         let _ = tokio::task::spawn_blocking(move || trust.save()).await;
-        state.emit(Event::TrustChanged {
-            path: path_clone,
-            decision: decision_clone,
-        });
+        state.emit(Event::TrustChanged { path: path_clone, decision: decision_clone });
     }
 
     /// Handle append to history.
     pub async fn handle_append_history(_state: &mut SessionActorState, entry: String) {
         let entry_clone = entry;
-        let _ =
-            tokio::task::spawn_blocking(move || crate::input_history::append_history(&entry_clone))
-                .await;
+        let _ = tokio::task::spawn_blocking(move || crate::input_history::append_history(&entry_clone)).await;
     }
 
     /// Handle load session.
@@ -293,11 +248,7 @@ impl RactorSessionActor {
 
         match res {
             Ok(Ok((events, metadata))) => {
-                state.emit(Event::SessionLoaded {
-                    name,
-                    events: Box::new(events),
-                    metadata: metadata.map(Box::new),
-                });
+                state.emit(Event::SessionLoaded { name, events: Box::new(events), metadata: metadata.map(Box::new) });
             }
             _ => {
                 state.emit(Event::SessionOperationFailed {
@@ -340,14 +291,10 @@ impl RactorSessionActor {
 
         match res {
             Ok(Ok(())) => state.emit(Event::SessionSaved { name }),
-            Ok(Err(e)) => state.emit(Event::SessionOperationFailed {
-                operation: "save".to_owned(),
-                error: e.to_string(),
-            }),
-            Err(e) => state.emit(Event::SessionOperationFailed {
-                operation: "save".to_owned(),
-                error: e.to_string(),
-            }),
+            Ok(Err(e)) => {
+                state.emit(Event::SessionOperationFailed { operation: "save".to_owned(), error: e.to_string() })
+            }
+            Err(e) => state.emit(Event::SessionOperationFailed { operation: "save".to_owned(), error: e.to_string() }),
         }
     }
 
@@ -368,10 +315,9 @@ impl RactorSessionActor {
                     ),
                 });
             }
-            Err(e) => state.emit(Event::SessionOperationFailed {
-                operation: "delete".to_owned(),
-                error: e.to_string(),
-            }),
+            Err(e) => {
+                state.emit(Event::SessionOperationFailed { operation: "delete".to_owned(), error: e.to_string() })
+            }
         }
     }
 
@@ -381,17 +327,11 @@ impl RactorSessionActor {
         let res = tokio::task::spawn_blocking(move || store.list()).await;
 
         match res {
-            Ok(Ok(sessions)) => state.emit(Event::SessionList {
-                sessions: Box::new(sessions),
-            }),
-            Ok(Err(e)) => state.emit(Event::SessionOperationFailed {
-                operation: "list".to_owned(),
-                error: e.to_string(),
-            }),
-            Err(e) => state.emit(Event::SessionOperationFailed {
-                operation: "list".to_owned(),
-                error: e.to_string(),
-            }),
+            Ok(Ok(sessions)) => state.emit(Event::SessionList { sessions: Box::new(sessions) }),
+            Ok(Err(e)) => {
+                state.emit(Event::SessionOperationFailed { operation: "list".to_owned(), error: e.to_string() })
+            }
+            Err(e) => state.emit(Event::SessionOperationFailed { operation: "list".to_owned(), error: e.to_string() }),
         }
     }
 
@@ -425,10 +365,7 @@ impl RactorSessionActor {
                 });
             }
             Err(e) => {
-                state.emit(Event::SessionOperationFailed {
-                    operation: "resume".to_owned(),
-                    error: e.to_string(),
-                });
+                state.emit(Event::SessionOperationFailed { operation: "resume".to_owned(), error: e.to_string() });
             }
         }
     }
@@ -438,22 +375,17 @@ impl RactorSessionActor {
         let path_clone = path.clone();
         match tokio::task::spawn_blocking(move || std::fs::read_to_string(&path_clone)).await {
             Ok(Ok(json)) => match serde_json::from_str::<Session>(&json) {
-                Ok(session) => state.emit(Event::SessionImported {
-                    session: Box::new(session),
-                }),
-                Err(e) => state.emit(Event::SessionOperationFailed {
-                    operation: "import".to_owned(),
-                    error: e.to_string(),
-                }),
+                Ok(session) => state.emit(Event::SessionImported { session: Box::new(session) }),
+                Err(e) => {
+                    state.emit(Event::SessionOperationFailed { operation: "import".to_owned(), error: e.to_string() })
+                }
             },
-            Ok(Err(e)) => state.emit(Event::SessionOperationFailed {
-                operation: "import".to_owned(),
-                error: e.to_string(),
-            }),
-            Err(e) => state.emit(Event::SessionOperationFailed {
-                operation: "import".to_owned(),
-                error: e.to_string(),
-            }),
+            Ok(Err(e)) => {
+                state.emit(Event::SessionOperationFailed { operation: "import".to_owned(), error: e.to_string() })
+            }
+            Err(e) => {
+                state.emit(Event::SessionOperationFailed { operation: "import".to_owned(), error: e.to_string() })
+            }
         }
     }
 
@@ -463,25 +395,18 @@ impl RactorSessionActor {
         let json = match serde_json::to_string_pretty(&session) {
             Ok(json) => json,
             Err(e) => {
-                state.emit(Event::SessionOperationFailed {
-                    operation: "export".to_owned(),
-                    error: e.to_string(),
-                });
+                state.emit(Event::SessionOperationFailed { operation: "export".to_owned(), error: e.to_string() });
                 return;
             }
         };
         match tokio::task::spawn_blocking(move || std::fs::write(&path, json)).await {
-            Ok(Ok(())) => state.emit(Event::SessionExported {
-                path: path_clone.to_string_lossy().to_string(),
-            }),
-            Ok(Err(e)) => state.emit(Event::SessionOperationFailed {
-                operation: "export".to_owned(),
-                error: e.to_string(),
-            }),
-            Err(e) => state.emit(Event::SessionOperationFailed {
-                operation: "export".to_owned(),
-                error: e.to_string(),
-            }),
+            Ok(Ok(())) => state.emit(Event::SessionExported { path: path_clone.to_string_lossy().to_string() }),
+            Ok(Err(e)) => {
+                state.emit(Event::SessionOperationFailed { operation: "export".to_owned(), error: e.to_string() })
+            }
+            Err(e) => {
+                state.emit(Event::SessionOperationFailed { operation: "export".to_owned(), error: e.to_string() })
+            }
         }
     }
 
@@ -489,34 +414,21 @@ impl RactorSessionActor {
     #[instrument(name = "session_handler", skip_all, fields(msg = ?msg))]
     pub async fn handle_msg(state: &mut SessionActorState, msg: SessionMsg) {
         match msg {
-            SessionMsg::SetTrust { path, decision } => {
-                Self::handle_set_trust(state, path, decision).await
-            }
+            SessionMsg::SetTrust { path, decision } => Self::handle_set_trust(state, path, decision).await,
             SessionMsg::AppendHistory { entry } => Self::handle_append_history(state, entry).await,
             SessionMsg::Load { name } => Self::handle_load(state, name).await,
             SessionMsg::Save { name, session } => Self::handle_save(state, name, session).await,
             SessionMsg::Delete { name } => Self::handle_delete(state, name).await,
             SessionMsg::List => Self::handle_list(state).await,
             SessionMsg::ResumeMostRecent => Self::handle_resume_most_recent(state).await,
-            SessionMsg::AddUserMessage { content, images } => {
-                Self::handle_add_user_message(state, content, images)
+            SessionMsg::AddUserMessage { content, images } => Self::handle_add_user_message(state, content, images),
+            SessionMsg::AddSystemMessage { content } => Self::handle_add_system_message(state, content),
+            SessionMsg::AddToolMessage { id, name, content } => Self::handle_add_tool_message(state, id, name, content),
+            SessionMsg::UpdateToolMessage { id_contains, content } => {
+                Self::handle_update_tool_message(state, &id_contains, &content)
             }
-            SessionMsg::AddSystemMessage { content } => {
-                Self::handle_add_system_message(state, content)
-            }
-            SessionMsg::AddToolMessage { id, name, content } => {
-                Self::handle_add_tool_message(state, id, name, content)
-            }
-            SessionMsg::UpdateToolMessage {
-                id_contains,
-                content,
-            } => Self::handle_update_tool_message(state, &id_contains, &content),
-            SessionMsg::AddTurnComplete { id, content } => {
-                Self::handle_add_turn_complete(state, id, content)
-            }
-            SessionMsg::AddErrorMessage { id, content } => {
-                Self::handle_add_error_message(state, id, content)
-            }
+            SessionMsg::AddTurnComplete { id, content } => Self::handle_add_turn_complete(state, id, content),
+            SessionMsg::AddErrorMessage { id, content } => Self::handle_add_error_message(state, id, content),
             SessionMsg::Reset => Self::handle_reset(state),
             SessionMsg::ForkAt { index } => Self::handle_fork_at(state, index),
             SessionMsg::CloneBranch => Self::handle_clone_branch(state),

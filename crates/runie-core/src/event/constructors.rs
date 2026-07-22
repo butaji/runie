@@ -48,11 +48,7 @@ impl Event {
         Event::Abort
     }
     pub fn switch_model(provider: String, model: String) -> Self {
-        Event::SwitchModel {
-            provider,
-            model,
-            explicit: false,
-        }
+        Event::SwitchModel { provider, model, explicit: false }
     }
     pub fn switch_theme(name: String) -> Self {
         Event::SwitchTheme { name }

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Replay provider for black-box testing.
 //!
 //! `ReplayProvider` cycles through a list of SSE fixtures, replaying each one
@@ -11,8 +13,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::pin::Pin;
-use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, RwLock};
 
 use futures::Stream;
 use hex;
@@ -34,10 +36,7 @@ impl ToolCallEntry {
         let mut hasher = DefaultHasher::new();
         args.hash(&mut hasher);
         let args_hash = format!("{:x}", hasher.finish());
-        Self {
-            tool_name: tool_name.into(),
-            args_hash,
-        }
+        Self { tool_name: tool_name.into(), args_hash }
     }
 }
 
@@ -127,12 +126,7 @@ pub struct ReplayProvider {
 impl ReplayProvider {
     /// Build a provider that cycles through `fixtures` (each a raw SSE string).
     pub fn new(fixtures: Vec<String>, protocol: Protocol) -> Self {
-        Self {
-            fixtures,
-            protocol,
-            index: AtomicUsize::new(0),
-            key_map: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self { fixtures, protocol, index: AtomicUsize::new(0), key_map: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// Build a call tree from messages for deterministic key computation.
@@ -207,7 +201,10 @@ impl std::fmt::Debug for ReplayProvider {
         f.debug_struct("ReplayProvider")
             .field("fixtures", &self.fixtures.len())
             .field("protocol", &self.protocol)
-            .field("key_map_size", &self.key_map.read().map(|m| m.len()).unwrap_or(0))
+            .field(
+                "key_map_size",
+                &self.key_map.read().map(|m| m.len()).unwrap_or(0),
+            )
             .finish()
     }
 }
@@ -255,9 +252,7 @@ fn is_bare_retryable_error(events: &[ProviderEvent]) -> bool {
     let has_content = events.iter().any(|e| {
         matches!(
             e,
-            ProviderEvent::TextDelta(_)
-                | ProviderEvent::ThinkingDelta(_)
-                | ProviderEvent::ToolCallStart { .. }
+            ProviderEvent::TextDelta(_) | ProviderEvent::ThinkingDelta(_) | ProviderEvent::ToolCallStart { .. }
         )
     });
     if has_content {
@@ -287,12 +282,8 @@ fn parse_fixture(content: &str, protocol: Protocol) -> Vec<ProviderEvent> {
 
             let model_err = match code {
                 401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
-                429 => ModelError::RateLimit {
-                    retry_after_secs: None,
-                },
-                529 => ModelError::Overloaded {
-                    retry_after_secs: None,
-                },
+                429 => ModelError::RateLimit { retry_after_secs: None },
+                529 => ModelError::Overloaded { retry_after_secs: None },
                 500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
                 _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
             };
@@ -373,8 +364,7 @@ mod tests {
         let provider = ReplayProvider::new(
             vec![
                 "# HTTP 529\n# overloaded".to_string(),
-                "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\ndata: [DONE]\n\n"
-                    .to_string(),
+                "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\ndata: [DONE]\n\n".to_string(),
             ],
             Protocol::OpenAi,
         );
@@ -410,8 +400,7 @@ mod tests {
         let provider = ReplayProvider::new(
             vec![
                 "# HTTP 401\n# invalid api key".to_string(),
-                "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\ndata: [DONE]\n\n"
-                    .to_string(),
+                "data: {\"choices\":[{\"delta\":{\"content\":\"pong\"}}]}\n\ndata: [DONE]\n\n".to_string(),
             ],
             Protocol::OpenAi,
         );
@@ -471,9 +460,7 @@ mod tests {
 
     #[test]
     fn compute_replay_key_deterministic() {
-        let entries = vec![
-            ToolCallEntry::new("read_file", &serde_json::json!({"path": "/tmp"})),
-        ];
+        let entries = vec![ToolCallEntry::new("read_file", &serde_json::json!({"path": "/tmp"}))];
         let key1 = compute_replay_key(&entries, 0);
         let key2 = compute_replay_key(&entries, 0);
         assert_eq!(key1, key2, "same input must produce same key");
@@ -481,14 +468,8 @@ mod tests {
 
     #[test]
     fn compute_replay_key_different_tree() {
-        let entries1 = vec![ToolCallEntry::new(
-            "read_file",
-            &serde_json::json!({"path": "/tmp"}),
-        )];
-        let entries2 = vec![ToolCallEntry::new(
-            "write_file",
-            &serde_json::json!({"path": "/tmp"}),
-        )];
+        let entries1 = vec![ToolCallEntry::new("read_file", &serde_json::json!({"path": "/tmp"}))];
+        let entries2 = vec![ToolCallEntry::new("write_file", &serde_json::json!({"path": "/tmp"}))];
         let key1 = compute_replay_key(&entries1, 0);
         let key2 = compute_replay_key(&entries2, 0);
         assert_ne!(key1, key2, "different tree must produce different key");
@@ -496,10 +477,7 @@ mod tests {
 
     #[test]
     fn compute_replay_key_different_position() {
-        let entries = vec![ToolCallEntry::new(
-            "read_file",
-            &serde_json::json!({"path": "/tmp"}),
-        )];
+        let entries = vec![ToolCallEntry::new("read_file", &serde_json::json!({"path": "/tmp"}))];
         let key1 = compute_replay_key(&entries, 0);
         let key2 = compute_replay_key(&entries, 1);
         assert_ne!(key1, key2, "different position must produce different key");
@@ -521,8 +499,7 @@ mod tests {
 
     #[test]
     fn replay_key_builder_compute_key() {
-        let builder = ReplayKeyBuilder::new()
-            .add_call("read_file", &serde_json::json!({"path": "/tmp"}));
+        let builder = ReplayKeyBuilder::new().add_call("read_file", &serde_json::json!({"path": "/tmp"}));
         let key = builder.compute_key(0);
         assert!(!key.is_empty());
         assert_eq!(key.len(), 64);
@@ -530,9 +507,7 @@ mod tests {
 
     #[test]
     fn replay_key_builder_extend() {
-        let entries = vec![
-            ToolCallEntry::new("read_file", &serde_json::json!({"path": "/tmp"})),
-        ];
+        let entries = vec![ToolCallEntry::new("read_file", &serde_json::json!({"path": "/tmp"}))];
         let mut builder = ReplayKeyBuilder::new();
         builder.extend(&entries);
         assert_eq!(builder.call_tree().len(), 1);
@@ -548,21 +523,17 @@ mod tests {
             .add_call("bash", &serde_json::json!({"cmd": "ls"}));
         let key1 = builder1.compute_key(0);
         let key2 = builder2.compute_key(0);
-        assert_eq!(
-            key1, key2,
-            "identical builders must produce identical keys"
-        );
+        assert_eq!(key1, key2, "identical builders must produce identical keys");
     }
 
     #[test]
-    #[test]
     fn build_call_tree_from_messages() {
-        use runie_core::proto::message::{ChatMessageBuilder, Role};
+        use runie_core::proto::message::ChatMessageBuilder;
         let messages = vec![
-            ChatMessageBuilder::assistant()
+            ChatMessageBuilder::assistant("")
                 .tool_call("tc1", "read_file", serde_json::json!({"path": "/tmp"}))
                 .build(),
-            ChatMessageBuilder::assistant()
+            ChatMessageBuilder::assistant("")
                 .tool_call("tc2", "bash", serde_json::json!({"cmd": "ls"}))
                 .build(),
         ];
@@ -580,7 +551,7 @@ mod tests {
 
     #[test]
     fn deterministic_key_same_tool_sequence() {
-        use runie_core::proto::message::{ChatMessageBuilder, Role};
+        use runie_core::proto::message::ChatMessageBuilder;
         let fixtures = vec![
             r#"data: {"choices":[{"delta":{"content":"result1"}}]}"#.to_string(),
             r#"data: {"choices":[{"delta":{"content":"result2"}}]}"#.to_string(),
@@ -588,13 +559,13 @@ mod tests {
         let provider = ReplayProvider::new(fixtures, Protocol::OpenAi);
 
         // First call with specific tool sequence
-        let messages = vec![ChatMessageBuilder::assistant()
+        let messages = vec![ChatMessageBuilder::assistant("")
             .tool_call("tc1", "read_file", serde_json::json!({"path": "/tmp"}))
             .build()];
         let events1 = collect_from_provider(&provider, messages.clone());
 
         // Second call with SAME tool sequence
-        let messages2 = vec![ChatMessageBuilder::assistant()
+        let messages2 = vec![ChatMessageBuilder::assistant("")
             .tool_call("tc2", "read_file", serde_json::json!({"path": "/tmp"}))
             .build()];
         let events2 = collect_from_provider(&provider, messages2.clone());
@@ -622,7 +593,7 @@ mod tests {
 
     #[test]
     fn deterministic_key_different_tool_sequence() {
-        use runie_core::proto::message::{ChatMessageBuilder, Role};
+        use runie_core::proto::message::ChatMessageBuilder;
         let fixtures = vec![
             r#"data: {"choices":[{"delta":{"content":"result1"}}]}"#.to_string(),
             r#"data: {"choices":[{"delta":{"content":"result2"}}]}"#.to_string(),
@@ -630,13 +601,13 @@ mod tests {
         let provider = ReplayProvider::new(fixtures, Protocol::OpenAi);
 
         // First call with read_file
-        let messages1 = vec![ChatMessageBuilder::assistant()
+        let messages1 = vec![ChatMessageBuilder::assistant("")
             .tool_call("tc1", "read_file", serde_json::json!({"path": "/tmp"}))
             .build()];
         let events1 = collect_from_provider(&provider, messages1);
 
         // Second call with DIFFERENT tool (bash)
-        let messages2 = vec![ChatMessageBuilder::assistant()
+        let messages2 = vec![ChatMessageBuilder::assistant("")
             .tool_call("tc2", "bash", serde_json::json!({"cmd": "ls"}))
             .build()];
         let events2 = collect_from_provider(&provider, messages2);
@@ -647,14 +618,12 @@ mod tests {
 
     #[test]
     fn parallel_tool_results_stable_across_runs() {
-        use runie_core::proto::message::{ChatMessageBuilder, Role};
-        let fixtures = vec![
-            r#"data: {"choices":[{"delta":{"content":"stable_result"}}]}"#.to_string(),
-        ];
+        use runie_core::proto::message::ChatMessageBuilder;
+        let fixtures = vec![r#"data: {"choices":[{"delta":{"content":"stable_result"}}]}"#.to_string()];
         let provider = ReplayProvider::new(fixtures, Protocol::OpenAi);
 
         // Simulate multiple "runs" with same call tree
-        let call_tree = vec![ChatMessageBuilder::assistant()
+        let call_tree = vec![ChatMessageBuilder::assistant("")
             .tool_call("tc1", "read_file", serde_json::json!({"path": "/stable"}))
             .build()];
 
@@ -683,10 +652,7 @@ mod tests {
         );
     }
 
-    fn collect_from_provider(
-        provider: &ReplayProvider,
-        messages: Vec<ChatMessage>,
-    ) -> Vec<ProviderEvent> {
+    fn collect_from_provider(provider: &ReplayProvider, messages: Vec<ChatMessage>) -> Vec<ProviderEvent> {
         use futures::StreamExt;
         let rt = tokio::runtime::Builder::new_current_thread()
             .build()

@@ -53,8 +53,10 @@ fn assistant_with_mixed_text_and_tool_not_rendered() {
     });
     state.ensure_fresh();
 
-    assert!(!has_agent_message(&state),
-        "Assistant with natural language + tool marker must not render as AgentMessage (captured in thought)");
+    assert!(
+        !has_agent_message(&state),
+        "Assistant with natural language + tool marker must not render as AgentMessage (captured in thought)"
+    );
 }
 
 #[test]
@@ -62,9 +64,7 @@ fn assistant_with_structured_tool_not_rendered() {
     let mut state = fresh_state();
     state.update(Event::Response {
         id: "req.0".into(),
-        content:
-            r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#
-                .into(),
+        content: r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#.into(),
         role: String::new(),
         timestamp: 0.0,
         provider: String::new(),
@@ -163,8 +163,7 @@ fn thought_renders_after_thought_done() {
     let has_thought = feed.elements.iter().any(|e| {
         matches!(
             e,
-            runie_core::view::Element::ThoughtMarker { .. }
-                | runie_core::view::Element::ThoughtSummary { .. }
+            runie_core::view::Element::ThoughtMarker { .. } | runie_core::view::Element::ThoughtSummary { .. }
         )
     });
     assert!(has_thought, "Thought must render after AgentThoughtDone");
@@ -189,17 +188,8 @@ fn post_tool_assistant_renders() {
         provider: String::new(),
     });
     state.update(Event::ThoughtDone { id: "req.0".into() });
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "file1".into(),
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "file1".into() });
     state.update(Event::Response {
         id: "req.0".into(),
         content: "Done!".into(),
@@ -276,17 +266,8 @@ fn verify_no_agent_after_thought_done(state: &mut AppState) {
 }
 
 fn verify_no_agent_during_tool(state: &mut AppState) {
-    state.update(Event::ToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 0.5,
-        output: "a\nb\nc".into(),
-    });
+    state.update(Event::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a\nb\nc".into() });
     state.ensure_fresh();
     assert!(
         agent_texts(state).is_empty(),
@@ -311,10 +292,7 @@ fn verify_final_response_shows(state: &mut AppState) {
 }
 
 fn verify_response_persists_after_turn(state: &mut AppState) {
-    state.update(Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 2.0,
-    });
+    state.update(Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert_eq!(
@@ -387,10 +365,7 @@ fn streaming_turn_appears_in_feed_after_done() {
     // Simulate a streaming turn: thinking starts, text streams in, done.
     state.update(Event::Thinking { id: "req.0".into() });
     state.update(Event::TextStart { id: "req.0".into() });
-    state.update(Event::ResponseDelta {
-        id: "req.0".into(),
-        content: "Hello!".into(),
-    });
+    state.update(Event::ResponseDelta { id: "req.0".into(), content: "Hello!".into() });
     state.update(Event::Done { id: "req.0".into() });
 
     // After Done, the assistant message MUST be visible in the feed.
@@ -425,10 +400,7 @@ fn streaming_turn_appears_in_feed_after_done() {
 #[test]
 fn error_message_renders_normally() {
     let mut state = fresh_state();
-    state.update(Event::Error {
-        id: "req.0".into(),
-        message: "API timeout".into(),
-    });
+    state.update(Event::Error { id: "req.0".into(), message: "API timeout".into() });
     state.ensure_fresh();
 
     assert!(

@@ -80,11 +80,7 @@ pub enum WaitResult {
 /// ).await;
 /// assert_eq!(result, WaitResult::Met);
 /// ```
-pub async fn wait_for_condition<Fut>(
-    timeout: Duration,
-    step: Duration,
-    condition: impl Fn() -> Fut,
-) -> WaitResult
+pub async fn wait_for_condition<Fut>(timeout: Duration, step: Duration, condition: impl Fn() -> Fut) -> WaitResult
 where
     Fut: std::future::Future<Output = bool>,
 {

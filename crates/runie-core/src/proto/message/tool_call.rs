@@ -19,21 +19,12 @@ pub struct ToolCall {
 
 impl ToolCall {
     pub fn new(id: impl Into<String>, name: impl Into<String>, args: serde_json::Value) -> Self {
-        Self {
-            id: id.into(),
-            name: name.into(),
-            args,
-        }
+        Self { id: id.into(), name: name.into(), args }
     }
 
     /// Construct a ToolCall from a JSON string for the arguments field.
-    pub fn with_json_args(
-        id: impl Into<String>,
-        name: impl Into<String>,
-        arguments: impl AsRef<str>,
-    ) -> Self {
-        let args: serde_json::Value =
-            serde_json::from_str(arguments.as_ref()).unwrap_or(serde_json::Value::Null);
+    pub fn with_json_args(id: impl Into<String>, name: impl Into<String>, arguments: impl AsRef<str>) -> Self {
+        let args: serde_json::Value = serde_json::from_str(arguments.as_ref()).unwrap_or(serde_json::Value::Null);
         Self::new(id, name, args)
     }
 

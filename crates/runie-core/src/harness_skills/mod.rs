@@ -162,10 +162,7 @@ pub struct SkillRegistry {
 impl SkillRegistry {
     /// Create a new empty registry.
     pub fn new() -> Self {
-        Self {
-            skills: Vec::new(),
-            config: HarnessConfig::default(),
-        }
+        Self { skills: Vec::new(), config: HarnessConfig::default() }
     }
 
     /// Register a skill.

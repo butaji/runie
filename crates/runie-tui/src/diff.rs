@@ -6,9 +6,7 @@
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 
-use crate::theme::{
-    color_diff_insert_bg, color_diff_remove_bg, color_dim, color_fg, color_success,
-};
+use crate::theme::{color_diff_insert_bg, color_diff_remove_bg, color_dim, color_fg, color_success};
 
 use runie_core::diff::{Diff, DiffLine};
 
@@ -39,10 +37,7 @@ pub fn render_canonical_diff(diff: &Diff, gutter_width: usize) -> Vec<Line<'stat
                         Span::styled(line.content().to_owned(), style),
                     ]
                 }
-                None => vec![
-                    Span::styled(prefix, style),
-                    Span::styled(line.content().to_owned(), style),
-                ],
+                None => vec![Span::styled(prefix, style), Span::styled(line.content().to_owned(), style)],
             };
             output.push(Line::from(spans));
         }
@@ -142,10 +137,7 @@ mod tests {
         // Force truecolor so quantized approximations do not break RGB assertions.
         crate::theme::set_current_theme_with_caps(
             crate::theme::DEFAULT_THEME_NAME,
-            crate::terminal::caps::TermCaps {
-                truecolor: true,
-                ..Default::default()
-            },
+            crate::terminal::caps::TermCaps { truecolor: true, ..Default::default() },
         );
 
         let added = DiffLine::Added("test".to_string(), Some(1));

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Unified terminal backend trait (from Grok Build)
 
 use async_trait::async_trait;

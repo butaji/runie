@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 use runie_patterns::{
-    model_for, AgentTrace, Context, Pattern, PatternConfig, PatternRegistry, SinglePattern,
-    TerminationReason, TraceEvent, WorkerRunner, WorkerTask,
+    model_for, AgentTrace, Context, Pattern, PatternConfig, PatternRegistry, SinglePattern, TerminationReason,
+    TraceEvent, WorkerRunner, WorkerTask,
 };
 use tokio::sync::{mpsc, Semaphore};
 use tokio_util::sync::CancellationToken;
@@ -153,9 +153,7 @@ async fn single_pattern_happy_path() -> Result<()> {
     assert_eq!(out.traces[0].agent_id, "leader");
     assert_eq!(
         out.traces[0].events,
-        vec![TraceEvent::Termination {
-            reason: TerminationReason::Completed
-        }]
+        vec![TraceEvent::Termination { reason: TerminationReason::Completed }]
     );
 
     // Trace was also delivered on the trace channel.
@@ -192,10 +190,7 @@ async fn single_pattern_runner_error() -> Result<()> {
 #[tokio::test]
 async fn single_pattern_timeout() -> Result<()> {
     let runner = Arc::new(MockRunner::ok("too late").with_sleep(Duration::from_millis(500)));
-    let config = PatternConfig {
-        timeout_ms: 50,
-        ..PatternConfig::default()
-    };
+    let config = PatternConfig { timeout_ms: 50, ..PatternConfig::default() };
     let (ctx, _trace_rx) = make_ctx(config, runner.clone(), CancellationToken::new());
 
     let out = SinglePattern.execute(&ctx, "hello").await?;

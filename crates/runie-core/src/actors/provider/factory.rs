@@ -12,17 +12,14 @@ use crate::provider::routing::{route_model, select_context_fallback};
 use crate::provider_event::ProviderEvent;
 
 // `Provider` and `ProviderError` are defined in `runie-provider` and re-exported here.
-use crate::provider::{
-    Provider, ProviderError, ProviderMetadata, RetryConfig, CONNECT_TIMEOUT, REQUEST_TIMEOUT,
-};
+use crate::provider::{Provider, ProviderError, ProviderMetadata, RetryConfig, CONNECT_TIMEOUT, REQUEST_TIMEOUT};
 
 /// Process-global cache of HTTP clients keyed by `(provider_key, base_url)`.
 ///
 /// This enables connection reuse across turns: each unique provider+URL pair shares
 /// one `reqwest::Client`, so TCP connections and HTTP/2 streams are pooled.
 #[allow(clippy::type_complexity)]
-static HTTP_CLIENT_CACHE: OnceLock<Mutex<HashMap<(String, String), Arc<reqwest::Client>>>> =
-    OnceLock::new();
+static HTTP_CLIENT_CACHE: OnceLock<Mutex<HashMap<(String, String), Arc<reqwest::Client>>>> = OnceLock::new();
 
 fn get_cached_http_client(provider_key: &str, base_url: &str) -> Arc<reqwest::Client> {
     let cache = HTTP_CLIENT_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
@@ -64,39 +61,19 @@ impl BuiltProvider {
     /// Create a new `BuiltProvider` from a boxed provider.
     pub fn new(provider: Box<dyn Provider>, key: String, model: String) -> Self {
         let metadata = provider.metadata();
-        Self {
-            provider: Arc::from(provider),
-            key,
-            model,
-            metadata,
-        }
+        Self { provider: Arc::from(provider), key, model, metadata }
     }
 
     /// Create a new `BuiltProvider` with metadata.
-    pub fn with_metadata(
-        provider: Box<dyn Provider>,
-        key: String,
-        model: String,
-        metadata: ProviderMetadata,
-    ) -> Self {
-        Self {
-            provider: Arc::from(provider),
-            key,
-            model,
-            metadata,
-        }
+    pub fn with_metadata(provider: Box<dyn Provider>, key: String, model: String, metadata: ProviderMetadata) -> Self {
+        Self { provider: Arc::from(provider), key, model, metadata }
     }
 
     /// Wrap a provider implementation.
     #[doc(hidden)]
     pub fn from_provider(provider: Box<dyn Provider>, key: &str, model: &str) -> Self {
         let metadata = provider.metadata();
-        Self {
-            provider: Arc::from(provider),
-            key: key.to_owned(),
-            model: model.to_owned(),
-            metadata,
-        }
+        Self { provider: Arc::from(provider), key: key.to_owned(), model: model.to_owned(), metadata }
     }
 
     /// Get a cached HTTP client for a provider+URL pair.
@@ -156,11 +133,7 @@ impl BuiltProvider {
     ///
     /// Returns a new BuiltProvider with the fallback model if the current
     /// model has limited context window.
-    pub fn with_context_fallback(
-        self,
-        models: &[crate::provider::ModelMeta],
-        config: &Config,
-    ) -> Self {
+    pub fn with_context_fallback(self, models: &[crate::provider::ModelMeta], config: &Config) -> Self {
         let fallback_list = &config.models.context_window_fallback;
         if fallback_list.is_empty() {
             return self;
@@ -173,10 +146,7 @@ impl BuiltProvider {
                 if let Some(fallback) = select_context_fallback(fallback_list, models) {
                     let mut new_provider = self;
                     new_provider.model = fallback.name.clone();
-                    let mut info = crate::model_catalog::ModelInfo::new(
-                        &new_provider.key,
-                        fallback.name.clone(),
-                    );
+                    let mut info = crate::model_catalog::ModelInfo::new(&new_provider.key, fallback.name.clone());
                     info.context_window = fallback.context_window;
                     new_provider.metadata = new_provider.metadata.with_model_info(info);
                     return new_provider;
@@ -200,8 +170,7 @@ impl Provider for BuiltProvider {
     fn generate(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-    {
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         self.provider.generate(messages)
     }
 
@@ -209,8 +178,7 @@ impl Provider for BuiltProvider {
         &self,
         messages: Vec<ChatMessage>,
         tools: Vec<serde_json::Value>,
-    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-    {
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         self.provider.generate_with_tools(messages, tools)
     }
 
@@ -221,8 +189,7 @@ impl Provider for BuiltProvider {
     fn complete_fast(
         &self,
         messages: Vec<ChatMessage>,
-    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-    {
+    ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
         self.provider.complete_fast(messages)
     }
 }
@@ -235,12 +202,7 @@ impl Provider for BuiltProvider {
 #[async_trait]
 pub trait ProviderFactory: Send + Sync + 'static {
     /// Build a provider for `provider`/`model` using credentials in `config`.
-    fn build(
-        &self,
-        provider: &str,
-        model: &str,
-        config: &Config,
-    ) -> Result<BuiltProvider, ProviderError>;
+    fn build(&self, provider: &str, model: &str, config: &Config) -> Result<BuiltProvider, ProviderError>;
 
     /// Validate `api_key` against `base_url` and return available model IDs.
     async fn validate_key(&self, base_url: &str, api_key: &str) -> anyhow::Result<Vec<String>>;

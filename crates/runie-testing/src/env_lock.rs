@@ -19,9 +19,7 @@ pub struct EnvRestore {
 impl EnvRestore {
     /// Create a new empty restore guard.
     pub fn new() -> Self {
-        Self {
-            vars: HashMap::new(),
-        }
+        Self { vars: HashMap::new() }
     }
 
     /// Set an environment variable, saving its prior value for restoration.

@@ -70,20 +70,12 @@ pub struct AuthorizationContext<'a> {
 impl<'a> AuthorizationContext<'a> {
     /// Create a new authorization context.
     pub fn new(tool_name: &'a str, input: &'a Value) -> Self {
-        Self {
-            tool_name,
-            input,
-            is_first_call: true,
-        }
+        Self { tool_name, input, is_first_call: true }
     }
 
     /// Create a new context with first-call flag.
     pub fn with_first_call(tool_name: &'a str, input: &'a Value, is_first_call: bool) -> Self {
-        Self {
-            tool_name,
-            input,
-            is_first_call,
-        }
+        Self { tool_name, input, is_first_call }
     }
 }
 
@@ -126,18 +118,13 @@ pub fn always_ask(_ctx: &AuthorizationContext<'_>) -> AuthorizeResult {
 
 /// Default authorization that denies with a reason.
 pub fn deny(reason: &str) -> impl Fn(&AuthorizationContext<'_>) -> AuthorizeResult + '_ {
-    move |_ctx: &AuthorizationContext<'_>| AuthorizeResult::Denied {
-        reason: reason.to_owned(),
-    }
+    move |_ctx: &AuthorizationContext<'_>| AuthorizeResult::Denied { reason: reason.to_owned() }
 }
 
 /// Authorization based on tool input patterns.
 ///
 /// Returns `AskUser` if the input contains suspicious patterns, otherwise `Allowed`.
-pub fn check_input_patterns(
-    ctx: &AuthorizationContext<'_>,
-    dangerous_patterns: &[&str],
-) -> AuthorizeResult {
+pub fn check_input_patterns(ctx: &AuthorizationContext<'_>, dangerous_patterns: &[&str]) -> AuthorizeResult {
     let input_str = ctx.input.to_string();
     for pattern in dangerous_patterns {
         if input_str.contains(pattern) {
@@ -184,9 +171,7 @@ mod tests {
 
     #[test]
     fn authorize_result_denied() {
-        let result = AuthorizeResult::Denied {
-            reason: "dangerous command".to_owned(),
-        };
+        let result = AuthorizeResult::Denied { reason: "dangerous command".to_owned() };
         assert!(!result.is_allowed());
         assert!(result.is_denied());
         assert!(!result.requires_user());
@@ -221,19 +206,22 @@ mod tests {
 
     #[test]
     fn allow_readonly_always_allows() {
-        let ctx = AuthorizationContext::new("grep", &json!({}));
+        let binding = json!({});
+        let ctx = AuthorizationContext::new("grep", &binding);
         assert!(matches!(allow_readonly(&ctx), AuthorizeResult::Allowed));
     }
 
     #[test]
     fn always_ask_always_asks() {
-        let ctx = AuthorizationContext::new("bash", &json!({}));
+        let binding = json!({});
+        let ctx = AuthorizationContext::new("bash", &binding);
         assert!(matches!(always_ask(&ctx), AuthorizeResult::AskUser));
     }
 
     #[test]
     fn deny_creates_denial() {
-        let ctx = AuthorizationContext::new("rm", &json!({}));
+        let binding = json!({});
+        let ctx = AuthorizationContext::new("rm", &binding);
         let check = deny("not allowed");
         let result = check(&ctx);
         assert!(result.is_denied());
@@ -242,7 +230,8 @@ mod tests {
 
     #[test]
     fn check_input_patterns_allows_safe() {
-        let ctx = AuthorizationContext::new("read_file", &json!({"path": "/safe/path"}));
+        let binding = json!({"path": "/safe/path"});
+        let ctx = AuthorizationContext::new("read_file", &binding);
         let patterns = ["sudo", "rm -rf", "eval"];
         let result = check_input_patterns(&ctx, &patterns);
         assert!(result.is_allowed());
@@ -250,10 +239,8 @@ mod tests {
 
     #[test]
     fn check_input_patterns_asks_on_match() {
-        let ctx = AuthorizationContext::new(
-            "bash",
-            &json!({"command": "sudo rm -rf /important"}),
-        );
+        let binding = json!({"command": "sudo rm -rf /important"});
+        let ctx = AuthorizationContext::new("bash", &binding);
         let patterns = ["sudo", "rm -rf", "eval"];
         let result = check_input_patterns(&ctx, &patterns);
         assert!(result.requires_user());
@@ -283,7 +270,7 @@ mod tests {
     }
 
     impl Authorizable for MockTool {
-        fn authorize(&self, ctx: &AuthorizationContext<'_>) -> AuthorizeResult {
+        fn authorize(&self, _ctx: &AuthorizationContext<'_>) -> AuthorizeResult {
             if self.requires_approval {
                 AuthorizeResult::AskUser
             } else {
@@ -291,37 +278,30 @@ mod tests {
             }
         }
 
-        async fn execute_async(&self, input: Value) -> super::ToolOutput {
-            super::ToolOutput::success(self.name, input, "executed".into())
+        async fn execute_async(&self, input: Value) -> crate::tool::ToolOutput {
+            crate::tool::ToolOutput::success(self.name, input, "executed".into())
         }
     }
 
     #[test]
     fn authorizable_trait_ask_user() {
-        let tool = MockTool {
-            name: "bash",
-            requires_approval: true,
-        };
-        let ctx = AuthorizationContext::new("bash", &json!({}));
+        let tool = MockTool { name: "bash", requires_approval: true };
+        let input = json!({});
+        let ctx = AuthorizationContext::new("bash", &input);
         assert!(matches!(tool.authorize(&ctx), AuthorizeResult::AskUser));
     }
 
     #[test]
     fn authorizable_trait_allowed() {
-        let tool = MockTool {
-            name: "read_file",
-            requires_approval: false,
-        };
-        let ctx = AuthorizationContext::new("read_file", &json!({}));
+        let tool = MockTool { name: "read_file", requires_approval: false };
+        let input = json!({});
+        let ctx = AuthorizationContext::new("read_file", &input);
         assert!(matches!(tool.authorize(&ctx), AuthorizeResult::Allowed));
     }
 
     #[tokio::test]
     async fn authorizable_executes_after_auth() {
-        let tool = MockTool {
-            name: "read_file",
-            requires_approval: false,
-        };
+        let tool = MockTool { name: "read_file", requires_approval: false };
         let input = json!({"path": "/test"});
         let result = tool.execute_async(input.clone()).await;
         assert_eq!(result.tool_name, "read_file");

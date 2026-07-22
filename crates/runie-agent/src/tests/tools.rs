@@ -1,8 +1,8 @@
 //! Tests for canonical tool execution via `runie_core::tool`.
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool,
-    ReadFileTool, SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
+    SearchTool, WriteFileTool,
 };
 use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 
@@ -12,6 +12,7 @@ async fn call_tool(name: &str, args: serde_json::Value) -> ToolOutput {
 
 /// Dispatch a tool call by name.
 /// Match arms are kept in the same order as `BUILTIN_TOOL_NAMES`.
+#[allow(clippy::cognitive_complexity)]
 async fn dispatch_tool(name: &str, args: &serde_json::Value) -> ToolOutput {
     match name {
         "bash" => run_tool::<BashTool>(args).await,

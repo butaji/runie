@@ -6,8 +6,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use runie_patterns::{
-    AgentTrace, Context, ImprovePattern, Pattern, PatternConfig, PatternOutput,
-    PatternRegistry, TerminationReason, WorkerRunner, WorkerTask,
+    AgentTrace, Context, ImprovePattern, Pattern, PatternConfig, PatternOutput, PatternRegistry, TerminationReason,
+    WorkerRunner, WorkerTask,
 };
 use tokio::sync::{mpsc, Semaphore};
 use tokio_util::sync::CancellationToken;
@@ -32,10 +32,7 @@ struct MockRunner {
 
 impl MockRunner {
     fn new(responses: Vec<Result<String, String>>) -> Self {
-        Self {
-            responses: Arc::new(Mutex::new(responses.into())),
-            ..Self::default()
-        }
+        Self { responses: Arc::new(Mutex::new(responses.into())), ..Self::default() }
     }
 
     fn with_sleep(mut self, d: Duration) -> Self {
@@ -81,6 +78,7 @@ fn test_config() -> PatternConfig {
         timeout_ms: 5_000,
         max_retries: 2,
         circuit_breaker: 3,
+        doom_loop_threshold: 5,
     }
 }
 
@@ -114,7 +112,10 @@ async fn improve_approved_on_first_review() -> Result<()> {
 
     assert_eq!(out.result, "draft v1");
     assert_eq!(out.termination, TerminationReason::Approved);
-    assert_eq!(trace_ids(&out), vec!["improve-generate-1", "improve-review-1"]);
+    assert_eq!(
+        trace_ids(&out),
+        vec!["improve-generate-1", "improve-review-1"]
+    );
     assert_eq!(out.traces[0].description, "generate");
     assert_eq!(out.traces[0].output, "draft v1");
     assert_eq!(out.traces[1].description, "review round 1");
@@ -140,8 +141,27 @@ async fn improve_approved_on_first_review() -> Result<()> {
     Ok(())
 }
 
+/// improve_happy_path: generate → review → APPROVED on first pass.
 #[tokio::test]
-async fn improve_feedback_then_approval() -> Result<()> {
+async fn improve_happy_path() -> Result<()> {
+    let runner = Arc::new(MockRunner::new(vec![ok("draft v1"), ok("APPROVED")]));
+    let (ctx, _rx) = make_ctx(test_config(), runner.clone(), CancellationToken::new());
+
+    let out = ImprovePattern.execute(&ctx, "write a haiku").await?;
+
+    assert_eq!(out.termination, TerminationReason::Approved);
+    assert_eq!(out.result, "draft v1");
+    assert_eq!(
+        trace_ids(&out),
+        vec!["improve-generate-1", "improve-review-1"]
+    );
+    assert!(runner.calls()[1].prompt.contains("draft v1"));
+    Ok(())
+}
+
+/// improve_reject_and_revise: review rejects → revise → second review approves.
+#[tokio::test]
+async fn improve_reject_and_revise() -> Result<()> {
     let runner = Arc::new(MockRunner::new(vec![
         ok("draft v1"),
         ok("add more detail"),
@@ -156,12 +176,7 @@ async fn improve_feedback_then_approval() -> Result<()> {
     assert_eq!(out.termination, TerminationReason::Approved);
     assert_eq!(
         trace_ids(&out),
-        vec![
-            "improve-generate-1",
-            "improve-review-1",
-            "improve-revise-2",
-            "improve-review-2"
-        ]
+        vec!["improve-generate-1", "improve-review-1", "improve-revise-2", "improve-review-2"]
     );
     assert_eq!(out.traces[2].description, "revise round 2");
 
@@ -182,12 +197,10 @@ async fn improve_feedback_then_approval() -> Result<()> {
     Ok(())
 }
 
+/// improve_no_approval_times_out: max_rounds exhausted without approval.
 #[tokio::test]
-async fn improve_max_rounds_without_approval() -> Result<()> {
-    let config = PatternConfig {
-        max_rounds: 2,
-        ..test_config()
-    };
+async fn improve_no_approval_times_out() -> Result<()> {
+    let config = PatternConfig { max_rounds: 2, ..test_config() };
     let runner = Arc::new(MockRunner::new(vec![
         ok("draft v1"),
         ok("feedback 1"),
@@ -196,20 +209,13 @@ async fn improve_max_rounds_without_approval() -> Result<()> {
     ]));
     let (ctx, _rx) = make_ctx(config, runner.clone(), CancellationToken::new());
 
-    let out = ImprovePattern
-        .execute(&ctx, "never good enough")
-        .await?;
+    let out = ImprovePattern.execute(&ctx, "never good enough").await?;
 
     assert_eq!(out.termination, TerminationReason::MaxRoundsReached);
     assert_eq!(out.result, "draft v2", "result is the last draft");
     assert_eq!(
         trace_ids(&out),
-        vec![
-            "improve-generate-1",
-            "improve-review-1",
-            "improve-revise-2",
-            "improve-review-2"
-        ]
+        vec!["improve-generate-1", "improve-review-1", "improve-revise-2", "improve-review-2"]
     );
     assert_eq!(runner.calls().len(), 4, "2 rounds x (draft + review)");
     Ok(())
@@ -255,14 +261,9 @@ async fn improve_generator_error_returns_empty_result() -> Result<()> {
 #[test]
 fn improve_registry_metadata() {
     let registry = PatternRegistry::default();
-    let pattern = registry
-        .get("improve")
-        .expect("improve registered");
+    let pattern = registry.get("improve").expect("improve registered");
     assert_eq!(pattern.name(), "improve");
-    assert_eq!(
-        pattern.description(),
-        "Iterative improvement with review"
-    );
+    assert_eq!(pattern.description(), "Iterative improvement with review");
 
     let names = registry.names();
     let swarm_pos = names
@@ -273,8 +274,5 @@ fn improve_registry_metadata() {
         .iter()
         .position(|n| *n == "improve")
         .expect("improve registered");
-    assert!(
-        eval_pos > swarm_pos,
-        "improve is registered after swarm"
-    );
+    assert!(eval_pos > swarm_pos, "improve is registered after swarm");
 }

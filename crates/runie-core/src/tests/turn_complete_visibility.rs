@@ -60,10 +60,7 @@ fn single_thought_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 0.5,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 0.5 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     // TurnComplete is ALWAYS shown (like Grok does)
@@ -76,18 +73,8 @@ fn tool_plus_thought_shows_turn_complete() {
     state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.3,
-        output: "file1".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "file1".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Found it".into(),
@@ -96,10 +83,7 @@ fn tool_plus_thought_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
@@ -117,18 +101,8 @@ fn tool_only_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.3,
-        output: "file1".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "file1".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -137,10 +111,7 @@ fn tool_only_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     // TurnComplete is ALWAYS shown (like Grok does)
@@ -163,10 +134,7 @@ fn two_thoughts_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 2.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
@@ -178,30 +146,10 @@ fn two_tools_shows_turn_complete() {
     state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.1,
-        output: "a".into(),
-
-        input: None,
-    });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "cat".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.2,
-        output: "b".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(), input: None });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -210,10 +158,7 @@ fn two_tools_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 3.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 3.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
@@ -225,18 +170,8 @@ fn mixed_thought_tool_shows_turn_complete() {
     state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: "a".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -245,10 +180,7 @@ fn mixed_thought_tool_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.5,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.5 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
@@ -266,10 +198,7 @@ fn zero_actions_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 0.1,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 0.1 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     // TurnComplete is ALWAYS shown (like Grok does)
@@ -280,18 +209,8 @@ fn first_turn_events() -> Vec<Event> {
     vec![
         crate::Event::Thinking { id: "req.0".into() },
         crate::Event::ThoughtDone { id: "req.0".into() },
-        crate::Event::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        crate::Event::ToolEnd {
-            id: "".to_string(),
-            duration_secs: 0.5,
-            output: "a".into(),
-
-            input: None,
-        },
+        crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(), input: None },
         crate::Event::Response {
             id: "req.0".into(),
             content: "First".into(),
@@ -300,10 +219,7 @@ fn first_turn_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        crate::Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 1.0,
-        },
+        crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 },
         crate::Event::Done { id: "req.0".into() },
     ]
 }
@@ -311,18 +227,8 @@ fn first_turn_events() -> Vec<Event> {
 fn second_turn_events() -> Vec<Event> {
     vec![
         crate::Event::Thinking { id: "req.1".into() },
-        crate::Event::ToolStart {
-            id: "req.1".into(),
-            name: "cat".into(),
-            input: serde_json::Value::Null,
-        },
-        crate::Event::ToolEnd {
-            id: "".to_string(),
-            duration_secs: 0.3,
-            output: "b".into(),
-
-            input: None,
-        },
+        crate::Event::ToolStart { id: "req.1".into(), name: "cat".into(), input: serde_json::Value::Null },
+        crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: "b".into(), input: None },
         crate::Event::Response {
             id: "req.1".into(),
             content: "Second".into(),
@@ -331,10 +237,7 @@ fn second_turn_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        crate::Event::TurnComplete {
-            id: "req.1".into(),
-            duration_secs: 0.8,
-        },
+        crate::Event::TurnComplete { id: "req.1".into(), duration_secs: 0.8 },
         crate::Event::Done { id: "req.1".into() },
     ]
 }
@@ -362,18 +265,8 @@ fn three_mixed_actions_shows_turn_complete() {
     state.set_streaming(true);
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.1,
-        output: "a".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(), input: None });
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
     state.update(crate::Event::Response {
@@ -384,10 +277,7 @@ fn three_mixed_actions_shows_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 2.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     assert!(feed_has_turn_complete(&state));
@@ -407,10 +297,7 @@ fn turn_complete_in_session_and_feed() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 0.5,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 0.5 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
     let turn_msgs = state

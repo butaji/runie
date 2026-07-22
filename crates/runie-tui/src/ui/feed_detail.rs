@@ -8,53 +8,35 @@
 use ratatui::{
     layout::{Margin, Rect},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 use runie_core::Snapshot;
 
 /// Render the feed element detail overlay fullscreen over the feed area.
-pub fn render_feed_detail(f: &mut Frame, snap: &Snapshot, area: Rect) {
+pub fn render_feed_detail(f: &mut Frame, snap: &Snapshot, _area: Rect) {
     let Some(detail) = snap.feed_element_detail.as_ref() else {
         return;
     };
 
     let title = format!(" {} ", detail.kind.label());
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(crate::theme::style_border())
-        .title(Line::from(title));
 
-    f.render_widget(block.clone(), area);
+    // Use setup_panel to render the panel with consistent styling
+    let inner = crate::popups::panel::setup_panel(f, _area, &title);
 
-    let inner = block.inner(area);
     if inner.height < 3 {
         return;
     }
 
-    let body_height = inner.height - 1;
-    let body_area = Rect {
-        x: inner.x,
-        y: inner.y,
-        width: inner.width,
-        height: body_height,
-    };
-    let footer_area = Rect {
-        x: inner.x,
-        y: inner.y + body_height,
-        width: inner.width,
-        height: 1,
-    };
+    // Body area is the full inner rect; footer is the last row
+    let body_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: inner.height - 1 };
+    let footer_area = Rect { x: inner.x, y: inner.y + inner.height - 1, width: inner.width, height: 1 };
 
     render_body(f, detail, body_area);
     render_footer(f, footer_area);
 }
 
-fn render_body(
-    f: &mut Frame,
-    detail: &runie_core::model::FeedElementDetail,
-    area: Rect,
-) {
+fn render_body(f: &mut Frame, detail: &runie_core::model::FeedElementDetail, area: Rect) {
     let content_width = area.width.saturating_sub(2).max(1);
     let body = detail.body_text();
 
@@ -132,9 +114,8 @@ fn wrap_text_lines(text: &str, width: u16) -> Vec<Line<'static>> {
 mod tests {
     use super::*;
     use runie_core::model::feed_detail::{FeedElementDetail, FeedElementKind};
-    use std::sync::Arc;
 
-    fn buffer_string(terminal: &ratatui::terminal::Terminal<ratatui::backend::TestBackend>) -> String {
+    fn buffer_string(terminal: &ratatui::Terminal<ratatui::backend::TestBackend>) -> String {
         let buf = terminal.backend().buffer();
         (0..buf.area().height)
             .map(|y| {
@@ -147,10 +128,7 @@ mod tests {
     }
 
     fn make_snap(detail: Option<FeedElementDetail>) -> Snapshot {
-        Snapshot {
-            feed_element_detail: detail,
-            ..Default::default()
-        }
+        Snapshot { feed_element_detail: detail, ..Default::default() }
     }
 
     #[test]
@@ -158,9 +136,7 @@ mod tests {
         let detail = FeedElementDetail {
             element_index: 0,
             scroll: 0,
-            kind: FeedElementKind::UserInput {
-                content: "Hello world".to_string(),
-            },
+            kind: FeedElementKind::UserInput { content: "Hello world".to_string() },
         };
         let snap = make_snap(Some(detail));
         let backend = ratatui::backend::TestBackend::new(80, 10);
@@ -185,9 +161,7 @@ mod tests {
         let detail = FeedElementDetail {
             element_index: 0,
             scroll: 0,
-            kind: FeedElementKind::Thought {
-                content: "thinking...".to_string(),
-            },
+            kind: FeedElementKind::Thought { content: "thinking...".to_string() },
         };
         let snap = make_snap(Some(detail));
         let backend = ratatui::backend::TestBackend::new(80, 8);
@@ -197,10 +171,7 @@ mod tests {
             .unwrap();
 
         let text = buffer_string(&terminal);
-        assert!(
-            text.contains("q/Esc"),
-            "footer must show back hint: {text}"
-        );
+        assert!(text.contains("q/Esc"), "footer must show back hint: {text}");
         assert!(
             text.contains("scroll"),
             "footer must show scroll hint: {text}"
@@ -212,10 +183,7 @@ mod tests {
         let detail = FeedElementDetail {
             element_index: 0,
             scroll: 0,
-            kind: FeedElementKind::ToolRunning {
-                name: "Read".to_string(),
-                args: "path/to/file".to_string(),
-            },
+            kind: FeedElementKind::ToolRunning { name: "Read".to_string(), args: "path/to/file".to_string() },
         };
         let snap = make_snap(Some(detail));
         let backend = ratatui::backend::TestBackend::new(80, 12);
@@ -229,10 +197,7 @@ mod tests {
             text.contains("Tool Running"),
             "title must show Tool Running: {text}"
         );
-        assert!(
-            text.contains("Read"),
-            "body must show tool name: {text}"
-        );
+        assert!(text.contains("Read"), "body must show tool name: {text}");
         assert!(
             text.contains("path/to/file"),
             "body must show tool args: {text}"

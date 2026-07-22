@@ -45,10 +45,7 @@ pub fn convert_event(event: &Event, user_bindings: &HashMap<String, String>) -> 
         Event::Mouse(_) => None,
         Event::FocusGained => Some(CoreEvent::FocusGained),
         Event::FocusLost => Some(CoreEvent::FocusLost),
-        Event::Resize(width, height) => Some(CoreEvent::TerminalSize {
-            width: *width,
-            height: *height,
-        }),
+        Event::Resize(width, height) => Some(CoreEvent::TerminalSize { width: *width, height: *height }),
         Event::Key(key) if is_press_or_repeat(key) => convert_key_event(key, user_bindings),
         _ => None,
     }

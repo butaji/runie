@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use crate::model::{AppState, Role};
 use crate::tests::{exec, fresh_state};
 use crate::Event;
@@ -72,18 +73,8 @@ fn test_tool_flow_creates_two_thoughts() {
         &[
             crate::Event::Thinking { id: "req.0".into() },
             crate::Event::ThoughtDone { id: "req.0".into() },
-            crate::Event::ToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-                input: serde_json::Value::Null,
-            },
-            crate::Event::ToolEnd {
-                id: "".to_string(),
-                duration_secs: 0.5,
-                output: String::new(),
-
-                input: None,
-            },
+            crate::Event::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+            crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(), input: None },
             crate::Event::Thinking { id: "req.0".into() },
             crate::Event::ThoughtDone { id: "req.0".into() },
             crate::Event::Response {
@@ -109,10 +100,7 @@ fn test_tool_flow_creates_two_thoughts() {
 fn test_turn_complete_event() {
     let mut state = fresh_state();
     state.agent.intermediate_step_count = 1;
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".to_string(),
-        duration_secs: 5.1,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::TurnComplete);
@@ -136,10 +124,7 @@ fn test_turn_complete_always_added_when_event_received() {
                 timestamp: 0.0,
                 provider: String::new(),
             },
-            crate::Event::TurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
+            crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 },
         ],
     );
     let has_turn_complete = state
@@ -147,7 +132,10 @@ fn test_turn_complete_always_added_when_event_received() {
         .messages
         .iter()
         .any(|m| m.role == Role::TurnComplete);
-    assert!(has_turn_complete, "Core should always add TurnComplete when event is received; agent decides whether to emit it");
+    assert!(
+        has_turn_complete,
+        "Core should always add TurnComplete when event is received; agent decides whether to emit it"
+    );
 }
 
 #[test]
@@ -158,13 +146,7 @@ fn test_tool_done_event() {
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.3,
-        output: String::new(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.3, output: String::new(), input: None });
     assert_eq!(state.session.messages.len(), 1);
     let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
@@ -181,18 +163,8 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
         &[
             crate::Event::Thinking { id: "req.0".into() },
             crate::Event::ThoughtDone { id: "req.0".into() },
-            crate::Event::ToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-                input: serde_json::Value::Null,
-            },
-            crate::Event::ToolEnd {
-                id: "".to_string(),
-                duration_secs: 0.5,
-                output: String::new(),
-
-                input: None,
-            },
+            crate::Event::ToolStart { id: "req.0".into(), name: "list_files".into(), input: serde_json::Value::Null },
+            crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(), input: None },
             crate::Event::Response {
                 id: "req.0".into(),
                 content: "Here are files".into(),
@@ -202,10 +174,7 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
                 provider: String::new(),
             },
             crate::Event::Done { id: "req.0".into() },
-            crate::Event::TurnComplete {
-                id: "req.0".into(),
-                duration_secs: 3.2,
-            },
+            crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 3.2 },
         ],
     );
     let has_turn_complete = state

@@ -18,8 +18,7 @@ pub use message::{ChatMessage, MessageMetadata, Part, Role, ToolCall};
 pub use messages::Message;
 pub use notification::Notification;
 pub use op::{
-    ApprovalDecision, ApprovalId, Op, PromptOrigin, SessionConfig, Submission, SubmissionId,
-    W3cTraceContext,
+    ApprovalDecision, ApprovalId, Op, PromptOrigin, SessionConfig, Submission, SubmissionId, W3cTraceContext,
 };
 pub use provider::ProviderConfig;
 pub use request::Request;

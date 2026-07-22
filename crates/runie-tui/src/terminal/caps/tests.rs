@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::terminal::caps::detect::{
-    detect_clipboard, detect_color_depth, detect_focus_tracking, detect_hyperlinks, detect_mouse,
-    detect_unicode,
+    detect_clipboard, detect_color_depth, detect_focus_tracking, detect_hyperlinks, detect_mouse, detect_unicode,
 };
 use crate::terminal::caps::{detect_capabilities, ColorDepth, MouseCapability, TermCaps};
 
@@ -207,11 +206,7 @@ fn unicode_defaults_to_true() {
 #[cfg(test)]
 #[test]
 fn full_detection_combines_fields() {
-    let env = env(&[
-        ("TERM_PROGRAM", "WezTerm"),
-        ("COLORTERM", "truecolor"),
-        ("LANG", "en_US.UTF-8"),
-    ]);
+    let env = env(&[("TERM_PROGRAM", "WezTerm"), ("COLORTERM", "truecolor"), ("LANG", "en_US.UTF-8")]);
     let caps = detect_capabilities(&env);
     assert!(caps.truecolor);
     assert!(caps.clipboard);

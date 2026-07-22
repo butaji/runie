@@ -8,20 +8,14 @@ use crate::model::AppState;
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
     registry.register(
         "readonly",
-        NamedHandler::Handler(|_: &mut AppState, _: &str| {
-            CommandResult::Event(crate::Event::ToggleReadOnly)
-        }),
+        NamedHandler::Handler(|_: &mut AppState, _: &str| CommandResult::Event(crate::Event::ToggleReadOnly)),
     );
     registry.register(
         "trust",
-        NamedHandler::Handler(|_: &mut AppState, _: &str| {
-            CommandResult::Event(crate::Event::TrustProject)
-        }),
+        NamedHandler::Handler(|_: &mut AppState, _: &str| CommandResult::Event(crate::Event::TrustProject)),
     );
     registry.register(
         "untrust",
-        NamedHandler::Handler(|_: &mut AppState, _: &str| {
-            CommandResult::Event(crate::Event::UntrustProject)
-        }),
+        NamedHandler::Handler(|_: &mut AppState, _: &str| CommandResult::Event(crate::Event::UntrustProject)),
     );
 }

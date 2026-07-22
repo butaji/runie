@@ -19,9 +19,7 @@ pub(super) struct FrecencyStore {
 impl FrecencyStore {
     /// Create a new empty store.
     pub(super) fn new() -> Self {
-        Self {
-            accesses: HashMap::new(),
-        }
+        Self { accesses: HashMap::new() }
     }
 
     /// Record an access for the given path.

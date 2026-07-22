@@ -65,12 +65,7 @@ pub fn load_prompts(default: Option<&str>, custom_path: Option<&str>) -> Vec<Pro
 /// If a custom prompt is active, it replaces the base personality text.
 /// Tool instructions are appended only when `tools_list` is non-empty, and the
 /// thinking suffix is always appended when provided.
-pub fn build_system_prompt(
-    base_prompt: &str,
-    tools_list: &str,
-    read_only: bool,
-    thinking_suffix: &str,
-) -> String {
+pub fn build_system_prompt(base_prompt: &str, tools_list: &str, read_only: bool, thinking_suffix: &str) -> String {
     let mut system = base_prompt.to_owned();
     if !tools_list.is_empty() {
         system.push_str(&format!(

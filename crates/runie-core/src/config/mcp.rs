@@ -15,9 +15,7 @@ use super::ConfigScope;
 // ============================================================================
 
 /// Transport type for MCP server communication.
-#[derive(
-    Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, Display, EnumString,
-)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 #[derive(JsonSchema)]
@@ -123,12 +121,7 @@ mod tests {
     #[test]
     fn mcp_transport_round_trip() {
         use std::str::FromStr;
-        for transport in [
-            McpTransport::Stdio,
-            McpTransport::Http,
-            McpTransport::Sse,
-            McpTransport::WebSocket,
-        ] {
+        for transport in [McpTransport::Stdio, McpTransport::Http, McpTransport::Sse, McpTransport::WebSocket] {
             let s = transport.to_string();
             let parsed = McpTransport::from_str(&s);
             assert_eq!(
@@ -143,11 +136,7 @@ mod tests {
     fn mcp_server_stdio() {
         let server = McpServer {
             transport: McpTransport::Stdio,
-            command: vec![
-                "npx".to_string(),
-                "-y".to_string(),
-                "@mcp/server".to_string(),
-            ],
+            command: vec!["npx".to_string(), "-y".to_string(), "@mcp/server".to_string()],
             url: None,
             headers: HashMap::new(),
             scope: ConfigScope::Global,

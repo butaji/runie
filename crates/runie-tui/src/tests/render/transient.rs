@@ -48,10 +48,7 @@ fn transient_success_has_1_symbol_margin_on_both_sides() {
     let badge_bg = crate::theme::darken(green, 0.8);
 
     let transient_y = (0..buf.area().height)
-        .find(|&y| {
-            (0..buf.area().width)
-                .any(|x| buf[(x, y)].symbol() == "T" && buf[(x, y)].style().bg == Some(green))
-        })
+        .find(|&y| (0..buf.area().width).any(|x| buf[(x, y)].symbol() == "T" && buf[(x, y)].style().bg == Some(green)))
         .expect("Should find transient row");
 
     assert_eq!(buf[(1, transient_y)].style().bg, Some(margin_green));
@@ -134,10 +131,7 @@ fn streaming_tail_renders_when_turn_active() {
         provider: String::new(),
     });
     // Add streaming tail
-    state.update(runie_core::event::Event::ResponseDelta {
-        id: "test.1".into(),
-        content: " and more".into(),
-    });
+    state.update(runie_core::event::Event::ResponseDelta { id: "test.1".into(), content: " and more".into() });
     // Set turn_active to show streaming cell
     state.agent.turn_active = true;
 

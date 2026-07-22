@@ -49,8 +49,7 @@ pub async fn run(provider_name: Option<String>) -> Result<()> {
 
     // Store in keyring
     println!("\nStoring API key in OS keyring...");
-    runie_core::auth::set_keyring(&provider.key, &key)
-        .context("Failed to store API key in keyring")?;
+    runie_core::auth::set_keyring(&provider.key, &key).context("Failed to store API key in keyring")?;
 
     // Update config
     println!("Updating config...");

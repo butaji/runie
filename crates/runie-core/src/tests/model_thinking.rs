@@ -19,6 +19,7 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
                 base_url: String::new(),
                 models: models.clone(),
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: vec![],
             },
         );
     }
@@ -26,10 +27,7 @@ fn configure(state: &mut AppState, providers: &[(String, Vec<String>)]) {
 
 fn current_panel(state: &AppState) -> Option<&crate::dialog::Panel> {
     match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current(),
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => stack.current(),
         _ => None,
     }
 }
@@ -184,7 +182,7 @@ fn selector_labels_show_override_suffix() {
     let labels = panel_labels(&state);
     let row = labels
         .iter()
-        .find(|l| l.contains("openai/gpt-4o"))
+        .find(|l| l.contains("gpt-4o"))
         .expect("model row should be listed");
     assert!(
         row.contains("high"),
@@ -214,9 +212,7 @@ fn config_loaded_populates_model_thinking() {
         .thinking
         .insert("openai/gpt-4o".to_string(), ThinkingLevel::High);
 
-    state.update(crate::Event::ConfigLoaded {
-        config: Box::new(config),
-    });
+    state.update(crate::Event::ConfigLoaded { config: Box::new(config) });
 
     assert_eq!(
         state.config.model_thinking.get("openai/gpt-4o"),

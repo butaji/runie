@@ -152,12 +152,7 @@ fn query_parser_handles_mixed_query() {
 #[tokio::test]
 async fn search_tool_handles_uninitialized_indexer() {
     let ctx = ToolContext::default();
-    let input = SearchInput {
-        query: "test".to_string(),
-        path: None,
-        mode: None,
-        limit: None,
-    };
+    let input = SearchInput { query: "test".to_string(), path: None, mode: None, limit: None };
     let output = SearchTool::execute(input, &ctx).await;
     assert!(
         output.status == ToolStatus::Error

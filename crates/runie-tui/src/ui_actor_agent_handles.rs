@@ -46,9 +46,7 @@ impl LeaderAgentActorHandle {
 
     /// Create a no-op handle for use before `Leader::start_with_bus()` returns.
     pub fn new_noop() -> Self {
-        Self {
-            inner: std::sync::Arc::new(NoOpAgentHandle),
-        }
+        Self { inner: std::sync::Arc::new(NoOpAgentHandle) }
     }
 
     pub async fn run(&self, command: AgentCommand) {

@@ -77,9 +77,7 @@ pub struct MockKeyringStore {
 
 impl MockKeyringStore {
     pub fn new() -> Self {
-        Self {
-            entries: RwLock::new(HashMap::new()),
-        }
+        Self { entries: RwLock::new(HashMap::new()) }
     }
 }
 

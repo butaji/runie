@@ -83,8 +83,7 @@ fn status_timer_updates_over_time() {
     let _timer_pos1 = out1.find("Working").unwrap_or(0);
 
     // Set the turn started time in the past so the timer shows elapsed time
-    state.agent.turn_started_at =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
+    state.agent.turn_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
 
     state.ensure_fresh();
     let out2 = render_status(&mut state);
@@ -145,8 +144,7 @@ fn status_line_timer_drops_decimals_at_ten_seconds() {
     let mut state = AppState::default();
     connect_model(&mut state);
     state.agent.turn_active = true;
-    state.agent.turn_started_at =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(24));
+    state.agent.turn_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(24));
     state.ensure_fresh();
 
     let out = render_status(&mut state);
@@ -167,10 +165,7 @@ fn status_line_hides_working_after_provider_error() {
     let out = render_status(&mut state);
     assert!(out.contains("Working"), "Setup should show Working");
 
-    state.update(Event::Error {
-        id: "req.0".to_string(),
-        message: "Provider error: Missing API key".to_string(),
-    });
+    state.update(Event::Error { id: "req.0".to_string(), message: "Provider error: Missing API key".to_string() });
     state.ensure_fresh();
 
     let out = render_status(&mut state);

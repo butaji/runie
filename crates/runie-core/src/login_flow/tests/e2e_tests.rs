@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use crate::model::AppState;
 use crate::provider::config::list_configured_providers;
 
@@ -43,13 +44,8 @@ fn login_flow_save_requires_validation() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(crate::Event::Save);
 
     assert!(
@@ -71,13 +67,8 @@ fn login_flow_save_activates_first_model_after_validation() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 
@@ -110,13 +101,8 @@ fn login_flow_save_saves_config() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 
@@ -136,20 +122,12 @@ fn login_flow_save_allows_model_selection_after_auto_activation() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 
-    state.update(crate::Event::ProvidersSelectModel {
-        provider: "minimax".into(),
-        model: "MiniMax-M3".into(),
-    });
+    state.update(crate::Event::ProvidersSelectModel { provider: "minimax".into(), model: "MiniMax-M3".into() });
 
     assert_eq!(state.config.current_provider, "minimax");
     assert_eq!(state.config.current_model, "MiniMax-M3");
@@ -164,23 +142,15 @@ fn login_flow_save_allows_model_selection_from_multiple() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "openai".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "openai".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "openai".into() });
+    state.update(crate::Event::SubmitKey { provider: "openai".into(), key: "sk-test".into() });
 
     let defaults = default_models_for_provider("openai");
     validate_provider(&mut state, "openai", "sk-test");
     state.update(crate::Event::Save);
 
     if defaults.len() >= 2 {
-        state.update(crate::Event::ProvidersSelectModel {
-            provider: "openai".into(),
-            model: defaults[1].to_string(),
-        });
+        state.update(crate::Event::ProvidersSelectModel { provider: "openai".into(), model: defaults[1].to_string() });
     }
 
     assert_eq!(state.config.current_provider, "openai");
@@ -197,9 +167,7 @@ fn login_key_input_reads_typed_key() {
     state.config.current_model.clear();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
     for c in "sk-test".chars() {
         state.update(crate::Event::Input(c));
     }
@@ -226,9 +194,7 @@ fn login_key_input_submit_button_submits_typed_key() {
     state.config.current_model.clear();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
     for c in "sk-test".chars() {
         state.update(crate::Event::Input(c));
     }
@@ -253,9 +219,7 @@ fn login_key_input_rejects_empty_key() {
     state.config.current_model.clear();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
     state.update(crate::Event::Submit);
 
     let flow = state.login_flow.as_ref().unwrap();
@@ -274,13 +238,8 @@ fn login_flow_save_blocked_after_validation_failure() {
     state.config.current_model.clear();
 
     state.update(crate::Event::Start);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(crate::Event::ValidationFailed {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -304,13 +263,8 @@ async fn login_flow_save_does_not_block_async_runtime() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
 
     let start = std::time::Instant::now();
@@ -346,9 +300,7 @@ fn login_flow_panel_changes_mark_dirty() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
 
     assert!(
         state.view.dirty,
@@ -368,9 +320,7 @@ fn login_flow_no_duplicate_panels_when_dialog_closed_before_event() {
     // `apply_form_action` closes the dialog before publishing the event.
     // Reconstructing the stack from a target `LoginStep` would duplicate panels.
     state.open_dialog = None;
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
 
     let stack = state
         .open_dialog
@@ -385,10 +335,7 @@ fn login_flow_no_duplicate_panels_when_dialog_closed_before_event() {
     );
 
     state.open_dialog = None;
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
 
     let stack = state
         .open_dialog
@@ -437,13 +384,8 @@ fn login_flow_save_updates_config_cache_for_immediate_model_switch() {
 
     state.update(crate::Event::ProvidersDialog);
     state.update(crate::Event::ProvidersAdd);
-    state.update(crate::Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(crate::Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(crate::Event::SelectProvider { provider: "minimax".into() });
+    state.update(crate::Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     validate_provider(&mut state, "minimax", "sk-test");
     state.update(crate::Event::Save);
 

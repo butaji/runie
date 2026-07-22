@@ -48,18 +48,15 @@ pub enum StreamingChunk {
     /// An error occurred during generation.
     Error(String),
     /// Token usage information.
-    Usage {
-        input_tokens: usize,
-        output_tokens: usize,
-    },
+    Usage { input_tokens: usize, output_tokens: usize },
     /// Generation finished.
     Finish { reason: String },
 }
 
 impl From<ProviderEvent> for Option<StreamingChunk> {
+    #[allow(clippy::too_many_lines)]
     fn from(event: ProviderEvent) -> Self {
         use crate::provider_event::ModelError;
-        use crate::provider_event::StopReason;
         match event {
             ProviderEvent::TextStart { id } => Some(StreamingChunk::TextStart { id }),
             ProviderEvent::TextDelta(delta) => Some(StreamingChunk::TextDelta(delta)),
@@ -67,38 +64,22 @@ impl From<ProviderEvent> for Option<StreamingChunk> {
             ProviderEvent::ThinkingDelta(delta) => Some(StreamingChunk::ThinkingDelta(delta)),
             ProviderEvent::ThinkingStart { id } => Some(StreamingChunk::ThinkingStart { id }),
             ProviderEvent::ThinkingEnd { id } => Some(StreamingChunk::ThinkingEnd { id }),
-            ProviderEvent::ToolCallStart { id, name } => {
-                Some(StreamingChunk::ToolCallStart { id, name })
-            }
-            ProviderEvent::ToolCallInputDelta { id, delta } => {
-                Some(StreamingChunk::ToolCallInputDelta { id, delta })
-            }
+            ProviderEvent::ToolCallStart { id, name } => Some(StreamingChunk::ToolCallStart { id, name }),
+            ProviderEvent::ToolCallInputDelta { id, delta } => Some(StreamingChunk::ToolCallInputDelta { id, delta }),
             ProviderEvent::ToolCallEnd { id } => Some(StreamingChunk::ToolCallEnd { id }),
-            ProviderEvent::ToolExecutionStart { id, name } => {
-                Some(StreamingChunk::ToolExecutionStart { id, name })
-            }
-            ProviderEvent::ToolExecutionEnd { id } => {
-                Some(StreamingChunk::ToolExecutionEnd { id })
-            }
+            ProviderEvent::ToolExecutionStart { id, name } => Some(StreamingChunk::ToolExecutionStart { id, name }),
+            ProviderEvent::ToolExecutionEnd { id } => Some(StreamingChunk::ToolExecutionEnd { id }),
             ProviderEvent::ToolExecutionResult { id, result } => {
                 Some(StreamingChunk::ToolExecutionResult { id, result })
             }
             ProviderEvent::TurnEnd => Some(StreamingChunk::TurnEnd),
             ProviderEvent::AgentEnd => Some(StreamingChunk::AgentEnd),
-            ProviderEvent::Error(ModelError::JsonDecode(msg)) => {
-                Some(StreamingChunk::Error(msg))
-            }
+            ProviderEvent::Error(ModelError::JsonDecode(msg)) => Some(StreamingChunk::Error(msg)),
             ProviderEvent::Error(e) => Some(StreamingChunk::Error(e.to_string())),
-            ProviderEvent::Usage {
-                input_tokens,
-                output_tokens,
-            } => Some(StreamingChunk::Usage {
-                input_tokens,
-                output_tokens,
-            }),
-            ProviderEvent::Finish { reason } => Some(StreamingChunk::Finish {
-                reason: reason.to_string(),
-            }),
+            ProviderEvent::Usage { input_tokens, output_tokens } => {
+                Some(StreamingChunk::Usage { input_tokens, output_tokens })
+            }
+            ProviderEvent::Finish { reason } => Some(StreamingChunk::Finish { reason: reason.to_string() }),
         }
     }
 }
@@ -177,6 +158,7 @@ where
 {
     type Item = anyhow::Result<StreamingChunk>;
 
+    #[allow(clippy::too_many_lines)]
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = &mut *self;
         let next = futures::StreamExt::poll_next_unpin(&mut this.stream, cx);
@@ -198,9 +180,7 @@ where
                 // Track last chunk.
                 if !this.sent_last_chunk {
                     match &event {
-                        ProviderEvent::Finish { .. }
-                        | ProviderEvent::Error(_)
-                        | ProviderEvent::AgentEnd => {
+                        ProviderEvent::Finish { .. } | ProviderEvent::Error(_) | ProviderEvent::AgentEnd => {
                             this.sent_last_chunk = true;
                         }
                         _ => {}
@@ -265,11 +245,7 @@ impl ToolCallAccumulator {
 
     /// Create an accumulator with initial data.
     pub fn with_data(id: impl Into<String>, name: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            name: name.into(),
-            arguments: String::new(),
-        }
+        Self { id: id.into(), name: name.into(), arguments: String::new() }
     }
 
     /// Append a delta of arguments.
@@ -304,6 +280,7 @@ impl ToolCallAccumulator {
 mod tests {
     use super::*;
     use futures::stream;
+    use futures::StreamExt;
 
     fn make_event(event: ProviderEvent) -> anyhow::Result<ProviderEvent> {
         Ok(event)
@@ -314,12 +291,10 @@ mod tests {
         let events = vec![
             make_event(ProviderEvent::TextStart { id: "text".into() }),
             make_event(ProviderEvent::TextDelta("hello".into())),
-            make_event(ProviderEvent::Finish {
-                reason: crate::provider_event::StopReason::Stop,
-            }),
+            make_event(ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop }),
         ];
         let wrapped = CustomStreamWrapper::new(stream::iter(events));
-        let collected: Vec<_> = futures::stream::Collect::new(wrapped).await;
+        let collected: Vec<_> = wrapped.collect().await;
         assert_eq!(collected.len(), 3);
         assert!(matches!(
             collected[0].as_ref().unwrap(),
@@ -333,7 +308,9 @@ mod tests {
 
     #[tokio::test]
     async fn wrapper_tracks_sent_first_chunk_on_text_delta() {
-        let wrapper = CustomStreamWrapper::new(stream::iter(vec![]));
+        let wrapper: CustomStreamWrapper<_> = CustomStreamWrapper::new(stream::iter(Vec::<
+            Result<ProviderEvent, anyhow::Error>,
+        >::new()));
         assert!(!wrapper.has_sent_first_chunk());
     }
 
@@ -341,9 +318,7 @@ mod tests {
     async fn wrapper_tracks_sent_last_chunk_on_finish() {
         let events = vec![
             make_event(ProviderEvent::TextDelta("hello".into())),
-            make_event(ProviderEvent::Finish {
-                reason: crate::provider_event::StopReason::Stop,
-            }),
+            make_event(ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop }),
         ];
         let wrapped = CustomStreamWrapper::new(stream::iter(events));
         let wrapper = CustomStreamWrapper::new(wrapped);
@@ -354,9 +329,9 @@ mod tests {
     async fn wrapper_tracks_sent_last_chunk_on_error() {
         let events = vec![
             make_event(ProviderEvent::TextDelta("hello".into())),
-            make_event(ProviderEvent::Error(crate::provider_event::ModelError::Other(
-                "boom".into(),
-            ))),
+            make_event(ProviderEvent::Error(
+                crate::provider_event::ModelError::Other("boom".into()),
+            )),
         ];
         let wrapped = CustomStreamWrapper::new(stream::iter(events));
         let wrapper = CustomStreamWrapper::new(wrapped);
@@ -372,12 +347,10 @@ mod tests {
             make_event(ProviderEvent::ThinkingDelta("thinking".into())),
             make_event(ProviderEvent::ThinkingEnd { id: "r1".into() }),
             make_event(ProviderEvent::TextEnd { id: "t1".into() }),
-            make_event(ProviderEvent::Finish {
-                reason: crate::provider_event::StopReason::Stop,
-            }),
+            make_event(ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop }),
         ];
         let wrapped = CustomStreamWrapper::new(stream::iter(events));
-        let collected: Vec<_> = futures::stream::Collect::new(wrapped).await;
+        let collected: Vec<_> = wrapped.collect().await;
         assert_eq!(collected.len(), 7);
     }
 
@@ -385,13 +358,15 @@ mod tests {
     async fn tool_call_accumulator_assembles_arguments() {
         let mut acc = ToolCallAccumulator::new();
         assert!(!acc.is_complete());
+        assert!(acc.needs_name()); // No name set yet
 
         acc.push_delta("{\"path");
         assert_eq!(acc.arguments(), "{\"path");
 
         acc.push_delta("\":\"test.txt\"}");
-        assert_eq!(acc.arguments(), "{\"path\":\"test.txt\"");
-        assert!(!acc.needs_name());
+        assert_eq!(acc.arguments(), "{\"path\":\"test.txt\"}");
+        // needs_name checks if name is empty, not if args are complete
+        assert!(acc.needs_name()); // Still no name set
     }
 
     #[tokio::test]
@@ -399,7 +374,7 @@ mod tests {
         let mut acc = ToolCallAccumulator::with_data("call_123", "read_file");
         assert_eq!(acc.id, "call_123");
         assert_eq!(acc.name, "read_file");
-        assert!(acc.needs_name());
+        assert!(!acc.needs_name()); // Name is set
 
         acc.push_delta("{\"path\":\"foo\"}");
         assert!(acc.is_complete());
@@ -417,52 +392,53 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn wrapper_assemble_tool_calls_collects_partial_calls() {
         // Simulate a tool call that arrives in fragments across chunks.
-        let events = vec![
-            make_event(ProviderEvent::ToolCallStart {
-                id: "call_abc".into(),
-                name: "read_file".into(),
-            }),
-            make_event(ProviderEvent::ToolCallInputDelta {
-                id: "call_abc".into(),
-                delta: "{\"path\":\"".into(),
-            }),
-            make_event(ProviderEvent::ToolCallInputDelta {
-                id: "call_abc".into(),
-                delta: "Cargo.toml\"}".into(),
-            }),
-            make_event(ProviderEvent::ToolCallEnd {
-                id: "call_abc".into(),
-            }),
-            make_event(ProviderEvent::Finish {
-                reason: crate::provider_event::StopReason::ToolCalls,
-            }),
-        ];
-        let wrapped = CustomStreamWrapper::new(stream::iter(events));
-        let collected: Vec<_> = futures::stream::Collect::new(wrapped).await;
+        fn make_tool_call_events() -> Vec<Result<ProviderEvent, anyhow::Error>> {
+            vec![
+                make_event(ProviderEvent::ToolCallStart { id: "call_abc".into(), name: "read_file".into() }),
+                make_event(ProviderEvent::ToolCallInputDelta { id: "call_abc".into(), delta: "{\"path\":\"".into() }),
+                make_event(ProviderEvent::ToolCallInputDelta { id: "call_abc".into(), delta: "Cargo.toml\"}".into() }),
+                make_event(ProviderEvent::ToolCallEnd { id: "call_abc".into() }),
+                make_event(ProviderEvent::Finish { reason: crate::provider_event::StopReason::ToolCalls }),
+            ]
+        }
 
-        // Reconstruct wrapper by polling the stream again.
-        let wrapper = CustomStreamWrapper::new(stream::iter(events));
+        // Create a wrapper and poll it manually to populate tool_call_buffer
+        let events = make_tool_call_events();
+        let stream = stream::iter(events);
+        let wrapper = CustomStreamWrapper::new(stream);
+
+        // Poll the stream to completion without consuming wrapper using pin_mut
+        use futures::StreamExt;
+        futures::pin_mut!(wrapper);
+        while wrapper.next().await.is_some() {}
+
+        // Now assemble_tool_calls should work
         let tool_calls = wrapper.assemble_tool_calls();
+        eprintln!("DEBUG: tool_calls.len() = {}", tool_calls.len());
+        if !tool_calls.is_empty() {
+            eprintln!("DEBUG: first tool_call = {:?}", tool_calls[0]);
+        }
         assert_eq!(tool_calls.len(), 1);
         assert_eq!(tool_calls[0].id, "call_abc");
         assert_eq!(tool_calls[0].name, "read_file");
         // Arguments string assembled correctly
-        let args_str = wrapper.assemble_tool_calls()[0]
-            .args
-            .as_str()
-            .unwrap_or("{}");
-        assert!(args_str.contains("path"));
+        let first_call = &tool_calls[0];
+        let args_str = first_call.args.as_str().unwrap_or("{}");
+        eprintln!("DEBUG: args_str = {:?}", args_str);
+        // as_str() returns None for non-string values, so use unwrap_or which gives "{}"
+        // The correct approach is to serialize to JSON string
+        let args_json = serde_json::to_string(&first_call.args).unwrap();
+        assert!(args_json.contains("path"));
     }
 
     #[tokio::test]
     async fn wrapper_assemble_tool_calls_empty_when_no_tool_calls() {
         let events = vec![
             make_event(ProviderEvent::TextDelta("hello".into())),
-            make_event(ProviderEvent::Finish {
-                reason: crate::provider_event::StopReason::Stop,
-            }),
+            make_event(ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop }),
         ];
         let wrapper = CustomStreamWrapper::new(stream::iter(events));
         let tool_calls = wrapper.assemble_tool_calls();
@@ -472,18 +448,15 @@ mod tests {
     #[tokio::test]
     async fn wrapper_handles_empty_stream() {
         let wrapped: CustomStreamWrapper<_> = CustomStreamWrapper::new(stream::iter(vec![]));
-        let collected: Vec<_> = futures::stream::Collect::new(wrapped).await;
+        let collected: Vec<_> = wrapped.collect().await;
         assert!(collected.is_empty());
     }
 
     #[tokio::test]
     async fn wrapper_handles_error_events() {
-        let events = vec![
-            make_event(ProviderEvent::TextDelta("hi".into())),
-            Err(anyhow::anyhow!("stream error")),
-        ];
+        let events = vec![make_event(ProviderEvent::TextDelta("hi".into())), Err(anyhow::anyhow!("stream error"))];
         let wrapped = CustomStreamWrapper::new(stream::iter(events));
-        let collected: Vec<_> = futures::stream::Collect::new(wrapped).await;
+        let collected: Vec<_> = wrapped.collect().await;
         assert_eq!(collected.len(), 2);
         assert!(collected[0].is_ok());
         assert!(collected[1].is_err());
@@ -505,9 +478,7 @@ mod tests {
 
     #[tokio::test]
     async fn streaming_chunk_conversion_finish() {
-        let event = ProviderEvent::Finish {
-            reason: crate::provider_event::StopReason::ToolCalls,
-        };
+        let event = ProviderEvent::Finish { reason: crate::provider_event::StopReason::ToolCalls };
         let chunk: Option<StreamingChunk> = event.into();
         assert!(matches!(
             chunk,
@@ -517,17 +488,11 @@ mod tests {
 
     #[tokio::test]
     async fn streaming_chunk_conversion_usage() {
-        let event = ProviderEvent::Usage {
-            input_tokens: 100,
-            output_tokens: 50,
-        };
+        let event = ProviderEvent::Usage { input_tokens: 100, output_tokens: 50 };
         let chunk: Option<StreamingChunk> = event.into();
         assert!(matches!(
             chunk,
-            Some(StreamingChunk::Usage {
-                input_tokens: 100,
-                output_tokens: 50,
-            })
+            Some(StreamingChunk::Usage { input_tokens: 100, output_tokens: 50 })
         ));
     }
 }

@@ -24,13 +24,9 @@ fn test_complete_agent_flow() {
     // Set streaming on AgentState.
     state.agent_state_mut().streaming = true;
 
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
     assert!(state.agent.streaming);
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
@@ -42,9 +38,7 @@ fn test_complete_agent_flow() {
     assert_eq!(state.session.messages.len(), 3);
     assert_eq!(state.session.messages[1].role, Role::Thought);
     assert_eq!(state.session.messages[2].role, Role::Assistant);
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
     assert!(!state.agent.streaming);
 }
 
@@ -108,9 +102,7 @@ fn test_queued_message_appears_after_turn_completes() {
     );
 
     // Agent finishes turn
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
 
     // Now message B should appear and be ready for its turn
     assert!(
@@ -203,12 +195,8 @@ fn test_multiple_submits_increment_id() {
 fn test_multiple_thoughts_for_sequential_requests() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
@@ -217,15 +205,9 @@ fn test_multiple_thoughts_for_sequential_requests() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
-    state.update(crate::Event::Thinking {
-        id: "req.1".to_string(),
-    });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.1".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
+    state.update(crate::Event::Thinking { id: "req.1".to_string() });
+    state.update(crate::Event::ThoughtDone { id: "req.1".to_string() });
     state.update(crate::Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
@@ -246,9 +228,7 @@ fn test_multiple_thoughts_for_sequential_requests() {
 #[test]
 fn test_think_tags_split_into_thought_and_answer() {
     let mut state = fresh_state();
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>reasoning</think>answer".to_string(),
@@ -257,9 +237,7 @@ fn test_think_tags_split_into_thought_and_answer() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     let thoughts: Vec<_> = state
         .session
         .messages
@@ -283,9 +261,7 @@ fn test_think_tags_split_into_thought_and_answer() {
 #[test]
 fn test_think_tags_only_reasoning_removes_assistant() {
     let mut state = fresh_state();
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>only reasoning</think>".to_string(),
@@ -294,9 +270,7 @@ fn test_think_tags_only_reasoning_removes_assistant() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     let assistants: Vec<_> = state
         .session
         .messages
@@ -310,9 +284,7 @@ fn test_think_tags_only_reasoning_removes_assistant() {
 #[test]
 fn test_unclosed_think_tag_hides_reasoning() {
     let mut state = fresh_state();
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "visible<think>still reasoning".to_string(),
@@ -321,9 +293,7 @@ fn test_unclosed_think_tag_hides_reasoning() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     let assistants: Vec<_> = state
         .session
         .messages
@@ -345,9 +315,7 @@ fn test_unclosed_think_tag_hides_reasoning() {
 #[test]
 fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
     let mut state = fresh_state();
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "<think>reasoning</think>answer".to_string(),
@@ -356,9 +324,7 @@ fn test_think_tags_update_cached_assistant_index_for_tail_flush() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     assert_eq!(state.agent.last_assistant_index, Some(1));
 
     // Simulate a trailing streaming delta being flushed on turn end.

@@ -7,11 +7,7 @@ use crate::dialog::{ItemAction, Panel, PanelItem};
 fn space_toggles_checkbox_item_value() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    let mut panel = Panel::new("test", "Test").toggle(
-        "Read-Only",
-        false,
-        ItemAction::Toggle("read_only".into()),
-    );
+    let mut panel = Panel::new("test", "Test").toggle("Read-Only", false, ItemAction::Toggle("read_only".into()));
 
     assert!(toggle_selected_checkbox(&mut state, &mut panel));
     assert!(
@@ -60,16 +56,9 @@ fn space_on_emit_checkbox_updates_state() {
 #[test]
 fn space_in_list_panel_keeps_dialog_open() {
     let mut state = AppState::default();
-    let panel = Panel::new("settings", "Settings").toggle(
-        "Read-Only",
-        false,
-        ItemAction::Toggle("read_only".into()),
-    );
+    let panel = Panel::new("settings", "Settings").toggle("Read-Only", false, ItemAction::Toggle("read_only".into()));
     let mut stack = PanelStack::new(panel);
-    state.open_dialog = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack.clone(),
-    });
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
 
     let result = update_panel_stack(&mut state, crate::Event::Input(' ').into(), &mut stack);
     assert_eq!(
@@ -80,10 +69,7 @@ fn space_in_list_panel_keeps_dialog_open() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, panels: _ })
         ),
         "dialog should stay open after toggling"
     );
@@ -97,16 +83,9 @@ fn space_in_list_panel_keeps_dialog_open() {
 fn enter_on_toggle_row_toggles_and_keeps_dialog_open() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    let panel = Panel::new("settings", "Settings").toggle(
-        "Read-Only",
-        false,
-        ItemAction::Toggle("read_only".into()),
-    );
+    let panel = Panel::new("settings", "Settings").toggle("Read-Only", false, ItemAction::Toggle("read_only".into()));
     let mut stack = PanelStack::new(panel);
-    state.open_dialog = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack.clone(),
-    });
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
 
     let result = update_panel_stack(&mut state, crate::Event::Submit.into(), &mut stack);
 
@@ -118,10 +97,7 @@ fn enter_on_toggle_row_toggles_and_keeps_dialog_open() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, .. })
         ),
         "dialog should stay open after Enter toggles a row"
     );
@@ -148,10 +124,7 @@ fn enter_on_cycle_row_cycles_and_keeps_dialog_open() {
         key: "thinking_level".into(),
     });
     let mut stack = PanelStack::new(panel);
-    state.open_dialog = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack.clone(),
-    });
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack.clone() });
 
     let result = update_panel_stack(&mut state, crate::Event::Submit.into(), &mut stack);
 
@@ -163,10 +136,7 @@ fn enter_on_cycle_row_cycles_and_keeps_dialog_open() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, .. })
         ),
         "dialog should stay open after Enter cycles a settings row"
     );

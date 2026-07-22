@@ -73,8 +73,7 @@ impl ToolDef for ReadFileTool {
     type Input = ReadFileInput;
 
     const NAME: &'static str = "read_file";
-    const DESCRIPTION: &'static str =
-        "Read the contents of a file from disk. Supports optional offset and limit.";
+    const DESCRIPTION: &'static str = "Read the contents of a file from disk. Supports optional offset and limit.";
     const READ_ONLY: bool = true;
     const REQUIRES_APPROVAL: bool = false;
 
@@ -97,8 +96,17 @@ impl ToolDef for ReadFileTool {
         };
 
         let offset = input.offset.map(|v| v as usize);
-        let limit = input.limit.map(|v| v as usize);
+        // Default cap: reading a whole large file unbounded can stall
+        // providers when the result is sent back. Only applies when the file
+        // actually exceeds it, so small reads stay header-free.
+        let total_lines = content.lines().count();
+        let limit = match input.limit {
+            Some(v) => Some(v as usize),
+            None if total_lines > DEFAULT_LINE_LIMIT => Some(DEFAULT_LINE_LIMIT),
+            None => None,
+        };
         let output = Self::slice_content(&content, offset, limit);
+        let output = cap_output_bytes(output);
         ToolOutput::success_with_bytes(
             "read_file",
             serde_json::json!({ "path": input.path }),
@@ -106,6 +114,20 @@ impl ToolDef for ReadFileTool {
             content.len() as u64,
         )
     }
+}
+
+/// Default maximum lines returned per read when no `limit` is given.
+const DEFAULT_LINE_LIMIT: usize = 2_000;
+/// Maximum bytes returned per read (guards against huge single lines).
+const MAX_OUTPUT_BYTES: usize = 50_000;
+
+fn cap_output_bytes(output: String) -> String {
+    if output.len() <= MAX_OUTPUT_BYTES {
+        return output;
+    }
+    let total = output.len();
+    let truncated = runie_core::tool::truncate_output(&output, MAX_OUTPUT_BYTES, usize::MAX);
+    format!("{truncated}\n[output truncated: {total} bytes total; use offset/limit to read a smaller range]")
 }
 
 #[cfg(test)]
@@ -161,5 +183,36 @@ mod tests {
         let result = ReadFileTool::slice_content(content, None, Some(2));
         assert!(result.contains("line1"));
         assert!(result.contains("line2"));
+    }
+
+    #[tokio::test]
+    async fn execute_caps_large_files_by_default() {
+        let dir = std::env::temp_dir().join(format!("runie_read_cap_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("big.txt");
+        let body: String = (1..=5_000).map(|i| format!("line{i}\n")).collect();
+        std::fs::write(&path, &body).unwrap();
+
+        let input = ReadFileInput { path: path.to_string_lossy().into_owned(), offset: None, limit: None };
+        let ctx = ToolContext::default();
+        let out = ReadFileTool::execute(input, &ctx).await;
+        assert!(out.content.contains("[Lines 1-2000 of 5000]"), "got: {}", &out.content[..100.min(out.content.len())]);
+        assert!(out.content.contains("[3000 more lines]"));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn execute_respects_explicit_limit_beyond_default() {
+        let dir = std::env::temp_dir().join(format!("runie_read_limit_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("big.txt");
+        let body: String = (1..=3_000).map(|i| format!("line{i}\n")).collect();
+        std::fs::write(&path, &body).unwrap();
+
+        let input = ReadFileInput { path: path.to_string_lossy().into_owned(), offset: Some(2000), limit: Some(1000) };
+        let ctx = ToolContext::default();
+        let out = ReadFileTool::execute(input, &ctx).await;
+        assert!(out.content.contains("line3000"), "explicit paging must work past the default cap");
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

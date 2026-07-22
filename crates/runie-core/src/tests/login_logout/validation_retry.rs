@@ -4,8 +4,8 @@ use crate::login_flow::LoginStep;
 use crate::model::AppState;
 
 use super::{
-    assert_step, assert_transient_contains, clean_config, default_models_for_provider,
-    save_login_flow, select_provider, submit_key,
+    assert_step, assert_transient_contains, clean_config, default_models_for_provider, save_login_flow,
+    select_provider, submit_key,
 };
 
 #[test]
@@ -66,11 +66,7 @@ fn retry_after_failure_succeeds() {
     assert_step(&state, LoginStep::Validating);
 
     let models = default_models_for_provider("minimax");
-    state.update(crate::Event::ModelsFetched {
-        provider: "minimax".into(),
-        key: "sk-test2".into(),
-        models,
-    });
+    state.update(crate::Event::ModelsFetched { provider: "minimax".into(), key: "sk-test2".into(), models });
     assert_step(&state, LoginStep::ModelSelect);
 
     save_login_flow(&mut state);

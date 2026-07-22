@@ -3,6 +3,7 @@
 //! [`ParsedToolCall`] and [`ToolParseError`] are used by the streaming state machine
 //! in [`tool_stream`](crate::tool_stream) and as a text-based fallback when providers
 //! do not emit structured `ProviderEvent::ToolCall*` events.
+#![allow(clippy::too_many_lines)]
 
 use serde_json::{Map, Value};
 use thiserror::Error;
@@ -43,6 +44,7 @@ pub fn repair_partial_json(raw: &str) -> Option<Value> {
     complete_by_brace_counting(raw).and_then(|repaired| serde_json::from_str(&repaired).ok())
 }
 
+#[allow(clippy::cognitive_complexity)]
 fn complete_by_brace_counting(raw: &str) -> Option<String> {
     let bytes = raw.as_bytes();
     let mut result = raw.to_owned();

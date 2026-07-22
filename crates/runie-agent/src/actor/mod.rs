@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! `AgentActor` — ractor-based implementation.
 //!
 //! This is the production implementation of the AgentActor using ractor.
@@ -40,9 +42,7 @@ pub enum AgentMsg {
     /// Execute one agent turn.
     Run { command: AgentCommand },
     /// Execute a turn from the leader's minimal command type.
-    RunLeader {
-        command: runie_core::actors::leader::LeaderAgentCmd,
-    },
+    RunLeader { command: runie_core::actors::leader::LeaderAgentCmd },
     /// Abort the currently running turn, if any.
     Abort,
     /// Internal: the spawned turn task finished (success or error).
@@ -192,19 +192,13 @@ impl RactorAgentActor {
         command.cancellation_token = cancel_token.clone();
         let cancel_token_gate = cancel_token.clone();
 
-        let gate =
-            Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
+        let gate = Self::create_permission_gate_with_cancel(permission.clone(), cancel_token_gate).await;
 
         // Store token and gate in state so Abort handler can cancel them.
         state.current_turn_token = Some(Arc::new(cancel_token));
         state.current_gate = Some(gate.clone());
 
-        Ok(TurnSetupInfo {
-            built,
-            emit,
-            gate,
-            bus: state.bus.clone(),
-        })
+        Ok(TurnSetupInfo { built, emit, gate, bus: state.bus.clone() })
     }
 
     /// Spawns the turn as a background task; sends TurnComplete to the actor on finish.
@@ -231,11 +225,7 @@ impl RactorAgentActor {
             let result = turn.await;
 
             if let Err(e) = result {
-                Self::publish_error_and_done(
-                    &bus_for_task,
-                    &command_id,
-                    format!("Agent error: {e}"),
-                );
+                Self::publish_error_and_done(&bus_for_task, &command_id, format!("Agent error: {e}"));
             }
 
             // Notify actor to clear current_turn_* state.
@@ -244,10 +234,7 @@ impl RactorAgentActor {
     }
 
     pub(crate) fn publish_error_and_done(bus: &EventBus<Event>, id: &str, message: String) {
-        bus.publish(runie_core::Event::Error {
-            id: id.to_owned(),
-            message,
-        });
+        bus.publish(runie_core::Event::Error { id: id.to_owned(), message });
         bus.publish(runie_core::Event::Done { id: id.to_owned() });
     }
 
@@ -266,10 +253,9 @@ impl RactorAgentActor {
     }
 
     pub(crate) fn emit_error_and_done(state: &mut AgentActorState, id: &str, message: String) {
-        state.bus.publish(runie_core::Event::Error {
-            id: id.to_owned(),
-            message,
-        });
+        state
+            .bus
+            .publish(runie_core::Event::Error { id: id.to_owned(), message });
         state
             .bus
             .publish(runie_core::Event::Done { id: id.to_owned() });
@@ -292,11 +278,7 @@ pub async fn spawn_ractor_agent(
     ),
     ractor::SpawnErr,
 > {
-    let args = RactorAgentArgs {
-        provider_handle,
-        permission_handle,
-        bus: bus.clone(),
-    };
+    let args = RactorAgentArgs { provider_handle, permission_handle, bus: bus.clone() };
     spawn_ractor(None, RactorAgentActor, args).await
 }
 

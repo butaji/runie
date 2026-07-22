@@ -32,18 +32,12 @@ impl std::fmt::Debug for ProviderConfigResolver {
 impl ProviderConfigResolver {
     /// Create a resolver from a `ProviderConfig` implementation.
     pub fn new(config: Arc<dyn ProviderConfig>) -> Self {
-        Self {
-            inner: runie_core::auth::CredentialResolver::new(),
-            fallback: Some(config),
-        }
+        Self { inner: runie_core::auth::CredentialResolver::new(), fallback: Some(config) }
     }
 
     /// Create a resolver with only environment variables (no config file).
     pub fn env_only() -> Self {
-        Self {
-            inner: runie_core::auth::CredentialResolver::new(),
-            fallback: None,
-        }
+        Self { inner: runie_core::auth::CredentialResolver::new(), fallback: None }
     }
 
     /// Create a resolver with a config but no environment variable capture.
@@ -60,14 +54,8 @@ impl ProviderConfigResolver {
     ///
     /// This allows tests to use `MockKeyringStore` without hitting the OS keyring.
     /// Uses an empty environment to avoid environment variable interference in tests.
-    pub fn with_keyring_store(
-        config: Arc<dyn ProviderConfig>,
-        store: Arc<dyn runie_core::auth::KeyringStore>,
-    ) -> Self {
-        Self {
-            inner: runie_core::auth::CredentialResolver::with_store_empty_env(store),
-            fallback: Some(config),
-        }
+    pub fn with_keyring_store(config: Arc<dyn ProviderConfig>, store: Arc<dyn runie_core::auth::KeyringStore>) -> Self {
+        Self { inner: runie_core::auth::CredentialResolver::with_store_empty_env(store), fallback: Some(config) }
     }
 
     /// Resolve the API key for a provider, checking environment first.
@@ -97,10 +85,7 @@ impl ProviderConfigResolver {
     ///
     /// Environment variables are not supported for headers; they come from the
     /// config file only.
-    pub fn resolve_headers(
-        &self,
-        provider: &str,
-    ) -> Option<std::collections::HashMap<String, String>> {
+    pub fn resolve_headers(&self, provider: &str) -> Option<std::collections::HashMap<String, String>> {
         self.fallback.as_ref()?.resolve_headers(provider)
     }
 }
@@ -135,10 +120,7 @@ mod tests {
             self.base_url.clone()
         }
 
-        fn resolve_headers(
-            &self,
-            _provider: &str,
-        ) -> Option<std::collections::HashMap<String, String>> {
+        fn resolve_headers(&self, _provider: &str) -> Option<std::collections::HashMap<String, String>> {
             None
         }
     }
@@ -147,13 +129,9 @@ mod tests {
     fn resolve_env_takes_priority() {
         // Set env var BEFORE creating resolver (env is captured at construction)
         std::env::set_var("TESTPROVIDER_API_KEY", "env-key");
-        let test_config = TestConfig {
-            api_key: Some(ss("config-key")),
-            base_url: Some("http://example.com".to_string()),
-        };
-        let resolver = ProviderConfigResolver::new(
-            Arc::new(test_config) as Arc<dyn runie_core::proto::ProviderConfig>
-        );
+        let test_config =
+            TestConfig { api_key: Some(ss("config-key")), base_url: Some("http://example.com".to_string()) };
+        let resolver = ProviderConfigResolver::new(Arc::new(test_config) as Arc<dyn runie_core::proto::ProviderConfig>);
 
         // Environment variable should override config
         let result = resolver.resolve_api_key("testprovider");
@@ -167,10 +145,8 @@ mod tests {
 
     #[test]
     fn resolve_config_fallback() {
-        let test_config = TestConfig {
-            api_key: Some(ss("config-key")),
-            base_url: Some("http://example.com".to_string()),
-        };
+        let test_config =
+            TestConfig { api_key: Some(ss("config-key")), base_url: Some("http://example.com".to_string()) };
         // Use with_config to avoid environment variable interference
         let resolver = ProviderConfigResolver::with_config(test_config);
 
@@ -185,10 +161,7 @@ mod tests {
 
     #[test]
     fn empty_config_returns_none() {
-        let test_config = TestConfig {
-            api_key: None,
-            base_url: None,
-        };
+        let test_config = TestConfig { api_key: None, base_url: None };
         // Use with_config to avoid environment variable interference
         let resolver = ProviderConfigResolver::with_config(test_config);
 
@@ -198,10 +171,7 @@ mod tests {
 
     #[test]
     fn dotenv_fallback() {
-        let test_config = TestConfig {
-            api_key: None,
-            base_url: None,
-        };
+        let test_config = TestConfig { api_key: None, base_url: None };
         // Use with_config to avoid environment variable interference
         let resolver = ProviderConfigResolver::with_config(test_config);
 
@@ -215,10 +185,7 @@ mod tests {
         // instead of the OS keyring.
         use runie_core::auth::MockKeyringStore;
 
-        let test_config = TestConfig {
-            api_key: None,
-            base_url: Some("http://test.example.com".to_string()),
-        };
+        let test_config = TestConfig { api_key: None, base_url: Some("http://test.example.com".to_string()) };
         let mock_store = Arc::new(MockKeyringStore::new());
         let resolver = ProviderConfigResolver::with_keyring_store(
             Arc::new(test_config) as Arc<dyn runie_core::proto::ProviderConfig>,

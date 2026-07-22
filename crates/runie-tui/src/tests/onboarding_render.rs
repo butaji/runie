@@ -1,4 +1,5 @@
 #![allow(clippy::useless_conversion)]
+#![allow(clippy::too_many_lines)]
 //! Onboarding / login flow rendering tests (Layer 3).
 //!
 //! Drives the provider-add flow through core events and verifies the rendered

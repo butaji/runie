@@ -4,8 +4,7 @@ use super::{ItemAction, Panel, PanelStack};
 use crate::Event;
 
 /// Build a scoped models panel with provider-grouped toggle items.
-pub fn scoped_models(
-    models: Vec<(String, String, bool)>, // (provider, name, enabled)
+pub fn scoped_models(models: Vec<(String, String, bool)>, // (provider, name, enabled)
 ) -> PanelStack {
     let mut panel = Panel::new("scoped", " Scoped Models ").keep_open();
     let mut last_provider = String::new();
@@ -18,10 +17,7 @@ pub fn scoped_models(
             last_provider = provider.clone();
         }
         // Emit a toggle event for each model — the state will mutate.
-        let evt = Event::ScopedModelToggle {
-            provider: provider.clone(),
-            name: name.clone(),
-        };
+        let evt = Event::ScopedModelToggle { provider: provider.clone(), name: name.clone() };
         panel = panel.toggle(name, enabled, ItemAction::Emit(evt));
     }
     PanelStack::new(panel)

@@ -7,11 +7,7 @@ use crate::view::elements::{Element, PostKind};
 use crate::view::LazyCache;
 
 fn spawn(state: &mut AppState, id: &str, desc: &str, model: &str) {
-    state.update(Event::PatternWorkerSpawned {
-        id: id.into(),
-        description: desc.into(),
-        model: model.into(),
-    });
+    state.update(Event::PatternWorkerSpawned { id: id.into(), description: desc.into(), model: model.into() });
 }
 
 fn finish(state: &mut AppState, id: &str, status: &str, duration_ms: u64, output: &str) {
@@ -35,11 +31,7 @@ fn subagent_rows(state: &AppState) -> Vec<Element> {
 
 #[test]
 fn pattern_worker_events_are_agent_facts() {
-    let spawned = Event::PatternWorkerSpawned {
-        id: "w.1".into(),
-        description: "d".into(),
-        model: "m".into(),
-    };
+    let spawned = Event::PatternWorkerSpawned { id: "w.1".into(), description: "d".into(), model: "m".into() };
     let finished = Event::PatternWorkerFinished {
         id: "w.1".into(),
         status: "completed".into(),
@@ -58,11 +50,7 @@ fn pattern_worker_events_are_agent_facts() {
 
 #[test]
 fn pattern_worker_events_are_transient_not_durable() {
-    let spawned = Event::PatternWorkerSpawned {
-        id: "w.1".into(),
-        description: "d".into(),
-        model: "m".into(),
-    };
+    let spawned = Event::PatternWorkerSpawned { id: "w.1".into(), description: "d".into(), model: "m".into() };
     let finished = Event::PatternWorkerFinished {
         id: "w.1".into(),
         status: "completed".into(),
@@ -168,11 +156,7 @@ fn turn_started_clears_pattern_workers() {
     spawn(&mut state, "w.1", "Summarize the task", "echo");
     assert_eq!(state.agent_state().pattern_workers.len(), 1);
 
-    state.update(Event::TurnStarted {
-        id: "req.1".into(),
-        request_id: "req.1".into(),
-        content: "next turn".into(),
-    });
+    state.update(Event::TurnStarted { id: "req.1".into(), request_id: "req.1".into(), content: "next turn".into() });
     assert!(state.agent_state().pattern_workers.is_empty());
 }
 
@@ -241,14 +225,8 @@ fn completed_row_is_collapsible_post_running_row_is_not() {
         assert_eq!(post.kind, PostKind::SubagentRow);
         let elem = &feed.elements[post.start];
         match elem {
-            Element::SubagentRow {
-                status: PatternWorkerStatus::Running,
-                ..
-            } => running_post = Some(post),
-            Element::SubagentRow {
-                status: PatternWorkerStatus::Completed,
-                ..
-            } => completed_post = Some(post),
+            Element::SubagentRow { status: PatternWorkerStatus::Running, .. } => running_post = Some(post),
+            Element::SubagentRow { status: PatternWorkerStatus::Completed, .. } => completed_post = Some(post),
             _ => {}
         }
     }
@@ -285,9 +263,7 @@ fn expanding_completed_post_reveals_worker_output() {
     let rows = subagent_rows(&state);
     assert_eq!(rows.len(), 1);
     match &rows[0] {
-        Element::SubagentRow {
-            expanded, output, ..
-        } => {
+        Element::SubagentRow { expanded, output, .. } => {
             assert!(expanded, "post in expanded_posts must render expanded");
             assert_eq!(output, "line one\nline two");
         }

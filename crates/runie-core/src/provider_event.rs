@@ -46,10 +46,7 @@ pub enum ProviderEvent {
     /// An error occurred during generation.
     Error(ModelError),
     /// Token usage information.
-    Usage {
-        input_tokens: usize,
-        output_tokens: usize,
-    },
+    Usage { input_tokens: usize, output_tokens: usize },
     /// Generation finished.
     Finish { reason: StopReason },
 }
@@ -166,10 +163,7 @@ mod tests {
 
     #[test]
     fn provider_event_tool_call_roundtrip() {
-        let event = ProviderEvent::ToolCallStart {
-            id: "call_abc".into(),
-            name: "bash".into(),
-        };
+        let event = ProviderEvent::ToolCallStart { id: "call_abc".into(), name: "bash".into() };
         let json = serde_json::to_string(&event).unwrap();
         let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert!(matches!(parsed, ProviderEvent::ToolCallStart { id, name }
@@ -244,10 +238,7 @@ mod tests {
 
     #[test]
     fn model_error_context_length_roundtrip() {
-        let err = ModelError::ContextLength {
-            limit: 8192,
-            used: 9000,
-        };
+        let err = ModelError::ContextLength { limit: 8192, used: 9000 };
         let json = serde_json::to_string(&err).unwrap();
         // Struct variants put the struct fields in message
         assert_eq!(
@@ -269,9 +260,7 @@ mod tests {
 
     #[test]
     fn model_error_rate_limit_roundtrip() {
-        let err = ModelError::RateLimit {
-            retry_after_secs: Some(30),
-        };
+        let err = ModelError::RateLimit { retry_after_secs: Some(30) };
         let json = serde_json::to_string(&err).unwrap();
         // The retry_after_secs field is renamed to retryAfterSecs in JSON
         assert_eq!(
@@ -282,9 +271,7 @@ mod tests {
         assert_eq!(roundtrip, err);
 
         // Without retry info, the field is skipped entirely
-        let err2 = ModelError::RateLimit {
-            retry_after_secs: None,
-        };
+        let err2 = ModelError::RateLimit { retry_after_secs: None };
         let json2 = serde_json::to_string(&err2).unwrap();
         assert_eq!(json2, r#"{"kind":"rateLimit","message":{}}"#);
         let roundtrip2: ModelError = serde_json::from_str(&json2).unwrap();
@@ -302,9 +289,7 @@ mod tests {
 
     #[test]
     fn model_error_overloaded_roundtrip_and_display() {
-        let err = ModelError::Overloaded {
-            retry_after_secs: None,
-        };
+        let err = ModelError::Overloaded { retry_after_secs: None };
         assert_eq!(err.to_string(), "Provider overloaded");
         let json = serde_json::to_string(&err).unwrap();
         let roundtrip: ModelError = serde_json::from_str(&json).unwrap();
@@ -313,14 +298,8 @@ mod tests {
 
     #[test]
     fn model_error_is_retryable_matrix() {
-        assert!(ModelError::RateLimit {
-            retry_after_secs: None
-        }
-        .is_retryable());
-        assert!(ModelError::Overloaded {
-            retry_after_secs: None
-        }
-        .is_retryable());
+        assert!(ModelError::RateLimit { retry_after_secs: None }.is_retryable());
+        assert!(ModelError::Overloaded { retry_after_secs: None }.is_retryable());
         assert!(!ModelError::Other("boom".into()).is_retryable());
         assert!(!ModelError::Refusal("no".into()).is_retryable());
         assert!(!ModelError::ContextLength { limit: 1, used: 2 }.is_retryable());
@@ -342,10 +321,7 @@ mod tests {
 
     #[test]
     fn provider_event_tool_execution_roundtrip() {
-        let event = ProviderEvent::ToolExecutionStart {
-            id: "exec_1".into(),
-            name: "bash".into(),
-        };
+        let event = ProviderEvent::ToolExecutionStart { id: "exec_1".into(), name: "bash".into() };
         let json = serde_json::to_string(&event).unwrap();
         let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert!(matches!(
@@ -357,9 +333,7 @@ mod tests {
 
     #[test]
     fn provider_event_tool_execution_end_roundtrip() {
-        let event = ProviderEvent::ToolExecutionEnd {
-            id: "exec_1".into(),
-        };
+        let event = ProviderEvent::ToolExecutionEnd { id: "exec_1".into() };
         let json = serde_json::to_string(&event).unwrap();
         let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert!(matches!(
@@ -370,10 +344,7 @@ mod tests {
 
     #[test]
     fn provider_event_tool_execution_result_roundtrip() {
-        let event = ProviderEvent::ToolExecutionResult {
-            id: "exec_1".into(),
-            result: "hello world".into(),
-        };
+        let event = ProviderEvent::ToolExecutionResult { id: "exec_1".into(), result: "hello world".into() };
         let json = serde_json::to_string(&event).unwrap();
         let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert!(matches!(

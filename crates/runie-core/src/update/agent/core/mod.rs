@@ -7,9 +7,7 @@ use crate::update::agent::thought::{plan_thought, take_reasoning_parts, ThoughtP
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
         // Idempotent: skip if already streaming with the same request_id.
-        if self.agent_state().streaming
-            && self.agent_state().current_request_id.as_deref() == Some(&id)
-        {
+        if self.agent_state().streaming && self.agent_state().current_request_id.as_deref() == Some(&id) {
             return;
         }
         // Update AgentState projection directly.
@@ -37,6 +35,8 @@ impl AppState {
         self.messages_changed();
     }
 
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn add_thought(&mut self, id: String) {
         // Idempotent: skip if we've already created a thought for this (request_id, thought_seq) combination.
         // The thought_id format is "{request_id}#thought.{thought_seq}".
@@ -137,9 +137,7 @@ impl AppState {
                 role: Role::Thought,
                 timestamp: thought_ts,
                 id: thought_id,
-                parts: vec![Part::Text {
-                    content: plan.thought_content,
-                }],
+                parts: vec![Part::Text { content: plan.thought_content }],
                 ..Default::default()
             },
         );
@@ -171,9 +169,7 @@ impl AppState {
             role: Role::Tool,
             timestamp: now(),
             id: tool_id,
-            parts: vec![Part::Text {
-                content: tool_running(&name),
-            }],
+            parts: vec![Part::Text { content: tool_running(&name) }],
             ..Default::default()
         });
 
@@ -302,25 +298,17 @@ impl AppState {
 
     fn on_text_start(&mut self) {
         if let Some(msg) = self.current_assistant_message_mut() {
-            msg.parts.push(Part::Text {
-                content: String::new(),
-            });
+            msg.parts.push(Part::Text { content: String::new() });
         } else {
-            self.start_assistant_message(Part::Text {
-                content: String::new(),
-            });
+            self.start_assistant_message(Part::Text { content: String::new() });
         }
     }
 
     fn on_thinking_start(&mut self) {
         if let Some(msg) = self.current_assistant_message_mut() {
-            msg.parts.push(Part::Reasoning {
-                content: String::new(),
-            });
+            msg.parts.push(Part::Reasoning { content: String::new() });
         } else {
-            self.start_assistant_message(Part::Reasoning {
-                content: String::new(),
-            });
+            self.start_assistant_message(Part::Reasoning { content: String::new() });
         }
     }
 
@@ -355,6 +343,7 @@ impl AppState {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn on_response_delta(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
         // Split `<think>` reasoning out before text reaches the visible

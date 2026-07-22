@@ -14,10 +14,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn headless_runner_with_mock_returns_content() {
     let provider = MockProvider::default();
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("hello world"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("hello world")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,
@@ -36,10 +33,7 @@ async fn headless_runner_with_mock_returns_content() {
 async fn headless_runner_executes_tool_and_returns_output() {
     let _mock_guard = crate::tests::ensure_mock_provider().await;
     let provider = MockProvider::default();
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("list files"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("list files")];
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
@@ -61,10 +55,7 @@ async fn headless_runner_executes_tool_and_returns_output() {
 async fn headless_runner_with_execute_tools_enabled() {
     let _mock_guard = crate::tests::ensure_mock_provider().await;
     let provider = MockProvider::default();
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("list files"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("list files")];
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
@@ -82,10 +73,7 @@ async fn headless_runner_with_execute_tools_enabled() {
 async fn headless_runner_feeds_parse_errors_back_to_model() {
     let _mock_guard = crate::tests::ensure_mock_provider().await;
     let provider = MockProvider::default();
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("malformed tool call"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("malformed tool call")];
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
@@ -112,10 +100,7 @@ async fn headless_runner_feeds_parse_errors_back_to_model() {
 async fn headless_runner_executes_tool_call_markup() {
     let _mock_guard = crate::tests::ensure_mock_provider().await;
     let provider = MockProvider::default();
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("use markup tool call"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("use markup tool call")];
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
@@ -137,12 +122,7 @@ async fn headless_runner_executes_tool_call_markup() {
 #[tokio::test]
 async fn headless_cli_helper_builds_gate() {
     let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
-    let _opts = HeadlessCliOptions {
-        execute_tools: true,
-        max_tool_rounds: 5,
-        on_chunk: None,
-        on_event: None,
-    };
+    let _opts = HeadlessCliOptions { execute_tools: true, max_tool_rounds: 5, on_chunk: None, on_event: None };
     let gate = PermissionGate::new(PermissionManager::default(), sink.clone());
     assert!(Arc::ptr_eq(gate.sink_ref(), &sink));
 }
@@ -152,16 +132,8 @@ async fn headless_cli_helper_builds_gate() {
 async fn headless_cli_smoke_with_mock() {
     let _mock_guard = crate::tests::ensure_mock_provider().await;
     let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("hello"),
-    ];
-    let opts = HeadlessCliOptions {
-        execute_tools: false,
-        max_tool_rounds: 5,
-        on_chunk: None,
-        on_event: None,
-    };
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("hello")];
+    let opts = HeadlessCliOptions { execute_tools: false, max_tool_rounds: 5, on_chunk: None, on_event: None };
     let result = run_headless_cli(Some("mock"), Some("echo"), messages, sink, opts, None)
         .await
         .unwrap();
@@ -176,8 +148,7 @@ async fn headless_turn_error_propagates() {
         fn generate(
             &self,
             _messages: Vec<ChatMessage>,
-        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>>
-        {
+        ) -> std::pin::Pin<Box<dyn futures::Stream<Item = anyhow::Result<ProviderEvent>> + Send + '_>> {
             let events = vec![
                 Ok(ProviderEvent::TextDelta("Before error. ".into())),
                 Ok(ProviderEvent::Error(ModelError::RateLimit {
@@ -188,10 +159,7 @@ async fn headless_turn_error_propagates() {
         }
     }
 
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("hello"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("hello")];
     let options = HeadlessOptions {
         execute_tools: false,
         max_tool_rounds: 5,
@@ -211,9 +179,7 @@ async fn headless_turn_error_propagates() {
 // Layer 1: HeadlessEvent emits valid JSON lines
 #[test]
 fn headless_event_serializes_to_jsonl() {
-    let evt = HeadlessEvent::Text {
-        data: "Hello".into(),
-    };
+    let evt = HeadlessEvent::Text { data: "Hello".into() };
     let line = evt.to_json_line();
     assert!(line.contains(r#""type":"text""#));
     assert!(line.contains(r#""data":"Hello""#));
@@ -222,9 +188,7 @@ fn headless_event_serializes_to_jsonl() {
 // Layer 1: HeadlessEvent error round-trips
 #[test]
 fn headless_event_error_round_trips() {
-    let evt = HeadlessEvent::Error {
-        message: "oops".into(),
-    };
+    let evt = HeadlessEvent::Error { message: "oops".into() };
     let line = evt.to_json_line();
     let parsed: HeadlessEvent = serde_json::from_str(&line).unwrap();
     assert!(matches!(parsed, HeadlessEvent::Error { message } if message == "oops"));
@@ -233,10 +197,7 @@ fn headless_event_error_round_trips() {
 // Layer 1: HeadlessEvent tool call events serialize correctly
 #[test]
 fn headless_event_tool_call_round_trips() {
-    let evt = HeadlessEvent::ToolCallStart {
-        id: "c1".into(),
-        name: "read_file".into(),
-    };
+    let evt = HeadlessEvent::ToolCallStart { id: "c1".into(), name: "read_file".into() };
     let line = evt.to_json_line();
     let parsed: HeadlessEvent = serde_json::from_str(&line).unwrap();
     assert!(matches!(
@@ -268,10 +229,7 @@ async fn denied_tool_does_not_loop() {
     // Use MockProvider which emits a bash tool call for "native tool"
     let _mock_guard = crate::tests::ensure_mock_provider().await;
     let provider = MockProvider::default();
-    let messages = vec![
-        ChatMessage::system("You are helpful."),
-        ChatMessage::user("native tool"),
-    ];
+    let messages = vec![ChatMessage::system("You are helpful."), ChatMessage::user("native tool")];
 
     // The fix should make this return in a reasonable time instead of looping
     let result = run_headless_turn(messages, &provider, options)

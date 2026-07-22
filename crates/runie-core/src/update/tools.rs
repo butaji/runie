@@ -10,11 +10,7 @@ use crate::Event;
 
 pub fn update(state: &mut AppState, event: Event) {
     match event {
-        Event::PendingEdit {
-            path,
-            original,
-            proposed,
-        } => {
+        Event::PendingEdit { path, original, proposed } => {
             state
                 .session
                 .pending_edits

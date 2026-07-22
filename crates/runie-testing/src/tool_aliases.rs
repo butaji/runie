@@ -103,6 +103,7 @@ static GROK_TO_RUNIE: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::
 ///
 /// Grok uses snake_case for arguments, Runie uses camelCase.
 /// Some tools have different argument names.
+#[allow(clippy::too_many_lines)]
 pub fn transform_args(tool_name: &str, args: &serde_json::Value) -> serde_json::Value {
     // Most tools don't need transformation
     match tool_name {
@@ -237,8 +238,7 @@ mod tests {
         // ListDir could be grok-list-directory or grok-list-files
         let listdir_aliases = runie_to_grok_all("ListDir");
         assert!(
-            listdir_aliases.contains(&"grok-list-directory")
-                || listdir_aliases.contains(&"grok-list-files"),
+            listdir_aliases.contains(&"grok-list-directory") || listdir_aliases.contains(&"grok-list-files"),
             "ListDir should map to grok-list-directory or grok-list-files"
         );
         assert_eq!(runie_to_grok("unknown-tool"), None);

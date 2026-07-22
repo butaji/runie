@@ -8,8 +8,7 @@ use super::panels::{build_key_input, build_model_selector, build_validating_pane
 use super::state::{LoginFlowState, LoginStep};
 use crate::actors::ConfigMsg;
 use crate::login_flow::panel_ops::{
-    pop_login_panel, pop_login_panel_or_close, push_login_panel, rebuild_login_dialog,
-    replace_top_login_panel_with,
+    pop_login_panel, pop_login_panel_or_close, push_login_panel, rebuild_login_dialog, replace_top_login_panel_with,
 };
 use crate::Event;
 
@@ -56,11 +55,7 @@ fn login_flow_select_provider(state: &mut crate::model::AppState, provider: Stri
     push_login_panel(state, panel);
 }
 
-fn reject_empty_key(
-    state: &mut crate::model::AppState,
-    provider: &str,
-    key: &str,
-) -> Option<String> {
+fn reject_empty_key(state: &mut crate::model::AppState, provider: &str, key: &str) -> Option<String> {
     if key.trim().is_empty() {
         let p = if provider.is_empty() {
             state.active_provider()
@@ -267,9 +262,7 @@ fn validate_login_flow_ready(state: &mut crate::model::AppState) -> bool {
     true
 }
 
-fn extract_login_flow_data(
-    state: &crate::model::AppState,
-) -> (String, String, Vec<String>, String) {
+fn extract_login_flow_data(state: &crate::model::AppState) -> (String, String, Vec<String>, String) {
     let provider = state.active_provider();
     let key = state
         .login_flow
@@ -300,16 +293,12 @@ fn persist_provider_config(
         let base_url = base_url.to_owned();
         let key = key.to_owned();
         let selected = selected.to_vec();
-        let _ = h.config.try_send(ConfigMsg::SaveProvider {
-            name: provider,
-            base_url,
-            api_key: key,
-            models: selected,
-        });
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SaveProvider { name: provider, base_url, api_key: key, models: selected });
         return;
     }
-    if let Err(e) = crate::provider::config::save_provider_config(provider, base_url, key, selected)
-    {
+    if let Err(e) = crate::provider::config::save_provider_config(provider, base_url, key, selected) {
         state.add_system_msg(format!("Failed to save provider config: {}", e));
     }
 }

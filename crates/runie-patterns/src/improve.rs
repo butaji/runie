@@ -15,10 +15,7 @@ use std::time::{Duration, Instant};
 
 use chrono::Utc;
 
-use crate::{
-    model_for, AgentTrace, Context, Pattern, PatternOutput, TerminationReason, TraceEvent,
-    WorkerTask,
-};
+use crate::{model_for, AgentTrace, Context, Pattern, PatternOutput, TerminationReason, TraceEvent, WorkerTask};
 
 /// Iterative improvement with review — generate, evaluate, revise.
 pub struct ImprovePattern;
@@ -47,17 +44,11 @@ impl Pattern for ImprovePattern {
                 RoundVerdict::Approved(final_draft) => {
                     return Ok(finish(traces, final_draft, TerminationReason::Approved));
                 }
-                RoundVerdict::Revise {
-                    draft: new_draft,
-                    feedback: new_feedback,
-                } => {
+                RoundVerdict::Revise { draft: new_draft, feedback: new_feedback } => {
                     draft = new_draft;
                     feedback = new_feedback;
                 }
-                RoundVerdict::Stop {
-                    draft: partial,
-                    reason,
-                } => {
+                RoundVerdict::Stop { draft: partial, reason } => {
                     return Ok(finish(traces, partial, reason));
                 }
             }
@@ -73,10 +64,7 @@ enum RoundVerdict {
     /// Reviewer gave feedback; carries the new draft and the feedback.
     Revise { draft: String, feedback: String },
     /// Fatal: the pattern terminates with this reason and partial draft.
-    Stop {
-        draft: String,
-        reason: TerminationReason,
-    },
+    Stop { draft: String, reason: TerminationReason },
 }
 
 /// Whether the draft step of a round generates or revises.
@@ -96,19 +84,12 @@ fn aborted() -> TerminationReason {
     TerminationReason::Error("aborted".into())
 }
 
-fn finish(
-    traces: Vec<AgentTrace>,
-    result: String,
-    termination: TerminationReason,
-) -> PatternOutput {
-    PatternOutput {
-        result,
-        termination,
-        traces,
-    }
+fn finish(traces: Vec<AgentTrace>, result: String, termination: TerminationReason) -> PatternOutput {
+    PatternOutput { result, termination, traces, circuit_breaker_tripped: false }
 }
 
 /// One iteration: produce/revise the draft, then review it.
+#[allow(clippy::too_many_lines)]
 async fn eval_round(
     ctx: &Context,
     round: usize,
@@ -125,24 +106,15 @@ async fn eval_round(
     let draft = match draft_call(ctx, step, round, input, draft, feedback, traces).await {
         EvalCall::Text(text) => text,
         EvalCall::Failed(message) => {
-            return RoundVerdict::Stop {
-                draft: draft.to_string(),
-                reason: TerminationReason::Error(message),
-            };
+            return RoundVerdict::Stop { draft: draft.to_string(), reason: TerminationReason::Error(message) };
         }
         EvalCall::Aborted => {
-            return RoundVerdict::Stop {
-                draft: draft.to_string(),
-                reason: aborted(),
-            };
+            return RoundVerdict::Stop { draft: draft.to_string(), reason: aborted() };
         }
     };
 
     if ctx.abort.is_cancelled() {
-        return RoundVerdict::Stop {
-            draft,
-            reason: aborted(),
-        };
+        return RoundVerdict::Stop { draft, reason: aborted() };
     }
     let id = format!("improve-review-{round}");
     let description = format!("review round {round}");
@@ -157,14 +129,8 @@ async fn eval_round(
     {
         EvalCall::Text(text) if approved(&text) => RoundVerdict::Approved(draft),
         EvalCall::Text(feedback) => RoundVerdict::Revise { draft, feedback },
-        EvalCall::Failed(message) => RoundVerdict::Stop {
-            draft,
-            reason: TerminationReason::Error(message),
-        },
-        EvalCall::Aborted => RoundVerdict::Stop {
-            draft,
-            reason: aborted(),
-        },
+        EvalCall::Failed(message) => RoundVerdict::Stop { draft, reason: TerminationReason::Error(message) },
+        EvalCall::Aborted => RoundVerdict::Stop { draft, reason: aborted() },
     }
 }
 
@@ -195,6 +161,7 @@ async fn draft_call(
 
 /// One leader runner call with abort race, per-call timeout, and trace
 /// recording. A failed send on the trace channel must not fail the run.
+#[allow(clippy::too_many_lines)]
 async fn call_eval(
     ctx: &Context,
     id: &str,
@@ -203,13 +170,7 @@ async fn call_eval(
     traces: &mut Vec<AgentTrace>,
 ) -> EvalCall {
     let (provider, model) = model_for(&ctx.models, 0);
-    let task = WorkerTask {
-        id: id.to_string(),
-        prompt,
-        provider,
-        model,
-        read_only: true,
-    };
+    let task = WorkerTask { id: id.to_string(), prompt, provider, model, read_only: true };
     let start_time = Utc::now();
     let start = Instant::now();
     let timeout = Duration::from_millis(ctx.config.timeout_ms);
@@ -271,9 +232,7 @@ fn approved(response: &str) -> bool {
 }
 
 fn build_generate_prompt(input: &str) -> String {
-    format!(
-        "[improve-generate]\nProduce the best possible answer to the task below.\n\nTask:\n{input}"
-    )
+    format!("[improve-generate]\nProduce the best possible answer to the task below.\n\nTask:\n{input}")
 }
 
 fn build_revise_prompt(input: &str, draft: &str, feedback: &str) -> String {

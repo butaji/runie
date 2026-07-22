@@ -17,10 +17,7 @@ fn state_with_open_palette() -> AppState {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::CommandPalette,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::CommandPalette, .. })
         ),
         "command palette should be open"
     );
@@ -102,10 +99,7 @@ fn open_dialog_result_pushes_to_back_stack() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::Settings,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Settings, .. })
         ),
         "settings dialog should be open"
     );
@@ -129,10 +123,7 @@ fn open_panel_stack_result_pushes_to_back_stack() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, .. })
         ),
         "generic panel stack should be open"
     );
@@ -154,10 +145,7 @@ fn non_palette_dialog_unchanged_by_message_result() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::Settings,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Settings, .. })
         ),
         "settings dialog should be open"
     );
@@ -168,10 +156,7 @@ fn non_palette_dialog_unchanged_by_message_result() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::Settings,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Settings, .. })
         ),
         "settings dialog should remain open after Message result"
     );
@@ -260,10 +245,7 @@ fn autocomplete_palette_returns_to_chat_after_command() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::Generic, .. })
         ),
         "the /status result panel should be open"
     );
@@ -293,10 +275,7 @@ fn command_bar_palette_returns_to_palette_after_command() {
     assert!(
         matches!(
             state.open_dialog(),
-            Some(DialogState::Active {
-                kind: DialogKind::CommandPalette,
-                ..
-            })
+            Some(DialogState::Active { kind: DialogKind::CommandPalette, .. })
         ),
         "command bar must restore the palette after the command panel closes"
     );

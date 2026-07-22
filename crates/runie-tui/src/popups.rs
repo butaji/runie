@@ -2,13 +2,19 @@
 //!
 //! Layout constants are centralized in `layout_constants.rs`.
 
-use ratatui::{layout::Rect, prelude::Text, style::Style, text::Line, widgets::Clear, Frame};
+use ratatui::{
+    layout::Rect,
+    prelude::Text,
+    style::Style,
+    text::Line,
+    widgets::{Clear, Paragraph},
+    Frame,
+};
 use runie_core::Snapshot;
-use tui_popup::Popup;
 
 use crate::theme::{
-    color_bg_panel, style_hint, style_popup_selected, style_popup_unselected, GLYPH_SELECTED,
-    GLYPH_UNSELECTED,
+    block_popup, color_bg_panel, style_hint, style_popup_selected, style_popup_unselected,
+    GLYPH_SELECTED, GLYPH_UNSELECTED,
 };
 
 pub mod layout_constants;
@@ -49,28 +55,23 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
         .unwrap_or(0)
         .min(items.len().saturating_sub(1));
 
-    // Use tui-popup for the shell (border + title + background).
     let popup_rect = path_popup_area(f.area(), items.len());
     let lines = build_path_suggestion_lines(items, selected);
-    let bg = color_bg_panel();
-
-    // tui-popup clears to terminal bg; fill inner with panel bg.
-    let content = Text::from(lines).style(Style::default().bg(bg));
-
     let title = format!(" paths ({}) ", items.len());
-    let popup = Popup::new(content)
-        .title(title.as_str())
-        .style(Style::default().bg(bg));
-    f.render_widget(popup, popup_rect);
 
-    // Set inner background explicitly (tui-popup uses Clear which resets to terminal bg).
+    // setup_popup handles border + bg + 1-cell inner margin.
+    clear_panel_bg(f, popup_rect);
+    f.render_widget(Paragraph::new("").block(block_popup(&title)), popup_rect);
+
     let inner = Rect {
         x: popup_rect.x + 1,
         y: popup_rect.y + 1,
         width: popup_rect.width.saturating_sub(2),
         height: popup_rect.height.saturating_sub(2),
     };
-    f.buffer_mut().set_style(inner, Style::default().bg(bg));
+
+    let content = Text::from(lines);
+    f.render_widget(Paragraph::new(content), inner);
 }
 
 fn path_popup_area(area: Rect, item_count: usize) -> Rect {
@@ -87,10 +88,7 @@ fn path_popup_area(area: Rect, item_count: usize) -> Rect {
     }
 }
 
-fn build_path_suggestion_lines(
-    items: &[runie_core::path_complete::PathCompletion],
-    selected: usize,
-) -> Vec<Line<'_>> {
+fn build_path_suggestion_lines(items: &[runie_core::path_complete::PathCompletion], selected: usize) -> Vec<Line<'_>> {
     let mut lines: Vec<Line<'_>> = items
         .iter()
         .take(8)
@@ -102,10 +100,7 @@ fn build_path_suggestion_lines(
     lines
 }
 
-fn path_suggestion_line(
-    item: &runie_core::path_complete::PathCompletion,
-    is_selected: bool,
-) -> Line<'_> {
+fn path_suggestion_line(item: &runie_core::path_complete::PathCompletion, is_selected: bool) -> Line<'_> {
     let prefix = if is_selected {
         GLYPH_SELECTED
     } else {

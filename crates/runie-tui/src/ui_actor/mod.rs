@@ -22,8 +22,8 @@ use runie_core::actors::turn::RactorTurnHandle;
 use runie_core::actors::RactorInputHandle;
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::permissions::PermissionAction;
-use runie_core::update::dialog::handle_form_dialog;
 use runie_core::skills::build_skills_context;
+use runie_core::update::dialog::handle_form_dialog;
 use runie_core::{AppState, Event, Snapshot};
 
 use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
@@ -198,6 +198,69 @@ impl UiActor {
         this
     }
 
+    /// Parse "provider/model" into its components.
+    /// Returns `None` if the string has no `/` separator.
+    fn parse_provider_model(s: &str) -> Option<(String, String)> {
+        s.split_once('/').map(|(p, m)| (p.to_owned(), m.to_owned()))
+    }
+
+    /// Build the ordered model list for a pattern turn.
+    ///
+    /// Priority:
+    ///  1. `lead_model` → index 0 (leader / coordinator)
+    ///  2. `worker_model` → index 1+ (workers, round-robin)
+    ///  3. `scoped_models` (enabled only) if neither lead nor worker is configured
+    ///  4. Fall back to `(current_provider, current_model)`
+    ///
+    /// `model_for()` in runie-patterns reads:
+    ///   ctx.models[0]  → leader
+    ///   ctx.models[i]   → worker at index i-1  (falls back to models[0])
+    fn build_pattern_models(
+        mode: &runie_core::config::ModeSection,
+        current_provider: &str,
+        current_model: &str,
+        scoped_models: &[runie_core::scoped_model::ScopedModel],
+    ) -> Vec<(String, String)> {
+        let mut models: Vec<(String, String)> = Vec::with_capacity(2);
+
+        // Lead model → always index 0.
+        if let Some((p, m)) = mode
+            .lead_model
+            .as_ref()
+            .and_then(|s| Self::parse_provider_model(s))
+        {
+            models.push((p, m));
+        }
+
+        // Worker model → index 1.
+        if let Some((p, m)) = mode
+            .worker_model
+            .as_ref()
+            .and_then(|s| Self::parse_provider_model(s))
+        {
+            // Skip if identical to lead (user chose the same model for both).
+            if models.first() != Some(&(p.clone(), m.clone())) {
+                models.push((p, m));
+            }
+        }
+
+        // If no lead/worker configured, fall back to scoped_models or current.
+        if models.is_empty() {
+            let scoped: Vec<(String, String)> = scoped_models
+                .iter()
+                .filter(|m| m.enabled)
+                .map(|m| (m.provider.clone(), m.name.clone()))
+                .collect();
+            if scoped.is_empty() {
+                models.push((current_provider.to_owned(), current_model.to_owned()));
+            } else {
+                models = scoped;
+            }
+        }
+
+        models
+    }
+
     /// Replace the agent handle after construction.
     /// Use this when UiActor is created before `Leader::start_with_bus()` returns
     /// (so the real agent handle is not yet available). Call this after
@@ -209,10 +272,7 @@ impl UiActor {
     /// Install the pattern worker runner (bootstrap, after the leader starts).
     /// Without a runner, pattern modes fall back to the single-agent turn.
     /// Tests inject a fake runner here.
-    pub fn set_pattern_executor(
-        &mut self,
-        runner: std::sync::Arc<dyn runie_patterns::WorkerRunner>,
-    ) {
+    pub fn set_pattern_executor(&mut self, runner: std::sync::Arc<dyn runie_patterns::WorkerRunner>) {
         self.pattern_runner = Some(runner);
     }
 
@@ -242,13 +302,10 @@ impl UiActor {
     }
 
     /// Run the actor until a quit event is processed.
-    pub async fn run(
-        mut self,
-        mut rx: Receiver<Event>,
-        mut submit_rx: tokio::sync::mpsc::Receiver<Event>,
-    ) {
-        let (effect_tx, effect_rx) =
-            tokio::sync::mpsc::channel::<Event>(EFFECT_FORWARDER_CHANNEL_CAPACITY);
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
+    pub async fn run(mut self, mut rx: Receiver<Event>, mut submit_rx: tokio::sync::mpsc::Receiver<Event>) {
+        let (effect_tx, effect_rx) = tokio::sync::mpsc::channel::<Event>(EFFECT_FORWARDER_CHANNEL_CAPACITY);
         Self::spawn_effect_forwarder(self.bus.clone(), effect_rx);
 
         // Drain all buffered bootstrap events before sending the first snapshot.
@@ -323,11 +380,7 @@ impl UiActor {
     /// Handle a single event and publish a fresh snapshot.
     /// Returns `true` when the actor should shut down.
     #[cfg(test)]
-    pub(crate) async fn handle_event(
-        &mut self,
-        evt: Event,
-        effect_tx: tokio::sync::mpsc::Sender<Event>,
-    ) -> bool {
+    pub(crate) async fn handle_event(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         let quit = self.handle_event_inner(evt, effect_tx).await;
         self.publish_snapshot();
         quit
@@ -344,11 +397,9 @@ impl UiActor {
 
     /// Handle a single event without publishing. Returns `true` when the actor
     /// should shut down.
-    pub(crate) async fn handle_event_inner(
-        &mut self,
-        evt: Event,
-        effect_tx: tokio::sync::mpsc::Sender<Event>,
-    ) -> bool {
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
+    pub(crate) async fn handle_event_inner(&mut self, evt: Event, effect_tx: tokio::sync::mpsc::Sender<Event>) -> bool {
         // Priority quit / abort handling.
         //
         // `turn_active` is captured at the very top, BEFORE apply_event runs
@@ -422,12 +473,7 @@ impl UiActor {
             self.pending_queued_turn = true;
         }
 
-        if let Event::TurnStarted {
-            request_id,
-            content,
-            ..
-        } = &evt
-        {
+        if let Event::TurnStarted { request_id, content, .. } = &evt {
             // Guard: prevent duplicate agent spawns if TurnStarted arrives multiple times.
             // prev_turn_active was captured at the top of this function, BEFORE
             // apply_event (inside handle_input_event) updated the projection.
@@ -435,9 +481,7 @@ impl UiActor {
             if !prev_turn_active && !self.turn_was_active {
                 self.turn_was_active = true;
                 let mode_active = self.state.config().mode.active.clone();
-                if crate::pattern_runner::should_use_pattern(&mode_active)
-                    && self.pattern_runner.is_some()
-                {
+                if crate::pattern_runner::should_use_pattern(&mode_active) && self.pattern_runner.is_some() {
                     self.start_pattern_turn(request_id, content);
                 } else {
                     self.run_agent_turn(request_id, content).await;
@@ -497,6 +541,7 @@ impl UiActor {
     /// `Done` on success, `Error` + `Done` on failure — or the TurnActor
     /// stays stuck. On abort the normal `Event::Abort` path finalizes the
     /// turn, so the task publishes nothing once its token is cancelled.
+    #[allow(clippy::too_many_lines)]
     fn start_pattern_turn(&mut self, request_id: &str, content: &str) {
         let Some(runner) = self.pattern_runner.clone() else {
             // Guarded by the caller; never get stuck if misconfigured.
@@ -509,22 +554,21 @@ impl UiActor {
         let variant = self.state.config().swarm_variant.clone();
         let bus = self.bus.clone();
 
-        // Multi-model patterns: use enabled scoped models when available;
-        // otherwise fall back to the current model so single-model swarms
-        // keep working.
-        let pattern_models: Vec<(String, String)> = self
-            .state
-            .config()
-            .scoped_models
-            .iter()
-            .filter(|m| m.enabled)
-            .map(|m| (m.provider.clone(), m.name.clone()))
-            .collect();
-        let models = if pattern_models.is_empty() {
-            vec![(provider, model.clone())]
-        } else {
-            pattern_models
-        };
+        // Build the models list for the pattern run:
+        //  1. lead_model from /mode config → index 0 (leader)
+        //  2. worker_model from /mode config → index 1+ (workers, round-robin)
+        //  3. scoped_models (enabled only) if neither lead nor worker is set
+        //  4. fallback to current model
+        //
+        // model_for() in runie-patterns uses:
+        //   ctx.models[0]  → leader
+        //   ctx.models[i]  → worker at index i-1
+        let models = Self::build_pattern_models(
+            &mode,
+            &provider,
+            &model,
+            self.state.config().scoped_models.as_slice(),
+        );
 
         let abort = tokio_util::sync::CancellationToken::new();
         self.pattern_abort = Some(abort.clone());
@@ -540,6 +584,7 @@ impl UiActor {
                 timeout_ms: mode.timeout_ms,
                 max_retries: mode.max_retries,
                 circuit_breaker: mode.circuit_breaker,
+                doom_loop_threshold: 5,
             },
             models,
             semaphore: std::sync::Arc::new(tokio::sync::Semaphore::new(mode.workers.max(1))),
@@ -564,8 +609,7 @@ impl UiActor {
                 // here would double-finalize the turn.
                 return;
             }
-            crate::pattern_runner::publish_pattern_outcome(&bus, &id, outcome, &model, start)
-                .await;
+            crate::pattern_runner::publish_pattern_outcome(&bus, &id, outcome, &model, start, mode.circuit_breaker).await;
         });
         self.pattern_task = Some(task);
     }
@@ -574,6 +618,7 @@ impl UiActor {
     ///
     /// Resolves the pending request through the PermissionActor handle and clears
     /// the request state so the UI and the waiting agent move forward together.
+    #[allow(clippy::too_many_lines)]
     async fn handle_permission_dialog_action(&mut self, evt: &Event) {
         let request_id = match evt {
             Event::PermissionAllow { request_id } => request_id.clone(),
@@ -634,6 +679,8 @@ impl UiActor {
     /// everything else is routed via the shared helper.
     ///
     /// UiActor must NEVER mutate `AppState.input` directly — only through `apply_event`.
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     async fn handle_input_event(&mut self, evt: &Event) {
         // Synchronous autocomplete trigger: open the command palette/file picker
         // immediately when '/' or '@' is typed at a trigger position. This prevents
@@ -663,10 +710,7 @@ impl UiActor {
         // content stays accurate for fast-typed multi-line input. Without
         // this, Up/Down right after a fast Shift+Enter saw a single-line
         // mirror and moved the cursor to the start instead of up a line.
-        if matches!(evt, Event::Newline)
-            && self.state.open_dialog().is_none()
-            && !self.state.view().vim_nav_mode
-        {
+        if matches!(evt, Event::Newline) && self.state.open_dialog().is_none() && !self.state.view().vim_nav_mode {
             self.pending_input_chars.push('\n');
         }
 
@@ -687,11 +731,7 @@ impl UiActor {
         // its legacy global-toggle fallback) — it must NOT submit the chat input.
         if self.state.view().vim_nav_mode {
             match evt {
-                Event::Input(_)
-                | Event::Submit
-                | Event::HistoryPrev
-                | Event::HistoryNext
-                | Event::Backspace => {
+                Event::Input(_) | Event::Submit | Event::HistoryPrev | Event::HistoryNext | Event::Backspace => {
                     self.apply_event(evt.clone());
                     return;
                 }
@@ -708,9 +748,7 @@ impl UiActor {
         // scrolling uses PgUp/PgDn and Esc nav mode.
         // `effective_input_content` includes the optimistic pending mirror so
         // fast typing (echo not yet processed) still counts as non-empty.
-        if matches!(evt, Event::HistoryPrev | Event::HistoryNext)
-            && self.state.input().history_pos.is_none()
-        {
+        if matches!(evt, Event::HistoryPrev | Event::HistoryNext) && self.state.input().history_pos.is_none() {
             let content = self.effective_input_content();
             if !content.is_empty() {
                 if let Some(ref handle) = self.input_handle {
@@ -812,9 +850,7 @@ impl UiActor {
 
         // Route through apply_event — the single source of truth for state mutations.
         // UiActor must NOT mutate AppState.input directly.
-        self.apply_event(Event::InputChanged {
-            state: Box::new((*state).clone()),
-        });
+        self.apply_event(Event::InputChanged { state: Box::new((*state).clone()) });
 
         self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos)
             .await;
@@ -880,6 +916,8 @@ impl UiActor {
     ///
     /// For Abort: clears the queue so a new session starts clean.
     /// For TurnCompleted: delivers queued messages and starts the next turn.
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     async fn clear_turn_state(&mut self, is_abort: bool) {
         // Force turn_active=true for the final snapshot so streaming_tail is rendered.
         // TurnActor already cleared it, but we need it true here to capture the complete

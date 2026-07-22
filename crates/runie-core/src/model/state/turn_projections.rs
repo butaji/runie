@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Turn fact projections — event handlers for TurnActor facts.
 //!
 //! These methods project TurnActor facts into AppState's AgentState.
@@ -103,10 +105,7 @@ mod tests {
         state
             .agent_state_mut()
             .message_queue
-            .push(crate::model::QueuedMessage {
-                content: content.into(),
-                kind: Steering,
-            });
+            .push(crate::model::QueuedMessage { content: content.into(), kind: Steering });
     }
 
     /// Push a follow-up message to agent_state.message_queue directly.
@@ -114,10 +113,7 @@ mod tests {
         state
             .agent_state_mut()
             .message_queue
-            .push(crate::model::QueuedMessage {
-                content: content.into(),
-                kind: FollowUp,
-            });
+            .push(crate::model::QueuedMessage { content: content.into(), kind: FollowUp });
     }
 
     #[test]
@@ -353,9 +349,7 @@ impl AppState {
             role: Role::User,
             timestamp: now(),
             id: id.clone(),
-            parts: vec![Part::Text {
-                content: content.clone(),
-            }],
+            parts: vec![Part::Text { content: content.clone() }],
             ..Default::default()
         });
         self.agent_state_mut()
@@ -369,9 +363,9 @@ impl AppState {
     pub(crate) fn apply_steering_delivered(&mut self, content: String, id: String) {
         use crate::proto::message::{ChatMessageBuilder, MessageOrigin};
         // Remove the delivered steering message from the queue.
-        self.agent_state_mut().message_queue.retain(|m| {
-            !(m.kind == crate::model::QueuedMessageKind::Steering && m.content == content)
-        });
+        self.agent_state_mut()
+            .message_queue
+            .retain(|m| !(m.kind == crate::model::QueuedMessageKind::Steering && m.content == content));
         // Add to session
         let msg = ChatMessageBuilder::new(crate::message::Role::User)
             .id(id.clone())
@@ -391,9 +385,9 @@ impl AppState {
     pub(crate) fn apply_follow_up_delivered(&mut self, content: String, id: String) {
         use crate::proto::message::{ChatMessageBuilder, MessageOrigin};
         // Remove the delivered follow-up message from the queue.
-        self.agent_state_mut().message_queue.retain(|m| {
-            !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content == content)
-        });
+        self.agent_state_mut()
+            .message_queue
+            .retain(|m| !(m.kind == crate::model::QueuedMessageKind::FollowUp && m.content == content));
         // Add to session
         let msg = ChatMessageBuilder::new(crate::message::Role::User)
             .id(id.clone())
@@ -423,10 +417,7 @@ impl AppState {
         use crate::model::QueuedMessageKind;
         self.agent_state_mut()
             .message_queue
-            .push(crate::model::QueuedMessage {
-                content,
-                kind: QueuedMessageKind::FollowUp,
-            });
+            .push(crate::model::QueuedMessage { content, kind: QueuedMessageKind::FollowUp });
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
@@ -437,10 +428,7 @@ impl AppState {
         use crate::model::QueuedMessageKind;
         self.agent_state_mut()
             .message_queue
-            .push(crate::model::QueuedMessage {
-                content,
-                kind: QueuedMessageKind::Steering,
-            });
+            .push(crate::model::QueuedMessage { content, kind: QueuedMessageKind::Steering });
         self.view_mut().scroll = 0;
         self.view_mut().dirty = true;
     }
@@ -448,12 +436,7 @@ impl AppState {
     // ── Swarm pattern worker rows (GROK.md §26) ──────────────────────────────
 
     /// Project PatternWorkerSpawned — push (or replace, id-keyed) a Running row.
-    pub(crate) fn apply_pattern_worker_spawned(
-        &mut self,
-        id: String,
-        description: String,
-        model: String,
-    ) {
+    pub(crate) fn apply_pattern_worker_spawned(&mut self, id: String, description: String, model: String) {
         use crate::model::{PatternWorkerRow, PatternWorkerStatus};
         let row = PatternWorkerRow {
             id,

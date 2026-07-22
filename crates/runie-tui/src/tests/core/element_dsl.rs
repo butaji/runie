@@ -1,27 +1,21 @@
-use runie_core::view::elements::{Element, DiffType, ImageProtocol, WebSearchResult};
+use runie_core::view::elements::{DiffType, Element, ImageProtocol, WebSearchResult};
 
 #[test]
 fn user_message_builder() {
     let e = Element::user("hello").at(1.0);
-    assert!(
-        matches!(e, Element::UserMessage { content, timestamp } if content == "hello" && timestamp == 1.0)
-    );
+    assert!(matches!(e, Element::UserMessage { content, timestamp } if content == "hello" && timestamp == 1.0));
 }
 
 #[test]
 fn agent_message_builder() {
     let e = Element::agent("world").at(2.0);
-    assert!(
-        matches!(e, Element::AgentMessage { content, timestamp, .. } if content == "world" && timestamp == 2.0)
-    );
+    assert!(matches!(e, Element::AgentMessage { content, timestamp, .. } if content == "world" && timestamp == 2.0));
 }
 
 #[test]
 fn thought_marker_builder() {
     let e = Element::thought("thinking...").at(3.0);
-    assert!(
-        matches!(e, Element::ThoughtMarker { content, timestamp } if content == "thinking..." && timestamp == 3.0)
-    );
+    assert!(matches!(e, Element::ThoughtMarker { content, timestamp } if content == "thinking..." && timestamp == 3.0));
 }
 
 #[test]
@@ -47,7 +41,7 @@ fn tool_running_builder() {
 fn tool_done_builder() {
     let e = Element::tool_done("ls", ".", 0.5, "file1", None, false).at(6.0);
     assert!(
-        matches!(e, Element::ToolDone { name, args, duration_secs, output, bytes_transferred, error, timestamp }
+        matches!(e, Element::ToolDone { name, args, duration_secs, output, bytes_transferred, error, timestamp, finished_at: _ }
         if name == "ls" && args == "." && duration_secs == 0.5 && output == "file1" && timestamp == 6.0 && bytes_transferred.is_none() && !error)
     );
 }
@@ -134,10 +128,7 @@ fn data_part_builder() {
 #[test]
 fn markdown_table_builder() {
     let headers = vec!["Name".to_string(), "Age".to_string()];
-    let rows = vec![
-        vec!["Alice".to_string(), "30".to_string()],
-        vec!["Bob".to_string(), "25".to_string()],
-    ];
+    let rows = vec![vec!["Alice".to_string(), "30".to_string()], vec!["Bob".to_string(), "25".to_string()]];
     let alignments = vec![None, Some(true)];
     let e = Element::markdown_table(headers.clone(), rows.clone(), alignments.clone()).at(16.0);
     assert!(
@@ -157,13 +148,11 @@ fn diff_output_builder() {
 
 #[test]
 fn web_search_call_builder() {
-    let results = vec![
-        WebSearchResult {
-            title: "Result 1".to_string(),
-            url: "https://example.com/1".to_string(),
-            snippet: "Snippet 1".to_string(),
-        },
-    ];
+    let results = vec![WebSearchResult {
+        title: "Result 1".to_string(),
+        url: "https://example.com/1".to_string(),
+        snippet: "Snippet 1".to_string(),
+    }];
     let e = Element::web_search_call("rust programming", results.clone()).at(18.0);
     assert!(
         matches!(e, Element::WebSearchCall { query, results: r, timestamp }

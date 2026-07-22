@@ -49,19 +49,15 @@ impl Panel {
     }
 
     pub fn item(mut self, label: impl Into<String>, action: super::ItemAction) -> Self {
-        self.items.push(PanelItem::Action {
-            label: label.into(),
-            action,
-        });
+        self.items
+            .push(PanelItem::Action { label: label.into(), action });
         self
     }
 
     /// Add an action item. Alias for `item()`.
     pub fn action(mut self, label: impl Into<String>, action: super::ItemAction) -> Self {
-        self.items.push(PanelItem::Action {
-            label: label.into(),
-            action,
-        });
+        self.items
+            .push(PanelItem::Action { label: label.into(), action });
         self
     }
 
@@ -73,12 +69,7 @@ impl Panel {
     }
 
     /// Add a command-palette entry with separate name and description.
-    pub fn command(
-        self,
-        name: impl Into<String>,
-        desc: impl Into<String>,
-        action: super::ItemAction,
-    ) -> Self {
+    pub fn command(self, name: impl Into<String>, desc: impl Into<String>, action: super::ItemAction) -> Self {
         self.command_with_aliases(name, desc, Vec::new(), action)
     }
 
@@ -93,28 +84,15 @@ impl Panel {
         let name = name.into();
         let desc = desc.into();
         let label = format!("{} {}", name, desc);
-        self.items.push(PanelItem::Command {
-            name,
-            desc,
-            label,
-            aliases,
-            action,
-        });
+        self.items
+            .push(PanelItem::Command { name, desc, label, aliases, action });
         self
     }
 
     /// Add a toggle (checkbox) item.
-    pub fn toggle(
-        mut self,
-        label: impl Into<String>,
-        value: bool,
-        action: super::ItemAction,
-    ) -> Self {
-        self.items.push(PanelItem::Toggle {
-            label: label.into(),
-            value,
-            action,
-        });
+    pub fn toggle(mut self, label: impl Into<String>, value: bool, action: super::ItemAction) -> Self {
+        self.items
+            .push(PanelItem::Toggle { label: label.into(), value, action });
         self
     }
 
@@ -125,12 +103,8 @@ impl Panel {
         options: Vec<String>,
         key: impl Into<String>,
     ) -> Self {
-        self.items.push(PanelItem::Select {
-            label: label.into(),
-            current: current.into(),
-            options,
-            key: key.into(),
-        });
+        self.items
+            .push(PanelItem::Select { label: label.into(), current: current.into(), options, key: key.into() });
         self
     }
 
@@ -150,12 +124,7 @@ impl Panel {
     }
 
     /// Add a form field. Alias for `form_field()`.
-    pub fn field(
-        self,
-        label: impl Into<String>,
-        placeholder: impl Into<String>,
-        key: impl Into<String>,
-    ) -> Self {
+    pub fn field(self, label: impl Into<String>, placeholder: impl Into<String>, key: impl Into<String>) -> Self {
         self.form_field(label, placeholder, key)
     }
 

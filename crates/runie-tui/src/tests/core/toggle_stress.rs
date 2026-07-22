@@ -32,17 +32,8 @@ fn first_turn_before_collapse() -> Vec<Event> {
 
 fn first_turn_after_collapse() -> Vec<Event> {
     vec![
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "list_dir".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: "file1\nfile2".into(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "list_dir".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "file1\nfile2".into() },
         Event::Response {
             id: "req.0".into(),
             content: "Done.".into(),
@@ -50,10 +41,7 @@ fn first_turn_after_collapse() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 1.0,
-        },
+        Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 },
         Event::Done { id: "req.0".into() },
     ]
 }
@@ -76,17 +64,8 @@ fn turn_events(id: &str, content: &str, tool: &str, output: &str) -> Vec<Event> 
             provider: String::new(),
         },
         Event::ThoughtDone { id: id.into() },
-        Event::ToolStart {
-            id: id.into(),
-            name: tool.into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: output.into(),
-        },
+        Event::ToolStart { id: id.into(), name: tool.into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: output.into() },
         Event::Done { id: id.into() },
     ]
 }
@@ -109,17 +88,8 @@ fn multiple_tool_first_half() -> Vec<Event> {
             provider: String::new(),
         },
         Event::ThoughtDone { id: "req.0".into() },
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.5,
-            output: "a".into(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.5, output: "a".into() },
     ]
 }
 
@@ -141,17 +111,8 @@ fn multiple_tool_second_half() -> Vec<Event> {
             provider: String::new(),
         },
         Event::ThoughtDone { id: "req.0".into() },
-        Event::ToolStart {
-            id: "req.0".into(),
-            name: "grep".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.3,
-            output: "result".into(),
-        },
+        Event::ToolStart { id: "req.0".into(), name: "grep".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.3, output: "result".into() },
         Event::Done { id: "req.0".into() },
     ]
 }
@@ -174,17 +135,8 @@ fn single_thought_events(id: &str, reasoning: &str, output: &str) -> Vec<Event> 
             provider: String::new(),
         },
         Event::ThoughtDone { id: id.into() },
-        Event::ToolStart {
-            id: id.into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        Event::ToolEnd {
-            id: "".to_string(),
-            input: None,
-            duration_secs: 0.1,
-            output: output.into(),
-        },
+        Event::ToolStart { id: id.into(), name: "ls".into(), input: serde_json::Value::Null },
+        Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 0.1, output: output.into() },
         Event::Done { id: id.into() },
     ]
 }

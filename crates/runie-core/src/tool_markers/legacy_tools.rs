@@ -38,8 +38,7 @@ pub fn legacy_tool_marker_len(after: &str) -> Option<usize> {
         }
         let arg1 = parts.get(1).unwrap_or(&"");
         let arg2 = parts.get(2).unwrap_or(&"");
-        let consumed =
-            name.len() + 1 + arg1.len() + if arg2.is_empty() { 0 } else { 1 + arg2.len() };
+        let consumed = name.len() + 1 + arg1.len() + if arg2.is_empty() { 0 } else { 1 + arg2.len() };
         (name, consumed)
     } else {
         let mut tokens = trimmed.split_whitespace();

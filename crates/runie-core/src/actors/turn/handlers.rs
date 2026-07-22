@@ -26,11 +26,7 @@ pub(super) fn handle_run_if_queued(state: &mut TurnActorState) {
     state.turn_state.start_turn();
     emit(
         state,
-        Event::TurnStarted {
-            id: id.clone(),
-            request_id: id,
-            content,
-        },
+        Event::TurnStarted { id: id.clone(), request_id: id, content },
     );
 }
 
@@ -38,12 +34,7 @@ pub(super) fn handle_run_if_queued(state: &mut TurnActorState) {
 pub(super) fn handle_abort_turn(state: &mut TurnActorState) {
     let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
     for msg in &messages {
-        emit(
-            state,
-            Event::QueueAborted {
-                content: msg.content.clone(),
-            },
-        );
+        emit(state, Event::QueueAborted { content: msg.content.clone() });
     }
     state.turn_state.stop_turn();
     emit(state, Event::TurnAborted);
@@ -60,10 +51,7 @@ pub(super) fn handle_submit_user_message(
     if source == MessageSource::Fresh {
         emit(
             state,
-            Event::UserMessageSubmitted {
-                id: id.clone(),
-                content: content.clone(),
-            },
+            Event::UserMessageSubmitted { id: id.clone(), content: content.clone() },
         );
     }
     state.turn_state.request_queue.push_back((content, id));
@@ -78,20 +66,20 @@ pub(super) fn handle_submit_user_message(
 /// Handle `TurnMsg::QueueSteering` — add steering content to the queue.
 pub(super) fn handle_queue_steering(state: &mut TurnActorState, content: String) {
     let id = format!("q.steering.{}", state.turn_state.message_queue.len());
-    state.turn_state.message_queue.push(QueuedMessage {
-        content: content.clone(),
-        kind: QueuedMessageKind::Steering,
-    });
+    state
+        .turn_state
+        .message_queue
+        .push(QueuedMessage { content: content.clone(), kind: QueuedMessageKind::Steering });
     emit(state, Event::QueueSteeringAdded { id, content });
 }
 
 /// Handle `TurnMsg::QueueFollowUp` — add follow-up content to the queue.
 pub(super) fn handle_queue_follow_up(state: &mut TurnActorState, content: String) {
     let id = format!("q.followup.{}", state.turn_state.message_queue.len());
-    state.turn_state.message_queue.push(QueuedMessage {
-        content: content.clone(),
-        kind: QueuedMessageKind::FollowUp,
-    });
+    state
+        .turn_state
+        .message_queue
+        .push(QueuedMessage { content: content.clone(), kind: QueuedMessageKind::FollowUp });
     emit(state, Event::QueueFollowUpAdded { id, content });
 }
 
@@ -99,12 +87,7 @@ pub(super) fn handle_queue_follow_up(state: &mut TurnActorState, content: String
 pub(super) fn handle_abort_queue(state: &mut TurnActorState) {
     let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
     for msg in &messages {
-        emit(
-            state,
-            Event::QueueAborted {
-                content: msg.content.clone(),
-            },
-        );
+        emit(state, Event::QueueAborted { content: msg.content.clone() });
     }
 }
 
@@ -114,12 +97,7 @@ pub(super) fn handle_clear_queues(state: &mut TurnActorState) {
     // Collect messages first to avoid borrow conflict.
     let messages: Vec<_> = state.turn_state.message_queue.drain(..).rev().collect();
     for msg in messages {
-        emit(
-            state,
-            Event::QueueAborted {
-                content: msg.content,
-            },
-        );
+        emit(state, Event::QueueAborted { content: msg.content });
     }
     emit(state, Event::QueuesCleared);
 }
@@ -137,26 +115,18 @@ pub(super) fn handle_deliver_queued(
             try_deliver_follow_up(state, follow_up_mode);
         }
         if let Some(reply) = reply {
-            let _ = reply.send(
-                steering_result
-                    .map(|(content, id)| DeliverQueuedResponse::Steering { content, id }),
-            );
+            let _ = reply.send(steering_result.map(|(content, id)| DeliverQueuedResponse::Steering { content, id }));
         }
         return;
     }
     let follow_up_result = try_deliver_follow_up(state, follow_up_mode);
     if let Some(reply) = reply {
-        let _ = reply.send(
-            follow_up_result.map(|(content, id)| DeliverQueuedResponse::FollowUp { content, id }),
-        );
+        let _ = reply.send(follow_up_result.map(|(content, id)| DeliverQueuedResponse::FollowUp { content, id }));
     }
 }
 
 /// Try to deliver the next steering message from the queue.
-fn try_deliver_steering(
-    state: &mut TurnActorState,
-    mode: DeliveryMode,
-) -> Option<(String, String)> {
+fn try_deliver_steering(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
     let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
     let result = queue.pop_steering(mode);
     state.turn_state.message_queue = queue.into_inner();
@@ -169,19 +139,13 @@ fn try_deliver_steering(
     let content = r.content;
     emit(
         state,
-        Event::SteeringDelivered {
-            content: content.clone(),
-            id: id.clone(),
-        },
+        Event::SteeringDelivered { content: content.clone(), id: id.clone() },
     );
     Some((content, id))
 }
 
 /// Try to deliver the next follow-up message from the queue.
-fn try_deliver_follow_up(
-    state: &mut TurnActorState,
-    mode: DeliveryMode,
-) -> Option<(String, String)> {
+fn try_deliver_follow_up(state: &mut TurnActorState, mode: DeliveryMode) -> Option<(String, String)> {
     let mut queue = TurnQueue::new(std::mem::take(&mut state.turn_state.message_queue));
     let result = queue.pop_follow_up(mode);
     state.turn_state.message_queue = queue.into_inner();
@@ -194,10 +158,7 @@ fn try_deliver_follow_up(
     let content = r.content;
     emit(
         state,
-        Event::FollowUpDelivered {
-            content: content.clone(),
-            id: id.clone(),
-        },
+        Event::FollowUpDelivered { content: content.clone(), id: id.clone() },
     );
     Some((content, id))
 }
@@ -240,29 +201,18 @@ pub(super) fn handle_tool_start(state: &mut TurnActorState, id: String, name: St
         state.turn_state.tool_requests_recorded = true;
         emit(
             state,
-            Event::ToolRequestsRecorded {
-                request_id: id.clone(),
-            },
+            Event::ToolRequestsRecorded { request_id: id.clone() },
         );
     }
 
     emit(
         state,
-        Event::ToolStart {
-            id,
-            name,
-            input: serde_json::Value::Null,
-        },
+        Event::ToolStart { id, name, input: serde_json::Value::Null },
     );
 }
 
 /// Handle `TurnMsg::ToolEnd` — clear tool state and emit event.
-pub(super) fn handle_tool_end(
-    state: &mut TurnActorState,
-    id: String,
-    duration_secs: f64,
-    output: String,
-) {
+pub(super) fn handle_tool_end(state: &mut TurnActorState, id: String, duration_secs: f64, output: String) {
     state.turn_state.tool_started_at = None;
     state.turn_state.current_tool_name = None;
     emit(state, Event::tool_end(id, duration_secs, output));
@@ -280,9 +230,7 @@ pub(super) fn handle_response_delta(state: &mut TurnActorState, id: String, cont
             state.turn_state.response_delta_recorded = true;
             emit(
                 state,
-                Event::ResponseDeltaStarted {
-                    request_id: id.clone(),
-                },
+                Event::ResponseDeltaStarted { request_id: id.clone() },
             );
         }
 
@@ -323,10 +271,7 @@ pub(super) fn handle_update_speed(state: &mut TurnActorState, tokens_out: usize)
     // speed_tps is computed in the projection layer via speed_window.speed().
     emit(
         state,
-        Event::TokenStatsUpdated {
-            tokens_in: state.turn_state.tokens_in,
-            tokens_out,
-        },
+        Event::TokenStatsUpdated { tokens_in: state.turn_state.tokens_in, tokens_out },
     );
 }
 
@@ -338,10 +283,6 @@ pub(super) fn handle_next_id(state: &mut TurnActorState) {
 }
 
 /// Handle `TurnMsg::ConfigureTokenTracker` — update TurnState token tracker.
-pub(super) fn handle_configure_token_tracker(
-    state: &mut TurnActorState,
-    provider: String,
-    model: String,
-) {
+pub(super) fn handle_configure_token_tracker(state: &mut TurnActorState, provider: String, model: String) {
     state.turn_state.token_tracker = crate::tokens::token_tracker_for(&provider, &model);
 }

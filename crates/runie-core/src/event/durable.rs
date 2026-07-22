@@ -38,6 +38,7 @@ pub enum TurnPhase {
 impl DurableCoreEvent {
     /// Convert a canonical `Event` to a durable event for JSONL persistence.
     /// Returns `None` for transient-only events (keystrokes, scroll, streaming deltas).
+    #[allow(clippy::too_many_lines)]
     pub fn try_from_event(event: &Event) -> Option<Self> {
         use DurableCoreEvent as D;
         match event {
@@ -69,6 +70,8 @@ impl DurableCoreEvent {
             | Event::AssistantMessageReady { .. }
             | Event::PatternWorkerSpawned { .. }
             | Event::PatternWorkerFinished { .. }
+            | Event::CircuitBreakerTripped { .. }
+            | Event::CircuitBreakerReset
             | Event::Error { .. }
             | Event::ToggleTasksPane
             // Init load events — not persisted, only used during bootstrap
@@ -354,6 +357,8 @@ impl DurableCoreEvent {
             | Event::SetMode { .. }
             | Event::SetSwarmVariant { .. }
             | Event::SetModeAndSwarmVariant { .. }
+            | Event::SetLeadModel { .. }
+            | Event::SetWorkerModel { .. }
             | Event::ToggleReadOnly
             | Event::TrustProject
             | Event::UntrustProject
@@ -381,30 +386,20 @@ impl DurableCoreEvent {
 impl TryFrom<&Event> for DurableCoreEvent {
     type Error = ();
 
-    fn try_from(
-        event: &Event,
-    ) -> Result<DurableCoreEvent, <DurableCoreEvent as TryFrom<&Event>>::Error> {
+    fn try_from(event: &Event) -> Result<DurableCoreEvent, <DurableCoreEvent as TryFrom<&Event>>::Error> {
         Self::try_from_event(event).ok_or(())
     }
 }
 
 /// Convert a durable event back to a canonical `Event`.
+#[allow(clippy::too_many_lines)]
 impl TryFrom<&DurableCoreEvent> for Event {
     type Error = ();
 
-    fn try_from(
-        event: &DurableCoreEvent,
-    ) -> Result<Event, <Event as TryFrom<&DurableCoreEvent>>::Error> {
+    fn try_from(event: &DurableCoreEvent) -> Result<Event, <Event as TryFrom<&DurableCoreEvent>>::Error> {
         use DurableCoreEvent as D;
         match event {
-            D::MessageSent {
-                id,
-                role,
-                content,
-                timestamp,
-                provider,
-                parts,
-            } => {
+            D::MessageSent { id, role, content, timestamp, provider, parts } => {
                 Ok(Event::MessageReplayed {
                     id: id.clone(),
                     role: role.clone(),
@@ -425,11 +420,9 @@ impl TryFrom<&DurableCoreEvent> for Event {
                     provider: provider.clone(),
                 })
             }
-            D::ToolCalled { id, name, input } => Ok(Event::ToolStart {
-                id: id.clone(),
-                name: name.clone(),
-                input: input.clone(),
-            }),
+            D::ToolCalled { id, name, input } => {
+                Ok(Event::ToolStart { id: id.clone(), name: name.clone(), input: input.clone() })
+            }
             D::ToolResult { id, output, .. } => Ok(Event::ToolEnd {
                 id: id.clone(),
                 input: None,
@@ -437,18 +430,14 @@ impl TryFrom<&DurableCoreEvent> for Event {
                 duration_secs: 0.0,
                 output: output.clone(),
             }),
-            D::ModelSwitched { provider, model } => Ok(Event::SwitchModel {
-                provider: provider.clone(),
-                model: model.clone(),
-                explicit: false,
-            }),
+            D::ModelSwitched { provider, model } => {
+                Ok(Event::SwitchModel { provider: provider.clone(), model: model.clone(), explicit: false })
+            }
             D::ThemeSwitched { name } => Ok(Event::SwitchTheme { name: name.clone() }),
             D::ThinkingLevelSet { level } => Ok(Event::SetThinkingLevel(*level)),
             // SessionRenamed and ReadOnlySet are handled directly in replay_event
             D::SessionRenamed { .. } | D::ReadOnlySet { .. } => Err(()),
-            D::TreeSnapshot { snapshot } => Ok(Event::SessionTreeSnapshot {
-                snapshot: snapshot.clone(),
-            }),
+            D::TreeSnapshot { snapshot } => Ok(Event::SessionTreeSnapshot { snapshot: snapshot.clone() }),
             // TurnPhaseChanged is used for crash recovery but doesn't directly
             // translate to a canonical event (phase is reconstructed from other events).
             D::TurnPhaseChanged { .. } => Err(()),
@@ -474,11 +463,7 @@ pub enum DurableCoreEvent {
         parts: Vec<Part>,
     },
     /// An LLM invoked a tool.
-    ToolCalled {
-        id: String,
-        name: String,
-        input: serde_json::Value,
-    },
+    ToolCalled { id: String, name: String, input: serde_json::Value },
     /// A tool returned its result.
     ToolResult {
         id: String,
@@ -497,9 +482,7 @@ pub enum DurableCoreEvent {
     /// The user toggled read-only mode.
     ReadOnlySet { read_only: bool },
     /// Session tree structure snapshot (edges and branch).
-    TreeSnapshot {
-        snapshot: crate::session::tree::SessionTreeSnapshot,
-    },
+    TreeSnapshot { snapshot: crate::session::tree::SessionTreeSnapshot },
     /// Turn journal phase changed.
     ///
     /// Used for crash recovery: records the current phase of turn execution.

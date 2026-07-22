@@ -1,8 +1,6 @@
 //! Basic vim-nav visibility tests.
 
-use super::helpers::{
-    accent, add_message, draw, enter_vim_nav_and_select_top, state_with_user_agent_pairs,
-};
+use super::helpers::{accent, add_message, draw, enter_vim_nav_and_select_top, state_with_user_agent_pairs};
 use super::*;
 
 #[test]
@@ -16,10 +14,7 @@ fn vim_nav_mode_shows_orange_bracket_around_selected_post() {
     let mut found_line = false;
     for y in 0..buf.area().height {
         let cell = &buf[(0, y)];
-        let is_bracket = cell.symbol() == "▎"
-            || cell.symbol() == "╰"
-            || cell.symbol() == "╭"
-            || cell.symbol() == "├";
+        let is_bracket = cell.symbol() == "▎" || cell.symbol() == "╰" || cell.symbol() == "╭" || cell.symbol() == "├";
         if is_bracket && cell.style().fg == Some(accent) {
             found_line = true;
             let next = &buf[(1, y)];
@@ -48,10 +43,7 @@ fn vim_nav_mode_bracket_absent_when_not_in_nav_mode() {
     let accent = accent();
     let has_bracket = (0..buf.area().height).any(|y| {
         let cell = &buf[(0, y)];
-        let is_bracket = cell.symbol() == "▎"
-            || cell.symbol() == "╰"
-            || cell.symbol() == "╭"
-            || cell.symbol() == "├";
+        let is_bracket = cell.symbol() == "▎" || cell.symbol() == "╰" || cell.symbol() == "╭" || cell.symbol() == "├";
         is_bracket && cell.style().fg == Some(accent)
     });
     assert!(

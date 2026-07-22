@@ -29,12 +29,9 @@ fn minimax_m3_simple_emits_text() {
     assert!(events
         .iter()
         .any(|e| matches!(e, ProviderEvent::TextDelta(_))));
-    assert!(events.iter().any(|e| matches!(
-        e,
-        ProviderEvent::Finish {
-            reason: StopReason::Stop
-        }
-    )));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::Stop })));
 }
 
 #[test]
@@ -47,12 +44,9 @@ fn minimax_m3_tool_emits_tool_call() {
         e,
         ProviderEvent::ToolCallStart { name, .. } if name == "get_weather"
     )));
-    assert!(events.iter().any(|e| matches!(
-        e,
-        ProviderEvent::Finish {
-            reason: StopReason::ToolCalls
-        }
-    )));
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, ProviderEvent::Finish { reason: StopReason::ToolCalls })));
 }
 
 #[test]

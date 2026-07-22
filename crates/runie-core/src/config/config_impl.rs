@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! `Config` implementation methods.
 //!
 //! Extracted from `mod.rs` to satisfy the 500-line file limit.
@@ -182,10 +184,7 @@ impl crate::config::Config {
                     Ok(v) => v,
                     Err(_) => return Self::default(),
                 };
-                match crate::config::migrate::migrate_with_path(
-                    &mut value,
-                    Some(path.to_path_buf()),
-                ) {
+                match crate::config::migrate::migrate_with_path(&mut value, Some(path.to_path_buf())) {
                     Ok(true) => {
                         let _ = crate::config::migrate::backup_config(path);
                         if let Ok(migrated) = toml::to_string(&value) {
@@ -255,8 +254,7 @@ impl crate::config::Config {
 
     /// Validate this config against the canonical JSON schema.
     pub fn validate(&self) -> Result<(), Vec<String>> {
-        let value = serde_json::to_value(self)
-            .map_err(|e| vec![format!("config serialization failed: {e}")])?;
+        let value = serde_json::to_value(self).map_err(|e| vec![format!("config serialization failed: {e}")])?;
         Self::validate_value(&value)
     }
 
@@ -291,8 +289,7 @@ impl crate::config::Config {
 
     /// Validate a raw TOML value against the canonical JSON schema.
     pub fn validate_toml(value: &toml::Value) -> Result<(), Vec<String>> {
-        let json = serde_json::to_value(value)
-            .map_err(|e| vec![format!("config serialization failed: {e}")])?;
+        let json = serde_json::to_value(value).map_err(|e| vec![format!("config serialization failed: {e}")])?;
         Self::validate_value(&json)
     }
 
@@ -347,6 +344,7 @@ impl crate::config::Config {
     /// Uses `fs2` exclusive lock for cross-process safety.
     /// Replaces root-level tables from the serialized config into the existing
     /// file, preserving all comments and formatting outside replaced sections.
+    #[allow(clippy::too_many_lines)]
     pub fn save_to(&self, path: &Path) -> anyhow::Result<()> {
         use std::fs::{create_dir_all, OpenOptions};
         use std::io::Write;
@@ -355,8 +353,7 @@ impl crate::config::Config {
         }
 
         // Serialize the new config.
-        let new_toml =
-            toml::to_string_pretty(self).with_context(|| "failed to serialize config")?;
+        let new_toml = toml::to_string_pretty(self).with_context(|| "failed to serialize config")?;
 
         // Read existing file preserving its structure and comments.
         let existing_text = if path.exists() {
@@ -415,6 +412,7 @@ impl crate::config::Config {
     /// Save config to the given path without blocking the async runtime.
     ///
     /// Uses the same comment-preserving [`save_to`] logic on a blocking thread.
+    #[allow(clippy::too_many_lines)]
     pub fn save_nonblocking_to(&self, path: &Path) {
         // Serialize first so we can pass a Result up to the spawn.
         let new_toml = match toml::to_string_pretty(self) {
@@ -464,12 +462,9 @@ impl crate::config::Config {
                 .create(true)
                 .truncate(true)
                 .open(&path)
-                .with_context(|| {
-                    format!("failed to open config for writing: {}", path.display())
-                })?;
+                .with_context(|| format!("failed to open config for writing: {}", path.display()))?;
             let _lock = fs2::FileExt::lock_exclusive(&file);
-            std::fs::write(&path, final_toml)
-                .with_context(|| format!("failed to write config: {}", path.display()))?;
+            std::fs::write(&path, final_toml).with_context(|| format!("failed to write config: {}", path.display()))?;
             Ok(())
         };
 
@@ -560,9 +555,7 @@ impl crate::config::Config {
             // it). A stale default left over from another provider is ignored
             // and we fall back to the provider's first configured model.
             let model = match self.default_model() {
-                Some(def) if models.is_empty() || models.iter().any(|m| m == def) => {
-                    def.to_string()
-                }
+                Some(def) if models.is_empty() || models.iter().any(|m| m == def) => def.to_string(),
                 _ => self.first_model_for_provider(provider).unwrap_or_default(),
             };
             return (provider.to_owned(), model);
@@ -585,10 +578,7 @@ impl crate::config::Config {
         let old_vals = current_config_values(prev);
 
         if new_vals.0 != old_vals.0 || new_vals.1 != old_vals.1 {
-            changes.push(ConfigChange::Model {
-                provider: new_vals.0,
-                model: new_vals.1,
-            });
+            changes.push(ConfigChange::Model { provider: new_vals.0, model: new_vals.1 });
         }
         if new_vals.2 != old_vals.2 {
             changes.push(ConfigChange::Theme { name: new_vals.2 });

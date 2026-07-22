@@ -7,10 +7,7 @@ use crate::ui::render_lines::to_lines_and_count;
 /// each visible row belongs to. This mapping is what the vim-nav selection
 /// highlight uses, so the highlight height matches the *rendered* height of
 /// a post even when message text wraps.
-pub(crate) fn build_lines_with_mapping(
-    snap: &runie_core::Snapshot,
-    content_width: u16,
-) -> (Vec<Line<'_>>, Vec<usize>) {
+pub(crate) fn build_lines_with_mapping(snap: &runie_core::Snapshot, content_width: u16) -> (Vec<Line<'_>>, Vec<usize>) {
     let mut lines = Vec::with_capacity(snap.total_lines);
     let mut mapping = Vec::with_capacity(snap.total_lines);
     let tick = snap.animation_frame;
@@ -60,15 +57,22 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
         DataPart { data, .. } => data.len() / 4,
         MarkdownTable { headers, rows, .. } => {
             let header_len: usize = headers.iter().map(|h| h.len()).sum();
-            let row_len: usize = rows.iter().map(|r| r.iter().map(|c| c.len()).sum::<usize>()).sum();
+            let row_len: usize = rows
+                .iter()
+                .map(|r| r.iter().map(|c| c.len()).sum::<usize>())
+                .sum();
             (header_len + row_len) / 4
         }
         DiffOutput { content, .. } => content.len() / 4,
         WebSearchCall { query, results, .. } => {
-            query.len() / 4 + results.iter().map(|r| r.title.len() + r.snippet.len()).sum::<usize>() / 4
+            query.len() / 4
+                + results
+                    .iter()
+                    .map(|r| r.title.len() + r.snippet.len())
+                    .sum::<usize>()
+                    / 4
         }
         AnsiStyled { plain_text, .. } => plain_text.len() / 4,
-        SubagentRow { .. } => 10,
     }
 }
 
@@ -76,7 +80,6 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
 mod tests {
     use super::*;
     use crate::ui::render_lines::{element_line_count, to_lines_internal};
-    use ratatui::widgets::Paragraph;
     use runie_core::layout::word_wrap;
     use runie_core::view::elements::Element;
 

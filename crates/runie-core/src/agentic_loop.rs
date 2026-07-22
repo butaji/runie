@@ -9,11 +9,17 @@ use sha2::{Digest, Sha256};
 use crate::proto::message::tool_call::ToolCall;
 
 /// Configuration for agentic loop detection.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct AgenticLoopConfig {
     /// Maximum number of times the same tool fingerprint can appear at similar
     /// depth before considering it an agentic loop. Default is 3.
     pub max_loops: u32,
+}
+
+impl Default for AgenticLoopConfig {
+    fn default() -> Self {
+        Self { max_loops: 3 }
+    }
 }
 
 impl AgenticLoopConfig {
@@ -79,12 +85,7 @@ pub fn fingerprint_tools(tool_calls: &[ToolCall]) -> String {
 /// # Returns
 /// `true` if the pattern is safe (within loop limits), `false` if an agentic
 /// loop has been detected
-pub fn check_agentic_loop_safety(
-    fingerprints: &[String],
-    new_fp: &str,
-    _depth: u32,
-    max_loops: u32,
-) -> bool {
+pub fn check_agentic_loop_safety(fingerprints: &[String], new_fp: &str, _depth: u32, max_loops: u32) -> bool {
     if fingerprints.is_empty() && new_fp.is_empty() {
         return true;
     }
@@ -104,11 +105,17 @@ pub fn check_agentic_loop_safety(
 ///
 /// Stores the history of tool call fingerprints to detect repeated patterns
 /// over time.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct AgenticLoopTracker {
     fingerprints: Vec<String>,
     depths: Vec<u32>,
     max_fingerprints: usize,
+}
+
+impl Default for AgenticLoopTracker {
+    fn default() -> Self {
+        Self { fingerprints: Vec::new(), depths: Vec::new(), max_fingerprints: 100 }
+    }
 }
 
 /// Type alias for backwards compatibility.
@@ -139,7 +146,7 @@ impl AgenticLoopTracker {
     pub fn push_with_depth(&mut self, fingerprint: String, depth: u32) {
         if self.fingerprints.len() >= self.max_fingerprints {
             // Remove oldest entries (FIFO)
-            let drain_count = (self.fingerprints.len() + 1) / 2;
+            let drain_count = self.fingerprints.len().div_ceil(2);
             self.fingerprints.drain(0..drain_count);
             self.depths.drain(0..drain_count);
         }
@@ -162,7 +169,10 @@ impl AgenticLoopTracker {
     /// Returns `true` if safe, `false` if an agentic loop is detected.
     pub fn is_safe(&self, depth: u32, max_loops: u32) -> bool {
         if let Some(last_fp) = self.fingerprints.last() {
-            check_agentic_loop_safety(&self.fingerprints, last_fp, depth, max_loops)
+            // `last_fp` is already in `self.fingerprints`, so check the history
+            // excluding the last entry to avoid double-counting.
+            let history = &self.fingerprints[..self.fingerprints.len().saturating_sub(1)];
+            check_agentic_loop_safety(history, last_fp, depth, max_loops)
         } else {
             true
         }
@@ -199,7 +209,7 @@ mod tests {
     use super::*;
     use crate::proto::message::tool_call::ToolCall;
 
-    fn make_tool(name: &str) -> ToolCall {
+    fn _make_tool(name: &str) -> ToolCall {
         ToolCall::new("1", name, serde_json::json!({}))
     }
 
@@ -207,7 +217,7 @@ mod tests {
         names
             .iter()
             .enumerate()
-            .map(|(i, n)| ToolCall::new(format!("id-{}", i), n, serde_json::json!({})))
+            .map(|(i, n)| ToolCall::new(format!("id-{}", i), *n, serde_json::json!({})))
             .collect()
     }
 
@@ -447,8 +457,8 @@ mod tests {
         let config = AgenticLoopConfig::new(3);
 
         // Simulate a read loop: bash -> read_file -> bash -> read_file
-        let bash_fp = fingerprint_tools(&make_tools(&["bash"]));
-        let read_fp = fingerprint_tools(&make_tools(&["read_file"]));
+        let _bash_fp = fingerprint_tools(&make_tools(&["bash"]));
+        let _read_fp = fingerprint_tools(&make_tools(&["read_file"]));
         let bash_read_fp = fingerprint_tools(&make_tools(&["bash", "read_file"]));
 
         // First iteration - safe

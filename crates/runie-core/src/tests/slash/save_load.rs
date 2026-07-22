@@ -28,18 +28,14 @@ fn restored_session() -> Session {
             role: Role::User,
             timestamp: 1.0,
             id: "req.0".into(),
-            parts: vec![Part::Text {
-                content: "hi".into(),
-            }],
+            parts: vec![Part::Text { content: "hi".into() }],
             ..Default::default()
         },
         ChatMessage {
             role: Role::Assistant,
             timestamp: 2.0,
             id: "resp.0".into(),
-            parts: vec![Part::Text {
-                content: "hello there".into(),
-            }],
+            parts: vec![Part::Text { content: "hello there".into() }],
             ..Default::default()
         },
     ];
@@ -121,10 +117,7 @@ fn load_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog
     {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "load", "should be load form");

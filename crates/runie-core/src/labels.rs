@@ -30,9 +30,7 @@ pub const BRAILLE_SIX: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾'];
 pub const BRAILLE_EIGHT: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧'];
 
 /// 10-frame braille spinner for running subagent detail title animation.
-pub const BRAILLE_TEN: &[char] = &[
-    '⠷', '⠯', '⠟', '⠻', '⠽', '⠾', '⠷', '⠯', '⠟', '⠻',
-];
+pub const BRAILLE_TEN: &[char] = &['⠷', '⠯', '⠟', '⠻', '⠽', '⠾', '⠷', '⠯', '⠟', '⠻'];
 
 // throbber BRAILLE_SIX[5] = '⠋' — used as the default/initial spinner frame.
 pub const SPINNER: char = BRAILLE_SIX[5];

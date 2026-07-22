@@ -4,8 +4,8 @@
 //! tool definitions, schema generation, and execution via MCP.
 
 pub use runie_core::tool::{
-    is_builtin_tool, tool_error, truncate_output, which_tool, which_tool_async, ToolContext,
-    ToolDef, ToolOutput, ToolStatus, BUILTIN_TOOL_NAMES,
+    is_builtin_tool, tool_error, truncate_output, which_tool, which_tool_async, ToolContext, ToolDef, ToolOutput,
+    ToolStatus, BUILTIN_TOOL_NAMES,
 };
 
 use std::time::Duration;
@@ -39,11 +39,7 @@ pub use write_file::WriteFileTool;
 ///
 /// This function is public so it can be called by the macro-generated dispatch
 /// in `tool_registry.rs`. Both modules are in the same crate, so this is safe.
-pub async fn run_tool<T: ToolDef>(
-    name: &str,
-    args: &serde_json::Value,
-    ctx: &ToolContext,
-) -> ToolOutput {
+pub async fn run_tool<T: ToolDef>(name: &str, args: &serde_json::Value, ctx: &ToolContext) -> ToolOutput {
     match runie_core::tool::parse_input::<T::Input>(args) {
         Ok(i) => T::execute(i, ctx).await,
         Err(e) => ToolOutput {

@@ -2,6 +2,8 @@
 //!
 //! Uses `indextree` for stable `NodeId` handles and deterministic traversal.
 
+#![allow(clippy::too_many_lines)]
+
 use crate::message::{ChatMessage, Role};
 use indextree::{Arena, NodeId};
 use parking_lot::Mutex;
@@ -29,10 +31,7 @@ pub struct TreeNodeData {
 
 impl TreeNodeData {
     pub fn new(message: ChatMessage) -> Self {
-        Self {
-            message,
-            label: None,
-        }
+        Self { message, label: None }
     }
 }
 
@@ -109,12 +108,7 @@ pub struct SessionTreeSnapshot {
 
 impl Default for SessionTreeSnapshot {
     fn default() -> Self {
-        Self {
-            current_branch: Vec::new(),
-            root_id: "root".to_string(),
-            nodes: Vec::new(),
-            edges: Vec::new(),
-        }
+        Self { current_branch: Vec::new(), root_id: "root".to_string(), nodes: Vec::new(), edges: Vec::new() }
     }
 }
 
@@ -151,8 +145,7 @@ impl<'de> Deserialize<'de> for SessionTree {
         D: serde::Deserializer<'de>,
     {
         let snapshot = SessionTreeSnapshot::deserialize(deserializer)?;
-        Self::from_snapshot(&snapshot)
-            .ok_or_else(|| serde::de::Error::custom("invalid session tree snapshot"))
+        Self::from_snapshot(&snapshot).ok_or_else(|| serde::de::Error::custom("invalid session tree snapshot"))
     }
 }
 
@@ -166,8 +159,7 @@ impl Clone for SessionTree {
         let snapshot = self
             .to_snapshot()
             .expect("tree clone: arena node missing — internal bug");
-        Self::from_snapshot(&snapshot)
-            .expect("tree clone: snapshot round-trip failed — internal bug")
+        Self::from_snapshot(&snapshot).expect("tree clone: snapshot round-trip failed — internal bug")
     }
 }
 
@@ -188,9 +180,7 @@ impl Default for SessionTree {
         let root_data = TreeNodeData::new(ChatMessage {
             role: Role::System,
             id: "root".into(),
-            parts: vec![crate::message::Part::Text {
-                content: "[session root]".into(),
-            }],
+            parts: vec![crate::message::Part::Text { content: "[session root]".into() }],
             ..Default::default()
         });
         let root_id = arena.new_node(root_data);
@@ -211,13 +201,7 @@ impl SessionTree {
         let root_id = arena.new_node(TreeNodeData::new(root_message.clone()));
         let mut id_index = HashMap::new();
         id_index.insert(root_message.id.clone(), root_id);
-        Self {
-            arena,
-            root_id: Some(root_id),
-            current_branch: Vec::new(),
-            id_index,
-            cached_filter: Mutex::new(None),
-        }
+        Self { arena, root_id: Some(root_id), current_branch: Vec::new(), id_index, cached_filter: Mutex::new(None) }
     }
 
     /// Create a session tree from a flat list of messages.
@@ -245,13 +229,7 @@ impl SessionTree {
             parent = node_id;
         }
 
-        Self {
-            arena,
-            root_id: Some(root_id),
-            current_branch,
-            id_index,
-            cached_filter: Mutex::new(None),
-        }
+        Self { arena, root_id: Some(root_id), current_branch, id_index, cached_filter: Mutex::new(None) }
     }
 
     /// Serialize the tree to a snapshot (stable across serialization).
@@ -292,12 +270,7 @@ impl SessionTree {
             .filter_map(|id| self.arena.get(*id).map(|n| n.get().message.id.clone()))
             .collect();
 
-        Ok(SessionTreeSnapshot {
-            current_branch,
-            root_id,
-            nodes,
-            edges,
-        })
+        Ok(SessionTreeSnapshot { current_branch, root_id, nodes, edges })
     }
 
     /// Deserialize from a snapshot, rebuilding the arena.
@@ -317,9 +290,7 @@ impl SessionTree {
 
         // Second pass: attach children to parents
         for (parent_id, child_id) in &snapshot.edges {
-            if let (Some(&parent_node), Some(&child_node)) =
-                (id_to_node.get(parent_id), id_to_node.get(child_id))
-            {
+            if let (Some(&parent_node), Some(&child_node)) = (id_to_node.get(parent_id), id_to_node.get(child_id)) {
                 parent_node.append(child_node, &mut arena);
             }
         }
@@ -334,13 +305,7 @@ impl SessionTree {
         // Root ID
         let root_id = id_to_node.get(&snapshot.root_id).copied();
 
-        Some(Self {
-            arena,
-            root_id,
-            current_branch,
-            id_index: id_to_node,
-            cached_filter: Mutex::new(None),
-        })
+        Some(Self { arena, root_id, current_branch, id_index: id_to_node, cached_filter: Mutex::new(None) })
     }
 
     /// Get the number of nodes in the tree.
@@ -389,9 +354,7 @@ impl SessionTree {
             role: Role::System,
             timestamp: crate::message::now(),
             id: format!("fork.{}", message_index),
-            parts: vec![crate::message::Part::Text {
-                content: "[fork point]".to_owned(),
-            }],
+            parts: vec![crate::message::Part::Text { content: "[fork point]".to_owned() }],
             ..Default::default()
         };
 

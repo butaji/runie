@@ -1,4 +1,5 @@
 //! Unit tests for `RactorConfigActor`.
+#![allow(clippy::too_many_lines)]
 
 use tempfile::TempDir;
 
@@ -287,11 +288,7 @@ async fn tracing_event_emitted_on_config_load() {
     }
 
     impl<S: Subscriber> tracing_subscriber::layer::Layer<S> for CaptureLayer {
-        fn on_event(
-            &self,
-            event: &tracing::Event<'_>,
-            _ctx: tracing_subscriber::layer::Context<'_, S>,
-        ) {
+        fn on_event(&self, event: &tracing::Event<'_>, _ctx: tracing_subscriber::layer::Context<'_, S>) {
             let _ = self.sender.send(*event.metadata().level());
         }
     }
@@ -416,6 +413,7 @@ async fn save_provider_that_fails_validation_does_not_clobber_projection() {
             base_url: "http://localhost:11434/v1".into(),
             models: vec!["foo-model".into(), "bar-model".into()],
             headers: std::collections::HashMap::new(),
+            context_window_fallbacks: vec![],
         },
     );
     state.config.current_provider = "my-custom-llm".into();

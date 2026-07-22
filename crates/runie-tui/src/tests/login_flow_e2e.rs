@@ -149,10 +149,7 @@ fn e2e_providers_select_model_renders_input_box() {
     state.config.current_model.clear();
 
     state.update(Event::ProvidersDialog);
-    state.update(Event::ProvidersSelectModel {
-        provider: "minimax".into(),
-        model: "MiniMax-M3".into(),
-    });
+    state.update(Event::ProvidersSelectModel { provider: "minimax".into(), model: "MiniMax-M3".into() });
 
     assert!(
         state.has_models(),
@@ -208,13 +205,8 @@ fn e2e_providers_add_flow_save_renders_input_box() {
 
     state.update(Event::ProvidersDialog);
     state.update(Event::ProvidersAdd);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -246,13 +238,8 @@ fn e2e_login_flow_submit_save_button_renders_input_box() {
     state.config.current_model.clear();
 
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -320,13 +307,8 @@ fn e2e_login_flow_submit_on_model_toggle_saves_and_connects() {
     state.config.current_model.clear();
 
     state.update(Event::Start);
-    state.update(Event::SelectProvider {
-        provider: "minimax".into(),
-    });
-    state.update(Event::SubmitKey {
-        provider: "minimax".into(),
-        key: "sk-test".into(),
-    });
+    state.update(Event::SelectProvider { provider: "minimax".into() });
+    state.update(Event::SubmitKey { provider: "minimax".into(), key: "sk-test".into() });
     state.update(Event::ModelsFetched {
         provider: "minimax".into(),
         key: "sk-test".into(),
@@ -443,8 +425,8 @@ fn e2e_login_flow_save_persists_api_key_to_auth_file() {
     std::env::set_var("RUNIE_AUTH_FILE", &auth_path);
     state.update(Event::from(Event::Save));
 
-    let json = std::fs::read_to_string(&auth_path)
-        .expect("auth.json should be written on Save when RUNIE_AUTH_FILE is set");
+    let json =
+        std::fs::read_to_string(&auth_path).expect("auth.json should be written on Save when RUNIE_AUTH_FILE is set");
     std::env::remove_var("RUNIE_AUTH_FILE");
     drop(_guard);
 

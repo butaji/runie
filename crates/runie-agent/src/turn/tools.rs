@@ -1,9 +1,7 @@
 //! Tool execution helpers for agent turn.
 
 use crate::stream_response::EmitFn;
-use crate::tool_runner::{
-    execute_tool_call, fire_skill_after_hook, run_skill_before_hook, tool_result_message,
-};
+use crate::tool_runner::{execute_tool_call, fire_skill_after_hook, run_skill_before_hook, tool_result_message};
 
 use runie_core::harness_skills::SkillRegistry;
 use runie_core::message::ChatMessage;
@@ -31,8 +29,7 @@ pub async fn execute_tools(
     for tool_call in tools {
         *tool_call_count += 1;
         let tool_id = tool_call.id.as_deref().unwrap_or(cmd_id);
-        let output =
-            execute_single_tool(tool_id, tool_call, emit.clone(), skills, &ctx, gate).await;
+        let output = execute_single_tool(tool_id, tool_call, emit.clone(), skills, &ctx, gate).await;
 
         if output.status == ToolStatus::Blocked {
             any_blocked = true;

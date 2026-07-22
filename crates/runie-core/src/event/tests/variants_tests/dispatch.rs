@@ -198,9 +198,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ShowDiagnostics => Event::ClearTransient,
 
             // Config
-            Event::ConfigLoaded { .. } => Event::ConfigLoaded {
-                config: Box::new(Config::default()),
-            },
+            Event::ConfigLoaded { .. } => Event::ConfigLoaded { config: Box::new(Config::default()) },
 
             // Persistence
             Event::TrustLoaded { .. }
@@ -226,9 +224,7 @@ fn dispatcher_handles_all_variants() {
             | Event::EnvDetected { .. }
             | Event::InputChanged { .. }
             | Event::ViewChanged { .. }
-            | Event::CompletionChanged { .. } => Event::HistoryAppend {
-                entry: String::new(),
-            },
+            | Event::CompletionChanged { .. } => Event::HistoryAppend { entry: String::new() },
 
             // Session
             Event::ForkSession { .. }
@@ -251,9 +247,7 @@ fn dispatcher_handles_all_variants() {
             | Event::RunCompactCommand { .. }
             | Event::RunPromptCommand { .. }
             | Event::RunThinkingCommand { .. }
-            | Event::RunPaletteCommand { .. } => Event::RunNameCommand {
-                name: "test".into(),
-            },
+            | Event::RunPaletteCommand { .. } => Event::RunNameCommand { name: "test".into() },
 
             // LoginFlow
             Event::Start
@@ -276,159 +270,97 @@ fn dispatcher_handles_all_variants() {
                 action: crate::permissions::PermissionAction::Ask,
             },
             Event::PermissionRequestDismissed => Event::PermissionRequestDismissed,
-            Event::PermissionAllow { .. } => Event::PermissionAllow {
-                request_id: String::new(),
-            },
-            Event::PermissionDeny { .. } => Event::PermissionDeny {
-                request_id: String::new(),
-            },
-            Event::PermissionAlwaysAllow { .. } => Event::PermissionAlwaysAllow {
-                request_id: String::new(),
-                tool: String::new(),
-            },
-            Event::PermissionSessionAllow { .. } => Event::PermissionSessionAllow {
-                request_id: String::new(),
-                tool: String::new(),
-            },
-            Event::PermissionOnce { .. } => Event::PermissionOnce {
-                request_id: String::new(),
-            },
+            Event::PermissionAllow { .. } => Event::PermissionAllow { request_id: String::new() },
+            Event::PermissionDeny { .. } => Event::PermissionDeny { request_id: String::new() },
+            Event::PermissionAlwaysAllow { .. } => {
+                Event::PermissionAlwaysAllow { request_id: String::new(), tool: String::new() }
+            }
+            Event::PermissionSessionAllow { .. } => {
+                Event::PermissionSessionAllow { request_id: String::new(), tool: String::new() }
+            }
+            Event::PermissionOnce { .. } => Event::PermissionOnce { request_id: String::new() },
 
             // TurnActor
-            Event::TurnStarted { .. } => Event::TurnStarted {
-                id: String::new(),
-                request_id: String::new(),
-                content: String::new(),
-            },
+            Event::TurnStarted { .. } => {
+                Event::TurnStarted { id: String::new(), request_id: String::new(), content: String::new() }
+            }
             Event::TurnAborted => Event::TurnAborted,
             Event::TurnCompleted => Event::TurnCompleted,
-            Event::TurnErrored { .. } => Event::TurnErrored {
-                id: String::new(),
-                message: String::new(),
-            },
-            Event::TurnConstraintError { .. } => Event::TurnConstraintError {
-                id: String::new(),
-                tool: String::new(),
-                message: String::new(),
-            },
-            Event::TokenStatsUpdated { .. } => Event::TokenStatsUpdated {
-                tokens_in: 0,
-                tokens_out: 0,
-            },
-            Event::CompactionTriggered { .. } => Event::CompactionTriggered {
-                ratio: 0.7,
-                tokens_in: 100,
-                context_window: 128000,
-            },
-            Event::StreamStarted { .. } => Event::StreamStarted { id: String::new() },
-            Event::UserMessageSubmitted { .. } => Event::UserMessageSubmitted {
-                id: String::new(),
-                content: String::new(),
-            },
-            Event::QueueAborted { .. } => Event::QueueAborted {
-                content: String::new(),
-            },
-            Event::QueuesCleared => Event::QueuesCleared,
-            Event::QueueFollowUpAdded { .. } => Event::QueueFollowUpAdded {
-                id: String::new(),
-                content: String::new(),
-            },
-            Event::QueueSteeringAdded { .. } => Event::QueueSteeringAdded {
-                id: String::new(),
-                content: String::new(),
-            },
-            Event::SteeringDelivered { .. } => Event::SteeringDelivered {
-                content: String::new(),
-                id: String::new(),
-            },
-            Event::FollowUpDelivered { .. } => Event::FollowUpDelivered {
-                content: String::new(),
-                id: String::new(),
-            },
-            Event::MessageDequeued { .. } => Event::MessageDequeued {
-                content: String::new(),
-            },
-            Event::IdGenerated(_) => {
-                Event::IdGenerated(crate::actors::turn::NextIdResponse { id: String::new() })
+            Event::TurnErrored { .. } => Event::TurnErrored { id: String::new(), message: String::new() },
+            Event::TurnConstraintError { .. } => {
+                Event::TurnConstraintError { id: String::new(), tool: String::new(), message: String::new() }
             }
-            Event::AssistantMessageReady { .. } => Event::AssistantMessageReady {
-                message: crate::ChatMessage::default(),
-            },
+            Event::TokenStatsUpdated { .. } => Event::TokenStatsUpdated { tokens_in: 0, tokens_out: 0 },
+            Event::CompactionTriggered { .. } => {
+                Event::CompactionTriggered { ratio: 0.7, tokens_in: 100, context_window: 128000 }
+            }
+            Event::StreamStarted { .. } => Event::StreamStarted { id: String::new() },
+            Event::UserMessageSubmitted { .. } => {
+                Event::UserMessageSubmitted { id: String::new(), content: String::new() }
+            }
+            Event::QueueAborted { .. } => Event::QueueAborted { content: String::new() },
+            Event::QueuesCleared => Event::QueuesCleared,
+            Event::QueueFollowUpAdded { .. } => Event::QueueFollowUpAdded { id: String::new(), content: String::new() },
+            Event::QueueSteeringAdded { .. } => Event::QueueSteeringAdded { id: String::new(), content: String::new() },
+            Event::SteeringDelivered { .. } => Event::SteeringDelivered { content: String::new(), id: String::new() },
+            Event::FollowUpDelivered { .. } => Event::FollowUpDelivered { content: String::new(), id: String::new() },
+            Event::MessageDequeued { .. } => Event::MessageDequeued { content: String::new() },
+            Event::IdGenerated(_) => Event::IdGenerated(crate::actors::turn::NextIdResponse { id: String::new() }),
+            Event::AssistantMessageReady { .. } => {
+                Event::AssistantMessageReady { message: crate::ChatMessage::default() }
+            }
 
             // IO
-            Event::FffSearchResult { .. } => Event::FffSearchResult {
-                request_id: 0,
-                entries: Vec::new(),
-                query: String::new(),
-                indexed: false,
-            },
-            Event::SkillsLoaded { .. } => Event::HistoryAppend {
-                entry: String::new(),
-            },
-            Event::AuthLoaded { .. } => Event::HistoryAppend {
-                entry: String::new(),
-            },
+            Event::FffSearchResult { .. } => {
+                Event::FffSearchResult { request_id: 0, entries: Vec::new(), query: String::new(), indexed: false }
+            }
+            Event::SkillsLoaded { .. } => Event::HistoryAppend { entry: String::new() },
+            Event::AuthLoaded { .. } => Event::HistoryAppend { entry: String::new() },
 
             // IO effects (results)
-            Event::GistShared { .. } => Event::GistShared {
-                result: Ok("https://gist.github.com/test".to_string()),
-            },
-            Event::ExternalEditorClosed { .. } => Event::ExternalEditorClosed {
-                result: Ok("edited content".to_string()),
-            },
+            Event::GistShared { .. } => Event::GistShared { result: Ok("https://gist.github.com/test".to_string()) },
+            Event::ExternalEditorClosed { .. } => {
+                Event::ExternalEditorClosed { result: Ok("edited content".to_string()) }
+            }
             Event::ClipboardWritten { .. } => Event::ClipboardWritten { success: true },
-            Event::ClipboardRead { .. } => Event::ClipboardRead {
-                result: Ok("clipboard content".to_string()),
-            },
+            Event::ClipboardRead { .. } => Event::ClipboardRead { result: Ok("clipboard content".to_string()) },
             Event::ProcessResumed => Event::ProcessResumed,
-            Event::PlanModeEnabled { content } => Event::PlanModeEnabled {
-                content: content.clone(),
-            },
+            Event::PlanModeEnabled { content } => Event::PlanModeEnabled { content: content.clone() },
             Event::PlanModeDisabled => Event::PlanModeDisabled,
             Event::ToggleMcpServersDialog => Event::ToggleMcpServersDialog,
             Event::ToggleSkillsDialog => Event::ToggleSkillsDialog,
-            Event::McpServerAction { name, action } => Event::McpServerAction {
-                name,
-                action,
-            },
-            Event::SkillAction { name, action } => Event::SkillAction {
-                name,
-                action,
-            },
-            Event::GoalCreate { objective } => Event::GoalCreate {
-                objective: objective.clone(),
-            },
-            Event::GoalComplete { objective } => Event::GoalComplete {
-                objective: objective.clone(),
-            },
+            Event::McpServerAction { name, action } => Event::McpServerAction { name, action },
+            Event::SkillAction { name, action } => Event::SkillAction { name, action },
+            Event::GoalCreate { objective } => Event::GoalCreate { objective: objective.clone() },
+            Event::GoalComplete { objective } => Event::GoalComplete { objective: objective.clone() },
             Event::GoalPause => Event::GoalPause,
             Event::GoalResume => Event::GoalResume,
             Event::GoalCancel => Event::GoalCancel,
-            Event::GoalStatus { status } => Event::GoalStatus {
-                status: status.clone(),
-            },
-            Event::SkillCreated { name } => Event::SkillCreated {
-                name: name.clone(),
-            },
-            Event::SkillDeleted { name } => Event::SkillDeleted {
-                name: name.clone(),
-            },
-            Event::SkillError { name, message } => Event::SkillError {
-                name: name.clone(),
-                message: message.clone(),
-            },
+            Event::GoalStatus { status } => Event::GoalStatus { status: status.clone() },
+            Event::SkillCreated { name } => Event::SkillCreated { name: name.clone() },
+            Event::SkillDeleted { name } => Event::SkillDeleted { name: name.clone() },
+            Event::SkillError { name, message } => Event::SkillError { name: name.clone(), message: message.clone() },
 
             // AskUserQuestion dialog
-            Event::AskUserQuestion { request_id, questions } => Event::AskUserQuestion {
-                request_id,
-                questions: questions.clone(),
-            },
-            Event::QuestionAnswer { request_id, option_id } => Event::QuestionAnswer {
-                request_id,
-                option_id,
-            },
+            Event::AskUserQuestion { request_id, questions } => {
+                Event::AskUserQuestion { request_id, questions: questions.clone() }
+            }
+            Event::QuestionAnswer { request_id, option_id } => Event::QuestionAnswer { request_id, option_id },
             Event::QuestionSkip { request_id } => Event::QuestionSkip { request_id },
             Event::QuestionSubmit { request_id } => Event::QuestionSubmit { request_id },
+            Event::SetLeadModel { provider, model } => {
+                Event::SetLeadModel { provider: provider.clone(), model: model.clone() }
+            }
+            Event::SetWorkerModel { provider, model } => {
+                Event::SetWorkerModel { provider: provider.clone(), model: model.clone() }
+            }
+
+            // Circuit breaker
+            Event::CircuitBreakerTripped { .. } => Event::CircuitBreakerTripped {
+                failures: 0,
+                threshold: 3,
+            },
+            Event::CircuitBreakerReset => Event::CircuitBreakerReset,
         }
     }
     let _ = assert_exhaustive(Event::Submit);

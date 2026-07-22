@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Keystroke DSL → Runie Event translator for deterministic TUI comparisons.
 //!
 //! This module provides a small string-based DSL for representing keyboard input
@@ -44,6 +46,7 @@ use runie_core::event::Event as CoreEvent;
 /// - Single characters: `"a"`, `"A"`, `"!"` → `Input(c)`
 /// - Named keys: `"enter"`, `"escape"`, `"up"`, etc. → specific events
 /// - Modifiers: `"ctrl+c"`, `"alt+enter"`, `"shift+tab"`
+#[allow(clippy::too_many_lines)]
 pub fn parse_keystroke(dsl: &str) -> Option<CoreEvent> {
     // Handle empty string
     if dsl.is_empty() {
@@ -118,7 +121,7 @@ fn parse_ctrl_combo(rest: &str) -> Option<CoreEvent> {
         "c" => Some(CoreEvent::Quit),
         "d" => Some(CoreEvent::Quit),
         "z" => Some(CoreEvent::Suspend),
-        "l" => Some(CoreEvent::ClearTransient), // ctrl+l clears
+        "l" => Some(CoreEvent::ClearTransient),       // ctrl+l clears
         "u" => Some(CoreEvent::CommandFormBackspace), // ctrl+u clears input
         "a" => Some(CoreEvent::CursorStart),
         "e" => Some(CoreEvent::CursorEnd),
@@ -192,6 +195,8 @@ fn parse_shift_combo(rest: &str) -> Option<CoreEvent> {
 /// let events = parse_sequence("hello, world<enter>ctrl+c");
 /// // Produces: Input('h'), Input('e'), ..., Input(' '), Input('w'), ..., Newline, Quit
 /// ```
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 pub fn parse_sequence(dsl: &str) -> Vec<CoreEvent> {
     let mut events = Vec::new();
     let dsl = dsl.trim();
@@ -243,12 +248,7 @@ pub fn parse_sequence(dsl: &str) -> Vec<CoreEvent> {
             continue;
         }
 
-        if remaining >= 4
-            && chars[i] == 'a'
-            && chars[i + 1] == 'l'
-            && chars[i + 2] == 't'
-            && chars[i + 3] == '+'
-        {
+        if remaining >= 4 && chars[i] == 'a' && chars[i + 1] == 'l' && chars[i + 2] == 't' && chars[i + 3] == '+' {
             let rest: String = chars[i + 4..]
                 .iter()
                 .take_while(|&&c| c != ' ' && c != ',' && c != ';' && c != '<')
@@ -361,6 +361,7 @@ pub fn parse_tmux_style(dsl: &str) -> Option<CoreEvent> {
 }
 
 /// Convert a crossterm `KeyEvent` to DSL string representation.
+#[allow(clippy::too_many_lines)]
 pub fn key_event_to_dsl(event: &crossterm::event::KeyEvent) -> String {
     use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -427,6 +428,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn test_named_keys() {
         assert!(matches!(parse_keystroke("enter"), Some(CoreEvent::Newline)));
         // ESC maps to DialogBack to match keymap (KeyCode::Esc → DialogBack)
@@ -461,6 +463,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn test_ctrl_combos() {
         assert!(matches!(parse_keystroke("ctrl+c"), Some(CoreEvent::Quit)));
         assert!(matches!(parse_keystroke("ctrl+C"), Some(CoreEvent::Quit)));

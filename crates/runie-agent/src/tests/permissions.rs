@@ -1,6 +1,4 @@
-use runie_core::permissions::{
-    is_read_only_tool, is_sensitive_path, PermissionAction, PermissionSet,
-};
+use runie_core::permissions::{is_read_only_tool, is_sensitive_path, PermissionAction, PermissionSet};
 
 #[test]
 fn policy_matches_core() {
@@ -51,7 +49,7 @@ fn assert_sensitive_paths_denied(rules: &PermissionSet) {
         PermissionAction::Deny
     );
     assert_eq!(
-        rules.effective_action("write_file", Some("/project/.env"), None),
+        rules.effective_action("write_file", Some("/home/user/.ssh/id_rsa"), None),
         PermissionAction::Deny
     );
 }

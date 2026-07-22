@@ -64,11 +64,7 @@ pub fn rebuild_turns(elements: &[Element]) -> Vec<Turn> {
         if matches!(elem, Element::UserMessage { .. }) {
             // Close previous turn
             if let Some(start) = current_start {
-                turns.push(Turn {
-                    prompt_index: start,
-                    end_index: i,
-                    active: false,
-                });
+                turns.push(Turn { prompt_index: start, end_index: i, active: false });
             }
             current_start = Some(i);
         }
@@ -94,11 +90,7 @@ pub fn turn_containing(turns: &[Turn], index: usize) -> Option<usize> {
 }
 
 /// Get the visible entry range for a view mode and current turn.
-pub fn visible_range(
-    turns: &[Turn],
-    view_mode: ViewMode,
-    current_turn: Option<usize>,
-) -> Range<usize> {
+pub fn visible_range(turns: &[Turn], view_mode: ViewMode, current_turn: Option<usize>) -> Range<usize> {
     match view_mode {
         ViewMode::AllTurns => 0..usize::MAX, // Will be clamped by actual elements.len()
         ViewMode::SingleTurn => {
@@ -154,11 +146,11 @@ mod tests {
         ];
         let turns = rebuild_turns(&elements);
         assert_eq!(turns.len(), 2);
-        
+
         assert_eq!(turns[0].prompt_index, 0);
         assert_eq!(turns[0].end_index, 2);
         assert!(!turns[0].active);
-        
+
         assert_eq!(turns[1].prompt_index, 2);
         assert_eq!(turns[1].end_index, 5);
         assert!(turns[1].active);
@@ -170,7 +162,7 @@ mod tests {
             Turn { prompt_index: 0, end_index: 2, active: false },
             Turn { prompt_index: 2, end_index: 4, active: true },
         ];
-        
+
         assert_eq!(turn_containing(&turns, 0), Some(0));
         assert_eq!(turn_containing(&turns, 1), Some(0));
         assert_eq!(turn_containing(&turns, 2), Some(1));
@@ -184,7 +176,7 @@ mod tests {
             Turn { prompt_index: 0, end_index: 2, active: false },
             Turn { prompt_index: 2, end_index: 4, active: true },
         ];
-        
+
         let range = visible_range(&turns, ViewMode::AllTurns, Some(0));
         assert_eq!(range, 0..usize::MAX);
     }
@@ -195,7 +187,7 @@ mod tests {
             Turn { prompt_index: 0, end_index: 2, active: false },
             Turn { prompt_index: 2, end_index: 4, active: true },
         ];
-        
+
         let range = visible_range(&turns, ViewMode::SingleTurn, Some(1));
         assert_eq!(range, 2..4);
     }

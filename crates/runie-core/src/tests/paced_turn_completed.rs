@@ -17,10 +17,7 @@ fn turn_completed_keeps_turn_active_for_snapshot() {
     );
 
     // 2. Stream some response text
-    state.update(crate::Event::ResponseDelta {
-        id: "req.0".into(),
-        content: "say hello\n".into(),
-    });
+    state.update(crate::Event::ResponseDelta { id: "req.0".into(), content: "say hello\n".into() });
 
     // 3. Turn completes — apply_turn_completed should NOT clear turn_active
     state.apply_turn_completed();

@@ -11,9 +11,7 @@ fn prompt_switch_updates() {
         }],
         ..Default::default()
     };
-    state.update(crate::Event::RunPromptCommand {
-        name: "custom".into(),
-    });
+    state.update(crate::Event::RunPromptCommand { name: "custom".into() });
     assert_eq!(state.input.current_prompt, "custom");
     let last = state.session.messages.last().expect("should have message");
     assert!(last.content().contains("custom"));
@@ -41,9 +39,7 @@ fn prompt_shows_current_when_no_args() {
 #[test]
 fn prompt_unknown_returns_error() {
     let mut state = AppState::default();
-    state.update(crate::Event::RunPromptCommand {
-        name: "unknown".into(),
-    });
+    state.update(crate::Event::RunPromptCommand { name: "unknown".into() });
     let last = state.session.messages.last().expect("should have message");
     assert!(
         last.content().contains("not found"),

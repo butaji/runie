@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Unified bash execution using `command-group` for reliable process-group kill.
 //!
 //! Single source of truth for all bash/command execution in Runie. Provides both
@@ -20,7 +22,7 @@ use shell_words;
 use tokio::process::Command;
 use tokio::sync::oneshot;
 
-use crate::sandbox::{sandbox_available, SandboxStatus};
+use crate::sandbox::{sandbox_available, SandboxAvailability as SandboxStatus};
 
 /// Result of a bash command execution.
 #[derive(Debug, Clone)]
@@ -163,9 +165,8 @@ async fn run_sandboxed_direct(
 ) -> ShellResult {
     use crate::sandbox;
 
-    let child = match sandbox::run_sandboxed_direct_async(program, args, working_dir, &env_to_vec(env))
-        .await
-    {
+    let config = sandbox::SandboxConfig::workspace(working_dir.to_path_buf());
+    let child = match sandbox::run_sandboxed_direct_async(program, args, working_dir, &env_to_vec(env), &config).await {
         Ok(c) => c,
         Err(e) => return ShellResult::error(format!("Failed to spawn sandboxed direct: {}", e)),
     };
@@ -216,8 +217,8 @@ async fn run_sandboxed_shell(
 ) -> ShellResult {
     use crate::sandbox;
 
-    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_to_vec(env)).await
-    {
+    let config = sandbox::SandboxConfig::workspace(working_dir.to_path_buf());
+    let mut child = match sandbox::run_sandboxed_shell_async(command, working_dir, &env_to_vec(env), &config).await {
         Ok(c) => c,
         Err(e) => return ShellResult::error(format!("Failed to spawn sandboxed shell: {}", e)),
     };
@@ -299,12 +300,7 @@ async fn run_command(mut cmd: Command, timeout: Duration) -> ShellResult {
 /// Execute a bash command synchronously (for IO actor and update tools).
 ///
 /// Same semantics as `run_bash` but synchronous.
-pub fn run_bash_sync(
-    command: &str,
-    working_dir: &Path,
-    env: &HashMap<String, String>,
-    shell: bool,
-) -> ShellResult {
+pub fn run_bash_sync(command: &str, working_dir: &Path, env: &HashMap<String, String>, shell: bool) -> ShellResult {
     if shell {
         run_bash_sync_shell(command, working_dir, env)
     } else {
@@ -312,11 +308,7 @@ pub fn run_bash_sync(
     }
 }
 
-fn run_bash_sync_shell(
-    command: &str,
-    working_dir: &Path,
-    env: &HashMap<String, String>,
-) -> ShellResult {
+fn run_bash_sync_shell(command: &str, working_dir: &Path, env: &HashMap<String, String>) -> ShellResult {
     let output = std::process::Command::new("sh")
         .arg("-c")
         .arg(command)
@@ -332,11 +324,7 @@ fn run_bash_sync_shell(
     }
 }
 
-fn run_bash_sync_direct(
-    command: &str,
-    working_dir: &Path,
-    env: &HashMap<String, String>,
-) -> ShellResult {
+fn run_bash_sync_direct(command: &str, working_dir: &Path, env: &HashMap<String, String>) -> ShellResult {
     let args = match shell_words::split(command) {
         Ok(args) if !args.is_empty() => args,
         Ok(_) => return ShellResult::error("Empty command".to_owned()),
@@ -398,11 +386,7 @@ fn combine_output(stdout: &str, stderr: &str) -> String {
 
 impl ShellResult {
     fn error(msg: String) -> Self {
-        Self {
-            output: msg,
-            bytes_transferred: None,
-            status: ShellStatus::Error,
-        }
+        Self { output: msg, bytes_transferred: None, status: ShellStatus::Error }
     }
 
     fn timed_out(timeout: Duration) -> Self {

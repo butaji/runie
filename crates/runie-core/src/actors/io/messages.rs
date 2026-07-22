@@ -21,10 +21,7 @@ pub enum IoMsg {
     /// Detect environment info (cwd name, git info) asynchronously.
     DetectEnv,
     /// Share session messages to a GitHub gist.
-    ShareSession {
-        messages: Vec<ChatMessage>,
-        display_name: Option<String>,
-    },
+    ShareSession { messages: Vec<ChatMessage>, display_name: Option<String> },
     /// Open external editor with text, return edited text.
     OpenExternalEditor { text: String },
     /// Copy text to clipboard.

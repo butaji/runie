@@ -2,6 +2,7 @@
 //!
 //! The bug: when a user submits a message like "say hello", it appears TWICE
 //! in the feed when using the mock provider.
+#![allow(clippy::too_many_lines)]
 
 use crate::model::{AppState, Role};
 use crate::view::elements::Element;
@@ -14,10 +15,7 @@ fn test_single_user_message_in_feed() {
     let mut state = AppState::default();
 
     // 1. User submits a message
-    state.update(Event::UserMessageSubmitted {
-        id: "req.0".to_string(),
-        content: "say hello".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: "req.0".to_string(), content: "say hello".to_string() });
 
     // 2. Turn starts
     state.update(Event::TurnStarted {
@@ -27,25 +25,13 @@ fn test_single_user_message_in_feed() {
     });
 
     // 3. Response arrives
-    state.update(Event::TextStart {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ResponseDelta {
-        id: "req.0".to_string(),
-        content: "say hello\n".to_string(),
-    });
-    state.update(Event::TextEnd {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::TextStart { id: "req.0".to_string() });
+    state.update(Event::ResponseDelta { id: "req.0".to_string(), content: "say hello\n".to_string() });
+    state.update(Event::TextEnd { id: "req.0".to_string() });
 
     // 4. Turn completes
-    state.update(Event::TurnComplete {
-        id: "req.0".to_string(),
-        duration_secs: 0.5,
-    });
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::TurnComplete { id: "req.0".to_string(), duration_secs: 0.5 });
+    state.update(Event::Done { id: "req.0".to_string() });
 
     // Build the feed
     let feed = LazyCache::feed(&state);
@@ -160,13 +146,8 @@ fn test_full_submit_flow() {
     });
 
     // Turn completes
-    state.update(Event::TurnComplete {
-        id: "req.0".to_string(),
-        duration_secs: 0.5,
-    });
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::TurnComplete { id: "req.0".to_string(), duration_secs: 0.5 });
+    state.update(Event::Done { id: "req.0".to_string() });
 
     // Build the feed
     let feed = LazyCache::feed(&state);
@@ -200,10 +181,7 @@ fn test_apply_user_message_twice_should_not_duplicate() {
     let mut state = AppState::default();
 
     // Apply the same message twice (simulating potential double-submit)
-    state.update(Event::UserMessageSubmitted {
-        id: "req.0".to_string(),
-        content: "hello".to_string(),
-    });
+    state.update(Event::UserMessageSubmitted { id: "req.0".to_string(), content: "hello".to_string() });
 
     state.update(Event::UserMessageSubmitted {
         id: "req.0".to_string(), // Same ID!

@@ -167,12 +167,7 @@ fn no_form_submit_handler_returns_usage_message() {
     );
 }
 
-fn assert_form_submit_does_not_show_usage(
-    name: &str,
-    result: &CommandResult,
-    initial_count: usize,
-    state: &AppState,
-) {
+fn assert_form_submit_does_not_show_usage(name: &str, result: &CommandResult, initial_count: usize, state: &AppState) {
     if let CommandResult::Message(_) = result {
         panic!(
             "handle_{} with empty arg returned Message, should return dialog or None",

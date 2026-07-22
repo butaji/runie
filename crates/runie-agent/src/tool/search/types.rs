@@ -54,14 +54,7 @@ pub fn build_search_item(path: String, git_status: Option<GitStatus>, score: f64
     let git_status = git_status
         .map(format_git_status)
         .filter(|s| !s.is_empty() && s != "clean");
-    SearchItem {
-        path,
-        line: None,
-        col: None,
-        content: None,
-        score,
-        git_status,
-    }
+    SearchItem { path, line: None, col: None, content: None, score, git_status }
 }
 
 /// Map a git status to a short label.

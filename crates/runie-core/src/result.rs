@@ -244,8 +244,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
 
-        let anyhow_result: anyhow::Result<i32> =
-            RunieContext::into_anyhow(RunieResult::<i32, anyhow::Error>::Ok(42));
+        let anyhow_result: anyhow::Result<i32> = RunieContext::into_anyhow(RunieResult::<i32, anyhow::Error>::Ok(42));
         assert!(anyhow_result.is_ok());
     }
 

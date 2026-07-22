@@ -9,9 +9,7 @@ fn bench_snapshot(c: &mut Criterion) {
                 role: Role::User,
                 timestamp: i as f64,
                 id: format!("msg{}", i),
-                parts: vec![Part::Text {
-                    content: format!("Message {} with some content to make it realistic", i),
-                }],
+                parts: vec![Part::Text { content: format!("Message {} with some content to make it realistic", i) }],
                 ..Default::default()
             });
         }
@@ -30,9 +28,7 @@ fn bench_snapshot(c: &mut Criterion) {
                 role: Role::User,
                 timestamp: i as f64,
                 id: format!("msg{}", i),
-                parts: vec![Part::Text {
-                    content: format!("Message {} with some content to make it realistic", i),
-                }],
+                parts: vec![Part::Text { content: format!("Message {} with some content to make it realistic", i) }],
                 ..Default::default()
             });
         }

@@ -5,11 +5,7 @@ use runie_core::model::{AppState, ScopedModel};
 use runie_core::Event;
 
 fn scoped_model(provider: &str, name: &str) -> ScopedModel {
-    ScopedModel {
-        provider: provider.into(),
-        name: name.into(),
-        enabled: true,
-    }
+    ScopedModel { provider: provider.into(), name: name.into(), enabled: true }
 }
 
 fn footer_content(state: &mut AppState) -> String {
@@ -23,10 +19,7 @@ fn footer_content(state: &mut AppState) -> String {
 #[test]
 fn ctrl_m_cycles_to_next_scoped_model() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        scoped_model("openai", "gpt-4o"),
-        scoped_model("anthropic", "claude-3-sonnet"),
-    ];
+    state.config.scoped_models = vec![scoped_model("openai", "gpt-4o"), scoped_model("anthropic", "claude-3-sonnet")];
     state.config.scoped_index = 0;
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
@@ -40,10 +33,7 @@ fn ctrl_m_cycles_to_next_scoped_model() {
 #[test]
 fn ctrl_m_wraps_to_first_model() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        scoped_model("openai", "gpt-4o"),
-        scoped_model("anthropic", "claude-3-sonnet"),
-    ];
+    state.config.scoped_models = vec![scoped_model("openai", "gpt-4o"), scoped_model("anthropic", "claude-3-sonnet")];
     state.config.scoped_index = 1;
     state.config.current_provider = "anthropic".into();
     state.config.current_model = "claude-3-sonnet".into();
@@ -57,10 +47,7 @@ fn ctrl_m_wraps_to_first_model() {
 #[test]
 fn ctrl_m_updates_footer_model_name() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        scoped_model("openai", "gpt-4o"),
-        scoped_model("anthropic", "claude-3-sonnet"),
-    ];
+    state.config.scoped_models = vec![scoped_model("openai", "gpt-4o"), scoped_model("anthropic", "claude-3-sonnet")];
     state.config.scoped_index = 0;
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
@@ -83,10 +70,7 @@ fn ctrl_m_updates_footer_model_name() {
 #[test]
 fn ctrl_m_wraps_footer_back_to_first() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        scoped_model("openai", "gpt-4o"),
-        scoped_model("anthropic", "claude-3-sonnet"),
-    ];
+    state.config.scoped_models = vec![scoped_model("openai", "gpt-4o"), scoped_model("anthropic", "claude-3-sonnet")];
     state.config.scoped_index = 1;
     state.config.current_provider = "anthropic".into();
     state.config.current_model = "claude-3-sonnet".into();

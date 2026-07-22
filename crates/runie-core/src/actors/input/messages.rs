@@ -76,10 +76,7 @@ pub enum InputMsg {
     /// Submit content — clears input and publishes InputChanged.
     Submit { content: String },
     /// Replace all input text and reset cursor.
-    SetText {
-        text: String,
-        chips: Vec<crate::model::InputChip>,
-    },
+    SetText { text: String, chips: Vec<crate::model::InputChip> },
     /// Set the current prompt name.
     SetPrompt { name: String },
     /// Clear the input (reset text, cursor, undo/redo).
@@ -100,11 +97,11 @@ pub enum InputMsg {
 /// spawned. This lets synchronous tests exercise the same mutation logic that
 /// `InputActor` runs asynchronously in production.
 #[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 impl InputMsg {
     pub fn apply_to(&self, state: &mut crate::model::InputState) {
         use crate::update::input::{
-            find_word_boundary_left, find_word_boundary_right, next_grapheme_boundary,
-            prev_grapheme_boundary,
+            find_word_boundary_left, find_word_boundary_right, next_grapheme_boundary, prev_grapheme_boundary,
         };
         match self {
             InputMsg::InsertChar(c) => {
@@ -384,17 +381,13 @@ impl InputMsg {
                 if !combined.is_empty() {
                     state.push_undo();
                     state.history_pos = None;
-                    let append_at = state.input.len()
-                        + usize::from(!state.input.is_empty() && !state.input.ends_with('\n'));
+                    let append_at =
+                        state.input.len() + usize::from(!state.input.is_empty() && !state.input.ends_with('\n'));
                     if !state.input.is_empty() && !state.input.ends_with('\n') {
                         state.input.push('\n');
                     }
                     state.input.push_str(&combined);
-                    state.adjust_chips_for_replace(
-                        append_at,
-                        append_at,
-                        state.input.len() - append_at,
-                    );
+                    state.adjust_chips_for_replace(append_at, append_at, state.input.len() - append_at);
                     state.cursor_pos = state.input.len();
                     state.redo_stack.clear();
                 }
@@ -430,10 +423,7 @@ mod tests {
     fn set_text_replaces_input_content() {
         let mut state = crate::model::InputState::default();
         InputMsg::apply_to(
-            &InputMsg::SetText {
-                text: "read @a.rs".to_owned(),
-                chips: Vec::new(),
-            },
+            &InputMsg::SetText { text: "read @a.rs".to_owned(), chips: Vec::new() },
             &mut state,
         );
         assert_eq!(state.input, "read @a.rs");
@@ -447,10 +437,7 @@ mod tests {
         let mut state = crate::model::InputState::default();
         InputMsg::apply_to(&InputMsg::InsertChar('x'), &mut state);
         InputMsg::apply_to(
-            &InputMsg::SetText {
-                text: "new".to_owned(),
-                chips: Vec::new(),
-            },
+            &InputMsg::SetText { text: "new".to_owned(), chips: Vec::new() },
             &mut state,
         );
         assert_eq!(state.input, "new");
@@ -462,16 +449,9 @@ mod tests {
     #[test]
     fn set_text_installs_chips() {
         let mut state = crate::model::InputState::default();
-        let chip = crate::model::InputChip {
-            start: 5,
-            end: 10,
-            label: None,
-        };
+        let chip = crate::model::InputChip { start: 5, end: 10, label: None };
         InputMsg::apply_to(
-            &InputMsg::SetText {
-                text: "read @a.rs ".to_owned(),
-                chips: vec![chip.clone()],
-            },
+            &InputMsg::SetText { text: "read @a.rs ".to_owned(), chips: vec![chip.clone()] },
             &mut state,
         );
         assert_eq!(state.chips, vec![chip]);

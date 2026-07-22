@@ -35,13 +35,7 @@ pub struct PostBuilder {
 impl PostBuilder {
     /// Start building a post of the given logical kind.
     pub fn new(kind: PostKind) -> Self {
-        Self {
-            kind,
-            elements: Vec::new(),
-            timestamp: 0.0,
-            expanded: true,
-            trailing_spacer: true,
-        }
+        Self { kind, elements: Vec::new(), timestamp: 0.0, expanded: true, trailing_spacer: true }
     }
 
     /// Add an element to the post body. Elements are rendered in order.
@@ -93,13 +87,8 @@ impl PostBuilder {
         }
 
         let index = feed.posts.len();
-        feed.posts.push(Post {
-            index,
-            start,
-            end: feed.elements.len(),
-            kind: self.kind,
-            expanded: self.expanded,
-        });
+        feed.posts
+            .push(Post { index, start, end: feed.elements.len(), kind: self.kind, expanded: self.expanded });
         index
     }
 }

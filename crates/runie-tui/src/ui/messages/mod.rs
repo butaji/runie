@@ -57,6 +57,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 /// content starts at column 2. User message rows additionally get the card
 /// band: the bg.user background painted across the full app width, edge to
 /// edge.
+#[allow(clippy::too_many_lines)]
 fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
     snap: &Snapshot,
@@ -167,12 +168,8 @@ fn is_user_related_row(snap: &Snapshot, elem_idx: usize) -> bool {
 fn render_scrollbar_if_needed(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {
     if total > height {
         let full_w = f.area().width;
-        let scrollbar_area = Rect {
-            x: (area.x + area.width).min(full_w.saturating_sub(1)),
-            y: area.y,
-            width: 1,
-            height: area.height,
-        };
+        let scrollbar_area =
+            Rect { x: (area.x + area.width).min(full_w.saturating_sub(1)), y: area.y, width: 1, height: area.height };
         super::render_scrollbar(f, scrollbar_area, total, offset, height);
     }
 }
@@ -190,8 +187,7 @@ mod tests {
     fn scrollbar_thumb_matches_markdown_message_height() {
         let width = 40u16;
         let height = 4u16;
-        let element =
-            Element::agent("items:\n- one\n- two\n- three\n- four\n- five\n- six").at(0.0);
+        let element = Element::agent("items:\n- one\n- two\n- three\n- four\n- five\n- six").at(0.0);
         let rendered = to_lines_internal(&element, width).len();
         assert!(
             rendered > height as usize,

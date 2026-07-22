@@ -35,12 +35,8 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
@@ -68,12 +64,8 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
 
     state.update(Event::Input('A'));
     state.update(Event::Submit);
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Response 1".to_string(),
@@ -81,9 +73,7 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Done { id: "req.0".to_string() });
     state.update(Event::Input('B'));
     state.update(Event::Submit);
 
@@ -117,12 +107,8 @@ fn test_render_agent_response() {
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
@@ -215,9 +201,7 @@ fn test_render_thinking_indicator() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
     state.update(Event::Submit);
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
@@ -244,9 +228,7 @@ fn test_render_user_message_preserves_newlines() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "the problem\nthe answer".into(),
-        }],
+        parts: vec![Part::Text { content: "the problem\nthe answer".into() }],
         timestamp: 0.0,
         id: "req.0".into(),
         ..Default::default()
@@ -286,9 +268,7 @@ fn test_render_user_message_keeps_think_like_text_verbatim() {
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "use <think> tags\nfor reasoning".into(),
-        }],
+        parts: vec![Part::Text { content: "use <think> tags\nfor reasoning".into() }],
         timestamp: 0.0,
         id: "req.0".into(),
         ..Default::default()
@@ -317,18 +297,14 @@ fn test_render_performance_1000_messages() {
     for i in 0..200 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("Message {} from user with some content here", i),
-            }],
+            parts: vec![Part::Text { content: format!("Message {} from user with some content here", i) }],
             timestamp: 0.0,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text {
-                content: format!("Response {} from agent with detailed explanation", i),
-            }],
+            parts: vec![Part::Text { content: format!("Response {} from agent with detailed explanation", i) }],
             timestamp: 0.0,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -359,13 +335,8 @@ fn test_stress_many_tool_calls() {
     let mut state = AppState::default();
     for i in 0..20 {
         simulate_tool_call(&mut state, i);
-        state.update(Event::TurnComplete {
-            id: format!("req.{}", i),
-            duration_secs: 1.0,
-        });
-        state.update(Event::Done {
-            id: format!("req.{}", i),
-        });
+        state.update(Event::TurnComplete { id: format!("req.{}", i), duration_secs: 1.0 });
+        state.update(Event::Done { id: format!("req.{}", i) });
         if i % 5 == 0 {
             terminal.draw(|f| view(f, &mut state)).expect("draw");
         }
@@ -386,12 +357,8 @@ fn think_blocks_not_rendered() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     // Response contains think tags
     state.update(Event::Response {
         id: "req.0".to_string(),

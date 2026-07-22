@@ -1,10 +1,10 @@
 //! Tests for harness_skills module.
 
 use crate::harness_skills::{
-    HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill,
-    LoopDetectorConfig, LoopDetectorSkill, SkillConfig, SkillRegistry, StartupContextConfig,
-    StartupContextSkill, ToolSchemaEnricherConfig, ToolSchemaEnricherSkill, TurnEndCtx,
-    TurnEndResult, TurnStartCtx, TurnStartResult, VerificationConfig, VerificationLoopSkill,
+    HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill, LoopDetectorConfig,
+    LoopDetectorSkill, SkillConfig, SkillRegistry, StartupContextConfig, StartupContextSkill, ToolSchemaEnricherConfig,
+    ToolSchemaEnricherSkill, TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult, VerificationConfig,
+    VerificationLoopSkill,
 };
 
 #[test]
@@ -26,10 +26,7 @@ fn skill_registry_respects_disabled_flag() {
     let mut config = HarnessConfig::default();
     config.skills.insert(
         "startup_context".into(),
-        SkillConfig {
-            enabled: false,
-            ..Default::default()
-        },
+        SkillConfig { enabled: false, ..Default::default() },
     );
     registry.set_config(config);
     assert!(registry.enabled_skills().is_empty());
@@ -44,11 +41,8 @@ fn on_turn_start_all_continue() {
     }));
     registry.register(LoopDetectorSkill::new(LoopDetectorConfig::default()));
 
-    let ctx = TurnStartCtx {
-        message: "Hello".into(),
-        system_prompt: "You are helpful".into(),
-        skills_context: "".into(),
-    };
+    let ctx =
+        TurnStartCtx { message: "Hello".into(), system_prompt: "You are helpful".into(), skills_context: "".into() };
 
     let result = registry.on_turn_start(&ctx);
     assert!(matches!(result, TurnStartResult::Continue));
@@ -77,11 +71,7 @@ fn on_turn_start_first_abort_wins() {
     registry.register(AbortSkill);
     registry.register(ContinueSkill);
 
-    let ctx = TurnStartCtx {
-        message: "Hello".into(),
-        system_prompt: "".into(),
-        skills_context: "".into(),
-    };
+    let ctx = TurnStartCtx { message: "Hello".into(), system_prompt: "".into(), skills_context: "".into() };
 
     let result = registry.on_turn_start(&ctx);
     match result {
@@ -146,11 +136,7 @@ async fn verification_loop_disabled_continues() {
         ..Default::default()
     });
 
-    let ctx = TurnEndCtx {
-        assistant_message: "```rust\nfn main() {}\n```".into(),
-        tool_call_count: 1,
-        success: true,
-    };
+    let ctx = TurnEndCtx { assistant_message: "```rust\nfn main() {}\n```".into(), tool_call_count: 1, success: true };
 
     let result = skill.on_turn_end(&ctx).await;
     assert!(matches!(result, TurnEndResult::Continue));
@@ -165,11 +151,7 @@ async fn verification_loop_no_command_continues() {
         ..Default::default()
     });
 
-    let ctx = TurnEndCtx {
-        assistant_message: "```rust\nfn main() {}\n```".into(),
-        tool_call_count: 1,
-        success: true,
-    };
+    let ctx = TurnEndCtx { assistant_message: "```rust\nfn main() {}\n```".into(), tool_call_count: 1, success: true };
 
     let result = skill.on_turn_end(&ctx).await;
     assert!(matches!(result, TurnEndResult::Continue));
@@ -236,11 +218,7 @@ fn hashline_edit_deserializes() {
 
 #[test]
 fn hashline_edit_serialize_round_trip() {
-    let edit = HashlineEdit {
-        line: 5,
-        hash: "def456".to_string(),
-        content: "test".to_string(),
-    };
+    let edit = HashlineEdit { line: 5, hash: "def456".to_string(), content: "test".to_string() };
     let json = serde_json::to_value(&edit).unwrap();
     let round_trip: HashlineEdit = serde_json::from_value(json).unwrap();
     assert_eq!(edit.line, round_trip.line);
@@ -293,10 +271,7 @@ fn schemas_contain_examples_when_enabled() {
 
 #[test]
 fn schemas_unchanged_when_disabled() {
-    let skill = ToolSchemaEnricherSkill::new(ToolSchemaEnricherConfig {
-        enabled: false,
-        ..Default::default()
-    });
+    let skill = ToolSchemaEnricherSkill::new(ToolSchemaEnricherConfig { enabled: false, ..Default::default() });
     let schemas = vec![serde_json::json!({
         "name": "bash",
         "description": "Run a bash command",
@@ -320,10 +295,8 @@ fn unknown_tool_no_examples() {
 
 #[test]
 fn skip_tool_excludes_examples() {
-    let skill = ToolSchemaEnricherSkill::new(ToolSchemaEnricherConfig {
-        enabled: true,
-        skip_tools: vec!["bash".to_string()],
-    });
+    let skill =
+        ToolSchemaEnricherSkill::new(ToolSchemaEnricherConfig { enabled: true, skip_tools: vec!["bash".to_string()] });
     let schemas = vec![
         serde_json::json!({"name": "bash", "input_schema": {"type": "object"}}),
         serde_json::json!({"name": "read_file", "input_schema": {"type": "object"}}),
@@ -375,10 +348,7 @@ fn loop_detector_ignores_successful_repetition() {
 
 #[test]
 fn loop_detector_disabled_returns_none() {
-    let skill = LoopDetectorSkill::new(LoopDetectorConfig {
-        enabled: false,
-        max_repeats: 3,
-    });
+    let skill = LoopDetectorSkill::new(LoopDetectorConfig { enabled: false, max_repeats: 3 });
     let input = serde_json::json!({"path": "test.rs"});
 
     for _ in 0..5 {
@@ -404,15 +374,8 @@ fn loop_detector_reset_clears_state() {
 
 #[test]
 fn startup_context_disabled_returns_continue() {
-    let skill = StartupContextSkill::new(StartupContextConfig {
-        enabled: false,
-        ..Default::default()
-    });
-    let ctx = TurnStartCtx {
-        message: "test".into(),
-        system_prompt: "sys".into(),
-        skills_context: "".into(),
-    };
+    let skill = StartupContextSkill::new(StartupContextConfig { enabled: false, ..Default::default() });
+    let ctx = TurnStartCtx { message: "test".into(), system_prompt: "sys".into(), skills_context: "".into() };
     assert!(matches!(
         skill.on_turn_start(&ctx),
         TurnStartResult::Continue
@@ -426,11 +389,7 @@ async fn startup_context_injects_workspace_context() {
         max_output_bytes: 2048,
         commands: vec!["pwd".into()],
     });
-    let ctx = TurnStartCtx {
-        message: "hello".into(),
-        system_prompt: "sys".into(),
-        skills_context: "".into(),
-    };
+    let ctx = TurnStartCtx { message: "hello".into(), system_prompt: "sys".into(), skills_context: "".into() };
     let result = skill.on_turn_start(&ctx);
     if let TurnStartResult::SkipWithMessage(msg) = result {
         assert!(msg.contains("=== Workspace Context ==="));

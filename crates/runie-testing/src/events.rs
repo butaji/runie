@@ -10,10 +10,7 @@ pub fn ev_response_created(id: impl Into<String>) -> Event {
 
 /// Text delta event for a response stream.
 pub fn ev_output_text_delta(id: impl Into<String>, text: impl Into<String>) -> Event {
-    Event::ResponseDelta {
-        id: id.into(),
-        content: text.into(),
-    }
+    Event::ResponseDelta { id: id.into(), content: text.into() }
 }
 
 /// Event emitted when a turn completes successfully.
@@ -23,10 +20,7 @@ pub fn ev_completed(id: impl Into<String>) -> Event {
 
 /// Event emitted when a turn fails.
 pub fn ev_error(id: impl Into<String>, message: impl Into<String>) -> Event {
-    Event::Error {
-        id: id.into(),
-        message: message.into(),
-    }
+    Event::Error { id: id.into(), message: message.into() }
 }
 
 /// Build a `ProviderEvent::TextDelta`.
@@ -36,9 +30,7 @@ pub fn llm_text_delta(text: impl Into<String>) -> ProviderEvent {
 
 /// Build a `ProviderEvent::Finish`.
 pub fn llm_finish() -> ProviderEvent {
-    ProviderEvent::Finish {
-        reason: StopReason::Stop,
-    }
+    ProviderEvent::Finish { reason: StopReason::Stop }
 }
 
 #[cfg(test)]

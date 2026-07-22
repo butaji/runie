@@ -30,10 +30,7 @@ mod registry;
 #[cfg(test)]
 mod tests;
 
-pub use dsl::{
-    cmd, Action, Command, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType,
-    FormHandler,
-};
+pub use dsl::{cmd, Action, Command, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType, FormHandler};
 pub use registry::{filter_commands, CommandRegistry, DialogKind, DialogState};
 
 /// One row in the command palette.
@@ -53,13 +50,7 @@ impl CommandRow {
         desc: impl Into<String>,
         event: crate::Event,
     ) -> Self {
-        Self {
-            category: category.into(),
-            name: name.into(),
-            desc: desc.into(),
-            aliases: Vec::new(),
-            event,
-        }
+        Self { category: category.into(), name: name.into(), desc: desc.into(), aliases: Vec::new(), event }
     }
 
     pub fn with_aliases(mut self, aliases: Vec<String>) -> Self {

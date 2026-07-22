@@ -1,4 +1,5 @@
 #![allow(clippy::all)]
+#![allow(clippy::too_many_lines)]
 //! Streaming tool-turn regression tests.
 
 use crate::event::Event;
@@ -15,65 +16,22 @@ fn streaming_tool_turn_renders_tool_result_and_final_response() {
 
     for event in [
         Event::Thinking { id: id.clone() },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "I'll ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "list ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "the ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "files ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "in ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "the ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "current ".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "directory.\n".to_string(),
-        },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "TOOL:list_dir:.".to_string(),
-        },
+        Event::ResponseDelta { id: id.clone(), content: "I'll ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "list ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "the ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "files ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "in ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "the ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "current ".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "directory.\n".to_string() },
+        Event::ResponseDelta { id: id.clone(), content: "TOOL:list_dir:.".to_string() },
         Event::ThoughtDone { id: id.clone() },
-        Event::ToolStart {
-            id: id.clone(),
-            name: "list_dir".to_string(),
-            input: serde_json::json!({ "path": "." }),
-        },
-        Event::ToolEnd {
-            id: id.clone(),
-            duration_secs: 0.5,
-            output: "Cargo.toml\nsrc/".to_string(),
-
-            input: None,
-        },
+        Event::ToolStart { id: id.clone(), name: "list_dir".to_string(), input: serde_json::json!({ "path": "." }) },
+        Event::ToolEnd { id: id.clone(), duration_secs: 0.5, output: "Cargo.toml\nsrc/".to_string(), input: None },
         Event::Thinking { id: id.clone() },
-        Event::ResponseDelta {
-            id: id.clone(),
-            content: "Done.".to_string(),
-        },
+        Event::ResponseDelta { id: id.clone(), content: "Done.".to_string() },
         Event::ThoughtDone { id: id.clone() },
-        Event::TurnComplete {
-            id: id.clone(),
-            duration_secs: 1.2,
-        },
+        Event::TurnComplete { id: id.clone(), duration_secs: 1.2 },
         Event::Done { id },
     ] {
         state.update(event);

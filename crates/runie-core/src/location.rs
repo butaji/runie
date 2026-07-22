@@ -128,11 +128,7 @@ pub fn parse_search_query(input: &str) -> SearchQuery {
         }
     }
 
-    SearchQuery {
-        text,
-        constraints,
-        location,
-    }
+    SearchQuery { text, constraints, location }
 }
 
 /// Extract a location suffix from a query string using a compiled regex.
@@ -146,9 +142,7 @@ fn extract_location(input: &str) -> (&str, Option<Location>) {
         let path = caps.name("path").map(|m| m.as_str()).unwrap_or("");
 
         // Only accept as a path if it looks like a filename or contains a path separator.
-        let looks_like_path = path.contains('/')
-            || path.contains('\\')
-            || (path.contains('.') && !path.ends_with('.'));
+        let looks_like_path = path.contains('/') || path.contains('\\') || (path.contains('.') && !path.ends_with('.'));
         if !looks_like_path {
             return (input, None);
         }
@@ -164,20 +158,17 @@ fn extract_location(input: &str) -> (&str, Option<Location>) {
             // `N:M` → Position
             (Some(line), Some(col), None, None) => Some(Location::Position { line, col }),
             // `N:M-P` → Range (column range: start line/col, same line, end col)
-            (Some(line), Some(col_s), Some(end_col), None) => Some(Location::Range {
-                start: (line, col_s),
-                end: (line, end_col),
-            }),
+            (Some(line), Some(col_s), Some(end_col), None) => {
+                Some(Location::Range { start: (line, col_s), end: (line, end_col) })
+            }
             // `N:M-P:Q` → Range (full range)
-            (Some(line), Some(col_s), Some(end_line), Some(end_col)) => Some(Location::Range {
-                start: (line, col_s),
-                end: (end_line, end_col),
-            }),
+            (Some(line), Some(col_s), Some(end_line), Some(end_col)) => {
+                Some(Location::Range { start: (line, col_s), end: (end_line, end_col) })
+            }
             // `N-P` → Range (line range: end_col=0)
-            (Some(start_line), None, Some(end_line), None) => Some(Location::Range {
-                start: (start_line, 0),
-                end: (end_line, 0),
-            }),
+            (Some(start_line), None, Some(end_line), None) => {
+                Some(Location::Range { start: (start_line, 0), end: (end_line, 0) })
+            }
             _ => None,
         };
 

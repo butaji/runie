@@ -102,8 +102,7 @@ fn copy_event_payload_does_not_include_older_messages() {
     );
 
     let result = state.handle_slash("/copy");
-    if let Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(text))) = result
-    {
+    if let Some(crate::commands::CommandResult::Event(crate::Event::CopyToClipboard(text))) = result {
         assert!(
             !text.contains("old response"),
             "should NOT copy older messages, got: {:?}",

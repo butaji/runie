@@ -180,9 +180,7 @@ fn user_message_card_has_bg_padding_and_margin() {
 
     // Locate the content row (the one containing the user text "hello").
     let content_row = (0..buf.area().height)
-        .find(|&y| {
-            (0..width).any(|x| buf[(x, y)].symbol() == "h" && buf[(x, y)].style().bg == Some(bg))
-        })
+        .find(|&y| (0..width).any(|x| buf[(x, y)].symbol() == "h" && buf[(x, y)].style().bg == Some(bg)))
         .expect("user content row with bg not found");
 
     let row_bg = |y: u16| -> bool { (2..width - 2).all(|x| buf[(x, y)].style().bg == Some(bg)) };

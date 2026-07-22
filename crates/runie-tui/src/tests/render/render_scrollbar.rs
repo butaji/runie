@@ -7,9 +7,7 @@ fn make_messages(count: usize) -> Vec<ChatMessage> {
     (0..count)
         .map(|i| ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("Message {} with some text here", i),
-            }],
+            parts: vec![Part::Text { content: format!("Message {} with some text here", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -114,9 +112,7 @@ fn test_scrollbar_shows_when_content_overflows_small() {
     // Single short message - still overflows due to margins
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![Part::Text {
-            content: "Hi".into(),
-        }],
+        parts: vec![Part::Text { content: "Hi".into() }],
         timestamp: 0.0,
         id: "u1".into(),
         ..Default::default()
@@ -128,9 +124,8 @@ fn test_scrollbar_shows_when_content_overflows_small() {
     let scrollbar_col = area.width - 1;
 
     // With margins and spacers, even short content overflows
-    let has_scrollbar_content = (0..area.height).any(|y| {
-        buf[(scrollbar_col, y)].symbol() == "▐" || buf[(scrollbar_col, y)].symbol() == "│"
-    });
+    let has_scrollbar_content =
+        (0..area.height).any(|y| buf[(scrollbar_col, y)].symbol() == "▐" || buf[(scrollbar_col, y)].symbol() == "│");
     assert!(
         has_scrollbar_content,
         "Scrollbar should show when content has margins"

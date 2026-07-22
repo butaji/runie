@@ -51,11 +51,9 @@ mod tests {
     #[test]
     fn validate_passes_matched_tool_call_and_result() {
         let mut msgs = vec![assistant("call a tool"), tool("result", "c1")];
-        msgs[0].parts.push(Part::ToolCall {
-            id: "c1".into(),
-            name: "bash".into(),
-            args: serde_json::json!({}),
-        });
+        msgs[0]
+            .parts
+            .push(Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) });
         let errs = validate_messages(&msgs);
         assert!(
             errs.is_empty(),
@@ -84,10 +82,7 @@ mod tests {
         let removed: Vec<_> = errs
             .iter()
             .filter_map(|e| match e {
-                SanitizeError::RemovedMessage {
-                    role: Role::Assistant,
-                    ..
-                } => Some(()),
+                SanitizeError::RemovedMessage { role: Role::Assistant, .. } => Some(()),
                 _ => None,
             })
             .collect();
@@ -110,11 +105,8 @@ mod tests {
             metadata: Default::default(),
             tool_call_id: None,
             provider_metadata: None,
-            parts: vec![Part::ToolCall {
-                id: "c1".into(),
-                name: "bash".into(),
-                args: serde_json::json!({}),
-            }],
+            parts: vec![Part::ToolCall { id: "c1".into(), name: "bash".into(), args: serde_json::json!({}) }],
+            hidden_params: None,
         });
         let errs = validate_messages(&msgs);
         assert!(

@@ -18,9 +18,8 @@ use crate::terminal::caps;
 use crossterm::{
     cursor::{Hide, SetCursorStyle, Show},
     event::{
-        DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
-        EnableFocusChange, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
-        PushKeyboardEnhancementFlags,
+        DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste, EnableFocusChange,
+        KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
     },
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     QueueableCommand,
@@ -33,8 +32,7 @@ use std::io;
 /// Capability detection is best-effort and intentionally does not fail
 /// setup; a conservative capability set is returned if detection is
 /// inconclusive.
-pub fn setup_terminal() -> io::Result<(Terminal<CrosstermBackend<std::io::Stdout>>, caps::TermCaps)>
-{
+pub fn setup_terminal() -> io::Result<(Terminal<CrosstermBackend<std::io::Stdout>>, caps::TermCaps)> {
     let capabilities = caps::detect_capabilities_from_env();
 
     crossterm::terminal::enable_raw_mode()?;
@@ -85,10 +83,7 @@ pub fn reset_keyboard_enhancements<W: io::Write>(writer: &mut W) -> io::Result<(
     reset_xterm_modify_other_keys(writer)
 }
 
-pub fn restore_terminal_graphics<W: io::Write>(
-    writer: &mut W,
-    capabilities: caps::TermCaps,
-) -> io::Result<()> {
+pub fn restore_terminal_graphics<W: io::Write>(writer: &mut W, capabilities: caps::TermCaps) -> io::Result<()> {
     enter_tui_mode(writer, &capabilities)?;
     let _ = push_keyboard_enhancement_flags(writer);
     Ok(())
@@ -190,11 +185,7 @@ mod tests {
             caps::MouseCapability::SgrExtended,
         ] {
             let mut buf = Vec::new();
-            let caps = caps::TermCaps {
-                mouse,
-                focus_tracking: true,
-                ..Default::default()
-            };
+            let caps = caps::TermCaps { mouse, focus_tracking: true, ..Default::default() };
             enter_tui_mode(&mut buf, &caps).unwrap();
             let s = String::from_utf8(buf).unwrap();
             for mode in ["?1000h", "?1002h", "?1003h", "?1006h", "?1015h"] {
@@ -209,11 +200,7 @@ mod tests {
     #[test]
     fn init_sequence_keeps_terminal_modes() {
         let mut buf = Vec::new();
-        let caps = caps::TermCaps {
-            mouse: caps::MouseCapability::Sgr,
-            focus_tracking: true,
-            ..Default::default()
-        };
+        let caps = caps::TermCaps { mouse: caps::MouseCapability::Sgr, focus_tracking: true, ..Default::default() };
         enter_tui_mode(&mut buf, &caps).unwrap();
         let s = String::from_utf8(buf).unwrap();
         assert!(

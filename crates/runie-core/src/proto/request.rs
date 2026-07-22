@@ -19,12 +19,7 @@ pub struct Request {
 impl Request {
     /// Create a new request with the current protocol version.
     pub fn new(method: impl Into<String>, params: Value) -> Self {
-        Self {
-            id: None,
-            method: method.into(),
-            params,
-            version: Version::current(),
-        }
+        Self { id: None, method: method.into(), params, version: Version::current() }
     }
 
     /// Set the request id.

@@ -18,9 +18,7 @@ const TC_END: &str = "[/TOOL_CALL]";
 
 // ─── Legacy TOOL: parser ──────────────────────────────────────────────────────
 
-pub(crate) fn parse_legacy_tools_in_line(
-    line: &str,
-) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+pub(crate) fn parse_legacy_tools_in_line(line: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     let mut results = Vec::new();
     let trimmed = line.trim();
     if let Some(rest) = trimmed.strip_prefix("TOOL:") {
@@ -60,11 +58,7 @@ pub(crate) fn parse_legacy_tool(payload: &str) -> Option<ParsedToolCall> {
         return None;
     }
     let args = build_legacy_args(name, a1, a2)?;
-    Some(ParsedToolCall {
-        name: name.to_owned(),
-        args,
-        id: None,
-    })
+    Some(ParsedToolCall { name: name.to_owned(), args, id: None })
 }
 
 fn parse_legacy_colon(t: &str) -> (&str, String, String) {
@@ -104,6 +98,7 @@ fn build_legacy_args(name: &str, a1: String, a2: String) -> Option<Value> {
 
 // ─── Arrow-to-JSON normalizer for [TOOL_CALL] markup ───────────────────────────
 
+#[allow(clippy::too_many_lines)]
 fn arrow_to_json(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut chars = input.chars().peekable();
@@ -170,11 +165,7 @@ fn try_parse_non_xml_tool(line: &str) -> Option<ParsedToolCall> {
         let name = v.get("tool")?.as_str()?;
         let args = v.get("args")?.as_object()?;
         if is_known_tool(name) {
-            return Some(ParsedToolCall {
-                name: name.to_owned(),
-                args: Value::Object(args.clone()),
-                id: None,
-            });
+            return Some(ParsedToolCall { name: name.to_owned(), args: Value::Object(args.clone()), id: None });
         }
     }
 
@@ -212,10 +203,7 @@ pub fn parse_tool_calls_fallible(text: &str) -> Vec<Result<ParsedToolCall, ToolP
     results
 }
 
-fn parse_line_strategies(
-    trimmed: &str,
-    original: &str,
-) -> Vec<Result<ParsedToolCall, ToolParseError>> {
+fn parse_line_strategies(trimmed: &str, original: &str) -> Vec<Result<ParsedToolCall, ToolParseError>> {
     // If the line looks like JSON (has '{'), try JSON first.
     // If it looks like markup (has [TOOL_CALL]), try it last.
     // Return errors for tool-like-but-invalid inputs so callers can report them.
@@ -227,10 +215,7 @@ fn parse_line_strategies(
             return vec![Ok(tool)];
         }
         // Looks like JSON but failed to parse — return an error.
-        return vec![Err(ToolParseError {
-            raw: original.to_owned(),
-            reason: "invalid JSON".into(),
-        })];
+        return vec![Err(ToolParseError { raw: original.to_owned(), reason: "invalid JSON".into() })];
     }
 
     if looks_like_markup {
@@ -328,8 +313,7 @@ mod tests {
     fn debug_buffer_positions() {
         use quick_xml::events::Event;
         use quick_xml::Reader;
-        let block =
-            "<invoke name=\"list_dir\">\n<parameter name=\"path\">.</parameter>\n</invoke>\n";
+        let block = "<invoke name=\"list_dir\">\n<parameter name=\"path\">.</parameter>\n</invoke>\n";
         let mut reader = Reader::from_str(block);
         reader.config_mut().trim_text(true);
         loop {

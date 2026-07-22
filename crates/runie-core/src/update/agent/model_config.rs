@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 use crate::actors::SessionMsg;
 use crate::model::AppState;
 use crate::update::dialog::dialog_toggle_event;
@@ -14,11 +16,7 @@ pub fn model_config_event(state: &mut AppState, event: crate::Event) {
 
 fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
     match event {
-        crate::Event::SwitchModel {
-            provider,
-            model,
-            explicit,
-        } => {
+        crate::Event::SwitchModel { provider, model, explicit } => {
             // Always switch during session replay (when restoring a session's model).
             // Skip only when non-explicit switch would override a user's explicit choice.
             // During replay, the session's model should always be restored.
@@ -39,22 +37,23 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             v.dirty = true;
             *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
                 kind: crate::commands::DialogKind::ModelSelector,
-                panels: crate::dialog::builders::model_reasoning_panel(
-                    provider,
-                    model,
-                    global,
-                    override_level,
-                ),
+                panels: crate::dialog::builders::model_reasoning_panel(provider, model, global, override_level),
             });
             true
         }
-        crate::Event::SwitchModelWithLevel {
-            provider,
-            model,
-            level,
-        } => {
+        crate::Event::SwitchModelWithLevel { provider, model, level } => {
             state.set_model_thinking_level(provider, model, *level);
-            state.switch_model(provider.clone(), model.clone(), true);
+            // Route to lead/worker config when picking from `/mode` dialog.
+            if let Some(role) = state.pending_model_role().filter(|r| !r.is_empty()) {
+                if role == "lead" {
+                    state.set_lead_model(provider, model);
+                } else {
+                    state.set_worker_model(provider, model);
+                }
+                state.set_pending_model_role(None);
+            } else {
+                state.switch_model(provider.clone(), model.clone(), true);
+            }
             true
         }
         crate::Event::SwitchTheme { name } => {
@@ -85,12 +84,17 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
             state.set_swarm_variant(variant);
             true
         }
-        crate::Event::SetModeAndSwarmVariant {
-            active,
-            swarm_variant,
-        } => {
+        crate::Event::SetModeAndSwarmVariant { active, swarm_variant } => {
             state.set_mode(active, None);
             state.set_swarm_variant(swarm_variant);
+            true
+        }
+        crate::Event::SetLeadModel { provider, model } => {
+            state.set_lead_model(provider, model);
+            true
+        }
+        crate::Event::SetWorkerModel { provider, model } => {
+            state.set_worker_model(provider, model);
             true
         }
         crate::Event::ToggleReadOnly => {
@@ -104,8 +108,7 @@ fn handle_main_events(state: &mut AppState, event: &crate::Event) -> bool {
 fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecision) {
     use crate::event::TransientLevel;
     let cwd = std::env::current_dir().unwrap_or_default();
-    let cwd_utf8 =
-        camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
     // Update state synchronously (mirrors TrustActor logic for unit test compatibility).
     // TrustActor also processes this async for persistence.
     state.set_trust_decision(cwd_utf8.clone(), decision);
@@ -132,10 +135,9 @@ fn handle_trust_project(state: &mut AppState, decision: crate::trust::TrustDecis
     if let Some(handles) = state.actor_handles() {
         let handles = handles.clone();
         let cwd_async = cwd_utf8;
-        let _ = handles.session.try_send(SessionMsg::SetTrust {
-            path: cwd_async,
-            decision,
-        });
+        let _ = handles
+            .session
+            .try_send(SessionMsg::SetTrust { path: cwd_async, decision });
     }
 }
 

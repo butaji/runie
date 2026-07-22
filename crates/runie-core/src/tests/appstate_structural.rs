@@ -211,10 +211,7 @@ fn moved_field_access_patterns() {
 /// Verify singletons remain on AppState (not moved to inner structs).
 #[test]
 fn singletons_remain_on_appstate() {
-    let mut state = AppState {
-        should_quit: true,
-        ..Default::default()
-    };
+    let mut state = AppState { should_quit: true, ..Default::default() };
     assert!(state.should_quit);
     assert!(state.open_dialog.is_none());
     assert!(state.dialog_back_stack.is_empty());

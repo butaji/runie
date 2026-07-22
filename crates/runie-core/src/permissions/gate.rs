@@ -3,9 +3,7 @@
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
-use super::{
-    ApprovalSink, PermissionAction, PermissionContext, PermissionManager, PermissionResult,
-};
+use super::{ApprovalSink, PermissionAction, PermissionContext, PermissionManager, PermissionResult};
 
 /// Combines a permission policy chain with an approval sink.
 #[derive(Clone)]
@@ -28,11 +26,7 @@ impl PermissionGate {
         sink: Arc<dyn ApprovalSink>,
         cancel_token: CancellationToken,
     ) -> Self {
-        Self {
-            manager: Arc::new(manager),
-            sink,
-            cancel_token,
-        }
+        Self { manager: Arc::new(manager), sink, cancel_token }
     }
 
     /// Evaluate the context against the policy chain and sink.
@@ -52,5 +46,23 @@ impl PermissionGate {
     /// Call this when the turn is aborted (e.g. via AbortTurn / ForceQuit).
     pub fn cancel_pending(&self) {
         self.cancel_token.cancel();
+    }
+
+    /// Get a reference to the approval sink.
+    pub fn sink_ref(&self) -> &Arc<dyn ApprovalSink> {
+        &self.sink
+    }
+
+    /// Clone this gate for a subagent, inheriting the parent's permission policies.
+    ///
+    /// This ensures subagents cannot bypass the parent session's deny rules.
+    /// The cloned gate shares the same permission manager but gets a fresh
+    /// cancellation token to allow independent abort handling.
+    pub fn clone_for_subagent(&self) -> Self {
+        Self {
+            manager: Arc::clone(&self.manager),
+            sink: Arc::clone(&self.sink),
+            cancel_token: CancellationToken::new(),
+        }
     }
 }

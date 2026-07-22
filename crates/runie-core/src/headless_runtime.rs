@@ -35,13 +35,9 @@ pub struct HeadlessRuntime {
 
 impl HeadlessRuntime {
     /// Spawn the runtime and wait for the initial config load.
-    pub async fn spawn(
-        bus: EventBus<Event>,
-        factory: Arc<dyn ProviderFactory>,
-    ) -> anyhow::Result<Self> {
+    pub async fn spawn(bus: EventBus<Event>, factory: Arc<dyn ProviderFactory>) -> anyhow::Result<Self> {
         let mut sub = bus.subscribe();
-        let (config_handle, config_actor, config_join) =
-            RactorConfigActor::spawn_default(bus.clone()).await?;
+        let (config_handle, config_actor, config_join) = RactorConfigActor::spawn_default(bus.clone()).await?;
         let (provider_handle, provider_actor, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_handle.clone(), factory).await?;
 
@@ -50,9 +46,7 @@ impl HeadlessRuntime {
         timeout(Duration::from_secs(2), async {
             loop {
                 match sub.recv().await {
-                    Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => {
-                        return Ok::<(), anyhow::Error>(())
-                    }
+                    Ok(Event::ConfigLoaded { .. }) | Ok(Event::Error { .. }) => return Ok::<(), anyhow::Error>(()),
                     Err(_) => return Ok::<(), anyhow::Error>(()),
                     // intentionally ignored: other events loop back
                     _ => {}
@@ -62,14 +56,7 @@ impl HeadlessRuntime {
         .await
         .map_err(|_| anyhow::anyhow!("timed out waiting for config to load"))??;
 
-        Ok(Self {
-            config_handle,
-            provider_handle,
-            config_actor,
-            provider_actor,
-            config_join,
-            provider_join,
-        })
+        Ok(Self { config_handle, provider_handle, config_actor, provider_actor, config_join, provider_join })
     }
 
     /// Gracefully shutdown all actors with a timeout.
@@ -89,11 +76,7 @@ impl HeadlessRuntime {
     }
 
     /// Resolve provider/model from explicit args or config defaults and build it.
-    pub async fn provider(
-        &self,
-        provider: Option<&str>,
-        model: Option<&str>,
-    ) -> Result<BuiltProvider, ProviderError> {
+    pub async fn provider(&self, provider: Option<&str>, model: Option<&str>) -> Result<BuiltProvider, ProviderError> {
         let config = self.config().await.ok_or(ProviderError::ConfigNotLoaded)?;
         let provider_name = provider
             .map(String::from)

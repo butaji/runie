@@ -11,12 +11,7 @@ fn key_panel() -> Panel {
 fn set_field(panel: &mut Panel, value: &str, cursor_pos: usize) {
     panel.form_values.insert("key".into(), value.into());
     if let Some(idx) = panel.selected_form_field() {
-        if let crate::dialog::PanelItem::FormField {
-            value: v,
-            cursor_pos: cp,
-            ..
-        } = &mut panel.items[idx]
-        {
+        if let crate::dialog::PanelItem::FormField { value: v, cursor_pos: cp, .. } = &mut panel.items[idx] {
             *v = value.into();
             *cp = cursor_pos;
         }
@@ -89,11 +84,8 @@ fn paste_ignores_paste_when_no_field_selected() {
 fn submit_on_toggle_checkbox_keeps_form_open() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    let mut panel = Panel::new("settings", "Settings").toggle(
-        "Read-Only",
-        false,
-        ItemAction::Toggle("read_only".into()),
-    );
+    let mut panel =
+        Panel::new("settings", "Settings").toggle("Read-Only", false, ItemAction::Toggle("read_only".into()));
 
     let action = form_panel_action(&mut state, &mut panel, Event::Submit);
 
@@ -134,8 +126,7 @@ fn submit_on_emit_toggle_checkbox_updates_state_and_keeps_open() {
 #[test]
 fn submit_on_emit_action_dispatches_event() {
     let mut state = AppState::default();
-    let mut panel =
-        Panel::new("models", "Models").item("_Save", ItemAction::Emit(crate::Event::Save));
+    let mut panel = Panel::new("models", "Models").item("_Save", ItemAction::Emit(crate::Event::Save));
 
     let action = form_panel_action(&mut state, &mut panel, Event::Submit);
 

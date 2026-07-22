@@ -131,11 +131,7 @@ impl PlanStore {
                 created_at: Utc::now().to_rfc3339(),
             })
         } else {
-            PlanMeta {
-                id: plan_id.0.to_string(),
-                session_id: String::new(),
-                created_at: Utc::now().to_rfc3339(),
-            }
+            PlanMeta { id: plan_id.0.to_string(), session_id: String::new(), created_at: Utc::now().to_rfc3339() }
         };
         let created_at = DateTime::parse_from_rfc3339(&meta.created_at)
             .map(|dt| dt.with_timezone(&Utc))
@@ -195,12 +191,8 @@ impl PlanStore {
             return Ok(None);
         };
         let new_id = PlanId::new();
-        let new_plan = Plan {
-            id: new_id.clone(),
-            content: plan.content,
-            session_id: plan.session_id,
-            created_at: Utc::now(),
-        };
+        let new_plan =
+            Plan { id: new_id.clone(), content: plan.content, session_id: plan.session_id, created_at: Utc::now() };
         self.save(&new_plan)?;
         Ok(Some(new_id))
     }

@@ -8,11 +8,7 @@ fn tool_output_truncated_to_max_lines() {
     state.config.truncation.max_lines = 3;
     state.config.truncation.max_bytes = 100_000;
 
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "bash".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "bash".into(), input: serde_json::Value::Null });
     state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         input: None,
@@ -46,11 +42,7 @@ fn tool_output_truncated_to_max_bytes() {
     state.config.truncation.max_lines = 10_000;
     state.config.truncation.max_bytes = 10;
 
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "bash".into(),
-        input: serde_json::Value::Null,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "bash".into(), input: serde_json::Value::Null });
     state.update(crate::Event::ToolEnd {
         id: "".to_string(),
         input: None,

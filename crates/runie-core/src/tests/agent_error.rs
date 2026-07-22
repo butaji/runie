@@ -47,10 +47,7 @@ fn agent_error_resets_timers() {
     state.agent.thinking_started_at = Some(std::time::Instant::now());
     state.agent.tool_started_at = Some(std::time::Instant::now());
 
-    state.update(crate::Event::Error {
-        id: "req.0".to_string(),
-        message: "Provider error".to_string(),
-    });
+    state.update(crate::Event::Error { id: "req.0".to_string(), message: "Provider error".to_string() });
 
     assert!(state.agent.turn_started_at.is_none());
     assert!(state.agent.thinking_started_at.is_none());
@@ -62,10 +59,7 @@ fn agent_error_inserts_error_message() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
 
-    state.update(crate::Event::Error {
-        id: "req.0".to_string(),
-        message: "Missing API key".to_string(),
-    });
+    state.update(crate::Event::Error { id: "req.0".to_string(), message: "Missing API key".to_string() });
 
     let error_msg = state
         .session
@@ -82,10 +76,7 @@ fn agent_error_clears_current_request_id() {
 
     state.agent.current_request_id = Some("req.0".to_string());
 
-    state.update(crate::Event::Error {
-        id: "req.0".to_string(),
-        message: "Provider error".to_string(),
-    });
+    state.update(crate::Event::Error { id: "req.0".to_string(), message: "Provider error".to_string() });
 
     assert!(state.agent.current_request_id.is_none());
 }
@@ -101,10 +92,7 @@ fn agent_error_clears_streaming_and_thought_state() {
     state.agent.last_assistant_index = Some(2);
     state.view.vim_nav_pending = true;
 
-    state.update(crate::Event::Error {
-        id: "req.0".to_string(),
-        message: "Provider error".to_string(),
-    });
+    state.update(crate::Event::Error { id: "req.0".to_string(), message: "Provider error".to_string() });
 
     assert_eq!(state.agent.turn_tokens_out, 0);
     assert_eq!(state.agent.intermediate_step_count, 0);
@@ -122,10 +110,7 @@ fn agent_error_resets_streaming_buffer() {
     state.agent.streaming_buffer.push_delta("```rust\npartial");
     assert!(state.agent.streaming_buffer.has_pending_content());
 
-    state.update(crate::Event::Error {
-        id: "req.0".to_string(),
-        message: "Provider error".to_string(),
-    });
+    state.update(crate::Event::Error { id: "req.0".to_string(), message: "Provider error".to_string() });
 
     assert!(!state.agent.streaming_buffer.has_pending_content());
 }
@@ -136,15 +121,12 @@ fn agent_error_delivers_queued_messages() {
     state.agent.turn_active = true;
 
     // Push to agent state message queue.
-    state.agent_state_mut().message_queue.push(QueuedMessage {
-        content: "follow up".to_string(),
-        kind: QueuedMessageKind::FollowUp,
-    });
+    state
+        .agent_state_mut()
+        .message_queue
+        .push(QueuedMessage { content: "follow up".to_string(), kind: QueuedMessageKind::FollowUp });
 
-    state.update(crate::Event::Error {
-        id: "req.0".to_string(),
-        message: "Provider error".to_string(),
-    });
+    state.update(crate::Event::Error { id: "req.0".to_string(), message: "Provider error".to_string() });
 
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.agent.request_queue.len(), 1);
@@ -171,15 +153,9 @@ fn agent_error_after_streamed_reasoning_stays_in_feed() {
     // think filter holds it back, so no assistant message exists yet),
     // then the stream fails — e.g. a 429 surfaced after reasoning.
     state.update(crate::Event::Thinking { id: id.clone() });
-    state.update(crate::Event::ResponseDelta {
-        id: id.clone(),
-        content: "<think>analyzing the request".into(),
-    });
+    state.update(crate::Event::ResponseDelta { id: id.clone(), content: "<think>analyzing the request".into() });
     state.update(crate::Event::ThoughtDone { id: id.clone() });
-    state.update(crate::Event::Error {
-        id: id.clone(),
-        message: "Agent error: Rate limited".into(),
-    });
+    state.update(crate::Event::Error { id: id.clone(), message: "Agent error: Rate limited".into() });
     state.update(crate::Event::Done { id: id.clone() });
 
     assert!(
@@ -204,10 +180,7 @@ fn errored_turn_leaves_terminal_marker_in_feed() {
     let id = "req.0".to_string();
 
     state.update(crate::Event::Thinking { id: id.clone() });
-    state.update(crate::Event::Error {
-        id: id.clone(),
-        message: "Agent error: Rate limited".into(),
-    });
+    state.update(crate::Event::Error { id: id.clone(), message: "Agent error: Rate limited".into() });
     state.update(crate::Event::Done { id: id.clone() });
 
     let has_error = feed_has_error(&state, "Error: Agent error: Rate limited");

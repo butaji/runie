@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! UI Elements - Building blocks for the DSL
 
 #[derive(Debug, Clone)]
@@ -154,20 +156,15 @@ pub enum Element {
 }
 
 /// Terminal image rendering protocol
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImageProtocol {
     /// iTerm2 inline image protocol: \033]1337;File=inline=1:...
+    #[default]
     ITerm2,
     /// Kitty graphics protocol: \033_G...;...\033\\
     Kitty,
     /// Sixel graphics protocol (legacy terminals)
     Sixel,
-}
-
-impl Default for ImageProtocol {
-    fn default() -> Self {
-        ImageProtocol::ITerm2
-    }
 }
 
 /// Type of diff output
@@ -207,11 +204,7 @@ impl ElementBuilder {
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
             Element::AnthropicThinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ToolRunning { timestamp: ts, .. } => *ts = timestamp,
-            Element::ToolDone {
-                timestamp: ts,
-                finished_at,
-                ..
-            } => {
+            Element::ToolDone { timestamp: ts, finished_at, .. } => {
                 *ts = timestamp;
                 if finished_at.is_none() {
                     *finished_at = Some(std::time::Instant::now());
@@ -235,29 +228,16 @@ impl ElementBuilder {
 
 impl Element {
     pub fn user(content: impl Into<String>) -> ElementBuilder {
-        ElementBuilder(Element::UserMessage {
-            content: content.into(),
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::UserMessage { content: content.into(), timestamp: 0.0 })
     }
     pub fn agent(content: impl Into<String>) -> ElementBuilder {
-        ElementBuilder(Element::AgentMessage {
-            content: content.into(),
-            timestamp: 0.0,
-            provider: String::new(),
-        })
+        ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0, provider: String::new() })
     }
     pub fn thinking(started: std::time::Instant) -> ElementBuilder {
-        ElementBuilder(Element::Thinking {
-            started,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::Thinking { started, timestamp: 0.0 })
     }
     pub fn thought(content: impl Into<String>) -> ElementBuilder {
-        ElementBuilder(Element::ThoughtMarker {
-            content: content.into(),
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::ThoughtMarker { content: content.into(), timestamp: 0.0 })
     }
     pub fn thought_summary(content: impl Into<String>, duration_secs: f64) -> ElementBuilder {
         ElementBuilder(Element::ThoughtSummary {
@@ -270,10 +250,7 @@ impl Element {
     /// A thought summary with no hidden body — renders without the `[+]`
     /// expand affordance. Used for duration-only thoughts ("◆ Thought for
     /// 2.3s") where there is nothing to expand.
-    pub fn thought_summary_static(
-        content: impl Into<String>,
-        duration_secs: f64,
-    ) -> ElementBuilder {
+    pub fn thought_summary_static(content: impl Into<String>, duration_secs: f64) -> ElementBuilder {
         ElementBuilder(Element::ThoughtSummary {
             content: content.into(),
             duration_secs,
@@ -304,12 +281,7 @@ impl Element {
         args: impl Into<String>,
         started: std::time::Instant,
     ) -> ElementBuilder {
-        ElementBuilder(Element::ToolRunning {
-            name: name.into(),
-            args: args.into(),
-            started,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::ToolRunning { name: name.into(), args: args.into(), started, timestamp: 0.0 })
     }
     pub fn tool_done(
         name: impl Into<String>,
@@ -331,11 +303,7 @@ impl Element {
         })
     }
     pub fn tool_summary(name: impl Into<String>, duration_secs: f64) -> ElementBuilder {
-        ElementBuilder(Element::ToolSummary {
-            name: name.into(),
-            duration_secs,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::ToolSummary { name: name.into(), duration_secs, timestamp: 0.0 })
     }
     /// Tool call requiring user confirmation
     pub fn tool_confirmation(
@@ -353,11 +321,7 @@ impl Element {
         })
     }
     pub fn context_group(tools: Vec<Element>, collapsed: bool) -> ElementBuilder {
-        ElementBuilder(Element::ContextGroup {
-            tools,
-            collapsed,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::ContextGroup { tools, collapsed, timestamp: 0.0 })
     }
     /// A swarm worker lifecycle row. `started` is `Some` only while the
     /// worker is Running (spinner animation); `expanded` is set later by the
@@ -387,19 +351,13 @@ impl Element {
         })
     }
     pub fn turn_complete(duration_secs: f64) -> ElementBuilder {
-        ElementBuilder(Element::TurnComplete {
-            duration_secs,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::TurnComplete { duration_secs, timestamp: 0.0 })
     }
     pub fn spacer() -> ElementBuilder {
         ElementBuilder(Element::Spacer { timestamp: 0.0 })
     }
     /// Inline image element
-    pub fn image(
-        data: impl Into<String>,
-        mime_type: impl Into<String>,
-    ) -> ElementBuilder {
+    pub fn image(data: impl Into<String>, mime_type: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::Image {
             data: data.into(),
             mime_type: mime_type.into(),
@@ -411,11 +369,7 @@ impl Element {
     }
     /// Structured data part
     pub fn data_part(data: impl Into<String>, format_string: Option<String>) -> ElementBuilder {
-        ElementBuilder(Element::DataPart {
-            data: data.into(),
-            format_string,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::DataPart { data: data.into(), format_string, timestamp: 0.0 })
     }
     /// Markdown table
     pub fn markdown_table(
@@ -423,40 +377,26 @@ impl Element {
         rows: Vec<Vec<String>>,
         alignments: Vec<Option<bool>>,
     ) -> ElementBuilder {
-        ElementBuilder(Element::MarkdownTable {
-            headers,
-            rows,
-            alignments,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::MarkdownTable { headers, rows, alignments, timestamp: 0.0 })
     }
     /// Diff output
     pub fn diff_output(content: impl Into<String>, diff_type: DiffType) -> ElementBuilder {
-        ElementBuilder(Element::DiffOutput {
-            content: content.into(),
-            diff_type,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::DiffOutput { content: content.into(), diff_type, timestamp: 0.0 })
     }
     /// Web search call with results
     pub fn web_search_call(query: impl Into<String>, results: Vec<WebSearchResult>) -> ElementBuilder {
-        ElementBuilder(Element::WebSearchCall {
-            query: query.into(),
-            results,
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::WebSearchCall { query: query.into(), results, timestamp: 0.0 })
     }
     /// ANSI styled content
     pub fn ansi_styled(raw: impl Into<String>, plain: impl Into<String>) -> ElementBuilder {
-        ElementBuilder(Element::AnsiStyled {
-            raw_content: raw.into(),
-            plain_text: plain.into(),
-            timestamp: 0.0,
-        })
+        ElementBuilder(Element::AnsiStyled { raw_content: raw.into(), plain_text: plain.into(), timestamp: 0.0 })
     }
 
     pub fn is_thought(&self) -> bool {
-        matches!(self, Element::ThoughtMarker { .. } | Element::AnthropicThinking { .. })
+        matches!(
+            self,
+            Element::ThoughtMarker { .. } | Element::AnthropicThinking { .. }
+        )
     }
 
     /// Update the timestamp used to order this element in the feed.
@@ -577,10 +517,7 @@ pub struct Feed {
 
 impl Feed {
     pub fn new() -> Self {
-        Self {
-            elements: vec![],
-            posts: vec![],
-        }
+        Self { elements: vec![], posts: vec![] }
     }
 
     pub fn push(mut self, element: Element) -> Self {

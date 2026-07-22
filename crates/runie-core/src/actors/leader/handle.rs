@@ -119,6 +119,7 @@ impl LeaderHandle {
     ///
     /// This method never panics, even if the `LeaderHandle` was cloned.
     /// Subsequent clones will have `None` for the joins field after the first shutdown.
+    #[allow(clippy::too_many_lines)]
     pub async fn shutdown(mut self) {
         use super::messages::LeaderCommand;
         let _ = self.cmd_tx.send(LeaderCommand::Shutdown).await;

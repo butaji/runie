@@ -27,29 +27,17 @@ impl std::error::Error for Error {}
 impl Error {
     /// Build a parse error.
     pub fn parse(message: impl Into<String>) -> Self {
-        Self {
-            code: -32700,
-            message: message.into(),
-            data: None,
-        }
+        Self { code: -32700, message: message.into(), data: None }
     }
 
     /// Build a method-not-found error.
     pub fn method_not_found(method: impl Into<String>) -> Self {
-        Self {
-            code: -32601,
-            message: method.into(),
-            data: None,
-        }
+        Self { code: -32601, message: method.into(), data: None }
     }
 
     /// Build an internal error.
     pub fn internal(message: impl Into<String>) -> Self {
-        Self {
-            code: -32603,
-            message: message.into(),
-            data: None,
-        }
+        Self { code: -32603, message: message.into(), data: None }
     }
 }
 

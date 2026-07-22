@@ -6,9 +6,7 @@ use runie_testing::fresh_state;
 fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        parts: vec![Part::Text {
-            content: content.to_string(),
-        }],
+        parts: vec![Part::Text { content: content.to_string() }],
         timestamp: 0.0,
         id: id.into(),
         ..Default::default()
@@ -103,9 +101,7 @@ fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        parts: vec![Part::Text {
-            content: "hi".into(),
-        }],
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -147,9 +143,7 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        parts: vec![Part::Text {
-            content: "hi".into(),
-        }],
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
@@ -172,15 +166,12 @@ fn thinking_element_stores_instant_not_elapsed() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::User,
-        parts: vec![Part::Text {
-            content: "hi".into(),
-        }],
+        parts: vec![Part::Text { content: "hi".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.agent.thinking_started_at =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
+    state.agent.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
     state.agent.turn_active = true;
     state.refresh_after_message_change();
 
@@ -209,15 +200,12 @@ fn tool_running_element_stores_instant_not_elapsed() {
     let mut state = fresh_state();
     state.session.messages.push(runie_core::model::ChatMessage {
         role: runie_core::model::Role::Tool,
-        parts: vec![Part::Text {
-            content: "⠋ Running list_files...".into(),
-        }],
+        parts: vec![Part::Text { content: "⠋ Running list_files...".into() }],
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.agent.tool_started_at =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
+    state.agent.tool_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
     state.agent.turn_active = true;
     state.refresh_after_message_change();
 
@@ -244,8 +232,7 @@ fn tool_running_element_stores_instant_not_elapsed() {
 fn timer_advances_without_cache_rebuild() {
     let mut state = fresh_state();
     push_user_msg(&mut state, "hi", "t1");
-    state.agent.thinking_started_at =
-        Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
+    state.agent.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
     state.agent.turn_active = true;
     state.refresh_after_message_change();
 
@@ -305,9 +292,7 @@ fn external_editor_done_updates_input() {
     assert_eq!(state.input.input, "old");
     assert_eq!(state.input.cursor_pos, 3);
 
-    state.update(Event::ExternalEditorDone {
-        content: "new text".to_string(),
-    });
+    state.update(Event::ExternalEditorDone { content: "new text".to_string() });
     assert_eq!(state.input.input, "new text");
     assert_eq!(state.input.cursor_pos, 8);
 }

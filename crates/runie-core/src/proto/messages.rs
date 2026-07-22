@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use crate::hidden_params::{AsHiddenParams, HiddenParams};
 use super::error::Error;
 use super::notification::Notification;
 use super::request::Request;
 use super::response::Response;
 use super::version::Version;
+use crate::hidden_params::{AsHiddenParams, HiddenParams};
 
 /// Any protocol message on the wire.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -67,10 +67,7 @@ pub struct MessageWithHiddenParams {
 impl MessageWithHiddenParams {
     /// Create a new wrapper with hidden parameters.
     pub fn new(message: Message, params: HiddenParams) -> Self {
-        Self {
-            message,
-            hidden: Arc::new(params),
-        }
+        Self { message, hidden: Arc::new(params) }
     }
 
     /// Create a new wrapper with hidden parameters (arc form).
@@ -80,10 +77,7 @@ impl MessageWithHiddenParams {
 
     /// Wrap a message with no hidden parameters.
     pub fn from_message(message: Message) -> Self {
-        Self {
-            message,
-            hidden: Arc::new(HiddenParams::default()),
-        }
+        Self { message, hidden: Arc::new(HiddenParams::default()) }
     }
 
     /// Set hidden parameters.

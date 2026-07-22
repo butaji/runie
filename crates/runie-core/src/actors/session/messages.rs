@@ -18,10 +18,7 @@ use crate::trust::TrustDecision;
 #[derive(Debug, Clone)]
 pub enum PersistenceMsg {
     /// Set a trust decision for a project path.
-    SetTrust {
-        path: Utf8PathBuf,
-        decision: TrustDecision,
-    },
+    SetTrust { path: Utf8PathBuf, decision: TrustDecision },
     /// Append one entry to the input history file.
     AppendHistory { entry: String },
 }
@@ -55,23 +52,13 @@ pub enum SessionStoreMsg {
 #[derive(Debug, Clone)]
 pub enum SessionMutationMsg {
     /// Add a user message with optional image attachments.
-    AddUserMessage {
-        content: String,
-        images: Vec<String>,
-    },
+    AddUserMessage { content: String, images: Vec<String> },
     /// Add a system message.
     AddSystemMessage { content: String },
     /// Add a tool message.
-    AddToolMessage {
-        id: String,
-        name: String,
-        content: String,
-    },
+    AddToolMessage { id: String, name: String, content: String },
     /// Update an existing tool message.
-    UpdateToolMessage {
-        id_contains: String,
-        content: String,
-    },
+    UpdateToolMessage { id_contains: String, content: String },
     /// Add a turn-complete message.
     AddTurnComplete { id: String, content: String },
     /// Add an error message.

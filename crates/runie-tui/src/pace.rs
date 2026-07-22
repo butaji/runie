@@ -15,10 +15,7 @@ pub struct PacedRenderer {
 impl PacedRenderer {
     /// Create a new empty renderer.
     pub fn new() -> Self {
-        Self {
-            received: String::new(),
-            displayed: 0,
-        }
+        Self { received: String::new(), displayed: 0 }
     }
 
     /// Append more received text.

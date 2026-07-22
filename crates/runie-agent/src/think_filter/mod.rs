@@ -81,18 +81,14 @@ impl ThinkFilter {
                 if !self.buffer.is_empty() {
                     out.push(ProviderEvent::ThinkingDelta(self.buffer.clone()));
                 }
-                out.push(ProviderEvent::ThinkingEnd {
-                    id: "inline".into(),
-                });
+                out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
             }
             ThinkState::WaitingPartialOpen => {
                 emit_thinking_start(&mut out);
                 if !self.buffer.is_empty() {
                     out.push(ProviderEvent::ThinkingDelta(self.buffer.clone()));
                 }
-                out.push(ProviderEvent::ThinkingEnd {
-                    id: "inline".into(),
-                });
+                out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
             }
             _ if !self.buffer.is_empty() => {
                 out.push(ProviderEvent::TextDelta(self.buffer.clone()));
@@ -108,12 +104,7 @@ impl ThinkFilter {
     // Post-thought: skip the duplicate </thinking> then return to outside
     // =========================================================================
 
-    fn consume_post_thought(
-        &mut self,
-        text: &str,
-        pos: usize,
-        out: &mut Vec<ProviderEvent>,
-    ) -> usize {
+    fn consume_post_thought(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         self.state = ThinkState::Outside;
         let remaining = &text[pos..];
         let ws_len = remaining.chars().take_while(|c| c.is_whitespace()).count();
@@ -139,9 +130,7 @@ impl ThinkFilter {
     fn consume_outside(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         let remaining = &text[pos..];
         // Check for partial opening tag at start.
-        if starts_with_opening_tag(remaining).is_none()
-            && starts_partial_opening_tag(remaining).is_some()
-        {
+        if starts_with_opening_tag(remaining).is_none() && starts_partial_opening_tag(remaining).is_some() {
             self.buffer = remaining.to_owned();
             self.state = ThinkState::WaitingPartialOpen;
             return text.len();
@@ -264,15 +253,11 @@ fn emit_thinking(out: &mut Vec<ProviderEvent>, text: String) {
 }
 
 fn emit_thinking_start(out: &mut Vec<ProviderEvent>) {
-    out.push(ProviderEvent::ThinkingStart {
-        id: "inline".into(),
-    });
+    out.push(ProviderEvent::ThinkingStart { id: "inline".into() });
 }
 
 fn emit_thinking_end(out: &mut Vec<ProviderEvent>) {
-    out.push(ProviderEvent::ThinkingEnd {
-        id: "inline".into(),
-    });
+    out.push(ProviderEvent::ThinkingEnd { id: "inline".into() });
 }
 
 // ============================================================================

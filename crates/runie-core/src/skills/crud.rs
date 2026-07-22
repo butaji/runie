@@ -35,6 +35,10 @@ pub fn create_skill(name: &str, description: &str, content: &str) -> Result<Skil
         context: String::new(),
         user_invocable: true,
         file_path: skill_md.into(),
+        scope: SkillScope::User,
+        enabled: true,
+        plugin_name: None,
+        ignore_paths: vec![],
     })
 }
 
@@ -69,6 +73,10 @@ pub fn update_skill(name: &str, description: Option<&str>, content: Option<&str>
         context: new_content.to_string(),
         user_invocable: skill.user_invocable,
         file_path: skill.file_path.clone(),
+        scope: skill.scope.clone(),
+        enabled: skill.enabled,
+        plugin_name: skill.plugin_name.clone(),
+        ignore_paths: skill.ignore_paths.clone(),
     })
 }
 

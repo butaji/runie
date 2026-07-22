@@ -6,18 +6,10 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Event;
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
-    ScopedModel {
-        provider: provider.into(),
-        name: name.into(),
-        enabled,
-    }
+    ScopedModel { provider: provider.into(), name: name.into(), enabled }
 }
 
-fn rect_contains_text(
-    buf: &ratatui::buffer::Buffer,
-    rect: ratatui::layout::Rect,
-    text: &str,
-) -> bool {
+fn rect_contains_text(buf: &ratatui::buffer::Buffer, rect: ratatui::layout::Rect, text: &str) -> bool {
     for y in rect.y..rect.y + rect.height {
         let line: String = (rect.x..rect.x + rect.width)
             .map(|x| buf[(x, y)].symbol())
@@ -41,21 +33,11 @@ fn make_overflowing_models() -> Vec<ScopedModel> {
 }
 
 fn popup_outer_rect() -> ratatui::layout::Rect {
-    ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    }
+    ratatui::layout::Rect { x: 10, y: 3, width: 60, height: 18 }
 }
 
 fn popup_inner_rect() -> ratatui::layout::Rect {
-    ratatui::layout::Rect {
-        x: 11,
-        y: 4,
-        width: 58,
-        height: 16,
-    }
+    ratatui::layout::Rect { x: 11, y: 4, width: 58, height: 16 }
 }
 
 fn render_dialog(state: &mut AppState) -> ratatui::buffer::Buffer {

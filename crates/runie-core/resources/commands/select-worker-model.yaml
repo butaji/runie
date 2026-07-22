@@ -1,0 +1,7 @@
+# Select worker model for swarm orchestration
+name: select-worker-model
+description: Pick the worker (executor) model for swarm mode
+category: System
+sub: false
+type: handler
+handler: select-worker-model

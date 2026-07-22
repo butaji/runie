@@ -285,8 +285,7 @@ fn keybindings_json_migration() {
     std::fs::write(&config_path, "version = 2\nprovider = \"openai\"\n").unwrap();
 
     // Parse and migrate with the temp config path
-    let mut value: toml::Value =
-        toml::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+    let mut value: toml::Value = toml::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
     crate::config::migrate::migrate_with_path(&mut value, Some(config_path.clone())).unwrap();
 
     // After migration, keybindings should be in config

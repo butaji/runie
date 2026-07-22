@@ -3,12 +3,8 @@
 use crate::ChatMessage;
 
 /// Share session messages to GitHub gist (blocking).
-pub fn share_session_sync(
-    messages: &[ChatMessage],
-    display_name: Option<&str>,
-) -> Result<String, String> {
-    let token = std::env::var("GITHUB_TOKEN")
-        .map_err(|_| "GITHUB_TOKEN environment variable not set".to_string())?;
+pub fn share_session_sync(messages: &[ChatMessage], display_name: Option<&str>) -> Result<String, String> {
+    let token = std::env::var("GITHUB_TOKEN").map_err(|_| "GITHUB_TOKEN environment variable not set".to_string())?;
 
     let content = crate::format_as_markdown(messages, display_name);
     let description = display_name.unwrap_or("runie session");

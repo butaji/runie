@@ -48,10 +48,7 @@ impl SchemaCache {
     pub async fn new(cache_dir: PathBuf) -> anyhow::Result<Arc<Self>> {
         // Ensure cache directory exists
         tokio::fs::create_dir_all(&cache_dir).await?;
-        let cache = Arc::new(Self {
-            memory: RwLock::new(HashMap::new()),
-            cache_dir,
-        });
+        let cache = Arc::new(Self { memory: RwLock::new(HashMap::new()), cache_dir });
         cache.load_from_disk().await?;
         Ok(cache)
     }
@@ -94,18 +91,9 @@ impl SchemaCache {
     }
 
     /// Store cached schemas for a server.
-    pub async fn put(
-        &self,
-        server_name: &str,
-        server: &McpServer,
-        tools: Vec<CachedToolSchema>,
-    ) -> anyhow::Result<()> {
+    pub async fn put(&self, server_name: &str, server: &McpServer, tools: Vec<CachedToolSchema>) -> anyhow::Result<()> {
         let key = Self::compute_cache_key(server);
-        let schemas = CachedServerSchemas {
-            server_name: key,
-            cached_at: chrono::Utc::now(),
-            tools,
-        };
+        let schemas = CachedServerSchemas { server_name: key, cached_at: chrono::Utc::now(), tools };
 
         // Update memory
         {
@@ -151,11 +139,7 @@ mod tests {
     fn cache_key_deterministic() {
         let server = McpServer {
             transport: crate::config::McpTransport::Stdio,
-            command: vec![
-                "npx".to_string(),
-                "-y".to_string(),
-                "@mcp/server".to_string(),
-            ],
+            command: vec!["npx".to_string(), "-y".to_string(), "@mcp/server".to_string()],
             url: None,
             headers: Default::default(),
             scope: crate::config::ConfigScope::Global,

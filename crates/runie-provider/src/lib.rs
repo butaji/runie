@@ -24,9 +24,7 @@ pub mod mock;
 pub mod replay;
 
 #[cfg(feature = "replay")]
-pub use replay::{
-    compute_replay_key, ReplayKeyBuilder, Protocol as ReplayProtocol, ReplayProvider, ToolCallEntry,
-};
+pub use replay::{compute_replay_key, Protocol as ReplayProtocol, ReplayKeyBuilder, ReplayProvider, ToolCallEntry};
 
 use crate::retry::{is_retryable, with_retry};
 use std::collections::HashMap;
@@ -37,14 +35,12 @@ use std::collections::HashMap;
 
 // Provider trait and registry (moved to runie-core for cross-crate access).
 pub use runie_core::provider::registry::{
-    display_name, find_model, find_model_for_provider, find_provider, find_provider_by_env_var,
-    is_known_provider, is_mock_enabled, known_providers, strip_provider_prefix, ModelMeta,
-    ModelMetaBuilder, ProviderMeta, ProviderMetaBuilder,
+    display_name, find_model, find_model_for_provider, find_provider, find_provider_by_env_var, is_known_provider,
+    is_mock_enabled, known_providers, strip_provider_prefix, ModelMeta, ModelMetaBuilder, ProviderMeta,
+    ProviderMetaBuilder,
 };
 pub use runie_core::provider::ProviderError;
-pub use runie_core::provider::{
-    Provider, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy,
-};
+pub use runie_core::provider::{Provider, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy};
 
 // Model catalog types.
 pub use runie_core::model_catalog::configured::configured_models_catalog;
@@ -121,6 +117,7 @@ fn resolve_credentials(
 }
 
 /// Build a provider from a registry key and model name.
+#[allow(clippy::too_many_lines)]
 pub fn build_provider(
     key: &str,
     model: &str,
@@ -275,11 +272,7 @@ pub fn build_provider_with_config(
 }
 
 /// Wrap an arbitrary provider implementation.
-pub fn build_provider_from_boxed(
-    provider: Box<dyn Provider>,
-    key: &str,
-    model: &str,
-) -> BuiltProvider {
+pub fn build_provider_from_boxed(provider: Box<dyn Provider>, key: &str, model: &str) -> BuiltProvider {
     BuiltProvider::from_provider(provider, key, model)
 }
 
@@ -344,11 +337,7 @@ pub async fn validate_api_key_with_timeout(
     .await
 }
 
-async fn fetch_models(
-    base_url: &str,
-    api_key: &str,
-    timeout: std::time::Duration,
-) -> Result<Vec<String>> {
+async fn fetch_models(base_url: &str, api_key: &str, timeout: std::time::Duration) -> Result<Vec<String>> {
     let span = tracing::debug_span!("fetch_models", base_url = %base_url);
     async move {
         let client = reqwest::Client::builder()
@@ -422,8 +411,7 @@ fn sanitize_provider_error(status: reqwest::StatusCode, body: &str) -> String {
 // Re-exports for consumers
 // ---------------------------------------------------------------------------
 
-pub async fn spawn_headless_runtime(
-) -> anyhow::Result<runie_core::headless_runtime::HeadlessRuntime> {
+pub async fn spawn_headless_runtime() -> anyhow::Result<runie_core::headless_runtime::HeadlessRuntime> {
     use runie_core::bus::EventBus;
     use runie_core::event::Event;
     use std::sync::Arc;

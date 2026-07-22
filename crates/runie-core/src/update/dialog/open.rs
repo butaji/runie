@@ -1,9 +1,8 @@
 //! Functions that open specific dialogs.
+#![allow(clippy::too_many_lines)]
 
 use crate::commands::{DialogKind, DialogState};
-use crate::dialog::builders::{
-    command_palette, model_selector, mcp_servers, scoped_models, session_tree, skills,
-};
+use crate::dialog::builders::{command_palette, mcp_servers, model_selector, scoped_models, session_tree, skills};
 use crate::model::{AppState, InputReceiver};
 
 use super::build_file_picker_panel;
@@ -24,10 +23,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
                 cmd.category.to_string(),
                 &cmd.name,
                 &cmd.desc,
-                crate::Event::RunPaletteCommand {
-                    name: cmd.name.clone(),
-                    args: String::new(),
-                },
+                crate::Event::RunPaletteCommand { name: cmd.name.clone(), args: String::new() },
             )
             .with_aliases(cmd.aliases.clone()),
         );
@@ -38,9 +34,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
                 "Skill",
                 &skill.name,
                 &skill.description,
-                crate::Event::RunSkillCommand {
-                    name: skill.name.clone(),
-                },
+                crate::Event::RunSkillCommand { name: skill.name.clone() },
             ));
         }
     }
@@ -54,10 +48,7 @@ pub fn open_command_palette_with_filter(state: &mut AppState, initial_filter: &s
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::CommandPalette,
-        panels: stack,
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: stack });
     // Default to the persistent command-bar behavior (Esc returns to the
     // palette). The chat-input "/" autocomplete paths flip this to `true`
     // immediately after opening so an autocomplete palette returns to chat.
@@ -94,7 +85,15 @@ pub fn open_model_selector(state: &mut AppState) {
     v.dirty = true;
     *state.open_dialog_mut() = Some(DialogState::Active {
         kind: DialogKind::ModelSelector,
-        panels: model_selector(recent, groups, &current, &state.config().model_thinking),
+        panels: model_selector(
+            recent,
+            groups,
+            &current,
+            &state.config().model_thinking,
+            state.pending_model_role(),
+            state.config().mode.lead_model.clone(),
+            state.config().mode.worker_model.clone(),
+        ),
     });
 }
 
@@ -102,12 +101,14 @@ pub fn open_mode_selector(state: &mut AppState) {
     use crate::dialog::builders::mode_selector;
     let current = state.config().mode.active.clone();
     let variant = state.config().swarm_variant.clone();
+    let lead_model = state.config().mode.lead_model.clone();
+    let worker_model = state.config().mode.worker_model.clone();
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
     *state.open_dialog_mut() = Some(DialogState::Active {
         kind: DialogKind::ModeSelector,
-        panels: mode_selector(&current, variant.as_deref()),
+        panels: mode_selector(&current, variant.as_deref(), lead_model, worker_model),
     });
 }
 
@@ -121,10 +122,7 @@ pub fn open_settings_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::Settings,
-        panels: settings(categories),
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Settings, panels: settings(categories) });
 }
 
 pub fn open_scoped_models_dialog(state: &mut AppState) {
@@ -138,10 +136,8 @@ pub fn open_scoped_models_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::ScopedModels,
-        panels: scoped_models(models),
-    });
+    *state.open_dialog_mut() =
+        Some(DialogState::Active { kind: DialogKind::ScopedModels, panels: scoped_models(models) });
 }
 
 pub fn open_theme_selector(state: &mut AppState) {
@@ -153,18 +149,13 @@ pub fn open_theme_selector(state: &mut AppState) {
     for theme in crate::theme_tokens::BUILTIN_THEMES {
         panel = panel.item(
             *theme,
-            ItemAction::Emit(crate::Event::SwitchTheme {
-                name: theme.to_string(),
-            }),
+            ItemAction::Emit(crate::Event::SwitchTheme { name: theme.to_string() }),
         );
     }
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: PanelStack::new(panel),
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 }
 
 fn sync_scoped_models_with_config(state: &mut AppState) {
@@ -185,11 +176,7 @@ fn sync_scoped_models_with_config(state: &mut AppState) {
                 state
                     .config_mut()
                     .scoped_models
-                    .push(crate::model::ScopedModel {
-                        provider: provider.clone(),
-                        name,
-                        enabled: true,
-                    });
+                    .push(crate::model::ScopedModel { provider: provider.clone(), name, enabled: true });
             }
         }
     }
@@ -207,9 +194,7 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
                     node.message.role.as_str(),
                     node.message.content().chars().take(60).collect::<String>()
                 );
-                let evt = crate::Event::SessionTreeSelect {
-                    id: node.message.id.clone(),
-                };
+                let evt = crate::Event::SessionTreeSelect { id: node.message.id.clone() };
                 (depth, preview, evt)
             })
             .collect(),
@@ -218,10 +203,7 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::SessionTree,
-        panels: session_tree(items),
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::SessionTree, panels: session_tree(items) });
 }
 
 fn parse_filter(filter: Option<&str>) -> (Option<String>, Option<String>) {
@@ -263,10 +245,7 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: PanelStack::new(panel),
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 }
 
 /// Send a file search request to `FffIndexerActor`.
@@ -300,10 +279,7 @@ pub fn open_mcp_servers_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::McpServers,
-        panels: mcp_servers(servers),
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::McpServers, panels: mcp_servers(servers) });
 }
 
 /// Opens the skills management dialog.
@@ -312,7 +288,7 @@ pub fn open_skills_dialog(state: &mut AppState) {
 
     let skill_rows: Vec<SkillRow> = state
         .skills()
-        .into_iter()
+        .iter()
         .map(|s| SkillRow {
             name: s.name.clone(),
             description: s.description.clone(),
@@ -324,8 +300,5 @@ pub fn open_skills_dialog(state: &mut AppState) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::Skills,
-        panels: skills(skill_rows),
-    });
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Skills, panels: skills(skill_rows) });
 }

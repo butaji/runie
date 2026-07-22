@@ -9,9 +9,8 @@ use super::DefaultToolApprove;
 #[cfg(feature = "git")]
 use super::GitTrackedWriteApprove;
 use super::{
-    ApprovalSink, AutoAllowSink, FileAccessAsk, PermissionAction, PermissionContext,
-    PermissionManager, PermissionMode, PermissionPolicy, PermissionResult, PermissionRule,
-    PermissionScope, PermissionSet, ScriptedSink,
+    ApprovalSink, AutoAllowSink, FileAccessAsk, PermissionAction, PermissionContext, PermissionManager, PermissionMode,
+    PermissionPolicy, PermissionResult, PermissionRule, PermissionScope, PermissionSet, ScriptedSink,
 };
 
 mod declarative_rules;
@@ -149,7 +148,8 @@ fn last_rule_wins() {
 #[test]
 fn sensitive_path_denied() {
     assert!(super::is_sensitive_path("/home/user/.ssh/id_rsa"));
-    assert!(super::is_sensitive_path("/project/.env"));
+    assert!(super::is_sensitive_path("/home/user/.ssh/id_ed25519"));
+    assert!(super::is_sensitive_path("/project/.git/objects/pack"));
     assert!(!super::is_sensitive_path("/project/src/main.rs"));
 }
 
@@ -194,9 +194,9 @@ async fn auto_approve_allows_edit_and_shell_tools() {
 #[tokio::test]
 async fn auto_approve_asks_for_sensitive_paths() {
     let policy = super::AutoApprove::new();
-    let env = Path::new("/project/.env");
+    let sensitive = Path::new("/home/user/.ssh/id_rsa");
     for tool in ["read_file", "write_file", "edit_file", "bash"] {
-        let context = ctx(tool, Some(env), None);
+        let context = ctx(tool, Some(sensitive), None);
         assert_eq!(
             policy.evaluate(&context).await,
             Some(PermissionResult::Ask),
@@ -319,7 +319,7 @@ fn effective_action_denies_sensitive_paths() {
         PermissionAction::Deny
     );
     assert_eq!(
-        rules.effective_action("write_file", Some("/project/.env"), None),
+        rules.effective_action("write_file", Some("/home/user/.ssh/id_rsa"), None),
         PermissionAction::Deny
     );
     assert_eq!(

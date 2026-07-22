@@ -60,10 +60,7 @@ fn handle_model_selector_toggle(state: &mut AppState) {
         state,
         matches!(
             state.open_dialog(),
-            Some(&DialogState::Active {
-                kind: DialogKind::ModelSelector,
-                panels: _
-            })
+            Some(&DialogState::Active { kind: DialogKind::ModelSelector, panels: _ })
         ),
         open_model_selector,
     );
@@ -74,10 +71,7 @@ fn handle_scoped_models_toggle(state: &mut AppState) {
         state,
         matches!(
             state.open_dialog(),
-            Some(&DialogState::Active {
-                kind: DialogKind::ScopedModels,
-                panels: _
-            })
+            Some(&DialogState::Active { kind: DialogKind::ScopedModels, panels: _ })
         ),
         open_scoped_models_dialog,
     );
@@ -88,10 +82,7 @@ fn handle_settings_toggle(state: &mut AppState) {
         state,
         matches!(
             state.open_dialog(),
-            Some(&DialogState::Active {
-                kind: DialogKind::Settings,
-                panels: _
-            })
+            Some(&DialogState::Active { kind: DialogKind::Settings, panels: _ })
         ),
         open_settings_dialog,
     );
@@ -102,10 +93,7 @@ fn handle_mcp_servers_toggle(state: &mut AppState) {
         state,
         matches!(
             state.open_dialog(),
-            Some(&DialogState::Active {
-                kind: DialogKind::McpServers,
-                panels: _
-            })
+            Some(&DialogState::Active { kind: DialogKind::McpServers, panels: _ })
         ),
         open_mcp_servers_dialog,
     );
@@ -116,10 +104,7 @@ fn handle_skills_toggle(state: &mut AppState) {
         state,
         matches!(
             state.open_dialog(),
-            Some(&DialogState::Active {
-                kind: DialogKind::Skills,
-                panels: _
-            })
+            Some(&DialogState::Active { kind: DialogKind::Skills, panels: _ })
         ),
         open_skills_dialog,
     );
@@ -173,10 +158,8 @@ fn set_scoped_models_enabled(state: &mut AppState, enabled: bool) {
 
 fn handle_providers_dialog(state: &mut AppState) {
     use crate::provider::dialog::build_providers_dialog;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: build_providers_dialog(state),
-    });
+    *state.open_dialog_mut() =
+        Some(DialogState::Active { kind: DialogKind::Generic, panels: build_providers_dialog(state) });
     state.view_mut().dirty = true;
 }
 
@@ -201,19 +184,14 @@ fn handle_providers_select_model(state: &mut AppState, event: &crate::Event) {
 fn handle_providers_edit_models(state: &mut AppState, event: &crate::Event) {
     if let crate::Event::ProvidersEditModels { provider } = event {
         let stack = crate::provider::dialog::build_provider_models_editor(state, provider);
-        if let Some(DialogState::Active {
-            kind: DialogKind::Generic,
-            panels: current,
-        }) = state.open_dialog_mut().as_mut()
+        if let Some(DialogState::Active { kind: DialogKind::Generic, panels: current }) =
+            state.open_dialog_mut().as_mut()
         {
             if let Some(panel) = stack.current() {
                 current.push(panel.clone());
             }
         } else {
-            *state.open_dialog_mut() = Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: stack,
-            });
+            *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
         }
         state.view_mut().dirty = true;
     }
@@ -303,10 +281,9 @@ fn sync_provider_models(state: &mut AppState, provider: &str, models: &[String])
     if let Some(h) = state.actor_handles() {
         let provider = provider.to_owned();
         let models = models.to_vec();
-        let _ = h.config.try_send(ConfigMsg::SetProviderModels {
-            name: provider,
-            models,
-        });
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetProviderModels { name: provider, models });
     }
 }
 
@@ -335,11 +312,10 @@ pub fn partition_model_items(
             last_header = header.clone();
         }
         if let Some((provider, model)) = name.split_once('/') {
-            let evt = crate::Event::SelectModel {
-                provider: provider.to_owned(),
-                model: model.to_owned(),
-            };
-            current_group.push((name, evt));
+            let evt = crate::Event::SelectModel { provider: provider.to_owned(), model: model.to_owned() };
+            // Store only the model name (without the provider/ prefix) so
+            // `model_selector` can reconstruct `provider/model` correctly.
+            current_group.push((model.to_owned(), evt));
         }
     }
     if !current_group.is_empty() {

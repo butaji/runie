@@ -21,10 +21,7 @@ pub fn handle_panel_activation(
     stack: &mut PanelStack,
 ) -> Option<ActivationResult> {
     match event {
-        Event::Submit
-        | Event::SettingsSelect
-        | Event::PaletteSelect
-        | Event::ModelSelectorSelect => {
+        Event::Submit | Event::SettingsSelect | Event::PaletteSelect | Event::ModelSelectorSelect => {
             return Some(try_activate_panel(state, stack));
         }
         Event::Input(' ') => {
@@ -51,11 +48,7 @@ pub fn try_activate_panel(state: &mut AppState, stack: &mut PanelStack) -> Activ
 }
 
 /// Handle a panel item action. Returns `true` if the dialog was closed.
-pub fn handle_panel_action(
-    state: &mut AppState,
-    action: ItemAction,
-    stack: &mut PanelStack,
-) -> bool {
+pub fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut PanelStack) -> bool {
     match action {
         ItemAction::Push(_) | ItemAction::Pop => {
             stack.pop();
@@ -103,10 +96,7 @@ pub fn handle_emit_action(state: &mut AppState, stack: &mut PanelStack, evt: Eve
         if args.is_empty() {
             if let Some(panel) = stack.current() {
                 let filter_args = extract_palette_args(name, &panel.filter);
-                Event::RunPaletteCommand {
-                    name: name.clone(),
-                    args: filter_args,
-                }
+                Event::RunPaletteCommand { name: name.clone(), args: filter_args }
             } else {
                 evt.clone()
             }
@@ -144,10 +134,7 @@ pub fn panel_toggle_item(state: &mut AppState, stack: &mut PanelStack, _key: &st
 
 /// Cycle through options for the currently selected item.
 pub fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
-    if let Some(PanelItem::Select {
-        current, options, ..
-    }) = stack.current_mut().and_then(|p| p.selected_item_mut())
-    {
+    if let Some(PanelItem::Select { current, options, .. }) = stack.current_mut().and_then(|p| p.selected_item_mut()) {
         if let Some(idx) = options.iter().position(|o| o == current) {
             let next = (idx + 1) % options.len();
             *current = options[next].clone();

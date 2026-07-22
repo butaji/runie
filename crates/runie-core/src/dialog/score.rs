@@ -23,13 +23,7 @@ pub fn match_score(label: &str, query: &str) -> Option<isize> {
 /// Score any panel item, using command-aware matching for palette entries.
 pub fn item_match_score(item: &PanelItem, query: &str) -> Option<isize> {
     match item {
-        PanelItem::Command {
-            name,
-            desc,
-            label,
-            aliases,
-            ..
-        } => command_match_score(name, desc, label, aliases, query),
+        PanelItem::Command { name, desc, label, aliases, .. } => command_match_score(name, desc, label, aliases, query),
         _ => match_score(item.label()?, query),
     }
 }
@@ -37,13 +31,7 @@ pub fn item_match_score(item: &PanelItem, query: &str) -> Option<isize> {
 /// Score a command-palette entry, allowing the query to include arguments
 /// after the command name (e.g. "model gpt-4o-mini" should still match the
 /// `/model` command).
-fn command_match_score(
-    name: &str,
-    desc: &str,
-    label: &str,
-    aliases: &[String],
-    query: &str,
-) -> Option<isize> {
+fn command_match_score(name: &str, desc: &str, label: &str, aliases: &[String], query: &str) -> Option<isize> {
     if query.is_empty() {
         return Some(0);
     }
@@ -122,13 +110,19 @@ mod tests {
     fn alias_match_with_leading_slash() {
         let quit = command_item("quit", "Quit application", &["q", "exit"]);
         let score = item_match_score(&quit, "/exit").expect("'/exit' should match quit alias");
-        assert!(score >= 10_000, "exact alias should score like a prefix match");
+        assert!(
+            score >= 10_000,
+            "exact alias should score like a prefix match"
+        );
     }
 
     #[test]
     fn canonical_name_still_matches() {
         let quit = command_item("quit", "Quit application", &["q", "exit"]);
         let score = item_match_score(&quit, "quit").expect("canonical name should match");
-        assert!(score >= 10_000, "canonical prefix match should score highly");
+        assert!(
+            score >= 10_000,
+            "canonical prefix match should score highly"
+        );
     }
 }

@@ -3,8 +3,7 @@
 //! Projects AskUserQuestion events to AppState, mirroring the permission
 //! dialog pattern exactly.
 
-use crate::dialog::PanelItem;
-use crate::model::{AppState, InputReceiver, QuestionState, Role};
+use crate::model::{AppState, InputReceiver, QuestionState};
 use crate::update::question_dialog::open_question_dialog;
 use crate::Event;
 
@@ -38,12 +37,10 @@ fn close_question_dialog(state: &mut AppState) {
 }
 
 /// Project question events to AppState.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn question_event(state: &mut AppState, event: Event) {
     match event {
-        Event::AskUserQuestion {
-            request_id,
-            questions,
-        } => {
+        Event::AskUserQuestion { request_id, questions } => {
             if questions.is_empty() {
                 // Nothing to ask — silently ignore
                 return;
@@ -56,23 +53,13 @@ pub(crate) fn question_event(state: &mut AppState, event: Event) {
             state.agent_state_mut().streaming = false;
             state.view_mut().dirty = true;
         }
-        Event::QuestionAnswer {
-            request_id,
-            option_id,
-        } => {
+        Event::QuestionAnswer { request_id, option_id } => {
             // Answer the current question and advance
             if let Some(ref mut qs) = state.question_state_mut() {
                 if qs.request_id == request_id {
                     qs.answer(option_id);
-                    if qs.is_complete() {
-                        // All answered — rebuild to show completion panel
-                        let qs = state.question_state().cloned().unwrap();
-                        *state.open_dialog_mut() = Some(open_question_dialog(&qs));
-                    } else {
-                        // Move to next question — rebuild dialog
-                        let qs = state.question_state().cloned().unwrap();
-                        *state.open_dialog_mut() = Some(open_question_dialog(&qs));
-                    }
+                    let qs = state.question_state().cloned().unwrap();
+                    *state.open_dialog_mut() = Some(open_question_dialog(&qs));
                     state.view_mut().dirty = true;
                 }
             }
@@ -81,56 +68,54 @@ pub(crate) fn question_event(state: &mut AppState, event: Event) {
             if let Some(ref mut qs) = state.question_state_mut() {
                 if qs.request_id == request_id {
                     qs.skip();
-                    if qs.is_complete() {
-                        let qs = state.question_state().cloned().unwrap();
-                        *state.open_dialog_mut() = Some(open_question_dialog(&qs));
-                    } else {
-                        let qs = state.question_state().cloned().unwrap();
-                        *state.open_dialog_mut() = Some(open_question_dialog(&qs));
-                    }
+                    let qs = state.question_state().cloned().unwrap();
+                    *state.open_dialog_mut() = Some(open_question_dialog(&qs));
                     state.view_mut().dirty = true;
                 }
             }
         }
-        Event::QuestionSubmit { request_id } => {
+        Event::QuestionSubmit { request_id }
             if state
                 .question_state()
                 .map(|qs| qs.request_id == request_id)
-                .unwrap_or(false)
-            {
-                // Emit a system message summarizing answers
-                let answers = state
-                    .question_state()
-                    .map(|qs| {
-                        qs.answers
-                            .iter()
-                            .map(|a| {
-                                let question = qs
-                                    .questions
-                                    .iter()
-                                    .find(|q| q.id == a.question_id)
-                                    .map(|q| q.question.as_str())
-                                    .unwrap_or("?");
-                                let option = qs
-                                    .questions
-                                    .iter()
-                                    .find(|q| q.id == a.question_id)
-                                    .and_then(|q| q.options.iter().find(|o| o.id == a.option_id))
-                                    .map(|o| o.label.as_str())
-                                    .unwrap_or("skipped");
-                                format!("{}: {}", question, option)
-                            })
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                    })
-                    .unwrap_or_default();
+                .unwrap_or(false) =>
+        {
+            // Emit a system message summarizing answers
+            let answers = state
+                .question_state()
+                .map(|qs| {
+                    qs.answers
+                        .iter()
+                        .map(|a| {
+                            let question = qs
+                                .questions
+                                .iter()
+                                .find(|q| q.id == a.question_id)
+                                .map(|q| q.question.as_str())
+                                .unwrap_or("?");
+                            let option = qs
+                                .questions
+                                .iter()
+                                .find(|q| q.id == a.question_id)
+                                .and_then(|q| q.options.iter().find(|o| o.id == a.option_id))
+                                .map(|o| o.label.as_str())
+                                .unwrap_or("skipped");
+                            format!("{}: {}", question, option)
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .unwrap_or_default();
 
-                state.add_system_msg(format!(
-                    "Answers collected:\n{}",
-                    if answers.is_empty() { "(all skipped)".to_string() } else { answers }
-                ));
-                clear_matching_question(state, &request_id);
-            }
+            state.add_system_msg(format!(
+                "Answers collected:\n{}",
+                if answers.is_empty() {
+                    "(all skipped)".to_string()
+                } else {
+                    answers
+                }
+            ));
+            clear_matching_question(state, &request_id);
         }
         _ => {}
     }
@@ -139,53 +124,33 @@ pub(crate) fn question_event(state: &mut AppState, event: Event) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::{DialogKind, DialogState};
-    use crate::dialog::{Panel, PanelStack};
-    use crate::model::{Question, QuestionOption, QuestionState};
+    use crate::dialog::PanelItem;
+    use crate::model::{Question, QuestionOption};
+    use crate::Role;
 
+    #[allow(clippy::too_many_lines)]
     fn open_sample_question_dialog(state: &mut AppState) {
         let questions = vec![
             Question {
                 id: "type".into(),
                 question: "Project Type".into(),
                 options: vec![
-                    QuestionOption {
-                        id: "_1".into(),
-                        label: "Feature".into(),
-                    },
-                    QuestionOption {
-                        id: "_2".into(),
-                        label: "Bug fix".into(),
-                    },
-                    QuestionOption {
-                        id: "_S".into(),
-                        label: "Skip".into(),
-                    },
+                    QuestionOption { id: "_1".into(), label: "Feature".into() },
+                    QuestionOption { id: "_2".into(), label: "Bug fix".into() },
+                    QuestionOption { id: "_S".into(), label: "Skip".into() },
                 ],
             },
             Question {
                 id: "priority".into(),
                 question: "Priority".into(),
                 options: vec![
-                    QuestionOption {
-                        id: "_1".into(),
-                        label: "High".into(),
-                    },
-                    QuestionOption {
-                        id: "_2".into(),
-                        label: "Low".into(),
-                    },
-                    QuestionOption {
-                        id: "_S".into(),
-                        label: "Skip".into(),
-                    },
+                    QuestionOption { id: "_1".into(), label: "High".into() },
+                    QuestionOption { id: "_2".into(), label: "Low".into() },
+                    QuestionOption { id: "_S".into(), label: "Skip".into() },
                 ],
             },
         ];
-        state.update(Event::AskUserQuestion {
-            request_id: "req-1".into(),
-            questions,
-        });
+        state.update(Event::AskUserQuestion { request_id: "req-1".into(), questions });
     }
 
     #[test]
@@ -206,7 +171,10 @@ mod tests {
         let dialog = state.open_dialog().expect("dialog should be open");
         let stack = dialog.panel_stack().expect("panel stack");
         let panel = stack.current().expect("panel");
-        assert!(panel.items.iter().any(|i| matches!(i, PanelItem::Header(h) if h.contains("Project Type"))));
+        assert!(panel
+            .items
+            .iter()
+            .any(|i| matches!(i, PanelItem::Header(h) if h.contains("Project Type"))));
     }
 
     #[test]
@@ -215,10 +183,7 @@ mod tests {
         open_sample_question_dialog(&mut state);
 
         // Answer first question
-        state.update(Event::QuestionAnswer {
-            request_id: "req-1".into(),
-            option_id: "_1".into(),
-        });
+        state.update(Event::QuestionAnswer { request_id: "req-1".into(), option_id: "_1".into() });
 
         let dialog = state.open_dialog().expect("dialog should still be open");
         let stack = dialog.panel_stack().expect("panel stack");
@@ -232,19 +197,19 @@ mod tests {
         open_sample_question_dialog(&mut state);
 
         // Answer both questions
-        state.update(Event::QuestionAnswer {
-            request_id: "req-1".into(),
-            option_id: "_1".into(),
-        });
-        state.update(Event::QuestionAnswer {
-            request_id: "req-1".into(),
-            option_id: "_1".into(),
-        });
+        state.update(Event::QuestionAnswer { request_id: "req-1".into(), option_id: "_1".into() });
+        state.update(Event::QuestionAnswer { request_id: "req-1".into(), option_id: "_1".into() });
 
         let dialog = state.open_dialog().expect("dialog should still be open");
         let stack = dialog.panel_stack().expect("panel stack");
         let panel = stack.current().expect("panel");
-        assert!(panel.title.contains("complete") || panel.items.iter().any(|i| matches!(i, PanelItem::Header(h) if h.contains("answered"))));
+        assert!(
+            panel.title.contains("complete")
+                || panel
+                    .items
+                    .iter()
+                    .any(|i| matches!(i, PanelItem::Header(h) if h.contains("answered")))
+        );
     }
 
     #[test]
@@ -252,9 +217,7 @@ mod tests {
         let mut state = AppState::default();
         open_sample_question_dialog(&mut state);
 
-        state.update(Event::QuestionSkip {
-            request_id: "req-1".into(),
-        });
+        state.update(Event::QuestionSkip { request_id: "req-1".into() });
 
         let dialog = state.open_dialog().expect("dialog should still be open");
         let stack = dialog.panel_stack().expect("panel stack");
@@ -267,9 +230,7 @@ mod tests {
         let mut state = AppState::default();
         open_sample_question_dialog(&mut state);
 
-        state.update(Event::QuestionSubmit {
-            request_id: "req-1".into(),
-        });
+        state.update(Event::QuestionSubmit { request_id: "req-1".into() });
 
         assert!(state.open_dialog().is_none());
         assert!(state.question_state().is_none());
@@ -280,19 +241,16 @@ mod tests {
         let mut state = AppState::default();
         open_sample_question_dialog(&mut state);
 
-        state.update(Event::QuestionAnswer {
-            request_id: "req-1".into(),
-            option_id: "_1".into(),
-        });
+        state.update(Event::QuestionAnswer { request_id: "req-1".into(), option_id: "_1".into() });
 
-        state.update(Event::QuestionSubmit {
-            request_id: "req-1".into(),
-        });
+        state.update(Event::QuestionSubmit { request_id: "req-1".into() });
 
         // System message should be added
-        assert!(state.session().messages.iter().any(|m| {
-            m.role == Role::System && m.content().contains("Answers collected")
-        }));
+        assert!(state
+            .session()
+            .messages
+            .iter()
+            .any(|m| { m.role == Role::System && m.content().contains("Answers collected") }));
     }
 
     #[test]

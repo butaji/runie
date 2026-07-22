@@ -11,9 +11,7 @@ fn providers_disconnect_removes_provider() {
     select_minimax_model(&mut state);
 
     state.update(crate::Event::ProvidersDialog);
-    state.update(crate::Event::ProvidersDisconnect {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::ProvidersDisconnect { provider: "minimax".into() });
 
     assert!(
         state.config.current_provider != "minimax",
@@ -30,9 +28,7 @@ fn providers_disconnect_opens_login_when_no_models_remain() {
     select_minimax_model(&mut state);
 
     state.update(crate::Event::ProvidersDialog);
-    state.update(crate::Event::ProvidersDisconnect {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::ProvidersDisconnect { provider: "minimax".into() });
 
     assert!(
         state.login_flow.is_some(),
@@ -57,9 +53,7 @@ fn disconnect_clears_active_provider_when_no_other() {
     state.dialog_back_stack.clear();
 
     state.update(crate::Event::ProvidersDialog);
-    state.update(crate::Event::ProvidersDisconnect {
-        provider: "minimax".into(),
-    });
+    state.update(crate::Event::ProvidersDisconnect { provider: "minimax".into() });
 
     assert!(
         state.login_flow.is_some(),

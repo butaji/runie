@@ -5,14 +5,12 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    blend_color, color_accent, color_bg, color_subagent_completed_bright,
-    color_subagent_completed_diamond, color_subagent_failed_bright, color_subagent_failed_diamond,
-    color_subagent_running_bar, color_subagent_running_diamond, color_subagent_running_dim,
-    pulse_brightness, style_agent, style_feed_timestamp, style_thinking, style_thought,
-    style_tool_header, style_tool_output, style_tool_running, style_tool_summary, style_turn_complete,
-    wave_brightness, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR,
-    GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT,
-    GLYPH_SPINNER, GLYPH_X,
+    blend_color, color_accent, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
+    color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
+    color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent, style_feed_timestamp,
+    style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
+    style_turn_complete, wave_brightness, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_SUBAGENT_BAR,
+    GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_X,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -43,10 +41,7 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    vec![
-        Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64()))
-            .style(style_thinking()),
-    ]
+    vec![Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64())).style(style_thinking())]
 }
 
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
@@ -83,8 +78,7 @@ pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, animation
     // The wave travels through the glyph row using WAVE_ROWS phase offset.
     let wave = wave_brightness(animation_frame, 0, WAVE_ROWS, WAVE_SPEED);
     let base_style = style_tool_running();
-    let spinner_color = blend_color(color_bg(), color_accent(), wave)
-        .unwrap_or_else(|| color_accent());
+    let spinner_color = blend_color(color_bg(), color_accent(), wave).unwrap_or_else(color_accent);
     vec![Line::from(vec![
         Span::styled(GLYPH_SPINNER.to_string(), Style::new().fg(spinner_color)),
         Span::styled(" ", base_style),
@@ -112,6 +106,7 @@ fn finish_flash(finished_at: &Option<std::time::Instant>, _animation_frame: u32)
     (1.0 - elapsed_ms / FLASH_DURATION_MS) as f32
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_tool_done(
     name: &str,
     args: &str,
@@ -133,8 +128,7 @@ pub fn render_tool_done(
     let flash = finish_flash(finished_at, animation_frame);
     let glyph_style = if flash > 0.0 {
         // At peak flash, blend accent toward bg, creating a bright flash.
-        let glyph_color = blend_color(color_bg(), color_accent(), 0.3 + flash * 0.7)
-            .unwrap_or_else(color_accent);
+        let glyph_color = blend_color(color_bg(), color_accent(), 0.3 + flash * 0.7).unwrap_or_else(color_accent);
         Style::new().fg(glyph_color)
     } else {
         base_style
@@ -147,10 +141,7 @@ pub fn render_tool_done(
     } else {
         GLYPH_AGENT.to_string()
     };
-    let mut spans = vec![
-        Span::styled(glyph, glyph_style),
-        Span::styled(verb, base_style.bold()),
-    ];
+    let mut spans = vec![Span::styled(glyph, glyph_style), Span::styled(verb, base_style.bold())];
     let tail = format!("{args_part}{bytes_str}");
     if !tail.is_empty() {
         spans.push(Span::styled(tail, base_style));
@@ -171,10 +162,7 @@ pub fn render_tool_done(
 pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<Line<'static>> {
     let (verb, args_part) = format_tool_label_parts(name, args);
     let style = style_tool_summary();
-    let mut spans = vec![
-        Span::styled(GLYPH_AGENT, style),
-        Span::styled(verb, style.bold()),
-    ];
+    let mut spans = vec![Span::styled(GLYPH_AGENT, style), Span::styled(verb, style.bold())];
     if !args_part.is_empty() {
         spans.push(Span::styled(args_part, style));
     }
@@ -182,10 +170,7 @@ pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<L
 }
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    vec![
-        Line::from(format!("Turn completed in {:.1}s.", duration_secs))
-            .style(style_turn_complete()),
-    ]
+    vec![Line::from(format!("Turn completed in {:.1}s.", duration_secs)).style(style_turn_complete())]
 }
 
 /// Render a swarm subagent lifecycle row (GROK.md §26).
@@ -196,6 +181,7 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
 ///
 /// Expanded finished rows render the worker output indented under the row,
 /// styled like an expanded thought body.
+#[allow(clippy::too_many_lines)]
 pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> Vec<Line<'static>> {
     let runie_core::Element::SubagentRow {
         description,
@@ -216,15 +202,19 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
     let dim = style_tool_running();
     let header = match status {
         S::Running => {
-            let activity_text = if activity.is_empty() { "Running" } else { activity };
+            let activity_text = if activity.is_empty() {
+                "Running"
+            } else {
+                activity
+            };
             // Pulse the bar/diamond toward background using pulse_brightness (grok parity)
             let pulse = pulse_brightness(animation_frame, 0.08);
-            let bar_color = blend_color(color_bg(), color_subagent_running_bar(), pulse)
-                .unwrap_or(color_subagent_running_bar());
+            let bar_color =
+                blend_color(color_bg(), color_subagent_running_bar(), pulse).unwrap_or(color_subagent_running_bar());
             let diamond_color = blend_color(color_bg(), color_subagent_running_diamond(), pulse)
                 .unwrap_or(color_subagent_running_diamond());
-            let dim_color = blend_color(color_bg(), color_subagent_running_dim(), pulse)
-                .unwrap_or(color_subagent_running_dim());
+            let dim_color =
+                blend_color(color_bg(), color_subagent_running_dim(), pulse).unwrap_or(color_subagent_running_dim());
             Line::from(vec![
                 Span::styled(GLYPH_SUBAGENT_BAR, Style::new().fg(bar_color)),
                 Span::styled("  ", Style::new().fg(bar_color)),
@@ -240,7 +230,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             ])
         }
         S::Completed => Line::from(vec![
-            Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_completed_diamond())),
+            Span::styled(
+                GLYPH_SUBAGENT_DIAMOND,
+                Style::new().fg(color_subagent_completed_diamond()),
+            ),
             Span::styled(" ", Style::new().fg(color_subagent_completed_bright())),
             Span::styled(
                 format!(
@@ -251,7 +244,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             ),
         ]),
         S::Failed => Line::from(vec![
-            Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_failed_diamond())),
+            Span::styled(
+                GLYPH_SUBAGENT_DIAMOND,
+                Style::new().fg(color_subagent_failed_diamond()),
+            ),
             Span::styled(" ", Style::new().fg(color_subagent_failed_bright())),
             Span::styled(
                 format!(
@@ -262,7 +258,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             ),
         ]),
         S::Cancelled => Line::from(vec![
-            Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(color_subagent_failed_diamond())),
+            Span::styled(
+                GLYPH_SUBAGENT_DIAMOND,
+                Style::new().fg(color_subagent_failed_diamond()),
+            ),
             Span::styled(" ", Style::new().fg(color_subagent_failed_bright())),
             Span::styled(
                 format!(
@@ -312,37 +311,28 @@ fn context_group_summary(tools: &[runie_core::Element]) -> String {
 
 fn tool_element_name(elem: &runie_core::Element) -> Option<String> {
     match elem {
-        runie_core::Element::ToolDone { name, .. }
-        | runie_core::Element::ToolSummary { name, .. } => Some(name.clone()),
+        runie_core::Element::ToolDone { name, .. } | runie_core::Element::ToolSummary { name, .. } => {
+            Some(name.clone())
+        }
         _ => None,
     }
 }
 
 fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
     match elem {
-        runie_core::Element::ToolDone {
-            name,
-            args,
-            duration_secs,
-            output,
-            bytes_transferred,
-            error,
-            ..
-        } => render_tool_done(
-            name,
-            args,
-            *duration_secs,
-            output,
-            *bytes_transferred,
-            *error,
-            &None,
-            0,
-        ),
-        runie_core::Element::ToolSummary {
-            name,
-            duration_secs,
-            ..
-        } => render_tool_summary(name, "", *duration_secs),
+        runie_core::Element::ToolDone { name, args, duration_secs, output, bytes_transferred, error, .. } => {
+            render_tool_done(
+                name,
+                args,
+                *duration_secs,
+                output,
+                *bytes_transferred,
+                *error,
+                &None,
+                0,
+            )
+        }
+        runie_core::Element::ToolSummary { name, duration_secs, .. } => render_tool_summary(name, "", *duration_secs),
         _ => Vec::new(),
     }
 }
@@ -377,6 +367,7 @@ pub fn render_blockquote_from_spans(text: &str, base_color: Color) -> Vec<Line<'
 /// style). The result is a list of rows, each row being a list of spans that fit
 /// within `max_width`.
 #[allow(clippy::assigning_clones, clippy::redundant_clone)]
+#[allow(clippy::too_many_lines)]
 fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec<MdSpan>> {
     let max_w = max_width as usize;
 
@@ -390,12 +381,7 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
         let wrapped = textwrap::wrap(&span.content, max_w);
         return wrapped
             .into_iter()
-            .map(|line| {
-                vec![MdSpan {
-                    content: line.into_owned(),
-                    style: span.style,
-                }]
-            })
+            .map(|line| vec![MdSpan { content: line.into_owned(), style: span.style }])
             .collect();
     }
 
@@ -424,10 +410,7 @@ fn wrap_styled_spans_for_blockquote(spans: &[MdSpan], max_width: u16) -> Vec<Vec
                 if !current_row.is_empty() {
                     result.push(std::mem::take(&mut current_row));
                 }
-                current_row.push(MdSpan {
-                    content: line_owned,
-                    style: span.style,
-                });
+                current_row.push(MdSpan { content: line_owned, style: span.style });
                 current_width = str_width(&current_row[0].content);
             }
         } else {
@@ -545,11 +528,7 @@ pub fn render_image(
 }
 
 /// Render a structured data/JSON part with optional format string.
-pub fn render_data_part(
-    data: &str,
-    format_string: Option<&str>,
-    _timestamp: f64,
-) -> Vec<Line<'static>> {
+pub fn render_data_part(data: &str, format_string: Option<&str>, _timestamp: f64) -> Vec<Line<'static>> {
     use crate::theme::{style_agent, style_tool_output, GLYPH_INDENT};
 
     let style = style_agent();
@@ -574,6 +553,8 @@ pub fn render_data_part(
 }
 
 /// Render a markdown table with headers, rows, and column alignments.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 pub fn render_markdown_table(
     headers: &[String],
     rows: &[Vec<String>],
@@ -610,9 +591,9 @@ pub fn render_markdown_table(
             None
         };
         let cell_str = match aligned {
-            Some(true) => format!("{:>width$}", header, width = width),  // right
+            Some(true) => format!("{:>width$}", header, width = width), // right
             Some(false) => format!("{:^width$}", header, width = width), // center
-            None => format!("{:<width$}", header, width = width),        // left
+            None => format!("{:<width$}", header, width = width),       // left
         };
         header_spans.push(Span::styled(cell_str, style.bold().underlined()));
     }
@@ -653,11 +634,8 @@ pub fn render_markdown_table(
 }
 
 /// Render diff/changelist output with type indicator.
-pub fn render_diff_output(
-    content: &str,
-    diff_type: DiffType,
-    _timestamp: f64,
-) -> Vec<Line<'static>> {
+#[allow(clippy::too_many_lines)]
+pub fn render_diff_output(content: &str, diff_type: DiffType, _timestamp: f64) -> Vec<Line<'static>> {
     use crate::theme::{style_agent, style_tool_output, GLYPH_INDENT};
 
     let style = style_agent();
@@ -683,15 +661,15 @@ pub fn render_diff_output(
                 Span::styled(format!("{} ", GLYPH_INDENT), style),
                 Span::styled(line_owned.clone(), style),
             ])
-        } else if line.starts_with("+") {
+        } else if let Some(stripped) = line.strip_prefix('+') {
             Line::from(vec![
                 Span::styled(format!("{} +", GLYPH_INDENT), style),
-                Span::styled(line[1..].to_string(), style.green()),
+                Span::styled(stripped.to_string(), style.green()),
             ])
-        } else if line.starts_with("-") {
+        } else if let Some(stripped) = line.strip_prefix('-') {
             Line::from(vec![
                 Span::styled(format!("{} -", GLYPH_INDENT), style),
-                Span::styled(line[1..].to_string(), style.red()),
+                Span::styled(stripped.to_string(), style.red()),
             ])
         } else if line.starts_with("@@") {
             Line::from(vec![
@@ -718,6 +696,7 @@ pub fn render_diff_output(
 }
 
 /// Render an Anthropic-style thinking block.
+#[allow(clippy::too_many_lines)]
 pub fn render_anthropic_thinking(
     content: &str,
     signature: Option<String>,
@@ -773,20 +752,17 @@ pub fn render_anthropic_thinking(
             }
         }
     } else {
-        lines.push(Line::from(vec![
-            Span::styled(format!("{}   [encrypted content]", GLYPH_INDENT), base_style),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("{}   [encrypted content]", GLYPH_INDENT),
+            base_style,
+        )]));
     }
 
     lines
 }
 
 /// Render a web search call with results.
-pub fn render_web_search_call(
-    query: &str,
-    results: &[WebSearchResult],
-    _timestamp: f64,
-) -> Vec<Line<'static>> {
+pub fn render_web_search_call(query: &str, results: &[WebSearchResult], _timestamp: f64) -> Vec<Line<'static>> {
     use crate::theme::{style_agent, GLYPH_INDENT};
 
     let style = style_agent();
@@ -830,11 +806,7 @@ pub fn render_web_search_call(
 }
 
 /// Render ANSI escape sequence styled content.
-pub fn render_ansi_styled(
-    raw_content: &str,
-    _plain_text: &str,
-    _timestamp: f64,
-) -> Vec<Line<'static>> {
+pub fn render_ansi_styled(raw_content: &str, _plain_text: &str, _timestamp: f64) -> Vec<Line<'static>> {
     use crate::theme::{style_agent, style_tool_output, GLYPH_INDENT};
 
     let style = style_agent();
@@ -868,6 +840,8 @@ pub fn render_ansi_styled(
 }
 
 /// Convert ANSI escape sequences to ratatui spans.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<'static>> {
     use ratatui::style::Color;
 
@@ -892,12 +866,15 @@ fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<
 
             // Flush current text
             if !current_text.is_empty() {
-                spans.push(Span::styled(std::mem::take(&mut current_text), current_style));
+                spans.push(Span::styled(
+                    std::mem::take(&mut current_text),
+                    current_style,
+                ));
             }
 
             // Parse SGR (Select Graphic Rendition) parameters
             if seq.ends_with('m') {
-                let params = &seq[2..seq.len()-1];
+                let params = &seq[2..seq.len() - 1];
                 if params.is_empty() || params == "0" {
                     current_style = default_style;
                 } else {
@@ -915,7 +892,9 @@ fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<
                             35 => current_style = current_style.fg(Color::Magenta),
                             36 => current_style = current_style.fg(Color::Cyan),
                             37 => current_style = current_style.fg(Color::White),
-                            90..=97 => current_style = current_style.fg(Color::Indexed(part.parse::<u8>().unwrap_or(90) - 90)),
+                            90..=97 => {
+                                current_style = current_style.fg(Color::Indexed(part.parse::<u8>().unwrap_or(90) - 90))
+                            }
                             _ => {}
                         }
                     }
@@ -939,6 +918,7 @@ fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<
 }
 
 /// Render a tool confirmation request.
+#[allow(clippy::too_many_lines)]
 pub fn render_tool_confirmation(
     request_id: &str,
     name: &str,

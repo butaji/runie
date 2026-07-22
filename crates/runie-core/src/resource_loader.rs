@@ -42,9 +42,7 @@ pub fn load_resources_from_dir(dir: &Path) -> Vec<ResourceRecord> {
     records
 }
 
-fn load_subdir_resources(
-    entries: fs::ReadDir,
-) -> (Vec<ResourceRecord>, std::collections::HashSet<String>) {
+fn load_subdir_resources(entries: fs::ReadDir) -> (Vec<ResourceRecord>, std::collections::HashSet<String>) {
     let mut names = std::collections::HashSet::new();
     let mut records = Vec::new();
 
@@ -97,11 +95,7 @@ pub fn parse_resource_md(path: &Path) -> Option<ResourceRecord> {
     let file_path = Utf8PathBuf::from_path_buf(path.to_path_buf())
         .map_err(drop)
         .ok()?;
-    Some(ResourceRecord {
-        frontmatter,
-        content,
-        file_path,
-    })
+    Some(ResourceRecord { frontmatter, content, file_path })
 }
 
 /// Typed frontmatter for resources.

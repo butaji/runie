@@ -29,19 +29,18 @@ mod tests;
 pub mod types;
 
 pub use authorize::{
-    allow_readonly, always_ask, authorize, check_input_patterns, deny, AuthorizeResult,
-    AuthorizationContext, Authorizable,
+    allow_readonly, always_ask, authorize, check_input_patterns, deny, Authorizable, AuthorizationContext,
+    AuthorizeResult,
 };
 pub use cache::{is_cacheable_tool, CacheEntry, ToolResultCache, CACHEABLE_TOOL_NAMES};
 pub use circuit_breaker::{CircuitBreaker, CircuitBreakerRegistry, CircuitState};
 pub use constraints::{
-    validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation,
-    ValidationResult,
+    validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation, ValidationResult,
 };
 pub use context::{ToolContext, ToolOutput, ToolStatus};
 pub use format::{
-    compact_json_args, format_bytes, format_duration, format_tool_label, format_tool_label_parts,
-    tool_error, tool_status_line, truncate_output, which_tool, which_tool_async,
+    compact_json_args, format_bytes, format_duration, format_tool_label, format_tool_label_parts, tool_error,
+    tool_status_line, truncate_output, which_tool, which_tool_async,
 };
 // Path resolution utilities — expand ~ and absolutize.
 use path_absolutize::Absolutize;
@@ -62,8 +61,8 @@ pub fn resolve_path(raw: &str, working_dir: impl AsRef<std::path::Path>) -> std:
     }
 }
 pub use parse::{
-    assign_tool_call_ids, build_assistant_message, has_tool_calls, parse_tool_calls,
-    parse_tool_calls_fallible, tool_parse_error_message,
+    assign_tool_call_ids, build_assistant_message, has_tool_calls, parse_tool_calls, parse_tool_calls_fallible,
+    tool_parse_error_message,
 };
 #[cfg(feature = "mcp")]
 pub use schema::{generate_schema, parse_input, to_mcp_tool, to_openai_function, ToolDef};

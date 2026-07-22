@@ -22,9 +22,9 @@
 use crate::{run_agent_turn, stream_response::EmitFn, AgentCommand, PermissionGate};
 use parking_lot::Mutex as PgMutex;
 use runie_core::model::ThinkingLevel;
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
+use runie_core::permissions::{AutoAllowSink, PermissionManager, PermissionMode, PermissionSet};
 use runie_core::provider::Provider;
-use runie_core::subagents::{PermissionMode as SubPermissionMode, SubagentRegistry, SubagentType};
+use runie_core::subagents::{SubagentRegistry, SubagentType};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
@@ -93,6 +93,56 @@ pub async fn run_subagent_type(
     run_subagent_turn_with_gate(provider, &cmd, max_iterations, gate).await
 }
 
+/// Run a subagent turn with inherited permissions from the parent.
+///
+/// This ensures the subagent cannot bypass the parent session's deny rules.
+/// The `parent_gate` is cloned via `clone_for_subagent()` to share the parent's
+/// permission manager while getting an independent abort token.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_subagent_with_inherited_permissions(
+    prompt: &str,
+    provider_key: &str,
+    model: &str,
+    provider: &dyn Provider,
+    thinking_level: ThinkingLevel,
+    read_only: bool,
+    skills_context: &str,
+    system_prompt: &str,
+    max_iterations: usize,
+    parent_gate: &PermissionGate,
+) -> Result<String, SubagentError> {
+    let cmd = build_subagent_command(
+        prompt,
+        provider_key,
+        model,
+        thinking_level,
+        read_only,
+        skills_context,
+        system_prompt,
+    );
+    let gate = parent_gate.clone_for_subagent();
+    run_subagent_turn_with_gate(provider, &cmd, max_iterations, gate).await
+}
+
+/// Run a subagent type with inherited permissions from the parent.
+///
+/// Looks up `type_name` in `SubagentRegistry::default()`, interpolates the
+/// prompt template with `variables`, then runs the turn with the parent's
+/// permission gate inherited via `clone_for_subagent()`.
+pub async fn run_subagent_type_with_inherited_permissions(
+    type_name: &str,
+    variables: HashMap<&str, &str>,
+    parent: ParentContext,
+    provider: &dyn Provider,
+    max_iterations: usize,
+    parent_gate: &PermissionGate,
+) -> Result<String, SubagentError> {
+    let sub_type = resolve_subagent_type(type_name)?;
+    let cmd = build_type_command(&sub_type, type_name, &variables, &parent);
+    let gate = parent_gate.clone_for_subagent();
+    run_subagent_turn_with_gate(provider, &cmd, max_iterations, gate).await
+}
+
 fn resolve_subagent_type(type_name: &str) -> Result<SubagentType, SubagentError> {
     SubagentRegistry::from_builtins()
         .get(type_name)
@@ -118,7 +168,7 @@ fn build_type_command(
     } else {
         ""
     };
-    let read_only = sub_type.permission_mode == SubPermissionMode::Plan || parent.read_only;
+    let read_only = sub_type.permission_mode == PermissionMode::Plan || parent.read_only;
     AgentCommand {
         content: prompt,
         id: format!("subagent.{}", type_name),
@@ -147,8 +197,9 @@ fn resolve_model(sub_type: &SubagentType, parent_model: &str) -> String {
 ///
 /// Currently uses the default gate (no policies, AutoAllowSink fallback).
 /// The `Plan` mode is handled by setting `read_only = true` on the command.
-fn build_permission_gate(_mode: &SubPermissionMode) -> PermissionGate {
-    let manager = PermissionManager::default();
+fn build_permission_gate(mode: &runie_core::permissions::PermissionMode) -> PermissionGate {
+    let policies = crate::actor::handlers::policies_for_mode(*mode, PermissionSet::default());
+    let manager = PermissionManager::default().with_policies(policies);
     PermissionGate::new(manager, Arc::new(AutoAllowSink))
 }
 
@@ -178,6 +229,7 @@ fn build_subagent_command(
 /// Run a subagent turn with a custom permission gate.
 /// Uses a `tokio::sync::oneshot` channel so the callback sends the final result
 /// directly when `Done` is received. No polling, no shared mutable state.
+#[allow(clippy::too_many_lines)]
 async fn run_subagent_turn_with_gate(
     provider: &dyn Provider,
     cmd: &AgentCommand,
@@ -206,8 +258,7 @@ async fn run_subagent_turn_with_gate(
                         runie_core::Event::Error { message, .. } => {
                             let mut guard = result_tx_clone.lock();
                             if let Some(tx) = guard.take() {
-                                let _ =
-                                    tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
+                                let _ = tx.send(Err(SubagentError::Source(anyhow::anyhow!(message))));
                             }
                             return;
                         }

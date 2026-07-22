@@ -42,8 +42,8 @@ pub use runie_core::{AppState, ChatMessage};
 
 // Re-export dialog types from runie_core for convenience
 pub use runie_core::dialog::builders::{
-    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
-    settings, theme_picker, SessionRow,
+    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree, settings, theme_picker,
+    SessionRow,
 };
 pub use runie_core::dialog::dsl::{form, get_field, panel, FormPanel};
 pub use runie_core::dialog::{EventLabel, ItemAction, Panel, PanelId, PanelItem, PanelStack};

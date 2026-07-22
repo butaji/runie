@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Skill discovery and YAML frontmatter parsing (from Grok Build)
 
 use std::collections::HashMap;

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Tests for the config validator (moved from validate.rs).
 
 use super::*;
@@ -241,10 +243,7 @@ fn registry_validation_accepts_known_provider_and_model() {
 
 #[test]
 fn registry_validation_rejects_unknown_provider() {
-    let config = Config {
-        provider: Some("fake-provider".to_string()),
-        ..Config::default()
-    };
+    let config = Config { provider: Some("fake-provider".to_string()), ..Config::default() };
     let errors = validate_registry(&config);
     assert!(!errors.is_empty(), "unknown provider should fail");
     assert!(
@@ -307,6 +306,7 @@ fn registry_validation_rejects_unknown_configured_provider() {
             base_url: "https://fake.example.com".to_string(),
             models: vec![],
             headers: std::collections::HashMap::new(),
+            context_window_fallbacks: vec![],
         },
     );
     let errors = validate_registry(&config);
@@ -455,33 +455,21 @@ fn registry_validation_accepts_minimax_highspeed_default_model() {
 
 #[test]
 fn config_validate_registry_method() {
-    let config = Config {
-        provider: Some("openai".to_string()),
-        ..Config::default()
-    };
+    let config = Config { provider: Some("openai".to_string()), ..Config::default() };
     assert!(config.validate_registry().is_ok());
 
-    let bad_config = Config {
-        provider: Some("nonexistent".to_string()),
-        ..Config::default()
-    };
+    let bad_config = Config { provider: Some("nonexistent".to_string()), ..Config::default() };
     assert!(bad_config.validate_registry().is_err());
 }
 
 #[test]
 fn config_validate_full_method() {
     // Good config should pass full validation
-    let config = Config {
-        provider: Some("openai".to_string()),
-        ..Config::default()
-    };
+    let config = Config { provider: Some("openai".to_string()), ..Config::default() };
     assert!(config.validate_full().is_ok());
 
     // Unknown provider should fail full validation
-    let bad_config = Config {
-        provider: Some("nonexistent".to_string()),
-        ..Config::default()
-    };
+    let bad_config = Config { provider: Some("nonexistent".to_string()), ..Config::default() };
     let result = bad_config.validate_full();
     assert!(result.is_err());
 }

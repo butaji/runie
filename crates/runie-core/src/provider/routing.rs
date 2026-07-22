@@ -38,10 +38,7 @@ pub fn route_model<'a>(
 }
 
 /// Select a fallback model when context window is exceeded.
-pub fn select_context_fallback<'a>(
-    fallback_list: &'a [String],
-    models: &'a [ModelMeta],
-) -> Option<&'a ModelMeta> {
+pub fn select_context_fallback<'a>(fallback_list: &'a [String], models: &'a [ModelMeta]) -> Option<&'a ModelMeta> {
     for name in fallback_list {
         if let Some(model) = models.iter().find(|m| &m.name == name) {
             return Some(model);
@@ -54,12 +51,7 @@ pub fn select_context_fallback<'a>(
 mod tests {
     use super::*;
 
-    fn make_model(
-        name: &str,
-        context_window: usize,
-        cost_prompt: f64,
-        cost_completion: f64,
-    ) -> ModelMeta {
+    fn make_model(name: &str, context_window: usize, cost_prompt: f64, cost_completion: f64) -> ModelMeta {
         ModelMeta {
             name: name.to_string(),
             cost_prompt: Some(cost_prompt),
@@ -79,10 +71,7 @@ mod tests {
 
     #[test]
     fn simple_shuffle_uses_first_model() {
-        let models = vec![
-            make_model("model-a", 128000, 0.0, 0.0),
-            make_model("model-b", 64000, 0.0, 0.0),
-        ];
+        let models = vec![make_model("model-a", 128000, 0.0, 0.0), make_model("model-b", 64000, 0.0, 0.0)];
         let result = route_model(&ModelRoutingStrategy::SimpleShuffle, &models, None);
         assert_eq!(result.map(|m| m.name.as_str()), Some("model-a"));
     }
@@ -123,10 +112,7 @@ mod tests {
 
     #[test]
     fn context_fallback_falls_back_to_second() {
-        let models = vec![
-            make_model("model-a", 128000, 0.0, 0.0),
-            make_model("model-b", 64000, 0.0, 0.0),
-        ];
+        let models = vec![make_model("model-a", 128000, 0.0, 0.0), make_model("model-b", 64000, 0.0, 0.0)];
         let fallback = vec!["model-x".to_string(), "model-b".to_string()];
         let result = select_context_fallback(&fallback, &models);
         assert_eq!(result.map(|m| m.name.as_str()), Some("model-b"));

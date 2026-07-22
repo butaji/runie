@@ -1,4 +1,5 @@
 //! single tests.
+#![allow(clippy::too_many_lines)]
 
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
@@ -56,18 +57,8 @@ fn turn_complete_is_last_after_normal_flow() {
         provider: String::new(),
     });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: "file1".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -76,10 +67,7 @@ fn turn_complete_is_last_after_normal_flow() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 2.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -98,18 +86,8 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
     state.agent.streaming = true;
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: "a".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello ".into(),
@@ -118,10 +96,7 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "world".into(),
@@ -148,30 +123,10 @@ fn turn_complete_is_last_with_multiple_tools() {
     state.agent.streaming = true;
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "cat".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.1,
-        output: "a".into(),
-
-        input: None,
-    });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.2,
-        output: "b".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "cat".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.1, output: "a".into(), input: None });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.2, output: "b".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Done".into(),
@@ -180,10 +135,7 @@ fn turn_complete_is_last_with_multiple_tools() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 3.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 3.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -202,22 +154,9 @@ fn turn_complete_is_last_when_tool_end_after_turn_complete() {
     state.agent.streaming = true;
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: "file1".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "file1".into(), input: None });
     state.update(crate::Event::Done { id: "req.0".into() });
     state.ensure_fresh();
 
@@ -236,18 +175,8 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
     state.agent.streaming = true;
     state.update(crate::Event::Thinking { id: "req.0".into() });
     state.update(crate::Event::ThoughtDone { id: "req.0".into() });
-    state.update(crate::Event::ToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-        input: serde_json::Value::Null,
-    });
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: "a".into(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(), input: None });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -256,10 +185,7 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(crate::Event::Response {
         id: "req.0".into(),
         content: "".into(),
@@ -284,18 +210,8 @@ fn first_turn_with_tool_events() -> Vec<Event> {
     vec![
         crate::Event::Thinking { id: "req.0".into() },
         crate::Event::ThoughtDone { id: "req.0".into() },
-        crate::Event::ToolStart {
-            id: "req.0".into(),
-            name: "ls".into(),
-            input: serde_json::Value::Null,
-        },
-        crate::Event::ToolEnd {
-            id: "".to_string(),
-            duration_secs: 0.5,
-            output: "a".into(),
-
-            input: None,
-        },
+        crate::Event::ToolStart { id: "req.0".into(), name: "ls".into(), input: serde_json::Value::Null },
+        crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: "a".into(), input: None },
         crate::Event::Response {
             id: "req.0".into(),
             content: "First turn".into(),
@@ -304,10 +220,7 @@ fn first_turn_with_tool_events() -> Vec<Event> {
             timestamp: 0.0,
             provider: String::new(),
         },
-        crate::Event::TurnComplete {
-            id: "req.0".into(),
-            duration_secs: 1.0,
-        },
+        crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 },
         crate::Event::Done { id: "req.0".into() },
     ]
 }
@@ -321,9 +234,7 @@ fn turn_complete_before_next_turn_user_message() {
         role: Role::User,
         timestamp: crate::model::now(),
         id: "u1".into(),
-        parts: vec![Part::Text {
-            content: "Next turn".into(),
-        }],
+        parts: vec![Part::Text { content: "Next turn".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -356,10 +267,7 @@ fn turn_complete_timestamp_is_max_after_done() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::TurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
+    state.update(crate::Event::TurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(crate::Event::Done { id: "req.0".into() });
 
     let turn_ts = state
@@ -377,7 +285,10 @@ fn turn_complete_timestamp_is_max_after_done() {
         .map(|m| m.timestamp)
         .fold(0.0, f64::max);
 
-    assert!(turn_ts > max_other_ts,
+    assert!(
+        turn_ts > max_other_ts,
         "TurnComplete timestamp ({}) must be strictly greater than all other messages ({}) after finish_turn",
-        turn_ts, max_other_ts);
+        turn_ts,
+        max_other_ts
+    );
 }

@@ -9,12 +9,11 @@ use ratatui::{
 };
 
 use crate::theme::{
-    blend_color, color_accent, color_bg, color_monitor, color_success, pulse_brightness,
-    style_status_idle, style_timestamp, GLYPH_MONITOR_FRAMES, monitor_glyph, MONITOR_PULSE_DIVISOR,
-    GLYPH_PENDING,
+    blend_color, color_accent, color_bg, color_monitor, color_success, monitor_glyph, pulse_brightness,
+    style_status_idle, style_timestamp, GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
 };
 use crate::ui::{estimate_element_tokens, hstack};
-use runie_core::labels::{format_elapsed_secs};
+use runie_core::labels::format_elapsed_secs;
 use runie_core::Snapshot;
 use unicode_width::UnicodeWidthStr;
 
@@ -41,6 +40,7 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
 /// When a permission request is pending (`is_pending_user_input`), a pulsing
 /// diamond replaces the spinner — same cadence as Grok's drain-blocked and
 /// plan-approval "your turn" indicators.
+#[allow(clippy::too_many_lines)]
 fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let idle = style_status_idle();
 
@@ -77,8 +77,7 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let line = if snap.is_pending_user_input {
         // Pulsing diamond: blend accent toward bg using sin² pulse (grok parity).
         let pulse = pulse_brightness(snap.animation_frame, USER_WAITING_PULSE_SPEED);
-        let color = blend_color(color_bg(), color_accent(), 0.3 + pulse * 0.7)
-            .unwrap_or_else(color_accent);
+        let color = blend_color(color_bg(), color_accent(), 0.3 + pulse * 0.7).unwrap_or_else(color_accent);
         let spinner = Span::styled(format!("{} · ", GLYPH_PENDING), Style::new().fg(color));
         let body_span = if body_str.is_empty() {
             vec![spinner]
@@ -134,6 +133,9 @@ pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<Span<'static>> {
         parts.push(part);
     }
     if let Some(part) = push_auto_mode(snap) {
+        parts.push(part);
+    }
+    if let Some(part) = push_circuit_breaker(snap) {
         parts.push(part);
     }
     parts
@@ -201,8 +203,7 @@ fn push_watching_label(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
     }
 
     // Get the animated monitor glyph frame
-    let frame_idx = ((snap.animation_frame / MONITOR_PULSE_DIVISOR) as usize)
-        % GLYPH_MONITOR_FRAMES.len();
+    let frame_idx = ((snap.animation_frame / MONITOR_PULSE_DIVISOR) as usize) % GLYPH_MONITOR_FRAMES.len();
     let monitor_glyph_str = monitor_glyph(frame_idx);
 
     // Render as: "○ ◉ watching · N workers"
@@ -223,8 +224,7 @@ fn push_turn_status_text(snap: &Snapshot, idle: Style) -> Option<Span<'static>> 
     }
     if let Some(ref tool) = snap.current_tool_name {
         // Activity label: "Running {tool}…" styled green (grok parity).
-        let color = blend_color(color_bg(), color_success(), 0.4)
-            .unwrap_or_else(color_success);
+        let color = blend_color(color_bg(), color_success(), 0.4).unwrap_or_else(color_success);
         return Some(Span::styled(
             format!("Running {}…", tool),
             Style::new().fg(color),
@@ -272,6 +272,20 @@ fn push_read_only(snap: &Snapshot) -> Option<Span<'static>> {
 fn push_auto_mode(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.auto_mode {
         Some(Span::raw("⚡ Auto"))
+    } else {
+        None
+    }
+}
+
+/// Build the circuit breaker status indicator for the status bar.
+/// Shows "⚡ CB: N" when the circuit breaker has tripped, where N is the threshold.
+fn push_circuit_breaker(snap: &Snapshot) -> Option<Span<'static>> {
+    if snap.circuit_breaker_tripped {
+        let warning_color = crate::theme::color_warning();
+        Some(Span::styled(
+            format!("⚡ CB: {}", snap.circuit_breaker_threshold),
+            style_status_idle().fg(warning_color),
+        ))
     } else {
         None
     }
@@ -365,11 +379,7 @@ pub(crate) fn context_usage(snap: &Snapshot) -> ContextUsage {
         .and_then(|x| x.checked_div(limit))
         .unwrap_or(0)
         .min(100);
-    ContextUsage {
-        used,
-        limit,
-        percent,
-    }
+    ContextUsage { used, limit, percent }
 }
 
 impl ContextUsage {
@@ -416,10 +426,7 @@ mod tests {
 
     #[test]
     fn status_bar_shows_auto_badge_when_enabled() {
-        let snap = runie_core::Snapshot {
-            auto_mode: true,
-            ..Default::default()
-        };
+        let snap = runie_core::Snapshot { auto_mode: true, ..Default::default() };
         let left = super::build_left_text(&snap);
         assert!(
             left.contains("⚡ Auto"),

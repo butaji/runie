@@ -21,11 +21,7 @@ impl Default for StartupContextConfig {
         Self {
             enabled: true,
             max_output_bytes: 2048,
-            commands: vec![
-                "pwd".into(),
-                "ls".into(),
-                "git branch --show-current".into(),
-            ],
+            commands: vec!["pwd".into(), "ls".into(), "git branch --show-current".into()],
         }
     }
 }
@@ -41,10 +37,7 @@ pub struct StartupContextSkill {
 
 impl StartupContextSkill {
     pub fn new(config: StartupContextConfig) -> Self {
-        Self {
-            config,
-            cache: RwLock::new(None),
-        }
+        Self { config, cache: RwLock::new(None) }
     }
 
     fn run_cmd(cmd: &str) -> String {

@@ -1,4 +1,5 @@
 //! Tests for opt-in vim navigation mode.
+#![allow(clippy::too_many_lines)]
 
 use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
@@ -24,18 +25,14 @@ fn state_with_vim_and_messages() -> AppState {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg {}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg {}", i) }],
             timestamp: i as f64,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text {
-                content: format!("reply {}", i),
-            }],
+            parts: vec![Part::Text { content: format!("reply {}", i) }],
             timestamp: i as f64 + 0.5,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -51,18 +48,14 @@ fn state_with_messages() -> AppState {
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg {}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg {}", i) }],
             timestamp: i as f64,
             id: format!("req.{}", i),
             ..Default::default()
         });
         state.session.messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![Part::Text {
-                content: format!("reply {}", i),
-            }],
+            parts: vec![Part::Text { content: format!("reply {}", i) }],
             timestamp: i as f64 + 0.5,
             id: format!("resp.{}", i),
             ..Default::default()
@@ -483,18 +476,14 @@ fn state_for_nav_copy() -> AppState {
         role: Role::User,
         timestamp: 1.0,
         id: "req.0".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         timestamp: 2.0,
         id: "resp.0".into(),
-        parts: vec![Part::Text {
-            content: "the answer is 42".into(),
-        }],
+        parts: vec![Part::Text { content: "the answer is 42".into() }],
         ..Default::default()
     });
     state.refresh_after_message_change();
@@ -543,11 +532,11 @@ fn y_on_empty_selection_does_not_crash() {
 }
 
 // =========================================================================
-// Enter key in vim nav mode toggles expand/collapse (same as Ctrl+O)
+// ToggleExpand in vim nav mode toggles expand/collapse
 // =========================================================================
 
 #[test]
-fn enter_in_vim_nav_toggles_expand() {
+fn toggle_expand_in_vim_nav_works() {
     let mut state = state_for_nav_copy();
     enter_nav(&mut state);
     assert!(state.view.vim_nav_mode);
@@ -555,36 +544,36 @@ fn enter_in_vim_nav_toggles_expand() {
     // Initial state: not all collapsed
     let initially_collapsed = state.view.all_collapsed;
 
-    // Enter should toggle expand/collapse without exiting nav mode
-    state.update(crate::Event::Submit);
+    // ToggleExpand should toggle expand/collapse without exiting nav mode
+    state.update(crate::Event::ToggleExpand);
 
     assert_eq!(
         state.view.all_collapsed, !initially_collapsed,
-        "Enter in nav mode should toggle all_collapsed"
+        "ToggleExpand in nav mode should toggle all_collapsed"
     );
     assert!(
         state.view.vim_nav_mode,
-        "Enter in nav mode should NOT exit vim nav mode"
+        "ToggleExpand in nav mode should NOT exit vim nav mode"
     );
 }
 
 #[test]
-fn enter_in_vim_nav_toggles_expand_twice() {
+fn toggle_expand_in_vim_nav_toggles_twice() {
     let mut state = state_for_nav_copy();
     enter_nav(&mut state);
     assert!(state.view.vim_nav_mode);
 
     let initial = state.view.all_collapsed;
 
-    // First Enter: toggle on
-    state.update(crate::Event::Submit);
+    // First ToggleExpand: toggle on
+    state.update(crate::Event::ToggleExpand);
     assert_eq!(state.view.all_collapsed, !initial);
 
-    // Second Enter: toggle off
-    state.update(crate::Event::Submit);
+    // Second ToggleExpand: toggle off
+    state.update(crate::Event::ToggleExpand);
     assert_eq!(
         state.view.all_collapsed, initial,
-        "second Enter should restore original state"
+        "second ToggleExpand should restore original state"
     );
 }
 

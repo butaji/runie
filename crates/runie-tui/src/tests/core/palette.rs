@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use runie_core::commands::{DialogKind, DialogState};
 use runie_core::model::AppState;
 use runie_core::Event;
@@ -6,20 +7,18 @@ use crate::tests::view;
 
 fn palette_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::CommandPalette,
-            panels: stack,
-        }) => stack.current().map(|p| (p.filter.clone(), p.selected)),
+        Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: stack }) => {
+            stack.current().map(|p| (p.filter.clone(), p.selected))
+        }
         _ => None,
     }
 }
 
 fn model_selector_state(state: &AppState) -> Option<(String, usize)> {
     match &state.open_dialog {
-        Some(DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current().map(|p| (p.filter.clone(), p.selected)),
+        Some(DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
+            stack.current().map(|p| (p.filter.clone(), p.selected))
+        }
         _ => None,
     }
 }
@@ -114,10 +113,7 @@ fn esc_from_subdialog_returns_to_palette() {
     assert!(
         matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::CommandPalette,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })
         ),
         "Esc on sub-dialog must return to the palette, got {:?}",
         state.open_dialog
@@ -243,10 +239,7 @@ fn esc_restores_palette_in_same_state() {
     assert!(
         !matches!(
             state.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::CommandPalette,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::CommandPalette, panels: _ })
         ),
         "Sub-dialog should be open"
     );
@@ -314,10 +307,7 @@ fn palette_model_with_zero_providers_renders_message() {
 
 #[test]
 fn palette_model_with_args_switches_model() {
-    super::super::configure_test_providers(&[(
-        "openai".into(),
-        vec!["gpt-4o".into(), "gpt-4o-mini".into()],
-    )]);
+    super::super::configure_test_providers(&[("openai".into(), vec!["gpt-4o".into(), "gpt-4o-mini".into()])]);
     let mut state = AppState::default();
     super::super::apply_test_config_to_state(&mut state);
     state.config.current_provider = "openai".into();
@@ -366,8 +356,7 @@ async fn ui_actor_dispatch_submit_closes_palette() {
         }
     }
 
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(NoopAgent));
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(Arc::new(NoopAgent));
 
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());

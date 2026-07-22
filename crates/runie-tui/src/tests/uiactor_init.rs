@@ -3,6 +3,7 @@
 //! Verifies:
 //! 1. UiActor drains buffered bootstrap events before the first snapshot.
 //! 2. UiActor processes DeliverQueued via RPC (not polling).
+#![allow(clippy::too_many_lines)]
 
 use std::sync::Arc;
 
@@ -13,10 +14,7 @@ use runie_core::Event;
 struct MockAgentHandle;
 
 impl LeaderAgentHandle for MockAgentHandle {
-    fn run(
-        &self,
-        _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, _cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(async {})
     }
     fn abort(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
@@ -40,8 +38,7 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
@@ -61,9 +58,7 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
     // Publish ConfigLoaded BEFORE UiActor::run() starts.
     // It lands in the bus_rx buffer.
     let config = runie_core::config::Config::default();
-    bus.publish(Event::ConfigLoaded {
-        config: Box::new(config),
-    });
+    bus.publish(Event::ConfigLoaded { config: Box::new(config) });
 
     let mut ui = crate::ui_actor::UiActor::with_external_bus_rx(
         state,
@@ -132,8 +127,7 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());
@@ -211,8 +205,7 @@ async fn uiactor_drain_loop_quits_before_first_snapshot() {
     let bus = leader.event_bus().clone();
 
     let agent_arc: Arc<dyn LeaderAgentHandle> = Arc::new(MockAgentHandle);
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let mut state = runie_core::AppState::default();
     state.set_actor_handles(leader.clone());

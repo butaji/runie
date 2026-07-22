@@ -13,6 +13,18 @@
         "scan_timeout_secs": 30
       }
     },
+    "goal": {
+      "description": "Goal mode configuration.",
+      "$ref": "#/$defs/GoalSection",
+      "default": {
+        "auto_verify": true,
+        "enabled": true,
+        "max_checkpoints": 20,
+        "max_rounds": 10,
+        "show_pane": true,
+        "token_budget": null
+      }
+    },
     "hooks": {
       "description": "Hook commands registered by event name.",
       "$ref": "#/$defs/HooksConfig",
@@ -121,6 +133,15 @@
         "enabled": false
       }
     },
+    "skills": {
+      "description": "Skills configuration.",
+      "$ref": "#/$defs/SkillsConfig",
+      "default": {
+        "disabled": [],
+        "ignore": [],
+        "paths": []
+      }
+    },
     "telemetry": {
       "description": "Telemetry settings.",
       "$ref": "#/$defs/TelemetrySection",
@@ -204,6 +225,51 @@
           "type": "integer",
           "format": "uint64",
           "default": 30,
+          "minimum": 0
+        }
+      }
+    },
+    "GoalSection": {
+      "description": "Goal mode configuration section.",
+      "type": "object",
+      "properties": {
+        "auto_verify": {
+          "description": "Auto-verify after each task completion.",
+          "type": "boolean",
+          "default": true
+        },
+        "enabled": {
+          "description": "Enable goal mode.",
+          "type": "boolean",
+          "default": true
+        },
+        "max_checkpoints": {
+          "description": "Max checkpoints to track.",
+          "type": "integer",
+          "format": "uint",
+          "default": 20,
+          "minimum": 0
+        },
+        "max_rounds": {
+          "description": "Max verification rounds before pausing.",
+          "type": "integer",
+          "format": "uint",
+          "default": 10,
+          "minimum": 0
+        },
+        "show_pane": {
+          "description": "Show goal pane in UI.",
+          "type": "boolean",
+          "default": true
+        },
+        "token_budget": {
+          "description": "Token budget for goal execution (None = unlimited).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "default": null,
           "minimum": 0
         }
       }
@@ -337,6 +403,13 @@
           "default": 3,
           "minimum": 0
         },
+        "lead_model": {
+          "description": "Lead (coordinator) model for swarm/delegation patterns.\nFormat: \"provider/model\". Uses current model if None.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "max_retries": {
           "description": "Retries per task on failure.",
           "type": "integer",
@@ -358,6 +431,13 @@
           "default": 120000,
           "minimum": 0
         },
+        "worker_model": {
+          "description": "Worker (task-executor) model for swarm/delegation patterns.\nFormat: \"provider/model\". Uses current model if None.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "workers": {
           "description": "Max parallel workers.",
           "type": "integer",
@@ -367,12 +447,23 @@
         }
       }
     },
+    "ModelId": {
+      "description": "A model identifier in `\"provider/model\"` form.",
+      "type": "string"
+    },
     "ModelProvider": {
       "description": "A provider's configuration entry.\nAPI keys are resolved from environment variables or OS keyring, not stored here.",
       "type": "object",
       "properties": {
         "base_url": {
           "type": "string"
+        },
+        "context_window_fallbacks": {
+          "description": "Fallback model IDs to try when the primary model cannot handle a request\n(e.g., context window exceeded). Ordered by priority.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ModelId"
+          }
         },
         "headers": {
           "type": "object",
@@ -643,6 +734,36 @@
           "description": "Enable OS-level sandboxing for bash tool execution.\nWhen enabled, bash commands are wrapped in platform-specific sandbox.\nDefaults to false.",
           "type": "boolean",
           "default": false
+        }
+      }
+    },
+    "SkillsConfig": {
+      "description": "Skills configuration for skill discovery and management.",
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "description": "List of disabled skill names. Disabled skills are excluded from the\nsystem prompt and skill tool invocation but remain discoverable.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignore": {
+          "description": "Path prefixes to exclude from skill discovery.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "paths": {
+          "description": "Additional skill locations to load. Each entry is a `SKILL.md` file or\na directory walked recursively. Supports `~` expansion.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

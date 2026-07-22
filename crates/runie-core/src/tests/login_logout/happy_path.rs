@@ -6,8 +6,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    assert_panel_id, assert_step, clean_config, fetch_models, save_login_flow, select_provider,
-    start_login_flow, submit_key,
+    assert_panel_id, assert_step, clean_config, fetch_models, save_login_flow, select_provider, start_login_flow,
+    submit_key,
 };
 
 #[test]
@@ -121,9 +121,7 @@ async fn model_selector_reflects_login_selected_models_under_runtime() {
     select_provider(&mut state, "minimax");
     submit_key(&mut state, "sk-test");
     fetch_models(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
-    state.update(Event::ToggleModel {
-        model: "MiniMax-M2.7".into(),
-    });
+    state.update(Event::ToggleModel { model: "MiniMax-M2.7".into() });
     save_login_flow(&mut state);
 
     state.update(Event::ToggleModelSelector);
@@ -165,9 +163,7 @@ fn model_selector_reflects_login_selected_models() {
     fetch_models(&mut state, &["MiniMax-M3".into(), "MiniMax-M2.7".into()]);
 
     // Deselect MiniMax-M2.7 so only MiniMax-M3 remains chosen.
-    state.update(crate::Event::ToggleModel {
-        model: "MiniMax-M2.7".into(),
-    });
+    state.update(crate::Event::ToggleModel { model: "MiniMax-M2.7".into() });
     save_login_flow(&mut state);
 
     // Open the /model selector and inspect its items.

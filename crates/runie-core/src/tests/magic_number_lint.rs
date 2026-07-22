@@ -50,11 +50,7 @@ fn is_line_exempt(line: &str) -> bool {
     }
 
     // Skip vec!, hashmap!, etc. literals.
-    if line.contains("vec!")
-        || line.contains("hashmap!")
-        || line.contains("HashMap!")
-        || line.contains("btreemap!")
-    {
+    if line.contains("vec!") || line.contains("hashmap!") || line.contains("HashMap!") || line.contains("btreemap!") {
         return true;
     }
 
@@ -62,6 +58,8 @@ fn is_line_exempt(line: &str) -> bool {
 }
 
 /// Find magic numbers in a line.
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
 fn find_magic_numbers(line: &str) -> Vec<String> {
     // Skip entire line if exempt.
     if is_line_exempt(line) {
@@ -90,10 +88,8 @@ fn find_magic_numbers(line: &str) -> Vec<String> {
         }
 
         // Check if this looks like a named constant (preceded by =, :, ,, =>).
-        let looks_named = before.ends_with('=')
-            || before.ends_with(':')
-            || before.ends_with(',')
-            || before.ends_with("=>");
+        let looks_named =
+            before.ends_with('=') || before.ends_with(':') || before.ends_with(',') || before.ends_with("=>");
 
         if looks_named {
             continue;

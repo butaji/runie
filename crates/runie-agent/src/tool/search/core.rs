@@ -1,8 +1,6 @@
 //! Search tool — unified file/content search using the runie search index.
 
-use crate::tool::search::fff_helpers::{
-    build_error_json, build_error_json_with_instant, with_search_index,
-};
+use crate::tool::search::fff_helpers::{build_error_json, build_error_json_with_instant, with_search_index};
 use crate::tool::search::modes::{search_content, search_files, search_glob};
 use crate::tool::search::types::{SearchMode, DEFAULT_LIMIT};
 use crate::tool::{ToolContext, ToolDef, ToolOutput, ToolStatus};
@@ -68,13 +66,7 @@ fn search_error(query: &str, start: Instant, msg: String) -> ToolOutput {
     }
 }
 
-pub(crate) fn search_impl(
-    query: &str,
-    mode: SearchMode,
-    _path: &PathBuf,
-    limit: usize,
-    start: Instant,
-) -> ToolOutput {
+pub(crate) fn search_impl(query: &str, mode: SearchMode, _path: &PathBuf, limit: usize, start: Instant) -> ToolOutput {
     let state = match FffSearchState::get() {
         Some(s) => s,
         None => return search_not_initialized_error(query, start),

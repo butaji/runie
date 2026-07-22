@@ -102,9 +102,7 @@ fn agent_message_strips_structured_tool() {
     let mut state = fresh_state();
     state
         .agent("req.0")
-        .respond(
-            r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#,
-        )
+        .respond(r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#)
         .done();
     let count = state
         .session
@@ -136,7 +134,9 @@ fn agent_message_keeps_natural_language_around_tool_call_markup() {
     let mut state = fresh_state();
     state
         .agent("req.0")
-        .respond("I will list files.\n[TOOL_CALL]{tool => \"list_dir\", args => {\"path\" => \".\"}}[/TOOL_CALL]\nDone.")
+        .respond(
+            "I will list files.\n[TOOL_CALL]{tool => \"list_dir\", args => {\"path\" => \".\"}}[/TOOL_CALL]\nDone.",
+        )
         .done();
     let msg = state
         .session
@@ -183,13 +183,7 @@ fn tool_end_updates_timestamp() {
     let mut state = fresh_state();
     state.agent("req.0").tool_start("list_files");
     let t1 = state.session.messages[0].timestamp;
-    state.update(crate::Event::ToolEnd {
-        id: "".to_string(),
-        duration_secs: 0.5,
-        output: String::new(),
-
-        input: None,
-    });
+    state.update(crate::Event::ToolEnd { id: "".to_string(), duration_secs: 0.5, output: String::new(), input: None });
     let t2 = state.session.messages[0].timestamp;
     assert!(
         t2 >= t1,
@@ -224,8 +218,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
         .elements
         .iter()
         .map(|e| match e {
-            crate::view::Element::ThoughtMarker { .. }
-            | crate::view::Element::ThoughtSummary { .. } => "T",
+            crate::view::Element::ThoughtMarker { .. } | crate::view::Element::ThoughtSummary { .. } => "T",
             crate::view::Element::AgentMessage { .. } => "A",
             crate::view::Element::Spacer { .. } => "S",
             _ => "?",
@@ -308,9 +301,9 @@ fn streaming_mixed_text_and_tool_keeps_both_for_capture() {
 #[test]
 fn streaming_structured_tool_stored_for_capture() {
     let mut state = fresh_state();
-    state.agent("req.0").respond(
-        r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#,
-    );
+    state
+        .agent("req.0")
+        .respond(r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#);
     let msg = state
         .session
         .messages

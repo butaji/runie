@@ -41,6 +41,7 @@ ractor.workspace = true
 parking_lot.workspace = true
 ignore.workspace = true
 regex.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 runie-testing = { workspace = true, features = ["provider", "agent"] }

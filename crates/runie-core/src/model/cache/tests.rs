@@ -18,7 +18,11 @@ fn snapshot_rebuilds_palette_cache_without_blocking_io() {
         description: "rust helper".into(),
         context: String::new(),
         user_invocable: true,
-        file_path: std::path::PathBuf::new(),
+        file_path: Utf8PathBuf::from(""),
+        scope: crate::skills::SkillScope::Local,
+        enabled: true,
+        plugin_name: None,
+        ignore_paths: vec![],
     }];
     state.update(Event::ToggleCommandPalette);
     let snap = state.snapshot();

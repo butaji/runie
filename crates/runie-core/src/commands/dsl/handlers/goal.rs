@@ -30,7 +30,10 @@ pub fn handle_goal(state: &mut AppState, args: &str) -> CommandResult {
     let mut input = args;
     let replace = input.starts_with("--replace ");
     if replace {
-        input = input.trim_start_matches("--replace ").trim_start_matches("--").trim();
+        input = input
+            .trim_start_matches("--replace ")
+            .trim_start_matches("--")
+            .trim();
     } else if input.starts_with("-- ") {
         input = input.trim_start_matches("-- ").trim();
     } else if input == "--" {
@@ -43,15 +46,10 @@ pub fn handle_goal(state: &mut AppState, args: &str) -> CommandResult {
 /// Show the current goal status in a panel stack.
 fn handle_goal_status(state: &AppState) -> CommandResult {
     let Some(goal) = state.goal_state() else {
-        return CommandResult::Message(
-            "No active goal. Use /goal -- <objective> to create one.".into(),
-        );
+        return CommandResult::Message("No active goal. Use /goal -- <objective> to create one.".into());
     };
 
-    let elapsed = goal
-        .created_at
-        .elapsed()
-        .as_secs();
+    let elapsed = goal.created_at.elapsed().as_secs();
     let elapsed_str = format_duration(elapsed);
 
     let status_icon = match goal.status {
@@ -147,9 +145,7 @@ fn handle_goal_create(state: &mut AppState, objective: &str, replace: bool) -> C
     }
 
     // Emit event so actor layer knows about goal creation
-    CommandResult::Event(crate::Event::GoalCreate {
-        objective: objective.to_string(),
-    })
+    CommandResult::Event(crate::Event::GoalCreate { objective: objective.to_string() })
 }
 
 fn format_duration(secs: u64) -> String {

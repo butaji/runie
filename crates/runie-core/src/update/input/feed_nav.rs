@@ -5,8 +5,7 @@
 //!   - `K`/`J` — response anchor nav (snap to first/last agent message in current turn)
 
 use crate::model::AppState;
-use crate::update::input::scroll::{scroll_to_post, current_top_post};
-use crate::view::elements::PostKind;
+use crate::update::input::scroll::scroll_to_post;
 use crate::view::turns::{rebuild_turns, turn_containing};
 
 /// Jump to the previous turn's prompt boundary.
@@ -95,6 +94,7 @@ pub fn next_turn(state: &mut AppState) {
 }
 
 /// Jump to the previous agent message anchor in the current turn.
+#[allow(clippy::cognitive_complexity)]
 pub fn prev_response(state: &mut AppState) {
     let snap = state.snapshot();
     let turns = rebuild_turns(&snap.elements);
@@ -111,8 +111,7 @@ pub fn prev_response(state: &mut AppState) {
     };
 
     // Find previous agent response before the current position
-    let current_elem_idx = current_sel
-        .and_then(|sel| snap.posts.get(sel).map(|p| p.start));
+    let current_elem_idx = current_sel.and_then(|sel| snap.posts.get(sel).map(|p| p.start));
 
     let mut found = None;
     if let Some(start_idx) = range_start {
@@ -168,17 +167,15 @@ pub fn next_response(state: &mut AppState) {
     let search_end = range_end.unwrap_or(snap.elements.len());
 
     for (elem_idx, elem) in snap.elements.iter().enumerate() {
-        if elem_idx < search_end {
-            if matches!(elem, crate::view::elements::Element::AgentMessage { .. }) {
-                if let Some(cur) = current_elem_idx {
-                    if elem_idx >= cur {
-                        found = Some(elem_idx);
-                        break;
-                    }
-                } else {
+        if elem_idx < search_end && matches!(elem, crate::view::elements::Element::AgentMessage { .. }) {
+            if let Some(cur) = current_elem_idx {
+                if elem_idx >= cur {
                     found = Some(elem_idx);
                     break;
                 }
+            } else {
+                found = Some(elem_idx);
+                break;
             }
         }
     }

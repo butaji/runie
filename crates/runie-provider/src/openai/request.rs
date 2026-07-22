@@ -3,7 +3,7 @@
 #![allow(unused_imports)]
 use super::OpenAiProvider;
 use crate::ModelMeta;
-use runie_core::proto::message::{ChatMessage, Part, ToolCall};
+use runie_core::proto::message::{ChatMessage, ChatMessageBuilder, Part, ToolCall};
 
 const MAX_TOOL_CALL_ID_LEN: usize = 64;
 
@@ -32,10 +32,7 @@ struct OpenAiMessage {
     tool_call_id: Option<String>,
 }
 
-pub fn build_request_body(
-    provider: &OpenAiProvider,
-    messages: &[ChatMessage],
-) -> serde_json::Value {
+pub fn build_request_body(provider: &OpenAiProvider, messages: &[ChatMessage]) -> serde_json::Value {
     let span = tracing::debug_span!(
         "build_request_body",
         model = %provider.model(),
@@ -98,12 +95,7 @@ struct RequestMeta {
 
 impl Default for RequestMeta {
     fn default() -> Self {
-        Self {
-            is_thinking: false,
-            output_limit: None,
-            supports_system: true,
-            supports_tools: false,
-        }
+        Self { is_thinking: false, output_limit: None, supports_system: true, supports_tools: false }
     }
 }
 
@@ -177,10 +169,7 @@ fn tool_call_to_openai(call: &ToolCall) -> OpenAiToolCall {
     OpenAiToolCall {
         id: sanitize_tool_call_id(&call.id),
         call_type: "function".to_owned(),
-        function: OpenAiFunction {
-            name: call.name.clone(),
-            arguments: call.args.to_string(),
-        },
+        function: OpenAiFunction { name: call.name.clone(), arguments: call.args.to_string() },
     }
 }
 
@@ -222,25 +211,14 @@ mod tests {
         // When assistant has both text and tool_calls, OpenAI API requires
         // content to be empty (the text goes in a separate message).
         // Sanitize no longer removes dangling tool calls.
-        let msg = ChatMessage {
-            role: Role::Assistant,
-            timestamp: 0.0,
-            id: String::new(),
-            provider: String::new(),
-            metadata: MessageMetadata::default(),
-            tool_call_id: None,
-            provider_metadata: None,
-            parts: vec![
-                Part::Text {
-                    content: "I'll read it.".into(),
-                },
-                Part::ToolCall {
-                    id: "call_1".into(),
-                    name: "read_file".into(),
-                    args: serde_json::json!({"path":"Cargo.toml"}),
-                },
-            ],
-        };
+        let msg = ChatMessageBuilder::assistant("")
+            .text("I'll read it.")
+            .tool_call(
+                "call_1",
+                "read_file",
+                serde_json::json!({"path":"Cargo.toml"}),
+            )
+            .build();
         let body = build_request_body(&provider(), &[ChatMessage::user("hi".to_string()), msg]);
         let serialized = &body["messages"].as_array().unwrap()[1];
         assert_eq!(serialized["role"], "assistant");
@@ -283,10 +261,7 @@ mod tests {
         let p = OpenAiProvider::new("sk".to_string(), "o1").with_model_meta(meta);
         let body = build_request_body(
             &p,
-            &[
-                ChatMessage::system("sys".to_string()),
-                ChatMessage::user("hi".to_string()),
-            ],
+            &[ChatMessage::system("sys".to_string()), ChatMessage::user("hi".to_string())],
         );
         assert_eq!(body["max_completion_tokens"], 4096);
         assert!(body["max_tokens"].is_null());

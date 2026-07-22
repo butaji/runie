@@ -27,8 +27,7 @@ where
     // creates the file, not missing parents, so without this the open fails with
     // "No such file or directory" and the write is lost.
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create config dir: {}", parent.display()))?;
+        fs::create_dir_all(parent).with_context(|| format!("failed to create config dir: {}", parent.display()))?;
     }
 
     // Open file before acquiring lock
@@ -148,11 +147,7 @@ pub fn set_default_model_at_path(path: &Path, provider: &str, model: &str) -> an
 }
 
 /// Update the model list for a provider.
-pub fn set_provider_models_at_path(
-    path: &Path,
-    name: &str,
-    models: &[String],
-) -> anyhow::Result<()> {
+pub fn set_provider_models_at_path(path: &Path, name: &str, models: &[String]) -> anyhow::Result<()> {
     let n = name.to_owned();
     let m = models.to_vec();
     with_exclusive_lock(path, move |config| {
@@ -185,10 +180,7 @@ pub fn set_telemetry_at_path(path: &Path, enabled: bool) -> anyhow::Result<()> {
 }
 
 /// Set truncation limits.
-pub fn set_truncation_at_path(
-    path: &Path,
-    limits: &crate::config::TruncationSection,
-) -> anyhow::Result<()> {
+pub fn set_truncation_at_path(path: &Path, limits: &crate::config::TruncationSection) -> anyhow::Result<()> {
     let l = limits.clone();
     with_exclusive_lock(path, move |config| {
         config.truncation = l.clone();

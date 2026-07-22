@@ -22,19 +22,14 @@ impl MockAgentHandle {
     fn new() -> (Arc<Self>, tokio::sync::mpsc::Receiver<LeaderAgentCmd>) {
         let (_tx, rx) = tokio::sync::mpsc::channel(16);
         (
-            Arc::new(Self {
-                run_count: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            }),
+            Arc::new(Self { run_count: Arc::new(std::sync::atomic::AtomicUsize::new(0)) }),
             rx,
         )
     }
 }
 
 impl LeaderAgentHandle for MockAgentHandle {
-    fn run(
-        &self,
-        _cmd: LeaderAgentCmd,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    fn run(&self, _cmd: LeaderAgentCmd) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         self.run_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Box::pin(async {})
@@ -46,11 +41,8 @@ impl LeaderAgentHandle for MockAgentHandle {
 
 fn make_ui_actor() -> (UiActor, Arc<MockAgentHandle>) {
     let (agent, _rx) = MockAgentHandle::new();
-    let agent_arc = Arc::new(MockAgentHandle {
-        run_count: agent.run_count.clone(),
-    });
-    let agent_handle =
-        crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
+    let agent_arc = Arc::new(MockAgentHandle { run_count: agent.run_count.clone() });
+    let agent_handle = crate::ui_actor_agent_handles::LeaderAgentActorHandle::new(agent_arc.clone());
 
     let state = runie_core::AppState::default();
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
@@ -112,9 +104,7 @@ async fn permission_allow_event_clears_request() {
     set_permission_request(&mut ui, "test-allow");
 
     ui.handle_event_inner(
-        Event::PermissionAllow {
-            request_id: "test-allow".into(),
-        },
+        Event::PermissionAllow { request_id: "test-allow".into() },
         effect_tx.clone(),
     )
     .await;
@@ -134,9 +124,7 @@ async fn permission_deny_event_clears_request() {
     set_permission_request(&mut ui, "test-deny");
 
     ui.handle_event_inner(
-        Event::PermissionDeny {
-            request_id: "test-deny".into(),
-        },
+        Event::PermissionDeny { request_id: "test-deny".into() },
         effect_tx.clone(),
     )
     .await;
@@ -156,10 +144,7 @@ async fn permission_always_allow_event_clears_request() {
     set_permission_request(&mut ui, "test-always");
 
     ui.handle_event_inner(
-        Event::PermissionAlwaysAllow {
-            request_id: "test-always".into(),
-            tool: "bash".into(),
-        },
+        Event::PermissionAlwaysAllow { request_id: "test-always".into(), tool: "bash".into() },
         effect_tx.clone(),
     )
     .await;
@@ -179,9 +164,7 @@ async fn permission_event_wrong_id_is_ignored() {
     set_permission_request(&mut ui, "test-a");
 
     ui.handle_event_inner(
-        Event::PermissionAllow {
-            request_id: "test-b".into(),
-        },
+        Event::PermissionAllow { request_id: "test-b".into() },
         effect_tx.clone(),
     )
     .await;

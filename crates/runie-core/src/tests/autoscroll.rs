@@ -7,9 +7,7 @@ fn add_messages(state: &mut AppState, count: usize) {
     for i in 0..count {
         state.session.messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: format!("msg{}", i),
-            }],
+            parts: vec![Part::Text { content: format!("msg{}", i) }],
             timestamp: i as f64,
             id: format!("u{}", i),
             ..Default::default()
@@ -150,9 +148,7 @@ fn at_bottom_shows_new_thought() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(crate::Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Thinking { id: "req.0".to_string() });
     state.update(crate::Event::Response {
         id: "req.0".to_string(),
         content: "Thinking...".to_string(),
@@ -161,9 +157,7 @@ fn at_bottom_shows_new_thought() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(crate::Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::ThoughtDone { id: "req.0".to_string() });
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&mut state, 5);
@@ -287,9 +281,7 @@ fn single_message_visible() {
     let mut state = fresh_state();
     state.session.messages.push(ChatMessage {
         role: Role::User,
-        parts: vec![crate::message::Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![crate::message::Part::Text { content: "hello".into() }],
 
         timestamp: 0.0,
         id: "u1".into(),
@@ -327,9 +319,7 @@ fn agent_done_keeps_bottom_when_already_there() {
     add_messages(&mut state, 10);
     state.view.scroll = 0;
 
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
     state.ensure_fresh();
 
     assert_eq!(
@@ -344,9 +334,7 @@ fn agent_done_preserves_scroll_when_not_at_bottom() {
     add_messages(&mut state, 10);
     state.view.scroll = 5;
 
-    state.update(crate::Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(crate::Event::Done { id: "req.0".to_string() });
     state.ensure_fresh();
 
     assert_eq!(

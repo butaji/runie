@@ -16,16 +16,12 @@ pub struct AgentTurn<'a> {
 
 impl<'a> AgentTurn<'a> {
     pub fn new(state: &'a mut AppState, id: impl Into<String>) -> Self {
-        Self {
-            state,
-            id: id.into(),
-        }
+        Self { state, id: id.into() }
     }
 
     pub fn think(self) -> Self {
-        self.state.update(crate::Event::Thinking {
-            id: self.id.clone(),
-        });
+        self.state
+            .update(crate::Event::Thinking { id: self.id.clone() });
         self
     }
 
@@ -42,9 +38,8 @@ impl<'a> AgentTurn<'a> {
     }
 
     pub fn thought_done(self) -> Self {
-        self.state.update(crate::Event::ThoughtDone {
-            id: self.id.clone(),
-        });
+        self.state
+            .update(crate::Event::ThoughtDone { id: self.id.clone() });
         self
     }
 
@@ -75,10 +70,8 @@ impl<'a> AgentTurn<'a> {
     }
 
     pub fn complete(self, duration_secs: f64) -> Self {
-        self.state.update(crate::Event::TurnComplete {
-            id: self.id.clone(),
-            duration_secs,
-        });
+        self.state
+            .update(crate::Event::TurnComplete { id: self.id.clone(), duration_secs });
         self
     }
 
@@ -87,10 +80,8 @@ impl<'a> AgentTurn<'a> {
     }
 
     pub fn error(self, message: impl Into<String>) {
-        self.state.update(crate::Event::Error {
-            id: self.id,
-            message: message.into(),
-        });
+        self.state
+            .update(crate::Event::Error { id: self.id, message: message.into() });
     }
 }
 

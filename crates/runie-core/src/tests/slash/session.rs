@@ -1,4 +1,5 @@
 #![allow(clippy::all)]
+#![allow(clippy::too_many_lines)]
 use super::{exec, tmp_store};
 use crate::commands::DialogKind;
 use crate::message::Part;
@@ -23,10 +24,7 @@ fn delete_no_args_opens_form() {
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
-    if let Some(crate::commands::DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: stack,
-    }) = &state.open_dialog
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::Generic, panels: stack }) = &state.open_dialog
     {
         let panel = stack.current().expect("should have panel");
         assert_eq!(panel.id, "delete", "should be delete form");
@@ -88,8 +86,7 @@ fn save_trims_whitespace() {
         state.update(Event::submit()); // Submits the form
 
         // Should save with trimmed name
-        let jsonl_path =
-            crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
+        let jsonl_path = crate::session::store::SessionStore::new(store.dir().to_path_buf()).path("trimmed");
         assert!(jsonl_path.exists(), "whitespace should be trimmed");
     });
 }
@@ -155,10 +152,7 @@ fn new_closes_open_dialog_and_clears_ui_state() {
         input: serde_json::Value::Null,
     });
 
-    state.update(Event::RunPaletteCommand {
-        name: "new".into(),
-        args: "".into(),
-    });
+    state.update(Event::RunPaletteCommand { name: "new".into(), args: "".into() });
 
     assert!(state.open_dialog.is_none(), "open_dialog cleared");
     assert!(state.dialog_back_stack.is_empty(), "back stack cleared");
@@ -233,9 +227,7 @@ fn resume_loads_most_recent_session() {
             role: Role::User,
             timestamp: 1.0,
             id: "u.older".into(),
-            parts: vec![Part::Text {
-                content: "older".into(),
-            }],
+            parts: vec![Part::Text { content: "older".into() }],
             ..Default::default()
         });
         crate::session::replay::save_session("older", &older).unwrap();
@@ -255,9 +247,7 @@ fn resume_loads_most_recent_session() {
             role: Role::User,
             timestamp: 2.0,
             id: "u.newer".into(),
-            parts: vec![Part::Text {
-                content: "newer".into(),
-            }],
+            parts: vec![Part::Text { content: "newer".into() }],
             ..Default::default()
         });
         crate::session::replay::save_session("newer", &newer).unwrap();

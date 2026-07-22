@@ -1,4 +1,5 @@
 //! Session commands.
+#![allow(clippy::too_many_lines)]
 
 pub mod run;
 
@@ -23,9 +24,7 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
 }
 
 /// Register form-based session commands.
-fn register_session_form_handlers(
-    registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry,
-) {
+fn register_session_form_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
     registry.register(
         "save",
         NamedHandler::FormWithHandler {
@@ -96,9 +95,7 @@ fn register_session_form_handlers(
 }
 
 /// Register simple session commands.
-fn register_session_simple_handlers(
-    registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry,
-) {
+fn register_session_simple_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
     registry.register("sessions", NamedHandler::Handler(handle_sessions));
     registry.register("new", NamedHandler::Handler(handle_new));
     registry.register("reset", NamedHandler::Handler(handle_reset));
@@ -121,9 +118,7 @@ pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
         Ok(sessions) if sessions.is_empty() => {
             CommandResult::Message(crate::ui_strings::session::NO_SAVED_SESSIONS.into())
         }
-        Ok(sessions) => {
-            CommandResult::Message(crate::ui_strings::session::saved_sessions(&sessions))
-        }
+        Ok(sessions) => CommandResult::Message(crate::ui_strings::session::saved_sessions(&sessions)),
         Err(e) => CommandResult::Message(crate::ui_strings::session::session_list_error(
             &e.to_string(),
         )),
@@ -233,11 +228,7 @@ fn count_role(state: &AppState, role: crate::model::Role) -> usize {
         .count()
 }
 
-fn build_session_info(
-    state: &AppState,
-    tokens: usize,
-    (user, assistant, tool): (usize, usize, usize),
-) -> String {
+fn build_session_info(state: &AppState, tokens: usize, (user, assistant, tool): (usize, usize, usize)) -> String {
     let prompt = if state.input().current_prompt.is_empty() {
         "default"
     } else {
@@ -271,8 +262,7 @@ fn build_session_info(
 
 fn project_trust_status(state: &AppState) -> &'static str {
     let cwd = std::env::current_dir().unwrap_or_default();
-    let cwd_utf8 =
-        camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
+    let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
     // Read from the AppState projection populated via Event::TrustLoaded.
     // In test mode (no actor handles), trust_decisions may be empty;
     // fall back to the default trust status.
@@ -338,8 +328,7 @@ mod tests {
         let mut state = AppState::default();
         // Pre-populate trust decisions (as Event::TrustLoaded would).
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
-        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
-            .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
+        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
         state.trust_decisions = indexmap! { cwd_utf8.clone() => TrustDecision::Trusted };
 
         let status = project_trust_status(&state);
@@ -357,8 +346,7 @@ mod tests {
     fn project_trust_status_untrusted() {
         let mut state = AppState::default();
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
-        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
-            .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
+        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
         state.trust_decisions = indexmap! { cwd_utf8 => TrustDecision::Untrusted };
 
         let status = project_trust_status(&state);
@@ -367,8 +355,7 @@ mod tests {
 
     fn mark_current_dir(state: &mut AppState, decision: TrustDecision) {
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
-        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd)
-            .unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
+        let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("/tmp"));
         state.trust_decisions = indexmap! { cwd_utf8 => decision };
     }
 
@@ -407,6 +394,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn run_auto_refuses_in_untrusted_project() {
         let mut state = AppState::default();
         mark_current_dir(&mut state, TrustDecision::Untrusted);

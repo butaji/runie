@@ -15,12 +15,7 @@ pub enum ConfigMsg {
     /// Reload from disk, detect changes, and publish `Event::ConfigLoaded` if changed.
     Reload,
     /// Save or update a provider entry.
-    SaveProvider {
-        name: String,
-        base_url: String,
-        api_key: String,
-        models: Vec<String>,
-    },
+    SaveProvider { name: String, base_url: String, api_key: String, models: Vec<String> },
     /// Remove a provider entry.
     RemoveProvider { name: String },
     /// Persist the active provider/model as the default.
@@ -41,11 +36,7 @@ pub enum ConfigMsg {
     SetMode { section: ModeSection },
     /// Set (or clear, with `None`) the per-model thinking level override for
     /// `provider/model`.
-    SetModelThinking {
-        provider: String,
-        model: String,
-        level: Option<ThinkingLevel>,
-    },
+    SetModelThinking { provider: String, model: String, level: Option<ThinkingLevel> },
     /// Request the current in-memory config.
     GetConfig(RpcReplyPort<Config>),
     /// Request the list of configured providers.
@@ -77,58 +68,37 @@ pub enum ConfigMsg {
 }
 
 impl Clone for ConfigMsg {
+    #[allow(clippy::too_many_lines)]
     fn clone(&self) -> Self {
         match self {
             ConfigMsg::Load => ConfigMsg::Load,
             ConfigMsg::Reload => ConfigMsg::Reload,
-            ConfigMsg::SaveProvider {
-                name,
-                base_url,
-                api_key,
-                models,
-            } => ConfigMsg::SaveProvider {
+            ConfigMsg::SaveProvider { name, base_url, api_key, models } => ConfigMsg::SaveProvider {
                 name: name.clone(),
                 base_url: base_url.clone(),
                 api_key: api_key.clone(),
                 models: models.clone(),
             },
             ConfigMsg::RemoveProvider { name } => ConfigMsg::RemoveProvider { name: name.clone() },
-            ConfigMsg::SetDefaultModel { provider, model } => ConfigMsg::SetDefaultModel {
-                provider: provider.clone(),
-                model: model.clone(),
-            },
-            ConfigMsg::SetProviderModels { name, models } => ConfigMsg::SetProviderModels {
-                name: name.clone(),
-                models: models.clone(),
-            },
+            ConfigMsg::SetDefaultModel { provider, model } => {
+                ConfigMsg::SetDefaultModel { provider: provider.clone(), model: model.clone() }
+            }
+            ConfigMsg::SetProviderModels { name, models } => {
+                ConfigMsg::SetProviderModels { name: name.clone(), models: models.clone() }
+            }
             ConfigMsg::SetTheme { name } => ConfigMsg::SetTheme { name: name.clone() },
             ConfigMsg::SetVimMode { enabled } => ConfigMsg::SetVimMode { enabled: *enabled },
             ConfigMsg::SetTelemetry { enabled } => ConfigMsg::SetTelemetry { enabled: *enabled },
-            ConfigMsg::SetTruncation { limits } => ConfigMsg::SetTruncation {
-                limits: limits.clone(),
-            },
+            ConfigMsg::SetTruncation { limits } => ConfigMsg::SetTruncation { limits: limits.clone() },
             ConfigMsg::SetThinkingLevel { level } => ConfigMsg::SetThinkingLevel { level: *level },
-            ConfigMsg::SetMode { section } => ConfigMsg::SetMode {
-                section: section.clone(),
-            },
-            ConfigMsg::SetModelThinking {
-                provider,
-                model,
-                level,
-            } => ConfigMsg::SetModelThinking {
-                provider: provider.clone(),
-                model: model.clone(),
-                level: *level,
-            },
+            ConfigMsg::SetMode { section } => ConfigMsg::SetMode { section: section.clone() },
+            ConfigMsg::SetModelThinking { provider, model, level } => {
+                ConfigMsg::SetModelThinking { provider: provider.clone(), model: model.clone(), level: *level }
+            }
             ConfigMsg::GetConfig(_) => ConfigMsg::Load,
             ConfigMsg::GetConfiguredProviders(_) => ConfigMsg::Reload,
             ConfigMsg::LoadLayers(_) => ConfigMsg::Load,
-            ConfigMsg::AddMcpServer {
-                scope,
-                name,
-                server,
-                ..
-            } => {
+            ConfigMsg::AddMcpServer { scope, name, server, .. } => {
                 ConfigMsg::AddMcpServer {
                     scope: *scope,
                     name: name.clone(),

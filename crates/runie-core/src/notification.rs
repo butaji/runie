@@ -55,11 +55,7 @@ impl Notification {
 // ─── Notification constructors ─────────────────────────────────────────────
 
 fn make_notification(msg: impl Into<String>, level: TransientLevel) -> Notification {
-    Notification {
-        message: msg.into(),
-        level,
-        duration_secs: None,
-    }
+    Notification { message: msg.into(), level, duration_secs: None }
 }
 
 /// Show a success notification (green, {ok} badge).

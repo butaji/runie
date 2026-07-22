@@ -32,9 +32,7 @@ impl AppState {
 
     pub(crate) fn on_assistant_message_ready(&mut self, message: ChatMessage) {
         if let Some(idx) = self.agent_state().last_assistant_index {
-            if idx < self.session_mut().messages.len()
-                && self.session_mut().messages[idx].role == Role::Assistant
-            {
+            if idx < self.session_mut().messages.len() && self.session_mut().messages[idx].role == Role::Assistant {
                 self.session_mut().messages[idx] = message;
                 self.messages_changed();
                 return;
@@ -154,9 +152,8 @@ impl AppState {
             }
         }
         if msg.parts.is_empty() && !remaining_tail.is_empty() {
-            msg.parts.push(Part::Text {
-                content: remaining_tail.to_owned(),
-            });
+            msg.parts
+                .push(Part::Text { content: remaining_tail.to_owned() });
         }
     }
 
@@ -186,9 +183,7 @@ impl AppState {
 
     fn remove_empty_assistant(&mut self) {
         self.session_mut().messages.retain(|msg| {
-            !(msg.role == Role::Assistant
-                && msg.content().trim().is_empty()
-                && msg.tool_calls().is_empty())
+            !(msg.role == Role::Assistant && msg.content().trim().is_empty() && msg.tool_calls().is_empty())
         });
     }
 
@@ -275,9 +270,7 @@ impl AppState {
             timestamp: now(),
             id: format!("error.{}", id),
             provider: self.config_mut().current_provider.clone(),
-            parts: vec![Part::Text {
-                content: format!("Error: {}", message),
-            }],
+            parts: vec![Part::Text { content: format!("Error: {}", message) }],
             ..Default::default()
         };
         if let Some(idx) = self

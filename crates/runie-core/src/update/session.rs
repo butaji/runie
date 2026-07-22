@@ -11,10 +11,7 @@ impl AppState {
         use crate::commands::DialogState;
         if matches!(
             self.open_dialog,
-            Some(DialogState::Active {
-                kind: DialogKind::SessionTree,
-                panels: _
-            })
+            Some(DialogState::Active { kind: DialogKind::SessionTree, panels: _ })
         ) {
             *self.open_dialog_mut() = None;
             self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
@@ -27,10 +24,7 @@ impl AppState {
 
     pub(super) fn cycle_session_tree_filter(&mut self) {
         use crate::commands::DialogState;
-        if let Some(DialogState::Active {
-            kind: DialogKind::SessionTree,
-            panels: stack,
-        }) = &mut *self.open_dialog_mut()
+        if let Some(DialogState::Active { kind: DialogKind::SessionTree, panels: stack }) = &mut *self.open_dialog_mut()
         {
             if let Some(_panel) = stack.current_mut() {
                 // cycle through filter variants based on panel id or custom logic
@@ -47,8 +41,7 @@ impl AppState {
                 self.add_system_msg(format!("Forked at message {}.", message_index));
             }
         } else {
-            let mut tree =
-                crate::session::tree::SessionTree::from_messages(&self.session_mut().messages);
+            let mut tree = crate::session::tree::SessionTree::from_messages(&self.session_mut().messages);
             if let Some(path) = tree.fork_at(message_index) {
                 tree.navigate_to(&path);
                 self.session_mut().session_tree = Some(tree);
@@ -58,9 +51,11 @@ impl AppState {
     }
 
     pub(super) fn clone_session(&mut self) {
-        let tree = self.session_mut().session_tree.clone().unwrap_or_else(|| {
-            crate::session::tree::SessionTree::from_messages(&self.session_mut().messages)
-        });
+        let tree = self
+            .session_mut()
+            .session_tree
+            .clone()
+            .unwrap_or_else(|| crate::session::tree::SessionTree::from_messages(&self.session_mut().messages));
         self.session_mut().session_tree = Some(tree);
         self.add_system_msg("Session cloned at current position.".into());
     }
@@ -214,11 +209,8 @@ impl AppState {
     /// Logic matches RactorTurnActor::handle_deliver_queued:
     /// - If steering was delivered, only deliver follow-up if mode is All
     /// - If no steering, deliver follow-up
-    fn apply_queue_delivery_sync(
-        &mut self,
-        steering_mode: DeliveryMode,
-        follow_up_mode: DeliveryMode,
-    ) {
+    #[allow(clippy::too_many_lines)]
+    fn apply_queue_delivery_sync(&mut self, steering_mode: DeliveryMode, follow_up_mode: DeliveryMode) {
         use crate::proto::message::{ChatMessageBuilder, MessageOrigin, Role};
 
         // Work with AgentState projection directly.
@@ -241,8 +233,7 @@ impl AppState {
 
             // Only deliver follow-ups in All mode (matching RactorTurnActor)
             if follow_up_mode == DeliveryMode::All {
-                let mut q =
-                    TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
+                let mut q = TurnQueue::new(std::mem::take(&mut self.agent_state_mut().message_queue));
                 if let Some(r) = q.pop_all_follow_ups() {
                     self.agent_state_mut().message_queue = q.into_inner();
                     let id = self.next_id();
@@ -305,9 +296,7 @@ pub(super) fn handle_session_event(state: &mut AppState, event: crate::Event) {
             let plan_id_opt = state.view().active_plan_id.clone();
             if let Some(ref plan_id) = plan_id_opt {
                 if let Some(plans_dir) = crate::session::plan_persistence::default_plans_dir() {
-                    if let Ok(Some(new_plan_id)) =
-                        crate::session::plan_persistence::fork_plan(&plans_dir, plan_id)
-                    {
+                    if let Ok(Some(new_plan_id)) = crate::session::plan_persistence::fork_plan(&plans_dir, plan_id) {
                         state.view_mut().active_plan_id = Some(new_plan_id.clone());
                         tracing::debug!("Forked plan {} to {}", plan_id, new_plan_id);
                     }

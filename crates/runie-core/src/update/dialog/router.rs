@@ -11,8 +11,8 @@ use crate::model::AppState;
 use crate::Event;
 
 use super::{
-    open_command_palette, open_model_selector, open_mcp_servers_dialog, open_mode_selector,
-    open_scoped_models_dialog, open_settings_dialog, open_skills_dialog, open_theme_selector,
+    open_command_palette, open_mcp_servers_dialog, open_mode_selector, open_model_selector, open_scoped_models_dialog,
+    open_settings_dialog, open_skills_dialog, open_theme_selector,
     panel_handler::{update_panel_stack, PanelUpdateResult},
 };
 
@@ -113,10 +113,7 @@ fn is_palette_activation(dialog: &DialogState, event: &Event) -> bool {
     matches!(event, crate::Event::Submit | crate::Event::PaletteSelect)
         && matches!(
             dialog,
-            DialogState::Active {
-                kind: DialogKind::CommandPalette,
-                panels: _
-            }
+            DialogState::Active { kind: DialogKind::CommandPalette, panels: _ }
         )
 }
 
@@ -142,6 +139,7 @@ pub fn push_dialog_to_back_stack(state: &mut AppState, dialog: DialogState) {
 
 /// Process the result of executing a command.
 /// Closes the command palette after most command results (except when opening a new dialog).
+#[allow(clippy::too_many_lines)]
 pub fn process_command_result(state: &mut AppState, result: CommandResult) {
     use crate::commands::CommandResult as CR;
     match result {
@@ -187,10 +185,7 @@ pub fn process_command_result(state: &mut AppState, result: CommandResult) {
                 push_dialog_to_back_stack(state, current);
             }
             state.view_mut().dirty = true;
-            *state.open_dialog_mut() = Some(DialogState::Active {
-                kind: DialogKind::Generic,
-                panels: *stack,
-            });
+            *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: *stack });
         }
         CR::None => {
             // No-op, close any open command palette
@@ -216,9 +211,7 @@ fn close_command_palette_if_open(state: &mut AppState) {
 /// produce consistent UX (system messages for model/thinking/reset commands).
 fn apply_command_event_for_dialog(state: &mut AppState, evt: crate::Event) {
     match &evt {
-        crate::Event::SwitchModel {
-            provider, model, ..
-        } => {
+        crate::Event::SwitchModel { provider, model, .. } => {
             state.add_system_msg(format!("Switched to {}/{}", provider, model));
         }
         crate::Event::SetThinkingLevel(level) => {
@@ -234,6 +227,7 @@ fn apply_command_event_for_dialog(state: &mut AppState, evt: crate::Event) {
 }
 
 /// Handle MCP server and Skills panel actions.
+#[allow(clippy::too_many_lines)]
 fn handle_mcp_skill_action(state: &mut AppState, event: &Event) {
     match event {
         Event::McpServerAction { name, action } => {

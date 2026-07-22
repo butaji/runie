@@ -20,6 +20,7 @@ fn make_config(providers: &[(String, Vec<String>)]) -> Config {
                 base_url: format!("https://{}.example.com", name),
                 models: models.clone(),
                 headers: std::collections::HashMap::new(),
+                context_window_fallbacks: vec![],
             },
         );
     }
@@ -84,10 +85,7 @@ fn model_unknown_provider_model_returns_warning() {
     set_config(&mut state, &[("openai".into(), vec!["gpt-4o".into()])]);
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
-    let result = crate::commands::dsl::handlers::model::handle_model(
-        &mut state,
-        "anthropic/claude-3-sonnet",
-    );
+    let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "anthropic/claude-3-sonnet");
     assert!(
         matches!(result, CommandResult::Warning(ref msg) if msg.contains("not available")),
         "expected warning for unconfigured model, got {:?}",
@@ -131,10 +129,9 @@ fn model_opens_selector_with_only_configured_models() {
     process_command_result(&mut state, result);
 
     let items = match &state.open_dialog {
-        Some(crate::commands::DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current().map(|p| p.items.clone()).unwrap_or_default(),
+        Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
+            stack.current().map(|p| p.items.clone()).unwrap_or_default()
+        }
         other => panic!("expected ModelSelector dialog, got {:?}", other),
     };
 
@@ -163,8 +160,7 @@ fn model_unknown_model_name_for_configured_provider_returns_warning() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    let result =
-        crate::commands::dsl::handlers::model::handle_model(&mut state, "openai/nonexistent-model");
+    let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "openai/nonexistent-model");
     assert!(
         matches!(result, CommandResult::Warning(ref msg) if msg.contains("not available")),
         "expected warning for unknown model name, got {:?}",
@@ -180,8 +176,7 @@ fn model_unknown_model_name_without_provider_returns_warning() {
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4o".into();
 
-    let result =
-        crate::commands::dsl::handlers::model::handle_model(&mut state, "nonexistent-model");
+    let result = crate::commands::dsl::handlers::model::handle_model(&mut state, "nonexistent-model");
     assert!(
         matches!(result, CommandResult::Warning(ref msg) if msg.contains("not available")),
         "expected warning for unknown model name, got {:?}",
@@ -207,10 +202,9 @@ fn model_selector_includes_unknown_configured_models() {
     process_command_result(&mut state, result);
 
     let items = match &state.open_dialog {
-        Some(crate::commands::DialogState::Active {
-            kind: DialogKind::ModelSelector,
-            panels: stack,
-        }) => stack.current().map(|p| p.items.clone()).unwrap_or_default(),
+        Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) => {
+            stack.current().map(|p| p.items.clone()).unwrap_or_default()
+        }
         other => panic!("expected ModelSelector dialog, got {:?}", other),
     };
 
@@ -273,20 +267,15 @@ fn model_mock_enabled_opens_selector_with_echo_model() {
     assert!(
         matches!(
             dialog,
-            Some(crate::commands::DialogState::Active {
-                kind: DialogKind::ModelSelector,
-                panels: _,
-            })
+            Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, panels: _ })
         ),
         "expected ModelSelector dialog, got {:?}",
         dialog
     );
 
     // Verify the mock/echo model is present in the selector items
-    if let Some(crate::commands::DialogState::Active {
-        kind: DialogKind::ModelSelector,
-        panels: stack,
-    }) = &state.open_dialog()
+    if let Some(crate::commands::DialogState::Active { kind: DialogKind::ModelSelector, panels: stack }) =
+        &state.open_dialog()
     {
         let items = stack.current().map(|p| p.items.clone()).unwrap_or_default();
         let labels: Vec<_> = items.iter().filter_map(|i| i.label()).collect();

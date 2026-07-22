@@ -140,17 +140,11 @@ fn headless_system_prompt() -> String {
 }
 
 fn headless_options() -> HeadlessCliOptions {
-    HeadlessCliOptions {
-        execute_tools: false,
-        max_tool_rounds: 1,
-        on_chunk: None,
-        on_event: None,
-    }
+    HeadlessCliOptions { execute_tools: false, max_tool_rounds: 1, on_chunk: None, on_event: None }
 }
 
 async fn handle_chat(params: &Value) -> Result<Value> {
-    let messages: Vec<ChatMessage> =
-        serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
+    let messages: Vec<ChatMessage> = serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
 
     let mut msgs = vec![ChatMessage::system(headless_system_prompt())];
     msgs.extend(messages);
@@ -164,10 +158,7 @@ async fn handle_chat(params: &Value) -> Result<Value> {
 async fn handle_complete(params: &Value) -> Result<Value> {
     let prompt = params.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
 
-    let msgs = vec![
-        ChatMessage::system(headless_system_prompt()),
-        ChatMessage::user(prompt.to_owned()),
-    ];
+    let msgs = vec![ChatMessage::system(headless_system_prompt()), ChatMessage::user(prompt.to_owned())];
 
     let sink = build_sink(false);
     let opts = headless_options();
@@ -204,12 +195,9 @@ mod tests {
 
     #[test]
     fn rpc_parses_request() {
-        let json =
-            r#"{"kind":"request","id":1,"method":"initialize","params":{},"version":"0.1.0"}"#;
+        let json = r#"{"kind":"request","id":1,"method":"initialize","params":{},"version":"0.1.0"}"#;
         let msg: Message = serde_json::from_str(json).unwrap();
-        let Message::Request(req) = msg else {
-            panic!("expected request")
-        };
+        let Message::Request(req) = msg else { panic!("expected request") };
         assert_eq!(req.method, "initialize");
         assert_eq!(req.version, Version::current());
     }

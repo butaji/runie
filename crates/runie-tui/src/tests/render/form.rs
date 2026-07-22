@@ -13,10 +13,7 @@ use runie_core::{
 };
 
 fn open_form_dialog(state: &mut AppState, panel: Panel) {
-    state.open_dialog = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: PanelStack::new(panel),
-    });
+    state.open_dialog = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
 }
 
 fn render(state: &mut AppState) -> ratatui::buffer::Buffer {
@@ -28,12 +25,7 @@ fn render(state: &mut AppState) -> ratatui::buffer::Buffer {
 
 fn popup_inner_rect() -> ratatui::layout::Rect {
     // Dialog is centered: 60x18 at (10, 3) → inner at (11, 4) 58x16
-    ratatui::layout::Rect {
-        x: 11,
-        y: 4,
-        width: 58,
-        height: 16,
-    }
+    ratatui::layout::Rect { x: 11, y: 4, width: 58, height: 16 }
 }
 
 fn line_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
@@ -103,8 +95,11 @@ fn form_field_label_above_input() {
         .iter()
         .skip(name_idx + 1)
         .find(|l| l.contains("session-name") || l.contains('│'));
-    assert!(value_line.is_some(),
-        "Input value 'session-name' should be on a line AFTER the 'Name' label (label-above-input), got: {:?}", lines);
+    assert!(
+        value_line.is_some(),
+        "Input value 'session-name' should be on a line AFTER the 'Name' label (label-above-input), got: {:?}",
+        lines
+    );
 }
 
 /// Form must show a progress indicator (e.g. "1/1" or "①" etc.) showing
@@ -132,10 +127,7 @@ fn form_shows_progress_indicator() {
 /// Form must have a visually prominent Submit button — centered, with
 /// box-drawing or arrow markers, distinct from regular items.
 fn has_progress_indicator(line: &str) -> bool {
-    has_numeric_progress(line)
-        || has_circled_number(line)
-        || has_step_label(line)
-        || has_of_two_with_digit(line)
+    has_numeric_progress(line) || has_circled_number(line) || has_step_label(line) || has_of_two_with_digit(line)
 }
 
 fn has_numeric_progress(line: &str) -> bool {
@@ -152,10 +144,7 @@ fn has_circled_number(line: &str) -> bool {
 }
 
 fn has_step_label(line: &str) -> bool {
-    line.contains("Step 1")
-        || line.contains("Field 1")
-        || line.contains("Step 2")
-        || line.contains("Field 2")
+    line.contains("Step 1") || line.contains("Field 1") || line.contains("Step 2") || line.contains("Field 2")
 }
 
 fn has_of_two_with_digit(line: &str) -> bool {
@@ -221,12 +210,7 @@ fn form_active_field_visually_distinct() {
 fn form_completed_fields_show_checkmark() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    let panel = Panel::new("save", "Save Session").form_field_value(
-        "Name",
-        "session-name",
-        "name",
-        "my-session",
-    );
+    let panel = Panel::new("save", "Save Session").form_field_value("Name", "session-name", "name", "my-session");
     open_form_dialog(&mut state, panel);
 
     let buf = render(&mut state);

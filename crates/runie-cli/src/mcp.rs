@@ -94,13 +94,7 @@ pub async fn list() -> Result<()> {
 pub async fn add(name: String, command: Vec<String>, scope: ConfigScope) -> Result<()> {
     let handle = spawn_config_actor().await?;
 
-    let server = McpServer {
-        transport: McpTransport::Stdio,
-        command,
-        url: None,
-        headers: HashMap::new(),
-        scope,
-    };
+    let server = McpServer { transport: McpTransport::Stdio, command, url: None, headers: HashMap::new(), scope };
     handle.add_mcp_server(scope, name.clone(), server).await;
     println!("Added MCP server '{name}'.");
     Ok(())
@@ -115,6 +109,7 @@ pub async fn remove(name: String, scope: ConfigScope) -> Result<()> {
 }
 
 /// Run the `mcp wizard` subcommand - interactive setup for all transport types.
+#[allow(clippy::too_many_lines)]
 pub async fn wizard(scope: ConfigScope) -> Result<()> {
     use std::io::{self, Write};
 
@@ -214,13 +209,7 @@ pub async fn wizard(scope: ConfigScope) -> Result<()> {
 
     // Create and save the server config
     let handle = spawn_config_actor().await?;
-    let server = McpServer {
-        transport,
-        command,
-        url,
-        headers,
-        scope,
-    };
+    let server = McpServer { transport, command, url, headers, scope };
     handle.add_mcp_server(scope, name.clone(), server).await;
     println!("\n✅ MCP server '{name}' added successfully!");
     println!("   Use `runie mcp list` to verify.");

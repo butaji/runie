@@ -51,10 +51,7 @@ pub struct Request {
 
 impl Request {
     pub fn new(model: impl Into<String>) -> Self {
-        Self {
-            model: model.into(),
-            tools: Vec::new(),
-        }
+        Self { model: model.into(), tools: Vec::new() }
     }
 
     pub fn with_tools(mut self, tools: Vec<serde_json::Value>) -> Self {
@@ -77,17 +74,11 @@ pub struct TerminalWrapper<F> {
 
 impl<F> TerminalWrapper<F> {
     pub fn new(inner: F) -> Self {
-        Self {
-            inner,
-            is_done: false,
-        }
+        Self { inner, is_done: false }
     }
 
     pub fn done(inner: F) -> Self {
-        Self {
-            inner,
-            is_done: true,
-        }
+        Self { inner, is_done: true }
     }
 }
 

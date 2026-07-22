@@ -76,11 +76,7 @@ impl TokenTracker {
     }
 
     pub fn with_costs(input_cost: f64, output_cost: f64) -> Self {
-        Self {
-            input_cost_per_1m: input_cost,
-            output_cost_per_1m: output_cost,
-            ..Self::default()
-        }
+        Self { input_cost_per_1m: input_cost, output_cost_per_1m: output_cost, ..Self::default() }
     }
 
     pub fn add_input(&mut self, tokens: usize) {

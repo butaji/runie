@@ -56,10 +56,7 @@ fn theme_selector_renders_theme_list() {
     state.update(Event::Submit);
     assert!(matches!(
         state.open_dialog,
-        Some(runie_core::commands::DialogState::Active {
-            kind: DialogKind::Generic,
-            panels: _
-        })
+        Some(runie_core::commands::DialogState::Active { kind: DialogKind::Generic, panels: _ })
     ));
 
     let backend = TestBackend::new(60, 24);

@@ -11,9 +11,7 @@ fn user_message_has_border_bg_color() {
     state.config.vim_mode = true;
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         timestamp: 12345.0,
         id: "msg.1".to_string(),
         ..Default::default()
@@ -47,9 +45,7 @@ fn timestamp_shown_once_per_message_element() {
     let mut state = AppState::default();
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
-        parts: vec![Part::Text {
-            content: "line1\nline2\nline3".into(),
-        }],
+        parts: vec![Part::Text { content: "line1\nline2\nline3".into() }],
         timestamp: 12345.0,
         id: "msg.1".to_string(),
         ..Default::default()
@@ -78,9 +74,7 @@ fn timestamp_right_aligned_on_first_line() {
     let mut state = AppState::default();
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
-        parts: vec![Part::Text {
-            content: "short".into(),
-        }],
+        parts: vec![Part::Text { content: "short".into() }],
         timestamp: 12345.0,
         id: "msg.1".to_string(),
         ..Default::default()
@@ -116,9 +110,7 @@ fn agent_message_timestamp_appears_once() {
     let mut state = AppState::default();
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Assistant,
-        parts: vec![Part::Text {
-            content: "first line\nsecond line".into(),
-        }],
+        parts: vec![Part::Text { content: "first line\nsecond line".into() }],
         timestamp: 99999.0,
         id: "msg.1".to_string(),
         provider: "mock".to_string(),
@@ -149,9 +141,7 @@ fn timestamp_never_wraps_even_when_content_is_very_long() {
     let long_content = "a".repeat(200);
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
-        parts: vec![Part::Text {
-            content: long_content,
-        }],
+        parts: vec![Part::Text { content: long_content }],
         timestamp: 12345.0,
         id: "msg.1".to_string(),
         ..Default::default()

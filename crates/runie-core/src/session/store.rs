@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Unified session persistence with `fs2` advisory locks.
 //!
 //! Each session is stored in a single file: `<dir>/<id>.jsonl`
@@ -9,8 +11,7 @@
 
 use crate::event::durable::DurableCoreEvent;
 use crate::session::persistence::{
-    exclusive_lock, read_header, shared_lock, touch_header, write_header, ExclusiveLock,
-    SessionHeader, SharedLock,
+    exclusive_lock, read_header, shared_lock, touch_header, write_header, ExclusiveLock, SessionHeader, SharedLock,
 };
 use crate::session::SessionMetadata;
 use std::fs::{self, File, OpenOptions};
@@ -122,11 +123,7 @@ impl SessionStore {
 
     /// Append multiple events in a single atomic batch.
     #[allow(clippy::let_underscore_lock)]
-    pub fn append_batch(
-        &self,
-        session_id: &str,
-        events: &[DurableCoreEvent],
-    ) -> anyhow::Result<()> {
+    pub fn append_batch(&self, session_id: &str, events: &[DurableCoreEvent]) -> anyhow::Result<()> {
         if events.is_empty() {
             return Ok(());
         }

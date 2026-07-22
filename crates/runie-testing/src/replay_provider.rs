@@ -27,10 +27,7 @@ pub struct ReplayProvider {
 impl ReplayProvider {
     /// Build a provider that cycles through `fixtures` (each a raw SSE string).
     pub fn new(fixtures: Vec<String>) -> Self {
-        Self {
-            fixtures,
-            index: AtomicUsize::new(0),
-        }
+        Self { fixtures, index: AtomicUsize::new(0) }
     }
 }
 
@@ -67,9 +64,7 @@ fn parse_fixture(content: &str) -> Vec<ProviderEvent> {
 
             let model_err = match code {
                 401 | 403 => ModelError::Other(format!("HTTP {}: {}", code, message)),
-                429 => ModelError::RateLimit {
-                    retry_after_secs: None,
-                },
+                429 => ModelError::RateLimit { retry_after_secs: None },
                 500 | 502 | 503 => ModelError::Other(format!("HTTP {}: {}", code, message)),
                 _ => ModelError::Other(format!("HTTP {}: {}", code, message)),
             };
@@ -105,10 +100,7 @@ pub struct GrokReplayProvider {
 impl GrokReplayProvider {
     /// Build a provider that cycles through `fixtures` (each a raw SSE string).
     pub fn new(fixtures: Vec<String>) -> Self {
-        Self {
-            fixtures,
-            index: AtomicUsize::new(0),
-        }
+        Self { fixtures, index: AtomicUsize::new(0) }
     }
 
     /// Build from Grok fixture names in `crates/runie-testing/src/fixtures/grok_build/`.

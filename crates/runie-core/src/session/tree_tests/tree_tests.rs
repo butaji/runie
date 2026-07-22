@@ -9,20 +9,15 @@ fn msg(role: Role, content: &str, id: &str) -> ChatMessage {
         role,
         timestamp: 0.0,
         id: id.into(),
-        parts: vec![crate::message::Part::Text {
-            content: content.into(),
-        }],
+        parts: vec![crate::message::Part::Text { content: content.into() }],
         ..Default::default()
     }
 }
 
 #[test]
 fn from_messages_creates_linear_tree() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-        msg(Role::User, "there", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2"), msg(Role::User, "there", "m3")];
     let tree = SessionTree::from_messages(&messages);
 
     assert_eq!(tree.node_count(), 3);
@@ -34,11 +29,8 @@ fn from_messages_creates_linear_tree() {
 
 #[test]
 fn fork_creates_branch() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-        msg(Role::User, "how are you", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2"), msg(Role::User, "how are you", "m3")];
     let mut tree = SessionTree::from_messages(&messages);
     let path = tree.fork_at(1).expect("fork should succeed");
 
@@ -48,10 +40,7 @@ fn fork_creates_branch() {
 
 #[test]
 fn navigate_to_with_valid_path() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-    ];
+    let messages = vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2")];
     let mut tree = SessionTree::from_messages(&messages);
 
     // Navigate to root
@@ -79,11 +68,8 @@ fn navigate_to_with_valid_path() {
 
 #[test]
 fn filtered_walk_cache() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Tool, "output", "m2"),
-        msg(Role::Assistant, "hi", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Tool, "output", "m2"), msg(Role::Assistant, "hi", "m3")];
     let tree = SessionTree::from_messages(&messages);
 
     // First call populates cache
@@ -101,10 +87,7 @@ fn filtered_walk_cache() {
 
 #[test]
 fn find_path_by_id() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-    ];
+    let messages = vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2")];
     let tree = SessionTree::from_messages(&messages);
 
     let path = tree.find_path_by_id("m2").expect("should find m2");
@@ -115,11 +98,8 @@ fn find_path_by_id() {
 
 #[test]
 fn filter_excludes_tools() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Tool, "output", "m2"),
-        msg(Role::Assistant, "hi", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Tool, "output", "m2"), msg(Role::Assistant, "hi", "m3")];
     let tree = SessionTree::from_messages(&messages);
 
     let all = tree.filtered_walk(SessionTreeFilter::All);
@@ -135,11 +115,8 @@ fn filter_excludes_tools() {
 
 #[test]
 fn to_snapshot_and_back_preserves_tree() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-        msg(Role::User, "there", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2"), msg(Role::User, "there", "m3")];
     let tree = SessionTree::from_messages(&messages);
 
     // Serialize
@@ -160,11 +137,8 @@ fn to_snapshot_and_back_preserves_tree() {
 
 #[test]
 fn clone_preserves_tree_structure() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-        msg(Role::User, "there", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2"), msg(Role::User, "there", "m3")];
     let tree = SessionTree::from_messages(&messages);
 
     // Clone
@@ -182,11 +156,8 @@ fn clone_preserves_tree_structure() {
 
 #[test]
 fn to_snapshot_preserves_fork() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-        msg(Role::User, "there", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2"), msg(Role::User, "there", "m3")];
     let mut tree = SessionTree::from_messages(&messages);
     let _path = tree.fork_at(1).expect("fork should succeed");
 
@@ -205,11 +176,8 @@ fn to_snapshot_preserves_fork() {
 
 #[test]
 fn to_snapshot_preserves_current_branch() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-        msg(Role::User, "there", "m3"),
-    ];
+    let messages =
+        vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2"), msg(Role::User, "there", "m3")];
     let mut tree = SessionTree::from_messages(&messages);
 
     // Navigate to a different position
@@ -232,10 +200,7 @@ fn to_snapshot_preserves_current_branch() {
 
 #[test]
 fn serde_roundtrip_preserves_tree() {
-    let messages = vec![
-        msg(Role::User, "hello", "m1"),
-        msg(Role::Assistant, "hi", "m2"),
-    ];
+    let messages = vec![msg(Role::User, "hello", "m1"), msg(Role::Assistant, "hi", "m2")];
     let tree = SessionTree::from_messages(&messages);
 
     // Serialize to JSON

@@ -10,12 +10,8 @@ pub fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &s
         return;
     }
     match key {
-        "steering_mode" => {
-            state.config_mut().steering_mode = cycle_delivery_mode(state.config().steering_mode)
-        }
-        "follow_up_mode" => {
-            state.config_mut().follow_up_mode = cycle_delivery_mode(state.config().follow_up_mode)
-        }
+        "steering_mode" => state.config_mut().steering_mode = cycle_delivery_mode(state.config().steering_mode),
+        "follow_up_mode" => state.config_mut().follow_up_mode = cycle_delivery_mode(state.config().follow_up_mode),
         "provider" | "model" | "theme" | "thinking_level" => {
             apply_select_setting(state, stack, key);
         }
@@ -132,9 +128,9 @@ fn toggle_telemetry(state: &mut AppState) {
     // Persist to config.toml via ConfigActor (fire-and-forget).
     // In tests without handles, mutation is already applied above.
     if let Some(h) = state.actor_handles() {
-        let _ = h.config.try_send(ConfigMsg::SetTelemetry {
-            enabled: new_enabled,
-        });
+        let _ = h
+            .config
+            .try_send(ConfigMsg::SetTelemetry { enabled: new_enabled });
     }
     state.view_mut().cached_settings_valid = false;
 }

@@ -26,17 +26,7 @@ pub use crate::event::EventCategory;
 /// Intents request state changes (routed to actors).
 /// Facts describe state changes (projected into `AppState`).
 /// Controls manage lifecycle / terminal events (routed to `update/system.rs`).
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Default,
-    strum::Display,
-    strum::IntoStaticStr,
-    strum::VariantNames,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::IntoStaticStr, strum::VariantNames)]
 pub enum EventKind {
     /// Request to an actor — produced by input handlers, commands, dialogs.
     Intent,

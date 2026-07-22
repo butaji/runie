@@ -13,15 +13,14 @@ extern crate self as runie_core;
 
 pub mod actors;
 pub use actors::{
-    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState,
-    PersistenceActor,
+    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor,
 };
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
 // AppState itself remains pub so it can be used in public DSL signatures.
 pub use message::{ChatMessage, Role};
 pub use model::{
-    AgentState, AppState, CompletionState, ConfigState, DeliveryMode, InputState,
-    PermissionRequestState, ScopedModel, SessionState, ThinkingLevel, ViewState,
+    AgentState, AppState, CompletionState, ConfigState, DeliveryMode, InputState, PermissionRequestState, ScopedModel,
+    SessionState, ThinkingLevel, ViewState,
 };
 pub mod agent_phase;
 pub mod auth;
@@ -51,20 +50,22 @@ pub mod keybindings;
 pub mod mcp;
 #[cfg(feature = "mcp")]
 pub use mcp::{McpConnectionManager, McpTool, SchemaCache};
+pub mod hidden_params;
 /// Static labels and text constants.
 pub mod labels;
 pub mod layout;
 pub mod location;
 pub mod login_flow;
 pub mod markdown;
+pub mod memory;
 pub mod message;
 /// Wire-protocol types (JSON-RPC envelope, submission-queue types).
 pub mod proto;
-pub mod hidden_params;
 pub mod provider_event;
 pub use hidden_params::{AsHiddenParams, HiddenParams, ProviderEventWithHiddenParams, ResponseCost};
 pub use message::Part;
 pub mod harness_skills;
+pub mod goal;
 pub mod model;
 pub mod model_catalog;
 pub mod notification;
@@ -73,6 +74,7 @@ pub mod prompts;
 pub mod provider;
 pub mod result;
 pub use result::{RunieContext, RunieResult};
+/// OS-level sandboxing with profile support.
 pub mod sandbox;
 pub mod sanitize;
 pub mod scoped_model;
@@ -84,9 +86,9 @@ pub mod snapshot;
 // state types moved to model::state
 /// Metrics facade for telemetry (counters, histograms, gauges).
 pub mod metrics;
+pub mod stream_wrapper;
 pub mod streaming;
 pub mod streaming_buffer;
-pub mod stream_wrapper;
 pub mod subagents;
 /// Tracing subscriber initialization.
 pub mod tracing_init;
@@ -103,9 +105,14 @@ pub mod tool_markers;
 pub mod tool_stream;
 pub use tool::{format_bytes, format_duration};
 pub mod permissions;
+pub mod plugins;
 pub mod trust;
 pub mod update;
 pub mod view;
+
+pub use plugins::{discover_plugins, LoadedPlugin, PluginDiscovery, PluginError, PluginManager, PluginManifest, PluginRegistry, PluginScope};
+/// Worktree pool for subagent isolation.
+pub mod worktree;
 
 // The tests module is unconditionally declared so that its pub-re-exports
 // are visible to runie-testing dev-dependencies even in non-test builds.
@@ -144,44 +151,41 @@ pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
 // NOTE: RunieError/RunieErrorKind were deleted — see crates/runie-core/src/error.rs note.
 pub mod agentic_loop;
-pub use agentic_loop::{
-    check_agentic_loop_safety, fingerprint_tools, AgenticLoopConfig, AgenticLoopState,
-    AgenticLoopTracker,
-};
+pub use agentic_loop::{check_agentic_loop_safety, fingerprint_tools, AgenticLoopConfig, AgenticLoopTracker};
 pub use event::Event;
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
+pub use goal::{
+    Checkpoint, GoalPhase, GoalRole, GoalState, GoalStatus, GoalTracker,
+};
 pub use harness_skills::{
-    HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill,
-    SkillRegistry, ToolCallCtx, ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult,
-    TurnStartCtx, TurnStartResult, VerificationConfig, VerificationLoopSkill,
+    HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill, SkillRegistry, ToolCallCtx,
+    ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult, VerificationConfig,
+    VerificationLoopSkill,
 };
 pub use input_history::{filter_history, load_history, save_history, search_history};
 pub use keybindings::{
-    default_keybindings, event_from_name, load_keybindings, merged_keybindings,
-    parse_keybindings_json,
+    default_keybindings, event_from_name, load_keybindings, merged_keybindings, parse_keybindings_json,
 };
 pub use login_flow::{
-    build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
-    LoginStep,
+    build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState, LoginStep,
+};
+pub use memory::{
+    MemoryConfig, MemoryEntry, MemorySource, MemoryStore, SearchQuery, SearchResult, mmr_rerank,
 };
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{
-    is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction,
-    PermissionGate, PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
+    is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction, PermissionGate,
+    PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
 };
-pub use prompts::{
-    build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,
-};
+pub use prompts::{build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS};
 pub use provider::{
-    display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider,
-    known_providers, Provider, ProviderError, ProviderMeta, ProviderMetadata, ResponseChunk,
-    RetryConfig, RetryPolicy,
+    display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider, known_providers, Provider,
+    ProviderError, ProviderMeta, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy,
 };
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
-pub use streaming::OrderedStreamEmitter;
 pub use resource_loader::{
-    derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable,
-    load_resources_from_dir, parse_resource_md, resolve_name,
+    derive_name_from_path, extract_frontmatter, extract_section, is_user_invocable, load_resources_from_dir,
+    parse_resource_md, resolve_name,
 };
 pub use session::store::SessionStore;
 pub use session::tree::{SessionTree, SessionTreeFilter, TreeNodeData};
@@ -189,10 +193,8 @@ pub use session::SessionMetadata;
 pub use session::{format_as_markdown, Session};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};
+pub use streaming::OrderedStreamEmitter;
 
-pub use tokens::{
-    estimate_tokens, estimate_tokens_for_model, token_tracker_for,
-    TokenTracker,
-};
+pub use tokens::{estimate_tokens, estimate_tokens_for_model, token_tracker_for, TokenTracker};
 pub use trust::{TrustDecision, TrustManager};
 pub use view::{Element, Feed, LazyCache};

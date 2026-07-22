@@ -28,11 +28,11 @@ impl ToolDef for BashTool {
     type Input = BashInput;
 
     const NAME: &'static str = "bash";
-    const DESCRIPTION: &'static str =
-        "Execute a shell command. Commands are subject to safety checks.";
+    const DESCRIPTION: &'static str = "Execute a shell command. Commands are subject to safety checks.";
     const READ_ONLY: bool = false;
     const REQUIRES_APPROVAL: bool = true;
 
+    #[allow(clippy::too_many_lines)]
     async fn execute(input: Self::Input, ctx: &ToolContext) -> ToolOutput {
         let start = Instant::now();
         let tool_args = serde_json::json!({ "command": input.command });
@@ -72,15 +72,36 @@ impl ToolDef for BashTool {
             ShellStatus::TimedOut => ToolStatus::TimedOut,
         };
 
+        // Cap command output: unbounded stdout (cat huge.log, grep -r) can
+        // stall providers for minutes when the result is sent back.
+        let content = cap_command_output(&result.output);
+
         ToolOutput {
             tool_name: "bash".to_owned(),
             tool_args,
-            content: result.output,
+            content,
             bytes_transferred: result.bytes_transferred,
             duration: start.elapsed(),
             status,
         }
     }
+}
+
+/// Maximum bash output kept for the model (matches pi's 50KB/2000 lines).
+const MAX_OUTPUT_BYTES: usize = 50_000;
+const MAX_OUTPUT_LINES: usize = 2_000;
+
+fn cap_command_output(output: &str) -> String {
+    let total_lines = output.lines().count();
+    if output.len() <= MAX_OUTPUT_BYTES && total_lines <= MAX_OUTPUT_LINES {
+        return output.to_owned();
+    }
+    let truncated = runie_core::tool::truncate_output(output, MAX_OUTPUT_BYTES, MAX_OUTPUT_LINES);
+    format!(
+        "{truncated}\n[output truncated: {} bytes / {} lines total; pipe through head/tail or grep to narrow]",
+        output.len(),
+        total_lines
+    )
 }
 
 #[cfg(test)]
@@ -89,10 +110,7 @@ mod tests {
 
     #[tokio::test]
     async fn bash_timeout_kills_child() {
-        let input = BashInput {
-            command: "sleep 30".to_string(),
-            timeout_seconds: Some(1),
-        };
+        let input = BashInput { command: "sleep 30".to_string(), timeout_seconds: Some(1) };
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::TimedOut);
@@ -101,10 +119,7 @@ mod tests {
 
     #[tokio::test]
     async fn bash_command_succeeds() {
-        let input = BashInput {
-            command: "echo hello".to_string(),
-            timeout_seconds: Some(5),
-        };
+        let input = BashInput { command: "echo hello".to_string(), timeout_seconds: Some(5) };
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Success);
@@ -112,11 +127,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn bash_command_fails() {
+    async fn bash_output_is_capped() {
         let input = BashInput {
-            command: "exit 1".to_string(),
-            timeout_seconds: Some(5),
+            command: "seq 1 5000".to_string(),
+            timeout_seconds: Some(10),
         };
+        let ctx = ToolContext::default();
+        let output = BashTool::execute(input, &ctx).await;
+        assert_eq!(output.status, ToolStatus::Success);
+        assert!(output.content.len() < 60_000, "output not capped: {} bytes", output.content.len());
+        assert!(
+            output.content.contains("output truncated"),
+            "truncation note missing: {}",
+            &output.content[output.content.len().saturating_sub(200)..]
+        );
+    }
+
+    #[tokio::test]
+    async fn bash_command_fails() {
+        let input = BashInput { command: "exit 1".to_string(), timeout_seconds: Some(5) };
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Error);
@@ -136,10 +165,7 @@ mod tests {
         }
         let _guard = SandboxGuard;
 
-        let input = BashInput {
-            command: "echo sandboxed".to_string(),
-            timeout_seconds: Some(5),
-        };
+        let input = BashInput { command: "echo sandboxed".to_string(), timeout_seconds: Some(5) };
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
 
@@ -164,10 +190,7 @@ mod tests {
         // Ensure sandbox env is not set
         std::env::remove_var("RUNIE_SANDBOX");
 
-        let input = BashInput {
-            command: "echo no_sandbox".to_string(),
-            timeout_seconds: Some(5),
-        };
+        let input = BashInput { command: "echo no_sandbox".to_string(), timeout_seconds: Some(5) };
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Success);

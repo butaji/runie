@@ -365,9 +365,7 @@ pub fn blend_color(base: Color, original: Color, opacity: f32) -> Option<Color> 
     // When either input is indexed, quantize the blended result back to the
     // nearest 256-color index so the output stays terminal-compatible.
     Some(match (base, original) {
-        (Color::Indexed(_), _) | (_, Color::Indexed(_)) => {
-            Color::Indexed(nearest_indexed(r, g, b))
-        }
+        (Color::Indexed(_), _) | (_, Color::Indexed(_)) => Color::Indexed(nearest_indexed(r, g, b)),
         _ => Color::Rgb(r, g, b),
     })
 }

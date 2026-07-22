@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use super::*;
 use runie_core::Event;
 
@@ -17,9 +18,7 @@ fn test_submit_adds_message_to_queue() {
 fn test_agent_thinking_sets_streaming() {
     let mut state = AppState::default();
     state.update(Event::Submit);
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
     assert!(state.agent.streaming);
     assert!(state.agent.thinking_started_at.is_some());
 }
@@ -28,12 +27,8 @@ fn test_agent_thinking_sets_streaming() {
 fn test_agent_response_creates_messages() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
@@ -50,12 +45,8 @@ fn test_agent_response_creates_messages() {
 fn test_agent_done_clears_streaming() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "Hi".to_string(),
@@ -63,9 +54,7 @@ fn test_agent_done_clears_streaming() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Done { id: "req.0".to_string() });
     assert!(!state.agent.streaming);
 }
 
@@ -76,12 +65,8 @@ fn test_sequential_fifo_a_then_b() {
     state.update(Event::Submit);
     state.pop_queue();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
@@ -89,15 +74,9 @@ fn test_sequential_fifo_a_then_b() {
         timestamp: 0.0,
         provider: String::new(),
     });
-    state.update(Event::Done {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::Thinking {
-        id: "req.1".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.1".to_string(),
-    });
+    state.update(Event::Done { id: "req.0".to_string() });
+    state.update(Event::Thinking { id: "req.1".to_string() });
+    state.update(Event::ThoughtDone { id: "req.1".to_string() });
     state.update(Event::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
@@ -153,29 +132,16 @@ fn test_list_files_command_flow() {
 fn test_list_files_message_content() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::ToolStart {
         id: "req.0".to_string(),
         name: "list_files".to_string(),
         input: serde_json::Value::Null,
     });
-    state.update(Event::ToolEnd {
-        id: "".to_string(),
-        input: None,
-        duration_secs: 1.0,
-        output: String::new(),
-    });
-    state.update(Event::Thinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::ThoughtDone {
-        id: "req.0".to_string(),
-    });
+    state.update(Event::ToolEnd { id: "".to_string(), input: None, duration_secs: 1.0, output: String::new() });
+    state.update(Event::Thinking { id: "req.0".to_string() });
+    state.update(Event::ThoughtDone { id: "req.0".to_string() });
     state.update(Event::Response {
         id: "req.0".to_string(),
         content: "\nsrc/main.rs".to_string(),

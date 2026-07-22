@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 //! Thought extraction from assistant content, including `<think>` reasoning blocks.
 
 use crate::labels::thought_with_time;
@@ -36,11 +38,7 @@ pub(crate) struct ThoughtPlan {
 
 impl ThoughtPlan {
     pub fn plain(duration: f64) -> Self {
-        Self {
-            thought_content: thought_with_time(duration),
-            visible_content: None,
-            remove_assistant: false,
-        }
+        Self { thought_content: thought_with_time(duration), visible_content: None, remove_assistant: false }
     }
 
     /// Thought extracted incrementally during streaming: the visible text
@@ -69,23 +67,11 @@ pub(crate) fn plan_thought(content: &str, duration: f64) -> ThoughtPlan {
     if let Some(reasoning) = reasoning {
         let thought_content = format!("{}\n{}", thought_with_time(duration), reasoning);
         if visible.trim().is_empty() {
-            return ThoughtPlan {
-                thought_content,
-                visible_content: None,
-                remove_assistant: true,
-            };
+            return ThoughtPlan { thought_content, visible_content: None, remove_assistant: true };
         }
-        return ThoughtPlan {
-            thought_content,
-            visible_content: Some(visible),
-            remove_assistant: false,
-        };
+        return ThoughtPlan { thought_content, visible_content: Some(visible), remove_assistant: false };
     }
-    ThoughtPlan {
-        thought_content: thought_with_time(duration),
-        visible_content: None,
-        remove_assistant: false,
-    }
+    ThoughtPlan { thought_content: thought_with_time(duration), visible_content: None, remove_assistant: false }
 }
 
 /// Split `<think>...</think>` reasoning blocks out of model text.
@@ -343,10 +329,7 @@ mod tests {
     }
 
     fn feed_delta(state: &mut AppState, id: &str, content: &str) {
-        state.update(crate::Event::ResponseDelta {
-            id: id.to_string(),
-            content: content.to_string(),
-        });
+        state.update(crate::Event::ResponseDelta { id: id.to_string(), content: content.to_string() });
     }
 
     fn assistant_texts(state: &AppState) -> Vec<String> {
@@ -512,28 +495,16 @@ mod tests {
     fn streamed_think_filter_resets_between_turns() {
         let mut state = streaming_test_state();
 
-        state.update(crate::Event::Thinking {
-            id: "req.turn.1".into(),
-        });
+        state.update(crate::Event::Thinking { id: "req.turn.1".into() });
         feed_delta(&mut state, "req.turn.1", "<think>hidden</think>first");
-        state.update(crate::Event::ThoughtDone {
-            id: "req.turn.1".into(),
-        });
-        state.update(crate::Event::Done {
-            id: "req.turn.1".into(),
-        });
+        state.update(crate::Event::ThoughtDone { id: "req.turn.1".into() });
+        state.update(crate::Event::Done { id: "req.turn.1".into() });
 
-        state.update(crate::Event::Thinking {
-            id: "req.turn.2".into(),
-        });
+        state.update(crate::Event::Thinking { id: "req.turn.2".into() });
         feed_delta(&mut state, "req.turn.2", "second answer");
         assert_no_tag_leak(&state);
-        state.update(crate::Event::ThoughtDone {
-            id: "req.turn.2".into(),
-        });
-        state.update(crate::Event::Done {
-            id: "req.turn.2".into(),
-        });
+        state.update(crate::Event::ThoughtDone { id: "req.turn.2".into() });
+        state.update(crate::Event::Done { id: "req.turn.2".into() });
 
         let assistants = assistant_texts(&state);
         assert_eq!(
@@ -566,12 +537,7 @@ mod tests {
             name: "list_dir".into(),
             input: serde_json::json!({ "path": "." }),
         });
-        state.update(crate::Event::ToolEnd {
-            id: id.into(),
-            duration_secs: 0.5,
-            output: "src/".into(),
-            input: None,
-        });
+        state.update(crate::Event::ToolEnd { id: id.into(), duration_secs: 0.5, output: "src/".into(), input: None });
 
         // Same request id: set_thinking is idempotent-skipped, so the filter
         // is not reset between cycles — reasoning must still not repeat.

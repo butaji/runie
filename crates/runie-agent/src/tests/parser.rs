@@ -148,8 +148,7 @@ fn test_parse_structured_read_file() {
 
 #[test]
 fn test_parse_mixed_formats() {
-    let text =
-        "TOOL:bash:echo hi\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"Cargo.toml\"}}";
+    let text = "TOOL:bash:echo hi\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"Cargo.toml\"}}";
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 2);
 }
@@ -246,10 +245,7 @@ TOOL:unknown_tool:arg
 fn parse_error_message_includes_raw_input() {
     use runie_core::message::Role;
     use runie_core::tool::{tool_parse_error_message, ToolParseError};
-    let error = ToolParseError {
-        raw: "{bad json".into(),
-        reason: "invalid JSON".into(),
-    };
+    let error = ToolParseError { raw: "{bad json".into(), reason: "invalid JSON".into() };
     let msg = tool_parse_error_message(&error, "parse_0");
     assert_eq!(msg.role, Role::Tool);
     assert!(msg.content().contains("{bad json"));
@@ -312,8 +308,7 @@ Done."#;
 
 #[test]
 fn parse_grep_tool_json() {
-    let text =
-        r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": "src", "glob": "*.rs"}}"#;
+    let text = r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": "src", "glob": "*.rs"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
     assert_eq!(tools[0].name, "grep");

@@ -1,5 +1,6 @@
 //! Regression: captured agent events applied to AppState must not leave raw
 //! legacy TOOL: markers in assistant messages.
+#![allow(clippy::too_many_lines)]
 
 use crate::tests::ensure_mock_provider;
 use crate::{agent_command_builder::agent_cmd, run_agent_turn_with_skills};

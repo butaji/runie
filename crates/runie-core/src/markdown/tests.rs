@@ -2,14 +2,13 @@
 use super::*;
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn parse_markdown_splits_fenced_code() {
     let text = "hello\n```rust\nlet x = 1;\n```\nworld";
     let blocks = parse_markdown(text);
     assert_eq!(blocks.len(), 3);
     assert!(matches!(&blocks[0], CodeBlock::Text { content, .. } if content == "hello"));
-    assert!(
-        matches!(&blocks[1], CodeBlock::Code { lang, content } if lang == "rust" && content == "let x = 1;\n")
-    );
+    assert!(matches!(&blocks[1], CodeBlock::Code { lang, content } if lang == "rust" && content == "let x = 1;\n"));
     assert!(matches!(&blocks[2], CodeBlock::Text { content, .. } if content == "world"));
 }
 
@@ -19,9 +18,7 @@ fn parse_markdown_handles_unclosed_fence() {
     let blocks = parse_markdown(text);
     assert_eq!(blocks.len(), 2);
     assert!(matches!(&blocks[0], CodeBlock::Text { content, .. } if content == "hello"));
-    assert!(
-        matches!(&blocks[1], CodeBlock::Text { content, .. } if content.starts_with("```rust"))
-    );
+    assert!(matches!(&blocks[1], CodeBlock::Text { content, .. } if content.starts_with("```rust")));
 }
 
 #[test]
@@ -31,9 +28,7 @@ fn parse_markdown_handles_lists() {
     eprintln!("Blocks: {:?}", blocks);
     assert_eq!(blocks.len(), 2);
     assert!(matches!(&blocks[0], CodeBlock::Text { content, .. } if content == "items:"));
-    assert!(
-        matches!(&blocks[1], CodeBlock::List { ordered, items } if !ordered && items.len() == 2)
-    );
+    assert!(matches!(&blocks[1], CodeBlock::List { ordered, items } if !ordered && items.len() == 2));
 }
 
 #[test]
@@ -51,9 +46,7 @@ fn parse_markdown_handles_blockquote() {
 fn text_block_has_inlines() {
     let blocks = parse_markdown("hello **bold** world");
     assert_eq!(blocks.len(), 1);
-    let CodeBlock::Text { content, inlines } = &blocks[0] else {
-        panic!()
-    };
+    let CodeBlock::Text { content, inlines } = &blocks[0] else { panic!() };
     // Content is plain text (markers are in inlines)
     assert_eq!(content, "hello bold world");
     // Inlines contain the styles
@@ -91,9 +84,7 @@ fn list_item_with_inline_styles() {
 - `code` item";
     let blocks = parse_markdown(md);
     assert_eq!(blocks.len(), 1);
-    let CodeBlock::List { items, .. } = &blocks[0] else {
-        panic!("expected List block")
-    };
+    let CodeBlock::List { items, .. } = &blocks[0] else { panic!("expected List block") };
     assert_eq!(items.len(), 2);
 
     // First item: plain text, bold, and italic
@@ -112,9 +103,7 @@ fn block_parser_round_trip() {
     let md = "plain **bold** and *italic* and ~~strike~~ and `code`";
     let blocks = parse_markdown(md);
     assert_eq!(blocks.len(), 1);
-    let CodeBlock::Text { content, inlines } = &blocks[0] else {
-        panic!("expected Text block")
-    };
+    let CodeBlock::Text { content, inlines } = &blocks[0] else { panic!("expected Text block") };
     // Content is plain text (markers are in inlines)
     assert_eq!(content, "plain bold and italic and strike and `code`");
     // All inline styles are present
@@ -143,6 +132,7 @@ fn block_parser_nested_styles() {
 
 /// block_parser_multiple_blocks — code, list, and text blocks coexist.
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn block_parser_multiple_blocks() {
     let md = "intro\n```python\nprint(1)\n```\n- item\n> quote";
     let blocks = parse_markdown(md);

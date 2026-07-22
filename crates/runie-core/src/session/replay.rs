@@ -22,14 +22,7 @@ pub fn durable_to_event(event: &DurableCoreEvent) -> Option<Event> {
 /// Replay a single durable event directly into application state.
 pub fn replay_event(state: &mut AppState, event: &DurableCoreEvent) {
     match event {
-        DurableCoreEvent::MessageSent {
-            id,
-            role,
-            content,
-            timestamp,
-            provider,
-            parts,
-        } => {
+        DurableCoreEvent::MessageSent { id, role, content, timestamp, provider, parts } => {
             state.replay_message_with_parts(
                 id.clone(),
                 role.clone(),
@@ -82,16 +75,9 @@ pub fn state_to_durable_events(state: &AppState) -> Vec<DurableCoreEvent> {
 pub fn session_to_durable_events(session: &crate::session::Session) -> Vec<DurableCoreEvent> {
     let mut events = Vec::new();
     events.extend(messages_to_events(&session.messages));
-    events.push(DurableCoreEvent::ModelSwitched {
-        provider: session.provider.clone(),
-        model: session.model.clone(),
-    });
-    events.push(DurableCoreEvent::ThemeSwitched {
-        name: session.theme_name.clone(),
-    });
-    events.push(DurableCoreEvent::ThinkingLevelSet {
-        level: session.thinking_level,
-    });
+    events.push(DurableCoreEvent::ModelSwitched { provider: session.provider.clone(), model: session.model.clone() });
+    events.push(DurableCoreEvent::ThemeSwitched { name: session.theme_name.clone() });
+    events.push(DurableCoreEvent::ThinkingLevelSet { level: session.thinking_level });
     if session.read_only {
         events.push(DurableCoreEvent::ReadOnlySet { read_only: true });
     }
@@ -150,8 +136,7 @@ fn build_metadata(state: &AppState, name: &str) -> SessionMetadata {
 
 /// Save current application state as durable events.
 pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
-    let store =
-        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     let events = state_to_durable_events(state);
     store.append_batch(name, &events)?;
     store.update_metadata(&build_metadata(state, name))?;
@@ -161,17 +146,12 @@ pub fn save_session(name: &str, state: &AppState) -> anyhow::Result<()> {
 /// Load durable events into application state.
 /// Load a session using the default store (reads RUNIE_SESSIONS_DIR env var).
 pub fn load_session(name: &str, state: &mut AppState) -> anyhow::Result<()> {
-    let store =
-        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     load_session_from_store(name, state, &store)
 }
 
 /// Load a session from a specific store (avoids env-var race in parallel tests).
-pub fn load_session_from_store(
-    name: &str,
-    state: &mut AppState,
-    store: &SessionStore,
-) -> anyhow::Result<()> {
+pub fn load_session_from_store(name: &str, state: &mut AppState, store: &SessionStore) -> anyhow::Result<()> {
     let events = store.load_events(name)?;
     if events.is_empty() {
         return Err(anyhow::anyhow!("Session '{}' not found", name));
@@ -197,15 +177,13 @@ pub fn apply_json_session(state: &mut AppState, session: &crate::session::Sessio
 
 /// Delete a session from the durable store.
 pub fn delete_session(name: &str) -> anyhow::Result<()> {
-    let store =
-        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     store.delete(name)
 }
 
 /// List session names from the durable store.
 pub fn list_sessions() -> anyhow::Result<Vec<String>> {
-    let store =
-        SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
+    let store = SessionStore::default_store().ok_or_else(|| anyhow::anyhow!("No data directory"))?;
     store.list()
 }
 
@@ -233,18 +211,14 @@ mod tests {
         state.config_mut().current_model = "claude-3".into();
         state.session_mut().messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![crate::message::Part::Text {
-                content: "Hello".into(),
-            }],
+            parts: vec![crate::message::Part::Text { content: "Hello".into() }],
             timestamp: 1.0,
             id: "msg.1".into(),
             ..Default::default()
         });
         state.session_mut().messages.push(ChatMessage {
             role: Role::Assistant,
-            parts: vec![crate::message::Part::Text {
-                content: "Hi!".into(),
-            }],
+            parts: vec![crate::message::Part::Text { content: "Hi!".into() }],
             timestamp: 2.0,
             id: "msg.2".into(),
             provider: "anthropic".into(),
@@ -257,10 +231,12 @@ mod tests {
     fn state_to_events_includes_messages_and_config() {
         let state = sample_state();
         let events = state_to_durable_events(&state);
-        assert!(events.iter().any(
-            |e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")
-        ));
-        assert!(events.iter().any(|e| matches!(e, DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")));
     }
 
     #[test]
@@ -275,6 +251,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     fn session_save_preserves_message_parts() {
         use crate::message::Part;
 
@@ -286,9 +264,7 @@ mod tests {
         // Add a user message
         state.session_mut().messages.push(ChatMessage {
             role: Role::User,
-            parts: vec![Part::Text {
-                content: "Hello".into(),
-            }],
+            parts: vec![Part::Text { content: "Hello".into() }],
             timestamp: 1.0,
             id: "u1".into(),
             ..Default::default()
@@ -330,9 +306,7 @@ mod tests {
         assert_eq!(msgs[1].role, Role::Assistant);
         assert_eq!(msgs[1].parts.len(), 3);
         assert!(matches!(&msgs[1].parts[0], Part::Text { content } if content == "I'll help you"));
-        assert!(
-            matches!(&msgs[1].parts[1], Part::Reasoning { content } if content == "thinking about this")
-        );
+        assert!(matches!(&msgs[1].parts[1], Part::Reasoning { content } if content == "thinking about this"));
         assert!(matches!(&msgs[1].parts[2], Part::ToolCall { name, .. } if name == "bash"));
     }
 
@@ -345,13 +319,15 @@ mod tests {
 
         let loaded = store.load_events("save_test").unwrap();
         assert!(
-            loaded.iter().any(
-                |e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")
-            ),
+            loaded
+                .iter()
+                .any(|e| matches!(e, DurableCoreEvent::MessageSent { content, .. } if content == "Hello")),
             "save should persist user message as durable event"
         );
         assert!(
-            loaded.iter().any(|e| matches!(e, DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")),
+            loaded
+                .iter()
+                .any(|e| matches!(e, DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic")),
             "save should persist provider/model as durable event"
         );
     }
@@ -464,24 +440,21 @@ mod tests {
 
     /// Layer 1: SessionTreeSnapshot round-trips through durable events.
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn replay_tree_snapshot_restore() {
         use crate::session::tree::SessionTree;
 
         // Build a tree manually with known-good data (avoids tree-construction bugs)
         let user_msg = ChatMessage {
             role: Role::User,
-            parts: vec![crate::message::Part::Text {
-                content: "hello".into(),
-            }],
+            parts: vec![crate::message::Part::Text { content: "hello".into() }],
             timestamp: 1.0,
             id: "msg1".into(),
             ..Default::default()
         };
         let assistant_msg = ChatMessage {
             role: Role::Assistant,
-            parts: vec![crate::message::Part::Text {
-                content: "hi".into(),
-            }],
+            parts: vec![crate::message::Part::Text { content: "hi".into() }],
             timestamp: 2.0,
             id: "msg2".into(),
             ..Default::default()
@@ -494,9 +467,7 @@ mod tests {
         assert_eq!(snapshot.root_id, "msg1");
 
         // Convert to durable event and back (both directions)
-        let durable = DurableCoreEvent::TreeSnapshot {
-            snapshot: snapshot.clone(),
-        };
+        let durable = DurableCoreEvent::TreeSnapshot { snapshot: snapshot.clone() };
         let event: Event = Event::try_from(&durable).unwrap();
         let back: DurableCoreEvent = DurableCoreEvent::try_from_event(&event).unwrap();
 
@@ -510,8 +481,7 @@ mod tests {
         assert_eq!(roundtripped.nodes.len(), snapshot.nodes.len());
 
         // Reconstruct tree from round-tripped snapshot and verify
-        let restored_tree =
-            SessionTree::from_snapshot(&roundtripped).expect("snapshot should deserialize");
+        let restored_tree = SessionTree::from_snapshot(&roundtripped).expect("snapshot should deserialize");
         let restored_snapshot = restored_tree.to_snapshot().unwrap();
         assert_eq!(restored_snapshot.root_id, snapshot.root_id);
         assert_eq!(restored_snapshot.nodes.len(), snapshot.nodes.len());

@@ -31,9 +31,7 @@ fn copy_emits_clipboard_event_with_last_assistant_text() {
         role: Role::Assistant,
         timestamp: 0.0,
         id: "resp.0".into(),
-        parts: vec![Part::Text {
-            content: "the answer is 42".into(),
-        }],
+        parts: vec![Part::Text { content: "the answer is 42".into() }],
         ..Default::default()
     });
 
@@ -56,18 +54,14 @@ fn copy_uses_most_recent_assistant_message() {
         role: Role::Assistant,
         timestamp: 0.0,
         id: "resp.0".into(),
-        parts: vec![Part::Text {
-            content: "old response".into(),
-        }],
+        parts: vec![Part::Text { content: "old response".into() }],
         ..Default::default()
     });
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         timestamp: 1.0,
         id: "resp.1".into(),
-        parts: vec![Part::Text {
-            content: "newer response".into(),
-        }],
+        parts: vec![Part::Text { content: "newer response".into() }],
         ..Default::default()
     });
 
@@ -90,9 +84,7 @@ fn copy_round_trips_without_panic() {
         role: Role::Assistant,
         timestamp: 0.0,
         id: "resp.0".into(),
-        parts: vec![Part::Text {
-            content: "hello".into(),
-        }],
+        parts: vec![Part::Text { content: "hello".into() }],
         ..Default::default()
     });
     exec(&mut state, "/copy");

@@ -18,10 +18,7 @@ pub struct DeclarativeLoader {
 impl DeclarativeLoader {
     /// Create a new loader with the given directories.
     pub fn new() -> Self {
-        Self {
-            skill_dirs: Vec::new(),
-            command_dirs: Vec::new(),
-        }
+        Self { skill_dirs: Vec::new(), command_dirs: Vec::new() }
     }
 
     /// Add a directory to search for skills.
@@ -121,8 +118,7 @@ pub fn load_commands_from_dir(dir: &Path) -> Vec<DeclarativeCommandYaml> {
 
 /// Parse a command YAML file into `DeclarativeCommandYaml`.
 pub(crate) fn parse_command_yaml(path: &Path) -> Option<DeclarativeCommandYaml> {
-    let yaml: DeclarativeCommandYaml =
-        serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let yaml: DeclarativeCommandYaml = serde_yaml::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
     Some(yaml)
 }
 

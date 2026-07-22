@@ -72,6 +72,8 @@ impl SearchIndex {
     /// The scan respects [`super::is_indexer_scan_cancelled`] so it stops early
     /// when the user quits while indexing is still running, letting the process
     /// exit immediately.
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
     pub fn build(&self, root: &Path) {
         use ignore::WalkBuilder;
 
@@ -109,10 +111,7 @@ impl SearchIndex {
 
                     inner.files.insert(
                         rel_str.clone(),
-                        FileMetadata {
-                            absolute_path: path.to_path_buf(),
-                            is_dir: false,
-                        },
+                        FileMetadata { absolute_path: path.to_path_buf(), is_dir: false },
                     );
                 }
                 Err(e) => {
@@ -148,6 +147,7 @@ impl SearchIndex {
     }
 
     /// Perform a fuzzy file search and return scored results.
+    #[allow(clippy::too_many_lines)]
     pub fn fuzzy_search(&self, query: &str, limit: usize) -> Vec<FileSearchResult> {
         let inner = self.inner.read();
 
