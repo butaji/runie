@@ -116,6 +116,9 @@ fn estimate_tokens_uses_tiktoken_for_openai() {
     );
     // Unknown provider falls back to chars/4: 11 chars ceil(11/4) = 3
     assert_eq!(estimate_tokens_for_model(text, "unknown", "unknown"), 3);
+    // Known provider (minimax) uses tiktoken
+    let tik = estimate_tokens(text);
+    assert_eq!(estimate_tokens_for_model(text, "minimax", "abab6.5s"), tik);
 }
 
 #[test]

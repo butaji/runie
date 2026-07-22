@@ -45,10 +45,23 @@ fn chars4_count(text: &str) -> usize {
     text.chars().count().div_ceil(4)
 }
 
-/// Estimate token count. Delegates to `estimate_tokens`.
+/// Estimate token count. Uses tiktoken for OpenAI-compatible providers,
+/// falls back to chars/4 for unknown or non-standard providers.
 #[allow(dead_code)]
-pub fn estimate_tokens_for_model(text: &str, _provider: &str, _model: &str) -> usize {
-    estimate_tokens(text)
+pub fn estimate_tokens_for_model(text: &str, provider: &str, _model: &str) -> usize {
+    if is_openai_compatible_provider(provider) {
+        estimate_tokens(text)
+    } else {
+        chars4_count(text)
+    }
+}
+
+fn is_openai_compatible_provider(provider: &str) -> bool {
+    matches!(
+        provider.to_lowercase().as_str(),
+        "openai" | "azure" | "ollama" | "groq" | "anthropic" | "gemini" | "minimax"
+            | "kimi" | "deepseek" | "mistral" | "xai" | "perplexity" | "openrouter"
+    )
 }
 
 // =============================================================================
