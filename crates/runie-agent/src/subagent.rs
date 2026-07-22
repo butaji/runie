@@ -22,7 +22,7 @@
 use crate::{run_agent_turn, stream_response::EmitFn, AgentCommand, PermissionGate};
 use parking_lot::Mutex as PgMutex;
 use runie_core::model::ThinkingLevel;
-use runie_core::permissions::{AutoAllowSink, PermissionManager, PermissionMode, PermissionSet};
+use runie_core::permissions::{AutoAllowSink, PermissionMode};
 use runie_core::provider::Provider;
 use runie_core::subagents::{SubagentRegistry, SubagentType};
 use std::collections::HashMap;
@@ -193,14 +193,9 @@ fn resolve_model(sub_type: &SubagentType, parent_model: &str) -> String {
     }
 }
 
-/// Build a `PermissionGate` from a `PermissionMode`.
-///
-/// Currently uses the default gate (no policies, AutoAllowSink fallback).
-/// The `Plan` mode is handled by setting `read_only = true` on the command.
-fn build_permission_gate(mode: &runie_core::permissions::PermissionMode) -> PermissionGate {
-    let policies = crate::actor::handlers::policies_for_mode(*mode, PermissionSet::default());
-    let manager = PermissionManager::default().with_policies(policies);
-    PermissionGate::new(manager, Arc::new(AutoAllowSink))
+/// Build a `PermissionGate` — all modes now bypass (policy engine removed).
+fn build_permission_gate(_mode: &PermissionMode) -> PermissionGate {
+    PermissionGate::new(Arc::new(AutoAllowSink))
 }
 
 fn build_subagent_command(
@@ -333,7 +328,7 @@ async fn run_subagent_turn(
     cmd: &AgentCommand,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let gate = PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink));
+    let gate = PermissionGate::new(Arc::new(AutoAllowSink));
     run_subagent_turn_with_gate(provider, cmd, max_iterations, gate).await
 }
 

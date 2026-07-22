@@ -249,7 +249,7 @@ impl RactorAgentActor {
         permission_handle: RactorPermissionHandle,
         abort_tx: tokio_util::sync::CancellationToken,
     ) -> PermissionGate {
-        handlers::create_permission_gate(permission_handle, abort_tx).await
+        handlers::create_permission_gate(permission_handle, abort_tx)
     }
 
     pub(crate) fn emit_error_and_done(state: &mut AgentActorState, id: &str, message: String) {

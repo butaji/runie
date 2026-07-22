@@ -1,60 +1,51 @@
-//! Permission policy chain with declarative rule evaluation.
+//! Minimal permission infrastructure — bypass all by default (pi/Grok/Kimi Code style).
 //!
-//! Evaluates a chain of `PermissionPolicy` implementations in order; the first
-//! matching policy wins. Legacy `PermissionSet`/`PermissionRule` rulesets are
-//! preserved and re-exported for compatibility.
+//! The policy engine has been removed. All tool calls are allowed immediately.
+//! The TUI approval dialog (`update/permission_dialog.rs`) is preserved for UX
+//! but never shown since `PermissionGate::evaluate` always returns `Allow`.
 //!
-//! ## Permission Modes
+//! ## What was removed
 //!
-//! | Mode | Behavior |
-//! |------|----------|
-//! | `default` | Apply rules; ask when no rule matches |
-//! | `acceptEdits` | Auto-accept file edits; ask for shell commands |
-//! | `auto` | Auto-approve safe operations; ask for risky ones |
-//! | `dontAsk` | Approve unless a deny rule matches |
-//! | `bypassPermissions` | Approve everything (dangerous) |
-//! | `plan` | Block write tools until a plan is approved |
+//! - `PermissionManager` + policy chain (`PermissionPolicy`, `BypassAllPolicy`,
+//!   `BlockWriteToolsPolicy`, `AcceptEditsPolicy`, `AutoApprove`, `FileAccessAsk`,
+//!   `ReadOnlyToolApprove`, `SensitivePathBlocklist`, `GitTrackedWriteApprove`,
+//!   `DefaultToolApprove`)
+//! - `PermissionMode` enum and `parse_permission_mode()`
+//! - `PermissionSet`, `PermissionRule`, `PermissionScope`, `PermissionSetPolicy`
+//! - `actors/permission/` ractor actor
+//!
+//! ## What is kept
+//!
+//! - `PermissionAction` / `PermissionResult` — kept for API compatibility
+//! - `PermissionContext` — kept for API compatibility
+//! - `ApprovalSink` trait + `AutoAllowSink` / `TuiApprovalSink` / `DenyAllSink` / `ScriptedSink`
+//! - `PermissionGate` — now a simple pass-through to the sink
+//! - `is_read_only_tool()` — still used by other code
+//! - `is_sensitive_path()` — kept for reference, not enforced
 
 use std::path::Path;
-
-use async_trait::async_trait;
 #[cfg(feature = "mcp")]
 use rmcp::model::ToolAnnotations;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod auto_approve;
-pub mod blocklist;
-pub mod default_tool_approve;
-pub mod file_access_ask;
 pub mod format;
 pub mod gate;
-#[cfg(feature = "git")]
-pub mod git_tracked_write;
-pub mod read_only_tool_approve;
-pub mod rules;
 mod sink;
 
-pub use auto_approve::AutoApprove;
-pub use blocklist::{is_sensitive_path, SensitivePathBlocklist, SENSITIVE_PATH_PATTERNS};
-#[cfg(feature = "mcp")]
-pub use default_tool_approve::DefaultToolApprove;
-pub use file_access_ask::FileAccessAsk;
 pub use gate::PermissionGate;
-#[cfg(feature = "git")]
-pub use git_tracked_write::GitTrackedWriteApprove;
-pub use read_only_tool_approve::ReadOnlyToolApprove;
-pub use rules::{PermissionRule, PermissionScope, PermissionSet, PermissionSetPolicy};
 pub use sink::{ApprovalSink, AutoAllowSink, DenyAllSink, ScriptedSink, TuiApprovalSink};
 
-#[cfg(test)]
-mod tests;
+/// Build an approval sink based on yolo mode.
+pub fn build_sink(yolo: bool) -> std::sync::Arc<dyn ApprovalSink> {
+    if yolo {
+        std::sync::Arc::new(AutoAllowSink)
+    } else {
+        std::sync::Arc::new(DenyAllSink)
+    }
+}
 
-/// Permission action result.
-///
-/// This is the canonical enum for permission decisions throughout the codebase.
-/// The protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type
-/// at the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.
+/// Permission action result — kept for API compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionAction {
@@ -72,7 +63,7 @@ impl From<crate::proto::op::ApprovalDecision> for PermissionAction {
     }
 }
 
-/// Result returned by a permission policy.
+/// Result returned by a permission policy — kept for API compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PermissionResult {
     Allow,
@@ -90,57 +81,53 @@ impl From<PermissionResult> for PermissionAction {
     }
 }
 
-/// Global permission mode.
+/// Context passed to each policy during evaluation — kept for API compatibility.
+#[derive(Debug, Clone)]
+pub struct PermissionContext<'a> {
+    pub tool: &'a str,
+    pub path: Option<&'a Path>,
+    pub input: Option<&'a Value>,
+    pub cwd: Option<&'a Path>,
+    #[cfg(feature = "mcp")]
+    pub annotations: Option<ToolAnnotations>,
+}
+
+// ---------------------------------------------------------------------------
+// Stubs kept for API compatibility (used by config parsing and subagents)
+// ---------------------------------------------------------------------------
+
+/// Permission mode — stub. All modes now bypass.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema, strum::EnumString,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum PermissionMode {
-    /// Apply rules; ask when no rule matches.
     #[default]
     Default,
-    /// Auto-accept file edits; ask for shell commands.
     AcceptEdits,
-    /// Auto-approve safe operations; ask for risky ones.
     Auto,
-    /// Approve unless a deny rule matches.
     DontAsk,
-    /// Approve everything (dangerous).
     BypassPermissions,
-    /// Block write tools until a plan is approved.
     Plan,
 }
 
 impl PermissionMode {
-    /// Returns true if this mode bypasses all permission checks.
     pub fn bypasses_all(&self) -> bool {
-        matches!(self, PermissionMode::BypassPermissions)
+        true
     }
-
-    /// Returns true if this mode blocks write tools until a plan is approved.
     pub fn requires_plan(&self) -> bool {
-        matches!(self, PermissionMode::Plan)
+        false
     }
-
-    /// Returns true if this mode auto-approves file edits.
     pub fn auto_approves_edits(&self) -> bool {
-        matches!(self, PermissionMode::AcceptEdits)
+        true
     }
-
-    /// Returns true if this mode auto-approves safe tools.
     pub fn auto_approves_safe(&self) -> bool {
-        matches!(self, PermissionMode::Auto | PermissionMode::AcceptEdits)
+        true
     }
 }
 
-/// Parse a permission mode from a string, supporting both canonical snake_case
-/// names and legacy camelCase names from subagent YAML frontmatter.
+/// Parse a permission mode string to enum variant.
 pub fn parse_permission_mode(s: &str) -> PermissionMode {
-    // Try canonical FromStr first (snake_case via strum).
-    if let Ok(mode) = s.parse::<PermissionMode>() {
-        return mode;
-    }
-    // Fall back to legacy camelCase/frontmatter names.
     match s {
         "acceptEdits" => PermissionMode::AcceptEdits,
         "auto" => PermissionMode::Auto,
@@ -151,205 +138,92 @@ pub fn parse_permission_mode(s: &str) -> PermissionMode {
     }
 }
 
-/// Context passed to each policy during evaluation.
+/// Permission rule — stub for config compatibility.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct PermissionRule {
+    pub action: PermissionAction,
+    pub tool: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pattern: Option<String>,
+}
+
+impl PermissionRule {
+    pub fn new(action: PermissionAction, tool: impl Into<String>) -> Self {
+        Self { action, tool: tool.into(), pattern: None }
+    }
+}
+
+/// Permission scope — stub for config compatibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PermissionScope {
+    #[default]
+    User,
+    Project,
+    Session,
+}
+
+/// Permission set — stub for config compatibility.
+#[derive(Debug, Clone, Default)]
+pub struct PermissionSet {
+    _private: (),
+}
+
+impl PermissionSet {
+    pub fn new(_rules: Vec<PermissionRule>) -> Self {
+        Self { _private: () }
+    }
+    pub fn default_rules() -> Self {
+        Self { _private: () }
+    }
+    pub fn accept_edits_rules() -> Self {
+        Self { _private: () }
+    }
+    pub fn dont_ask_rules() -> Self {
+        Self { _private: () }
+    }
+    pub fn to_permission_set(&self) -> Self {
+        Self { _private: () }
+    }
+}
+
+/// Permission set policy — stub for config compatibility.
 #[derive(Debug, Clone)]
-pub struct PermissionContext<'a> {
-    pub tool: &'a str,
-    pub path: Option<&'a Path>,
-    pub input: Option<&'a Value>,
-    pub cwd: Option<&'a Path>,
-    /// MCP tool annotations for the requested tool, if known.
-    /// Populated by `PermissionActor` from `runie_core::tool::annotations`.
-    #[cfg(feature = "mcp")]
-    pub annotations: Option<ToolAnnotations>,
-}
+pub struct PermissionSetPolicy;
 
-/// A single permission policy in the chain.
-#[async_trait]
-pub trait PermissionPolicy: Send + Sync {
-    fn name(&self) -> &str;
-    fn matches(&self, ctx: &PermissionContext<'_>) -> bool;
-    async fn evaluate(&self, ctx: &PermissionContext<'_>) -> Option<PermissionResult>;
-}
-
-/// Evaluates policies in order; first matching policy wins.
-#[derive(Default)]
-pub struct PermissionManager {
-    policies: Vec<Box<dyn PermissionPolicy>>,
-}
-
-impl PermissionManager {
-    /// Create a new manager with the default policy chain for the given mode.
-    pub fn new(mode: PermissionMode) -> Self {
-        let policies = Self::build_policies(mode);
-        Self { policies }
-    }
-
-    /// Build the default policy chain for a permission mode.
-    fn build_policies(mode: PermissionMode) -> Vec<Box<dyn PermissionPolicy>> {
-        // Sensitive path blocklist is always first: ask for sensitive paths before any mode policy.
-        let blocklist: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(SensitivePathBlocklist::ask())];
-        let chain: Vec<Box<dyn PermissionPolicy>> = match mode {
-            PermissionMode::BypassPermissions => {
-                // Auto-approve everything.
-                vec![Box::new(BypassAllPolicy)]
-            }
-            PermissionMode::Plan => {
-                // Block all write tools until plan is approved.
-                vec![Box::new(BlockWriteToolsPolicy)]
-            }
-            PermissionMode::Auto => {
-                // Auto-approve safe tools, ask for others.
-                vec![
-                    #[cfg(feature = "mcp")]
-                    Box::new(DefaultToolApprove::new()),
-                    Box::new(FileAccessAsk::new()),
-                ]
-            }
-            PermissionMode::AcceptEdits => {
-                // Auto-approve read and write, ask for bash.
-                vec![
-                    #[cfg(feature = "mcp")]
-                    Box::new(DefaultToolApprove::new()),
-                    Box::new(AcceptEditsPolicy),
-                ]
-            }
-            PermissionMode::DontAsk => {
-                // Allow all unless explicit deny rule exists (handled by PermissionSet).
-                vec![]
-            }
-            PermissionMode::Default => {
-                // Ask for all operations that match file access outside cwd.
-                vec![Box::new(FileAccessAsk::new())]
-            }
-        };
-        blocklist.into_iter().chain(chain).collect()
-    }
-
-    pub fn with_policies(mut self, policies: Vec<Box<dyn PermissionPolicy>>) -> Self {
-        self.policies = policies;
-        self
-    }
-
-    pub fn add_policy(&mut self, policy: Box<dyn PermissionPolicy>) {
-        self.policies.push(policy);
-    }
-
-    /// Returns a manager that bypasses all permissions (always allows everything except
-    /// sensitive paths that are always checked first via SensitivePathBlocklist).
-    pub fn bypass_all() -> Self {
-        let blocklist: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(SensitivePathBlocklist::ask())];
-        let chain: Vec<Box<dyn PermissionPolicy>> = vec![Box::new(BypassAllPolicy)];
-        Self { policies: blocklist.into_iter().chain(chain).collect() }
-    }
-
-    /// Consume the manager and return its policy chain.
-    #[allow(clippy::vec_box)]
-    pub fn into_policies(self) -> Vec<Box<dyn PermissionPolicy>> {
-        self.policies
-    }
-
-    /// Evaluate the context against the policy chain.
-    pub async fn evaluate(&self, ctx: &PermissionContext<'_>) -> PermissionResult {
-        for policy in &self.policies {
-            if policy.matches(ctx) {
-                if let Some(result) = policy.evaluate(ctx).await {
-                    return result;
-                }
-            }
-        }
-        PermissionResult::Ask
+impl PermissionSetPolicy {
+    pub fn new(_rules: PermissionSet) -> Self {
+        Self
     }
 }
 
-// Policy implementations for PermissionMode-driven chains.
-// These policies are used by PermissionManager when built with a PermissionMode.
-
-/// Auto-approve all operations (BypassPermissions mode).
-pub(crate) struct BypassAllPolicy;
-
-#[async_trait]
-impl PermissionPolicy for BypassAllPolicy {
-    fn name(&self) -> &str {
-        "bypass_all"
-    }
-
-    fn matches(&self, _ctx: &PermissionContext<'_>) -> bool {
-        true
-    }
-
-    async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
-        Some(PermissionResult::Allow)
-    }
-}
-
-/// Block write tools until plan is approved (Plan mode).
-struct BlockWriteToolsPolicy;
-
-impl BlockWriteToolsPolicy {
-    fn is_write_tool(tool: &str) -> bool {
-        matches!(
-            tool,
-            "write_file" | "edit_file" | "bash" | "delete_file" | "create_directory"
-        )
-    }
-}
-
-#[async_trait]
-impl PermissionPolicy for BlockWriteToolsPolicy {
-    fn name(&self) -> &str {
-        "block_write_tools"
-    }
-
-    fn matches(&self, ctx: &PermissionContext<'_>) -> bool {
-        Self::is_write_tool(ctx.tool)
-    }
-
-    async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
-        Some(PermissionResult::Ask)
-    }
-}
-
-/// Auto-approve file edits (AcceptEdits mode).
-struct AcceptEditsPolicy;
-
-impl AcceptEditsPolicy {
-    fn is_edit_tool(tool: &str) -> bool {
-        matches!(tool, "write_file" | "edit_file")
-    }
-}
-
-#[async_trait]
-impl PermissionPolicy for AcceptEditsPolicy {
-    fn name(&self) -> &str {
-        "accept_edits"
-    }
-
-    fn matches(&self, ctx: &PermissionContext<'_>) -> bool {
-        Self::is_edit_tool(ctx.tool)
-    }
-
-    async fn evaluate(&self, _ctx: &PermissionContext<'_>) -> Option<PermissionResult> {
-        Some(PermissionResult::Allow)
-    }
-}
-
-/// Build an approval sink based on yolo mode.
-///
-/// When `yolo` is true, returns an auto-allow sink that approves all tool calls.
-/// When `yolo` is false, returns a deny-all sink that blocks all tool calls.
-pub fn build_sink(yolo: bool) -> std::sync::Arc<dyn ApprovalSink> {
-    if yolo {
-        std::sync::Arc::new(AutoAllowSink)
-    } else {
-        std::sync::Arc::new(DenyAllSink)
-    }
-}
+// ---------------------------------------------------------------------------
+// Utility functions
+// ---------------------------------------------------------------------------
 
 /// Tools that are read-only (safe for auto-approval).
 pub fn is_read_only_tool(tool: &str) -> bool {
-    matches!(
-        tool,
-        "read_file" | "grep" | "find" | "list_dir" | "fetch_docs"
-    )
+    matches!(tool, "read_file" | "grep" | "find" | "list_dir" | "fetch_docs")
+}
+
+/// Sensitive path patterns — kept for reference, not enforced.
+const SENSITIVE_PATH_PATTERNS: &[&str] = &[
+    "**/.ssh/*",
+    "**/id_rsa",
+    "**/id_ed25519",
+    "**/.aws/credentials",
+    "**/.aws/config",
+    "**/.azure/*",
+    "**/.kube/config",
+    "**/.docker/config.json",
+    "**/docker/config.json",
+    "**/.git/objects/**",
+    "**/.git/objects",
+];
+
+/// Returns true if the path matches any sensitive path pattern.
+pub fn is_sensitive_path(path: &str) -> bool {
+    SENSITIVE_PATH_PATTERNS
+        .iter()
+        .any(|p| glob::Pattern::new(p).map(|p| p.matches(path)).unwrap_or(false))
 }

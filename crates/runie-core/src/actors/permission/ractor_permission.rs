@@ -1,338 +1,97 @@
-//! Ractor-based `PermissionActor` implementation.
+//! Permission actor — stub. All permission checks now bypass.
 //!
-//! This module provides a ractor-based implementation of the PermissionActor,
-//! following the same pattern as the InputActor migration.
+//! The policy engine has been removed. `PermissionGate` always delegates to the
+//! approval sink. This actor is kept as a minimal stub so existing spawn sites
+//! (leader, agent) continue to compile without structural changes.
 
-use ractor::{Actor, ActorProcessingErr, ActorRef};
-use tracing::instrument;
+use ractor::async_trait;
+use ractor::{Actor, ActorCell, ActorProcessingErr, ActorRef};
 
-use std::collections::HashMap;
-
-use super::super::config::RactorConfigHandle;
 use crate::actors::ractor_adapter::spawn_ractor;
+use crate::actors::RactorConfigHandle;
 use crate::bus::EventBus;
-use crate::event::Event;
-use crate::model::PermissionRequestState;
 use crate::permissions::{PermissionAction, PermissionMode, PermissionSet};
+use crate::Event;
 
 use super::messages::PermissionMsg;
 
-/// Ractor handle type for PermissionActor with convenience methods.
-#[derive(Clone, Debug)]
+/// Stub handle — all permission checks bypass.
+#[derive(Clone)]
 pub struct RactorPermissionHandle {
-    inner: ActorRef<PermissionMsg>,
+    _cell: ActorCell,
 }
 
 impl RactorPermissionHandle {
-    /// Create a new handle wrapping an ActorRef.
-    pub fn new(inner: ActorRef<PermissionMsg>) -> Self {
-        Self { inner }
+    pub fn new(_cell: ActorCell) -> Self {
+        Self { _cell }
     }
 
-    /// Query the current pending request ID, if any.
-    pub async fn current_request_id(&self) -> Option<String> {
-        match self
-            .inner
-            .call(|tx| PermissionMsg::GetCurrentRequest(Some(tx)), None)
-            .await
-        {
-            Ok(ractor::rpc::CallResult::Success(v)) => v,
-            _ => None,
-        }
-    }
-
-    /// Request permission for a tool call. Returns a receiver for the response.
+    /// Stub: always returns None (bypass, no UI needed).
     pub async fn ask_permission(
         &self,
-        request_id: String,
-        tool: String,
-        input: serde_json::Value,
-    ) -> tokio::sync::oneshot::Receiver<PermissionAction> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let msg = PermissionMsg::AskPermission { request_id, tool, input, reply: Some(tx) };
-        let _ = self.inner.send_message(msg);
-        rx
+        _request_id: String,
+        _tool: String,
+        _input: serde_json::Value,
+    ) -> Option<PermissionAction> {
+        None
     }
 
-    /// Resolve a pending permission request.
-    pub async fn resolve_permission(&self, request_id: String, action: PermissionAction) {
-        let msg = PermissionMsg::ResolvePermission { request_id, action };
-        let _ = self.inner.send_message(msg);
+    pub fn try_cancel_permission(&self, _request_id: String) {}
+
+    pub fn try_resolve_permission(&self, _request_id: String, _action: PermissionAction) {}
+
+    pub fn try_upsert_rule(&self, _tool: String, _action: PermissionAction) {}
+
+    pub fn try_upsert_session_rule(&self, _tool: String, _action: PermissionAction) {}
+
+    pub fn try_send(&self, _msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
+        Ok(())
     }
 
-    /// Cancel a pending permission request.
-    pub async fn cancel_permission(&self, request_id: String) {
-        let msg = PermissionMsg::CancelPermission { request_id };
-        let _ = self.inner.send_message(msg);
-    }
+    pub async fn load_rules(&self) {}
 
-    /// Dismiss the permission request UI.
-    pub async fn dismiss(&self) {
-        let msg = PermissionMsg::DismissRequest;
-        let _ = self.inner.send_message(msg);
-    }
-
-    /// Resolve a pending permission request (sync fire-and-forget).
-    pub fn try_resolve_permission(&self, request_id: String, action: PermissionAction) {
-        let msg = PermissionMsg::ResolvePermission { request_id, action };
-        let _ = self.inner.send_message(msg);
-    }
-
-    /// Cancel a pending permission request (sync fire-and-forget).
-    pub fn try_cancel_permission(&self, request_id: String) {
-        let msg = PermissionMsg::CancelPermission { request_id };
-        let _ = self.inner.send_message(msg);
-    }
-
-    /// Dismiss the permission request UI (sync fire-and-forget).
-    pub fn try_dismiss(&self) {
-        let msg = PermissionMsg::DismissRequest;
-        let _ = self.inner.send_message(msg);
-    }
-
-    /// Add or update a permission rule (sync fire-and-forget).
-    pub fn try_upsert_rule(&self, tool: String, action: PermissionAction) {
-        let msg = PermissionMsg::UpsertRule { tool, action };
-        let _ = self.inner.send_message(msg);
-    }
-
-    /// Add or update a permission rule with Session scope (sync fire-and-forget).
-    pub fn try_upsert_session_rule(&self, tool: String, action: PermissionAction) {
-        let msg = PermissionMsg::UpsertSessionRule { tool, action };
-        let _ = self.inner.send_message(msg);
-    }
-
-    /// Try to send a message (non-blocking).
-    pub fn try_send(&self, msg: PermissionMsg) -> Result<(), ractor::MessagingErr<PermissionMsg>> {
-        self.inner.send_message(msg)
-    }
-
-    /// Load permission rules from the config actor (fires LoadRules internally).
-    pub async fn load_rules(&self) {
-        let _ = self.inner.send_message(PermissionMsg::LoadRules);
-    }
-
-    /// Query the current permission rule set.
     pub async fn get_rules(&self) -> PermissionSet {
-        match self
-            .inner
-            .call(|tx| PermissionMsg::GetRules(Some(tx)), None)
-            .await
-        {
-            Ok(ractor::rpc::CallResult::Success(rules)) => rules,
-            _ => PermissionSet::default(),
-        }
+        PermissionSet::default()
     }
 
-    /// Set the session permission mode (fire-and-forget).
-    pub fn set_mode(&self, mode: PermissionMode) {
-        let _ = self.inner.send_message(PermissionMsg::SetMode { mode });
-    }
+    pub fn set_mode(&self, _mode: PermissionMode) {}
 
-    /// Query the current permission mode.
     pub async fn get_mode(&self) -> PermissionMode {
-        match self
-            .inner
-            .call(|tx| PermissionMsg::GetMode(Some(tx)), None)
-            .await
-        {
-            Ok(ractor::rpc::CallResult::Success(mode)) => mode,
-            _ => PermissionMode::default(),
-        }
+        PermissionMode::default()
     }
 
-    /// Mark the current project as trusted.
-    pub async fn trust_project(&self) {
-        let _ = self.inner.send_message(PermissionMsg::TrustProject);
-    }
+    pub async fn trust_project(&self) {}
 
-    /// Mark the current project as untrusted.
-    pub async fn untrust_project(&self) {
-        let _ = self.inner.send_message(PermissionMsg::UntrustProject);
-    }
+    pub async fn untrust_project(&self) {}
 
-    /// Add or update a permission rule.
-    pub async fn upsert_rule(&self, tool: String, action: PermissionAction) {
-        let _ = self
-            .inner
-            .send_message(PermissionMsg::UpsertRule { tool, action });
-    }
+    pub async fn upsert_rule(&self, _tool: String, _action: PermissionAction) {}
 }
 
-/// Ractor State for PermissionActor — holds all mutable state.
-/// EventBus is Clone and publish takes &self, no Mutex needed.
-/// Pending approval channels are stored directly in state since ractor
-/// processes messages sequentially (no concurrent access to state).
-pub struct PermissionActorState {
-    /// Pending approval reply channels keyed by request id.
-    pending: HashMap<String, tokio::sync::oneshot::Sender<PermissionAction>>,
-    /// Current permission request state.
-    pub current_request: Option<PermissionRequestState>,
-    /// Bridge to the event bus for publishing facts.
-    pub bus: EventBus<Event>,
-    /// Declarative permission rules loaded from config.toml.
-    rules: PermissionSet,
-    /// Session permission mode (manual / auto-approve). Session-scoped:
-    /// every fresh actor starts in `Default` (manual) mode.
-    mode: PermissionMode,
-}
+/// Stub actor state.
+pub struct PermissionActorState;
 
 impl PermissionActorState {
-    fn emit(&self, event: Event) {
-        self.bus.publish(event);
-    }
+    fn emit(&self, _event: Event) {}
 }
 
-/// Ractor-based PermissionActor.
-///
-/// Owns the approval registry and permission request UI state.
-/// Uses ractor for actor supervision and message handling.
+/// Stub actor — does nothing.
 pub struct RactorPermissionActor;
 
-/// Spawn arguments for `RactorPermissionActor`.
-pub struct PermissionActorArgs {
-    pub bus: EventBus<Event>,
-    pub config_h: RactorConfigHandle,
-}
-
 impl RactorPermissionActor {
-    fn handle_get_current_request(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<Option<String>>>) {
-        if let Some(reply) = reply {
-            let _ = reply.send(state.current_request.as_ref().map(|r| r.request_id.clone()));
-        }
+    pub async fn spawn(
+        bus: EventBus<Event>,
+        _config_h: RactorConfigHandle,
+    ) -> anyhow::Result<(RactorPermissionHandle, ActorCell, ractor::concurrency::JoinHandle<()>)> {
+        let (actor_ref, join, cell) = spawn_ractor(None, Self, bus).await?;
+        Ok((RactorPermissionHandle::new(cell.clone()), cell, join))
     }
 
-    fn handle_ask_permission(
-        state: &mut PermissionActorState,
-        request_id: String,
-        tool: String,
-        input: serde_json::Value,
-        reply: Option<tokio::sync::oneshot::Sender<PermissionAction>>,
-    ) {
-        // Store the reply channel so ResolvePermission can send the user's choice.
-        if let Some(reply) = reply {
-            state.pending.insert(request_id.clone(), reply);
-        }
-
-        state.current_request =
-            Some(PermissionRequestState { request_id: request_id.clone(), tool: tool.clone(), input: input.clone() });
-
-        state.emit(Event::PermissionRequest { request_id, tool, input });
-    }
-
-    fn handle_resolve_permission(state: &mut PermissionActorState, request_id: String, action: PermissionAction) {
-        // Look up and resolve the pending reply channel.
-        if let Some(reply) = state.pending.remove(&request_id) {
-            let _ = reply.send(action);
-        }
-        if state
-            .current_request
-            .as_ref()
-            .map(|r| r.request_id == request_id)
-            .unwrap_or(false)
-        {
-            state.current_request = None;
-            state.emit(Event::PermissionRequestDismissed);
-        }
-        state.emit(Event::PermissionResponse { request_id, action });
-    }
-
-    fn handle_cancel_permission(state: &mut PermissionActorState, request_id: String) {
-        // Cancel by sending Deny on the pending channel.
-        if let Some(reply) = state.pending.remove(&request_id) {
-            let _ = reply.send(PermissionAction::Deny);
-        }
-        if state
-            .current_request
-            .as_ref()
-            .map(|r| r.request_id == request_id)
-            .unwrap_or(false)
-        {
-            state.current_request = None;
-            // Notify the UI so the permission dialog closes (timeout / abort path).
-            state.emit(Event::PermissionRequestDismissed);
-        }
-    }
-
-    fn handle_dismiss(state: &mut PermissionActorState) {
-        state.current_request = None;
-        state.emit(Event::PermissionRequestDismissed);
-    }
-
-    fn handle_get_rules(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<PermissionSet>>) {
-        if let Some(reply) = reply {
-            let _ = reply.send(state.rules.clone());
-        }
-    }
-
-    fn handle_set_mode(state: &mut PermissionActorState, mode: PermissionMode) {
-        state.mode = mode;
-    }
-
-    fn handle_get_mode(state: &PermissionActorState, reply: Option<ractor::RpcReplyPort<PermissionMode>>) {
-        if let Some(reply) = reply {
-            let _ = reply.send(state.mode);
-        }
-    }
-
-    fn handle_load_rules(_state: &mut PermissionActorState) {
-        // Rules are loaded from ConfigLoaded events; this is a no-op trigger
-        // for the actor's own re-evaluation. The actual loading happens in
-        // pre_start via ConfigActor, or explicitly after config changes.
-        tracing::debug!("LoadRules received (rules already initialized or updated via ConfigLoaded)");
-    }
-
-    async fn handle_trust_project(state: &mut PermissionActorState) {
-        let result = tokio::task::spawn_blocking(|| {
-            let cwd = std::env::current_dir().unwrap_or_default();
-            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
-            let mut tm = crate::trust::TrustManager::load();
-            tm.set(&cwd_utf8, crate::trust::TrustDecision::Trusted);
-            let _ = tm.save();
-            tm.decisions()
-        })
-        .await;
-
-        match result {
-            Ok(decisions) => {
-                state.emit(Event::TrustLoaded { decisions });
-            }
-            Err(e) => {
-                tracing::warn!("failed to persist trust decision: {}", e);
-            }
-        }
-    }
-
-    async fn handle_untrust_project(state: &mut PermissionActorState) {
-        let result = tokio::task::spawn_blocking(|| {
-            let cwd = std::env::current_dir().unwrap_or_default();
-            let cwd_utf8 = camino::Utf8PathBuf::from_path_buf(cwd).unwrap_or_else(|_| camino::Utf8PathBuf::from("."));
-            let mut tm = crate::trust::TrustManager::load();
-            tm.set(&cwd_utf8, crate::trust::TrustDecision::Untrusted);
-            let _ = tm.save();
-            tm.decisions()
-        })
-        .await;
-
-        match result {
-            Ok(decisions) => {
-                state.emit(Event::TrustLoaded { decisions });
-            }
-            Err(e) => {
-                tracing::warn!("failed to persist untrust decision: {}", e);
-            }
-        }
-    }
-
-    fn handle_upsert_rule(state: &mut PermissionActorState, tool: String, action: PermissionAction) {
-        let rule = crate::permissions::PermissionRule::new(action, tool);
-        state.rules.add_rule(rule);
-    }
-
-    fn handle_upsert_session_rule(state: &mut PermissionActorState, tool: String, action: PermissionAction) {
-        let rule = crate::permissions::PermissionRule::new(action, tool)
-            .with_scope(crate::permissions::PermissionScope::Session);
-        state.rules.add_rule(rule);
+    /// Spawn a stub permission actor (no config needed, all bypass).
+    pub async fn spawn_for_testing(
+        bus: EventBus<Event>,
+    ) -> anyhow::Result<(RactorPermissionHandle, ActorCell, ractor::concurrency::JoinHandle<()>)> {
+        let (_actor_ref, join, cell) = spawn_ractor(None, Self, bus).await?;
+        Ok((RactorPermissionHandle::new(cell.clone()), cell, join))
     }
 }
 
@@ -340,126 +99,22 @@ impl RactorPermissionActor {
 impl Actor for RactorPermissionActor {
     type Msg = PermissionMsg;
     type State = PermissionActorState;
-    type Arguments = PermissionActorArgs;
+    type Arguments = EventBus<Event>;
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        args: Self::Arguments,
+        _bus: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        // Load permission rules AND mode from the config actor so the agent can use them.
-        let (rules, mode) = match args.config_h.get_config().await {
-            Some(cfg) => (cfg.permissions.to_permission_set(), cfg.permissions.mode),
-            None => {
-                tracing::warn!("PermissionActor: config not available, using default rules");
-                (PermissionSet::default_rules(), PermissionMode::default())
-            }
-        };
-        Ok(PermissionActorState {
-            pending: HashMap::new(),
-            current_request: None,
-            bus: args.bus,
-            rules,
-            mode,
-        })
+        Ok(PermissionActorState)
     }
 
-    #[instrument(name = "permission_actor", skip_all, fields(msg = ?msg))]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
-        msg: Self::Msg,
-        state: &mut Self::State,
+        _msg: Self::Msg,
+        _state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        match msg {
-            PermissionMsg::AskPermission { request_id, tool, input, reply } => {
-                Self::handle_ask_permission(state, request_id, tool, input, reply);
-            }
-            PermissionMsg::ResolvePermission { request_id, action } => {
-                Self::handle_resolve_permission(state, request_id, action);
-            }
-            PermissionMsg::CancelPermission { request_id } => {
-                Self::handle_cancel_permission(state, request_id);
-            }
-            PermissionMsg::DismissRequest => {
-                Self::handle_dismiss(state);
-            }
-            PermissionMsg::GetCurrentRequest(reply) => {
-                Self::handle_get_current_request(state, reply);
-            }
-            PermissionMsg::LoadRules => {
-                Self::handle_load_rules(state);
-            }
-            PermissionMsg::GetRules(reply) => {
-                Self::handle_get_rules(state, reply);
-            }
-            PermissionMsg::TrustProject => {
-                Self::handle_trust_project(state).await;
-            }
-            PermissionMsg::UntrustProject => {
-                Self::handle_untrust_project(state).await;
-            }
-            PermissionMsg::UpsertRule { tool, action } => {
-                Self::handle_upsert_rule(state, tool, action);
-            }
-            PermissionMsg::UpsertSessionRule { tool, action } => {
-                Self::handle_upsert_session_rule(state, tool, action);
-            }
-            PermissionMsg::SetMode { mode } => {
-                Self::handle_set_mode(state, mode);
-            }
-            PermissionMsg::GetMode(reply) => {
-                Self::handle_get_mode(state, reply);
-            }
-        }
         Ok(())
     }
 }
-
-impl RactorPermissionActor {
-    /// Spawn a `RactorPermissionActor` on the given event bus.
-    ///
-    /// The actor loads permission rules from the config actor (via `config_h`)
-    /// on startup so that the agent can query them when building its gate.
-    ///
-    /// Returns a `Result` to allow callers to handle spawn failures gracefully.
-    pub async fn spawn(
-        bus: EventBus<Event>,
-        config_h: RactorConfigHandle,
-    ) -> anyhow::Result<(
-        RactorPermissionHandle,
-        ractor::ActorCell,
-        tokio::task::JoinHandle<()>,
-    )> {
-        let args = PermissionActorArgs { bus: bus.clone(), config_h };
-        let (handle, join, cell) = spawn_ractor(None, Self, args)
-            .await
-            .map_err(|e| anyhow::anyhow!("RactorPermissionActor spawn failed: {}", e))?;
-        Ok((RactorPermissionHandle::new(handle), cell, join))
-    }
-
-    /// Spawn for testing without a real config actor.
-    ///
-    /// Creates a dummy config actor to provide a real `RactorConfigHandle`,
-    /// so `pre_start` can call `get_config()` (which returns defaults).
-    /// Prefer [`spawn`](Self::spawn) in production code.
-    pub async fn spawn_for_testing(
-        bus: EventBus<Event>,
-    ) -> anyhow::Result<(
-        RactorPermissionHandle,
-        ractor::ActorCell,
-        tokio::task::JoinHandle<()>,
-    )> {
-        // Spawn with a hermetic temp config so the real ~/.runie/config.toml
-        // (which may set bypass_permissions or custom rules) doesn't leak in.
-        let dir = tempfile::tempdir()?;
-        let config_path = dir.path().join("config.toml");
-        std::fs::write(&config_path, "")?;
-        let (config_h, _cfg_cell, _cfg_join) =
-            crate::actors::RactorConfigActor::spawn(bus.clone(), Some(config_path), None).await?;
-        Self::spawn(bus, config_h).await
-    }
-}
-
-#[cfg(test)]
-mod tests;

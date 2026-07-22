@@ -19,7 +19,6 @@ use runie_core::event::headless::HeadlessEvent;
 use runie_core::event::Event;
 use runie_core::headless_runtime::HeadlessRuntime;
 use runie_core::message::ChatMessage;
-use runie_core::permissions::PermissionManager;
 use runie_core::provider::Provider;
 use runie_core::provider_event::ProviderEvent;
 use runie_core::tool::{assign_tool_call_ids, build_assistant_message, tool_parse_error_message, ParsedToolCall};
@@ -70,7 +69,7 @@ fn build_headless_options(
         max_tool_rounds: opts.max_tool_rounds,
         on_chunk: opts.on_chunk,
         on_event: opts.on_event,
-        permission_gate: PermissionGate::new(PermissionManager::default(), sink),
+        permission_gate: PermissionGate::new(sink),
     }
 }
 

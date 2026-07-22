@@ -452,7 +452,7 @@ async fn stream_error_emits_thought_done() {
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn denied_tool_does_not_loop_in_turn() {
-    use runie_core::permissions::{DenyAllSink, PermissionManager};
+    use runie_core::permissions::DenyAllSink;
     use std::sync::Arc;
 
     let _mock_guard = ensure_mock_provider().await;
@@ -461,7 +461,6 @@ async fn denied_tool_does_not_loop_in_turn() {
     let (events, emit) = capture_events();
 
     let gate = crate::PermissionGate::new(
-        PermissionManager::default(),
         Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>,
     );
 

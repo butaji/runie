@@ -174,8 +174,8 @@ pub use memory::{
 };
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{
-    is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction, PermissionGate,
-    PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
+    is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction,
+    PermissionGate, PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
 };
 pub use prompts::{build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS};
 pub use provider::{

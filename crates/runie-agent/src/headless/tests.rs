@@ -4,7 +4,7 @@ use crate::headless::{run_headless_cli, run_headless_turn, HeadlessCliOptions, H
 use crate::PermissionGate;
 use runie_core::event::headless::HeadlessEvent;
 use runie_core::message::{ChatMessage, Role};
-use runie_core::permissions::{AutoAllowSink, PermissionManager};
+use runie_core::permissions::AutoAllowSink;
 use runie_core::provider::Provider;
 use runie_core::provider_event::{ModelError, ProviderEvent};
 use runie_provider::MockProvider;
@@ -123,7 +123,7 @@ async fn headless_runner_executes_tool_call_markup() {
 async fn headless_cli_helper_builds_gate() {
     let sink: Arc<dyn runie_core::permissions::ApprovalSink> = Arc::new(AutoAllowSink);
     let _opts = HeadlessCliOptions { execute_tools: true, max_tool_rounds: 5, on_chunk: None, on_event: None };
-    let gate = PermissionGate::new(PermissionManager::default(), sink.clone());
+    let gate = PermissionGate::new(sink.clone());
     assert!(Arc::ptr_eq(gate.sink_ref(), &sink));
 }
 
@@ -214,7 +214,6 @@ async fn denied_tool_does_not_loop() {
 
     // Create a deny-all gate (simulates headless mode with no permissions)
     let gate = PermissionGate::new(
-        PermissionManager::default(),
         Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>,
     );
 

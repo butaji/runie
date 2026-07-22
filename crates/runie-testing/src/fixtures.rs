@@ -8,7 +8,7 @@ pub mod openai;
 use std::sync::Arc;
 
 use runie_core::config::Config;
-use runie_core::permissions::{AutoAllowSink, PermissionGate, PermissionManager};
+use runie_core::permissions::{AutoAllowSink, PermissionGate};
 use runie_core::session::store::SessionStore;
 use runie_core::Provider;
 use tempfile::TempDir;
@@ -72,7 +72,7 @@ pub fn mock_provider() -> runie_provider::BuiltProvider {
 
 /// Build a permission gate that allows all operations without prompting.
 pub fn allow_all_gate() -> PermissionGate {
-    PermissionGate::new(PermissionManager::default(), Arc::new(AutoAllowSink))
+    PermissionGate::new(Arc::new(AutoAllowSink))
 }
 
 /// Build a session store inside the temp home.

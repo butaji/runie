@@ -437,10 +437,7 @@ mod tests {
             }
         }
 
-        let gate = PermissionGate::new(
-            runie_core::permissions::PermissionManager::default(),
-            std::sync::Arc::new(runie_core::permissions::AutoAllowSink),
-        );
+        let gate = PermissionGate::new(std::sync::Arc::new(runie_core::permissions::AutoAllowSink));
         let tools = vec![ParsedToolCall {
             name: "list_dir".to_string(),
             args: serde_json::json!({"path": "."}),
@@ -461,10 +458,7 @@ mod tests {
     // Layer 2: without observer (headless), no events emitted.
     #[tokio::test]
     async fn headless_tool_execution_silent() {
-        let gate = PermissionGate::new(
-            runie_core::permissions::PermissionManager::default(),
-            std::sync::Arc::new(runie_core::permissions::AutoAllowSink),
-        );
+        let gate = PermissionGate::new(std::sync::Arc::new(runie_core::permissions::AutoAllowSink));
         let tools = vec![ParsedToolCall {
             name: "list_dir".to_string(),
             args: serde_json::json!({"path": "."}),
@@ -507,10 +501,7 @@ mod tests {
             },
         );
 
-        let gate = PermissionGate::new(
-            runie_core::permissions::PermissionManager::default(),
-            std::sync::Arc::new(runie_core::permissions::AutoAllowSink),
-        );
+        let gate = PermissionGate::new(std::sync::Arc::new(runie_core::permissions::AutoAllowSink));
         let ctx = ToolContext::default();
 
         let output = execute_tool_call(&tool_call, &ctx, &gate, Some(Arc::clone(&cache))).await;
@@ -550,10 +541,7 @@ mod tests {
             },
         );
 
-        let gate = PermissionGate::new(
-            runie_core::permissions::PermissionManager::default(),
-            std::sync::Arc::new(runie_core::permissions::AutoAllowSink),
-        );
+        let gate = PermissionGate::new(std::sync::Arc::new(runie_core::permissions::AutoAllowSink));
         let ctx = ToolContext::default();
 
         let output = execute_tool_call(&tool_call, &ctx, &gate, Some(Arc::clone(&cache))).await;

@@ -35,7 +35,7 @@ mod tests {
     use runie_agent::headless::{run_headless_turn, HeadlessOptions};
     use runie_core::event::headless::HeadlessEvent;
     use runie_core::message::ChatMessage;
-    use runie_core::permissions::{AutoAllowSink, PermissionManager};
+    use runie_core::permissions::AutoAllowSink;
     use runie_provider::MockProvider;
     use std::sync::{Arc, Mutex};
 
@@ -59,7 +59,7 @@ mod tests {
             on_event: Some(Box::new(move |evt: HeadlessEvent| {
                 captured.lock().unwrap().push(evt);
             })),
-            permission_gate: runie_agent::PermissionGate::new(PermissionManager::default(), sink.clone()),
+            permission_gate: runie_agent::PermissionGate::new(sink.clone()),
         };
 
         run_headless_turn(messages, &provider, options)
