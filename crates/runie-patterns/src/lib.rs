@@ -25,15 +25,11 @@
 //! - The pattern returns `TerminationReason::Error("aborted")`.
 //! - Clean shutdown with no zombie tasks.
 
-pub mod doom_loop;
-pub mod goal;
 mod improve;
 pub mod primitives;
 mod single;
 pub mod swarm;
 
-pub use doom_loop::{DoomLoopDetector, DoomLoopSignal, DEFAULT_DOOM_LOOP_THRESHOLD};
-pub use goal::GoalPattern;
 pub use improve::ImprovePattern;
 pub use single::SinglePattern;
 pub use swarm::{SwarmPattern, SwarmVariant, SwarmWorkerStatus, OrphanedWorkerTracker, StatusCounts, DEFAULT_ORPHAN_TIMEOUT_SECS};
@@ -95,8 +91,6 @@ pub struct PatternConfig {
     pub max_retries: u32,
     /// Consecutive failures before fail-fast.
     pub circuit_breaker: u32,
-    /// Threshold for doom loop detection (consecutive same-tool calls).
-    pub doom_loop_threshold: usize,
 }
 
 impl Default for PatternConfig {
@@ -108,7 +102,6 @@ impl Default for PatternConfig {
             timeout_ms: 120_000,
             max_retries: 2,
             circuit_breaker: 3,
-            doom_loop_threshold: DEFAULT_DOOM_LOOP_THRESHOLD,
         }
     }
 }

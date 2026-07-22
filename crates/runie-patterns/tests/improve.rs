@@ -78,7 +78,6 @@ fn test_config() -> PatternConfig {
         timeout_ms: 5_000,
         max_retries: 2,
         circuit_breaker: 3,
-        doom_loop_threshold: 5,
     }
 }
 

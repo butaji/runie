@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-patterns", "crates/runie-acp", "lint-check"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-agent", "crates/runie-provider", "crates/runie-cli", "crates/runie-testing", "crates/runie-patterns", "lint-check"]
 resolver = "2"
 
 # Default test timeout: 120 seconds. Tests exceeding this are killed.
