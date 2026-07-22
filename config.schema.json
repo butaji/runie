@@ -554,7 +554,7 @@
       }
     },
     "PermissionAction": {
-      "description": "Permission action result.\n\nThis is the canonical enum for permission decisions throughout the codebase.\nThe protocol's `ApprovalDecision` (Allow/Deny only) is converted to this type\nat the protocol/core boundary via `From<crate::proto::op::ApprovalDecision>`.",
+      "description": "Permission action result — kept for API compatibility.",
       "type": "string",
       "enum": [
         "allow",
@@ -563,95 +563,37 @@
       ]
     },
     "PermissionMode": {
-      "description": "Global permission mode.",
-      "oneOf": [
-        {
-          "description": "Apply rules; ask when no rule matches.",
-          "type": "string",
-          "const": "default"
-        },
-        {
-          "description": "Auto-accept file edits; ask for shell commands.",
-          "type": "string",
-          "const": "accept_edits"
-        },
-        {
-          "description": "Auto-approve safe operations; ask for risky ones.",
-          "type": "string",
-          "const": "auto"
-        },
-        {
-          "description": "Approve unless a deny rule matches.",
-          "type": "string",
-          "const": "dont_ask"
-        },
-        {
-          "description": "Approve everything (dangerous).",
-          "type": "string",
-          "const": "bypass_permissions"
-        },
-        {
-          "description": "Block write tools until a plan is approved.",
-          "type": "string",
-          "const": "plan"
-        }
+      "description": "Permission mode — stub. All modes now bypass.",
+      "type": "string",
+      "enum": [
+        "default",
+        "accept_edits",
+        "auto",
+        "dont_ask",
+        "bypass_permissions",
+        "plan"
       ]
     },
     "PermissionRule": {
-      "description": "A single permission rule with glob patterns and scope.",
+      "description": "Permission rule — stub for config compatibility.",
       "type": "object",
       "properties": {
         "action": {
-          "description": "Action when rule matches: \"allow\", \"ask\", or \"deny\".",
           "$ref": "#/$defs/PermissionAction"
         },
-        "path": {
-          "description": "Optional glob pattern for file paths.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "pattern": {
-          "description": "Optional glob pattern for shell command arguments.",
           "type": [
             "string",
             "null"
           ]
-        },
-        "scope": {
-          "description": "Scope of this rule: user, project, or session.\nHigher scopes override lower scopes (session > project > user).",
-          "$ref": "#/$defs/PermissionScope",
-          "default": "user"
         },
         "tool": {
-          "description": "Glob pattern for tool name, e.g. \"bash\", \"read_*\", \"*\".",
           "type": "string"
         }
       },
       "required": [
         "action",
         "tool"
-      ]
-    },
-    "PermissionScope": {
-      "description": "Scope of a permission rule.",
-      "oneOf": [
-        {
-          "description": "User-level rules from ~/.runie/config.toml",
-          "type": "string",
-          "const": "user"
-        },
-        {
-          "description": "Project-level rules from .runie/config.toml or AGENTS.md",
-          "type": "string",
-          "const": "project"
-        },
-        {
-          "description": "Session-level rules from CLI flags",
-          "type": "string",
-          "const": "session"
-        }
       ]
     },
     "PermissionsSection": {
