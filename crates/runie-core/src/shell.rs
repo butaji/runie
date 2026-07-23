@@ -22,7 +22,21 @@ use shell_words;
 use tokio::process::Command;
 use tokio::sync::oneshot;
 
+#[cfg(target_os = "macos")]
 use crate::sandbox::{sandbox_available, SandboxAvailability as SandboxStatus};
+
+/// Stub types for non-macOS platforms where sandbox is not available.
+#[cfg(not(target_os = "macos"))]
+mod sandbox_stub {
+    pub enum SandboxStatus {
+        Unavailable { reason: String },
+    }
+    pub fn sandbox_available() -> SandboxStatus {
+        SandboxStatus::Unavailable { reason: "macOS sandbox only".into() }
+    }
+}
+#[cfg(not(target_os = "macos"))]
+use sandbox_stub::{sandbox_available, SandboxStatus};
 
 /// Result of a bash command execution.
 #[derive(Debug, Clone)]
@@ -104,6 +118,7 @@ async fn run_bash_shell_internal(
 ) -> ShellResult {
     // For sandboxed execution, we use the sandbox module
     if use_sandbox {
+        #[cfg(target_os = "macos")]
         return run_sandboxed_shell(command, working_dir, env, timeout).await;
     }
 
@@ -139,6 +154,7 @@ async fn run_bash_direct(
 
     // For sandboxed execution, use sandbox-exec wrapper on macOS.
     if use_sandbox {
+        #[cfg(target_os = "macos")]
         return run_sandboxed_direct(program, &program_args, working_dir, env, timeout).await;
     }
 
@@ -156,6 +172,7 @@ async fn run_bash_direct(
 ///
 /// Uses a collector task to capture stdout/stderr while racing against the timeout,
 /// similar to `run_command`.
+#[cfg(target_os = "macos")]
 async fn run_sandboxed_direct(
     program: &str,
     args: &[String],
@@ -209,6 +226,7 @@ async fn run_sandboxed_direct(
 /// Run a sandboxed shell command with timeout support.
 ///
 /// Uses tokio::process::Command so the child can be killed when the timeout fires.
+#[cfg(target_os = "macos")]
 async fn run_sandboxed_shell(
     command: &str,
     working_dir: &Path,

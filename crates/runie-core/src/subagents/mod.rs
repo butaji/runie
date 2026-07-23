@@ -99,24 +99,26 @@ impl SubagentType {
 /// Extract all variable names from a tinytemplate template.
 fn extract_var_names(template: &str) -> Vec<String> {
     let mut names = Vec::new();
-    let chars: Vec<char> = template.chars().collect();
+    let bytes = template.as_bytes();
     let mut i = 0;
-
-    while i < chars.len() {
-        if chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] != '{' {
-            // Found {name}, extract the name.
-            i += 1; // consume {
-            let start = i;
-            while i < chars.len() && chars[i] != '}' {
-                i += 1;
+    while i < bytes.len() {
+        if bytes[i] == b'{' && i + 1 < bytes.len()
+            && (bytes[i + 1].is_ascii_alphanumeric() || bytes[i + 1] == b'_')
+        {
+            let start = i + 1;
+            let mut end = start;
+            while end < bytes.len()
+                && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_')
+            {
+                end += 1;
             }
-            let name: String = chars[start..i].iter().collect();
-            if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                names.push(name);
+            if end < bytes.len() && bytes[end] == b'}' {
+                let name = String::from_utf8_lossy(&bytes[start..end]).to_string();
+                if !names.contains(&name) {
+                    names.push(name);
+                }
             }
-            if i < chars.len() {
-                i += 1; // consume }
-            }
+            i = end + 1;
         } else {
             i += 1;
         }
@@ -126,28 +128,7 @@ fn extract_var_names(template: &str) -> Vec<String> {
 
 /// Convert `{{var}}` template syntax to tinytemplate's `{var}` syntax.
 fn convert_braces(s: &str) -> String {
-    let mut result = String::with_capacity(s.len());
-    let chars: Vec<char> = s.chars().collect();
-    let mut i = 0;
-
-    while i < chars.len() {
-        // Check for {{ (start of variable placeholder)
-        if chars[i] == '{' && i + 1 < chars.len() && chars[i + 1] == '{' {
-            result.push('{');
-            i += 2; // skip both {
-        }
-        // Check for }} (end of variable placeholder)
-        else if chars[i] == '}' && i + 1 < chars.len() && chars[i + 1] == '}' {
-            result.push('}');
-            i += 2; // skip both }
-        }
-        // Single brace or non-brace character
-        else {
-            result.push(chars[i]);
-            i += 1;
-        }
-    }
-    result
+    s.replace("{{", "{").replace("}}", "}")
 }
 
 /// Registry of all available subagent types.
@@ -342,6 +323,18 @@ mod tests {
         vars.insert("task", "find all TODO comments");
         let interpolated = explore.interpolate(&vars);
         assert!(interpolated.contains("find all TODO comments"));
+    }
+
+    #[test]
+    fn extract_var_names_simple() {
+        assert_eq!(extract_var_names("hi {name} end"), vec!["name"]);
+        assert_eq!(extract_var_names("hi {name}, {value} end"), vec!["name", "value"]);
+        assert_eq!(extract_var_names("no vars here"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn extract_var_names_empty() {
+        assert_eq!(extract_var_names("no vars here"), Vec::<String>::new());
     }
 
     #[test]

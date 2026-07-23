@@ -74,6 +74,7 @@ pub mod provider;
 pub mod result;
 pub use result::{RunieContext, RunieResult};
 /// OS-level sandboxing with profile support.
+#[cfg(target_os = "macos")]
 pub mod sandbox;
 pub mod sanitize;
 pub mod scoped_model;
