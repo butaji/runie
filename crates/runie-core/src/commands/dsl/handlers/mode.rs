@@ -1,29 +1,18 @@
 //! Mode command — switch the agent orchestration pattern (`/mode`).
-//!
-//! See PATTERNS.md: `single` (direct execution), `swarm` (coordinated
-//! multi-agent work), and `improve` (iterative improvement with review).
 
 use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::{CommandResult, DialogType};
 use crate::model::AppState;
 use crate::ui_strings::mode as m;
 
-/// Orchestration patterns accepted by `/mode <pattern>`.
 const PATTERNS: [&str; 3] = ["single", "swarm", "improve"];
-/// Execution variants accepted by `/mode swarm <variant>`.
 const SWARM_VARIANTS: [&str; 3] = ["parallel", "delegation", "dag"];
 
-/// Register the mode handler with the handler registry (for YAML-based commands).
-pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    registry.register("mode", NamedHandler::Handler(handle_mode));
-    registry.register(
-        "select-lead-model",
-        NamedHandler::Handler(handle_select_lead_model),
-    );
-    registry.register(
-        "select-worker-model",
-        NamedHandler::Handler(handle_select_worker_model),
-    );
+crate::handlers! {
+    registry,
+    "mode" => handle_mode,
+    "select-lead-model" => handle_select_lead_model,
+    "select-worker-model" => handle_select_worker_model,
 }
 
 pub fn handle_mode(state: &mut AppState, args: &str) -> CommandResult {

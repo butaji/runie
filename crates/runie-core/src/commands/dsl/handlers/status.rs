@@ -1,19 +1,11 @@
 //! Status command — opens a read-only panel summarizing the current session.
-//!
-//! The panel is informational only: every line is a non-selectable header and
-//! the panel is closable, so Esc/Enter returns to the chat via the generic
-//! panel-close path. It reads live `AppState` at open time; no live refresh.
 
-use crate::commands::dsl::handlers::registry::HandlerRegistry;
 use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::CommandResult;
 use crate::dialog::{Panel, PanelStack};
 use crate::model::AppState;
 
-/// Register the status handler with the handler registry.
-pub fn register_handlers(registry: &mut HandlerRegistry) {
-    registry.register("status", NamedHandler::Handler(handle_status));
-}
+crate::handlers! { registry, "status" => handle_status }
 
 pub fn handle_status(state: &mut AppState, _: &str) -> CommandResult {
     CommandResult::OpenPanelStack(Box::new(PanelStack::new(build_status_panel(state))))

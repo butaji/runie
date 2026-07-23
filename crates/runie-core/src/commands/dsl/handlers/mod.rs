@@ -4,6 +4,7 @@
 pub mod ask;
 pub mod goal;
 pub mod help;
+pub mod macros_;
 pub mod mode;
 pub mod model;
 pub mod registry;

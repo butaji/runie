@@ -6,17 +6,17 @@ use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::{AppState, ThinkingLevel};
 use crate::provider::is_mock_enabled;
 
+crate::handlers! {
+    registry,
+    "model" => handle_model,
+    "thinking" => handle_thinking,
+    "scoped-models" => handle_scoped_models,
+}
+
 /// Returns true if there is at least one usable provider: a configured TOML
 /// provider, or the mock provider when `RUNIE_MOCK` is set.
 fn has_any_available_provider(state: &AppState) -> bool {
     !state.configured_providers().is_empty() || is_mock_enabled()
-}
-
-/// Register all model handlers with the handler registry (for YAML-based commands).
-pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    registry.register("model", NamedHandler::Handler(handle_model));
-    registry.register("thinking", NamedHandler::Handler(handle_thinking));
-    registry.register("scoped-models", NamedHandler::Handler(handle_scoped_models));
 }
 
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {

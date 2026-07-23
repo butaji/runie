@@ -10,92 +10,18 @@ use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::CommandResult;
 use crate::model::AppState;
 
-// ── Form field defaults ──────────────────────────────────────────────────────
-
-/// Default token count for the `/compact` command form.
 pub const COMPACT_DEFAULT_KEEP_TOKENS: &str = "2000";
-/// Default message index for the `/fork` command form.
 pub const FORK_DEFAULT_MESSAGE_INDEX: &str = "0";
 
-/// Register all session handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    register_session_form_handlers(registry);
-    register_session_simple_handlers(registry);
-}
-
-/// Register form-based session commands.
-fn register_session_form_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    registry.register(
-        "save",
-        NamedHandler::FormWithHandler {
-            title: "Save Session",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_save,
-        },
-    );
-    registry.register(
-        "load",
-        NamedHandler::FormWithHandler {
-            title: "Load Session",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_load,
-        },
-    );
-    registry.register(
-        "delete",
-        NamedHandler::FormWithHandler {
-            title: "Delete Session",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_delete,
-        },
-    );
-    registry.register(
-        "export",
-        NamedHandler::FormWithHandler {
-            title: "Export Session",
-            fields: &[("Path", "session.json", "path")],
-            handler: run::run_export,
-        },
-    );
-    registry.register(
-        "import",
-        NamedHandler::FormWithHandler {
-            title: "Import Session",
-            fields: &[("Path", "session.json", "path")],
-            handler: run::run_import,
-        },
-    );
-    registry.register(
-        "compact",
-        NamedHandler::FormWithHandler {
-            title: "Compact Context",
-            fields: &[
-                ("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"),
-                ("Focus", "optional focus keyword", "focus"),
-            ],
-            handler: run::run_compact,
-        },
-    );
-    registry.register(
-        "fork",
-        NamedHandler::FormWithHandler {
-            title: "Fork Session",
-            fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")],
-            handler: run::run_fork,
-        },
-    );
-    registry.register(
-        "name",
-        NamedHandler::FormWithHandler {
-            title: "Set Session Name",
-            fields: &[("Name", "session-name", "name")],
-            handler: run::run_name,
-        },
-    );
-}
-
-/// Register simple session commands.
-fn register_session_simple_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
+    registry.register("save", NamedHandler::FormWithHandler { title: "Save Session", fields: &[("Name", "session-name", "name")], handler: run::run_save });
+    registry.register("load", NamedHandler::FormWithHandler { title: "Load Session", fields: &[("Name", "session-name", "name")], handler: run::run_load });
+    registry.register("delete", NamedHandler::FormWithHandler { title: "Delete Session", fields: &[("Name", "session-name", "name")], handler: run::run_delete });
+    registry.register("export", NamedHandler::FormWithHandler { title: "Export Session", fields: &[("Path", "session.json", "path")], handler: run::run_export });
+    registry.register("import", NamedHandler::FormWithHandler { title: "Import Session", fields: &[("Path", "session.json", "path")], handler: run::run_import });
+    registry.register("compact", NamedHandler::FormWithHandler { title: "Compact Context", fields: &[("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"), ("Focus", "optional focus keyword", "focus")], handler: run::run_compact });
+    registry.register("fork", NamedHandler::FormWithHandler { title: "Fork Session", fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")], handler: run::run_fork });
+    registry.register("name", NamedHandler::FormWithHandler { title: "Set Session Name", fields: &[("Name", "session-name", "name")], handler: run::run_name });
     registry.register("sessions", NamedHandler::Handler(handle_sessions));
     registry.register("new", NamedHandler::Handler(handle_new));
     registry.register("reset", NamedHandler::Handler(handle_reset));

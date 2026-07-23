@@ -5,7 +5,6 @@ use crate::commands::{CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
-/// Register all system handlers with the handler registry (for YAML-based commands).
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
     registry.register("settings", NamedHandler::Handler(handle_settings));
     registry.register("copy", NamedHandler::Handler(handle_copy));
@@ -14,11 +13,7 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
     registry.register("skills", NamedHandler::Handler(handle_skills));
     registry.register(
         "skill",
-        NamedHandler::FormWithHandler {
-            title: "Show Skill",
-            fields: &[("Name", "skill-name", "name")],
-            handler: run_skill,
-        },
+        NamedHandler::FormWithHandler { title: "Show Skill", fields: &[("Name", "skill-name", "name")], handler: run_skill },
     );
     registry.register("prompt", NamedHandler::Handler(handle_prompt));
     registry.register("hotkeys", NamedHandler::Handler(handle_hotkeys));

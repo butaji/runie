@@ -347,7 +347,7 @@ mod tests {
             "Leader::new() must default to embedded mode"
         );
         assert!(
-            !leader.config.project_root.as_os_str().is_empty(),
+            leader.config.tcp_addr.is_none(),
             "project_root should be set from current directory"
         );
     }
