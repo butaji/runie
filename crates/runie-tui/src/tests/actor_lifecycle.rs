@@ -30,9 +30,8 @@ async fn bootstrap_spawns_all_actors() {
     use runie_core::actors::RactorTurnHandle;
     use runie_core::actors::RactorInputHandle;
     use runie_core::actors::RactorPermissionHandle;
-    use runie_core::actors::RactorFffIndexerHandle;
 
-    // Config, provider, session, io, turn, input, permission, fff_indexer
+    // Config, provider, session, io, turn, input, permission
     // are all accessible via the LeaderHandle fields.
     let _: &RactorConfigHandle = &handle.config;
     let _: &RactorProviderHandle = &handle.provider;
@@ -41,7 +40,6 @@ async fn bootstrap_spawns_all_actors() {
     let _: &RactorTurnHandle = &handle.turn;
     let _: &RactorInputHandle = &handle.input;
     let _: &RactorPermissionHandle = &handle.permission;
-    let _: &RactorFffIndexerHandle = &handle.fff_indexer;
 
     // Agent handle is also present via the dyn trait.
     let _: &std::sync::Arc<dyn runie_core::actors::leader::LeaderAgentHandle> = &handle.agent;

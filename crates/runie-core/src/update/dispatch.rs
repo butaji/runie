@@ -394,15 +394,6 @@ fn handle_io_events(state: &mut AppState, event: &Event) -> bool {
             state.set_cwd_name(cwd_name.clone());
             true
         }
-        Event::FffSearchResult { request_id, entries, .. } => {
-            if *request_id == state.fff_debounce() {
-                *state.fff_file_results_mut() = entries.clone();
-                // Rebuild the file picker panel so new results appear immediately.
-                // Safe even if dialog is closed — rebuild_file_picker is a no-op in that case.
-                super::dialog::rebuild_file_picker(state);
-            }
-            true
-        }
         _ => false,
     }
 }

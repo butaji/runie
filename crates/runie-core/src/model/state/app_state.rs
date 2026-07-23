@@ -7,7 +7,7 @@
 //! The `take()` method supports `reset_session()` without requiring a full
 //! struct reassignment.
 
-use super::{AgentState, CompletionState, ConfigState, FffFileEntry, InputState, SessionState, ViewState};
+use super::{AgentState, CompletionState, ConfigState, InputState, SessionState, ViewState};
 use runie_patterns::swarm::{OrphanedWorkerTracker, StatusCounts};
 
 /// Application state — a read-only UI projection of actor-owned state.
@@ -55,8 +55,6 @@ pub struct AppState {
     // For tests, they may be set directly via struct literals.
     pub git_info: Option<crate::snapshot::GitInfo>,
     pub cwd_name: String,
-    pub fff_file_results: Vec<FffFileEntry>,
-    pub fff_debounce: u64,
     pub perm_req: Option<crate::model::PermissionRequestState>,
     pub goal_state: Option<crate::model::GoalState>,
     pub question_state: Option<crate::model::QuestionState>,

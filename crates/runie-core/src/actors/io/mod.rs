@@ -8,10 +8,5 @@ pub mod ractor_io;
 mod io;
 
 pub use messages::IoMsg;
-pub use io::{spawn_io_actor, IoActorHandle};
-
-// Backward-compat stubs
-#[allow(unused_imports)]
-pub use io::IoActorHandle as RactorIoHandle;
-#[allow(unused_imports)]
+pub use io::{spawn_io_actor, IoActorHandle, RactorIoHandle};
 pub use ractor_io::RactorIoActor;

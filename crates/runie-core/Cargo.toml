@@ -23,7 +23,7 @@ default = []
 # Consumers who need the subsystem add the feature to their dependency on runie-core.
 # Feature names match the cargo convention of lowercase-with-hyphens.
 
-git       = ["dep:git2"]                  # git-status checks in fff indexer + git-tracked-write
+git       = ["dep:git2"]                  # git-status checks + git-tracked-write
 watch     = ["dep:notify", "dep:notify-debouncer-mini"]  # file-system watcher in ConfigActor
 keyring   = ["dep:keyring"]               # OS keyring credential storage
 clipboard = ["dep:arboard"]               # OS clipboard read/write

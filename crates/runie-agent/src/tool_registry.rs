@@ -15,8 +15,8 @@
 use serde_json::Value;
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
-    SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
+    WriteFileTool,
 };
 use runie_core::tool::to_openai_function;
 
@@ -24,7 +24,7 @@ use runie_core::tool::to_openai_function;
 
 /// Read-only tools (no write side effects — allowed in read-only mode).
 pub const READ_ONLY_TOOL_NAMES: &[&str] =
-    &["read_file", "list_dir", "grep", "find", "fetch_docs", "search", "find_definitions"];
+    &["read_file", "list_dir", "grep", "find", "fetch_docs"];
 
 /// Write tools (require trust / read-write mode).
 pub const WRITE_TOOL_NAMES: &[&str] = &["bash", "write_file", "edit_file"];
@@ -47,8 +47,6 @@ pub const TOOL_NAMES: &[&str] = &[
     "grep",
     "find",
     "fetch_docs",
-    "search",
-    "find_definitions",
 ];
 
 // ── Dispatch (generated from tool list) ──────────────────────────────────────
@@ -72,8 +70,6 @@ pub(crate) async fn dispatch_tool_impl(
         "grep" => crate::tool::run_tool::<GrepTool>(name, args, ctx).await,
         "find" => crate::tool::run_tool::<FindTool>(name, args, ctx).await,
         "fetch_docs" => crate::tool::run_tool::<FetchDocsTool>(name, args, ctx).await,
-        "search" => crate::tool::run_tool::<SearchTool>(name, args, ctx).await,
-        "find_definitions" => crate::tool::run_tool::<FindDefinitionsTool>(name, args, ctx).await,
         // Unknown
         _ => crate::tool::ToolOutput::error(name, args.clone(), format!("unknown tool '{}'", name)),
     }
@@ -91,9 +87,7 @@ pub fn build_schemas(read_only: bool) -> Vec<Value> {
             to_openai_function::<ListDirTool>(),
             to_openai_function::<GrepTool>(),
             to_openai_function::<FindTool>(),
-            to_openai_function::<SearchTool>(),
             to_openai_function::<FetchDocsTool>(),
-            to_openai_function::<FindDefinitionsTool>(),
         ]
     } else {
         vec![
@@ -101,9 +95,7 @@ pub fn build_schemas(read_only: bool) -> Vec<Value> {
             to_openai_function::<ListDirTool>(),
             to_openai_function::<GrepTool>(),
             to_openai_function::<FindTool>(),
-            to_openai_function::<SearchTool>(),
             to_openai_function::<FetchDocsTool>(),
-            to_openai_function::<FindDefinitionsTool>(),
             to_openai_function::<WriteFileTool>(),
             to_openai_function::<EditFileTool>(),
             to_openai_function::<BashTool>(),

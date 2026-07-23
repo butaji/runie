@@ -314,40 +314,6 @@ impl Default for RetrySection {
     }
 }
 
-// ── FFF Search Section ────────────────────────────────────────────────────────
-
-/// FFF full-text search configuration.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(default)]
-#[derive(JsonSchema)]
-pub struct FffSection {
-    /// Scan timeout in seconds (default: 30).
-    #[serde(default = "fff_scan_timeout_default")]
-    pub scan_timeout_secs: u64,
-    /// Default maximum number of results to return (default: 50).
-    #[serde(default = "fff_default_limit_default")]
-    pub default_limit: usize,
-    /// Maximum file size in bytes to index (default: 2 MiB).
-    #[serde(default = "fff_max_file_size_default")]
-    pub max_file_size_bytes: usize,
-}
-
-fn fff_scan_timeout_default() -> u64 {
-    30
-}
-fn fff_default_limit_default() -> usize {
-    50
-}
-fn fff_max_file_size_default() -> usize {
-    2 * 1024 * 1024
-}
-
-impl Default for FffSection {
-    fn default() -> Self {
-        Self { scan_timeout_secs: 30, default_limit: 50, max_file_size_bytes: 2 * 1024 * 1024 }
-    }
-}
-
 // ============================================================================
 // Sandbox Section
 // ============================================================================
@@ -516,9 +482,6 @@ pub struct Config {
     /// Retry policy for transient provider errors.
     #[serde(default)]
     pub retry: RetrySection,
-    /// FFF full-text search settings.
-    #[serde(default)]
-    pub fff: FffSection,
     /// OS-level sandbox settings for bash tool execution.
     #[serde(default)]
     pub sandbox: SandboxSection,

@@ -409,9 +409,6 @@ impl UiActor {
             // Ctrl+Q (ForceQuit) is the "really exit" hatch: always quit, even
             // during an active turn.
             Event::ForceQuit => {
-                // Abort the background file-index scan so the process exits
-                // immediately instead of waiting for the initial walk to finish.
-                runie_core::actors::fff_indexer::cancel_indexer_scan();
                 return true;
             }
             // Ctrl+C (Quit): during a turn, abort the in-flight agent and stay
@@ -423,7 +420,6 @@ impl UiActor {
                     self.clear_turn_state(true).await;
                     return false;
                 }
-                runie_core::actors::fff_indexer::cancel_indexer_scan();
                 return true;
             }
             _ => {}
@@ -584,7 +580,6 @@ impl UiActor {
                 timeout_ms: mode.timeout_ms,
                 max_retries: mode.max_retries,
                 circuit_breaker: mode.circuit_breaker,
-                doom_loop_threshold: 5,
             },
             models,
             semaphore: std::sync::Arc::new(tokio::sync::Semaphore::new(mode.workers.max(1))),
@@ -784,9 +779,6 @@ impl UiActor {
                 // InputActor round-trip that normal submit flow requires.
                 let content = self.effective_input_content();
                 if runie_core::update::input::is_quit_command(content.trim()) {
-                    // Abort the background file-index scan so the process exits
-                    // immediately instead of waiting for the initial walk.
-                    runie_core::actors::fff_indexer::cancel_indexer_scan();
                     *self.state.should_quit_mut() = true;
                     return;
                 }

@@ -311,9 +311,6 @@ fn dispatcher_handles_all_variants() {
             }
 
             // IO
-            Event::FffSearchResult { .. } => {
-                Event::FffSearchResult { request_id: 0, entries: Vec::new(), query: String::new(), indexed: false }
-            }
             Event::SkillsLoaded { .. } => Event::HistoryAppend { entry: String::new() },
             Event::AuthLoaded { .. } => Event::HistoryAppend { entry: String::new() },
 

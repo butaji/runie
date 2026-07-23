@@ -5,7 +5,6 @@ use crate::commands::{DialogKind, DialogState};
 use crate::dialog::builders::{command_palette, mcp_servers, model_selector, scoped_models, session_tree, skills};
 use crate::model::{AppState, InputReceiver};
 
-use super::build_file_picker_panel;
 use crate::update::settings_dialog;
 
 pub fn open_command_palette(state: &mut AppState) {
@@ -229,42 +228,15 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     let (base_filter, range_suffix) = parse_filter(filter);
     state.input_mut().file_picker_range_suffix = range_suffix;
 
-    let query = base_filter.as_deref().unwrap_or("");
-    refresh_file_picker_search(state, query);
-
-    let entries = state.fff_file_results();
     let mut panel = Panel::new("at-files", " Files ").with_filter();
     if let Some(ref f) = base_filter {
         panel.filter = f.clone();
     }
-    panel = if entries.is_empty() {
-        panel.header("No files found")
-    } else {
-        build_file_picker_panel(panel, entries, base_filter.as_deref())
-    };
+    panel = panel.header("Use /new to create a file");
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
     *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
-}
-
-/// Send a file search request to `FffIndexerActor`.
-/// Results arrive asynchronously via `Event::FffSearchResult`.
-pub(crate) fn refresh_file_picker_search(state: &mut AppState, query: &str) {
-    let Some(handles) = state.actor_handles() else {
-        return;
-    };
-    let fff = &handles.fff_indexer;
-
-    let request_id = state.fff_debounce().wrapping_add(1);
-    let request = crate::actors::FffSearchRequest {
-        request_id,
-        query: query.to_owned(),
-        limit: Some(50),
-        project_path: std::env::current_dir().unwrap_or_default(),
-    };
-    let _ = fff.try_send(request);
-    *state.fff_debounce_mut() = request_id;
 }
 
 /// Opens the file picker without any filter (shows all files).

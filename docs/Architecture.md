@@ -24,7 +24,7 @@ Runie is a terminal-native harness for LLM-powered coding agents. It is a local 
 
 Rules:
 
-- **IO is async and actor-owned.** Blocking IO runs inside dedicated actors (`ConfigActor`, `SessionActor`, `FffIndexerActor`, `IoActor`, `EnvActor`).
+- **IO is async and actor-owned.** Blocking IO runs inside dedicated actors (`ConfigActor`, `SessionActor`, `IoActor`, `EnvActor`).
 - **Actors are the single source of truth.** Each mutable state slice lives in exactly one actor.
 - **State sync is event-driven.** Handlers emit **intents**; actors consume intents and emit **facts**. The UI projects facts into a read-only `Snapshot`/`AppState`.
 - **The UI layer is pure.** Rendering is `draw(&mut Frame, &Snapshot)`.

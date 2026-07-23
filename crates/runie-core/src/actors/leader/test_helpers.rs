@@ -22,10 +22,9 @@ use super::{LeaderAgentHandle, LeaderHandle, SpawnedHandles};
 pub async fn test_leader_handle() -> LeaderHandle {
     use super::LeaderAgentCmd;
     use crate::actors::turn::RactorTurnActor;
-    use crate::actors::InputActor;
     use crate::actors::{
-        RactorConfigActor, RactorFffIndexerActor, RactorIoActor, RactorPermissionActor, RactorProviderActor,
-        RactorSessionActor,
+        RactorConfigActor, RactorPermissionActor, RactorProviderActor, RactorSessionActor,
+        spawn_input_actor, spawn_io_actor, spawn_session_actor,
     };
 
     struct NoOpAgentHandle;
@@ -73,22 +72,13 @@ pub async fn test_leader_handle() -> LeaderHandle {
     let (provider_h, provider_cell, provider_join) = RactorProviderActor::spawn(bus.clone(), config_h.clone(), factory)
         .await
         .expect("provider spawn");
-    let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await.expect("io spawn");
-    let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone())
-        .await
-        .expect("session spawn");
+    let (io_h, io_cell, io_join) = spawn_io_actor(bus.clone());
+    let (session_h, session_cell, session_join) = spawn_session_actor(bus.clone());
     let (permission_h, permission_cell, permission_join) = RactorPermissionActor::spawn(bus.clone(), config_h.clone())
         .await
         .unwrap();
     let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
-    let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await.unwrap();
-    let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
-        std::env::current_dir().unwrap_or_default(),
-        std::env::temp_dir(),
-        bus.clone(),
-    )
-    .await
-    .expect("fff indexer spawn");
+    let (input_h, input_cell, input_join) = spawn_input_actor(bus.clone());
 
     let (cmd_tx, _cmd_rx) = mpsc::channel(4);
     let agent: Arc<dyn LeaderAgentHandle> = Arc::new(NoOpAgentHandle);
@@ -104,7 +94,6 @@ pub async fn test_leader_handle() -> LeaderHandle {
         turn_join,
         input_join,
         agent_join,
-        fff_join,
     ];
 
     // Dummy coordinator join for tests.
@@ -123,15 +112,13 @@ pub async fn test_leader_handle() -> LeaderHandle {
             input: input_h,
             agent,
             agent_cell: None,
-            fff_indexer: fff_h,
-            config_cell,
-            provider_cell,
-            io_cell,
-            session_cell,
-            permission_cell,
-            turn_cell,
-            input_cell,
-            fff_cell,
+            config_cell: config_cell.into(),
+            provider_cell: provider_cell.into(),
+            io_cell: io_cell.into(),
+            session_cell: session_cell.into(),
+            permission_cell: permission_cell.into(),
+            turn_cell: turn_cell.into(),
+            input_cell: input_cell.into(),
             all_joins,
         },
         Some(coordinator_join),

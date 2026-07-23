@@ -44,16 +44,6 @@ impl GoalState {
     }
 }
 
-/// A file entry from the FFF indexer for the file picker.
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FffFileEntry {
-    pub name: String,
-    pub path: String,
-    pub is_dir: bool,
-    pub score: f64,
-    pub git_status: Option<String>,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QueuedMessageKind {
     Steering,

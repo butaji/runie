@@ -66,7 +66,6 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     // Update modules with tool execution
     "update/tools.rs",
     "update/system.rs",
-    "update/dialog/file_pickers.rs",
     "update/dialog/open.rs",
     // Shell module — owns bash execution; sync variant for IO actor
     "shell.rs",
@@ -85,8 +84,6 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     "commands/dsl/handlers/session/",
     // Leader - coordination layer that manages actor lifecycle
     "actors/leader/",
-    // FFF indexer — IO actor owning file search with intentional sync file reads
-    "actors/fff_indexer/",
     // MCP cache - owns schema cache with disk persistence
     "mcp/",
     // Session persistence with SQLite

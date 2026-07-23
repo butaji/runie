@@ -4,15 +4,6 @@
   "description": "Canonical config type for `~/.runie/config.toml`.",
   "type": "object",
   "properties": {
-    "fff": {
-      "description": "FFF full-text search settings.",
-      "$ref": "#/$defs/FffSection",
-      "default": {
-        "default_limit": 50,
-        "max_file_size_bytes": 2097152,
-        "scan_timeout_secs": 30
-      }
-    },
     "goal": {
       "description": "Goal mode configuration.",
       "$ref": "#/$defs/GoalSection",
@@ -201,33 +192,6 @@
           "const": "project"
         }
       ]
-    },
-    "FffSection": {
-      "description": "FFF full-text search configuration.",
-      "type": "object",
-      "properties": {
-        "default_limit": {
-          "description": "Default maximum number of results to return (default: 50).",
-          "type": "integer",
-          "format": "uint",
-          "default": 50,
-          "minimum": 0
-        },
-        "max_file_size_bytes": {
-          "description": "Maximum file size in bytes to index (default: 2 MiB).",
-          "type": "integer",
-          "format": "uint",
-          "default": 2097152,
-          "minimum": 0
-        },
-        "scan_timeout_secs": {
-          "description": "Scan timeout in seconds (default: 30).",
-          "type": "integer",
-          "format": "uint64",
-          "default": 30,
-          "minimum": 0
-        }
-      }
     },
     "GoalSection": {
       "description": "Goal mode configuration section.",

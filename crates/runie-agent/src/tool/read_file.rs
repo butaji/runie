@@ -8,13 +8,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use tokio::fs;
 
-/// Update frecency when a file is successfully read.
-fn record_file_access(path: &std::path::Path) {
-    if let Some(state) = runie_core::actors::FffSearchState::get() {
-        state.record_file_access(path);
-    }
-}
-
 /// Input parameters for read_file tool.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ReadFileInput {
@@ -88,10 +81,7 @@ impl ToolDef for ReadFileTool {
 
         let full_path = resolve_path(&input.path, &ctx.working_dir);
         let content = match Self::read_file(&full_path).await {
-            Ok(c) => {
-                record_file_access(&full_path);
-                c
-            }
+            Ok(c) => c,
             Err(e) => return e,
         };
 

@@ -1,7 +1,7 @@
 //! Location parsing for file:line:col patterns.
 //!
 //! Defines the [`Location`] enum and [`SearchQuery`] parser for the search index.
-//! Replaces `fff_search::Location` with a local implementation.
+//! Location types for file/path handling.
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};

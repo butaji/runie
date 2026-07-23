@@ -8,22 +8,19 @@ mod speed_window;
 pub mod state;
 pub mod types;
 
-// mpsc-based implementation (primary).
-mod turn;
-
 // Handler functions (used by actor.rs).
 mod handlers;
 
-// Ractor-based implementation (stub for backward compat).
+// Ractor-based implementation.
 pub mod actor;
 
 pub use messages::{DeliverQueuedResponse, DeliverQueuedRpcResult, NextIdResponse, TurnMsg};
 pub use speed_window::SpeedWindow;
 pub use state::TurnState;
-pub use turn::{spawn_turn_actor, TurnHandle};
+pub use types::RactorTurnHandle;
 
 // Backward-compat stubs
 #[allow(unused_imports)]
 pub use actor::RactorTurnActor;
 #[allow(unused_imports)]
-pub use turn::TurnHandle as RactorTurnHandle;
+pub use types::RactorTurnHandle as TurnHandle;

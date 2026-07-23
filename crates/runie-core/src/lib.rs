@@ -12,9 +12,8 @@
 extern crate self as runie_core;
 
 pub mod actors;
-pub use actors::{
-    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState, PersistenceActor,
-};
+
+pub use actors::PersistenceActor;
 // Inner state structs are pub(crate) — accessible within runie-core but not exported externally.
 // AppState itself remains pub so it can be used in public DSL signatures.
 pub use message::{ChatMessage, Role};

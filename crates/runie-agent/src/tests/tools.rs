@@ -1,8 +1,8 @@
 //! Tests for canonical tool execution via `runie_core::tool`.
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindDefinitionsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
-    SearchTool, WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
+    WriteFileTool,
 };
 use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 
@@ -23,8 +23,6 @@ async fn dispatch_tool(name: &str, args: &serde_json::Value) -> ToolOutput {
         "grep" => run_tool::<GrepTool>(args).await,
         "find" => run_tool::<FindTool>(args).await,
         "fetch_docs" => run_tool::<FetchDocsTool>(args).await,
-        "search" => run_tool::<SearchTool>(args).await,
-        "find_definitions" => run_tool::<FindDefinitionsTool>(args).await,
         _ => ToolOutput {
             tool_name: name.to_string(),
             tool_args: args.clone(),

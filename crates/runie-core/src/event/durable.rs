@@ -241,7 +241,6 @@ impl DurableCoreEvent {
             | Event::BashOutput { .. }
             | Event::FilesWritten { .. }
             | Event::EnvDetected { .. }
-            | Event::FffSearchResult { .. }
             | Event::ToolConstraintError { .. } => None,
             // Command intents — handled directly in replay, not via durable_to_event
             Event::RunLoadCommand { .. }

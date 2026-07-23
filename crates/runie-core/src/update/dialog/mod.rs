@@ -1,6 +1,5 @@
 //! Dialog opening and top-level routing.
 
-mod file_pickers;
 mod form;
 mod form_handler;
 mod open;
@@ -24,7 +23,3 @@ pub use toggles::dialog_toggle_event;
 
 #[cfg(test)]
 pub use form::{form_panel_action, FormAction};
-
-// File picker helpers used by `open` and `panel` submodules.
-pub(crate) use file_pickers::build_file_picker_panel;
-pub(crate) use file_pickers::rebuild_file_picker;

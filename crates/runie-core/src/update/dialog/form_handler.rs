@@ -34,10 +34,6 @@ pub fn handle_form_dialog(state: &mut AppState, event: crate::Event) {
 
 /// Insert filepath into input and close any dialog.
 pub fn insert_at_ref(state: &mut AppState, path: &str) {
-    // Record frecency for the selected file.
-    if let Some(fff_state) = crate::actors::FffSearchState::get() {
-        fff_state.record_file_access(std::path::Path::new(path));
-    }
     let (final_text, mention_chip) = build_insert_text(state, path);
     // Merge pre-existing chips that sit before the insert point (chips at or
     // after it would need re-mapping through the replaced query token — rare

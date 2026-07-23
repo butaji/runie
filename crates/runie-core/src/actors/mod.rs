@@ -37,19 +37,62 @@ pub use config::{ConfigHandle, ConfigMsg};
 #[allow(unused_imports)]
 pub use config::{RactorConfigActor, RactorConfigHandle};
 
-// StopCell — no-op marker for mpsc actor shutdown (ractors use ActorCell)
+// StopCell — no-op marker for mpsc actor shutdown (ractors use ractor::ActorCell)
+#[derive(Clone, Default)]
 pub struct StopCell;
+
+impl StopCell {
+    /// No-op shutdown signal for mpsc-based actors.
+    #[allow(dead_code)]
+    pub fn stop(&self, _reason: Option<String>) {}
+}
+
+/// Unified actor cell ref — wraps ractor::ActorCell (ractors) or StopCell (mpsc).
+/// Used by SpawnedHandles and LeaderHandle so both actor types can coexist.
+#[derive(Clone)]
+pub enum ActorCellRef {
+    /// A ractor actor cell.
+    Ractor(ractor::ActorCell),
+    /// An mpsc actor cell (no-op stop).
+    Mpsc(StopCell),
+}
+
+impl ActorCellRef {
+    pub fn stop(&self, reason: Option<String>) {
+        match self {
+            Self::Ractor(cell) => cell.stop(reason),
+            Self::Mpsc(cell) => cell.stop(reason),
+        }
+    }
+}
+
+impl From<StopCell> for ActorCellRef {
+    fn from(cell: StopCell) -> Self {
+        Self::Mpsc(cell)
+    }
+}
+
+impl From<ractor::ActorCell> for ActorCellRef {
+    fn from(cell: ractor::ActorCell) -> Self {
+        Self::Ractor(cell)
+    }
+}
+
+// Back-compat alias (old code uses ActorCell)
+#[allow(non_local_definitions)]
+pub type ActorCell = ActorCellRef;
 
 #[allow(unused_imports)]
 pub use input::{spawn_input_actor, InputActorBase, InputHandle, InputMsg, RactorInputHandle};
 #[allow(unused_imports)]
-pub use io::{IoMsg, RactorIoActor, RactorIoHandle};
+pub use input::actor::InputActor;
+pub use io::{spawn_io_actor, IoActorHandle, IoMsg, RactorIoActor, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};
 #[allow(unused_imports)]
 pub use permission::{PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
 #[allow(unused_imports)]
 pub use provider::{BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderActor, RactorProviderHandle};
-#[allow(unused_imports)]
-pub use session::{spawn_session_actor, RactorSessionActor, RactorSessionHandle, SessionMsg};
+pub use session::{spawn_session_actor, RactorSessionActor, RactorSessionHandle, SessionHandle, SessionMsg};
 #[allow(unused_imports)]
 pub use turn::{RactorTurnActor, RactorTurnHandle, TurnMsg};
+

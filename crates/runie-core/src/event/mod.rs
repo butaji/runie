@@ -411,12 +411,6 @@ pub enum Event {
         git_info: Option<crate::snapshot::GitInfo>,
         cwd_name: String,
     },
-    FffSearchResult {
-        request_id: u64,
-        entries: Vec<crate::model::FffFileEntry>,
-        query: String,
-        indexed: bool,
-    },
     SkillsLoaded {
         #[serde(skip)]
         skills: Vec<crate::skills::Skill>,

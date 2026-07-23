@@ -1,14 +1,15 @@
 //! LeaderHandle implementation.
 
 /// Number of actors managed by the leader (config, provider, io, session,
-/// permission, turn, input, agent, fff_indexer). Used for status diagnostics.
-const SPAWNED_ACTOR_COUNT: usize = 9;
+/// permission, turn, input, agent). Used for status diagnostics.
+const SPAWNED_ACTOR_COUNT: usize = 8;
 
 use tokio::sync::{broadcast, mpsc};
 
 use crate::actors::SHUTDOWN_TIMEOUT_SECS;
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
+use crate::actors::{ActorCellRef, IoActorHandle, SessionHandle};
 
 use super::messages::LeaderStatus;
 use super::{LeaderAgentHandle, SpawnedHandles};
@@ -27,30 +28,27 @@ pub struct LeaderHandle {
     /// Provider actor handle.
     pub provider: crate::actors::RactorProviderHandle,
     /// IO actor handle.
-    pub io: crate::actors::RactorIoHandle,
+    pub io: IoActorHandle,
     /// Session actor handle.
-    pub session: crate::actors::RactorSessionHandle,
+    pub session: SessionHandle,
     /// Permission actor handle.
     pub permission: crate::actors::RactorPermissionHandle,
     /// Turn actor handle.
     pub turn: crate::actors::turn::RactorTurnHandle,
     /// Input actor handle.
-    pub input: crate::actors::RactorInputHandle,
+    pub input: crate::actors::InputHandle,
     /// Agent actor handle.
     pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
-    /// FFF indexer handle.
-    pub fff_indexer: crate::actors::RactorFffIndexerHandle,
     // ── Shutdown state ────────────────────────────────────────────────────────
     /// Actor cells (for stop signals).
-    config_cell: ractor::ActorCell,
-    provider_cell: ractor::ActorCell,
-    io_cell: ractor::ActorCell,
-    session_cell: ractor::ActorCell,
-    permission_cell: ractor::ActorCell,
-    turn_cell: ractor::ActorCell,
-    input_cell: ractor::ActorCell,
-    fff_cell: ractor::ActorCell,
-    agent_cell: Option<ractor::ActorCell>,
+    config_cell: ActorCellRef,
+    provider_cell: ActorCellRef,
+    io_cell: ActorCellRef,
+    session_cell: ActorCellRef,
+    permission_cell: ActorCellRef,
+    turn_cell: ActorCellRef,
+    input_cell: ActorCellRef,
+    agent_cell: Option<ActorCellRef>,
     /// All actor join handles wrapped in Option so LeaderHandle can be Clone.
     /// Taken at shutdown time via mem::take.
     joins: Option<Vec<tokio::task::JoinHandle<()>>>,
@@ -80,7 +78,6 @@ impl LeaderHandle {
             turn: handles.turn,
             input: handles.input,
             agent: handles.agent,
-            fff_indexer: handles.fff_indexer,
             config_cell: handles.config_cell,
             provider_cell: handles.provider_cell,
             io_cell: handles.io_cell,
@@ -88,7 +85,6 @@ impl LeaderHandle {
             permission_cell: handles.permission_cell,
             turn_cell: handles.turn_cell,
             input_cell: handles.input_cell,
-            fff_cell: handles.fff_cell,
             agent_cell: handles.agent_cell,
             joins: Some(handles.all_joins),
             coordinator_join,
@@ -134,7 +130,6 @@ impl LeaderHandle {
         self.input_cell.stop(None);
         self.session_cell.stop(None);
         self.turn_cell.stop(None);
-        self.fff_cell.stop(None);
         self.permission_cell.stop(None);
         self.config_cell.stop(None);
         self.provider_cell.stop(None);
@@ -203,7 +198,6 @@ impl Clone for LeaderHandle {
             turn: self.turn.clone(),
             input: self.input.clone(),
             agent: self.agent.clone(),
-            fff_indexer: self.fff_indexer.clone(),
             config_cell: self.config_cell.clone(),
             provider_cell: self.provider_cell.clone(),
             io_cell: self.io_cell.clone(),
@@ -211,7 +205,6 @@ impl Clone for LeaderHandle {
             permission_cell: self.permission_cell.clone(),
             turn_cell: self.turn_cell.clone(),
             input_cell: self.input_cell.clone(),
-            fff_cell: self.fff_cell.clone(),
             agent_cell: self.agent_cell.clone(),
             joins: None,
             coordinator_join: None,
@@ -243,21 +236,20 @@ mod tests {
         _compile_time_check(|h| {
             _assert_field::<crate::actors::RactorConfigHandle>(&h.config);
             _assert_field::<crate::actors::RactorProviderHandle>(&h.provider);
-            _assert_field::<crate::actors::RactorIoHandle>(&h.io);
-            _assert_field::<crate::actors::RactorSessionHandle>(&h.session);
+            _assert_field::<crate::actors::IoActorHandle>(&h.io);
+            _assert_field::<crate::actors::SessionHandle>(&h.session);
             _assert_field::<crate::actors::RactorPermissionHandle>(&h.permission);
             _assert_field::<crate::actors::turn::RactorTurnHandle>(&h.turn);
-            _assert_field::<crate::actors::RactorInputHandle>(&h.input);
+            _assert_field::<crate::actors::InputHandle>(&h.input);
             _assert_field::<std::sync::Arc<dyn LeaderAgentHandle>>(&h.agent);
-            _assert_field::<crate::actors::RactorFffIndexerHandle>(&h.fff_indexer);
         });
     }
 
     /// Layer 1: `status.actor_count` matches the expected constant.
     #[test]
     fn leader_status_counts_actors() {
-        assert_eq!(SPAWNED_ACTOR_COUNT, 9);
+        assert_eq!(SPAWNED_ACTOR_COUNT, 8);
         // Keep the constant consistent with SpawnedHandles fields:
-        // config, provider, io, session, permission, turn, input, agent, fff_indexer
+        // config, provider, io, session, permission, turn, input, agent
     }
 }

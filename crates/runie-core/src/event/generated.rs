@@ -59,7 +59,6 @@ impl Event {
             Event::Escape => EventKind::Intent,
             Event::ExternalEditorClosed { .. } => EventKind::Fact,
             Event::ExternalEditorDone { .. } => EventKind::Control,
-            Event::FffSearchResult { .. } => EventKind::Fact,
             Event::FilesWritten { .. } => EventKind::Fact,
             Event::FocusGained => EventKind::Intent,
             Event::FocusLost => EventKind::Intent,
@@ -325,7 +324,6 @@ impl Event {
             Event::Escape => EventCategory::Input,
             Event::ExternalEditorClosed { .. } => EventCategory::IO,
             Event::ExternalEditorDone { .. } => EventCategory::Control,
-            Event::FffSearchResult { .. } => EventCategory::IO,
             Event::FilesWritten { .. } => EventCategory::IO,
             Event::FocusGained => EventCategory::Input,
             Event::FocusLost => EventCategory::Input,
@@ -775,7 +773,6 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::ClipboardWritten { .. }
             | Event::EnvDetected { .. }
             | Event::ExternalEditorClosed { .. }
-            | Event::FffSearchResult { .. }
             | Event::FilesWritten { .. }
             | Event::GistShared { .. }
             | Event::ProcessResumed

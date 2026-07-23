@@ -13,10 +13,5 @@ mod ractor_session_handle;
 mod session_handlers;
 
 pub use messages::SessionMsg;
-pub use session::{spawn_session_actor, SessionHandle};
-
-// Backward-compat stubs
-#[allow(unused_imports)]
-pub use session::SessionHandle as RactorSessionHandle;
-#[allow(unused_imports)]
+pub use session::{spawn_session_actor, SessionHandle, RactorSessionHandle};
 pub use session_handlers::RactorSessionActor;

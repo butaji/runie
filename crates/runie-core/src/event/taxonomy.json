@@ -149,7 +149,6 @@
     "BashOutput": "{ command: String, output: String }",
     "FilesWritten": "{ count: usize, errors: Vec<String> }",
     "EnvDetected": "{ git_info: Option<crate::snapshot::GitInfo>, cwd_name: String }",
-    "FffSearchResult": "{ request_id: u64, entries: Vec<crate::model::FffFileEntry>, query: String, indexed: bool }",
     "ForkSession": "{ message_index: usize }",
     "SessionTreeSelect": "{ id: String }",
     "SetPrompt": "{ name: String }",
@@ -282,7 +281,7 @@
       "kind": "Fact",
       "variants": [
         "GistShared", "ExternalEditorClosed", "ClipboardWritten", "ClipboardRead",
-        "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected", "FffSearchResult",
+        "ProcessResumed", "BashOutput", "FilesWritten", "EnvDetected",
         "SkillsLoaded", "SkillCreated", "SkillDeleted", "SkillError", "AuthLoaded"
       ]
     },

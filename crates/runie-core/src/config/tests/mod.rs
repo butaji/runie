@@ -66,24 +66,6 @@ fn retry_section_has_tunable_policy() {
 }
 
 #[test]
-fn fff_section_has_tunable_scan_settings() {
-    let section = FffSection::default();
-    assert_eq!(section.scan_timeout_secs, 30);
-    assert_eq!(section.default_limit, 50);
-    assert_eq!(section.max_file_size_bytes, 2 * 1024 * 1024);
-
-    let custom = FffSection {
-        scan_timeout_secs: 60,
-        default_limit: 100,
-        max_file_size_bytes: 5 * 1024 * 1024,
-        ..FffSection::default()
-    };
-    assert_eq!(custom.scan_timeout_secs, 60);
-    assert_eq!(custom.default_limit, 100);
-    assert_eq!(custom.max_file_size_bytes, 5 * 1024 * 1024);
-}
-
-#[test]
 fn mode_section_has_tunable_defaults() {
     let section = ModeSection::default();
     assert_eq!(section.active, "single");
@@ -178,9 +160,6 @@ fn config_includes_all_tunable_sections() {
     assert_eq!(config.http.connect_timeout_secs, 10);
     // Retry section
     assert_eq!(config.retry.max_attempts, 5);
-    // FFF section
-    assert_eq!(config.fff.scan_timeout_secs, 30);
-    assert_eq!(config.fff.default_limit, 50);
     // UI section
     assert_eq!(config.ui.history_max_entries, 1000);
     assert_eq!(config.ui.page_size, 5);
@@ -223,24 +202,6 @@ multiplier = 1.5
 }
 
 #[test]
-fn config_load_parses_fff_section() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = make_test_config(
-        &dir,
-        r#"
-[fff]
-scan_timeout_secs = 60
-default_limit = 100
-max_file_size_bytes = 5242880
-"#,
-    );
-    let config = Config::load(Some(&path));
-    assert_eq!(config.fff.scan_timeout_secs, 60);
-    assert_eq!(config.fff.default_limit, 100);
-    assert_eq!(config.fff.max_file_size_bytes, 5 * 1024 * 1024);
-}
-
-#[test]
 fn config_load_parses_ui_history_and_page_size() {
     let dir = tempfile::tempdir().unwrap();
     let path = make_test_config(
@@ -264,9 +225,6 @@ fn tunable_values_match_previous_constants() {
     assert_eq!(HttpSection::default().request_timeout_secs, 120);
     assert_eq!(HttpSection::default().connect_timeout_secs, 10);
     assert_eq!(RetrySection::default().max_attempts, 5);
-    assert_eq!(FffSection::default().scan_timeout_secs, 30);
-    assert_eq!(FffSection::default().default_limit, 50);
-    assert_eq!(FffSection::default().max_file_size_bytes, 2 * 1024 * 1024);
     assert_eq!(UiSection::default().history_max_entries, 1000);
     assert_eq!(UiSection::default().page_size, 5);
 }

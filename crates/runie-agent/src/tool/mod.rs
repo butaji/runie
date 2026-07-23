@@ -15,22 +15,18 @@ mod constants;
 mod edit_file;
 mod fetch_docs;
 mod find;
-mod find_definitions;
 mod grep;
 mod list_dir;
 mod read_file;
-mod search;
 mod write_file;
 
 pub use bash::BashTool;
 pub use edit_file::EditFileTool;
 pub use fetch_docs::FetchDocsTool;
 pub use find::FindTool;
-pub use find_definitions::FindDefinitionsTool;
 pub use grep::GrepTool;
 pub use list_dir::ListDirTool;
 pub use read_file::ReadFileTool;
-pub use search::SearchTool;
 pub use write_file::WriteFileTool;
 
 // ── Tool execution helper ──────────────────────────────────────────────────────
@@ -75,8 +71,6 @@ mod tests {
             "grep",
             "find",
             "fetch_docs",
-            "search",
-            "find_definitions",
         ];
         for name in tools {
             assert!(

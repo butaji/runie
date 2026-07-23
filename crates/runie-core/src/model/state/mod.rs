@@ -22,5 +22,4 @@ pub(crate) use agent::AgentState;
 pub use app_state::AppState;
 pub(crate) use input::{CommandUsage, InputState};
 pub use session::{CompletionState, ConfigState, ModelSource, SessionState};
-pub use types::FffFileEntry;
 pub(crate) use view::ViewState;

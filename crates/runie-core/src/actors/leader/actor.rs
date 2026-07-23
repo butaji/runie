@@ -3,18 +3,16 @@
 //! Coordinates all actors in the Runie runtime and optionally listens
 //! on a local socket for client connections.
 
-use std::path::PathBuf;
-
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
-use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
-    self, spawn_input_actor, spawn_io_actor, spawn_session_actor, RactorConfigActor, RactorConfigHandle,
-    RactorInputHandle, RactorIoActor, RactorIoHandle, RactorPermissionActor, RactorPermissionHandle,
-    RactorProviderActor, RactorProviderHandle, RactorSessionActor, RactorSessionHandle, LEADER_CMD_CHANNEL_CAPACITY,
+    self, spawn_input_actor, spawn_io_actor, spawn_session_actor, ActorCellRef, InputHandle,
+    IoActorHandle, RactorConfigActor, RactorConfigHandle, RactorPermissionActor,
+    RactorPermissionHandle, RactorProviderActor, RactorProviderHandle, RactorTurnActor, SessionHandle,
+    LEADER_CMD_CHANNEL_CAPACITY,
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
@@ -32,18 +30,12 @@ use super::{AgentActorFactory, LeaderAgentHandle};
 pub struct LeaderConfig {
     /// Optional TCP address to listen for client connections.
     pub tcp_addr: Option<String>,
-    /// Project root for the FFF indexer.
-    pub project_root: PathBuf,
-    /// Data directory for the FFF indexer.
-    pub data_dir: PathBuf,
 }
 
 impl Default for LeaderConfig {
     fn default() -> Self {
         Self {
             tcp_addr: None,
-            project_root: std::env::current_dir().unwrap_or_default(),
-            data_dir: dirs::data_dir().unwrap_or_else(std::env::temp_dir),
         }
     }
 }
@@ -152,19 +144,12 @@ impl Leader {
         let (config_h, config_cell, config_join) = RactorConfigActor::spawn_default(bus.clone()).await?;
         let (provider_h, provider_cell, provider_join) =
             RactorProviderActor::spawn(bus.clone(), config_h.clone(), provider_factory).await?;
-        let (io_h, io_cell, io_join) = RactorIoActor::spawn(bus.clone()).await?;
-        let (session_h, session_cell, session_join) = RactorSessionActor::spawn(bus.clone()).await?;
+        let (io_h, io_cell, io_join) = spawn_io_actor(bus.clone());
+        let (session_h, session_cell, session_join) = spawn_session_actor(bus.clone());
         let (permission_h, permission_cell, permission_join) =
             RactorPermissionActor::spawn(bus.clone(), config_h.clone()).await?;
         let (turn_h, turn_cell, turn_join) = RactorTurnActor::spawn(bus.clone()).await?;
-        let (input_h, input_cell, input_join) = InputActor::spawn(bus.clone()).await?;
-        let (fff_h, fff_cell, fff_join) = RactorFffIndexerActor::spawn(
-            config.project_root.clone(),
-            config.data_dir.clone(),
-            bus.clone(),
-        )
-        .await
-        .map_err(|e| anyhow::anyhow!("FffIndexerActor spawn failed: {}", e))?;
+        let (input_h, input_cell, input_join) = spawn_input_actor(bus.clone());
         let SpawnedAgent { handle: agent_handle, join: agent_join, cell: agent_cell } = agent_factory
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
@@ -176,29 +161,26 @@ impl Leader {
             permission_join,
             turn_join,
             input_join,
-            fff_join,
             agent_join,
         ];
 
         Ok(super::SpawnedHandles {
             config: config_h,
-            config_cell,
+            config_cell: config_cell.into(),
             provider: provider_h,
-            provider_cell,
+            provider_cell: provider_cell.into(),
             io: io_h,
-            io_cell,
+            io_cell: io_cell.into(),
             session: session_h,
-            session_cell,
+            session_cell: session_cell.into(),
             permission: permission_h,
-            permission_cell,
+            permission_cell: permission_cell.into(),
             turn: turn_h,
-            turn_cell,
+            turn_cell: turn_cell.into(),
             input: input_h,
-            input_cell,
+            input_cell: input_cell.into(),
             agent: agent_handle,
-            agent_cell: Some(agent_cell),
-            fff_indexer: fff_h,
-            fff_cell,
+            agent_cell: Some(agent_cell.into()),
             all_joins,
         })
     }
@@ -291,25 +273,23 @@ impl Default for Leader {
 /// All handles, cells, and join handles produced by actor spawning.
 pub struct SpawnedHandles {
     pub config: RactorConfigHandle,
-    pub config_cell: ractor::ActorCell,
+    pub config_cell: ActorCellRef,
     pub provider: RactorProviderHandle,
-    pub provider_cell: ractor::ActorCell,
-    pub io: RactorIoHandle,
-    pub io_cell: ractor::ActorCell,
-    pub session: RactorSessionHandle,
-    pub session_cell: ractor::ActorCell,
+    pub provider_cell: ActorCellRef,
+    pub io: IoActorHandle,
+    pub io_cell: ActorCellRef,
+    pub session: SessionHandle,
+    pub session_cell: ActorCellRef,
     pub permission: RactorPermissionHandle,
-    pub permission_cell: ractor::ActorCell,
+    pub permission_cell: ActorCellRef,
     pub turn: crate::actors::turn::RactorTurnHandle,
-    pub turn_cell: ractor::ActorCell,
-    pub input: RactorInputHandle,
-    pub input_cell: ractor::ActorCell,
+    pub turn_cell: ActorCellRef,
+    pub input: InputHandle,
+    pub input_cell: ActorCellRef,
     pub agent: std::sync::Arc<dyn LeaderAgentHandle>,
     /// Agent actor cell. `Some` in production; `None` in the test helper, which
     /// substitutes a no-op agent with no real actor to stop.
-    pub agent_cell: Option<ractor::ActorCell>,
-    pub fff_indexer: RactorFffIndexerHandle,
-    pub fff_cell: ractor::ActorCell,
+    pub agent_cell: Option<ActorCellRef>,
     /// All actor join handles, collected for batch await during shutdown.
     pub all_joins: Vec<tokio::task::JoinHandle<()>>,
 }

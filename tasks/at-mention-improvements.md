@@ -2,21 +2,21 @@
 
 ## Objective
 
-Improve `@` file-reference completion ranking and handle empty or stale `fff` results gracefully.
+Improve `@` file-reference completion ranking and handle empty or stale results gracefully.
 
 ## Agent landscape finding
 
-opencode, gemini-cli, and kimi-code use `fd` or a fast scanner for fuzzy file completion. Runie already uses its own `fff` indexer.
+opencode, gemini-cli, and kimi-code use `fd` or a fast scanner for fuzzy file completion. Runie's FFF indexer has been removed; a simpler approach (plain path listing) should be used instead.
 
 ## runie current state
 
-Runie has `Event::AtFilePicker`, fff-backed search, line-range suffix support (`@file.rs:10-50`), and frecency tracking (`record_file_access`). The gap is ranking polish and a clear empty state.
+Runie has `Event::AtFilePicker`, line-range suffix support (`@file.rs:10-50`), and frecency tracking (`record_file_access`). The gap is ranking polish and a clear empty state.
 
 ## Required runie changes
 
 - Boost recently used files (frecency) to the top of `@` picker results.
-- Show an explicit "No matching files" state when `fff` returns nothing, with a hint to wait for indexing.
-- Ensure the picker refreshes asynchronously when `fff` results arrive after the dialog opens.
+- Show an explicit "No matching files" state when the picker returns nothing.
+- Ensure the picker refreshes asynchronously when results arrive after the dialog opens.
 
 ## Test scenarios
 
