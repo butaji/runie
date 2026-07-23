@@ -87,7 +87,6 @@ pub mod snapshot;
 /// Metrics facade for telemetry (counters, histograms, gauges).
 pub mod metrics;
 pub mod stream_wrapper;
-pub mod streaming;
 pub mod streaming_buffer;
 pub mod subagents;
 /// Tracing subscriber initialization.
@@ -193,8 +192,6 @@ pub use session::SessionMetadata;
 pub use session::{format_as_markdown, Session};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};
-pub use streaming::OrderedStreamEmitter;
-
 pub use tokens::{estimate_tokens, estimate_tokens_for_model, token_tracker_for, TokenTracker};
 pub use trust::{TrustDecision, TrustManager};
 pub use view::{Element, Feed, LazyCache};
