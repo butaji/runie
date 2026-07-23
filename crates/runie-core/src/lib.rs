@@ -55,7 +55,6 @@ pub mod layout;
 
 pub mod login_flow;
 pub mod markdown;
-pub mod memory;
 pub mod message;
 /// Wire-protocol types (JSON-RPC envelope, submission-queue types).
 pub mod proto;
@@ -166,9 +165,6 @@ pub use keybindings::{
 };
 pub use login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState, LoginStep,
-};
-pub use memory::{
-    MemoryConfig, MemoryEntry, MemorySource, MemoryStore, SearchQuery, SearchResult, mmr_rerank,
 };
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{

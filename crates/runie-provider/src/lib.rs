@@ -40,7 +40,7 @@ pub use runie_core::provider::registry::{
     ProviderMetaBuilder,
 };
 pub use runie_core::provider::ProviderError;
-pub use runie_core::provider::{Provider, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy};
+pub use runie_core::provider::{Provider, ProviderMetadata, ResponseChunk, RetryConfig};
 
 // Model catalog types.
 pub use runie_core::model_catalog::configured::configured_models_catalog;
