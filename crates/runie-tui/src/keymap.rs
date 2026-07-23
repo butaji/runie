@@ -40,9 +40,6 @@ pub fn convert_event(event: &Event, user_bindings: &HashMap<String, String>) -> 
     log_key_event(event);
     match event {
         Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
-        // Mouse capture is never enabled, so these events cannot arrive;
-        // drop them defensively (native terminal selection owns the mouse).
-        Event::Mouse(_) => None,
         Event::FocusGained => Some(CoreEvent::FocusGained),
         Event::FocusLost => Some(CoreEvent::FocusLost),
         Event::Resize(width, height) => Some(CoreEvent::TerminalSize { width: *width, height: *height }),

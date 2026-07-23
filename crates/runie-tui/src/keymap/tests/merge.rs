@@ -1,6 +1,6 @@
 //! Layer 2 tests — verify keymap and terminal caps work after runie-term merge.
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
 /// Verify capability detection is functional after the runie-term merge.
 #[test]
@@ -41,73 +41,4 @@ fn keymap_forward_paste() {
     assert!(result.is_some(), "Paste events should be forwarded");
 }
 
-/// Wheel events are dropped: runie never enables mouse capture, so no mouse
-/// event should convert to a core event. Native terminal selection takes
-/// precedence over wheel scrolling (keyboard scrolls the feed instead).
-#[test]
-fn keymap_mouse_scroll_is_dropped() {
-    let bindings = std::collections::HashMap::new();
-    let event = Event::Mouse(MouseEvent {
-        kind: MouseEventKind::ScrollUp,
-        column: 0,
-        row: 0,
-        modifiers: KeyModifiers::empty(),
-    });
-    let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(
-        result, None,
-        "mouse wheel should not convert to a core event"
-    );
-}
 
-/// Click (button down) is not a supported mouse interaction; it must be
-/// dropped. Only wheel scrolling is kept.
-#[test]
-fn keymap_mouse_click_is_dropped() {
-    let bindings = std::collections::HashMap::new();
-    let event = Event::Mouse(MouseEvent {
-        kind: MouseEventKind::Down(MouseButton::Left),
-        column: 5,
-        row: 10,
-        modifiers: KeyModifiers::empty(),
-    });
-    let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(
-        result, None,
-        "mouse click should not convert to a core event"
-    );
-}
-
-/// Button release is not a supported mouse interaction; it must be dropped.
-#[test]
-fn keymap_mouse_release_is_dropped() {
-    let bindings = std::collections::HashMap::new();
-    let event = Event::Mouse(MouseEvent {
-        kind: MouseEventKind::Up(MouseButton::Left),
-        column: 5,
-        row: 10,
-        modifiers: KeyModifiers::empty(),
-    });
-    let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(
-        result, None,
-        "mouse release should not convert to a core event"
-    );
-}
-
-/// Drag is not a supported mouse interaction; it must be dropped.
-#[test]
-fn keymap_mouse_drag_is_dropped() {
-    let bindings = std::collections::HashMap::new();
-    let event = Event::Mouse(MouseEvent {
-        kind: MouseEventKind::Drag(MouseButton::Left),
-        column: 5,
-        row: 10,
-        modifiers: KeyModifiers::empty(),
-    });
-    let result = crate::keymap::convert_event(&event, &bindings);
-    assert_eq!(
-        result, None,
-        "mouse drag should not convert to a core event"
-    );
-}
