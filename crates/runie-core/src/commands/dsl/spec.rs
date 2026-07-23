@@ -9,7 +9,6 @@ use super::{CommandCategory, CommandResult};
 pub use super::command::{Action, Command, FormHandler};
 
 // Re-exported for yaml.rs
-pub use self::CommandKind as SpecCommandKind;
 
 pub type CommandDef = Command;
 

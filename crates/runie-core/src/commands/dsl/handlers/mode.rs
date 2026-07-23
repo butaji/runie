@@ -1,6 +1,5 @@
 //! Mode command — switch the agent orchestration pattern (`/mode`).
 
-use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::{CommandResult, DialogType};
 use crate::model::AppState;
 use crate::ui_strings::mode as m;

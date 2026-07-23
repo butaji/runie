@@ -1,6 +1,5 @@
 //! Help commands.
 
-use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::CommandResult;
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;

@@ -1,6 +1,5 @@
 //! Status command — opens a read-only panel summarizing the current session.
 
-use crate::commands::dsl::handlers::NamedHandler;
 use crate::commands::CommandResult;
 use crate::dialog::{Panel, PanelStack};
 use crate::model::AppState;

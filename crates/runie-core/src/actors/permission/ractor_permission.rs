@@ -4,7 +4,6 @@
 //! approval sink. This actor is kept as a minimal stub so existing spawn sites
 //! (leader, agent) continue to compile without structural changes.
 
-use ractor::async_trait;
 use ractor::{Actor, ActorCell, ActorProcessingErr, ActorRef};
 
 use crate::actors::ractor_adapter::spawn_ractor;
@@ -70,10 +69,6 @@ impl RactorPermissionHandle {
 /// Stub actor state.
 pub struct PermissionActorState;
 
-impl PermissionActorState {
-    fn emit(&self, _event: Event) {}
-}
-
 /// Stub actor — does nothing.
 pub struct RactorPermissionActor;
 
@@ -82,7 +77,7 @@ impl RactorPermissionActor {
         bus: EventBus<Event>,
         _config_h: RactorConfigHandle,
     ) -> anyhow::Result<(RactorPermissionHandle, ActorCell, ractor::concurrency::JoinHandle<()>)> {
-        let (actor_ref, join, cell) = spawn_ractor(None, Self, bus).await?;
+        let (_actor_ref, join, cell) = spawn_ractor(None, Self, bus).await?;
         Ok((RactorPermissionHandle::new(cell.clone()), cell, join))
     }
 

@@ -5,7 +5,7 @@ use crate::model::AppState;
 use crate::Event;
 
 /// Handle panel filter events (typing in the input box).
-pub fn handle_panel_filter(state: &mut AppState, event: &Event, stack: &mut PanelStack) {
+pub fn handle_panel_filter(_state: &mut AppState, event: &Event, stack: &mut PanelStack) {
     match event {
         Event::PaletteFilter(c) => stack.push_filter(*c),
         Event::ModelSelectorFilter(c) => stack.push_filter(*c),

@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::{
-    self, spawn_input_actor, spawn_io_actor, spawn_session_actor, ActorCellRef, InputHandle,
+    spawn_input_actor, spawn_io_actor, spawn_session_actor, ActorCellRef, InputHandle,
     IoActorHandle, RactorConfigActor, RactorConfigHandle, RactorPermissionActor,
     RactorPermissionHandle, RactorProviderActor, RactorProviderHandle, RactorTurnActor, SessionHandle,
     LEADER_CMD_CHANNEL_CAPACITY,
@@ -137,7 +137,7 @@ impl Leader {
     #[allow(clippy::too_many_lines)]
     async fn spawn_actors(
         bus: &EventBus<CoreEvent>,
-        config: &LeaderConfig,
+        _config: &LeaderConfig,
         provider_factory: std::sync::Arc<dyn crate::actors::provider::ProviderFactory>,
         agent_factory: std::sync::Arc<dyn AgentActorFactory<SpawnFuture = AgentSpawnFuture>>,
     ) -> anyhow::Result<super::SpawnedHandles> {
