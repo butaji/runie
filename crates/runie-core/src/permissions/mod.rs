@@ -29,7 +29,6 @@ use rmcp::model::ToolAnnotations;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod format;
 pub mod gate;
 mod sink;
 
@@ -204,26 +203,4 @@ impl PermissionSetPolicy {
 /// Tools that are read-only (safe for auto-approval).
 pub fn is_read_only_tool(tool: &str) -> bool {
     matches!(tool, "read_file" | "grep" | "find" | "list_dir" | "fetch_docs")
-}
-
-/// Sensitive path patterns — kept for reference, not enforced.
-const SENSITIVE_PATH_PATTERNS: &[&str] = &[
-    "**/.ssh/*",
-    "**/id_rsa",
-    "**/id_ed25519",
-    "**/.aws/credentials",
-    "**/.aws/config",
-    "**/.azure/*",
-    "**/.kube/config",
-    "**/.docker/config.json",
-    "**/docker/config.json",
-    "**/.git/objects/**",
-    "**/.git/objects",
-];
-
-/// Returns true if the path matches any sensitive path pattern.
-pub fn is_sensitive_path(path: &str) -> bool {
-    SENSITIVE_PATH_PATTERNS
-        .iter()
-        .any(|p| glob::Pattern::new(p).map(|p| p.matches(path)).unwrap_or(false))
 }

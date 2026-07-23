@@ -9,8 +9,53 @@
 use crate::commands::{DialogKind, DialogState};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::PermissionRequestState;
-use crate::permissions::format::format_tool_input;
 use crate::Event;
+
+/// Format a tool's input arguments into a human-readable summary.
+fn format_tool_input(tool: &str, input: &serde_json::Value) -> String {
+    const MAX: usize = 500;
+    let formatted = match (tool, input) {
+        ("bash", input) => {
+            let cmd = input.get("command").or_else(|| input.get("cmd")).and_then(|v| v.as_str()).unwrap_or("<no command>");
+            format!("Command: {}", cmd)
+        }
+        ("read_file", input) => format!("File: {}", input.get("path").and_then(|v| v.as_str()).unwrap_or("<no path>")),
+        ("write_file", input) => {
+            let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("<no path>");
+            let content = input.get("content").or_else(|| input.get("text")).and_then(|v| v.as_str()).map(|s| if s.len() > 100 { format!("{}...", &s[..97]) } else { s.to_string() }).unwrap_or_else(|| "<no content>".to_string());
+            format!("File: {} | Content: {}", path, content)
+        }
+        ("edit_file", input) => format!("File: {}", input.get("path").or_else(|| input.get("file")).and_then(|v| v.as_str()).unwrap_or("<no path>")),
+        ("list_dir", input) => format!("Directory: {}", input.get("path").or_else(|| input.get("dir")).and_then(|v| v.as_str()).unwrap_or(".")),
+        ("grep" | "find", input) => {
+            let pat = input.get("pattern").or_else(|| input.get("query")).or_else(|| input.get("search")).and_then(|v| v.as_str()).unwrap_or("<no pattern>");
+            let path = input.get("path").or_else(|| input.get("dir")).and_then(|v| v.as_str()).unwrap_or(".");
+            format!("Pattern: {} | Path: {}", pat, path)
+        }
+        ("fetch_docs", input) => format!("URL: {}", input.get("url").and_then(|v| v.as_str()).unwrap_or("<no url>")),
+        ("search", input) => format!("Query: {}", input.get("query").or_else(|| input.get("q")).and_then(|v| v.as_str()).unwrap_or("<no query>")),
+        _ => match input {
+            serde_json::Value::Object(map) => {
+                let args: Vec<String> = map.iter().map(|(k, v)| {
+                    let val = match v {
+                        serde_json::Value::String(s) => if s.len() > 50 { format!("{}...", &s[..47]) } else { s.clone() },
+                        serde_json::Value::Number(n) => n.to_string(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        serde_json::Value::Null => "null".to_string(),
+                        serde_json::Value::Array(arr) => format!("[{} items]", arr.len()),
+                        serde_json::Value::Object(obj) => format!("{{{}}}", obj.keys().cloned().collect::<Vec<_>>().join(", ")),
+                        _ => format!("{}", v),
+                    };
+                    format!("{}: {}", k, val)
+                }).collect();
+                args.join(" | ")
+            }
+            serde_json::Value::String(s) => if s.len() > MAX { format!("{}...", &s[MAX - 3..]) } else { s.clone() },
+            _ => format!("{}", input),
+        },
+    };
+    if formatted.len() > MAX { format!("{}...", &formatted[..MAX - 3]) } else { formatted }
+}
 
 /// Build a hosted form panel for a pending permission request.
 /// Shows 4 options: Always (1), This session (2), Once (3), Deny (4)
