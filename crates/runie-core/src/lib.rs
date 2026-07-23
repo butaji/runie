@@ -53,7 +53,7 @@ pub mod hidden_params;
 /// Static labels and text constants.
 pub mod labels;
 pub mod layout;
-pub mod location;
+
 pub mod login_flow;
 pub mod markdown;
 pub mod memory;
@@ -85,7 +85,7 @@ pub mod snapshot;
 // state types moved to model::state
 /// Metrics facade for telemetry (counters, histograms, gauges).
 pub mod metrics;
-pub mod stream_wrapper;
+
 pub mod streaming_buffer;
 pub mod subagents;
 /// Tracing subscriber initialization.
@@ -172,7 +172,7 @@ pub use memory::{
 };
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{
-    is_read_only_tool, is_sensitive_path, ApprovalSink, AutoAllowSink, PermissionAction,
+    is_read_only_tool, ApprovalSink, AutoAllowSink, PermissionAction,
     PermissionGate, PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
 };
 pub use prompts::{build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS};
