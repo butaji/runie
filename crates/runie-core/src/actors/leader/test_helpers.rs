@@ -23,7 +23,7 @@ pub async fn test_leader_handle() -> LeaderHandle {
     use super::LeaderAgentCmd;
     use crate::actors::turn::RactorTurnActor;
     use crate::actors::{
-        RactorConfigActor, RactorPermissionActor, RactorProviderActor, RactorSessionActor,
+        RactorConfigActor, RactorPermissionActor, RactorProviderActor,
         spawn_input_actor, spawn_io_actor, spawn_session_actor,
     };
 

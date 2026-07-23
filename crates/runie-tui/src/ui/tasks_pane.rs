@@ -8,7 +8,7 @@ use ratatui::{
     Frame,
 };
 use runie_core::{model::PatternWorkerStatus, Snapshot};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_width::UnicodeWidthStr;
 
 /// Render the tasks pane into the given area.
 pub(crate) fn render_tasks_pane(f: &mut Frame, snap: &Snapshot, area: Rect) {

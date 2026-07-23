@@ -44,7 +44,6 @@ fn format_tool_input(tool: &str, input: &serde_json::Value) -> String {
                         serde_json::Value::Null => "null".to_string(),
                         serde_json::Value::Array(arr) => format!("[{} items]", arr.len()),
                         serde_json::Value::Object(obj) => format!("{{{}}}", obj.keys().cloned().collect::<Vec<_>>().join(", ")),
-                        _ => format!("{}", v),
                     };
                     format!("{}: {}", k, val)
                 }).collect();

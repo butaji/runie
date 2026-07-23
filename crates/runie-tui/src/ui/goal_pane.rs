@@ -9,7 +9,7 @@ use ratatui::{
     Frame,
 };
 use runie_core::{goal::GoalState, GoalPhase, GoalStatus, Snapshot};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_width::UnicodeWidthStr;
 use super::utils::truncate_to_width;
 
 /// Width of the goal pane.

@@ -272,22 +272,7 @@ pub fn spawn_io_actor(
     (IoActorHandle::new(tx), crate::actors::StopCell, join)
 }
 
-/// Stub type for backward compatibility.
-pub struct IoActorBase;
 
-/// Backward-compat alias.
-#[allow(dead_code)]
-pub type RactorIoActor = IoActorBase;
-
-impl IoActorBase {
-    /// Spawn a `IoActor` and return (handle, cell, join).
-    /// Cell is a no-op `StopCell` — mpsc actors stop when the handle is dropped.
-    pub async fn spawn(
-        bus: EventBus<Event>,
-    ) -> Result<(IoActorHandle, crate::actors::StopCell, tokio::task::JoinHandle<()>), anyhow::Error> {
-        Ok(spawn_io_actor(bus))
-    }
-}
 
 // ── Sync helpers ────────────────────────────────────────────────────────────
 

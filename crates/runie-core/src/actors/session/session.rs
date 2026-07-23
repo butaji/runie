@@ -638,19 +638,4 @@ pub fn spawn_session_actor(
     (SessionHandle::new(tx), crate::actors::StopCell, join)
 }
 
-/// Backward-compat alias.
-#[allow(dead_code)]
-pub type RactorSessionActor = SessionActorBase;
 
-impl SessionActorBase {
-    /// Spawn a `SessionActor` and return (handle, cell, join).
-    /// Cell is a no-op `StopCell` — mpsc actors stop when the handle is dropped.
-    pub async fn spawn(
-        bus: EventBus<Event>,
-    ) -> Result<(SessionHandle, crate::actors::StopCell, tokio::task::JoinHandle<()>), anyhow::Error> {
-        Ok(spawn_session_actor(bus))
-    }
-}
-
-/// Stub type for backward compatibility.
-pub struct SessionActorBase;

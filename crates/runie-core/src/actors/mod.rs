@@ -31,7 +31,7 @@ pub mod ractor_adapter;
 
 // ── Re-exports ───────────────────────────────────────────────────────────────
 
-pub use config::{ConfigHandle, ConfigMsg};
+pub use config::ConfigMsg;
 
 // Backward-compat aliases (existing call sites keep compiling)
 #[allow(unused_imports)]
@@ -86,13 +86,13 @@ pub type ActorCell = ActorCellRef;
 pub use input::{spawn_input_actor, InputActorBase, InputHandle, InputMsg, RactorInputHandle};
 #[allow(unused_imports)]
 pub use input::actor::InputActor;
-pub use io::{spawn_io_actor, IoActorHandle, IoMsg, RactorIoActor, RactorIoHandle};
+pub use io::{spawn_io_actor, IoActorHandle, IoMsg, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};
 #[allow(unused_imports)]
 pub use permission::{PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
 #[allow(unused_imports)]
 pub use provider::{BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderActor, RactorProviderHandle};
-pub use session::{spawn_session_actor, RactorSessionActor, RactorSessionHandle, SessionHandle, SessionMsg};
+pub use session::{spawn_session_actor, RactorSessionHandle, SessionHandle, SessionMsg};
 #[allow(unused_imports)]
 pub use turn::{RactorTurnActor, RactorTurnHandle, TurnMsg};
 

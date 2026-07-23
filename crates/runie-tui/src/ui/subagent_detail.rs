@@ -53,26 +53,6 @@ pub fn render_subagent_detail(f: &mut Frame, snap: &Snapshot, area: Rect) {
     render_footer(f, footer_area);
 }
 
-fn build_title(worker: &PatternWorkerRow, frame: u32) -> String {
-    let icon = match worker.status {
-        PatternWorkerStatus::Completed => crate::theme::GLYPH_CHECK.to_string(),
-        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => {
-            crate::theme::GLYPH_X.to_string()
-        }
-        PatternWorkerStatus::Running => {
-            let symbols = runie_core::labels::BRAILLE_TEN;
-            symbols[frame as usize % symbols.len()].to_string()
-        }
-    };
-    format!(
-        "{} General {} {} {} [✗]",
-        icon,
-        worker.description,
-        worker.model,
-        format_duration(worker)
-    )
-}
-
 fn build_status_icon(worker: &PatternWorkerRow, frame: u32) -> Span<'static> {
     match worker.status {
         PatternWorkerStatus::Completed => Span::styled(
