@@ -10,6 +10,7 @@ use ratatui::{
 };
 use runie_core::{goal::GoalState, GoalPhase, GoalStatus, Snapshot};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use super::utils::truncate_to_width;
 
 /// Width of the goal pane.
 #[allow(dead_code)]
@@ -202,34 +203,12 @@ fn render_tasks(f: &mut Frame, goal: &GoalState, x: u16, start_y: u16, width: u1
     }
 }
 
-/// Truncate text to max display width with ellipsis.
-fn truncate_to_width(text: &str, max_width: usize) -> String {
-    if max_width == 0 {
-        return String::new();
-    }
-    if text.width() <= max_width {
-        return text.to_owned();
-    }
-    let mut out = String::new();
-    let mut w = 0usize;
-    let limit = max_width.saturating_sub(1);
-    for ch in text.chars() {
-        let ch_width = ch.width().unwrap_or(0);
-        if w + ch_width > limit {
-            out.push('…');
-            break;
-        }
-        out.push(ch);
-        w += ch_width;
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use ratatui::{backend::TestBackend, Terminal};
     use runie_core::goal::GoalState;
+    use super::super::utils::truncate_to_width;
 
     fn sample_goal() -> GoalState {
         let mut goal = GoalState::new(

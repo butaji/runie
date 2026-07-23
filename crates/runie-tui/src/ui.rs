@@ -26,6 +26,7 @@ mod render_lines;
 mod scroll;
 pub(crate) mod subagent_detail;
 pub(crate) mod tasks_pane;
+mod utils;
 
 pub use input::count_input_lines;
 pub use render_lines::element_line_count;
