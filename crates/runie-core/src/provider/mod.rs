@@ -21,7 +21,7 @@ pub use detection::{
     KNOWN_API_BASES,
 };
 pub use provider_trait::{
-    Provider, ProviderError, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy, CONNECT_TIMEOUT,
+    Provider, ProviderError, ProviderMetadata, ResponseChunk, RetryConfig, CONNECT_TIMEOUT,
     REQUEST_TIMEOUT,
 };
 pub use registry::{

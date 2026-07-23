@@ -178,7 +178,7 @@ pub use permissions::{
 pub use prompts::{build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS};
 pub use provider::{
     display_name, find_model, find_provider, find_provider_by_env_var, is_known_provider, known_providers, Provider,
-    ProviderError, ProviderMeta, ProviderMetadata, ResponseChunk, RetryConfig, RetryPolicy,
+    ProviderError, ProviderMeta, ProviderMetadata, ResponseChunk, RetryConfig,
 };
 pub use provider_event::{ModelError, ProviderEvent, StopReason};
 pub use resource_loader::{
