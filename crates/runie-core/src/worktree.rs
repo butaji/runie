@@ -10,11 +10,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
-#[allow(dead_code)]
-const DEFAULT_POOL_SIZE: usize = 3;
-#[allow(dead_code)]
-const DEFAULT_STALE_TIMEOUT_MINS: u64 = 30;
-
 const READY_SUFFIX: &str = ".ready";
 const CLAIMED_SUFFIX: &str = ".claimed";
 const LAST_USED_SUFFIX: &str = ".last_used";

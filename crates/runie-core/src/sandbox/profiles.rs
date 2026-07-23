@@ -293,12 +293,6 @@ pub fn load_profile_from_file(path: &Path) -> Result<(Profile, SandboxConfig), S
     Ok((profile, config))
 }
 
-/// Get the default sandbox config path (`.runie/sandbox.toml`).
-#[allow(dead_code)]
-pub fn default_sandbox_path() -> Option<PathBuf> {
-    dirs::config_dir().map(|p| p.join("runie").join("sandbox.toml"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
