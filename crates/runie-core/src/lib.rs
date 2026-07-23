@@ -39,7 +39,6 @@ pub mod error;
 pub mod event;
 pub mod file_refs;
 pub mod headless_runtime;
-pub mod hooks;
 pub mod input_history;
 /// I/O utilities (atomic writes, file locking).
 pub mod io;

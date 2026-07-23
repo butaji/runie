@@ -49,8 +49,6 @@ const PRODUCTION_ALLOW_LIST: &[&str] = &[
     // Path utilities used by commands
     "path.rs",
     "path_complete.rs",
-    // Hooks for external integrations
-    "hooks.rs",
     // Harness skills with file operations
     "harness_skills/",
     // Declarative config loading for skills and commands
