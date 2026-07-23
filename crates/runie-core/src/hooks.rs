@@ -9,29 +9,12 @@
 //! The async hook system provides hooks for LLM API calls with message
 //! transformation capabilities. Handlers can inspect and modify the request
 //! payload (model, messages, kwargs) before sending to the API.
-//!
-//! ## File-Based Hook Discovery
-//!
-//! Hooks can also be discovered from `~/.runie/hooks/{event}/` directories.
-//! Each hook is defined as a JSON file with the following format:
-//! ```json
-//! {
-//!   "command": "echo allow",
-//!   "env": { "VAR": "value" },
-//!   "trust": "trusted",
-//!   "timeout_ms": 5000
-//! }
-//! ```
 #![allow(clippy::too_many_lines)]
 
 use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 use strum::EnumString;
-
-// File-based hook discovery module
-mod discovery;
-pub use discovery::{default_hooks_dir, discover_hooks, FileHook, HookTrust};
 
 use crate::proto::message::ChatMessage;
 use crate::scoped_model::ScopedModel;
@@ -249,15 +232,6 @@ impl HookRegistry {
                 for cmd in commands {
                     registry.register(event, Box::new(ShellHook::new(cmd.clone())));
                 }
-            }
-        }
-
-        // Load hooks from file-based discovery
-        let hooks_dir = default_hooks_dir();
-        let file_hooks = discover_hooks(&hooks_dir);
-        for (event, handlers) in file_hooks {
-            for handler in handlers {
-                registry.register(event, handler);
             }
         }
 

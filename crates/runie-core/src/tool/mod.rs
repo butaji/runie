@@ -12,9 +12,7 @@
 /// MCP tool annotations. Requires the `mcp` feature.
 #[cfg(feature = "mcp")]
 pub mod annotations;
-pub mod authorize;
 pub mod cache;
-pub mod circuit_breaker;
 mod constraints;
 mod context;
 mod format;
@@ -28,12 +26,7 @@ mod state;
 mod tests;
 pub mod types;
 
-pub use authorize::{
-    allow_readonly, always_ask, authorize, check_input_patterns, deny, Authorizable, AuthorizationContext,
-    AuthorizeResult,
-};
 pub use cache::{is_cacheable_tool, CacheEntry, ToolResultCache, CACHEABLE_TOOL_NAMES};
-pub use circuit_breaker::{CircuitBreaker, CircuitBreakerRegistry, CircuitState};
 pub use constraints::{
     validate as validate_constraints, validate_constraint, Constraint, ConstraintViolation, ValidationResult,
 };

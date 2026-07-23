@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::turn::RactorTurnActor;
 use crate::actors::{
-    InputActor, RactorConfigActor, RactorConfigHandle, RactorFffIndexerActor, RactorFffIndexerHandle,
+    self, spawn_input_actor, spawn_io_actor, spawn_session_actor, RactorConfigActor, RactorConfigHandle,
     RactorInputHandle, RactorIoActor, RactorIoHandle, RactorPermissionActor, RactorPermissionHandle,
     RactorProviderActor, RactorProviderHandle, RactorSessionActor, RactorSessionHandle, LEADER_CMD_CHANNEL_CAPACITY,
 };

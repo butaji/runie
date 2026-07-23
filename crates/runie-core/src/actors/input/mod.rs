@@ -1,7 +1,7 @@
 //! InputActor — owns the authoritative `InputState`.
 
-mod actor;
+mod input;
 mod messages;
 
-pub use actor::{InputActor, RactorInputHandle};
+pub use input::{spawn_input_actor, InputActorBase, InputHandle, RactorInputHandle};
 pub use messages::InputMsg;

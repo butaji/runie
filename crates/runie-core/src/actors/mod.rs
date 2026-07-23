@@ -1,16 +1,12 @@
 //! Actor definitions for the Runie runtime.
 //!
-//! The agent uses ractor-based actors: each actor is a tokio task
-//! receiving typed messages. This module contains the actors that live inside
-//! a running session.
+//! All actors are tokio tasks receiving typed messages via `mpsc`. No ractor dependency
+//! for most actors. Use `spawn_actor!` macro to reduce boilerplate.
 
 pub mod constants;
-pub mod ractor_adapter;
 pub use constants::{CONFIG_WATCHER_DEBOUNCE_MS, LEADER_CMD_CHANNEL_CAPACITY, SHUTDOWN_TIMEOUT_SECS};
-pub use ractor_adapter::spawn_ractor;
 
 pub mod config;
-pub mod fff_indexer;
 pub mod input;
 pub mod io;
 pub mod leader;
@@ -19,20 +15,41 @@ pub mod provider;
 pub mod session;
 pub mod turn;
 
+// Macro crate (no deps — pure token manipulation)
+pub mod macro_defs;
+
+// Re-export macro helpers
+// Note: `spawn_actor!` macro is exported at crate root via #[macro_export]
+pub use macro_defs::RpcError;
+
 mod persistence;
 pub use persistence::PersistenceActor;
 
-pub use config::{ConfigMsg, RactorConfigActor, RactorConfigHandle};
-#[cfg(feature = "git")]
-pub use fff_indexer::format_git_status;
-pub use fff_indexer::{
-    FffFileItem, FffSearchRequest, FffSearchResult, FffSearchResultPayload, FffSearchState, RactorFffIndexerActor,
-    RactorFffIndexerHandle,
-};
-pub use input::{InputActor, InputMsg, RactorInputHandle};
+// ractor_adapter kept for runie-agent (still uses ractor internally).
+// Other actors use pure mpsc and don't need this.
+pub mod ractor_adapter;
+
+// ── Re-exports ───────────────────────────────────────────────────────────────
+
+pub use config::{ConfigHandle, ConfigMsg};
+
+// Backward-compat aliases (existing call sites keep compiling)
+#[allow(unused_imports)]
+pub use config::{RactorConfigActor, RactorConfigHandle};
+
+// StopCell — no-op marker for mpsc actor shutdown (ractors use ActorCell)
+pub struct StopCell;
+
+#[allow(unused_imports)]
+pub use input::{spawn_input_actor, InputActorBase, InputHandle, InputMsg, RactorInputHandle};
+#[allow(unused_imports)]
 pub use io::{IoMsg, RactorIoActor, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};
+#[allow(unused_imports)]
 pub use permission::{PermissionMsg, RactorPermissionActor, RactorPermissionHandle};
+#[allow(unused_imports)]
 pub use provider::{BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderActor, RactorProviderHandle};
-pub use session::{RactorSessionActor, RactorSessionHandle, SessionMsg};
+#[allow(unused_imports)]
+pub use session::{spawn_session_actor, RactorSessionActor, RactorSessionHandle, SessionMsg};
+#[allow(unused_imports)]
 pub use turn::{RactorTurnActor, RactorTurnHandle, TurnMsg};
