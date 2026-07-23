@@ -17,10 +17,10 @@ pub(crate) mod embedded_commands;
 pub(crate) mod flow;
 pub mod handlers;
 pub(crate) mod spec;
+pub(crate) mod yaml;
 
 pub use category::CommandCategory;
 pub use command::{cmd, Action, Command, FormHandler};
 pub use flow::{CommandFlow, CommandResult, DialogType};
-// Keep re-exports for backward compatibility
-pub use spec::{build_cmd, register_commands, CommandSpec, FormHandler as SpecFormHandler};
-pub use spec::{CommandDef, CommandKind};
+// Legacy re-exports still needed by yaml.rs
+pub use spec::{CommandKind, CommandDef, CommandSpec, FormHandler as SpecFormHandler};

@@ -46,7 +46,7 @@ impl CommandRegistry {
     /// Register a command from YAML definition.
     fn register_from_yaml(&mut self, yaml: DeclarativeCommandYaml) {
         let handler_registry = &super::dsl::handlers::HANDLER_REGISTRY;
-        let cmd = super::dsl::spec::build_cmd_from_yaml(&yaml, handler_registry);
+        let cmd = super::dsl::yaml::build_cmd_from_yaml(&yaml, handler_registry);
         if let Some(cmd) = cmd {
             self.register(cmd);
         }

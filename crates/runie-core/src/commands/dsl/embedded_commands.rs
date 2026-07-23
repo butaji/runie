@@ -7,7 +7,7 @@
 //! resources/commands/ at compile time, avoiding a hand-maintained list.
 
 use crate::commands::dsl::handlers::HANDLER_REGISTRY;
-use crate::commands::dsl::spec::build_cmd_from_yaml;
+use crate::commands::dsl::yaml::build_cmd_from_yaml;
 use crate::commands::Command;
 use include_dir::Dir;
 
