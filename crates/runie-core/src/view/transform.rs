@@ -36,6 +36,7 @@ impl LazyCache {
                 elem.clone()
             };
             let elem = Self::maybe_expand_subagent(elem, state, feed.post_count());
+            let elem = Self::maybe_expand_user_message(elem, state, feed.post_count());
             let kind = Self::post_kind(&elem);
             let expanded = match &elem {
                 Element::ThoughtSummary { .. } | Element::ToolSummary { .. } => false,
@@ -45,6 +46,9 @@ impl LazyCache {
                 Element::SubagentRow { status, expanded, .. } => {
                     *expanded || matches!(status, crate::model::PatternWorkerStatus::Running)
                 }
+                // User messages fold when expanded=false (user collapsed their own post
+                // with ctrl+o). User messages default to expanded=true.
+                Element::UserMessage { expanded, .. } => *expanded,
                 _ => true,
             };
 
@@ -429,6 +433,19 @@ impl LazyCache {
         if let Element::SubagentRow { expanded, status, .. } = &mut elem {
             *expanded = !matches!(status, crate::model::PatternWorkerStatus::Running)
                 && state.view().expanded_posts.contains(&post_index);
+        }
+        elem
+    }
+
+    /// Mark a user message expanded when its post was individually expanded
+    /// with Enter in feed navigation (ctrl+o). User messages fold when
+    /// expanded=false and content exceeds 3 visual lines.
+    fn maybe_expand_user_message(mut elem: Element, state: &AppState, post_index: usize) -> Element {
+        if let Element::UserMessage { expanded, .. } = &mut elem {
+            // User messages start folded (expanded=false). When the user explicitly
+            // expands the post (pressed ctrl+o or Enter on it in vim nav), the post
+            // index is added to expanded_posts — meaning "I expanded this".
+            *expanded = state.view().expanded_posts.contains(&post_index);
         }
         elem
     }

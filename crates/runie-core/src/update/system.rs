@@ -94,6 +94,34 @@ impl AppState {
         self.messages_changed();
     }
 
+    /// Toggle fold/expand for the last user message in the feed.
+    /// This is triggered by ctrl+o in normal (non-vim-nav) mode.
+    pub(crate) fn toggle_last_user_message_fold(&mut self) {
+        // Find the index of the last UserMessage in the current snapshot.
+        // We use the cached feed's post count to find the index.
+        let snap = self.snapshot();
+        // Find the last post with kind UserInput.
+        let last_user_post_idx = snap
+            .posts
+            .iter()
+            .rposition(|p| p.kind == crate::view::elements::PostKind::UserInput);
+        tracing::debug!(
+            "toggle_last_user_message_fold: last_user_post_idx={:?}, vim_nav_mode={}",
+            last_user_post_idx,
+            self.view().vim_nav_mode
+        );
+        if let Some(idx) = last_user_post_idx {
+            let set = &mut self.view_mut().expanded_posts;
+            tracing::debug!("expanded_posts before: {:?}", set);
+            // Toggle: if in set, remove (fold); if not in set, insert (expand).
+            if !set.remove(&idx) {
+                set.insert(idx);
+            }
+            tracing::debug!("expanded_posts after: {:?}", set);
+            self.messages_changed();
+        }
+    }
+
     pub(crate) fn toggle_tasks_pane(&mut self) {
         let visible = !self.view().tasks_pane_visible;
         self.view_mut().tasks_pane_visible = visible;
@@ -233,7 +261,11 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::Abort => handle_abort(state),
         Event::ClearQueues => handle_clear_queues(state),
         Event::ExternalEditorDone { content } => handle_editor_done(state, content),
-        Event::ToggleExpand => state.toggle_expand_all(),
+        Event::ToggleExpand => {
+            // In normal mode, ctrl+o toggles fold/expand for the last user message.
+            // In vim nav mode, it toggles individual posts (handled in nav.rs).
+            state.toggle_last_user_message_fold();
+        }
         Event::ToggleTasksPane => state.toggle_tasks_pane(),
         Event::FollowUp => state.queue_follow_up(),
         Event::Dequeue => state.dequeue(),

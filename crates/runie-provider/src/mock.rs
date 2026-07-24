@@ -122,6 +122,8 @@ enum ScriptError {
     RateLimit(u64),
     MidStreamAbort,
     Truncate(usize),
+    Abort { after_chunks: usize },
+    Hang,
 }
 
 /// A single scripted turn deserialized from JSON.
@@ -131,12 +133,19 @@ struct ScriptTurn {
     chunks: Vec<String>,
     #[serde(default)]
     tool_calls: Vec<ScriptTool>,
+    /// Tool result content emitted after each tool call (one per tool).
+    /// The agent needs tool results to proceed past tool execution.
+    #[serde(default)]
+    tool_results: Vec<String>,
     #[serde(default)]
     error: Option<ScriptError>,
     #[serde(default)]
     latency_ms: u64,
     #[serde(default)]
     token_usage: Option<ScriptTokenUsage>,
+    /// Duration in seconds for the "Turn completed" event. Defaults to 0.5.
+    #[serde(default)]
+    turn_complete_secs: Option<f64>,
 }
 
 /// Manages a sequence of scripted turns parsed from `RUNIE_MOCK_SCRIPT`.
@@ -175,8 +184,15 @@ impl MockScript {
 
 
 /// Stream the events for a single scripted turn.
+///
+/// `is_tool_result_turn` is true when this turn was triggered by the agent
+/// sending a tool result back — i.e. the user did NOT send a new prompt, the
+/// model is responding to its own tool call. In that case we skip the scripted
+/// response `chunks` because they are emitted separately by `generate()` as the
+/// completion (prevents duplicate responses: "Listed all directories" from the
+/// stream + "Done." from the post-tool-result path).
 #[allow(clippy::too_many_lines)]
-fn script_turn_stream(turn: ScriptTurn) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+fn script_turn_stream(turn: ScriptTurn, is_tool_result_turn: bool) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
     use runie_core::provider_event::ModelError;
     Box::pin(async_stream::stream! {
         // Apply per-turn latency.
@@ -212,7 +228,7 @@ fn script_turn_stream(turn: ScriptTurn) -> Pin<Box<dyn Stream<Item = anyhow::Res
                     tokio::time::sleep(Duration::from_millis(20)).await;
                 }
                 yield Ok(ProviderEvent::Error(ModelError::Other(
-                    "Stream aborted by provider".into(),
+                    "Stream cancelled by provider".into(),
                 )));
                 return;
             }
@@ -226,16 +242,38 @@ fn script_turn_stream(turn: ScriptTurn) -> Pin<Box<dyn Stream<Item = anyhow::Res
                 )));
                 return;
             }
+            Some(ScriptError::Abort { after_chunks }) => {
+                for (i, chunk) in turn.chunks.iter().enumerate() {
+                    if i >= after_chunks {
+                        break;
+                    }
+                    yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+                yield Ok(ProviderEvent::Error(ModelError::Other(
+                    "Stream aborted".into(),
+                )));
+                return;
+            }
+            Some(ScriptError::Hang) => {
+                yield Ok(ProviderEvent::TextDelta("Starting... ".into()));
+                tokio::time::sleep(Duration::from_secs(3600)).await;
+                return;
+            }
             None => {}
         }
 
-        // Emit text chunks.
-        for chunk in &turn.chunks {
-            yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+        // Emit text chunks — but NOT when this turn is the model's response to
+        // its own tool call. In that case the completion chunks are streamed by
+        // `generate()` after the tool result is processed (avoids duplicates).
+        if !is_tool_result_turn {
+            for chunk in &turn.chunks {
+                yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+            }
         }
 
-        // Emit tool calls.
-        for tool in &turn.tool_calls {
+        // Emit tool calls, each followed by an optional tool result.
+        for (i, tool) in turn.tool_calls.iter().enumerate() {
             yield Ok(ProviderEvent::ToolCallStart {
                 id: "call_1".to_string(),
                 name: tool.name.clone(),
@@ -247,6 +285,14 @@ fn script_turn_stream(turn: ScriptTurn) -> Pin<Box<dyn Stream<Item = anyhow::Res
                 });
             }
             yield Ok(ProviderEvent::ToolCallEnd { id: "call_1".to_string() });
+
+            // Emit the tool result if one was provided for this tool index.
+            if let Some(result) = turn.tool_results.get(i) {
+                yield Ok(ProviderEvent::ToolExecutionResult {
+                    id: "call_1".to_string(),
+                    result: result.clone(),
+                });
+            }
         }
 
         // Emit token usage if provided.
@@ -258,6 +304,9 @@ fn script_turn_stream(turn: ScriptTurn) -> Pin<Box<dyn Stream<Item = anyhow::Res
         }
 
         yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+        // Emit TurnComplete so the UI shows "Turn completed in Xs."
+        let duration_secs = turn.turn_complete_secs.unwrap_or(0.5);
+        yield Ok(ProviderEvent::TurnComplete { duration_secs });
     })
 }
 

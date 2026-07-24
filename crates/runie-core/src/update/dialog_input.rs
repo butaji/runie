@@ -36,7 +36,8 @@ impl AppState {
             | crate::Event::CursorLeft
             | crate::Event::CursorRight
             | crate::Event::Paste(_)
-            | crate::Event::CycleThinkingLevel => {
+            | crate::Event::CycleThinkingLevel
+            | crate::Event::DialogBack => {
                 dialog::update_dialog(self, event.clone());
                 return true;
             }

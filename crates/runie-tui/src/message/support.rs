@@ -10,7 +10,7 @@ use crate::theme::{
     color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent, style_feed_timestamp,
     style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
     style_turn_complete, wave_brightness, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_SUBAGENT_BAR,
-    GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_X,
+    GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_X, RAIL_GLYPH,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -41,7 +41,15 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    vec![Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64())).style(style_thinking())]
+    // Grok-style thinking line with dim rail: `┃` + `◆ ⠋ Waiting...`
+    let rail_color = crate::theme::color_rail_thinking();
+    let line_text = crate::theme::thinking_line(started.elapsed().as_secs_f64());
+    vec![Line::from(vec![
+        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
+        Span::styled(" ", style_thinking()),
+        Span::raw(line_text),
+    ])
+    .style(style_thinking())]
 }
 
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
@@ -74,12 +82,15 @@ const WAVE_ROWS: u16 = 32;
 
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, animation_frame: u32) -> Vec<Line<'static>> {
     let (verb, args_part) = format_tool_label_parts(name, args);
-    // Use wave_brightness on the spinner glyph color for running tools (grok parity).
+    // Use wave_brightness on the rail and spinner glyph colors for running tools (grok parity).
     // The wave travels through the glyph row using WAVE_ROWS phase offset.
     let wave = wave_brightness(animation_frame, 0, WAVE_ROWS, WAVE_SPEED);
     let base_style = style_tool_running();
+    let rail_color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
+        .unwrap_or_else(crate::theme::color_rail_running);
     let spinner_color = blend_color(color_bg(), color_accent(), wave).unwrap_or_else(color_accent);
     vec![Line::from(vec![
+        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
         Span::styled(GLYPH_SPINNER.to_string(), Style::new().fg(spinner_color)),
         Span::styled(" ", base_style),
         Span::styled(verb, base_style.bold()),
@@ -123,6 +134,13 @@ pub fn render_tool_done(
         .unwrap_or_default();
     let base_style = style_tool_header();
 
+    // Rail color: green for success, red for error.
+    let rail_color = if error {
+        crate::theme::color_rail_error()
+    } else {
+        crate::theme::color_rail_success()
+    };
+
     // Grok-style finish-flash: blend accent toward bg at peak, then settle.
     // The flash uses the same wave brightness function as tool-running.
     let flash = finish_flash(finished_at, animation_frame);
@@ -134,14 +152,18 @@ pub fn render_tool_done(
         base_style
     };
 
-    // Grok-style done post: `◆ ` + bold verb/name + plain args, all dim.
+    // Grok-style done post: `┃` rail + `◆ ` + bold verb/name + plain args, all dim.
     // No ✓, no trailing duration. Errors keep the ✗ marker.
     let glyph = if error {
         format!("{GLYPH_X} ")
     } else {
         GLYPH_AGENT.to_string()
     };
-    let mut spans = vec![Span::styled(glyph, glyph_style), Span::styled(verb, base_style.bold())];
+    let mut spans = vec![
+        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
+        Span::styled(glyph, glyph_style),
+        Span::styled(verb, base_style.bold()),
+    ];
     let tail = format!("{args_part}{bytes_str}");
     if !tail.is_empty() {
         spans.push(Span::styled(tail, base_style));
@@ -207,8 +229,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             } else {
                 activity
             };
-            // Pulse the bar/diamond toward background using pulse_brightness (grok parity)
+            // Pulse the rail/bar/diamond toward background using pulse_brightness (grok parity)
             let pulse = pulse_brightness(animation_frame, 0.08);
+            let rail_color = blend_color(color_bg(), crate::theme::color_rail_running(), pulse)
+                .unwrap_or_else(crate::theme::color_rail_running);
             let bar_color =
                 blend_color(color_bg(), color_subagent_running_bar(), pulse).unwrap_or(color_subagent_running_bar());
             let diamond_color = blend_color(color_bg(), color_subagent_running_diamond(), pulse)
@@ -216,8 +240,9 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             let dim_color =
                 blend_color(color_bg(), color_subagent_running_dim(), pulse).unwrap_or(color_subagent_running_dim());
             Line::from(vec![
+                Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
                 Span::styled(GLYPH_SUBAGENT_BAR, Style::new().fg(bar_color)),
-                Span::styled("  ", Style::new().fg(bar_color)),
+                Span::styled(" ", Style::new().fg(bar_color)),
                 Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(diamond_color)),
                 Span::styled(" ", Style::new().fg(dim_color)),
                 Span::styled("Subagent running: ", dim.bold()),
@@ -230,6 +255,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             ])
         }
         S::Completed => Line::from(vec![
+            Span::styled(
+                RAIL_GLYPH.to_string(),
+                Style::new().fg(crate::theme::color_rail_success()),
+            ),
             Span::styled(
                 GLYPH_SUBAGENT_DIAMOND,
                 Style::new().fg(color_subagent_completed_diamond()),
@@ -245,6 +274,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
         ]),
         S::Failed => Line::from(vec![
             Span::styled(
+                RAIL_GLYPH.to_string(),
+                Style::new().fg(crate::theme::color_rail_error()),
+            ),
+            Span::styled(
                 GLYPH_SUBAGENT_DIAMOND,
                 Style::new().fg(color_subagent_failed_diamond()),
             ),
@@ -258,6 +291,10 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             ),
         ]),
         S::Cancelled => Line::from(vec![
+            Span::styled(
+                RAIL_GLYPH.to_string(),
+                Style::new().fg(crate::theme::color_rail_error()),
+            ),
             Span::styled(
                 GLYPH_SUBAGENT_DIAMOND,
                 Style::new().fg(color_subagent_failed_diamond()),
@@ -338,26 +375,60 @@ fn render_context_tool(elem: &runie_core::Element) -> Vec<Line<'static>> {
 }
 
 /// Render a blockquote from plain markdown text using tui_markdown.
-pub fn render_blockquote_from_spans(text: &str, base_color: Color) -> Vec<Line<'static>> {
+/// `depth` controls how many `│` bars are stacked (1 for `> quote`, 2 for `>> nested`, etc.).
+pub fn render_blockquote_from_spans(text: &str, base_color: Color, depth: usize) -> Vec<Line<'static>> {
     // Use tui_markdown for styling (via apply_color_to_inlines).
     let spans = apply_color_to_inlines(text, base_color);
     let mut lines = Vec::new();
-    let prefix = format!("{}│ ", GLYPH_INDENT);
+    // Stack `depth` bars for nested quotes: 1 bar per level (grok parity).
+    let bars = "│".repeat(depth);
+    let prefix = format!("{} {} ", GLYPH_INDENT.trim_end(), bars);
     let prefix_width = str_width(&prefix) as u16;
     let content_width = 200u16; // Will be clamped by actual terminal width
     let rest_width = content_width.saturating_sub(prefix_width);
 
     let rows = wrap_styled_spans_for_blockquote(&spans, rest_width);
     for (i, row) in rows.iter().enumerate() {
-        let line_prefix = if i == 0 { prefix.as_str() } else { "     " };
-        let mut line_spans = vec![Span::styled(line_prefix.to_owned(), style_agent())];
+        let line_prefix = if i == 0 { prefix.as_str() } else { "       " };
+        // Blockquote bar is dim-colored.
+        let dim_style = style_agent().dim();
+        let mut line_spans = vec![Span::styled(line_prefix.to_owned(), dim_style)];
         line_spans.extend(md_to_spans(row));
-        lines.push(Line::from(line_spans).style(style_agent()));
+        lines.push(Line::from(line_spans).style(dim_style));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{}│", GLYPH_INDENT)).style(style_agent()));
+        lines.push(Line::from(format!("{} {} ", GLYPH_INDENT.trim_end(), bars)).style(style_agent().dim()));
     }
     lines
+}
+
+/// Render a horizontal rule as a line of box-drawing dashes (U+2500).
+pub fn render_horizontal_rule(content_width: u16, ts_str: &str, is_first: bool) -> Vec<Line<'static>> {
+    let rule_char = "─"; // U+2500 BOX DRAWINGS LIGHT HORIZONTAL
+    let ts_width: u16 = (str_width(ts_str) + 1) as u16;
+    let rule_len = if is_first {
+        content_width.saturating_sub(ts_width) as usize
+    } else {
+        content_width as usize
+    };
+    let rule = rule_char.repeat(rule_len.max(3));
+
+    let mut line_spans: Vec<Span<'static>> = Vec::new();
+
+    if is_first {
+        // Add padding before rule to align with content.
+        let text_width = str_width(&rule) as u16;
+        let padding = content_width.saturating_sub(text_width).saturating_sub(ts_width);
+        if padding > 0 {
+            line_spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
+        line_spans.push(Span::styled(rule, style_agent().dim()));
+        line_spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
+    } else {
+        line_spans.push(Span::styled(rule, style_agent().dim()));
+    }
+
+    vec![Line::from(line_spans)]
 }
 
 /// Wrap styled spans for blockquote rendering.
@@ -552,7 +623,7 @@ pub fn render_data_part(data: &str, format_string: Option<&str>, _timestamp: f64
     ]
 }
 
-/// Render a markdown table with headers, rows, and column alignments.
+/// Render a markdown table with headers, rows, and column alignments using box-drawing characters.
 #[allow(clippy::cognitive_complexity)]
 #[allow(clippy::too_many_lines)]
 pub fn render_markdown_table(
@@ -581,8 +652,27 @@ pub fn render_markdown_table(
         }
     }
 
-    // Render header row
-    let mut header_spans = vec![Span::styled(GLYPH_INDENT.to_string(), style)];
+    // Build box-drawing borders
+    let dash = "─"; // U+2500 BOX DRAWINGS LIGHT HORORIZONTAL
+    let tee_down = "┬"; // U+252C
+    let tee_up = "┴"; // U+2534
+    let cross = "┼"; // U+253C
+    let left_tee = "├"; // U+251C
+    let right_tee = "┤"; // U+2524
+
+    // Top border: ┌─┬─┐
+    let mut top_border = format!("{}┌", GLYPH_INDENT);
+    for (i, width) in col_widths.iter().enumerate() {
+        top_border.push_str(&dash.repeat(*width));
+        if i < col_widths.len() - 1 {
+            top_border.push_str(tee_down);
+        }
+    }
+    top_border.push('┐');
+    lines.push(Line::from(top_border).style(style));
+
+    // Header row with vertical bars
+    let mut header_spans = vec![Span::styled(format!("{}│", GLYPH_INDENT), style)];
     for (i, header) in headers.iter().enumerate() {
         let width = col_widths[i];
         let aligned = if i < alignments.len() {
@@ -595,21 +685,24 @@ pub fn render_markdown_table(
             Some(false) => format!("{:^width$}", header, width = width), // center
             None => format!("{:<width$}", header, width = width),       // left
         };
-        header_spans.push(Span::styled(cell_str, style.bold().underlined()));
+        header_spans.push(Span::styled(format!(" {} │", cell_str), style.bold().underlined()));
     }
     lines.push(Line::from(header_spans));
 
-    // Render separator
-    let sep = col_widths
-        .iter()
-        .map(|w| "─".repeat(*w))
-        .collect::<Vec<_>>()
-        .join("─┼─");
-    lines.push(Line::from(format!("{} {}", GLYPH_INDENT, sep)).style(style));
+    // Header separator: ├─┼─┤
+    let mut header_sep = format!("{}├", GLYPH_INDENT);
+    for (i, width) in col_widths.iter().enumerate() {
+        header_sep.push_str(&dash.repeat(*width));
+        if i < col_widths.len() - 1 {
+            header_sep.push_str(cross);
+        }
+    }
+    header_sep.push('┤');
+    lines.push(Line::from(header_sep).style(style));
 
     // Render data rows
     for row in rows {
-        let mut row_spans = vec![Span::styled(GLYPH_INDENT.to_string(), style)];
+        let mut row_spans = vec![Span::styled(format!("{}│", GLYPH_INDENT), style)];
         for (i, cell) in row.iter().enumerate() {
             if i >= col_count {
                 break;
@@ -625,10 +718,21 @@ pub fn render_markdown_table(
                 Some(false) => format!("{:^width$}", cell, width = width),
                 None => format!("{:<width$}", cell, width = width),
             };
-            row_spans.push(Span::styled(cell_str, style));
+            row_spans.push(Span::styled(format!(" {} │", cell_str), style));
         }
         lines.push(Line::from(row_spans));
     }
+
+    // Bottom border: └─┴─┘
+    let mut bottom_border = format!("{}└", GLYPH_INDENT);
+    for (i, width) in col_widths.iter().enumerate() {
+        bottom_border.push_str(&dash.repeat(*width));
+        if i < col_widths.len() - 1 {
+            bottom_border.push_str(tee_up);
+        }
+    }
+    bottom_border.push('┘');
+    lines.push(Line::from(bottom_border).style(style));
 
     lines
 }

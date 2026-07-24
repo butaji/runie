@@ -35,6 +35,7 @@ dirs.workspace = true
 serde_json.workspace = true
 syntect.workspace = true
 unicode-width.workspace = true
+linkify.workspace = true
 tui-markdown.workspace = true
 tui-popup.workspace = true
 tui-scrollview.workspace = true

@@ -34,6 +34,10 @@ impl From<ProviderEvent> for Event {
             }
             PE::TurnEnd | PE::AgentEnd => Event::Done { id: String::new() },
             PE::Finish { reason: _ } => Event::Done { id: String::new() },
+            PE::TurnComplete { duration_secs } => Event::TurnComplete {
+                id: String::new(),
+                duration_secs,
+            },
             PE::Error(e) => Event::Error { id: String::new(), message: e.to_string() },
             PE::Usage { .. } => usage_event(),
         }
@@ -89,6 +93,7 @@ mod tests {
             ProviderEvent::Error(crate::provider_event::ModelError::Other("oops".into())),
             ProviderEvent::Usage { input_tokens: 100, output_tokens: 50 },
             ProviderEvent::Finish { reason: crate::provider_event::StopReason::Stop },
+            ProviderEvent::TurnComplete { duration_secs: 1.5 },
         ];
 
         for event in cases {

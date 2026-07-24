@@ -57,6 +57,20 @@ pub enum CodeBlock {
         content: String,
         inlines: Vec<MdInline>,
     },
+    /// A heading (H1–H6) with level and inline spans.
+    Heading {
+        level: u8,
+        content: String,
+        inlines: Vec<MdInline>,
+    },
+    /// A horizontal rule (---, ***, ___).
+    HorizontalRule,
+    /// A table with headers, rows, and column alignments.
+    Table {
+        headers: Vec<String>,
+        rows: Vec<Vec<String>>,
+        alignments: Vec<Option<bool>>,
+    },
     Code {
         lang: String,
         content: String,
@@ -66,8 +80,9 @@ pub enum CodeBlock {
         /// Each list item is a list of inline spans.
         items: Vec<Vec<MdInline>>,
     },
-    /// A blockquote with inline spans for styling.
-    Blockquote(Vec<MdInline>),
+    /// A blockquote with inline spans for styling and nesting depth.
+    /// Depth = 1 for `> quote`, 2 for `>> nested`, etc.
+    Blockquote(Vec<MdInline>, usize),
 }
 
 /// Legacy alias so existing call sites don't break.
@@ -94,10 +109,11 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
 
 // ── Legacy helpers ─────────────────────────────────────────────────────────
 
-/// Return the plain-text content of a Text block (for layout.rs line math).
+/// Return the plain-text content of a Text or Heading block (for layout.rs line math).
 pub fn text_block_content(block: &CodeBlock) -> Option<&str> {
     match block {
         CodeBlock::Text { content, .. } => Some(content),
+        CodeBlock::Heading { content, .. } => Some(content),
         _ => None,
     }
 }

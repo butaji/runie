@@ -136,20 +136,22 @@ impl LeaderHandle {
         self.io_cell.stop(None);
 
         // Collect all join handles for parallel await.
-        let mut all_joins = Vec::with_capacity(self.joins.as_ref().map_or(0, |v| v.len()) + 2);
+        let mut all_joins: Vec<tokio::task::JoinHandle<()>> =
+            Vec::with_capacity(self.joins.as_ref().map_or(0, |v| v.len()) + 2);
 
         if let Some(joins) = self.joins.take() {
             all_joins.extend(joins);
         }
-        if let Some(cj) = self.coordinator_join.take() {
+        let coordinator_join = self.coordinator_join.take();
+        let tcp_join = self.tcp_join.take();
+        if let Some(cj) = coordinator_join {
             all_joins.push(cj);
         }
-        if let Some(tcp_join) = self.tcp_join.take() {
-            all_joins.push(tcp_join);
+        if let Some(tp) = tcp_join {
+            all_joins.push(tp);
         }
 
         // Await all join handles in parallel with a timeout.
-        // Uses tokio::join! for concurrent await since we need all to complete.
         let timeout_duration = std::time::Duration::from_secs(SHUTDOWN_TIMEOUT_SECS);
         let result = tokio::time::timeout(timeout_duration, async {
             let mut errors = Vec::new();
@@ -164,9 +166,8 @@ impl LeaderHandle {
 
         if result.is_err() {
             tracing::warn!(
-                "Leader shutdown timed out after {:?}, {} actors may still be running",
+                "Leader shutdown timed out after {:?}, aborting remaining actors",
                 timeout_duration,
-                self.joins.as_ref().map_or(0, |v| v.len())
             );
         }
     }

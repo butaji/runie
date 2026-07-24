@@ -20,7 +20,7 @@
 //! runtime.run().await;
 //! ```
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use futures::StreamExt;
 use ratatui::backend::TestBackend;
@@ -373,11 +373,11 @@ impl TuiRuntime {
         // `kill` does not strand the terminal in raw mode / alternate screen.
         wait_for_shutdown(shutdown_rx).await;
 
-        // Graceful teardown on every exit path. `leader_handle.shutdown()` is
-        // idempotent (never panics; safe even if a clone already shut the leader
-        // down via the in-app quit key) and `handles.shutdown()` awaits the rest.
-        leader_handle.shutdown().await;
+        // Abort all TUI runtime tasks (UiActor, render loop, input reader).
+        // This is fast — no graceful drain, just immediate abort.
         handles.shutdown().await;
+        // Drop the leader handle to abort its actor tasks.
+        drop(leader_handle);
         Ok(())
     }
 
@@ -676,16 +676,41 @@ fn spawn_ui_actor_with_external_rx(
 
 async fn input_reader(input_tx: mpsc::Sender<Event>, mut kb_rx: watch::Receiver<HashMap<String, String>>) {
     let mut reader = crossterm::event::EventStream::new();
-    while let Some(Ok(event)) = reader.next().await {
-        let bindings = kb_rx.borrow_and_update().clone();
-        if let Some(evt) = keymap::convert_event(&event, &bindings) {
-            let is_quit = is_input_stop_event(&evt);
-            if input_tx.send(evt).await.is_err() {
+    // Timeout: if no input events arrive for this long, force quit.
+    // This guards against the crossterm EventStream blocking forever when stdin
+    // is not a real TTY (e.g. in PTY test harness misconfiguration).
+    let input_timeout = Duration::from_secs(5);
+
+    tokio::pin!(reader);
+    let mut input_deadline = tokio::time::Instant::now() + input_timeout;
+
+    loop {
+        let timeout_fired = tokio::time::timeout_at(input_deadline, reader.next()).await;
+        match timeout_fired {
+            Ok(Some(Ok(event))) => {
+                // Reset deadline on any event.
+                input_deadline = tokio::time::Instant::now() + input_timeout;
+                let bindings = kb_rx.borrow_and_update().clone();
+                if let Some(evt) = keymap::convert_event(&event, &bindings) {
+                    let is_quit = is_input_stop_event(&evt);
+                    if input_tx.send(evt).await.is_err() {
+                        break;
+                    }
+                    if is_quit {
+                        break;
+                    }
+                }
+            }
+            Ok(Some(Err(_) )) => {
+                // Error reading event — break
                 break;
             }
-            if is_quit {
+            // Timeout: no input events arrived. Send ForceQuit to break the app loop.
+            Err(_) => {
+                let _ = input_tx.send(Event::ForceQuit).await;
                 break;
             }
+            Ok(None) => break,
         }
     }
 }

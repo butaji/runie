@@ -2,7 +2,8 @@
 #![allow(clippy::too_many_lines)]
 
 use crate::commands::{DialogKind, DialogState};
-use crate::dialog::builders::{command_palette, mcp_servers, model_selector, scoped_models, session_tree, skills};
+use crate::dialog::builders::{command_palette, file_picker, mcp_servers, model_selector, scoped_models, session_tree, skills};
+use crate::file_refs::find_file_entries;
 use crate::model::{AppState, InputReceiver};
 
 use crate::update::settings_dialog;
@@ -223,20 +224,43 @@ fn parse_filter(filter: Option<&str>) -> (Option<String>, Option<String>) {
 /// If the filter contains a `:start-end` range suffix (e.g. `@src/main.rs:10-50`),
 /// the base path is used for filtering and the range suffix is appended on insertion.
 pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
-    use crate::dialog::{Panel, PanelStack};
-
     let (base_filter, range_suffix) = parse_filter(filter);
     state.input_mut().file_picker_range_suffix = range_suffix;
 
-    let mut panel = Panel::new("at-files", " Files ").with_filter();
-    if let Some(ref f) = base_filter {
-        panel.filter = f.clone();
-    }
-    panel = panel.header("Use /new to create a file");
+    let base_dir = std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| ".".to_string());
+
+    // Find files in the project root, optionally filtered.
+    let entries = find_file_entries(&base_dir, 500);
+
+    // If there's a filter, narrow down the results (case-insensitive match).
+    let filtered: Vec<_> = if let Some(ref pat) = base_filter {
+        let pat_lower = pat.to_lowercase();
+        entries
+            .into_iter()
+            .filter(|e| e.name.to_lowercase().contains(&pat_lower))
+            .collect()
+    } else {
+        entries
+    };
+
+    // Build picker entries: each emits Event::InsertAtRef with the file path.
+    let picker_entries: Vec<_> = filtered
+        .into_iter()
+        .map(|entry| {
+            let name = entry.name.clone();
+            (entry.name, entry.is_dir, crate::Event::InsertAtRef(name))
+        })
+        .collect();
+
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: PanelStack::new(panel) });
+    *state.open_dialog_mut() = Some(DialogState::Active {
+        kind: DialogKind::Generic,
+        panels: file_picker(picker_entries),
+    });
 }
 
 /// Opens the file picker without any filter (shows all files).

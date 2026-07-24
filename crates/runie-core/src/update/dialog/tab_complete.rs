@@ -1,3 +1,4 @@
+use crate::commands::{DialogKind, DialogState};
 use crate::model::AppState;
 
 impl AppState {
@@ -7,7 +8,21 @@ impl AppState {
     /// - Second Tab with single match: complete (accept ghost)
     /// - Second Tab with multiple matches: cycle to next
     pub(crate) fn tab_complete(&mut self) {
-        if self.open_dialog().is_some() {
+        // If the file picker is already open, Tab cycles through its items.
+        if let Some(DialogState::Active { kind: DialogKind::Generic, panels }) = self.open_dialog_mut() {
+            // Check ID with immutable borrow.
+            let is_at_files = panels.current().is_some_and(|p| p.id == "at-files");
+            if !is_at_files {
+                return; // Other dialogs: Tab is not meaningful.
+            }
+            // Now mutate via direct PanelStack field access to avoid re-borrowing panels.
+            let count = panels.panels.last().map_or(0, |p| p.items.len());
+            if count > 0 {
+                if let Some(panel) = panels.panels.last_mut() {
+                    panel.selected = (panel.selected + 1) % count;
+                    self.view_mut().dirty = true;
+                }
+            }
             return;
         }
         if self.completion_mut().at_suggestions.is_some() {

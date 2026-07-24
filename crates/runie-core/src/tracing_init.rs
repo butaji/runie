@@ -10,7 +10,7 @@
 //! a real exporter (e.g., `metrics_exporter_prometheus`) when observability is needed.
 
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -18,7 +18,8 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter, Registry};
 
 /// Global guard for the non-blocking worker thread.
 /// Must be kept alive for the duration of the program.
-static FILE_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
+/// Stored in a `Mutex<Option<_>>` so `shutdown()` can drop it.
+static FILE_GUARD: Mutex<Option<WorkerGuard>> = Mutex::new(None);
 
 /// Global flag to track if the subscriber has been initialized.
 static INITIALIZED: OnceLock<InitMode> = OnceLock::new();
@@ -95,7 +96,7 @@ fn init_with_mode(mode: InitMode) {
             let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
             // Keep the guard alive for the lifetime of the program.
-            let _ = FILE_GUARD.set(guard);
+            *FILE_GUARD.lock().unwrap() = Some(guard);
 
             // JSON file layer for structured logs.
             let file_layer = fmt::layer()
@@ -130,6 +131,17 @@ fn default_log_dir() -> PathBuf {
 /// Returns the current initialization mode, if initialized.
 pub fn init_mode() -> Option<InitMode> {
     INITIALIZED.get().copied()
+}
+
+/// Drop the file guard to stop the non-blocking worker thread.
+///
+/// This MUST be called before the process exits when `init_tui()` was used.
+/// Without this, the `tracing_appender` worker thread keeps the tokio runtime
+/// alive indefinitely.
+pub fn shutdown() {
+    if let Ok(mut guard) = FILE_GUARD.lock() {
+        *guard = None;
+    }
 }
 
 #[cfg(test)]

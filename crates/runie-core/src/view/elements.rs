@@ -9,6 +9,10 @@ pub enum Element {
     },
     UserMessage {
         content: String,
+        /// Whether the message is expanded (true) or folded (false).
+        /// When false and the content exceeds 3 visual lines, the renderer
+        /// shows only the first 3 lines + ` …`.
+        expanded: bool,
         timestamp: f64,
     },
     AgentMessage {
@@ -228,7 +232,7 @@ impl ElementBuilder {
 
 impl Element {
     pub fn user(content: impl Into<String>) -> ElementBuilder {
-        ElementBuilder(Element::UserMessage { content: content.into(), timestamp: 0.0 })
+        ElementBuilder(Element::UserMessage { content: content.into(), expanded: false, timestamp: 0.0 })
     }
     pub fn agent(content: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0, provider: String::new() })

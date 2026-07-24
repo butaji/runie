@@ -49,6 +49,8 @@ pub enum ProviderEvent {
     Usage { input_tokens: usize, output_tokens: usize },
     /// Generation finished.
     Finish { reason: StopReason },
+    /// Turn completed — carries elapsed duration so the UI can show "Worked for Xs."
+    TurnComplete { duration_secs: f64 },
 }
 
 /// Why the generation stopped.
@@ -368,6 +370,15 @@ mod tests {
         let event = ProviderEvent::AgentEnd;
         let json = serde_json::to_string(&event).unwrap();
         assert_eq!(json, r#"{"type":"agentEnd"}"#);
+        let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, event);
+    }
+
+    #[test]
+    fn provider_event_turn_complete_roundtrip() {
+        let event = ProviderEvent::TurnComplete { duration_secs: 2.5 };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(json, r#"{"type":"turnComplete","data":{"durationSecs":2.5}}"#);
         let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, event);
     }

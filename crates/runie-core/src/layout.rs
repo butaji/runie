@@ -15,7 +15,9 @@ pub const GLYPH_USER: &str = "❯ ";
 /// Agent message prefix glyph (must match `runie_tui::theme::GLYPH_AGENT`).
 pub const GLYPH_AGENT: &str = "◆ ";
 /// Indented continuation glyph (must match `runie_tui::theme::GLYPH_INDENT`).
-pub const GLYPH_INDENT: &str = "     ";
+/// Grok parity: continuation indent = prefix width = 2 cells (the `❯ ` prefix
+/// is 2 cells wide, so continuation lines are also indented by 2 cells).
+pub const GLYPH_INDENT: &str = "  ";
 /// Leading indent prepended to every feed line by the TUI feed renderer
 /// (must match `runie_tui::theme::FEED_INDENT`). Combined with the 1-column
 /// terminal margin this places post content at column 2 (0-indexed).
@@ -31,7 +33,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
 
     match element {
         Element::Spacer { .. } => 1,
-        Element::UserMessage { content, timestamp } => user_message_line_count(content, *timestamp, width),
+        Element::UserMessage { content, timestamp, expanded } => user_message_line_count(content, *timestamp, width, *expanded),
         Element::AgentMessage { content, timestamp, .. } => agent_message_line_count(content, *timestamp, width),
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
@@ -112,7 +114,7 @@ fn subagent_row_line_count(output: &str, expanded: bool) -> usize {
     }
 }
 
-fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
+fn user_message_line_count(content: &str, timestamp: f64, width: u16, expanded: bool) -> usize {
     // The caller passes area_width - 2 (right-side slack); subtract the
     // leading feed indent the TUI prepends at render time (see
     // ui::messages::render_message_content).
@@ -138,9 +140,17 @@ fn user_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
         content_lines += word_wrap(line, w, rest_w).len().max(1);
     }
 
+    // Fold: when collapsed and content exceeds 3 visual lines, show only
+    // 3 lines + 1 ellipsis row. Grok parity: >3 lines fold.
+    let content_lines = if !expanded && content_lines > 3 {
+        3 + 1 // 3 content lines + 1 ellipsis row
+    } else {
+        content_lines.max(1)
+    };
+
     // +2 for the bg-padding lines the renderer adds above and below the card
     // (see render_user_message). Keeps scroll math in sync with the render.
-    content_lines.max(1) + 2
+    content_lines + 2
 }
 
 fn agent_message_line_count(content: &str, timestamp: f64, width: u16) -> usize {
@@ -194,7 +204,17 @@ fn markdown_block_line_count(
             .iter()
             .map(|item| inlines_to_plain_text(item).lines().count().max(1))
             .sum(),
-        CodeBlock::Blockquote(inlines) => inlines_to_plain_text(inlines).lines().count().max(1),
+        CodeBlock::Blockquote(inlines, _) => inlines_to_plain_text(inlines).lines().count().max(1),
+        CodeBlock::Heading { inlines, .. } => {
+            // Headings are typically 1 line but may wrap if very long
+            let text = inlines_to_plain_text(inlines);
+            text.lines().count().max(1)
+        }
+        CodeBlock::HorizontalRule => 1,
+        CodeBlock::Table { headers, rows, .. } => {
+            // Header + separator row + data rows
+            2 + rows.len()
+        }
     };
     *is_first = false;
     lines

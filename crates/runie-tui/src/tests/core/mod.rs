@@ -58,3 +58,43 @@ mod toggle_all;
 mod toggle_stress;
 #[cfg(test)]
 pub(crate) mod visible_helper;
+
+// =============================================================================
+// Shared test helpers
+// =============================================================================
+
+/// Injects mock file entries into the open file picker panel.
+/// Opens the picker if not already open, then adds 3 test files:
+/// `Cargo.toml` (file), `src/` (dir), `README.md` (file).
+///
+/// Idempotent: safe to call even if picker is already open.
+pub fn inject_mock_file_entries(state: &mut AppState) {
+    use runie_core::commands::DialogState;
+    use runie_core::dialog::{ItemAction, PanelItem};
+    use runie_core::Event;
+
+    // Ensure the file picker dialog is open.
+    let already_open = matches!(
+        state.open_dialog(),
+        Some(DialogState::Active { kind: DialogKind::Generic, .. })
+    );
+    if !already_open {
+        runie_core::update::dialog::open_at_file_picker_all(state);
+    }
+
+    // Get the panel and push mock items directly.
+    if let Some(DialogState::Active { kind: DialogKind::Generic, panels }) = state.open_dialog_mut() {
+        if let Some(panel) = panels.current_mut() {
+            // header("3 files") is already set by open_at_file_picker_all.
+            let mock_entries = vec![
+                ("Cargo.toml".to_string(), false, Event::InsertAtRef("Cargo.toml".to_string())),
+                ("src/".to_string(), true, Event::InsertAtRef("src/".to_string())),
+                ("README.md".to_string(), false, Event::InsertAtRef("README.md".to_string())),
+            ];
+            for (name, is_dir, evt) in mock_entries {
+                let label = if is_dir { name } else { name };
+                panel.items.push(PanelItem::Action { label, action: ItemAction::Emit(evt) });
+            }
+        }
+    }
+}

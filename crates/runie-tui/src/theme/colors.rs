@@ -175,6 +175,39 @@ pub fn color_monitor() -> Color {
     theme_color_fallback("accent.monitor", Color::Rgb(255, 158, 100))
 }
 
+// Grok-style heading colors (grok-build parity).
+// Per-level heading colors as specified in the test expectations.
+
+/// Heading H1 color: teal (grok: `#73DACA` = 115, 218, 202).
+pub fn color_h1() -> Color {
+    theme_color_fallback("heading.h1", Color::Rgb(115, 218, 202))
+}
+
+/// Heading H2 color: blue (grok: `#7AA2F7` = 122, 162, 247).
+pub fn color_h2() -> Color {
+    theme_color_fallback("heading.h2", Color::Rgb(122, 162, 247))
+}
+
+/// Heading H3 color: orange (grok: `#FF9E64` = 255, 158, 100).
+pub fn color_h3() -> Color {
+    theme_color_fallback("heading.h3", Color::Rgb(255, 158, 100))
+}
+
+/// Heading H4 color: red (grok: `#F7768E` = 247, 118, 142).
+pub fn color_h4() -> Color {
+    theme_color_fallback("heading.h4", Color::Rgb(247, 118, 142))
+}
+
+/// Heading H5 color: green (grok: `#9ECE6A` = 158, 206, 106).
+pub fn color_h5() -> Color {
+    theme_color_fallback("heading.h5", Color::Rgb(158, 206, 106))
+}
+
+/// Heading H6 color: magenta (grok: `#BB9AF7` = 187, 154, 247).
+pub fn color_h6() -> Color {
+    theme_color_fallback("heading.h6", Color::Rgb(187, 154, 247))
+}
+
 // Grok-style multi-tier block backgrounds (grok-build parity).
 
 /// Light block background (grok: `#2E2E2E`).
@@ -218,6 +251,28 @@ pub fn color_user_bg() -> Color {
 /// the selected post in vim nav mode.
 pub fn color_accent_bg() -> Color {
     blend(color_bg(), color_accent(), 0.1)
+}
+
+// Grok-style accent rail colors (grok-parity feed-accent-rail).
+
+/// Rail color for tool-running blocks: animated magenta (#bb9af7).
+pub fn color_rail_running() -> Color {
+    theme_color_fallback("rail.running", Color::Rgb(187, 154, 247))
+}
+
+/// Rail color for tool-success blocks: green (#9ece6a).
+pub fn color_rail_success() -> Color {
+    theme_color_fallback("rail.success", Color::Rgb(158, 206, 106))
+}
+
+/// Rail color for tool-error blocks: red (#f7768e).
+pub fn color_rail_error() -> Color {
+    theme_color_fallback("rail.error", Color::Rgb(247, 118, 142))
+}
+
+/// Rail color for thinking blocks: dim gutter (#3b4261).
+pub fn color_rail_thinking() -> Color {
+    theme_color_fallback("rail.thinking", Color::Rgb(59, 66, 97))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

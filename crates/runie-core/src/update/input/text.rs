@@ -167,7 +167,10 @@ impl AppState {
             let input = self.input();
             input.input.is_empty() || input.input.ends_with(' ')
         };
-        if is_at_trigger_position && self.completion().path_suggestions.is_none() {
+        // Don't open dialogs if one is already active (typing '@' or '/' in an
+        // already-open picker should just insert the character).
+        let dialog_already_open = self.open_dialog().is_some();
+        if is_at_trigger_position && self.completion().path_suggestions.is_none() && !dialog_already_open {
             if c == '/' {
                 self.open_command_palette_from_input();
                 return;

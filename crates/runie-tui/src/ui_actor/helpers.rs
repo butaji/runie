@@ -22,6 +22,7 @@ pub fn is_dialog_input_event(evt: &Event) -> bool {
             | Event::HistoryNext
             | Event::CycleThinkingLevel
             | Event::Submit
+            | Event::Newline
     )
 }
 
@@ -45,7 +46,6 @@ mod tests {
     /// Layer 1: non-dialog input events keep routing to InputActor.
     #[test]
     fn dialog_input_event_excludes_non_dialog_keys() {
-        assert!(!is_dialog_input_event(&Event::Newline));
         assert!(!is_dialog_input_event(&Event::InputChanged {
             state: Box::default()
         }));

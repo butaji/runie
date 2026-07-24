@@ -410,7 +410,13 @@ fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
     } else if let crate::Event::InsertAtRef(path) = event {
         super::dialog::insert_at_ref(state, &path);
     } else if matches!(event, crate::Event::DialogBack) {
-        handle_dialog_back_no_dialog(state);
+        if state.open_dialog().is_some() {
+            // Route through update_dialog so the panel stack (file picker,
+            // palette, etc.) gets the close event and restores the typed prefix.
+            super::dialog::update_dialog(state, event);
+        } else {
+            handle_dialog_back_no_dialog(state);
+        }
     }
 }
 

@@ -53,9 +53,18 @@ fn is_press_or_repeat(key: &KeyEvent) -> bool {
 }
 
 fn convert_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) -> Option<CoreEvent> {
-    // Special handling for Enter variants
+    // Special handling for Enter variants.
+    //
+    // In a PTY (test harness, tmux), Enter sends '\r' (CR). crossterm parses
+    // raw '\r' as KeyCode::Char('\n') with no modifiers — NOT as KeyCode::Enter.
+    // This bare Char('\n') must be Submit so the command palette closes and
+    // the typed command is dispatched. A real Enter key should never produce
+    // bare Char('\n') in any terminal; it always arrives as KeyCode::Enter.
+    //
+    // Shift+Enter sends raw '\n' (LF); crossterm parses it as Char('\n') + SHIFT
+    // modifier → falls through to the SHIFT branch below → Newline (multi-line input).
     if key.modifiers.is_empty() && key.code == KeyCode::Char('\n') {
-        return Some(CoreEvent::Newline);
+        return Some(CoreEvent::Submit);
     }
     if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
         return Some(CoreEvent::Newline);

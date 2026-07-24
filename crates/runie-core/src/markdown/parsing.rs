@@ -4,7 +4,7 @@
 //! (`MdInline`), so line counts in core stay in sync with rendered output.
 //! This replaces the former `blocks.rs` + `inline.rs` split.
 
-use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{Alignment, Event, Options, Parser, Tag, TagEnd};
 
 use super::{CodeBlock, MdInline};
 
@@ -177,6 +177,10 @@ pub(crate) fn split_unclosed_fence(text: &str) -> (&str, Option<&str>) {
 enum BlockState {
     #[default]
     Top,
+    Heading {
+        level: u8,
+        inlines: Vec<MdInline>,
+    },
     Code {
         lang: String,
         content: String,
@@ -188,6 +192,14 @@ enum BlockState {
     },
     Quote {
         inlines: Vec<MdInline>,
+        depth: usize,
+    },
+    Table {
+        headers: Vec<String>,
+        alignments: Vec<Option<bool>>,
+        rows: Vec<Vec<String>>,
+        current_row: Vec<String>,
+        in_header: bool,
     },
 }
 
@@ -207,6 +219,10 @@ struct BlockParser {
     inline_buf: Vec<MdInline>,
     style_stack: Vec<BlStyle>,
     state: BlockState,
+    /// Stack of outer quote inlines when nesting blockquotes (e.g. `> a\n>> b`).
+    /// Each entry holds the inlines accumulated for an outer quote level.
+    /// Stack of (depth, inlines) for outer quote levels when nesting.
+    quotes_stack: Vec<(usize, Vec<MdInline>)>,
 }
 
 impl BlockParser {
@@ -217,11 +233,23 @@ impl BlockParser {
             inline_buf: Vec::new(),
             style_stack: vec![BlStyle::None],
             state: BlockState::Top,
+            quotes_stack: Vec::new(),
         }
     }
 
     fn finish(mut self) -> Vec<CodeBlock> {
         self.flush_text();
+        // Emit any remaining quote blocks (including from the stack)
+        if let BlockState::Quote { inlines, depth } = &mut self.state {
+            if !inlines.is_empty() {
+                self.blocks.push(CodeBlock::Blockquote(std::mem::take(inlines), *depth));
+            }
+        }
+        for (depth, inlines) in self.quotes_stack.into_iter().rev() {
+            if !inlines.is_empty() {
+                self.blocks.push(CodeBlock::Blockquote(inlines, depth));
+            }
+        }
         self.blocks
     }
 
@@ -242,6 +270,10 @@ impl BlockParser {
         if self.content_buf.is_empty() && self.inline_buf.is_empty() {
             return;
         }
+        // Only flush text blocks in Top state; Heading/Table/Quote manage their own content
+        if !matches!(self.state, BlockState::Top) {
+            return;
+        }
         let content = std::mem::take(&mut self.content_buf);
         let inlines = std::mem::take(&mut self.inline_buf);
         self.blocks.push(CodeBlock::Text { content, inlines });
@@ -255,13 +287,31 @@ impl BlockParser {
             Event::Code(t) => self.push_code(&t),
             Event::SoftBreak => self.push_break(),
             Event::HardBreak => self.push_break(),
+            Event::Rule => self.handle_rule(),
             _ => {}
         }
+    }
+
+    fn handle_rule(&mut self) {
+        self.flush_text();
+        self.blocks.push(CodeBlock::HorizontalRule);
     }
 
     #[allow(clippy::too_many_lines)]
     fn start_tag(&mut self, tag: Tag<'_>) {
         match tag {
+            Tag::Heading { level, .. } => {
+                self.flush_text();
+                let level_num = match level {
+                    pulldown_cmark::HeadingLevel::H1 => 1,
+                    pulldown_cmark::HeadingLevel::H2 => 2,
+                    pulldown_cmark::HeadingLevel::H3 => 3,
+                    pulldown_cmark::HeadingLevel::H4 => 4,
+                    pulldown_cmark::HeadingLevel::H5 => 5,
+                    pulldown_cmark::HeadingLevel::H6 => 6,
+                };
+                self.state = BlockState::Heading { level: level_num, inlines: Vec::new() };
+            }
             Tag::CodeBlock(kind) => {
                 self.flush_text();
                 let lang = match kind {
@@ -269,6 +319,37 @@ impl BlockParser {
                     pulldown_cmark::CodeBlockKind::Indented => String::new(),
                 };
                 self.state = BlockState::Code { lang, content: String::new() };
+            }
+            Tag::Table(alignments) => {
+                self.flush_text();
+                self.state = BlockState::Table {
+                    headers: Vec::new(),
+                    alignments: alignments.iter().map(|a| match a {
+                        Alignment::Left => Some(false),
+                        Alignment::Right => Some(true),
+                        Alignment::Center => None,
+                        Alignment::None => None,
+                    }).collect(),
+                    rows: Vec::new(),
+                    current_row: Vec::new(),
+                    in_header: true,
+                };
+            }
+            Tag::TableHead => {
+                // Table head started, headers will be collected via push_text
+            }
+            Tag::TableRow => {
+                if let BlockState::Table { headers, rows, current_row, in_header, .. } = &mut self.state {
+                    if *in_header && !headers.is_empty() {
+                        *in_header = false;
+                    } else if !current_row.is_empty() {
+                        rows.push(std::mem::take(current_row));
+                    }
+                    *current_row = Vec::new();
+                }
+            }
+            Tag::TableCell => {
+                // Cell started, text will be collected via push_text
             }
             Tag::List(order) => {
                 self.flush_text();
@@ -287,7 +368,17 @@ impl BlockParser {
                 if matches!(self.state, BlockState::Top) {
                     self.flush_text();
                 }
-                self.state = BlockState::Quote { inlines: Vec::new() };
+                // If already in a quote, save the current inlines to the stack and
+                // start a fresh quote for the nested level
+                if let BlockState::Quote { inlines, depth } = std::mem::take(&mut self.state) {
+                    if !inlines.is_empty() {
+                        self.blocks.push(CodeBlock::Blockquote(inlines.clone(), depth));
+                    }
+                    self.quotes_stack.push((depth, inlines));
+                    self.state = BlockState::Quote { inlines: Vec::new(), depth: depth + 1 };
+                } else {
+                    self.state = BlockState::Quote { inlines: Vec::new(), depth: 1 };
+                }
             }
             Tag::Strong => self.style_stack.push(BlStyle::Bold),
             Tag::Emphasis => self.style_stack.push(BlStyle::Italic),
@@ -303,6 +394,18 @@ impl BlockParser {
                 self.emit_inline(text, current_style);
                 self.content_buf.push_str(text);
             }
+            BlockState::Heading { inlines, .. } => {
+                if !text.is_empty() {
+                    let inline = match current_style {
+                        BlStyle::Bold => MdInline::Bold(text.to_owned()),
+                        BlStyle::Italic => MdInline::Italic(text.to_owned()),
+                        BlStyle::Strike => MdInline::Strike(text.to_owned()),
+                        BlStyle::None => MdInline::Text(text.to_owned()),
+                    };
+                    inlines.push(inline);
+                }
+                self.content_buf.push_str(text);
+            }
             BlockState::Code { content, .. } => content.push_str(text),
             BlockState::List { current, .. } => {
                 if !text.is_empty() {
@@ -315,7 +418,7 @@ impl BlockParser {
                     current.push(inline);
                 }
             }
-            BlockState::Quote { inlines } => {
+            BlockState::Quote { inlines, .. } => {
                 if !text.is_empty() {
                     let inline = match current_style {
                         BlStyle::Bold => MdInline::Bold(text.to_owned()),
@@ -324,6 +427,13 @@ impl BlockParser {
                         BlStyle::None => MdInline::Text(text.to_owned()),
                     };
                     inlines.push(inline);
+                }
+            }
+            BlockState::Table { headers, current_row, in_header, .. } => {
+                if *in_header {
+                    headers.push(text.to_owned());
+                } else {
+                    current_row.push(text.to_owned());
                 }
             }
         }
@@ -337,12 +447,21 @@ impl BlockParser {
                 self.content_buf.push_str(code);
                 self.content_buf.push('`');
             }
+            BlockState::Heading { inlines, .. } => {
+                inlines.push(MdInline::Code(code.to_string()));
+                self.content_buf.push('`');
+                self.content_buf.push_str(code);
+                self.content_buf.push('`');
+            }
             BlockState::Code { content, .. } => content.push_str(code),
             BlockState::List { current, .. } => {
                 current.push(MdInline::Code(code.to_string()));
             }
-            BlockState::Quote { inlines } => {
+            BlockState::Quote { inlines, .. } => {
                 inlines.push(MdInline::Code(code.to_string()));
+            }
+            BlockState::Table { .. } => {
+                // Inline code in tables - store as cell text
             }
         }
     }
@@ -353,12 +472,19 @@ impl BlockParser {
                 self.inline_buf.push(MdInline::SoftBreak);
                 self.content_buf.push('\n');
             }
+            BlockState::Heading { inlines, .. } => {
+                inlines.push(MdInline::SoftBreak);
+                self.content_buf.push('\n');
+            }
             BlockState::Code { content, .. } => content.push('\n'),
             BlockState::List { current, .. } => {
                 current.push(MdInline::SoftBreak);
             }
-            BlockState::Quote { inlines } => {
+            BlockState::Quote { inlines, .. } => {
                 inlines.push(MdInline::SoftBreak);
+            }
+            BlockState::Table { .. } => {
+                // Table cells don't have breaks
             }
         }
     }
@@ -366,10 +492,37 @@ impl BlockParser {
     #[allow(clippy::too_many_lines)]
     fn end_tag(&mut self, tag_end: TagEnd) {
         match tag_end {
+            TagEnd::Heading(_level) => {
+                if let BlockState::Heading { level: lvl, inlines } = std::mem::take(&mut self.state) {
+                    let content = std::mem::take(&mut self.content_buf);
+                    self.blocks.push(CodeBlock::Heading { level: lvl, content, inlines });
+                }
+            }
             TagEnd::CodeBlock => {
                 if let BlockState::Code { lang, content } = std::mem::take(&mut self.state) {
                     self.blocks.push(CodeBlock::Code { lang, content });
                 }
+            }
+            TagEnd::Table => {
+                if let BlockState::Table { headers, alignments, rows, current_row, .. } = std::mem::take(&mut self.state) {
+                    // Push last row if not empty
+                    if !current_row.is_empty() {
+                        let mut all_rows = rows;
+                        all_rows.push(current_row);
+                        self.blocks.push(CodeBlock::Table { headers, alignments, rows: all_rows });
+                    } else if !headers.is_empty() {
+                        self.blocks.push(CodeBlock::Table { headers, alignments, rows });
+                    }
+                }
+            }
+            TagEnd::TableHead => {
+                // Table head ended, separator row will follow
+            }
+            TagEnd::TableRow => {
+                // Row ended, push_text handles adding to rows
+            }
+            TagEnd::TableCell => {
+                // Cell ended
             }
             TagEnd::List(_) => {
                 if let BlockState::List { ordered, mut items, current } = std::mem::take(&mut self.state) {
@@ -389,8 +542,14 @@ impl BlockParser {
                 }
             }
             TagEnd::BlockQuote(_) => {
-                if let BlockState::Quote { inlines } = std::mem::take(&mut self.state) {
-                    self.blocks.push(CodeBlock::Blockquote(inlines));
+                if let BlockState::Quote { inlines, depth } = std::mem::take(&mut self.state) {
+                    if !inlines.is_empty() {
+                        self.blocks.push(CodeBlock::Blockquote(inlines, depth));
+                    }
+                    // If there are outer quote levels on the stack, pop back to the parent
+                    if let Some((outer_depth, outer_inlines)) = self.quotes_stack.pop() {
+                        self.state = BlockState::Quote { inlines: outer_inlines, depth: outer_depth };
+                    }
                 }
                 self.content_buf.clear();
                 self.inline_buf.clear();

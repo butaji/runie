@@ -53,6 +53,12 @@ pub const GLYPH_SPINNER: char = '⠋';
 pub const INDICATOR_COLLAPSED: &str = " [+]";
 pub const INDICATOR_ERROR: &str = " [✗]";
 
+// Accent rail glyph (grok parity — U+2503 BOX DRAWINGS LIGHT VERTICAL)
+pub const RAIL_GLYPH: char = '┃';
+
+// Rail column width in cells (always 1, regardless of the glyph's unicode width).
+pub const RAIL_WIDTH: usize = 1;
+
 // Box drawing glyphs
 pub const BOX_HORIZONTAL: char = '─'; // horizontal line
 pub const BOX_VERTICAL: char = '│'; // vertical line

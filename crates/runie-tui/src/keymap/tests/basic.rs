@@ -293,13 +293,16 @@ fn ctrl_j_converts_to_newline() {
 }
 
 #[test]
-fn ctrl_j_as_lf_converts_to_newline() {
+fn ctrl_j_as_lf_converts_to_submit() {
+    // In a PTY (test harness, tmux), Enter sends '\r'. crossterm parses bare
+    // '\r' as KeyCode::Char('\n') with no modifiers. This must be Submit so the
+    // command palette closes and typed commands are dispatched.
     let key = KeyEvent::new(KeyCode::Char('\n'), KeyModifiers::empty());
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::Newline)),
-        "LF char should map to Newline, got {:?}",
+        matches!(result, Some(runie_core::Event::Submit)),
+        "Bare LF char (Enter from PTY) should map to Submit, got {:?}",
         result
     );
 }

@@ -17,8 +17,9 @@ pub fn theme_picker(themes: Vec<(String, Event)>) -> PanelStack {
 /// Build an @-file picker panel.
 pub fn file_picker(entries: Vec<(String, bool, Event)>) -> PanelStack {
     // (name, is_dir, event_to_emit)
+    let is_empty = entries.is_empty();
     let mut panel = Panel::new("at-files", " Files ").with_filter();
-    if entries.is_empty() {
+    if is_empty {
         panel = panel.header("No files found");
     } else {
         panel = panel.header(format!("{} files", entries.len()));
@@ -26,6 +27,12 @@ pub fn file_picker(entries: Vec<(String, bool, Event)>) -> PanelStack {
     for (name, is_dir, evt) in entries {
         let label = if is_dir { format!("{}/", name) } else { name };
         panel = panel.item(label, ItemAction::Emit(evt));
+    }
+    // Skip the header (item 0) and select the first file item instead.
+    // The default selected=0 points at the non-navigable header, so Enter
+    // would return Consumed and keep the dialog open indefinitely.
+    if !is_empty {
+        panel.selected = 1;
     }
     PanelStack::new(panel)
 }

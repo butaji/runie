@@ -19,7 +19,8 @@ use runie_core::markdown::{extract_code_blocks, inlines_to_text, CodeBlock};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    color_agent_text, color_user_text, style_agent, style_feed_timestamp, style_user, GLYPH_INDENT, GLYPH_USER,
+    color_agent_text, color_h1, color_h2, color_h3, color_h4, color_h5, color_h6, color_user_text, style_agent,
+    style_feed_timestamp, style_user, GLYPH_INDENT, GLYPH_USER,
 };
 
 mod code;
@@ -31,16 +32,16 @@ pub(crate) use wrap::wrap_styled_spans;
 
 pub use support::{
     render_ansi_styled, render_anthropic_thinking, render_context_group, render_data_part, render_diff_output,
-    render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row, render_thinking,
-    render_thought_marker, render_thought_summary, render_tool_confirmation, render_tool_done, render_tool_running,
-    render_tool_summary, render_turn_complete, render_web_search_call,
+    render_horizontal_rule, render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row,
+    render_thinking, render_thought_marker, render_thought_summary, render_tool_confirmation, render_tool_done,
+    render_tool_running, render_tool_summary, render_turn_complete, render_web_search_call,
 };
 
 fn span_width(spans: &[Span<'_>]) -> u16 {
     spans.iter().map(|s| str_width(&s.content)).sum()
 }
 
-pub fn render_user_message(content: &str, timestamp: f64, content_width: u16) -> Vec<Line<'static>> {
+pub fn render_user_message(content: &str, timestamp: f64, expanded: bool, content_width: u16) -> Vec<Line<'static>> {
     let ts_str = format_timestamp(timestamp);
     let base_style = style_user();
     let inner_width = content_width;
@@ -55,6 +56,9 @@ pub fn render_user_message(content: &str, timestamp: f64, content_width: u16) ->
         .max(10); // Ensure at least 10 chars for content
     let rest_w = inner_width.saturating_sub(indent_width);
 
+    // Fold ellipsis span appended to line 3 when collapsed (grok parity).
+    let ellipsis_span = Some(Span::styled(" …", base_style));
+
     // The user "card" is content plus one blank padding line above and below.
     // Those blank rows render with the bg.user background (applied in the feed
     // renderer to every UserMessage row), forming the card's top/bottom margin.
@@ -64,7 +68,8 @@ pub fn render_user_message(content: &str, timestamp: f64, content_width: u16) ->
         content,
         first_w,
         rest_w,
-        &UserLineParams { inner_width, ts_str, ts_width, base_style },
+        &UserLineParams { inner_width, ts_str, ts_width, base_style, ellipsis_span },
+        expanded,
     ));
     lines.push(Line::from(""));
     lines
@@ -76,9 +81,11 @@ struct UserLineParams {
     ts_str: String,
     ts_width: u16,
     base_style: Style,
+    /// Fold ellipsis span appended to line 3 when collapsed.
+    ellipsis_span: Option<Span<'static>>,
 }
 
-fn build_user_body(content: &str, first_w: u16, rest_w: u16, params: &UserLineParams) -> Vec<Line<'static>> {
+fn build_user_body(content: &str, first_w: u16, rest_w: u16, params: &UserLineParams, expanded: bool) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling (applies inline styles + base color).
     // tui_markdown drops inline HTML entirely, so "<think>"-like user text
     // would vanish; escape '<' to keep user content verbatim (pulldown
@@ -87,12 +94,27 @@ fn build_user_body(content: &str, first_w: u16, rest_w: u16, params: &UserLinePa
     let spans = apply_color_to_inlines(&escaped, color_user_text());
     let rows = wrap_styled_spans(&spans, first_w, rest_w);
 
-    rows.iter()
+    // Fold: when collapsed and rows exceed 3 visual lines, show only first 3 + ellipsis.
+    // Grok parity: >3 lines fold to 3 lines + ` …`.
+    let visible_rows = if !expanded && rows.len() > 3 {
+        &rows[..3]
+    } else {
+        &rows[..]
+    };
+
+    visible_rows
+        .iter()
         .enumerate()
         .map(|(i, row)| {
             let with_ts = i == 0;
             let prefix = if with_ts { GLYPH_USER } else { GLYPH_INDENT };
-            build_user_line_from_spans(row, prefix, with_ts, params)
+            // Append ellipsis on line 3 when folded.
+            let extra = if !expanded && rows.len() > 3 && i == 2 {
+                params.ellipsis_span.clone()
+            } else {
+                None
+            };
+            build_user_line_from_spans(row, prefix, with_ts, params, extra)
         })
         .collect()
 }
@@ -102,10 +124,16 @@ fn build_user_line_from_spans(
     prefix: &'static str,
     with_ts: bool,
     params: &UserLineParams,
+    extra: Option<Span<'static>>,
 ) -> Line<'static> {
     let p_width = str_width(prefix);
     let mut line_spans = vec![Span::styled(prefix, params.base_style)];
     line_spans.extend(md_to_spans(spans));
+
+    // Append fold ellipsis when present.
+    if let Some(ellipsis) = extra {
+        line_spans.push(ellipsis);
+    }
 
     if with_ts {
         let text_width = span_width(&line_spans[1..]);
@@ -192,6 +220,29 @@ fn render_agent_block(
             is_first,
             lines,
         ),
+        CodeBlock::Heading { level, inlines, .. } => render_agent_heading_block(
+            *level,
+            inlines,
+            ts_str,
+            inner_width,
+            first_w,
+            rest_w,
+            is_first,
+            lines,
+        ),
+        CodeBlock::HorizontalRule => {
+            lines.extend(support::render_horizontal_rule(inner_width, ts_str, is_first));
+            is_first
+        }
+        CodeBlock::Table { headers, rows, alignments } => {
+            lines.extend(support::render_markdown_table(
+                headers,
+                rows,
+                alignments,
+                0.0,
+            ));
+            false
+        }
         CodeBlock::Code { lang, content } => {
             render_agent_code_block(lang, content, ts_str, inner_width, is_first, lines)
         }
@@ -205,11 +256,12 @@ fn render_agent_block(
             is_first,
             lines,
         ),
-        CodeBlock::Blockquote(inlines) => {
+        CodeBlock::Blockquote(inlines, depth) => {
             let text = inlines_to_text(inlines);
             lines.extend(support::render_blockquote_from_spans(
                 &text,
                 color_agent_text(),
+                *depth,
             ));
             false
         }
@@ -245,6 +297,79 @@ fn render_agent_text_block(
         ));
     }
     false
+}
+
+fn render_agent_heading_block(
+    level: u8,
+    inlines: &[runie_core::markdown::MdInline],
+    ts_str: &str,
+    inner_width: u16,
+    first_w: u16,
+    _rest_w: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    if inlines.is_empty() {
+        return is_first;
+    }
+    // Convert MdInline[] to plain text, prefix with markdown heading markers so
+    // tui_markdown can detect and style them.
+    let prefix = "#".repeat(level as usize);
+    let text = format!("{} {}", prefix, inlines_to_text(inlines));
+
+    // Get heading color based on level.
+    let heading_color = match level {
+        1 => color_h1(),
+        2 => color_h2(),
+        3 => color_h3(),
+        4 => color_h4(),
+        5 => color_h5(),
+        6 => color_h6(),
+        _ => color_agent_text(),
+    };
+
+    // Style with bold + heading color.
+    let spans = apply_color_to_inlines(&text, heading_color);
+    let ts_width = str_width(ts_str) + 1;
+    let rows = wrap_styled_spans(&spans, first_w, inner_width);
+
+    for (i, row) in rows.iter().enumerate() {
+        let with_ts = is_first && i == 0;
+        lines.push(build_agent_line_from_spans_with_bold(
+            row,
+            inner_width,
+            ts_str,
+            ts_width,
+            with_ts,
+        ));
+    }
+    false
+}
+
+/// Build an agent line from spans with bold applied (for headings).
+fn build_agent_line_from_spans_with_bold(
+    spans: &[MdSpan],
+    content_width: u16,
+    ts_str: &str,
+    ts_width: u16,
+    with_ts: bool,
+) -> Line<'static> {
+    let mut line_spans: Vec<Span<'_>> = md_to_spans(spans)
+        .into_iter()
+        .map(|s| Span::styled(s.content, s.style.add_modifier(ratatui::style::Modifier::BOLD)))
+        .collect();
+
+    if with_ts && content_width > 0 {
+        let text_width = span_width(&line_spans);
+        let padding = content_width
+            .saturating_sub(text_width)
+            .saturating_sub(ts_width);
+        if padding > 0 {
+            line_spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
+        line_spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
+    }
+    Line::from(line_spans)
 }
 
 fn build_agent_line_from_spans(

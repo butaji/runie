@@ -3,7 +3,7 @@ use runie_core::view::elements::{DiffType, Element, ImageProtocol, WebSearchResu
 #[test]
 fn user_message_builder() {
     let e = Element::user("hello").at(1.0);
-    assert!(matches!(e, Element::UserMessage { content, timestamp } if content == "hello" && timestamp == 1.0));
+    assert!(matches!(e, Element::UserMessage { content, timestamp, expanded: _ } if content == "hello" && timestamp == 1.0));
 }
 
 #[test]

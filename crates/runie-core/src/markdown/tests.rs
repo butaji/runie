@@ -38,7 +38,7 @@ fn parse_markdown_handles_blockquote() {
     assert_eq!(blocks.len(), 1);
     // Count text inlines to verify blockquote content
     assert!(
-        matches!(&blocks[0], CodeBlock::Blockquote(inlines) if inlines.iter().any(|i| matches!(i, MdInline::Text(_))))
+        matches!(&blocks[0], CodeBlock::Blockquote(inlines, _) if inlines.iter().any(|i| matches!(i, MdInline::Text(_))))
     );
 }
 
@@ -140,7 +140,7 @@ fn block_parser_multiple_blocks() {
     assert!(matches!(&blocks[0], CodeBlock::Text { content, .. } if content == "intro"));
     assert!(matches!(&blocks[1], CodeBlock::Code { lang, .. } if lang == "python"));
     assert!(matches!(&blocks[2], CodeBlock::List { .. }));
-    assert!(matches!(&blocks[3], CodeBlock::Blockquote(_)));
+    assert!(matches!(&blocks[3], CodeBlock::Blockquote(_, _)));
 }
 
 /// heal_unclosed_inline — unclosed `**` is closed correctly.

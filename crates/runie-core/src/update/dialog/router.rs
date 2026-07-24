@@ -47,13 +47,18 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     let stack = dialog
         .panel_stack_mut()
         .expect("non-welcome dialog has panel stack");
-    let result = update_panel_stack(state, event, stack);
-    restore_or_pop_dialog(state, dialog, result, is_palette_activation);
+    let close_result = update_panel_stack(state, event, stack);
+
+    // Restore the file picker backup when DialogBack (Esc) closes the picker.
+    // Must happen before restore_or_pop_dialog potentially re-sets open_dialog,
+    // so the backup is always restored regardless of close vs. back-stack restore.
+    if is_dialog_back && matches!(close_result, PanelUpdateResult::Closed) {
+        restore_file_picker_backup(state);
+    }
+
+    restore_or_pop_dialog(state, dialog, close_result, is_palette_activation);
 
     if is_dialog_back && state.open_dialog().is_none() {
-        // Esc (DialogBack) closing the file picker must restore the typed
-        // prefix from the picker backup, exactly like Abort does.
-        restore_file_picker_backup(state);
         // Closing a hosted permission dialog without resolving it (e.g. pressing
         // Escape) must cancel the underlying request so the agent is not left
         // blocked indefinitely.

@@ -277,6 +277,17 @@ impl AppState {
                                 return Some(true);
                             }
                         }
+                        // User messages (UserInput): Enter toggles fold/expand (grok parity).
+                        // User messages start expanded; entering their index in
+                        // expanded_posts marks them as collapsed (3 lines + ` …`).
+                        if post.kind == crate::view::elements::PostKind::UserInput {
+                            let set = &mut self.view_mut().expanded_posts;
+                            if !set.remove(&sel) {
+                                set.insert(sel);
+                            }
+                            self.messages_changed();
+                            return Some(true);
+                        }
                         // Grok-style: Enter on any feed element opens the detail overlay.
                         // Skip elements that already have their own dedicated overlay
                         // (SubagentRow above) and skip non-visual kinds (Thinking).
@@ -298,6 +309,29 @@ impl AppState {
                         return Some(true);
                     }
                 }
+                self.update(crate::Event::ToggleExpand);
+                Some(true)
+            }
+            // ToggleExpand (ctrl+o) in vim nav mode: when a user message post is
+            // selected, toggle its individual fold/expand state via expanded_posts.
+            // User messages start folded by default; pressing ctrl+o expands them
+            // to show all lines (grok parity: per-item fold toggle).
+            crate::Event::ToggleExpand => {
+                tracing::debug!("ToggleExpand in vim_nav_mode={}", self.view().vim_nav_mode);
+                if let Some(sel) = self.view().selected_post {
+                    let snap = self.snapshot();
+                    if let Some(post) = snap.posts.get(sel) {
+                        if post.kind == crate::view::elements::PostKind::UserInput {
+                            let set = &mut self.view_mut().expanded_posts;
+                            if !set.remove(&sel) {
+                                set.insert(sel);
+                            }
+                            self.messages_changed();
+                            return Some(true);
+                        }
+                    }
+                }
+                // Default: toggle global expand/collapse (thoughts, tools).
                 self.update(crate::Event::ToggleExpand);
                 Some(true)
             }

@@ -167,3 +167,98 @@ fn palette_args_only_from_exact_command_prefix() {
     assert_eq!(activation::extract_palette_args("theme", "the nord"), "");
     assert_eq!(activation::extract_palette_args("theme", ""), "");
 }
+
+/// Regression: pressing Esc (DialogBack) on the @-file picker must close the dialog
+/// AND restore the typed prefix from the file_picker_backup.
+#[test]
+fn dialog_back_closes_file_picker_and_restores_prefix() {
+    use crate::dialog::builders::file_picker;
+    use crate::update::dialog::update_dialog;
+
+    let mut state = AppState::default();
+    // Simulate typing "read @" before opening the picker
+    state.input.input = "read @".to_string();
+    state.input.cursor_pos = 6;
+
+    // Open the file picker — this saves the backup
+    let entries = vec![
+        ("foo.rs".into(), false, crate::Event::InsertAtRef("foo.rs".into())),
+        ("bar.rs".into(), false, crate::Event::InsertAtRef("bar.rs".into())),
+    ];
+    let stack = file_picker(entries);
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
+
+    assert!(
+        state.open_dialog().is_some(),
+        "file picker should be open"
+    );
+    assert!(
+        state.input.file_picker_backup.is_some(),
+        "picker backup should be set"
+    );
+
+    // Press Esc (DialogBack) — should close the picker
+    update_dialog(&mut state, crate::Event::DialogBack);
+
+    assert!(
+        state.open_dialog().is_none(),
+        "file picker should be closed after DialogBack"
+    );
+    // The typed prefix should be restored
+    assert_eq!(
+        state.input.input, "read @",
+        "input should be restored to the typed prefix"
+    );
+}
+
+/// DialogBack on a file picker selected on the header (non-navigable) should
+/// still close the dialog (not return Consumed and keep it open).
+#[test]
+fn dialog_back_closes_even_without_selection() {
+    use crate::dialog::builders::file_picker;
+    use crate::update::dialog::update_dialog;
+
+    let mut state = AppState::default();
+    state.input.input = "read @".to_string();
+
+    // File picker with zero entries — the header is the only item
+    let stack = file_picker(vec![]);
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
+
+    assert!(state.open_dialog().is_some());
+    update_dialog(&mut state, crate::Event::DialogBack);
+    assert!(
+        state.open_dialog().is_none(),
+        "file picker should close on DialogBack even with no items"
+    );
+    assert_eq!(state.input.input, "read @");
+}
+
+/// Enter on a file picker item should close the dialog and insert the path.
+#[test]
+fn enter_on_file_picker_inserts_path() {
+    use crate::dialog::builders::file_picker;
+    use crate::update::dialog::update_dialog;
+
+    let mut state = AppState::default();
+    state.input.input = "read @".to_string();
+    state.input.cursor_pos = 6;
+
+    let entries = vec![("foo.rs".into(), false, crate::Event::InsertAtRef("foo.rs".into()))];
+    let stack = file_picker(entries);
+    *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
+
+    assert!(state.open_dialog().is_some());
+
+    // Enter — should close the picker and insert the path
+    update_dialog(&mut state, crate::Event::Submit);
+
+    assert!(
+        state.open_dialog().is_none(),
+        "file picker should close on Enter"
+    );
+    assert!(
+        state.input.input.contains("foo.rs"),
+        "inserted path should appear in input"
+    );
+}

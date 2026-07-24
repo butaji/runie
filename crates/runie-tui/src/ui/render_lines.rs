@@ -34,7 +34,7 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
-        UserMessage { content, timestamp } => msg::render_user_message(content, *timestamp, content_width),
+        UserMessage { content, timestamp, expanded } => msg::render_user_message(content, *timestamp, *expanded, content_width),
         AgentMessage { content, timestamp, .. } => msg::render_agent_message(content, *timestamp, content_width),
         Thinking { started, .. } => msg::render_thinking(*started),
         ThoughtSummary { content, duration_secs, .. } => msg::render_thought_summary(content, *duration_secs),

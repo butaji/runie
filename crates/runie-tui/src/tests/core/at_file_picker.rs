@@ -70,9 +70,8 @@ fn at_opens_file_picker_for_at_ref_suggestion() {
 fn tab_cycles_panel_selection_in_file_picker() {
     let mut state = AppState::default();
     inject_mock_file_entries(&mut state);
-
-    // Open file picker
-    state.update(Event::Input('@'));
+    // Picker is already open from inject_mock_file_entries — do NOT call
+    // Event::Input('@') here as that reopens and wipes the injected items.
 
     // Verify dialog is open
     assert!(state.open_dialog.is_some(), "File picker should be open");
@@ -93,9 +92,7 @@ fn tab_cycles_panel_selection_in_file_picker() {
 fn tab_wraps_around_panel_selection() {
     let mut state = AppState::default();
     inject_mock_file_entries(&mut state);
-
-    // Open file picker
-    state.update(Event::Input('@'));
+    // Picker is already open — do NOT call Event::Input('@') here.
 
     // Get panel to check number of items
     let items_count = get_panel_items_count(&state);
@@ -124,9 +121,7 @@ fn tab_wraps_around_panel_selection() {
 fn submit_inserts_selected_file() {
     let mut state = AppState::default();
     inject_mock_file_entries(&mut state);
-
-    // Open file picker
-    state.update(Event::Input('@'));
+    // Picker is already open — do NOT call Event::Input('@') here.
 
     // Navigate to a specific item if there are files
     let items_count = get_panel_items_count(&state);

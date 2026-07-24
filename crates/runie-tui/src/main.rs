@@ -18,6 +18,8 @@ use std::io;
 
 use runie_tui::bootstrap::{BackendType, TuiRuntime};
 
+use tokio::runtime::Builder;
+
 /// Runie TUI CLI arguments.
 #[derive(Parser, Debug)]
 #[command(name = "runie-tui", version)]
@@ -56,8 +58,7 @@ impl Drop for Cleanup {
     }
 }
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> io::Result<()> {
+fn main() -> io::Result<()> {
     // Install human-panic hook for crash reports.
     human_panic::setup_panic!();
 
@@ -84,10 +85,35 @@ async fn main() -> io::Result<()> {
 
     let _cleanup = Cleanup;
 
-    // Build and run the TUI runtime with production settings.
-    let runtime = TuiRuntime::builder()
+    // Build a multi-threaded tokio runtime manually so we can explicitly shut
+    // it down after the TUI exits.  Without this, the `#[tokio::main]` implicit
+    // runtime parks its worker threads indefinitely after `main()` returns, and
+    // the process hangs around for 15+ seconds (or forever on macOS) because the
+    // worker threads never release the process.
+    let rt = Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("failed to create tokio runtime");
+
+    // Build the TUI runtime with production settings.
+    let tui_runtime = TuiRuntime::builder()
         .backend(BackendType::Crossterm)
         .build();
 
-    runtime.run().await
+    // Run the TUI on the tokio runtime.  The `block_on` call returns once the
+    // TUI's `run()` future completes (i.e. when the user quits).
+    rt.block_on(async {
+        let _ = tui_runtime.run().await;
+    });
+
+    // Drop the tracing file guard so the non-blocking worker thread stops.
+    runie_core::tracing_init::shutdown();
+
+    // Explicitly shut down the tokio runtime's worker threads.  This is the key
+    // fix: without it the runtime parks its threads indefinitely after `main()`
+    // returns and the process stays alive for 15+ seconds.
+    rt.shutdown_background();
+
+    // Exit immediately — no further cleanup needed.
+    std::process::exit(0);
 }
