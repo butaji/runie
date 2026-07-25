@@ -170,7 +170,7 @@ impl MockScript {
                 let file_path = match std::env::var("RUNIE_MOCK_SCRIPT_FILE") {
                     Ok(p) => std::path::PathBuf::from(p),
                     Err(_) => {
-                        eprintln!("[MOCK_DEBUG] RUNIE_MOCK_SCRIPT and RUNIE_MOCK_SCRIPT_FILE not set");
+                        tracing::debug!("[MOCK_DEBUG] RUNIE_MOCK_SCRIPT and RUNIE_MOCK_SCRIPT_FILE not set");
                         return None;
                     }
                 };
@@ -196,15 +196,15 @@ impl MockScript {
         let turns: Vec<ScriptTurn> = match serde_json::from_str(&json) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("[MOCK_DEBUG] failed to parse JSON: {}", e);
+                tracing::debug!("[MOCK_DEBUG] failed to parse JSON: {}", e);
                 return None;
             }
         };
         if turns.is_empty() {
-            eprintln!("[MOCK_DEBUG] empty turns array");
+            tracing::debug!("[MOCK_DEBUG] empty turns array");
             return None;
         }
-        eprintln!("[MOCK_DEBUG] loaded {} turn(s) from env", turns.len());
+        tracing::debug!("[MOCK_DEBUG] loaded {} turn(s) from env", turns.len());
         Some(Self { turns, index: 0 })
     }
 
@@ -934,7 +934,7 @@ impl Provider for MockProvider {
             let mut guard = self.script.lock().unwrap();
             if let Some(ref mut script) = *guard {
                 if let Some(turn) = script.next() {
-                    eprintln!("[MOCK_DEBUG] serving scripted turn");
+                    tracing::debug!("[MOCK_DEBUG] serving scripted turn");
                     let _ = std::fs::write(
                         "/tmp/runie_mock_debug.txt",
                         format!(
@@ -945,7 +945,7 @@ impl Provider for MockProvider {
                     );
                     return script_turn_stream(turn, false);
                 } else {
-                    eprintln!("[MOCK_DEBUG] script exhausted");
+                    tracing::debug!("[MOCK_DEBUG] script exhausted");
                     let _ = std::fs::write("/tmp/runie_mock_debug.txt", "SCRIPT EXHAUSTED\n");
                 }
             } else {

@@ -272,9 +272,9 @@ impl BuiltProviderFactory {
         let fixture_list = std::env::var("RUNIE_REPLAY_FIXTURES").ok()?;
         // File marker so tests can verify replay provider was actually reached
         let _ = std::fs::write("/tmp/replay_reached.txt", format!("replay_reached fixture={:?}\n", fixture_list));
-        eprintln!("[REPLAY_DEBUG] try_build_replay_provider called: fixture_list={:?}", fixture_list);
+        tracing::debug!("[REPLAY_DEBUG] try_build_replay_provider called: fixture_list={:?}", fixture_list);
         if fixture_list.trim().is_empty() {
-            eprintln!("[REPLAY_DEBUG] fixture_list is empty, skipping replay");
+            tracing::debug!("[REPLAY_DEBUG] fixture_list is empty, skipping replay");
             return None;
         }
 
@@ -287,19 +287,19 @@ impl BuiltProviderFactory {
             }
             match std::fs::read_to_string(path) {
                 Ok(contents) => {
-                    eprintln!("[REPLAY_DEBUG] loaded fixture from {}: {} bytes, first_line={:?}",
+                    tracing::debug!("[REPLAY_DEBUG] loaded fixture from {}: {} bytes, first_line={:?}",
                         path, contents.len(), contents.lines().next());
                     fixtures.push(contents);
                 }
                 Err(e) => {
-                    eprintln!("[REPLAY_DEBUG] failed to read fixture {}: {}", path, e);
+                    tracing::debug!("[REPLAY_DEBUG] failed to read fixture {}: {}", path, e);
                     return None;
                 }
             }
         }
 
         if fixtures.is_empty() {
-            eprintln!("[REPLAY_DEBUG] no fixtures loaded, skipping replay");
+            tracing::debug!("[REPLAY_DEBUG] no fixtures loaded, skipping replay");
             return None;
         }
 
@@ -311,7 +311,7 @@ impl BuiltProviderFactory {
         };
 
         let replay = ReplayProvider::new(fixtures, protocol);
-        eprintln!("[REPLAY_DEBUG] REPLAY_PROVIDER_BUILT provider={} model={} protocol={:?}", provider, model, protocol);
+        tracing::debug!("[REPLAY_DEBUG] REPLAY_PROVIDER_BUILT provider={} model={} protocol={:?}", provider, model, protocol);
         tracing::debug!(provider, model, protocol = ?protocol, "using replay provider");
 
         // Use provided provider/model, or defaults for replay context.

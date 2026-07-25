@@ -123,7 +123,7 @@ pub fn build_provider(
     model: &str,
     config: Option<Arc<dyn ProviderConfig>>,
 ) -> Result<BuiltProvider, ProviderError> {
-    eprintln!(
+    tracing::debug!(
         "[MOCK_DEBUG] build_provider called key={} model={} is_mock_enabled={}",
         key, model, is_mock_enabled()
     );

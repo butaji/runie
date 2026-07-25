@@ -59,8 +59,9 @@ impl Drop for Cleanup {
 }
 
 fn main() -> io::Result<()> {
-    eprintln!("[MAIN_DEBUG] runie-tui main() started");
+    tracing::debug!("[MAIN_DEBUG] runie-tui main() started");
     // Install human-panic hook for crash reports.
+    human_panic::setup_panic!();
     human_panic::setup_panic!();
 
     // Install color-eyre for better error chains.
