@@ -207,7 +207,7 @@ fn glyph_indicator_constants_are_correct() {
 /// Verifies that scrollbar glyphs have correct values.
 #[test]
 fn glyph_scrollbar_constants_are_correct() {
-    assert_eq!(SCROLLBAR_TRACK, " ");
+    assert_eq!(SCROLLBAR_TRACK, "│", "scrollbar track should be visible vertical bar");
     assert_eq!(SCROLLBAR_THUMB, "▐");
 }
 

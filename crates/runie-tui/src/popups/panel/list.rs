@@ -80,6 +80,8 @@ fn render_item_list(
             scroll.total,
             scroll.offset as u16,
             scroll.area.height as usize,
+            true,   // is_following: popup scrollbar is always following
+            None,   // track_symbol: use default SCROLLBAR_TRACK
         );
     }
 }

@@ -274,7 +274,8 @@ fn render_input_scrollbar(f: &mut Frame, area: Rect, total: usize, scroll: usize
         width: 1,
         height: area.height.saturating_sub(2),
     };
-    super::render_scrollbar(f, sb_area, total, scroll as u16, height);
+    // Input scrollbar is always "following" (internal content scroll).
+    super::render_scrollbar(f, sb_area, total, scroll as u16, height, true, None);
 }
 
 /// Count the number of visual lines needed for the input.

@@ -48,7 +48,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
         nav::highlight_selected_post(f, snap, area, &row_to_element, offset);
     }
 
-    render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height);
+    render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height, snap.follow_mode);
 }
 
 /// Render lines with user message backgrounds applied to the lines.
@@ -165,12 +165,12 @@ fn is_user_related_row(snap: &Snapshot, elem_idx: usize) -> bool {
     )
 }
 
-fn render_scrollbar_if_needed(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {
+fn render_scrollbar_if_needed(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize, is_following: bool) {
     if total > height {
         let full_w = f.area().width;
         let scrollbar_area =
             Rect { x: (area.x + area.width).min(full_w.saturating_sub(1)), y: area.y, width: 1, height: area.height };
-        super::render_scrollbar(f, scrollbar_area, total, offset, height);
+        super::render_scrollbar(f, scrollbar_area, total, offset, height, is_following, None);
     }
 }
 

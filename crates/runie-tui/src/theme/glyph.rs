@@ -68,7 +68,7 @@ pub const BOX_BOTTOM_LEFT: &str = "└";
 pub const BOX_BOTTOM_RIGHT: &str = "┘";
 
 // Scrollbar glyphs
-pub const SCROLLBAR_TRACK: &str = " "; // invisible track
+pub const SCROLLBAR_TRACK: &str = "│"; // visible track (U+2502 BOX DRAWINGS LIGHT VERTICAL)
 pub const SCROLLBAR_THUMB: &str = "▐"; // right half-block — visible but not heavy
 
 // Panel headers
