@@ -212,11 +212,23 @@ pub fn render_tool_done(
         lines.push(Line::from(""));
         // Tool output panel: bg_dark background across all output rows to content width.
         let output_style = style_tool_output().bg(crate::theme::color_code_bg());
+        // Grok 2+…+3 truncation: show first 2 + … + last 3 for long outputs.
         if runie_core::diff::Diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
         } else {
-            for line in output.lines() {
-                lines.push(Line::from(line.to_owned()).style(output_style));
+            let output_lines: Vec<&str> = output.lines().collect();
+            if output_lines.len() > 5 {
+                for line in output_lines.iter().take(2) {
+                    lines.push(Line::from(line.to_string()).style(output_style));
+                }
+                lines.push(Line::from("  …").style(output_style));
+                for line in output_lines.iter().rev().take(3).rev() {
+                    lines.push(Line::from(line.to_string()).style(output_style));
+                }
+            } else {
+                for line in &output_lines {
+                    lines.push(Line::from(line.to_string()).style(output_style));
+                }
             }
         }
     }
