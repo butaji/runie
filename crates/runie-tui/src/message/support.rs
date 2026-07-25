@@ -208,11 +208,15 @@ pub fn render_tool_done(
     }
     let mut lines = vec![Line::from(spans)];
     if !output.is_empty() {
+        // Blank separator line before output panel (Grok parity).
+        lines.push(Line::from(""));
+        // Tool output panel: bg_dark background across all output rows to content width.
+        let output_style = style_tool_output().bg(crate::theme::color_code_bg());
         if runie_core::diff::Diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
         } else {
             for line in output.lines() {
-                lines.push(Line::from(line.to_owned()).style(style_tool_output()));
+                lines.push(Line::from(line.to_owned()).style(output_style));
             }
         }
     }
