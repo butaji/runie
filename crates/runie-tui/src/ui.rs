@@ -54,9 +54,13 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let constraints = snapshot_constraints(snap);
     let c = layout::vstack(area, &constraints);
 
+    // Render context header (c[0]).
+    crate::status_bar::render_context_header(f, snap, c[0]);
+
+    // Feed area is c[1]; split with tasks/goal pane when active.
     let message_area = if (snap.tasks_pane_visible || snap.goal_state.is_some()) && area.width > TASKS_PANE_WIDTH + 10 {
         let h = Layout::horizontal([Constraint::Min(10), Constraint::Length(TASKS_PANE_WIDTH)]);
-        let split = h.split(c[0]);
+        let split = h.split(c[1]);
         if snap.tasks_pane_visible {
             tasks_pane::render_tasks_pane(f, snap, split[1]);
         }
@@ -65,19 +69,19 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
         }
         split[0]
     } else {
-        c[0]
+        c[1]
     };
 
     messages::render_messages(f, snap, message_area);
     if snap.has_models {
-        // c[1] is the empty margin line — no rendering needed
-        crate::status_bar::render(f, snap, c[2]);
-        input::input(f, snap, c[3]);
+        // c[2] is the empty margin line — no rendering needed
+        crate::status_bar::render(f, snap, c[3]);
+        input::input(f, snap, c[4]);
     }
     if snap.has_models {
-        hints::hints(f, snap, c[5]);
-    } else if c.len() > 1 {
-        hints::hints(f, snap, c[1]);
+        hints::hints(f, snap, c[6]);
+    } else if c.len() > 2 {
+        hints::hints(f, snap, c[2]);
     }
     crate::popups::path_suggestions(f, snap);
     crate::popups::panel::panel_dialog(f, snap);
@@ -96,17 +100,19 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
         let input_lines = count_input_lines(&snap.input_display);
         let input_height = (input_lines + 2).min(10) as u16;
         vec![
-            Constraint::Min(3),
+            Constraint::Length(1), // context header (cwd + token count)
+            Constraint::Min(3),    // messages/feed
             Constraint::Length(1), // empty margin above status
             Constraint::Length(1), // status
-            Constraint::Length(input_height),
-            Constraint::Length(1),
+            Constraint::Length(input_height), // input
+            Constraint::Length(1), // margin
             Constraint::Length(1), // hints
         ]
     } else {
         vec![
+            Constraint::Length(1), // context header
             Constraint::Length(snap.last_visible_height),
-            Constraint::Length(2), // hints bar (fixed height, not expandable)
+            Constraint::Length(2), // hints bar
         ]
     }
 }

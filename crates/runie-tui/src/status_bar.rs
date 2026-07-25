@@ -17,9 +17,33 @@ use runie_core::labels::format_elapsed_secs;
 use runie_core::Snapshot;
 use unicode_width::UnicodeWidthStr;
 
-/// Render the status bar. The spinner comes from the snapshot (wall-clock
-/// driven in core), so it animates at a steady cadence regardless of render
-/// rate — the previous ThrobberState widget never advanced in production.
+/// Render the context header row (cwd left, token usage right).
+///
+/// Grok parity: top row above the feed showing current directory and context
+/// window usage. Updates live as context grows.
+/// Example: `/private/tmp …                              18K / 500K`
+pub fn render_context_header(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    if !snap.has_models {
+        return;
+    }
+    let usage = context_usage(snap);
+    let limit = usage.limit_k();
+    let used_k = format_k(usage.used);
+
+    // Left: cwd (truncated with … if needed)
+    let cwd = &snap.cwd_name;
+    let left = format!("{}", cwd);
+
+    // Right: token usage
+    let right = format!("{} / {}", used_k, limit);
+
+    let line = Line::from(vec![
+        Span::styled(left, style_timestamp()),
+        Span::raw(" "),
+        Span::styled(right, style_timestamp()),
+    ]);
+    f.render_widget(Paragraph::new(line).style(style_timestamp()), area);
+}
 pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     if !snap.has_models {
         return;
