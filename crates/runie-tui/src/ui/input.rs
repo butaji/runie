@@ -190,7 +190,7 @@ fn build_line_with_cursor_owned(
     let boundary = content.floor_char_boundary(col);
     let before = &content[..boundary];
     let (at_cursor, after) = if boundary < content.len() {
-        let c = content[boundary..].chars().next().unwrap();
+        let c = content[boundary..].chars().next().unwrap_or(' ');
         let char_len = c.len_utf8();
         (c.to_string(), content[boundary + char_len..].to_string())
     } else {
@@ -218,7 +218,7 @@ fn build_line_with_cursor_and_ghost_owned(
     let boundary = content.floor_char_boundary(cursor_pos);
     let before = &content[..boundary];
     let (at_cursor, after) = if boundary < content.len() {
-        let c = content[boundary..].chars().next().unwrap();
+        let c = content[boundary..].chars().next().unwrap_or(' ');
         let char_len = c.len_utf8();
         (c.to_string(), content[boundary + char_len..].to_string())
     } else {
