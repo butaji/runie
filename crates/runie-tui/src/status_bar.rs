@@ -23,7 +23,7 @@ use unicode_width::UnicodeWidthStr;
 /// window usage. Updates live as context grows.
 /// Example: `/private/tmp …                              18K / 500K`
 pub fn render_context_header(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    if !snap.has_models {
+    if !snap.has_models || area.width < 10 || area.height == 0 {
         return;
     }
     let usage = context_usage(snap);
