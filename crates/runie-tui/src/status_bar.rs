@@ -312,25 +312,18 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
     let limit = usage.limit_k();
 
     if snap.turn_active {
-        let speed = if snap.speed_tps >= 1.0 {
-            format!("{:.0}", snap.speed_tps)
-        } else if snap.speed_tps > 0.0 {
-            format!("{:.1}", snap.speed_tps)
-        } else {
-            "-".to_owned()
+        // Grok-style turn status: M:SS ⇣Nk [stop]
+        let timer = match snap.turn_elapsed_secs {
+            Some(secs) => {
+                let total_secs = secs as u64;
+                let mins = total_secs / 60;
+                let secs = total_secs % 60;
+                format!("{}:{:02}", mins, secs)
+            }
+            None => "0:00".to_owned(),
         };
-        // Use animated display values for smooth transitions
-        let tokens_in_display = snap.tokens_in_display;
-        let tokens_out_display = snap.tokens_out_display;
-        format!(
-            "↑{} ↓{} {}/s {}%/{} {}",
-            format_k_animated(tokens_in_display),
-            format_k_animated(tokens_out_display),
-            speed,
-            usage.percent,
-            limit,
-            piece
-        )
+        let tokens_out_k = format_k_animated(snap.tokens_out_display);
+        format!("{} ⇣{} [stop]", timer, tokens_out_k)
     } else {
         let used_k = format_k(usage.used);
         format!("{}/{} {}% {}", used_k, limit, usage.percent, piece)
