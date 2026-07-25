@@ -52,12 +52,19 @@ pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
     .style(style_thinking())]
 }
 
+/// Number of thought body lines to show in truncated (default) mode.
+const THOUGHT_TRUNCATED_LINES: usize = 3;
+
+/// Ellipsis line shown between header and last N truncated lines.
+const ELLIPSIS_LINE: &str = "  …";
+
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
     let style = style_thought();
     let first_line = content.lines().next().unwrap_or(content);
     // Grok-style summary: `◆ ` + bold "Thought" + plain " for Xs", all dim.
-    // No [+] affordance — expandability is advertised in the hint bar.
-    match first_line.strip_prefix("◆ ") {
+    // Truncated default: if body lines > THOUGHT_TRUNCATED_LINES, show
+    // header + `…` + last THOUGHT_TRUNCATED_LINES lines.
+    let header = match first_line.strip_prefix("◆ ") {
         Some(rest) => match rest.split_once(' ') {
             Some((word, tail)) => vec![Line::from(vec![
                 Span::styled(GLYPH_AGENT, style),
@@ -70,7 +77,38 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
             ])],
         },
         None => vec![Line::from(first_line.to_owned()).style(style)],
+    };
+
+    // Collect body lines (everything after the first line).
+    let body_lines: Vec<&str> = content.lines().skip(1).collect();
+    if body_lines.is_empty() {
+        return header;
     }
+
+    // Truncated default mode: show `…` + last THOUGHT_TRUNCATED_LINES body lines.
+    let mut lines = header;
+    if body_lines.len() > THOUGHT_TRUNCATED_LINES {
+        lines.push(Line::from(ELLIPSIS_LINE).style(style));
+        for line in body_lines.iter().rev().take(THOUGHT_TRUNCATED_LINES).rev() {
+            let styled = if line.is_empty() {
+                Line::from("").style(style)
+            } else {
+                Line::from(format!("  {line}")).style(style)
+            };
+            lines.push(styled);
+        }
+    } else {
+        // Fewer than threshold — show all body lines.
+        for line in &body_lines {
+            let styled = if line.is_empty() {
+                Line::from("").style(style)
+            } else {
+                Line::from(format!("  {line}")).style(style)
+            };
+            lines.push(styled);
+        }
+    }
+    lines
 }
 
 /// Animation speed for running blocks (radians per tick).

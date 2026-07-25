@@ -255,8 +255,8 @@ fn thinking_line_matches_grok_waiting_row() {
         "thinking line must carry a braille spinner frame, got: {line}"
     );
     assert!(
-        line.contains("Waiting for response…"),
-        "thinking line must use grok wording, got: {line}"
+        line.contains("Thinking…"),
+        "thinking line must use grok wording 'Thinking…', got: {line}"
     );
     assert!(
         line.contains("0.4s"),

@@ -123,6 +123,10 @@ pub fn build_provider(
     model: &str,
     config: Option<Arc<dyn ProviderConfig>>,
 ) -> Result<BuiltProvider, ProviderError> {
+    eprintln!(
+        "[MOCK_DEBUG] build_provider called key={} model={} is_mock_enabled={}",
+        key, model, is_mock_enabled()
+    );
     #[cfg(feature = "mock")]
     {
         if key == "mock" && is_mock_enabled() {
@@ -182,6 +186,25 @@ pub fn build_provider(
 #[cfg(feature = "mock")]
 fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     use crate::mock::MockProviderBuilder;
+    let debug_path = std::env::var("RUNIE_TEST_DATA_DIR")
+        .map(|d| std::path::PathBuf::from(d).join("mock_provider_debug.txt"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/mock_provider_debug.txt"));
+    let _ = std::fs::write(&debug_path, format!(
+        "key={} model={} mock={} script={} script_file={}\n",
+        key, model,
+        std::env::var("RUNIE_MOCK").unwrap_or_default(),
+        std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
+        std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
+    ));
+    eprintln!(
+        "[MOCK_DEBUG] build_mock_provider wrote debug to {}",
+        debug_path.display()
+    );
+    // Print to stdout so the PTY reader captures it.
+    println!(
+        "[MOCK_STDOUT] build_mock_provider key={} model={}",
+        key, model
+    );
 
     let base = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {
         MockProviderBuilder::new().with_delay(MOCK_DELAY_MIN_MS, MOCK_DELAY_MAX_MS)

@@ -59,6 +59,7 @@ impl Drop for Cleanup {
 }
 
 fn main() -> io::Result<()> {
+    eprintln!("[MAIN_DEBUG] runie-tui main() started");
     // Install human-panic hook for crash reports.
     human_panic::setup_panic!();
 
@@ -76,7 +77,15 @@ fn main() -> io::Result<()> {
     }
 
     let cli = Cli::parse();
+    eprintln!("[MAIN_MARKER] runie-tui binary PID={} binary_v2", std::process::id());
     enable_mock_if_requested(cli.mock, cli.mock_onboarding, cli.mock_model.as_deref());
+    eprintln!(
+        "[MAIN_DEBUG] mock={} mock_onboarding={} RUNIE_MOCK={} is_mock_enabled={}",
+        cli.mock,
+        cli.mock_onboarding,
+        std::env::var("RUNIE_MOCK").unwrap_or_default(),
+        runie_core::provider::is_mock_enabled()
+    );
     if cli.dry_run || cli.preview {
         let report = runie_core::run_dry_run(&runie_core::Config::load(None));
         println!("{report}");
