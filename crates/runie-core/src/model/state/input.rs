@@ -111,8 +111,9 @@ impl InputState {
     }
 
     /// Insert pasted text at the cursor: CRLF/CR normalize to LF, tabs to 4
-    /// spaces. Pasting more than 3 lines records a `[Pasted: N lines]` chip
-    /// (grok parity) — the full text stays in the buffer.
+    /// spaces. Pasting more than 3 lines records a chip (grok parity) —
+    /// either `[Pasted: N lines]` for <10KB, or `[Pasted: 12 KB]` / `[Pasted: 1.0 MB]`
+    /// for larger pastes. The full text stays in the buffer.
     pub fn insert_paste(&mut self, text: &str) {
         let clean = text
             .replace("\r\n", "\n")
@@ -128,13 +129,32 @@ impl InputState {
         self.cursor_pos += clean.len();
         let n_lines = clean.lines().count();
         if n_lines > 3 {
+            let byte_len = clean.len();
+            let label = if byte_len > 10_000 {
+                format!("[Pasted: {}]", Self::format_bytes(byte_len))
+            } else {
+                format!("[Pasted: {} lines]", n_lines)
+            };
             self.chips.push(InputChip {
                 start,
                 end: start + clean.len(),
-                label: Some(format!("[Pasted: {} lines]", n_lines)),
+                label: Some(label),
             });
         }
         self.redo_stack.clear();
+    }
+
+    /// Format byte count in human-readable form: 12 KB, 1.0 MB, etc.
+    fn format_bytes(bytes: usize) -> String {
+        const KB: usize = 1024;
+        const MB: usize = KB * 1024;
+        if bytes >= MB {
+            let mb = bytes as f64 / MB as f64;
+            if mb >= 10.0 { format!("{:.0} MB", mb) } else { format!("{:.1} MB", mb) }
+        } else {
+            let kb = bytes as f64 / KB as f64;
+            if kb >= 10.0 { format!("{:.0} KB", kb) } else { format!("{:.1} KB", kb) }
+        }
     }
 
     /// Adjust chip spans after replacing `[start, end)` with `new_len` bytes.
