@@ -154,7 +154,7 @@ fn register_input_styles(theme: &mut opaline::Theme) {
     theme.register_default_style("runie.hint", opaline::OpalineStyle::fg(dim));
     theme.register_default_style(
         "runie.hint.key",
-        opaline::OpalineStyle::fg(theme.color("text.muted")),
+        opaline::OpalineStyle::fg(theme.color("text.muted")).bold(),
     );
 }
 
