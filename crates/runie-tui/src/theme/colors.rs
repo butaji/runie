@@ -53,6 +53,9 @@ pub fn color_dim() -> Color {
 pub fn color_border() -> Color {
     theme_color("border.unfocused")
 }
+pub fn color_border_focused() -> Color {
+    theme_color("border.focused")
+}
 pub fn color_code() -> Color {
     theme_color("code.function")
 }

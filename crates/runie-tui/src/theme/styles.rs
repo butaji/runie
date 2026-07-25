@@ -235,6 +235,9 @@ pub fn style_status_active() -> Style {
 pub fn style_border() -> Style {
     style_fn("runie.border")
 }
+pub fn style_border_focused() -> Style {
+    Style::default().fg(crate::theme::color_border_focused())
+}
 pub fn style_border_flash() -> Style {
     style_fn("runie.border.flash")
 }
@@ -312,7 +315,15 @@ pub fn style_chevron(token_held: bool) -> Style {
 
 /// Build the input panel block with rounded borders.
 /// Title is placed at the bottom-right.
-pub fn block_input(title: &str, flash: bool) -> Block<'_> {
+/// Uses a brighter border when focused (user typing), dim when unfocused.
+pub fn block_input(title: &str, flash: bool, focused: bool) -> Block<'_> {
+    let border_style = if flash {
+        style_border_flash()
+    } else if focused {
+        style_border_focused()
+    } else {
+        style_border()
+    };
     let border_style = if flash {
         style_border_flash()
     } else {

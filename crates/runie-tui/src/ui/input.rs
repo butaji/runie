@@ -36,7 +36,7 @@ pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let token_held = !snap.vim_nav_mode && snap.dialog.is_none();
 
     let title = format!(" {} ", snap.input_title);
-    let block = block_input(&title, snap.input_flash > 0);
+    let block = block_input(&title, snap.input_flash > 0, token_held);
 
     // Build the input content based on whether it's empty or has content.
     // `input_display` is the render view: labeled chips (e.g.
