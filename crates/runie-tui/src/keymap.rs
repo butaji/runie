@@ -63,7 +63,7 @@ fn convert_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) ->
     //
     // Shift+Enter sends raw '\n' (LF); crossterm parses it as Char('\n') + SHIFT
     // modifier → falls through to the SHIFT branch below → Newline (multi-line input).
-    if key.modifiers.is_empty() && key.code == KeyCode::Char('\n') {
+    if key.modifiers.is_empty() && is_enter_like(key.code) && key.code != KeyCode::F(3) && key.code != KeyCode::F(13) {
         return Some(CoreEvent::Submit);
     }
     if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
