@@ -136,12 +136,12 @@ impl RactorAgentActor {
         state: &mut AgentActorState,
         mut command: AgentCommand,
     ) {
-        eprintln!(
-            "[AGENT_DEBUG] run_turn: content={:?} provider={} model={}",
+        tracing::debug!(
+            "run_turn: content={:?} provider={} model={}",
             command.content, command.provider, command.model
         );
         if Self::reject_if_turn_in_flight(state, &command) {
-            eprintln!("[AGENT_DEBUG] turn rejected (in-flight)");
+            tracing::debug!("turn rejected (in-flight)");
             return;
         }
 

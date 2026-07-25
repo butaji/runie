@@ -176,14 +176,14 @@ impl MockScript {
                 };
                 match std::fs::read_to_string(&file_path) {
                     Ok(content) => {
-                        eprintln!(
+                        tracing::debug!(
                             "[MOCK_DEBUG] loaded script from RUNIE_MOCK_SCRIPT_FILE={}",
                             file_path.display()
                         );
                         content
                     }
                     Err(e) => {
-                        eprintln!(
+                        tracing::debug!(
                             "[MOCK_DEBUG] failed to read RUNIE_MOCK_SCRIPT_FILE={}: {}",
                             file_path.display(),
                             e
@@ -676,7 +676,7 @@ impl MockProviderBuilder {
     pub fn build(self) -> MockProvider {
         let script = MockScript::from_env();
         let was_loaded = script.is_some();
-        eprintln!(
+        tracing::debug!(
             "[MOCK_DEBUG] MockProvider::build() script={}",
             if script.is_some() { "Some" } else { "None" }
         );
@@ -949,7 +949,7 @@ impl Provider for MockProvider {
                     let _ = std::fs::write("/tmp/runie_mock_debug.txt", "SCRIPT EXHAUSTED\n");
                 }
             } else {
-                eprintln!(
+                tracing::debug!(
                     "[MOCK_DEBUG] no script loaded (RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={})",
                     std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
                     std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
@@ -1017,7 +1017,7 @@ impl Provider for MockProvider {
                 user_input, fixture,
             ),
         );
-        eprintln!(
+        tracing::debug!(
             "[MOCK_DEBUG] fallback path: user_input={:?} fixture={:?}",
             user_input, fixture
         );

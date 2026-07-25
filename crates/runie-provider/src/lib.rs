@@ -196,7 +196,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
         std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
         std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
     ));
-    eprintln!(
+    tracing::debug!(
         "[MOCK_DEBUG] build_mock_provider key={} model={}",
         key, model
     );
