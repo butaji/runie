@@ -324,11 +324,6 @@ pub fn block_input(title: &str, flash: bool, focused: bool) -> Block<'_> {
     } else {
         style_border()
     };
-    let border_style = if flash {
-        style_border_flash()
-    } else {
-        style_border()
-    };
     Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
