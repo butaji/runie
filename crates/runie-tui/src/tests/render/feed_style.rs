@@ -388,10 +388,10 @@ fn turn_completed_line_is_dim_with_trailing_period() {
     );
 
     let buf = draw(&mut state, 60, 20);
-    let row = find_row(&buf, "Turn completed").expect("turn completed row");
+    let row = find_row(&buf, "Worked for").expect("turn completed row");
     let text = row_text(&buf, row);
     assert!(
-        text.contains("Turn completed in 1.0s."),
+        text.contains("Worked for 1.0s."),
         "turn line must end with a period: {text:?}"
     );
     let x = find_col(&buf, row, "T").expect("turn text");

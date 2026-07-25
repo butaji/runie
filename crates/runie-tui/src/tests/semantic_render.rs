@@ -101,7 +101,7 @@ fn turn_complete_always_last_visible() {
     let out = render(&mut state, 40, 15);
 
     // TurnComplete must be visible and after everything else
-    let turn_pos = out.find("Turn completed");
+    let turn_pos = out.find("Worked for");
     let agent_pos = out.find("Done!");
     assert!(turn_pos.is_some(), "TurnComplete must be visible");
     assert!(agent_pos.is_some(), "Agent must be visible");

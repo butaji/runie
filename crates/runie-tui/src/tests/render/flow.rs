@@ -62,7 +62,7 @@ fn test_formatted_labels_short_names() {
     // The turn-completed line carries the turn duration (tool posts no
     // longer render their own duration).
     assert!(
-        content.contains("Turn completed in 5.1s."),
+        content.contains("Worked for 5.1s."),
         "Missing turn duration in: {}",
         content
     );

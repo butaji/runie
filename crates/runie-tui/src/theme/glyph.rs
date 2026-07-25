@@ -163,7 +163,7 @@ pub fn tool_summary_line(name: &str, duration_secs: f64) -> String {
 
 /// Turn complete line.
 pub fn turn_complete_line(duration_secs: f64) -> String {
-    format!("Turn completed in {:.1}s.", duration_secs)
+    format!("Worked for {:.1}s.", duration_secs)
 }
 
 /// Thought summary line.
