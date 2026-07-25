@@ -287,16 +287,37 @@ fn render_input_scrollbar(f: &mut Frame, area: Rect, total: usize, scroll: usize
     super::render_scrollbar(f, sb_area, total, scroll as u16, height, true, None);
 }
 
-/// Count the number of visual lines needed for the input.
+/// Count the number of visual lines needed for the input, considering
+/// soft-wrapping at `content_width` characters.
 pub fn count_input_lines(input: &str) -> usize {
+    count_input_lines_with_wrap(input, 80)
+}
+
+/// Count visual lines accounting for soft-wrapping.
+fn count_input_lines_with_wrap(input: &str, content_width: u16) -> usize {
     if input.is_empty() {
         return 1;
     }
-    let mut lines = input.lines().count().max(1);
+    let cw = content_width.max(10) as usize;
+
+    // Count visual lines: each logical line is split into ceil(len / cw) visual lines.
+    let total: usize = input
+        .lines()
+        .map(|line| {
+            let line_len = line.chars().count();
+            if line_len == 0 {
+                1 // Empty logical line = 1 visual line
+            } else {
+                (line_len + cw - 1) / cw
+            }
+        })
+        .sum();
+
+    // Trailing newline adds an extra visual line.
     if input.ends_with('\n') {
-        lines += 1;
+        return total + 1;
     }
-    lines
+    total.max(1)
 }
 
 #[cfg(test)]
