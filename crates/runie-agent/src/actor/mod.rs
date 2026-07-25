@@ -182,18 +182,18 @@ impl RactorAgentActor {
         } else {
             (command.provider.clone(), command.model.clone())
         };
-        eprintln!(
-            "[AGENT_DEBUG] build_provider_turn: key={} model={} is_mock={}",
+        tracing::debug!(
+            "build_provider_turn: key={} model={} is_mock={}",
             provider_key, model, runie_core::provider::is_mock_enabled()
         );
 
         let built = match provider.build(provider_key, model).await {
             Ok(b) => {
-                eprintln!("[AGENT_DEBUG] provider.build() succeeded");
+                tracing::debug!("provider.build() succeeded");
                 b
             }
             Err(e) => {
-                eprintln!("[AGENT_DEBUG] provider.build() failed: {}", e);
+                tracing::debug!("provider.build() failed: {}", e);
                 Self::emit_error_and_done(state, &command.id, format!("Provider error: {e}"));
                 return Err(());
             }

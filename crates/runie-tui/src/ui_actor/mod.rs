@@ -799,15 +799,17 @@ impl UiActor {
     /// this path only submits the chat input box.
     async fn handle_submit_event(&mut self) {
         let content = self.effective_input_content().trim().to_owned();
-        self.pending_submit = if content.is_empty() {
-            None
-        } else {
-            Some(content.clone())
-        };
-        // The submit flow clears the input box; the optimistic mirror resets too.
+        if content.is_empty() {
+            return;
+        }
+        // Save content for the InputChanged callback path (legacy).
+        self.pending_submit = Some(content.clone());
         self.pending_input_chars.clear();
-        self.send_input_msg(runie_core::actors::InputMsg::Submit { content })
+        self.send_input_msg(runie_core::actors::InputMsg::Submit { content: content.clone() })
             .await;
+        // Also dispatch directly — the InputChanged callback may never arrive
+        // in some actor configurations, so we don't rely on it exclusively.
+        self.dispatch_submit_content(content).await;
     }
 
     /// The full chat input content: the AppState projection plus characters

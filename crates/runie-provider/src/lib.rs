@@ -197,12 +197,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
         std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
     ));
     eprintln!(
-        "[MOCK_DEBUG] build_mock_provider wrote debug to {}",
-        debug_path.display()
-    );
-    // Print to stdout so the PTY reader captures it.
-    println!(
-        "[MOCK_STDOUT] build_mock_provider key={} model={}",
+        "[MOCK_DEBUG] build_mock_provider key={} model={}",
         key, model
     );
 

@@ -329,11 +329,10 @@ impl BuiltProviderFactory {
 #[async_trait]
 impl ProviderFactory for BuiltProviderFactory {
     fn build(&self, provider: &str, model: &str, config: &Config) -> Result<BuiltProvider, ProviderError> {
-        eprintln!(
-            "[MOCK_DEBUG] BuiltProviderFactory::build() called: provider={} model={} is_mock_enabled={}",
+        tracing::debug!(
+            "BuiltProviderFactory::build() called: provider={} model={} is_mock_enabled={}",
             provider, model, is_mock_enabled()
         );
-        println!("[MOCK_STDOUT] BuiltProviderFactory::build() provider={} model={}", provider, model);
         // Check for replay mode first.
         #[cfg(feature = "replay")]
         if let Some(replay_provider) = Self::try_build_replay_provider(provider, model) {
