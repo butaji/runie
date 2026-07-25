@@ -50,32 +50,41 @@ pub(crate) fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     }
 }
 
-/// Render the empty input state with cursor only (no placeholder).
-/// Matches grok's behavior: shows "❯ " with a blinking cursor when focused.
+/// Render the empty input state with cursor when focused, or placeholder when unfocused.
+/// Grok: shows "❯ " + cursor when focused, "❯ " + dim placeholder when unfocused.
 fn render_empty_input(f: &mut Frame, snap: &Snapshot, area: Rect, block: &Block<'_>, token_held: bool) {
     let chevron_style = style_chevron(token_held);
-    let cursor_style = if token_held {
-        style_input_cursor()
-    } else {
-        style_input_cursor_disabled()
-    };
 
-    // Build line with chevron and cursor (no placeholder text, matching grok)
-    let mut spans = vec![Span::styled(GLYPH_USER, chevron_style)];
     if token_held {
+        // Focused: show chevron + cursor block
+        let cursor_style = style_input_cursor();
+        let mut spans = vec![Span::styled(GLYPH_USER, chevron_style)];
         spans.push(Span::styled(" ", cursor_style));
+
+        // Add image attachment label if present
+        if let Some(label) = image_attachment_label(snap) {
+            spans.push(Span::styled(label, style_hint()));
+        }
+
+        let line = Line::from(spans);
+        let paragraph = ratatui::widgets::Paragraph::new(line).block(block.clone());
+        f.render_widget(paragraph, area);
+    } else {
+        // Unfocused: show chevron + dim placeholder text
+        let placeholder = "Ask anything...";
+        let placeholder_style = style_hint();
+        let mut spans = vec![Span::styled(GLYPH_USER, chevron_style)];
+        spans.push(Span::styled(format!(" {placeholder}"), placeholder_style));
+
+        // Add image attachment label if present
+        if let Some(label) = image_attachment_label(snap) {
+            spans.push(Span::styled(label, style_hint()));
+        }
+
+        let line = Line::from(spans);
+        let paragraph = ratatui::widgets::Paragraph::new(line).block(block.clone());
+        f.render_widget(paragraph, area);
     }
-
-    // Add image attachment label if present
-    if let Some(label) = image_attachment_label(snap) {
-        spans.push(Span::styled(label, style_hint()));
-    }
-
-    let line = Line::from(spans);
-
-    let paragraph = ratatui::widgets::Paragraph::new(line).block(block.clone());
-
-    f.render_widget(paragraph, area);
 }
 
 /// Render input content with cursor.
