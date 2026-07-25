@@ -159,13 +159,52 @@ struct MockScript {
 }
 
 impl MockScript {
-    /// Parse turns from the `RUNIE_MOCK_SCRIPT` environment variable.
+    /// Parse turns from `RUNIE_MOCK_SCRIPT` env var, or from `RUNIE_MOCK_SCRIPT_FILE`
+    /// if the env var is absent. The file path is used when the script JSON is too large
+    /// to pass as an environment variable (e.g. via tmux -e or portable-pty).
     fn from_env() -> Option<Self> {
-        let json = std::env::var("RUNIE_MOCK_SCRIPT").ok()?;
-        let turns: Vec<ScriptTurn> = serde_json::from_str(&json).ok()?;
+        let json = match std::env::var("RUNIE_MOCK_SCRIPT") {
+            Ok(j) => j,
+            Err(_) => {
+                // Fall back to reading from a file written by the test harness.
+                let file_path = match std::env::var("RUNIE_MOCK_SCRIPT_FILE") {
+                    Ok(p) => std::path::PathBuf::from(p),
+                    Err(_) => {
+                        eprintln!("[MOCK_DEBUG] RUNIE_MOCK_SCRIPT and RUNIE_MOCK_SCRIPT_FILE not set");
+                        return None;
+                    }
+                };
+                match std::fs::read_to_string(&file_path) {
+                    Ok(content) => {
+                        eprintln!(
+                            "[MOCK_DEBUG] loaded script from RUNIE_MOCK_SCRIPT_FILE={}",
+                            file_path.display()
+                        );
+                        content
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "[MOCK_DEBUG] failed to read RUNIE_MOCK_SCRIPT_FILE={}: {}",
+                            file_path.display(),
+                            e
+                        );
+                        return None;
+                    }
+                }
+            }
+        };
+        let turns: Vec<ScriptTurn> = match serde_json::from_str(&json) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("[MOCK_DEBUG] failed to parse JSON: {}", e);
+                return None;
+            }
+        };
         if turns.is_empty() {
+            eprintln!("[MOCK_DEBUG] empty turns array");
             return None;
         }
+        eprintln!("[MOCK_DEBUG] loaded {} turn(s) from env", turns.len());
         Some(Self { turns, index: 0 })
     }
 
@@ -286,8 +325,12 @@ fn script_turn_stream(turn: ScriptTurn, is_tool_result_turn: bool) -> Pin<Box<dy
             }
             yield Ok(ProviderEvent::ToolCallEnd { id: "call_1".to_string() });
 
-            // Emit the tool result if one was provided for this tool index.
+            // Emit the tool execution start + result if a result was provided.
             if let Some(result) = turn.tool_results.get(i) {
+                yield Ok(ProviderEvent::ToolExecutionStart {
+                    id: "call_1".to_string(),
+                    name: tool.name.clone(),
+                });
                 yield Ok(ProviderEvent::ToolExecutionResult {
                     id: "call_1".to_string(),
                     result: result.clone(),
@@ -456,11 +499,9 @@ mod fixtures {
     }
 }
 
-/// MiniMax-shaped reasoning stream: native `ThinkingStart`/`ThinkingDelta`/
-/// `ThinkingEnd` events (no `<think>` markup in content), a tool call in the
-/// first iteration, and fresh reasoning plus the final answer in the second.
-/// Regression fixture for the live bug where iteration-2 reasoning rendered
-/// as a bare fragment that looked like a duplicated assistant post.
+/// Thinking stream WITH a tool call — triggers the permission dialog.
+/// Use this only for tests that need to exercise the permission dialog,
+/// and call `allow_permission_once()` before `wait_for_idle()`.
 fn thinking_tool_stream(
     delay_ms: Option<Duration>,
     second_iteration: bool,
@@ -476,6 +517,7 @@ fn thinking_tool_stream(
             yield Ok(ProviderEvent::TextDelta("I'll verify this with a quick check.\n".into()));
             yield Ok(ProviderEvent::TextDelta("TOOL:list_dir:.".into()));
             yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+            yield Ok(ProviderEvent::TurnComplete { duration_secs: 0.5 });
         } else {
             yield Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() });
             yield Ok(ProviderEvent::ThinkingDelta("The check confirmed it.".into()));
@@ -485,6 +527,38 @@ fn thinking_tool_stream(
             }
             yield Ok(ProviderEvent::TextDelta("Yes, verified.\n".into()));
             yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+            yield Ok(ProviderEvent::TurnComplete { duration_secs: 0.5 });
+        }
+    })
+}
+
+/// Thinking stream WITHOUT a tool call — no permission dialog.
+/// Use this for simple thinking/rendering tests.
+fn thinking_no_tool_stream(
+    delay_ms: Option<Duration>,
+    second_iteration: bool,
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+    Box::pin(async_stream::stream! {
+        if !second_iteration {
+            yield Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() });
+            yield Ok(ProviderEvent::ThinkingDelta("Deciding to run a check.".into()));
+            yield Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() });
+            if let Some(d) = delay_ms {
+                tokio::time::sleep(d).await;
+            }
+            yield Ok(ProviderEvent::TextDelta("I'll verify this with a quick check.\n".into()));
+            yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+            yield Ok(ProviderEvent::TurnComplete { duration_secs: 0.5 });
+        } else {
+            yield Ok(ProviderEvent::ThinkingStart { id: "reasoning".into() });
+            yield Ok(ProviderEvent::ThinkingDelta("The check confirmed it.".into()));
+            yield Ok(ProviderEvent::ThinkingEnd { id: "reasoning".into() });
+            if let Some(d) = delay_ms {
+                tokio::time::sleep(d).await;
+            }
+            yield Ok(ProviderEvent::TextDelta("Yes, verified.\n".into()));
+            yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
+            yield Ok(ProviderEvent::TurnComplete { duration_secs: 0.5 });
         }
     })
 }
@@ -507,6 +581,9 @@ pub struct MockProvider {
     echo_fallback: bool,
     /// Scripted turns from `RUNIE_MOCK_SCRIPT`.
     script: Arc<Mutex<Option<MockScript>>>,
+    /// Whether a script was ever loaded — prevents `fixtures::done()` duplication
+    /// after scripted tool-call turns trigger the tool-result fallthrough path.
+    script_was_loaded: Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// Builder for configuring a `MockProvider`.
@@ -598,6 +675,11 @@ impl MockProviderBuilder {
 
     pub fn build(self) -> MockProvider {
         let script = MockScript::from_env();
+        let was_loaded = script.is_some();
+        eprintln!(
+            "[MOCK_DEBUG] MockProvider::build() script={}",
+            if script.is_some() { "Some" } else { "None" }
+        );
         MockProvider {
             delay_ms: self.delay_ms,
             seed: self.seed.unwrap_or(MOCK_DEFAULT_SEED),
@@ -605,6 +687,7 @@ impl MockProviderBuilder {
             fixture: self.fixture,
             echo_fallback: self.echo_fallback.unwrap_or(true),
             script: Arc::new(Mutex::new(script)),
+            script_was_loaded: Arc::new(std::sync::atomic::AtomicBool::new(was_loaded)),
         }
     }
 }
@@ -851,8 +934,34 @@ impl Provider for MockProvider {
             let mut guard = self.script.lock().unwrap();
             if let Some(ref mut script) = *guard {
                 if let Some(turn) = script.next() {
-                    return script_turn_stream(turn);
+                    eprintln!("[MOCK_DEBUG] serving scripted turn");
+                    let _ = std::fs::write(
+                        "/tmp/runie_mock_debug.txt",
+                        format!(
+                            "SCRIPT LOADED: serving turn, RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={}\n",
+                            std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
+                            std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
+                        ),
+                    );
+                    return script_turn_stream(turn, false);
+                } else {
+                    eprintln!("[MOCK_DEBUG] script exhausted");
+                    let _ = std::fs::write("/tmp/runie_mock_debug.txt", "SCRIPT EXHAUSTED\n");
                 }
+            } else {
+                eprintln!(
+                    "[MOCK_DEBUG] no script loaded (RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={})",
+                    std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
+                    std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
+                );
+                let _ = std::fs::write(
+                    "/tmp/runie_mock_debug.txt",
+                    format!(
+                        "NO SCRIPT: RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={}\n",
+                        std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
+                        std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
+                    ),
+                );
             }
         }
 
@@ -878,18 +987,40 @@ impl Provider for MockProvider {
             return text_chunks_stream(delay_ms, chunks);
         }
 
-        // MiniMax-shaped reasoning+tool scenario (regression fixture).
+        // MiniMax-shaped reasoning scenarios (regression fixture).
+        // "think tool"  → with tool call (triggers permission dialog).
+        // "think" alone  → no tool call (simple thinking/rendering tests).
         if user_input.contains("think tool") {
             return thinking_tool_stream(delay_ms, is_after_tool_result(last));
+        }
+        if user_input.contains("think") {
+            return thinking_no_tool_stream(delay_ms, is_after_tool_result(last));
         }
 
         // Check for completion after tool result
         if is_after_tool_result(last) {
+            // If a script was loaded but is now exhausted, skip `fixtures::done()`
+            // to avoid duplicating the script's response chunks (the scripted turn
+            // already emitted its model response before the tool call/result cycle).
+            if self.script_was_loaded.load(std::sync::atomic::Ordering::Relaxed) {
+                return text_chunks_stream(delay_ms, vec![]);
+            }
             return text_chunks_stream(delay_ms, fixtures::done());
         }
 
         // Use explicit fixture or auto-detect
         let fixture = self.fixture.clone().or_else(|| detect_fixture(&user_input));
+        let _ = std::fs::write(
+            "/tmp/runie_mock_debug.txt",
+            format!(
+                "FALLBACK: user_input={:?} fixture={:?}\n",
+                user_input, fixture,
+            ),
+        );
+        eprintln!(
+            "[MOCK_DEBUG] fallback path: user_input={:?} fixture={:?}",
+            user_input, fixture
+        );
         let chunks = response_from_fixture(fixture, &user_input, self.echo_fallback);
         text_chunks_stream(delay_ms, chunks)
     }
