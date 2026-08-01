@@ -1,0 +1,9 @@
+# Create skill command
+name: create-skill
+description: Create a new skill from a template
+category: System
+sub: false
+triggers:
+  - /create-skill
+type: handler
+handler: create-skill

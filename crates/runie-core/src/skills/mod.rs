@@ -15,6 +15,7 @@ use camino::Utf8PathBuf;
 use std::path::{Path, PathBuf};
 
 mod load;
+pub mod crud;
 #[cfg(test)]
 mod tests;
 

@@ -141,3 +141,130 @@ fn palette_select_skill_emits_message() {
         last.content()
     );
 }
+
+// ── CRUD slash commands ─────────────────────────────────────────────────────
+
+/// Serializes env-dependent tests (HOME pointing at a temp dir).
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn state_with_home(dir: &tempfile::TempDir) -> AppState {
+    std::env::set_var("HOME", dir.path());
+    AppState::default()
+}
+
+#[test]
+fn create_skill_writes_file_and_reloads() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let mut state = state_with_home(&tmp);
+
+    let result = exec_handler(&mut state, "create-skill", "my-new-skill");
+    match result {
+        CommandResult::Message(msg) => {
+            assert!(msg.contains("Created skill 'my-new-skill'"), "got: {msg}");
+        }
+        other => panic!("/create-skill should return Message, got {other:?}"),
+    }
+
+    let skill_file = tmp.path().join(".runie/skills/my-new-skill.md");
+    assert!(skill_file.exists(), "skill file should be created");
+    assert!(
+        state.skills().iter().any(|s| s.name == "my-new-skill"),
+        "state should be reloaded with the new skill"
+    );
+}
+
+#[test]
+fn create_skill_rejects_empty_and_duplicate() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let mut state = state_with_home(&tmp);
+
+    let empty = exec_handler(&mut state, "create-skill", "");
+    assert!(
+        matches!(&empty, CommandResult::Warning(_)),
+        "empty name should warn, got {empty:?}"
+    );
+
+    exec_handler(&mut state, "create-skill", "dup");
+    let dup = exec_handler(&mut state, "create-skill", "dup");
+    assert!(
+        matches!(&dup, CommandResult::Warning(msg) if msg.contains("already exists")),
+        "duplicate should warn, got {dup:?}"
+    );
+}
+
+#[test]
+fn delete_skill_removes_file_and_reloads() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let mut state = state_with_home(&tmp);
+
+    exec_handler(&mut state, "create-skill", "to-delete");
+    assert!(state.skills().iter().any(|s| s.name == "to-delete"));
+
+    let result = exec_handler(&mut state, "delete-skill", "to-delete");
+    match result {
+        CommandResult::Message(msg) => {
+            assert!(msg.contains("Deleted skill 'to-delete'"), "got: {msg}");
+        }
+        other => panic!("/delete-skill should return Message, got {other:?}"),
+    }
+
+    let skill_file = tmp.path().join(".runie/skills/to-delete.md");
+    assert!(!skill_file.exists(), "skill file should be removed");
+    assert!(
+        !state.skills().iter().any(|s| s.name == "to-delete"),
+        "state should be reloaded without the deleted skill"
+    );
+}
+
+#[test]
+fn delete_unknown_skill_warns() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let mut state = state_with_home(&tmp);
+
+    let result = exec_handler(&mut state, "delete-skill", "missing");
+    assert!(
+        matches!(&result, CommandResult::Warning(msg) if msg.contains("not found")),
+        "unknown delete should warn, got {result:?}"
+    );
+}
+
+#[test]
+fn reload_skills_refreshes_list() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let mut state = state_with_home(&tmp);
+
+    let result = exec_handler(&mut state, "reload-skills", "");
+    match result {
+        CommandResult::Message(msg) => {
+            assert!(
+                msg.contains("none loaded"),
+                "no skills should report 'none loaded', got: {msg}"
+            );
+        }
+        other => panic!("/reload-skills should return Message, got {other:?}"),
+    }
+
+    // Create a skill on disk and reload: it must appear in state.
+    let dir = tmp.path().join(".runie/skills");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("external.md"),
+        "---\nname: external\n---\n# External\n",
+    )
+    .unwrap();
+
+    let result = exec_handler(&mut state, "reload-skills", "");
+    assert!(
+        matches!(&result, CommandResult::Message(msg) if msg.contains("1")),
+        "one skill should be reported, got {result:?}"
+    );
+    assert!(
+        state.skills().iter().any(|s| s.name == "external"),
+        "reload should pick up the on-disk skill"
+    );
+}

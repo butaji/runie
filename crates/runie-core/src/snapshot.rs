@@ -156,6 +156,8 @@ pub struct Snapshot {
     pub active_plan_id: Option<String>,
     /// Grok-style tasks pane visibility.
     pub tasks_pane_visible: bool,
+    /// Configured MCP servers for status display.
+    pub mcp_servers: Arc<[crate::dialog::builders::McpServerRow]>,
     /// Show completed workers in the tasks pane (true when no workers are running).
     pub tasks_pane_show_done: bool,
     /// Open subagent detail overlay state.

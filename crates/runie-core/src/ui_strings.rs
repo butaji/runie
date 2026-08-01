@@ -236,6 +236,22 @@ pub mod system {
     pub fn skill_not_found(name: &str) -> String {
         format!("Skill '{}' not found. Use /skills.", name)
     }
+    /// Format for a successfully created skill.
+    pub fn skill_created(name: &str, path: impl std::fmt::Display) -> String {
+        format!("Created skill '{name}' at {path}. Use /reload-skills to refresh other sessions.")
+    }
+    /// Format for a successfully deleted skill.
+    pub fn skill_deleted(name: &str, path: impl std::fmt::Display) -> String {
+        format!("Deleted skill '{name}' ({path}).")
+    }
+    /// Format for a completed skills reload.
+    pub fn skills_reloaded(count: usize) -> String {
+        if count == 0 {
+            "Reloaded skills: none loaded.".to_string()
+        } else {
+            format!("Reloaded {count} skill(s).")
+        }
+    }
 }
 
 /// Command parsing strings.

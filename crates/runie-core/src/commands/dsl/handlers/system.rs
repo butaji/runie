@@ -15,6 +15,9 @@ pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry
         "skill",
         NamedHandler::FormWithHandler { title: "Show Skill", fields: &[("Name", "skill-name", "name")], handler: run_skill },
     );
+    registry.register("create-skill", NamedHandler::Handler(handle_create_skill));
+    registry.register("delete-skill", NamedHandler::Handler(handle_delete_skill));
+    registry.register("reload-skills", NamedHandler::Handler(handle_reload_skills));
     registry.register("prompt", NamedHandler::Handler(handle_prompt));
     registry.register("hotkeys", NamedHandler::Handler(handle_hotkeys));
     registry.register("theme", NamedHandler::Handler(handle_theme));
@@ -80,6 +83,44 @@ pub fn run_skill(state: &mut AppState, args: &str) -> CommandResult {
         )),
         None => CommandResult::Message(s::skill_not_found(name)),
     }
+}
+
+/// Handler for `/create-skill <name>` — creates a skill from the standard
+/// template in the user skills directory, then reloads the in-memory list.
+pub fn handle_create_skill(state: &mut AppState, args: &str) -> CommandResult {
+    use crate::ui_strings::system as s;
+    let name = args.trim();
+    match crate::skills::crud::create_skill(name) {
+        Ok(path) => {
+            state.set_skills(crate::skills::load_all());
+            CommandResult::Message(s::skill_created(name, path.display()))
+        }
+        Err(e) => CommandResult::Warning(e),
+    }
+}
+
+/// Handler for `/delete-skill <name>` — deletes a skill file (flat or nested)
+/// from the user skills directory, then reloads the in-memory list.
+pub fn handle_delete_skill(state: &mut AppState, args: &str) -> CommandResult {
+    use crate::ui_strings::system as s;
+    let name = args.trim();
+    match crate::skills::crud::delete_skill(name) {
+        Ok(path) => {
+            state.set_skills(crate::skills::load_all());
+            CommandResult::Message(s::skill_deleted(name, path.display()))
+        }
+        Err(e) => CommandResult::Warning(e),
+    }
+}
+
+/// Handler for `/reload-skills` — re-scans skill directories and refreshes the
+/// in-memory list without restarting.
+pub fn handle_reload_skills(state: &mut AppState, _: &str) -> CommandResult {
+    use crate::ui_strings::system as s;
+    let skills = crate::skills::load_all();
+    let count = skills.len();
+    state.set_skills(skills);
+    CommandResult::Message(s::skills_reloaded(count))
 }
 
 pub fn handle_theme(_state: &mut AppState, args: &str) -> CommandResult {

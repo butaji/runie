@@ -35,9 +35,9 @@ mod tests {
     #[test]
     fn test_visible_slices_correctly() {
         let cache = vec![
-            Element::UserMessage { content: "a".to_string(), timestamp: 0.0 },
+            Element::UserMessage { content: "a".to_string(), timestamp: 0.0, expanded: false },
             Element::Spacer { timestamp: 0.0 },
-            Element::UserMessage { content: "b".to_string(), timestamp: 1.0 },
+            Element::UserMessage { content: "b".to_string(), timestamp: 1.0, expanded: false },
         ];
         let visible = LazyCache::visible(&cache, 0, 2);
         assert_eq!(visible.len(), 2);
@@ -45,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_visible_bounds_check() {
-        let cache = vec![Element::UserMessage { content: "a".to_string(), timestamp: 0.0 }];
+        let cache = vec![Element::UserMessage { content: "a".to_string(), timestamp: 0.0, expanded: false }];
         let visible = LazyCache::visible(&cache, 10, 5);
         assert!(visible.is_empty());
     }
@@ -268,7 +268,7 @@ mod tests {
             1,
             "Expected exactly one UserMessage element"
         );
-        if let Element::UserMessage { content, timestamp } = user_elements[0] {
+        if let Element::UserMessage { content, timestamp, .. } = user_elements[0] {
             assert_eq!(content, "Hello, world!");
             assert_eq!(*timestamp, 1.0);
         } else {

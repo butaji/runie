@@ -83,6 +83,46 @@ async fn ractor_io_load_auth_emits_auth_loaded() {
 // ── Git detection tests ──────────────────────────────────────────────────────
 // These use git2 directly, not shell commands.
 
+// ── Skills hot-reload watcher (requires `watch` feature) ────────────────────
+
+#[cfg(feature = "watch")]
+mod skills_watcher {
+    use super::*;
+
+    fn event(path: std::path::PathBuf, kind: DebouncedEventKind) -> DebouncedEvent {
+        DebouncedEvent { path, kind }
+    }
+
+    #[test]
+    fn relevant_when_touching_user_skills_dir() {
+        let dir = skills_watch_dirs()
+            .into_iter()
+            .find(|d| d.ends_with(".runie/skills"))
+            .expect("user skills dir should be present");
+        let evt = event(dir.join("my-skill.md"), DebouncedEventKind::Any);
+        assert!(skills_event_is_relevant(&[evt]));
+    }
+
+    #[test]
+    fn relevant_for_nested_skill_md() {
+        let dir = skills_watch_dirs()
+            .into_iter()
+            .find(|d| d.ends_with(".runie/skills"))
+            .expect("user skills dir should be present");
+        let evt = event(dir.join("nested/SKILL.md"), DebouncedEventKind::AnyContinuous);
+        assert!(skills_event_is_relevant(&[evt]));
+    }
+
+    #[test]
+    fn irrelevant_for_unrelated_path() {
+        let evt = event(
+            std::env::temp_dir().join("random.txt"),
+            DebouncedEventKind::Any,
+        );
+        assert!(!skills_event_is_relevant(&[evt]));
+    }
+}
+
 #[cfg(feature = "git")]
 #[test]
 fn detect_git_in_real_repo() {

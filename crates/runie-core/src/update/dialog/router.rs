@@ -249,12 +249,30 @@ fn handle_mcp_skill_action(state: &mut AppState, event: &Event) {
                     state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
                 }
                 crate::dialog::builders::mcp::McpServerActionKind::Remove => {
-                    // Remove the server
+                    // Remove the server from the active config scope.
                     let name = name.clone();
-                    state.add_system_msg(format!("Removing MCP server: {}", name));
-                    // Close the dialog and return to chat
-                    *state.open_dialog_mut() = None;
-                    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                    if let Some(handles) = state.actor_handles() {
+                        let _ = handles.config.try_send(crate::actors::ConfigMsg::RemoveMcpServer {
+                            scope: crate::config::ConfigScope::Global,
+                            name: name.clone(),
+                            reply: None,
+                        });
+                    }
+                    state.add_system_msg(format!("Removed MCP server: {}", name));
+                    // Refresh the panel from config.
+                    let servers = state.mcp_servers().to_vec();
+                    let panels = crate::dialog::builders::mcp::mcp_servers(
+                        servers.into_iter().filter(|s| s.name != *name).collect(),
+                    );
+                    if let Some(DialogState::Active { kind: DialogKind::McpServers, panels: stack }) =
+                        state.open_dialog_mut()
+                    {
+                        *stack = panels;
+                    } else {
+                        // Close the dialog and return to chat if it is not open.
+                        *state.open_dialog_mut() = None;
+                        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                    }
                 }
                 crate::dialog::builders::mcp::McpServerActionKind::Edit => {
                     // Open the MCP wizard for editing
@@ -279,15 +297,120 @@ fn handle_mcp_skill_action(state: &mut AppState, event: &Event) {
                     }
                 }
                 crate::dialog::builders::skills::SkillActionKind::Delete => {
-                    // Delete the skill
-                    state.add_system_msg(format!("Deleting skill: {}", name));
-                    // Close the dialog and return to chat
-                    *state.open_dialog_mut() = None;
-                    state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                    // Delete the skill file and refresh the loaded list.
+                    let name = name.clone();
+                    match crate::skills::crud::delete_skill(&name) {
+                        Ok(path) => {
+                            state.set_skills(crate::skills::load_all());
+                            state.add_system_msg(format!("Deleted skill '{}' ({})", name, path.display()));
+                        }
+                        Err(e) => {
+                            state.warn(format!("Cannot delete skill '{name}': {e}"));
+                        }
+                    }
+                    // Refresh the skills panel.
+                    let rows: Vec<_> = state
+                        .skills()
+                        .iter()
+                        .map(|s| crate::dialog::builders::SkillRow {
+                            name: s.name.clone(),
+                            description: s.description.clone(),
+                            user_invocable: s.user_invocable,
+                            file_path: s.file_path.to_string(),
+                        })
+                        .collect();
+                    let panels = crate::dialog::builders::skills::skills(rows);
+                    if let Some(DialogState::Active { kind: DialogKind::Skills, panels: stack }) =
+                        state.open_dialog_mut()
+                    {
+                        *stack = panels;
+                    } else {
+                        // Close the dialog and return to chat if it is not open.
+                        *state.open_dialog_mut() = None;
+                        state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+                    }
                 }
             }
         }
         _ => {}
     }
     state.view_mut().dirty = true;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dialog::builders::skills::SkillActionKind;
+
+    /// Serializes env-dependent tests (HOME pointing at a temp dir).
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn state_with_home(dir: &tempfile::TempDir) -> AppState {
+        std::env::set_var("HOME", dir.path());
+        AppState::default()
+    }
+
+    #[test]
+    fn skill_action_delete_removes_file_and_refreshes_panel() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let tmp = tempfile::TempDir::new().unwrap();
+        let mut state = state_with_home(&tmp);
+
+        // Seed a skill on disk and load it into state.
+        let dir = tmp.path().join(".runie/skills");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("to-delete.md"),
+            "---\nname: to-delete\n---\n# To delete\n",
+        )
+        .unwrap();
+        state.set_skills(crate::skills::load_all());
+        assert!(state.skills().iter().any(|s| s.name == "to-delete"));
+
+        // Open the skills dialog so the Delete action can refresh the panel.
+        crate::update::dialog::open_skills_dialog(&mut state);
+        assert!(matches!(
+            state.open_dialog(),
+            Some(DialogState::Active { kind: DialogKind::Skills, .. })
+        ));
+
+        state.update(crate::Event::SkillAction {
+            name: "to-delete".to_string(),
+            action: SkillActionKind::Delete,
+        });
+
+        // File removed, state reloaded, dialog still open with the skill gone.
+        assert!(!dir.join("to-delete.md").exists(), "skill file should be removed");
+        assert!(
+            !state.skills().iter().any(|s| s.name == "to-delete"),
+            "state should be reloaded without the deleted skill"
+        );
+        assert!(matches!(
+            state.open_dialog(),
+            Some(DialogState::Active { kind: DialogKind::Skills, .. })
+        ), "skills dialog should stay open after delete");
+        let last = state.session().messages.last();
+        assert!(
+            last.map(|m| m.content().contains("Deleted skill")).unwrap_or(false),
+            "a confirmation message should be added"
+        );
+    }
+
+    #[test]
+    fn skill_action_delete_unknown_warns() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let tmp = tempfile::TempDir::new().unwrap();
+        let mut state = state_with_home(&tmp);
+
+        state.update(crate::Event::SkillAction {
+            name: "missing".to_string(),
+            action: SkillActionKind::Delete,
+        });
+
+        assert_eq!(
+            state.transient_message(),
+            Some(&"Cannot delete skill 'missing': Skill 'missing' not found.".to_string()),
+            "unknown delete should warn"
+        );
+    }
 }

@@ -407,6 +407,9 @@ fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
         super::dialog::dialog_toggle_event(state, event);
     } else if is_form_dialog_event(&event) {
         super::dialog::handle_form_dialog(state, event);
+    } else if matches!(&event, crate::Event::SkillAction { .. } | crate::Event::McpServerAction { .. }) {
+        // Panel actions (skills / MCP servers) handled in the dialog router.
+        super::dialog::update_dialog(state, event);
     } else if let crate::Event::InsertAtRef(path) = event {
         super::dialog::insert_at_ref(state, &path);
     } else if matches!(event, crate::Event::DialogBack) {

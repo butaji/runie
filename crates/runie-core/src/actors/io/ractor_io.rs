@@ -11,6 +11,11 @@ use ractor::async_trait;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tracing::instrument;
 
+#[cfg(feature = "watch")]
+use notify::RecursiveMode;
+#[cfg(feature = "watch")]
+use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
+
 use crate::actors::ractor_adapter::spawn_ractor;
 use crate::bus::EventBus;
 use crate::event::Event;
@@ -138,9 +143,15 @@ impl Actor for RactorIoActor {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         _args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
+        // Watch skills directories for changes and reload them automatically
+        // (requires the `watch` feature, same as the config watcher).
+        #[cfg(feature = "watch")]
+        spawn_skills_watcher(myself);
+        #[cfg(not(feature = "watch"))]
+        let _ = myself;
         Ok(())
     }
 
@@ -346,6 +357,75 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
     };
 
     Some(GitInfo { repo_name, branch, is_worktree, worktree_source })
+}
+
+/// Debounce window for the skills directory watcher (milliseconds).
+#[cfg(feature = "watch")]
+const SKILLS_WATCHER_DEBOUNCE_MS: u64 = 300;
+
+/// True if any debounced event touches the skills directories (or a child).
+#[cfg(feature = "watch")]
+fn skills_event_is_relevant(events: &[DebouncedEvent]) -> bool {
+    let dirs: Vec<PathBuf> = skills_watch_dirs();
+    events.iter().any(|e| {
+        dirs.iter().any(|d| e.path.starts_with(d))
+            && matches!(
+                e.kind,
+                DebouncedEventKind::Any | DebouncedEventKind::AnyContinuous
+            )
+    })
+}
+
+/// Directories watched for skill hot-reload: the user scope
+/// (`~/.runie/skills/`) and the local project scope (`.runie/skills/`).
+#[cfg(feature = "watch")]
+fn skills_watch_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from).or_else(dirs::home_dir) {
+        dirs.push(home.join(".runie").join("skills"));
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        dirs.push(cwd.join(".runie").join("skills"));
+    }
+    dirs
+}
+
+/// Spawn a file-watcher thread that reloads skills on changes.
+///
+/// Mirrors the config watcher: a debouncer thread watches the skills
+/// directories and sends `IoMsg::LoadSkills` back to the IO actor, which
+/// re-scans and emits `Event::SkillsLoaded`.
+#[cfg(feature = "watch")]
+fn spawn_skills_watcher(myself: ActorRef<IoMsg>) {
+    std::thread::spawn(move || {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let debouncer = match new_debouncer(
+            std::time::Duration::from_millis(SKILLS_WATCHER_DEBOUNCE_MS),
+            tx,
+        ) {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::error!("skills watcher: create debouncer failed: {e:?}");
+                return;
+            }
+        };
+        let mut debouncer = debouncer;
+        for dir in skills_watch_dirs() {
+            if dir.exists() {
+                if let Err(e) = debouncer
+                    .watcher()
+                    .watch(&dir, RecursiveMode::Recursive)
+                {
+                    tracing::error!("skills watcher: watch {:?} failed: {e:?}", dir);
+                }
+            }
+        }
+        while let Ok(Ok(events)) = rx.recv() {
+            if skills_event_is_relevant(&events) {
+                let _ = myself.send_message(IoMsg::LoadSkills);
+            }
+        }
+    });
 }
 
 #[cfg(test)]

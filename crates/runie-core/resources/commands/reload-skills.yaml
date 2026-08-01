@@ -1,0 +1,9 @@
+# Reload skills command
+name: reload-skills
+description: Re-scan skill directories and refresh loaded skills
+category: System
+sub: false
+triggers:
+  - /reload-skills
+type: handler
+handler: reload-skills

@@ -159,6 +159,9 @@ pub(crate) fn build_left_text_parts(snap: &Snapshot) -> Vec<Span<'static>> {
     if let Some(part) = push_auto_mode(snap) {
         parts.push(part);
     }
+    if let Some(part) = push_mcp_status(snap) {
+        parts.push(part);
+    }
     if let Some(part) = push_circuit_breaker(snap) {
         parts.push(part);
     }
@@ -299,6 +302,20 @@ fn push_auto_mode(snap: &Snapshot) -> Option<Span<'static>> {
     } else {
         None
     }
+}
+
+/// MCP server status indicator: shows the count of configured MCP servers
+/// (e.g. `⌘ 2 mcp`), styled dim. Hidden when none are configured.
+fn push_mcp_status(snap: &Snapshot) -> Option<Span<'static>> {
+    let count = snap.mcp_servers.len();
+    if count == 0 {
+        return None;
+    }
+    let noun = if count == 1 { "mcp server" } else { "mcp servers" };
+    Some(Span::styled(
+        format!("⌘ {count} {noun}"),
+        style_status_idle().fg(crate::theme::color_dim()),
+    ))
 }
 
 /// Build the circuit breaker status indicator for the status bar.
@@ -477,6 +494,35 @@ mod tests {
         assert!(
             left.contains("worktree"),
             "left text should contain worktree: {left}"
+        );
+    }
+
+    #[test]
+    fn status_bar_shows_mcp_count_when_configured() {
+        let snap = runie_core::Snapshot {
+            mcp_servers: vec![runie_core::dialog::builders::McpServerRow {
+                name: "filesystem".to_string(),
+                transport: "stdio".to_string(),
+                connected: false,
+                tool_count: 0,
+            }]
+            .into(),
+            ..Default::default()
+        };
+        let left = super::build_left_text(&snap);
+        assert!(
+            left.contains("1 mcp server"),
+            "left text should contain MCP count: {left}"
+        );
+    }
+
+    #[test]
+    fn status_bar_hides_mcp_when_none_configured() {
+        let snap = runie_core::Snapshot::default();
+        let left = super::build_left_text(&snap);
+        assert!(
+            !left.contains("mcp"),
+            "left text should not contain MCP indicator: {left}"
         );
     }
 }
