@@ -289,15 +289,19 @@ pub fn render_background_task(
 ) -> Vec<Line<'static>> {
     let style = style_tool_summary();
     let display = description.filter(|text| !text.trim().is_empty()).unwrap_or(command).replace('\n', " ");
+    let signal_is_kill = signal.is_some_and(|value| matches!(value, "killed" | "SIGTERM" | "SIGKILL" | "oom"));
     let (verb, suffix) = match status {
         "completed" => ("completed", format!(" in {:.1}s", duration_secs)),
+        "failed" if signal_is_kill => {
+            ("killed", format!(" in {:.1}s", duration_secs))
+        }
         "failed" => {
             ("failed", format!(" in {:.1}s", duration_secs))
         }
         "killed" | "cancelled" => ("killed", format!(" in {:.1}s", duration_secs)),
         _ => ("started", String::new()),
     };
-    let detail = if status == "failed" {
+    let detail = if status == "failed" && !signal_is_kill {
         signal
             .map(|s| format!(" ({s})"))
             .or_else(|| exit_code.map(|code| format!(" (exit {code})")))

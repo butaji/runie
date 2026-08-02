@@ -334,6 +334,26 @@ fn background_task_feed_row_covers_grok_lifecycle_variants() {
             .join("\n");
         assert!(text.contains(expected), "wrong background-task wording for {status}: {text}");
     }
+
+    for signal in ["killed", "SIGTERM", "SIGKILL", "oom"] {
+        let element = Element::background_task(
+            "cargo test",
+            "task-1",
+            "failed",
+            Some("run tests".into()),
+            1.2,
+            Some(137),
+            Some(signal.into()),
+        )
+        .at(1.0);
+        let text = crate::ui::to_lines_internal(&element, 80)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains("Task killed in 1.2s: run tests"), "kill signal {signal} must use killed wording: {text}");
+        assert!(!text.contains(&format!(" ({signal})")), "kill signal detail leaked into Grok killed row for {signal}: {text}");
+    }
 }
 
 #[test]
