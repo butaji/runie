@@ -96,17 +96,6 @@ fn render_paragraph_with_user_backgrounds(
                 line_to_owned(line)
             };
             let mut spans = vec![Span::raw(crate::theme::FEED_INDENT)];
-            if matches!(snap.elements.get(elem_idx), Some(Element::Thinking { .. })) && !line.spans.is_empty() {
-                let wave = wave_brightness(
-                    snap.animation_frame,
-                    element_row.min(u16::MAX as usize) as u16,
-                    FEED_WAVE_ROWS,
-                    FEED_WAVE_SPEED,
-                );
-                let rail_color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
-                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
-                spans.push(Span::raw(" "));
-            }
             if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx, element_row) {
                 spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
                 if is_first_element_row {
