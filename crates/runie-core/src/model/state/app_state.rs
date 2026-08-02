@@ -1,8 +1,8 @@
 //! `AppState` — the read-only UI projection of actor-owned state.
 //!
-//! Fields are crate-visible to allow test setup within runie-core.
-//! Production code should use the accessors in `accessors.rs` for reads and
-//! mutable accessors for mutations.
+//! All fields are currently `pub` (not `pub(crate)`) to allow test setup
+//! within runie-core. Production code should use the accessors in
+//! `accessors.rs` for reads and mutable accessors for mutations.
 //!
 //! The `take()` method supports `reset_session()` without requiring a full
 //! struct reassignment.
@@ -16,14 +16,15 @@ use runie_patterns::swarm::{OrphanedWorkerTracker, StatusCounts};
 /// Inner state structs (`session`, `input`, etc.) have private fields that
 /// require accessors to be added incrementally.
 ///
-/// NOTE: View projection (Element/Post/Feed) is no longer cached in AppState.
-/// The projection is built on-demand by `ensure_fresh()` and stored in `Snapshot`.
-/// UiActor owns the Element cache for rendering purposes.
+/// NOTE: The reusable feed cache IS stored in `self.view.cached_feed` (inside
+/// the `view: ViewState` inner struct). `snapshot_feed()` in `cache/mod.rs`
+/// reuses it when `cached_gen == message_gen`, otherwise it calls
+/// `ensure_fresh()` to rebuild. UiActor additionally owns an Element cache
+/// for rendering purposes.
 #[derive(Clone, Default)]
 pub struct AppState {
-    // 6 inner state structs (factored domain state)
-    // `session` transitions to private once all direct mutations are removed
-    // (tracked in `remove-direct-appstate-mutations`). Use `session()` accessor.
+    // 6 inner state structs (factored domain state).
+    // Use `session()` accessor for mutations.
     pub session: SessionState,
     pub input: InputState,
     pub agent: AgentState,
@@ -144,16 +145,12 @@ impl AppState {
     /// Clean up orphaned and cancelled swarm workers.
     /// Returns the counts of cleaned workers.
     pub fn swarm_cleanup(&self) -> StatusCounts {
-        let before = self.swarm_state.status_counts();
-        let _ = self.swarm_state.cleanup_orphaned_workers();
-        let after = self.swarm_state.status_counts();
-        StatusCounts {
-            running: before.running - after.running,
-            completed: before.completed - after.completed,
-            failed: before.failed - after.failed,
-            cancelled: before.cancelled - after.cancelled,
-            orphaned: before.orphaned - after.orphaned,
-        }
+        // Use the atomic cleanup_with_counts to avoid TOCTOU races where
+        // reconcile_orphans promotes Running→Orphaned between the before-snapshot
+        // and the retain, which would cause the naive before-after subtraction
+        // to underflow.
+        let (removed, _after) = self.swarm_state.cleanup_with_counts();
+        removed
     }
 
     /// Get swarm status counts.

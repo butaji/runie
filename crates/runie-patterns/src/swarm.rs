@@ -1158,6 +1158,53 @@ impl OrphanedWorkerTracker {
         prev_len - self.workers.lock().unwrap().len()
     }
 
+    /// Atomically clean up orphaned/cancelled workers and return the counts of
+    /// workers removed per status. This prevents TOCTOU races where concurrent
+    /// `reconcile_orphans_by_max_age` promotes Running → Orphaned between a
+    /// pre-cleanup snapshot and the cleanup itself, causing the subtraction in
+    /// `swarm_cleanup` to underflow.
+    ///
+    /// Returns `(removed_counts, after_counts)` where `removed_counts` holds the
+    /// delta (`before - after`) for each status.
+    pub fn cleanup_with_counts(&self) -> (StatusCounts, StatusCounts) {
+        use std::ops::Sub;
+
+        let mut guard = self.workers.lock().unwrap();
+        let before = Self::counts_from_slice(&guard);
+        let removed = guard
+            .iter()
+            .filter(|w| w.status == SwarmWorkerStatus::Orphaned || w.status == SwarmWorkerStatus::Cancelled)
+            .count();
+        guard.retain(|w| {
+            w.status != SwarmWorkerStatus::Orphaned && w.status != SwarmWorkerStatus::Cancelled
+        });
+        let after = Self::counts_from_slice(&guard);
+
+        let delta = StatusCounts {
+            running: before.running.saturating_sub(after.running),
+            completed: before.completed.saturating_sub(after.completed),
+            failed: before.failed.saturating_sub(after.failed),
+            cancelled: before.cancelled.saturating_sub(after.cancelled),
+            orphaned: before.orphaned.saturating_sub(after.orphaned),
+        };
+        (delta, after)
+    }
+
+    /// Build a `StatusCounts` from a slice of workers.
+    fn counts_from_slice(workers: &[SwarmWorker]) -> StatusCounts {
+        let mut counts = StatusCounts::default();
+        for w in workers {
+            match &w.status {
+                SwarmWorkerStatus::Running => counts.running += 1,
+                SwarmWorkerStatus::Completed => counts.completed += 1,
+                SwarmWorkerStatus::Failed => counts.failed += 1,
+                SwarmWorkerStatus::Cancelled => counts.cancelled += 1,
+                SwarmWorkerStatus::Orphaned => counts.orphaned += 1,
+            }
+        }
+        counts
+    }
+
     /// Returns all workers currently tracked.
     pub fn workers(&self) -> Vec<SwarmWorker> {
         self.workers.lock().unwrap().clone()
@@ -1212,4 +1259,94 @@ pub struct StatusCounts {
     pub failed: usize,
     pub cancelled: usize,
     pub orphaned: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression (task 23): concurrent `cleanup_with_counts` calls must not cause
+    /// underflow in the StatusCounts subtraction. The naive before/after snapshot
+    /// approach suffers TOCTOU if Running workers are promoted to Orphaned between
+    /// the two snapshots; `cleanup_with_counts` acquires the lock once and computes
+    /// the diff atomically.
+    #[test]
+    fn cleanup_with_counts_no_underflow_on_concurrent_calls() {
+        let tracker = OrphanedWorkerTracker::new();
+
+        // Spawn 5 running workers.
+        for i in 0..5 {
+            tracker.spawn(format!("w{i}"), "task".to_string());
+        }
+        // Mark 3 as Orphaned, 2 as Cancelled.
+        tracker.fail("w0");
+        tracker.fail("w1");
+        tracker.fail("w2");
+        tracker.cancel("w3");
+        tracker.cancel("w4");
+
+        let counts = tracker.status_counts();
+        assert_eq!(counts.orphaned, 3);
+        assert_eq!(counts.cancelled, 2);
+
+        // Multiple concurrent cleanups: none must panic and the total removed must
+        // equal the original orphaned+cancelled count.
+        let results: Vec<_> = (0..4)
+            .map(|_| {
+                let t = tracker.clone();
+                std::thread::spawn(move || t.cleanup_with_counts())
+            })
+            .collect();
+
+        let total_removed: StatusCounts = results
+            .into_iter()
+            .map(|r| r.join().unwrap().0)
+            .fold(StatusCounts::default(), |mut acc, delta| {
+                acc.cancelled += delta.cancelled;
+                acc.orphaned += delta.orphaned;
+                acc
+            });
+
+        assert_eq!(
+            total_removed.cancelled, 2,
+            "total cancelled removed across all calls must be exactly 2"
+        );
+        assert_eq!(
+            total_removed.orphaned, 3,
+            "total orphaned removed across all calls must be exactly 3"
+        );
+    }
+
+    /// Regression (task 23): concurrent `reconcile_orphans_by_max_age` +
+    /// `cleanup_with_counts` must not cause underflow in the orphaned count.
+    #[test]
+    fn concurrent_reconcile_and_cleanup_no_underflow() {
+        let tracker = OrphanedWorkerTracker::new();
+
+        tracker.spawn_with_timeout("w0".to_string(), "task".to_string(), std::time::Duration::ZERO);
+        tracker.spawn_with_timeout("w1".to_string(), "task".to_string(), std::time::Duration::ZERO);
+
+        // Give them a chance to become orphaned (timeout=0).
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        let t1 = tracker.clone();
+        let reconcile_thread = std::thread::spawn(move || {
+            t1.reconcile_orphans_by_max_age(std::time::Duration::ZERO)
+        });
+
+        let t2 = tracker.clone();
+        let cleanup_thread = std::thread::spawn(move || {
+            t2.cleanup_with_counts()
+        });
+
+        let orphaned_count = reconcile_thread.join().unwrap();
+        let (_removed, _after) = cleanup_thread.join().unwrap();
+
+        // No panic means no underflow. Verify the counts are internally consistent.
+        let final_counts = tracker.status_counts();
+        assert!(
+            final_counts.orphaned == 0,
+            "all orphaned should have been cleaned up, got: {final_counts:?}"
+        );
+    }
 }

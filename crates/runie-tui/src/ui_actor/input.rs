@@ -46,19 +46,18 @@ impl UiActor {
                 if !effective.trim().is_empty() {
                     return false;
                 }
-                let new_input = format!("{}/", effective);
-                if matches!(new_input.trim(), "/q" | "/quit" | "/exit") {
+                if matches!(effective.trim(), "/q" | "/quit" | "/exit") {
                     return false;
                 }
-                self.state.input_mut().input = String::new();
-                self.state.input_mut().cursor_pos = 0;
+                // Type the "/" through the InputActor (authoritative) and open
+                // the inline dropdown (grok parity). The "/" lives in the
+                // projection; the pending mirror stays empty so the "/" echo
+                // drops nothing (guarded by `!pending.is_empty()`).
                 self.pending_input_chars.clear();
-                self.send_input_msg(InputMsg::Clear).await;
-                self.apply_event(runie_core::Event::ToggleCommandPalette);
-                // Palette opened from the chat-input "/" autocomplete: it is
-                // ephemeral and must return to chat (not the palette) after a
-                // command runs, so the next "/" starts a fresh palette.
-                self.state.command_palette_from_input = true;
+                self.state.input_mut().input = "/".to_string();
+                self.state.input_mut().cursor_pos = 1;
+                self.send_input_msg(InputMsg::InsertChar('/')).await;
+                self.state.open_slash_dropdown();
                 true
             }
             _ => false,

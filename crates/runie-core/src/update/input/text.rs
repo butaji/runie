@@ -172,7 +172,11 @@ impl AppState {
         let dialog_already_open = self.open_dialog().is_some();
         if is_at_trigger_position && self.completion().path_suggestions.is_none() && !dialog_already_open {
             if c == '/' {
-                self.open_command_palette_from_input();
+                // The TUI routes "/" through the inline dropdown (grok parity);
+                // the core palette fallback must not double-open on top of it.
+                if self.view().slash_dropdown.is_none() {
+                    self.open_command_palette_from_input();
+                }
                 return;
             }
             if c == '@' {

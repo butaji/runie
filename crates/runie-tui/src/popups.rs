@@ -4,9 +4,8 @@
 
 use ratatui::{
     layout::Rect,
-    prelude::Text,
     style::Style,
-    text::Line,
+    text::{Line, Span, Text},
     widgets::{Clear, Paragraph},
     Frame,
 };
@@ -113,4 +112,76 @@ fn path_suggestion_line(item: &runie_core::path_complete::PathCompletion, is_sel
     };
     let suffix = if item.is_dir { "/" } else { "" };
     Line::from(format!("{}{}{}", prefix, item.path, suffix)).style(style)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline slash-command dropdown (grok parity: slash_dropdown.rs)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Render the inline slash-command dropdown anchored above the input box.
+/// Rows: `❯ /name  desc` (selected) / `  /name  desc`. A bare match count
+/// sits right-aligned in the top border. None when closed or empty.
+pub fn slash_dropdown(f: &mut Frame, snap: &Snapshot) {
+    let dd = match &snap.slash_dropdown {
+        Some(dd) if !dd.matches.is_empty() => dd,
+        _ => return,
+    };
+    let count = dd.matches.len().min(model_slash_max_rows());
+    let panel_height = (count + 2) as u16;
+    let area = f.area();
+    // Anchor at the top, below the context header: the input box absorbs all
+    // leftover vertical space, so a bottom-anchored panel would overlap it.
+    let y = 1u16;
+    if area.height < panel_height + 3 {
+        return;
+    }
+    let rect = Rect {
+        x: area.x + 1,
+        y,
+        width: area.width.saturating_sub(2).min(60),
+        height: panel_height,
+    };
+
+    clear_panel_bg(f, rect);
+    // Top border with the match-count hint right-aligned.
+    let top = format!("{}{}", "─".repeat(rect.width as usize - 3), format!(" {} ", dd.matches.len()));
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled(top, Style::new().fg(color_bg_panel())),
+        ])),
+        Rect { x: rect.x, y: rect.y, width: rect.width, height: 1 },
+    );
+    f.render_widget(
+        Paragraph::new(Line::from("─".repeat(rect.width as usize))).style(Style::new().fg(color_bg_panel())),
+        Rect { x: rect.x, y: rect.y + rect.height - 1, width: rect.width, height: 1 },
+    );
+
+    let inner = Rect {
+        x: rect.x + 1,
+        y: rect.y + 1,
+        width: rect.width.saturating_sub(2),
+        height: rect.height.saturating_sub(2),
+    };
+    let lines: Vec<Line<'static>> = dd
+        .matches
+        .iter()
+        .take(count)
+        .enumerate()
+        .map(|(i, m)| {
+            let selected = i == dd.selected;
+            let prefix = if selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
+            let style = if selected {
+                style_popup_selected()
+            } else {
+                style_popup_unselected()
+            };
+            Line::from(format!("{prefix}/{}  {}", m.name, m.desc)).style(style)
+        })
+        .collect();
+    f.render_widget(Paragraph::new(Text::from(lines)), inner);
+}
+
+/// Max visible dropdown rows (grok `MAX_VISIBLE_SUGGESTIONS`).
+fn model_slash_max_rows() -> usize {
+    6
 }

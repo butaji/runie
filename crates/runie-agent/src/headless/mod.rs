@@ -229,7 +229,8 @@ impl<'a> StreamingHandler for HeadlessHandler<'a> {
     }
 
     fn on_error(&mut self, message: String) -> Result<()> {
-        Err(anyhow::anyhow!("LLM error: {}", message))
+        self.emit(HeadlessEvent::Error { message });
+        Ok(())
     }
 
     fn is_cancelled(&self) -> bool {
@@ -271,8 +272,7 @@ async fn stream_headless_response(
             ProviderEvent::Error(e) => {
                 let msg = format!("{:?}", e);
                 handler.emit(HeadlessEvent::Error { message: msg.clone() });
-                handler.on_error(msg)?;
-                return Ok(handler.shared.into_response());
+                return Err(anyhow::anyhow!("Model error: {}", msg));
             }
             // Pass through the rest.
             other => other,

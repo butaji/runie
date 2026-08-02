@@ -20,6 +20,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+y".into(), "Redo".into());
     map.insert("ctrl+c".into(), "Quit".into());
     map.insert("ctrl+q".into(), "ForceQuit".into());
+    map.insert("ctrl+;".into(), "ToggleQueuePane".into());
     map.insert("ctrl+s".into(), "Abort".into());
     map.insert("ctrl+g".into(), "OpenExternalEditor".into());
     map.insert("ctrl+shift+o".into(), "CopyLastResponse".into());

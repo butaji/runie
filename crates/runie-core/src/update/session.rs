@@ -283,6 +283,40 @@ impl AppState {
             self.view_mut().dirty = true;
         }
     }
+
+    /// Move the queue-pane selection by `delta` rows (clamped, no wrap).
+    pub fn queue_pane_move(&mut self, delta: isize) {
+        let len = self.agent_state().message_queue.len();
+        if len == 0 {
+            return;
+        }
+        let sel = self.view().queue_pane_selected as isize + delta;
+        self.view_mut().queue_pane_selected = sel.clamp(0, len as isize - 1) as usize;
+        self.view_mut().dirty = true;
+    }
+
+    /// Remove the queued message at `index` (queue pane `x` action).
+    /// Mirrors `dequeue`: the AgentState projection is authoritative for the
+    /// UI; the TurnActor's delivery queue entry is left in place (same
+    /// pre-existing sync quirk as `Dequeue`).
+    pub fn remove_queued_at(&mut self, index: usize) {
+        let len = self.agent_state().message_queue.len();
+        if index >= len {
+            return;
+        }
+        self.agent_state_mut().message_queue.remove(index);
+        // Keep the selection valid and auto-hide the pane when the queue drains.
+        let new_len = self.agent_state().message_queue.len();
+        if new_len == 0 {
+            self.view_mut().queue_pane_visible = false;
+            self.view_mut().queue_pane_focused = false;
+            self.view_mut().queue_pane_selected = 0;
+        } else {
+            let sel = self.view().queue_pane_selected;
+            self.view_mut().queue_pane_selected = sel.min(new_len - 1);
+        }
+        self.view_mut().dirty = true;
+    }
 }
 
 // ── Session event dispatcher ─────────────────────────────────────────────────

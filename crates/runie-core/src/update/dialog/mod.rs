@@ -18,7 +18,7 @@ pub use open::{
     open_session_tree_dialog, open_settings_dialog, open_skills_dialog, open_theme_selector,
 };
 pub(crate) use panel_handler::root_closable;
-pub use router::{process_command_result, update_dialog};
+pub use router::{process_command_result, restore_file_picker_backup, update_dialog};
 pub use toggles::dialog_toggle_event;
 
 #[cfg(test)]

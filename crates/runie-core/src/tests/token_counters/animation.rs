@@ -252,3 +252,74 @@ fn speed_window_speed_calculation_uses_rolling_window() {
     let speed2 = window.speed();
     assert!(speed2 >= 0.0);
 }
+
+// =============================================================================
+// Layer 1: tick_animation dirty-flag tests (Task 25)
+// =============================================================================
+
+/// tick_animation with no active work and no flash does NOT set dirty.
+#[test]
+fn tick_animation_idle_is_noop() {
+    let mut state = crate::tests::fresh_state();
+    // Default state: turn_active=false, no tools running, no input flash.
+    // Ensure clean starting point (default ViewState starts dirty).
+    state.agent_state_mut().turn_active = false;
+    state.agent_state_mut().current_tool_name = None;
+    state.input_mut().input_flash = 0;
+    state.view_mut().dirty = false;
+
+    state.tick_animation();
+
+    assert!(
+        !state.is_dirty(),
+        "Idle tick_animation must not set dirty flag"
+    );
+}
+
+/// tick_animation with turn_active=true sets dirty.
+#[test]
+fn tick_animation_turn_active_sets_dirty() {
+    let mut state = crate::tests::fresh_state();
+    state.agent_state_mut().turn_active = true;
+    // Also seed a request_id so animation proceeds.
+    state.agent_state_mut().current_request_id = Some("r1".to_string());
+
+    state.tick_animation();
+
+    assert!(
+        state.is_dirty(),
+        "tick_animation with turn_active=true must set dirty flag"
+    );
+}
+
+/// tick_animation with input_flash > 0 sets dirty even without turn_active.
+#[test]
+fn tick_animation_flash_sets_dirty() {
+    let mut state = crate::tests::fresh_state();
+    // No turn active.
+    state.agent_state_mut().turn_active = false;
+    state.agent_state_mut().current_tool_name = None;
+    state.input_mut().input_flash = 1;
+
+    state.tick_animation();
+
+    assert!(
+        state.is_dirty(),
+        "tick_animation with input_flash>0 must set dirty flag"
+    );
+}
+
+/// tick_animation with a running tool sets dirty.
+#[test]
+fn tick_animation_tool_running_sets_dirty() {
+    let mut state = crate::tests::fresh_state();
+    state.agent_state_mut().turn_active = false;
+    state.agent_state_mut().current_tool_name = Some("bash".to_string());
+
+    state.tick_animation();
+
+    assert!(
+        state.is_dirty(),
+        "tick_animation with current_tool_name set must set dirty flag"
+    );
+}

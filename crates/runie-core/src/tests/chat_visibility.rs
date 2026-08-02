@@ -13,6 +13,7 @@ fn visible_kinds(state: &mut AppState, height: usize) -> Vec<String> {
         .map(|e| match e {
             crate::view::Element::UserMessage { .. } => "User".to_string(),
             crate::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            crate::view::Element::SystemMessage { .. } => "System".to_string(),
             crate::view::Element::Thinking { .. } => "Thinking".to_string(),
             crate::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
             crate::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),
@@ -31,6 +32,11 @@ fn visible_kinds(state: &mut AppState, height: usize) -> Vec<String> {
             crate::view::Element::WebSearchCall { .. } => "WebSearchCall".to_string(),
             crate::view::Element::AnsiStyled { .. } => "AnsiStyled".to_string(),
             crate::view::Element::Spacer { .. } => "Spacer".to_string(),
+            crate::view::Element::CreditLimit { .. } => "CreditLimit".to_string(),
+            crate::view::Element::Workflow { .. } => "Workflow".to_string(),
+            crate::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
+            crate::view::Element::Btw { .. } => "Btw".to_string(),
+            crate::view::Element::ContextInfo { .. } => "ContextInfo".to_string(),
         })
         .filter(|k| k != "Spacer")
         .collect()

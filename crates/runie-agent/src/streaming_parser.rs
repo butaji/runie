@@ -185,7 +185,6 @@ pub async fn stream_with_handler<H: StreamingHandler>(
                 }
                 ProviderEvent::Error(e) => {
                     handler.on_error(format!("{:?}", e))?;
-                    return Ok(state.into_response());
                 }
                 _ => {}
             },

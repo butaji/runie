@@ -22,6 +22,17 @@ pub const GLYPH_INDENT: &str = "  ";
 /// (must match `runie_tui::theme::FEED_INDENT`). Combined with the 1-column
 /// terminal margin this places post content at column 2 (0-indexed).
 pub const FEED_INDENT: &str = " ";
+/// Width of the accent-rail column at the feed's left edge (must match
+/// `runie_tui::theme::RAIL_WIDTH`).
+pub const RAIL_WIDTH: usize = 1;
+
+/// Content width the TUI feed renderer wraps to for a feed area of
+/// `area_width` columns: `area_width - 2` (right-side slack) minus the feed
+/// indent and accent-rail columns. Cache/scroll math in core MUST use this
+/// exact formula so cached `total_lines` matches the rendered line count.
+pub fn feed_content_width(area_width: u16) -> u16 {
+    area_width.saturating_sub(2 + FEED_INDENT.len() as u16 + RAIL_WIDTH as u16)
+}
 
 /// Number of terminal rows an element renders to at the given viewport
 /// width. This uses the same wrapping rules as `runie_tui::ui::messages::to_lines`,
@@ -35,14 +46,24 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::Spacer { .. } => 1,
         Element::UserMessage { content, timestamp, expanded } => user_message_line_count(content, *timestamp, width, *expanded),
         Element::AgentMessage { content, timestamp, .. } => agent_message_line_count(content, *timestamp, width),
+        Element::SystemMessage { content, .. } => content
+            .lines()
+            .map(|line| word_wrap(line, width.max(1), width.max(1)).len().max(1))
+            .sum::<usize>()
+            .max(1),
+        Element::ContextInfo { .. } => if width < 50 { 15 } else { 10 },
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
-        Element::AnthropicThinking { content, .. } => thought_marker_line_count(content, width),
+        Element::AnthropicThinking { content, signature, redacted, .. } => {
+            anthropic_thinking_line_count(content, signature.as_deref(), *redacted)
+        }
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
-        Element::ToolConfirmation { .. } => 1,
+        Element::ToolConfirmation { args, description, .. } => {
+            tool_confirmation_line_count(args, description)
+        }
         Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
@@ -52,18 +73,21 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         }
         Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
-        Element::Image { .. } => 1, // Image placeholder height
-        Element::DataPart { data, .. } => data.lines().count().max(1),
-        Element::MarkdownTable { rows, .. } => {
-            // Header + separator + rows
-            1 + 1 + rows.len()
-        }
-        Element::DiffOutput { content, .. } => content.lines().count().max(1),
+        Element::Image { .. } => 2, // Header plus terminal-protocol detail row
+        Element::DataPart { .. } => 2, // Label plus formatted payload
+        Element::MarkdownTable { rows, .. } => 4 + rows.len(),
+        Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
         Element::WebSearchCall { results, .. } => {
-            // Query line + result headers + separator
-            1 + results.len() * 2
+            // Query line + title, snippet, and URL for each result.
+            1 + results.len().min(5) * 3
         }
-        Element::AnsiStyled { plain_text, .. } => plain_text.lines().count().max(1),
+        Element::CreditLimit { .. } => 4,
+        Element::Workflow { .. } => 1,
+        Element::BackgroundTask { .. } => 1,
+        Element::Btw { answer, expanded, .. } => {
+            1 + if *expanded { answer.as_ref().map(|text| 1 + text.lines().count()).unwrap_or(0) } else { 0 }
+        }
+        Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
 }
 
@@ -72,10 +96,14 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::Spacer { .. } => 1,
         Element::UserMessage { content, .. } => content.lines().count().max(1) + 2,
         Element::AgentMessage { content, .. } => content.lines().count().max(1),
+        Element::SystemMessage { content, .. } => content.lines().count().max(1),
+        Element::ContextInfo { .. } => 10,
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
         Element::ThoughtSummary { .. } => 1,
-        Element::AnthropicThinking { content, .. } => content.lines().count().max(1),
+        Element::AnthropicThinking { content, signature, redacted, .. } => {
+            anthropic_thinking_line_count(content, signature.as_deref(), *redacted)
+        }
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => {
             if output.is_empty() {
@@ -85,7 +113,9 @@ fn fallback_line_count(element: &Element) -> usize {
             }
         }
         Element::ToolSummary { .. } => 1,
-        Element::ToolConfirmation { .. } => 1,
+        Element::ToolConfirmation { args, description, .. } => {
+            tool_confirmation_line_count(args, description)
+        }
         Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
@@ -95,12 +125,18 @@ fn fallback_line_count(element: &Element) -> usize {
         }
         Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
-        Element::Image { .. } => 1,
-        Element::DataPart { data, .. } => data.lines().count().max(1),
-        Element::MarkdownTable { rows, .. } => 1 + 1 + rows.len(),
-        Element::DiffOutput { content, .. } => content.lines().count().max(1),
-        Element::WebSearchCall { results, .. } => 1 + results.len() * 2,
-        Element::AnsiStyled { plain_text, .. } => plain_text.lines().count().max(1),
+        Element::Image { .. } => 2,
+        Element::DataPart { .. } => 2,
+        Element::MarkdownTable { rows, .. } => 4 + rows.len(),
+        Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
+        Element::WebSearchCall { results, .. } => 1 + results.len().min(5) * 3,
+        Element::CreditLimit { .. } => 4,
+        Element::Workflow { .. } => 1,
+        Element::BackgroundTask { .. } => 1,
+        Element::Btw { answer, expanded, .. } => {
+            1 + if *expanded { answer.as_ref().map(|text| 1 + text.lines().count()).unwrap_or(0) } else { 0 }
+        }
+        Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
 }
 
@@ -270,11 +306,41 @@ fn thought_marker_line_count(content: &str, width: u16) -> usize {
     lines.max(1)
 }
 
+/// Matches `render_anthropic_thinking`: header, optional signature row, and
+/// either wrapped content or the single redaction placeholder row.
+fn anthropic_thinking_line_count(content: &str, signature: Option<&str>, redacted: bool) -> usize {
+    let mut lines = 1; // header
+    if signature.is_some() {
+        lines += 1;
+    }
+    if redacted {
+        lines + 1
+    } else {
+        lines + content.lines().map(|line| word_wrap(line, 80, 80).len().max(1)).sum::<usize>()
+    }
+}
+
+/// Matches `render_tool_confirmation`: fixed header/detail/action rows plus
+/// at most five argument rows.
+fn tool_confirmation_line_count(args: &str, description: &str) -> usize {
+    1 // warning header
+        + 1 // tool name
+        + usize::from(!description.is_empty())
+        + usize::from(!args.is_empty()) // args label
+        + args.lines().take(5).count()
+        + 1 // request id
+        + 1 // action hint
+}
+
 fn tool_done_line_count(output: &str) -> usize {
     if output.is_empty() {
         1
     } else {
-        1 + output.lines().count()
+        // Must match the TUI renderer (message/support.rs): header row +
+        // blank separator + output panel, where panels longer than 5 lines
+        // are truncated to `first 2 + … + last 3` (6 rows).
+        let n = output.lines().count();
+        2 + if n > 5 { 6 } else { n }
     }
 }
 

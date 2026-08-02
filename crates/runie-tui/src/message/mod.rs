@@ -31,10 +31,11 @@ pub(crate) use wrap::word_wrap;
 pub(crate) use wrap::wrap_styled_spans;
 
 pub use support::{
-    render_ansi_styled, render_anthropic_thinking, render_context_group, render_data_part, render_diff_output,
+    render_ansi_styled, render_anthropic_thinking, render_context_group, render_credit_limit, render_data_part, render_diff_output,
     render_horizontal_rule, render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row,
     render_thinking, render_thought_marker, render_thought_summary, render_tool_confirmation, render_tool_done,
-    render_tool_running, render_tool_summary, render_turn_complete, render_web_search_call,
+    render_system_message, render_context_info, render_tool_running, render_tool_summary, render_turn_complete, render_web_search_call,
+    render_workflow, render_background_task, render_btw,
 };
 
 fn span_width(spans: &[Span<'_>]) -> u16 {

@@ -81,10 +81,11 @@ fn tool_line_count_matches_output() {
     state.refresh_after_message_change();
 
     let total = state.view.total_lines;
-    // ToolDone: header (1) + output (3) = 4, + leading spacer + trailing spacer = 6
+    // ToolDone: header (1) + separator (1) + output (3) = 5, plus the
+    // feed spacer rows retained by the element cache = 7 rows total.
     assert_eq!(
-        total, 6,
-        "Tool with 3 output lines should be 4+2=6 lines total"
+        total, 7,
+        "Tool with 3 output lines should match the rendered feed line count"
     );
 }
 

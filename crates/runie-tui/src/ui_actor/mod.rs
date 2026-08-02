@@ -19,7 +19,7 @@ use std::time::Duration;
 use runie_agent::truncate::TruncationPolicy;
 use runie_agent::AgentCommand;
 use runie_core::actors::turn::RactorTurnHandle;
-use runie_core::actors::RactorInputHandle;
+use runie_core::actors::{InputMsg, RactorInputHandle};
 use runie_core::bus::{EventBus, Receiver};
 use runie_core::permissions::PermissionAction;
 use runie_core::skills::build_skills_context;
@@ -53,9 +53,7 @@ pub struct UiActor {
     /// real typing; autocomplete trigger checks must include these pending
     /// characters or they read a stale (shorter) input.
     pending_input_chars: Vec<char>,
-    /// Pending submit content captured before sending InputMsg::Submit.
-    /// Dispatched after InputChanged is applied so state is clean.
-    pending_submit: Option<String>,
+    last_echo_input_len: usize,
     /// Tracks whether a turn was active (agent was spawned) in the previous turn cycle.
     /// Set when an agent is spawned; cleared when `TurnCompleted`/`Abort` resets the state.
     /// Used by the guard to block a `TurnStarted` that arrives after `Done` clears
@@ -65,6 +63,11 @@ pub struct UiActor {
     /// not a fresh user submit. When true, UiActor skips calling submit_user_message
     /// for TurnStarted because the content was already delivered via FollowUpDelivered.
     pending_queued_turn: bool,
+    /// A `TurnStarted` that arrived while the agent guard was still held from the
+    /// previous turn (the TurnActor can emit the next `TurnStarted` before the
+    /// previous `TurnCompleted` is processed). Stored and spawned once the guard
+    /// clears, so a queued follow-up turn is never silently dropped.
+    pending_turn: Option<(String, String)>,
     /// Turn actor handle for draining the queue after a turn completes.
     /// Stored here so UiActor can call run_if_queued after Done is processed.
     turn_handle: Option<RactorTurnHandle>,
@@ -142,9 +145,10 @@ impl UiActor {
             caps,
             paced: PacedRenderer::new(),
             pending_input_chars: Vec::new(),
-            pending_submit: None,
+            last_echo_input_len: 0,
             turn_was_active: false,
             pending_queued_turn: false,
+            pending_turn: None,
             turn_handle: Some(turn_handle),
             input_handle: Some(input_handle),
             // Store the pre-created receiver for run_with_external_rx
@@ -184,9 +188,10 @@ impl UiActor {
             caps,
             paced: PacedRenderer::new(),
             pending_input_chars: Vec::new(),
-            pending_submit: None,
+            last_echo_input_len: 0,
             turn_was_active: false,
             pending_queued_turn: false,
+            pending_turn: None,
             turn_handle,
             input_handle,
             _bus_rx: None,
@@ -336,36 +341,39 @@ impl UiActor {
             tokio::select! {
                 Ok(evt) = rx.recv() => {
                     if self.handle_event_inner(evt, effect_tx.clone()).await {
-                        break;
+                        // Quit: publish final snapshot and propagate quit signal
+                        // so the outer loop exits (not just the burst-drain while).
+                        self.publish_snapshot();
+                        return;
                     }
                     // Drain any events already queued (e.g. streaming response
                     // deltas) and apply them in one batch, then publish a single
                     // snapshot for the whole burst instead of one per token.
                     while let Ok(evt) = rx.try_recv() {
                         if self.handle_event_inner(evt, effect_tx.clone()).await {
-                            // Quit: break out of while loop to publish final snapshot.
-                            break;
+                            // Quit: publish final snapshot and propagate quit signal.
+                            self.publish_snapshot();
+                            return;
                         }
                     }
                     self.publish_snapshot();
                 }
                 Some(evt) = submit_rx.recv() => {
                     if self.handle_event_inner(evt, effect_tx.clone()).await {
-                        break;
+                        // Quit: publish final snapshot and propagate quit signal.
+                        self.publish_snapshot();
+                        return;
                     }
                     self.publish_snapshot();
                 }
                 _ = anim.tick() => {
                     self.state.tick_animation();
                     self.paced.tick();
-                    self.publish_snapshot();
+                    if self.state.is_dirty() {
+                        self.publish_snapshot();
+                    }
                 }
             }
-        }
-
-        self.publish_snapshot();
-        if let Some(tx) = self.shutdown_tx.take() {
-            let _ = tx.send(());
         }
     }
 
@@ -420,6 +428,15 @@ impl UiActor {
                     self.clear_turn_state(true).await;
                     return false;
                 }
+                // Ctrl+C clears a non-empty composer before it becomes the
+                // idle quit command. This matches terminal-editor behavior.
+                if !self.state.input().input.is_empty() {
+                    self.state.input_mut().input.clear();
+                    self.state.input_mut().cursor_pos = 0;
+                    self.send_input_msg(InputMsg::Clear).await;
+                    self.state.view_mut().dirty = true;
+                    return false;
+                }
                 return true;
             }
             _ => {}
@@ -428,8 +445,13 @@ impl UiActor {
         // Esc / DialogBack at the chat root while a turn is active: abort the
         // turn and stay open. Only fires when no dialog is open, so dialog
         // dismissal is preserved (DialogBack for an open dialog, and vim-nav
-        // when idle, flow through apply_event below).
-        if matches!(&evt, Event::DialogBack) && self.state.open_dialog().is_none() && turn_active {
+        // when idle, flow through apply_event below). When the queue pane is
+        // focused, Esc first returns focus to the chat input (grok parity).
+        if matches!(&evt, Event::DialogBack)
+            && self.state.open_dialog().is_none()
+            && !self.state.view().queue_pane_focused
+            && turn_active
+        {
             self.clear_turn_state(true).await;
             return false;
         }
@@ -482,6 +504,16 @@ impl UiActor {
                 } else {
                     self.run_agent_turn(request_id, content).await;
                 }
+            } else {
+                // The previous turn's agent is still settling (TurnCompleted not
+                // yet processed). Only retain a turn that was explicitly
+                // delivered by TurnActor as a queued follow-up. A duplicate
+                // TurnStarted arriving from another producer must be ignored;
+                // treating every duplicate as queued would make the guard test
+                // scenario spawn an unexpected second turn after completion.
+                if self.pending_queued_turn {
+                    self.pending_turn = Some((request_id.clone(), content.clone()));
+                }
             }
             // Clear the queued-turn flag now that the turn has started.
             // (submit_user_message was already called for queued turns by TurnActor.)
@@ -506,6 +538,12 @@ impl UiActor {
         ) {
             let is_abort = matches!(&evt, Event::Abort);
             self.clear_turn_state(is_abort).await;
+            // Spawn a turn that was blocked by the guard while the previous
+            // turn was settling (see the TurnStarted handler).
+            if let Some((request_id, content)) = self.pending_turn.take() {
+                self.turn_was_active = true;
+                self.run_agent_turn(&request_id, &content).await;
+            }
         }
 
         false
@@ -719,6 +757,58 @@ impl UiActor {
             return;
         }
 
+        // Inline slash dropdown: Up/Down navigate (wrap), Esc closes keeping
+        // the text, Enter submits the accepted `/cmd`. Intercepted here
+        // because the core input router would translate Up/Down to cursor
+        // messages and Esc to nav/abort before the dropdown could see them.
+        if self.state.view().slash_dropdown.is_some() {
+            // The chat-input keymap maps Up/Down to HistoryPrev/HistoryNext
+            // (history recall) and Esc to DialogBack — intercept those.
+            match evt {
+                Event::HistoryPrev => {
+                    self.state.slash_move_selection(-1);
+                    self.state.view_mut().dirty = true;
+                    return;
+                }
+                Event::HistoryNext => {
+                    self.state.slash_move_selection(1);
+                    self.state.view_mut().dirty = true;
+                    return;
+                }
+                Event::DialogBack | Event::Escape => {
+                    self.state.slash_close();
+                    self.state.view_mut().dirty = true;
+                    return;
+                }
+                Event::Input('\t') => {
+                    // Tab commits the selected command into the input and
+                    // closes the dropdown (grok parity: accept preview).
+                    if let Some(name) = self
+                        .state
+                        .view()
+                        .slash_dropdown
+                        .as_ref()
+                        .and_then(|d| d.selected_name())
+                    {
+                        let full = format!("/{}", name);
+                        self.state.input_mut().input = full.clone();
+                        self.state.input_mut().cursor_pos = full.len();
+                        // Replace the InputActor's authoritative input too
+                        // (a Clear echo would wipe the projection).
+                        self.send_input_msg(runie_core::actors::InputMsg::SetText { text: full.clone(), chips: Vec::new() })
+                            .await;
+                        self.state.view_mut().dirty = true;
+                    }
+                    self.state.slash_close();
+                    self.state.view_mut().dirty = true;
+                    return;
+                }
+                // Submit falls through: handle_submit_event accepts the
+                // selected row and submits the full `/cmd`.
+                _ => {}
+            }
+        }
+
         // Vim nav mode intercepts keys that would otherwise edit the chat input.
         // Route them through the canonical state update so j/k/i/I/space/arrows
         // move the feed selection or return to the input box. Enter (Submit) is
@@ -728,6 +818,30 @@ impl UiActor {
             match evt {
                 Event::Input(_) | Event::Submit | Event::HistoryPrev | Event::HistoryNext | Event::Backspace => {
                     self.apply_event(evt.clone());
+                    return;
+                }
+                _ => {}
+            }
+        }
+
+        // Queue pane focus: j/k navigate rows, x removes the selected row,
+        // Esc returns focus to the chat input (grok parity).
+        if self.state.view().queue_pane_focused {
+            match evt {
+                Event::Input('j') | Event::Input('k') => {
+                    let delta = if matches!(evt, Event::Input('j')) { 1 } else { -1 };
+                    self.state.queue_pane_move(delta);
+                    self.state.view_mut().dirty = true;
+                    return;
+                }
+                Event::Input('x') => {
+                    let sel = self.state.view().queue_pane_selected;
+                    self.state.remove_queued_at(sel);
+                    return;
+                }
+                Event::DialogBack => {
+                    self.state.view_mut().queue_pane_focused = false;
+                    self.state.view_mut().dirty = true;
                     return;
                 }
                 _ => {}
@@ -787,6 +901,15 @@ impl UiActor {
             Event::InputChanged { state } => {
                 self.handle_input_changed(state).await;
             }
+            Event::FollowUp => {
+                // Queue the projection input (queue_follow_up) and clear the
+                // InputActor's authoritative buffer — otherwise the echoed
+                // text stays and the next keystroke appends to stale content.
+                self.apply_event(evt.clone());
+                if let Some(ref handle) = self.input_handle {
+                    handle.send_message(runie_core::actors::InputMsg::Clear);
+                }
+            }
             _ => {
                 self.apply_event(evt.clone());
             }
@@ -798,17 +921,53 @@ impl UiActor {
     /// Dialog forms and palettes receive Enter via `is_dialog_input_event`, so
     /// this path only submits the chat input box.
     async fn handle_submit_event(&mut self) {
+        // Inline slash dropdown: Enter accepts the SELECTED row (grok parity),
+        // submitting the full `/cmd` — not the raw typed prefix. Recompute the
+        // matches from the EFFECTIVE input first: the projection can lag the
+        // keystrokes by one echo round-trip, so a fast Enter after typing
+        // would otherwise accept a stale selection (e.g. "/mode swarm" seen as
+        // "/m" → accepts "/ask"). A space in the effective text means
+        // command-with-args — close and submit the raw `/cmd args`.
+        if self.state.view().slash_dropdown.is_some() {
+            let effective = self.effective_input_content();
+            if effective.trim().contains(' ') || !effective.trim_start().starts_with('/') {
+                self.state.slash_close();
+            } else {
+                self.state.open_slash_dropdown_for(effective.trim());
+                if let Some(name) = self
+                    .state
+                    .view()
+                    .slash_dropdown
+                    .as_ref()
+                    .and_then(|d| d.selected_name())
+                {
+                    let full = format!("/{}", name);
+                    self.state.input_mut().input = full.clone();
+                    self.state.input_mut().cursor_pos = full.len();
+                    // Drop the optimistic mirror: its un-echoed characters
+                    // must not append onto the accepted command.
+                    self.pending_input_chars.clear();
+                }
+                self.state.slash_close();
+            }
+        }
         let content = self.effective_input_content().trim().to_owned();
         if content.is_empty() {
             return;
         }
-        // Save content for the InputChanged callback path (legacy).
-        self.pending_submit = Some(content.clone());
         self.pending_input_chars.clear();
+        // Clear the input projection synchronously so a fast follow-up command
+        // (e.g. "/compact" typed immediately after Enter) does not see the stale
+        // submitted text and mis-trigger the '/' autocomplete check. The
+        // InputActor's Clear echo will land shortly after and is idempotent.
+        self.state.input_mut().input.clear();
+        self.state.input_mut().cursor_pos = 0;
         self.send_input_msg(runie_core::actors::InputMsg::Submit { content: content.clone() })
             .await;
-        // Also dispatch directly — the InputChanged callback may never arrive
-        // in some actor configurations, so we don't rely on it exclusively.
+        // Dispatch the submit exactly once, synchronously. The InputChanged
+        // echo from the InputActor is a state projection, not a second submit
+        // trigger — dispatching again there would submit the same prompt twice
+        // (two TurnStarted events, two agent runs for one Enter).
         self.dispatch_submit_content(content).await;
     }
 
@@ -836,11 +995,16 @@ impl UiActor {
         let new_cursor_pos = state.cursor_pos;
 
         // Each routed character produces exactly one InputChanged echo; drop
-        // it from the optimistic pending mirror. Clears/pastes leave the
-        // queue untouched because those paths reset it themselves.
-        if !self.pending_input_chars.is_empty() {
+        // it from the optimistic pending mirror — but ONLY when the echo is an
+        // insert (input length grew). A late Clear/replacement echo (e.g. from
+        // Ctrl+U clearing the box right before more typing) must not eat a
+        // pending char that was typed after the clear was issued, or fast
+        // follow-up messages lose their first character.
+        let echo_len = new_input.len();
+        if echo_len > self.last_echo_input_len && !self.pending_input_chars.is_empty() {
             self.pending_input_chars.remove(0);
         }
+        self.last_echo_input_len = echo_len;
 
         // Route through apply_event — the single source of truth for state mutations.
         // UiActor must NOT mutate AppState.input directly.
@@ -849,12 +1013,27 @@ impl UiActor {
         self.detect_autocomplete_trigger(&prev_input, prev_cursor_pos, &new_input, new_cursor_pos)
             .await;
 
-        if let Some(content) = self.pending_submit.take() {
-            self.dispatch_submit_content(content).await;
-        }
-
         self.state.view_mut().dirty = true;
         self.handle_at_trigger();
+
+        // Keep the inline slash dropdown in sync with the typed `/…` text.
+        if self.state.view().slash_dropdown.is_some() {
+            self.state.open_slash_dropdown();
+        }
+
+        // Ephemeral plan-nudge tip (grok parity: tips/plan_nudge.rs) — whole-word
+        // keyword match on every edit; suppressed while in plan mode or a turn
+        // is busy (the tip row is also gated at snapshot time).
+        if runie_core::model::tips::plan_nudge_matches(&new_input)
+            && !self.state.view().plan_mode
+            && !self.state.agent_state().turn_active
+        {
+            let (tip_state, seen_counts) = {
+                let view = self.state.view_mut();
+                (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+            };
+            tip_state.show(runie_core::model::tips::plan_nudge_tip(), seen_counts);
+        }
     }
 
     /// Update the paced renderer based on the received event.
@@ -883,6 +1062,20 @@ impl UiActor {
     /// Build a snapshot with the paced streaming tail applied.
     fn build_paced_snapshot(&mut self) -> Snapshot {
         self.state.ensure_fresh();
+
+        // Small-screen tip (grok parity: tips/small_screen.rs): once per run
+        // when the terminal is in the 21..=28 row band (auto-compact kicks in
+        // at <= 20). Seen cap 1 makes the repeat show a no-op. Must run BEFORE
+        // the snapshot build so this frame's `ephemeral_tip` projection carries it.
+        let rows = self.state.view().terminal_rows;
+        if rows > runie_core::model::tips::SHORT_TERMINAL_ROWS && rows <= 28 {
+            let (tip_state, seen_counts) = {
+                let view = self.state.view_mut();
+                (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+            };
+            tip_state.show(runie_core::model::tips::small_screen_tip(), seen_counts);
+        }
+
         let mut snap = self.state.snapshot();
         // Only show streaming tail when turn is active.
         // When turn_active is false, the pacing renderer may contain stale content

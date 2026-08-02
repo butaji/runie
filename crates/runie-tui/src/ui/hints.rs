@@ -13,10 +13,34 @@ use crate::theme::{color_bg, color_bg_panel, color_error, color_success, color_w
 pub(crate) fn hints(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect) {
     if let Some(ref msg) = snap.transient_message {
         render_transient(f, snap, area, msg);
+    } else if let Some(ref tip) = snap.ephemeral_tip {
+        render_tip(f, area, tip);
     } else {
         let line = Line::from(parse_hint_spans(&snap.hint_text));
         f.render_widget(Paragraph::new(line), area);
     }
+}
+
+/// Render an ephemeral tip (grok parity: tips/render.rs): dim body spans with
+/// bold chord/command tokens, truncated at the row width — no wrap.
+fn render_tip(f: &mut Frame, area: Rect, tip: &[runie_core::model::tips::TipSpan]) {
+    let base = style_hint();
+    let mut spans: Vec<Span<'static>> = Vec::with_capacity(tip.len());
+    let mut width = 0usize;
+    for span in tip {
+        let remaining = (area.width as usize).saturating_sub(width);
+        if remaining == 0 {
+            break;
+        }
+        let text: String = span.text.chars().take(remaining).collect();
+        width += text.chars().count();
+        spans.push(if span.bold {
+            Span::styled(text, style_hint_key())
+        } else {
+            Span::styled(text, base)
+        });
+    }
+    f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
 fn render_transient(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect, msg: &str) {

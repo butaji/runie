@@ -10,6 +10,8 @@ fn element_kinds(state: &AppState) -> Vec<String> {
         .map(|e| match e {
             runie_core::view::Element::UserMessage { .. } => "User".to_string(),
             runie_core::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            runie_core::view::Element::SystemMessage { .. } => "System".to_string(),
+            runie_core::view::Element::ContextInfo { .. } => "ContextInfo".to_string(),
             runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
             // A thought post renders as a full marker or (by default) a
             // one-line summary — both are the same post for ordering.
@@ -30,6 +32,10 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::MarkdownTable { .. } => "Table".to_string(),
             runie_core::view::Element::DiffOutput { .. } => "Diff".to_string(),
             runie_core::view::Element::WebSearchCall { .. } => "Search".to_string(),
+            runie_core::view::Element::CreditLimit { .. } => "CreditLimit".to_string(),
+            runie_core::view::Element::Workflow { .. } => "Workflow".to_string(),
+            runie_core::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
+            runie_core::view::Element::Btw { .. } => "Btw".to_string(),
             runie_core::view::Element::AnsiStyled { .. } => "ANSI".to_string(),
         })
         .collect()

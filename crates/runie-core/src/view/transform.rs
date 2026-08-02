@@ -2,6 +2,19 @@ use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::view::elements::{Element, Feed, PostKind};
 
+fn parse_elapsed_seconds(value: &str) -> Option<f64> {
+    let value = value.trim();
+    if let Some(seconds) = value.strip_suffix('s').filter(|seconds| !seconds.contains('m')) {
+        return seconds.parse().ok();
+    }
+    if let Some(index) = value.find('m') {
+        let minutes = value[..index].parse::<f64>().ok()?;
+        let seconds = value[index + 1..].strip_suffix('s')?.parse::<f64>().ok()?;
+        return Some(minutes * 60.0 + seconds);
+    }
+    None
+}
+
 pub struct LazyCache;
 
 impl LazyCache {
@@ -37,6 +50,7 @@ impl LazyCache {
             };
             let elem = Self::maybe_expand_subagent(elem, state, feed.post_count());
             let elem = Self::maybe_expand_user_message(elem, state, feed.post_count());
+            let elem = Self::maybe_expand_btw(elem, state, feed.post_count());
             let kind = Self::post_kind(&elem);
             let expanded = match &elem {
                 Element::ThoughtSummary { .. } | Element::ToolSummary { .. } => false,
@@ -46,9 +60,11 @@ impl LazyCache {
                 Element::SubagentRow { status, expanded, .. } => {
                     *expanded || matches!(status, crate::model::PatternWorkerStatus::Running)
                 }
-                // User messages fold when expanded=false (user collapsed their own post
-                // with ctrl+o). User messages default to expanded=true.
+                // User messages use the inverse global fold state: they are
+                // folded in the normal feed and expanded by the feed-wide
+                // Ctrl+O toggle. Individual expansion still wins.
                 Element::UserMessage { expanded, .. } => *expanded,
+                Element::Btw { expanded, .. } => *expanded,
                 _ => true,
             };
 
@@ -77,6 +93,7 @@ impl LazyCache {
             E::Spacer { .. } => PostKind::System,
             E::UserMessage { .. } => PostKind::UserInput,
             E::AgentMessage { .. } => PostKind::AgentResponse,
+            E::SystemMessage { .. } => PostKind::System,
             E::Thinking { .. } => PostKind::Thinking,
             E::ThoughtMarker { .. } | E::ThoughtSummary { .. } | E::AnthropicThinking { .. } => PostKind::Thought,
             E::ToolRunning { .. } => PostKind::ToolRunning,
@@ -84,6 +101,7 @@ impl LazyCache {
             E::ToolSummary { .. } => PostKind::ToolSummary,
             E::ToolConfirmation { .. } => PostKind::ToolRunning,
             E::ContextGroup { .. } => PostKind::ContextGroup,
+            E::ContextInfo { .. } => PostKind::System,
             E::SubagentRow { .. } => PostKind::SubagentRow,
             E::TurnComplete { .. } => PostKind::TurnComplete,
             E::Image { .. } => PostKind::AgentResponse,
@@ -91,6 +109,10 @@ impl LazyCache {
             E::MarkdownTable { .. } => PostKind::AgentResponse,
             E::DiffOutput { .. } => PostKind::AgentResponse,
             E::WebSearchCall { .. } => PostKind::AgentResponse,
+            E::CreditLimit { .. } => PostKind::System,
+            E::Workflow { .. } => PostKind::System,
+            E::BackgroundTask { .. } => PostKind::System,
+            E::Btw { .. } => PostKind::System,
             E::AnsiStyled { .. } => PostKind::AgentResponse,
         }
     }
@@ -268,8 +290,72 @@ impl LazyCache {
             } // filtered in collect_entries
             // System messages (trust banner, /sessions, compaction summary)
             // reuse the thought element for styling but are never collapsed.
-            Role::System => vec![(Element::thought(msg.content()).at(ts), false)],
+            Role::System => {
+                let content = msg.content().to_string();
+                let lower = content.to_ascii_lowercase();
+                if let Some(snapshot) = content.strip_prefix("Context snapshot: ") {
+                    let mut fields = snapshot.split('|');
+                    let model = fields.next().unwrap_or_default().to_owned();
+                    let used_tokens = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    let total_tokens = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    let turns = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    let tool_calls = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    vec![(Element::context_info(model, used_tokens, total_tokens, turns, tool_calls).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal: ") {
+                    vec![(Element::workflow("goal", objective, "running", Vec::new(), 0).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal done: ") {
+                    vec![(Element::workflow("goal", objective, "done", Vec::new(), 0).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal paused: ") {
+                    vec![(Element::workflow("goal", objective, "paused", Vec::new(), 0).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal cancelled: ") {
+                    vec![(Element::workflow("goal", objective, "cancelled", Vec::new(), 0).at(ts), false)]
+                } else if let Some(task) = Self::background_task_elem(&content, ts) {
+                    vec![(task, false)]
+                } else if lower.contains("credit limit") || lower.contains("spending cap") {
+                    let action = if lower.contains("spending cap") {
+                        "increase_payg_limit"
+                    } else {
+                        "purchase_credits"
+                    };
+                    vec![(Element::credit_limit(content, action, "https://grok.com/usage").at(ts), false)]
+                } else {
+                    vec![(Element::SystemMessage { content, timestamp: ts }, false)]
+                }
+            }
         }
+    }
+
+    /// Project Grok-compatible background-task lifecycle announcements into a
+    /// collapsed feed row. These messages deliberately use a strict prefix
+    /// and shape so ordinary system text is never misclassified.
+    fn background_task_elem(content: &str, ts: f64) -> Option<Element> {
+        let (status, rest) = if let Some(rest) = content.strip_prefix("Task started: ") {
+            ("started", rest)
+        } else if let Some(rest) = content.strip_prefix("Task completed in ") {
+            ("completed", rest)
+        } else if let Some(rest) = content.strip_prefix("Task failed in ") {
+            ("failed", rest)
+        } else if let Some(rest) = content.strip_prefix("Task killed in ") {
+            ("killed", rest)
+        } else {
+            return None;
+        };
+
+        let (duration_secs, display) = if status == "started" {
+            (0.0, rest)
+        } else {
+            let (duration, display) = rest.split_once(": ")?;
+            (parse_elapsed_seconds(duration)?, display)
+        };
+        Some(Element::background_task(
+            display,
+            "",
+            status,
+            Some(display.to_owned()),
+            duration_secs,
+            None,
+            None,
+        ).at(ts))
     }
 
     fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<(Element, bool)> {
@@ -442,10 +528,22 @@ impl LazyCache {
     /// expanded=false and content exceeds 3 visual lines.
     fn maybe_expand_user_message(mut elem: Element, state: &AppState, post_index: usize) -> Element {
         if let Element::UserMessage { expanded, .. } = &mut elem {
-            // User messages start folded (expanded=false). When the user explicitly
-            // expands the post (pressed ctrl+o or Enter on it in vim nav), the post
-            // index is added to expanded_posts — meaning "I expanded this".
-            *expanded = state.view().expanded_posts.contains(&post_index);
+            // User messages start folded. Ctrl+O participates in the same
+            // feed-wide expand/collapse cycle as tool/thought sections, while
+            // an individually expanded post remains expanded in either mode.
+            *expanded = state.view().all_collapsed
+                || state.view().expanded_posts.contains(&post_index);
+        }
+        elem
+    }
+
+    /// Mark a BTW response expanded when its post is selected for feed-wide or
+    /// individual expansion. The renderer owns the answer visibility, so the
+    /// element must carry the projection rather than only the Post metadata.
+    fn maybe_expand_btw(mut elem: Element, state: &AppState, post_index: usize) -> Element {
+        if let Element::Btw { expanded, .. } = &mut elem {
+            *expanded = state.view().all_collapsed
+                || state.view().expanded_posts.contains(&post_index);
         }
         elem
     }

@@ -50,7 +50,11 @@ pub enum ProviderEvent {
     /// Generation finished.
     Finish { reason: StopReason },
     /// Turn completed — carries elapsed duration so the UI can show "Worked for Xs."
-    TurnComplete { duration_secs: f64 },
+    TurnComplete {
+        /// Wire field name is camelCase (matches the SSE provider protocol).
+        #[serde(rename = "durationSecs")]
+        duration_secs: f64,
+    },
 }
 
 /// Why the generation stopped.

@@ -44,8 +44,10 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
     match elem {
         UserMessage { content, .. }
         | AgentMessage { content, .. }
+        | SystemMessage { content, .. }
         | ThoughtMarker { content, .. }
         | AnthropicThinking { content, .. } => content.len() / 4,
+        ContextInfo { model, .. } => model.len() / 4 + 20,
         Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
@@ -72,6 +74,10 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
                     .sum::<usize>()
                     / 4
         }
+        CreditLimit { heading, url, .. } => (heading.len() + url.len()) / 4 + 10,
+        Workflow { objective, phases, .. } => (objective.len() + phases.iter().map(String::len).sum::<usize>()) / 4 + 10,
+        BackgroundTask { command, description, .. } => (command.len() + description.as_deref().unwrap_or_default().len()) / 4 + 10,
+        Btw { question, answer, .. } => (question.len() + answer.as_deref().unwrap_or_default().len()) / 4 + 10,
         AnsiStyled { plain_text, .. } => plain_text.len() / 4,
     }
 }

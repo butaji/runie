@@ -31,13 +31,13 @@ fn row_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
 // ─── render_tool_running ────────────────────────────────────────────────────
 
 #[test]
-fn render_tool_running_shows_spinner() {
+fn render_tool_running_uses_stable_header_text() {
     let lines = render_tool_running("ls", ".", 1.5, 0);
     let output = render_to_string(lines, 80, 3);
-    // Should contain spinner char
+    // Grok owns the braille spinner in the live turn-status row, not here.
     assert!(
-        output.contains("⠋") || output.contains("⠙"),
-        "Output should contain spinner char: {}",
+        output.contains("Run ls") && !output.contains("⠋") && !output.contains("⠙"),
+        "Tool feed content must not contain a duplicate spinner: {}",
         output
     );
 }
@@ -65,27 +65,84 @@ fn render_tool_running_shows_args() {
 }
 
 #[test]
-fn render_tool_running_shows_duration() {
+fn render_tool_running_does_not_append_duration_to_grok_header() {
     let lines = render_tool_running("ls", ".", 12.5, 0);
     let output = render_to_string(lines, 80, 3);
     assert!(
-        output.contains("12.5s"),
-        "Output should contain duration: {}",
+        output.contains("Run ls") && !output.contains("12.5s"),
+        "Grok live tool headers do not append elapsed duration: {}",
         output
     );
+}
+
+#[test]
+fn render_builtin_tool_uses_grok_action_label() {
+    let lines = render_tool_running("read_file", "src/main.rs", 0.5, 0);
+    let output = render_to_string(lines, 80, 2);
+    assert!(output.contains("Read src/main.rs"), "read tool label: {output}");
+    assert!(!output.contains("Run read_file"), "raw protocol name must not replace action label: {output}");
+}
+
+#[test]
+fn completed_list_tool_shows_entry_count() {
+    let lines = render_tool_done(
+        "list_dir",
+        ".",
+        0.5,
+        "one.txt\ntwo.txt",
+        None,
+        false,
+        &None,
+        0,
+    );
+    let output = render_to_string(lines, 80, 2);
+    assert!(output.contains("List . (2 entries)"), "list summary: {output}");
+}
+
+#[test]
+fn completed_list_tool_uses_singular_entry_count() {
+    let output = render_to_string(
+        render_tool_done("list_dir", ".", 0.5, "one.txt", None, false, &None, 0),
+        80,
+        2,
+    );
+    assert!(output.contains("List . (1 entry)"), "list summary: {output}");
+    assert!(!output.contains("1 entries"), "singular count must not be plural: {output}");
+}
+
+#[test]
+fn completed_empty_list_tool_has_no_zero_count_suffix() {
+    let output = render_to_string(
+        render_tool_done("list_dir", ".", 0.5, "", None, false, &None, 0),
+        80,
+        2,
+    );
+    assert!(output.contains("List ."), "list summary: {output}");
+    assert!(!output.contains("(0 entry"), "empty listing must omit count: {output}");
+}
+
+#[test]
+fn render_unknown_tool_keeps_run_label() {
+    let lines = render_tool_running("custom_tool", "arg", 0.5, 0);
+    let output = render_to_string(lines, 80, 2);
+    assert!(output.contains("Run custom_tool"), "unknown tool label: {output}");
+}
+
+#[test]
+fn render_search_tool_variants_use_grok_action_labels() {
+    let web = render_to_string(render_tool_running("web_search", "rust", 0.5, 0), 80, 2);
+    let memory = render_to_string(render_tool_running("memory_search", "rust", 0.5, 0), 80, 2);
+    assert!(web.contains("Web Search rust"), "web search label: {web}");
+    assert!(memory.contains("Memory Search rust"), "memory search label: {memory}");
 }
 
 // ─── render_tool_done ───────────────────────────────────────────────────────
 
 #[test]
-fn render_tool_done_shows_diamond() {
+fn render_tool_done_content_excludes_feed_diamond() {
     let lines = render_tool_done("ls", ".", 2.5, "file1\nfile2", None, false, &None, 0);
     let output = render_to_string(lines, 80, 5);
-    assert!(
-        output.contains("◆"),
-        "Output should contain the tool diamond: {}",
-        output
-    );
+    assert!(!output.contains("◆"), "feed diamond belongs to the compositor: {output}");
     assert!(
         !output.contains("✓"),
         "Output should not contain the old checkmark: {}",
@@ -125,14 +182,10 @@ fn render_tool_done_shows_bytes() {
 }
 
 #[test]
-fn render_tool_done_shows_error_icon() {
+fn render_tool_done_content_excludes_feed_error_icon() {
     let lines = render_tool_done("bash", "exit 1", 0.5, "error", None, true, &None, 0);
     let output = render_to_string(lines, 80, 5);
-    assert!(
-        output.contains("✗") || output.contains("[✗]"),
-        "Output should contain error icon: {}",
-        output
-    );
+    assert!(!output.contains("✗"), "feed error icon belongs to the compositor: {output}");
 }
 
 #[test]
@@ -158,7 +211,7 @@ fn render_tool_done_no_bytes_when_none() {
 }
 
 #[test]
-fn render_tool_done_shows_error_text() {
+fn render_tool_done_content_preserves_error_text() {
     let lines = render_tool_done(
         "bash",
         "exit 1",
@@ -170,11 +223,6 @@ fn render_tool_done_shows_error_text() {
         0,
     );
     let output = render_to_string(lines, 80, 5);
-    assert!(
-        output.contains("✗"),
-        "Output should contain error icon: {}",
-        output
-    );
     assert!(
         output.contains("command not found"),
         "Output should contain error text: {}",

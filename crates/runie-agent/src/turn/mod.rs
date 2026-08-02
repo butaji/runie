@@ -126,6 +126,11 @@ async fn emit_turn_end(
 
     emit(Event::TurnComplete { id: id.to_owned(), duration_secs: turn_start.elapsed().as_secs_f64() });
     emit(Event::Done { id: id.to_owned() });
+    // Terminal marker mirroring the TurnActor path (turn/handlers.rs): the
+    // UiActor's turn guard clears on `TurnCompleted`, so without this event the
+    // agent-actor turn cycle never releases `turn_was_active` and a queued
+    // follow-up `TurnStarted` is dropped, leaving the status line stuck active.
+    emit(Event::TurnCompleted);
 }
 
 // allow: iteration control params — orthogonal and intentionally flat for turn loop clarity

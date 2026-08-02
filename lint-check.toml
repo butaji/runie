@@ -1,6 +1,12 @@
 # Lint-check exemption config
 # Files/functions listed here are allowed to exceed limits.
 # Key: absolute justification required.
+#
+# POLICY: exemptions are temporary. Every exemption must include a TODO comment
+# with a target date (6 months from addition) for removal or refactor. The
+# two largest offenders should be prioritised:
+#   - retry.rs (1533 lines) — TODO [DATE]: split retry.rs
+#   - swarm.rs (1215 lines) — TODO [DATE]: split swarm.rs
 
 [exempt_files]
 
@@ -128,6 +134,7 @@
 "crates/runie-agent/src/tool/find_definitions.rs" = "Multi-language symbol detection — language parsers bundled"
 
 # Swarm patterns — pattern orchestration
+# TODO 2026-08-01: split swarm.rs (1215 lines) — task 32
 "crates/runie-patterns/src/swarm.rs" = "Swarm orchestration — pattern composition"
 
 # UI actor — main UI state machine
@@ -161,6 +168,7 @@
 "crates/runie-provider/src/openai/protocol.rs" = "OpenAI protocol implementation — frame parsing"
 
 # Retry logic - backoff configuration
+# TODO 2026-08-01: split retry.rs (1533 lines, largest exempt file) — task 32
 "crates/runie-provider/src/retry.rs" = "Retry/backoff configuration — configuration struct"
 
 # CLI main - command entry points
@@ -168,9 +176,6 @@
 
 # CLI inspect - inspection subcommands
 "crates/runie-cli/src/inspect/mod.rs" = "CLI inspect module — inspection subcommands"
-
-# Agentic loop - main agent orchestration loop
-"crates/runie-core/src/agentic_loop.rs" = "Agentic loop — main agent orchestration loop"
 
 # Goal mode — goal pattern orchestration
 "crates/runie-core/src/goal.rs" = "Goal pattern — goal mode orchestration pipeline"

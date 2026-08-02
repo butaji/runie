@@ -95,6 +95,9 @@ pub fn inject_mock_file_entries(state: &mut AppState) {
                 let label = if is_dir { name } else { name };
                 panel.items.push(PanelItem::Action { label, action: ItemAction::Emit(evt) });
             }
+            // Keep the fixture deterministic regardless of the real project
+            // entries discovered before the mock rows are appended.
+            panel.selected = 0;
         }
     }
 }

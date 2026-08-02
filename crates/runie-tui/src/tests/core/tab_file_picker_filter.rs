@@ -8,16 +8,20 @@
 use super::*;
 use runie_core::Event;
 
+fn open_tab_picker_with_mock_entries(state: &mut AppState) {
+    state.update(Event::Input('\t'));
+    inject_mock_file_entries(state);
+}
+
 /// "ca ca" -> Tab -> pick -> "ca filename" (space preserved, NO brackets).
 #[test]
 fn tab_file_picker_preserves_space_in_middle() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     state.input.input = "ca ca".to_string();
     state.input.cursor_pos = 5; // cursor after "ca ca"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit
@@ -44,12 +48,11 @@ fn tab_file_picker_preserves_space_in_middle() {
 #[test]
 fn tab_file_picker_preserves_space_before_prefix() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     state.input.input = "car dev".to_string();
     state.input.cursor_pos = 7; // cursor after "car dev"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit
@@ -82,12 +85,11 @@ fn tab_file_picker_preserves_space_before_prefix() {
 #[test]
 fn tab_file_picker_empty_input() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     // Empty input
     assert_eq!(state.input.input, "");
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit
@@ -112,12 +114,11 @@ fn tab_file_picker_empty_input() {
 #[test]
 fn tab_file_picker_replaces_typed_prefix() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     state.input.input = "Tes".to_string();
     state.input.cursor_pos = 3;
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit
@@ -144,12 +145,11 @@ fn tab_file_picker_replaces_typed_prefix() {
 #[test]
 fn tab_file_picker_replaces_last_word_at_end() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     state.input.input = "Hello World".to_string();
     state.input.cursor_pos = 11; // cursor after "Hello World"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit
@@ -176,12 +176,11 @@ fn tab_file_picker_replaces_last_word_at_end() {
 #[test]
 fn tab_file_picker_inserts_at_cursor_middle() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     state.input.input = "Hello World".to_string();
     state.input.cursor_pos = 5; // cursor after "Hello"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit
@@ -207,11 +206,11 @@ fn tab_file_picker_inserts_at_cursor_middle() {
 #[test]
 fn tab_file_picker_at_alone_no_brackets() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
 
     // Type just @
     state.update(Event::Input('@'));
     assert!(state.open_dialog.is_some());
+    inject_mock_file_entries(&mut state);
 
     // Submit
     state.update(Event::submit());
@@ -231,7 +230,6 @@ fn tab_file_picker_at_alone_no_brackets() {
 #[test]
 fn tab_file_picker_at_with_prefix_no_brackets() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
 
     // Type "car @"
     state.update(Event::Input('c'));
@@ -242,6 +240,7 @@ fn tab_file_picker_at_with_prefix_no_brackets() {
 
     // @ opens file picker
     assert!(state.open_dialog.is_some());
+    inject_mock_file_entries(&mut state);
 
     // Submit
     state.update(Event::submit());
@@ -275,7 +274,7 @@ fn escape_closes_file_picker_restores_input() {
     let original_input = state.input.input.clone();
 
     // Press Tab to open file picker
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Press Escape to close
@@ -296,12 +295,11 @@ fn escape_closes_file_picker_restores_input() {
 #[test]
 fn tab_file_picker_preserves_trailing_space() {
     let mut state = AppState::default();
-    inject_mock_file_entries(&mut state);
     state.input.input = "test  ".to_string(); // with trailing space
     state.input.cursor_pos = 5;
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    open_tab_picker_with_mock_entries(&mut state);
     assert!(state.open_dialog.is_some());
 
     // Submit

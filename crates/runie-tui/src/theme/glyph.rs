@@ -27,9 +27,9 @@ pub const GLYPH_SUBAGENT_QUOTE_LEFT: &str = "“";
 pub const GLYPH_SUBAGENT_QUOTE_RIGHT: &str = "”";
 
 // Monitor pulse glyph frames (grok-build parity).
-// Concentric circles: outer ring breathing to solid to inner breathing to solid.
+// A single 1-column glyph breathing from outer ring to solid to inner ring.
 // Used when pattern workers are running but no named tool is active yet.
-pub const GLYPH_MONITOR_FRAMES: [&str; 4] = ["○ ◉", "◉ ○", "◉ ○", "◉ ◉"];
+pub const GLYPH_MONITOR_FRAMES: [&str; 4] = ["○", "◎", "◉", "◎"];
 
 // Monitor pulse speed divisor - every N animation frames, advance one pulse frame.
 // pulse_brightness cycles at period pi, so at ~30fps this gives a ~2.1s cycle.
@@ -128,22 +128,10 @@ pub fn pulse_brightness(tick: u32, speed: f32) -> f32 {
     sin_val * sin_val
 }
 
-/// Thinking/waiting indicator line (grok parity — GROK.md §24).
-///
-/// `◆ ⠋ Thinking… 0.4s` — the braille frame is derived from the
-/// elapsed wall time (~120ms per frame), so the row animates at a steady
-/// cadence regardless of render rate. Timer: one decimal below 10s, integer
-/// at ≥10s.
-pub fn thinking_line(elapsed_secs: f64) -> String {
-    use runie_core::labels::{format_elapsed_secs, BRAILLE_EIGHT};
-    const FRAME_MS: f64 = 120.0;
-    let idx = ((elapsed_secs * 1000.0 / FRAME_MS) as usize) % BRAILLE_EIGHT.len();
-    format!(
-        "{}{} Thinking… {}",
-        GLYPH_AGENT,
-        BRAILLE_EIGHT[idx],
-        format_elapsed_secs(elapsed_secs)
-    )
+/// Stable active thinking header. Grok animates the feed accent/bullet,
+/// not the header text.
+pub fn thinking_line(_elapsed_secs: f64) -> String {
+    "Thinking…".to_owned()
 }
 
 /// Tool running line.

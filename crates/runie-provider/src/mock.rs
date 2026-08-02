@@ -143,6 +143,10 @@ struct ScriptTurn {
     latency_ms: u64,
     #[serde(default)]
     token_usage: Option<ScriptTokenUsage>,
+    /// Extra latency applied after `ToolExecutionStart` so the running-tool
+    /// status window is observable in black-box tests. Defaults to 0.
+    #[serde(default)]
+    tool_latency_ms: u64,
     /// Duration in seconds for the "Turn completed" event. Defaults to 0.5.
     #[serde(default)]
     turn_complete_secs: Option<f64>,
@@ -331,6 +335,11 @@ fn script_turn_stream(turn: ScriptTurn, is_tool_result_turn: bool) -> Pin<Box<dy
                     id: "call_1".to_string(),
                     name: tool.name.clone(),
                 });
+                // Optional per-tool latency so the "Running {tool}…" status
+                // window stays observable in black-box tests.
+                if turn.tool_latency_ms > 0 {
+                    tokio::time::sleep(Duration::from_millis(turn.tool_latency_ms)).await;
+                }
                 yield Ok(ProviderEvent::ToolExecutionResult {
                     id: "call_1".to_string(),
                     result: result.clone(),
@@ -344,6 +353,9 @@ fn script_turn_stream(turn: ScriptTurn, is_tool_result_turn: bool) -> Pin<Box<dy
                 input_tokens: usage.input_tokens as usize,
                 output_tokens: usage.output_tokens as usize,
             });
+            // Small hold after the usage event so the per-turn `⇣{Nk}` arm is
+            // visible while the turn is still active (black-box tests).
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
 
         yield Ok(ProviderEvent::Finish { reason: StopReason::Stop });
@@ -935,32 +947,15 @@ impl Provider for MockProvider {
             if let Some(ref mut script) = *guard {
                 if let Some(turn) = script.next() {
                     tracing::debug!("[MOCK_DEBUG] serving scripted turn");
-                    let _ = std::fs::write(
-                        "/tmp/runie_mock_debug.txt",
-                        format!(
-                            "SCRIPT LOADED: serving turn, RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={}\n",
-                            std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
-                            std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
-                        ),
-                    );
                     return script_turn_stream(turn, false);
                 } else {
                     tracing::debug!("[MOCK_DEBUG] script exhausted");
-                    let _ = std::fs::write("/tmp/runie_mock_debug.txt", "SCRIPT EXHAUSTED\n");
                 }
             } else {
                 tracing::debug!(
                     "[MOCK_DEBUG] no script loaded (RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={})",
                     std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
                     std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
-                );
-                let _ = std::fs::write(
-                    "/tmp/runie_mock_debug.txt",
-                    format!(
-                        "NO SCRIPT: RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={}\n",
-                        std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
-                        std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
-                    ),
                 );
             }
         }
@@ -1010,13 +1005,6 @@ impl Provider for MockProvider {
 
         // Use explicit fixture or auto-detect
         let fixture = self.fixture.clone().or_else(|| detect_fixture(&user_input));
-        let _ = std::fs::write(
-            "/tmp/runie_mock_debug.txt",
-            format!(
-                "FALLBACK: user_input={:?} fixture={:?}\n",
-                user_input, fixture,
-            ),
-        );
         tracing::debug!(
             "[MOCK_DEBUG] fallback path: user_input={:?} fixture={:?}",
             user_input, fixture

@@ -193,8 +193,15 @@ fn resolve_model(sub_type: &SubagentType, parent_model: &str) -> String {
     }
 }
 
-/// Build a `PermissionGate` — all modes now bypass (policy engine removed).
+/// Build a `PermissionGate`. Note: non-inherited entry points currently bypass
+/// permission checks via `AutoAllowSink` (policy engine removed). Use
+/// `run_subagent_with_inherited_permissions` / `run_subagent_type_with_inherited_permissions`
+/// for proper permission inheritance. This bypass path is logged at warn level.
 fn build_permission_gate(_mode: &PermissionMode) -> PermissionGate {
+    tracing::warn!(
+        "subagent: build_permission_gate using AutoAllowSink bypass — \
+         use *_with_inherited_permissions variants instead"
+    );
     PermissionGate::new(Arc::new(AutoAllowSink))
 }
 
@@ -328,6 +335,10 @@ async fn run_subagent_turn(
     cmd: &AgentCommand,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
+    tracing::warn!(
+        "subagent: run_subagent_turn using AutoAllowSink bypass — \
+         use run_subagent_turn_with_inherited_permissions instead"
+    );
     let gate = PermissionGate::new(Arc::new(AutoAllowSink));
     run_subagent_turn_with_gate(provider, cmd, max_iterations, gate).await
 }

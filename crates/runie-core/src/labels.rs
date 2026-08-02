@@ -19,6 +19,47 @@ pub fn format_elapsed_secs(secs: f64) -> String {
     }
 }
 
+/// Grok `format_duration` port (turn-status parity): `<10s` → `0.5s`/`9.9s`
+/// (one decimal), `10–59s` → `10s`/`32s`, `1m–59m` → `1m20s`/`10m0s`,
+/// `1h+` → `1h0m`/`1h2m`.
+pub fn format_turn_timer(d: std::time::Duration) -> String {
+    let total = d.as_secs_f64();
+    if total < 10.0 {
+        format!("{:.1}s", total)
+    } else if total < 60.0 {
+        format!("{}s", total as u64)
+    } else if total < 3600.0 {
+        let m = (total as u64) / 60;
+        let s = (total as u64) % 60;
+        format!("{}m{}s", m, s)
+    } else {
+        let h = (total as u64) / 3600;
+        let m = ((total as u64) % 3600) / 60;
+        format!("{}h{}m", h, m)
+    }
+}
+
+/// Grok `format_tokens_short` port (turn-status parity): raw `<1k`
+/// (`500`), `{:.2}k` for `1k–9.99k` (`1.23k`), `{:.1}k` for `10k–99.9k`
+/// (`10.1k`), whole `k` for `100k–999k` (`128k`), then `{:.2}m`/`{:.1}m`
+/// for millions.
+pub fn format_tokens_short(tokens: u64) -> String {
+    let n = tokens as f64;
+    if n < 1_000.0 {
+        tokens.to_string()
+    } else if n < 10_000.0 {
+        format!("{:.2}k", n / 1_000.0)
+    } else if n < 100_000.0 {
+        format!("{:.1}k", n / 1_000.0)
+    } else if n < 1_000_000.0 {
+        format!("{}k", tokens / 1_000)
+    } else if n < 10_000_000.0 {
+        format!("{:.2}m", n / 1_000_000.0)
+    } else {
+        format!("{:.1}m", n / 1_000_000.0)
+    }
+}
+
 // Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
 

@@ -19,7 +19,7 @@ fn status_line_shows_timer_when_turn_active() {
     state.ensure_fresh();
 
     let out = render_status(&mut state);
-    assert!(out.contains("Working"), "Status line must show 'Working'");
+    assert!(out.contains("Thinking"), "Status line must show 'Thinking'");
     assert!(out.contains("s"), "Status line must show timer with 's'");
 }
 
@@ -38,7 +38,7 @@ fn status_line_shows_spinner_and_timer() {
         out.contains(&spinner.to_string()),
         "Status must show spinner frame"
     );
-    assert!(out.contains("Working"), "Status must show 'Working'");
+    assert!(out.contains("Thinking"), "Status must show 'Thinking'");
 }
 
 #[test]
@@ -50,8 +50,8 @@ fn status_line_empty_when_turn_inactive() {
 
     let out = render_status(&mut state);
     assert!(
-        !out.contains("Working"),
-        "Status must not show 'Working' when inactive"
+        !out.contains("Thinking"),
+        "Status must not show 'Thinking' when inactive"
     );
 }
 
@@ -80,18 +80,18 @@ fn status_timer_updates_over_time() {
     state.ensure_fresh();
 
     let out1 = render_status(&mut state);
-    let _timer_pos1 = out1.find("Working").unwrap_or(0);
+    let _timer_pos1 = out1.find("Thinking").unwrap_or(0);
 
     // Set the turn started time in the past so the timer shows elapsed time
     state.agent.turn_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
 
     state.ensure_fresh();
     let out2 = render_status(&mut state);
-    let _timer_pos2 = out2.find("Working").unwrap_or(0);
+    let _timer_pos2 = out2.find("Thinking").unwrap_or(0);
 
-    // Both should show Working with a timer
-    assert!(out1.contains("Working"));
-    assert!(out2.contains("Working"));
+    // Both should show Thinking with a timer
+    assert!(out1.contains("Thinking"));
+    assert!(out2.contains("Thinking"));
 }
 
 #[test]
@@ -130,11 +130,11 @@ fn status_line_uses_single_ellipsis_glyph() {
 
     let out = render_status(&mut state);
     assert!(
-        out.contains("Working…"),
+        out.contains("Thinking…"),
         "Status must use the single … glyph (grok parity), got: {out}"
     );
     assert!(
-        !out.contains("Working..."),
+        !out.contains("Thinking..."),
         "Status must not use three ASCII dots, got: {out}"
     );
 }
@@ -163,14 +163,14 @@ fn status_line_hides_working_after_provider_error() {
     state.ensure_fresh();
 
     let out = render_status(&mut state);
-    assert!(out.contains("Working"), "Setup should show Working");
+    assert!(out.contains("Thinking"), "Setup should show Thinking");
 
     state.update(Event::Error { id: "req.0".to_string(), message: "Provider error: Missing API key".to_string() });
     state.ensure_fresh();
 
     let out = render_status(&mut state);
     assert!(
-        !out.contains("Working"),
+        !out.contains("Thinking"),
         "Status must hide Working after provider error, got: {}",
         out
     );

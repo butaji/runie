@@ -20,7 +20,7 @@
 //! runtime.run().await;
 //! ```
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, io::{self, IsTerminal, Write}, sync::Arc, time::Duration};
 
 use futures::StreamExt;
 use ratatui::backend::TestBackend;
@@ -457,6 +457,9 @@ impl TuiRuntime {
         }
 
         // Yield to let rendering settle
+        // TODO 2026-08-01: replace with state-based wait (task 34 hygiene)
+        tracing::warn!("bootstrap: 50ms render-settle sleep is a placeholder; replace with state-based wait");
+        #[allow(clippy::disallowed_methods)]
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Signal shutdown
@@ -478,6 +481,9 @@ fn init_terminal_state(state: &mut AppState) {
         let area_width = width.saturating_sub(2);
         state.set_last_content_width(area_width);
         state.set_last_visible_height(height);
+        // Total terminal rows: drives auto-compact and the ephemeral-tip
+        // renderability gate (`terminal_rows > SHORT_TERMINAL_ROWS`).
+        state.set_terminal_rows(height);
     }
 }
 
@@ -620,13 +626,22 @@ async fn async_render_loop(
             last_size = Some(new_size);
         }
 
+
         theme::set_current_theme_with_caps(&snap.theme_name, caps);
 
         let term_clone = Arc::clone(&term);
         let snap = snap;
         let _ = tokio::task::spawn_blocking(move || {
             let mut term_guard = term_clone.lock();
-            term_guard.draw(|f| ui::draw_snapshot(f, &snap))
+            // Synchronized-update markers let PTY harnesses measure complete
+            // render frames without depending on tmux's re-emission timing.
+            let mut stdout = io::stdout();
+            let _ = stdout.write_all(b"\x1b[?2026h");
+            let _ = stdout.flush();
+            let result = term_guard.draw(|f| ui::draw_snapshot(f, &snap));
+            let _ = stdout.write_all(b"\x1b[?2026l");
+            let _ = stdout.flush();
+            result
         })
         .await;
     }
@@ -676,20 +691,31 @@ fn spawn_ui_actor_with_external_rx(
 
 async fn input_reader(input_tx: mpsc::Sender<Event>, mut kb_rx: watch::Receiver<HashMap<String, String>>) {
     let mut reader = crossterm::event::EventStream::new();
-    // Timeout: if no input events arrive for this long, force quit.
-    // This guards against the crossterm EventStream blocking forever when stdin
-    // is not a real TTY (e.g. in PTY test harness misconfiguration).
-    let input_timeout = Duration::from_secs(5);
+    // The idle ForceQuit guard exists to keep the app from hanging forever when
+    // stdin is not a real TTY (e.g. in PTY test harness misconfiguration).
+    // On a real TTY the crossterm EventStream returns None on EOF, so no idle
+    // timeout is needed — and applying one unconditionally force-quits the app
+    // whenever a user simply pauses for >5s (e.g. while reading a response).
+    let input_timeout = (!std::io::stdin().is_terminal()).then(|| Duration::from_secs(5));
 
     tokio::pin!(reader);
-    let mut input_deadline = tokio::time::Instant::now() + input_timeout;
+    let mut input_deadline = input_timeout.map(|t| tokio::time::Instant::now() + t);
 
     loop {
-        let timeout_fired = tokio::time::timeout_at(input_deadline, reader.next()).await;
+        let timeout_fired = match input_timeout {
+            Some(t) => {
+                let deadline = input_deadline.unwrap_or_else(|| tokio::time::Instant::now() + t);
+                tokio::time::timeout_at(deadline, reader.next()).await
+            }
+            // Real TTY: wait for the next event (or EOF) without any deadline.
+            None => Ok(reader.next().await),
+        };
         match timeout_fired {
             Ok(Some(Ok(event))) => {
                 // Reset deadline on any event.
-                input_deadline = tokio::time::Instant::now() + input_timeout;
+                if let Some(t) = input_timeout {
+                    input_deadline = Some(tokio::time::Instant::now() + t);
+                }
                 let bindings = kb_rx.borrow_and_update().clone();
                 if let Some(evt) = keymap::convert_event(&event, &bindings) {
                     let is_quit = is_input_stop_event(&evt);
@@ -701,11 +727,12 @@ async fn input_reader(input_tx: mpsc::Sender<Event>, mut kb_rx: watch::Receiver<
                     }
                 }
             }
-            Ok(Some(Err(_) )) => {
+            Ok(Some(Err(_))) => {
                 // Error reading event — break
                 break;
             }
-            // Timeout: no input events arrived. Send ForceQuit to break the app loop.
+            // Timeout: no input events arrived on non-TTY stdin. Send ForceQuit
+            // to break the app loop.
             Err(_) => {
                 let _ = input_tx.send(Event::ForceQuit).await;
                 break;

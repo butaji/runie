@@ -110,11 +110,13 @@ pub struct UiSection {
     pub history_max_entries: usize,
     /// Number of items per page in list dialogs.
     pub page_size: usize,
+    /// Manually enable compact layout (reduces margins to save vertical space).
+    pub compact_mode: bool,
 }
 
 impl Default for UiSection {
     fn default() -> Self {
-        Self { vim_mode: true, history_max_entries: 1000, page_size: 5 }
+        Self { vim_mode: true, history_max_entries: 1000, page_size: 5, compact_mode: false }
     }
 }
 

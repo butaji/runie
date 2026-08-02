@@ -18,7 +18,10 @@ use reqwest::Client;
 /// Falls back to a default client if construction fails.
 pub fn build_client() -> Arc<Client> {
     let client = Client::builder()
-        .timeout(crate::REQUEST_TIMEOUT)
+        // NOTE: REQUEST_TIMEOUT is NOT applied here. Streaming responses have no
+        // meaningful total-duration bound — a 130s response for a long reasoning
+        // turn is legitimate. Per-read idle timeout (tokio::time::timeout) is the
+        // correct mechanism for SSE streams; reqwest's total timeout is inappropriate.
         .connect_timeout(crate::CONNECT_TIMEOUT)
         .build()
         .unwrap_or_else(|_| Client::new());

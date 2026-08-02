@@ -80,6 +80,7 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
     match event {
         Event::TurnAborted => {
             state.apply_turn_aborted();
+            state.add_system_msg("Turn cancelled by user.".to_owned());
             true
         }
         Event::QueueAborted { content } => {
@@ -94,8 +95,11 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_turn_completed();
             true
         }
-        Event::TurnErrored { .. } => {
+        Event::TurnErrored { message, .. } => {
             state.apply_turn_errored();
+            // Grok preserves a compact, muted session-event row for a failed
+            // turn instead of exposing only the internal state transition.
+            state.add_system_msg(format!("Turn failed: {message}"));
             true
         }
         Event::TokenStatsUpdated { tokens_in, tokens_out } => {
@@ -117,11 +121,16 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             }
             true
         }
-        Event::CompactionTriggered { tokens_in: _, context_window, .. } => {
+        Event::CompactionTriggered { ratio, tokens_in: _, context_window, .. } => {
             // Compaction keeps roughly COMPACT_TOKEN_RATIO of the context window.
             use crate::session::store::COMPACT_TOKEN_RATIO;
             let keep = (*context_window as f64 * COMPACT_TOKEN_RATIO) as usize;
             let _ = state.compact(keep);
+            // Grok keeps compaction visible in the feed as a muted session
+            // event instead of making the history rewrite silent.
+            let percentage = (*ratio * 100.0).round() as u8;
+            state.add_system_msg(format!("Context {percentage}% full. Compacting…"));
+            state.add_system_msg(format!("Context compacted → {keep} tokens"));
             true
         }
         Event::UserMessageSubmitted { id, content } => {
@@ -195,6 +204,13 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
         }
         Event::QueueFollowUpAdded { id, content } => {
             state.apply_queue_follow_up_added(id.clone(), content.clone());
+            // Send-now tip: advertise that bare Enter force-sends the top
+            // queued item (grok parity: send_now.rs).
+            let (tip_state, seen_counts) = {
+                let view = state.view_mut();
+                (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+            };
+            tip_state.show(crate::model::tips::send_now_tip(), seen_counts);
             true
         }
         Event::QueueSteeringAdded { id, content } => {

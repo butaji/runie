@@ -1,7 +1,7 @@
 //! Actor definitions for the Runie runtime.
 //!
 //! All actors are tokio tasks receiving typed messages via `mpsc`. No ractor dependency
-//! for most actors. Use `spawn_actor!` macro to reduce boilerplate.
+//! for most actors.
 
 pub mod constants;
 pub use constants::{CONFIG_WATCHER_DEBOUNCE_MS, LEADER_CMD_CHANNEL_CAPACITY, SHUTDOWN_TIMEOUT_SECS};
@@ -15,12 +15,22 @@ pub mod provider;
 pub mod session;
 pub mod turn;
 
-// Macro crate (no deps — pure token manipulation)
-pub mod macro_defs;
+/// Error when the actor drops before sending an RPC reply.
+/// Moved from macro_defs.rs (task 35: spawn_actor! macro deleted as dead code).
+#[derive(Debug)]
+pub enum RpcError {
+    ActorDropped,
+}
 
-// Re-export macro helpers
-// Note: `spawn_actor!` macro is exported at crate root via #[macro_export]
-pub use macro_defs::RpcError;
+impl std::fmt::Display for RpcError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RpcError::ActorDropped => write!(f, "actor dropped"),
+        }
+    }
+}
+
+impl std::error::Error for RpcError {}
 
 mod persistence;
 pub use persistence::PersistenceActor;

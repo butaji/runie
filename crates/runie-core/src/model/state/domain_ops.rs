@@ -199,6 +199,7 @@ impl AppState {
         self.config_mut().thinking_level = config.thinking_level;
         self.config_mut().model_thinking = config.models.thinking.clone();
         self.config_mut().vim_mode = config.vim_mode();
+        self.config_mut().compact_mode = config.ui.compact_mode;
         let prompts_section = config.prompts();
         *self.prompts_mut() = crate::prompts::load_prompts(
             prompts_section.default.as_deref(),
@@ -365,6 +366,11 @@ impl AppState {
     /// `content_width` value, avoiding double-subtraction bugs.
     pub fn set_last_content_width(&mut self, width: u16) {
         self.view_mut().last_content_width = width.max(1);
+    }
+
+    /// Record the total terminal row count from a resize event.
+    pub fn set_terminal_rows(&mut self, rows: u16) {
+        self.view_mut().terminal_rows = rows;
     }
 
     pub fn cache_generation(&self) -> u64 {

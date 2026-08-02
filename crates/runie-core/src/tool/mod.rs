@@ -80,8 +80,6 @@ pub const BUILTIN_TOOL_NAMES: &[&str] = &[
     "grep",
     "find",
     "fetch_docs",
-    "search",
-    "find_definitions",
 ];
 
 /// Check if a tool name is a known built-in.

@@ -80,7 +80,8 @@ fn vim_mode_scroll_renders_older_content() {
 
     state.update(Event::TerminalSize { width: 80, height: 24 });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
-    state.update(Event::Input('g'));
+    state.update(Event::DialogBack);
+    state.update(Event::GoToTop);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let content: String = terminal
@@ -105,8 +106,9 @@ fn vim_mode_page_down_renders_newer_content() {
 
     state.update(Event::TerminalSize { width: 80, height: 24 });
     terminal.draw(|f| view(f, &mut state)).expect("draw");
-    state.update(Event::Input('g'));
-    state.update(Event::Input(' '));
+    state.update(Event::DialogBack);
+    state.update(Event::GoToTop);
+    state.update(Event::PageDown);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let content: String = terminal
@@ -117,8 +119,8 @@ fn vim_mode_page_down_renders_newer_content() {
         .map(|c| c.symbol())
         .collect();
     assert!(
-        content.contains("message 0") || content.contains("response 0"),
-        "page-down from top should still show old content. Got: {}",
+        content.contains("message 1") || content.contains("response 1"),
+        "page-down from top should reveal newer content. Got: {}",
         content
     );
 }
@@ -254,8 +256,8 @@ fn nav_mode_and_command_bar_share_disabled_chevron_style() {
     assert!(s2.view.vim_nav_mode);
     let cell_nav = chevron_cell(&s2).expect("nav chevron cell");
 
-    // Nav-mode chevron uses Reset foreground (not hint dim color)
-    let reset_fg = Some(ratatui::style::Color::Reset);
+    // Nav-mode chevron uses the shared disabled/dim foreground.
+    let reset_fg = Some(crate::theme::color_dim());
     assert_eq!(
         cell_nav.fg, reset_fg,
         "nav-mode chevron must use Reset foreground"

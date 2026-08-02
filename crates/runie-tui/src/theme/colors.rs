@@ -50,6 +50,16 @@ pub fn color_error() -> Color {
 pub fn color_dim() -> Color {
     theme_color("text.dim")
 }
+/// Turn-status phase/turn timer color (grok parity — GrokNight `COMMENT`
+/// `#6c6c6c`; maps onto the existing dim token).
+pub fn color_turn_timer() -> Color {
+    theme_color("text.dim")
+}
+/// `[stop]` button color — gray at rest (grok parity `#6c6c6c`); accent_error
+/// `#f7768e` is reserved for hover (mouse-support task).
+pub fn color_stop_button() -> Color {
+    theme_color("text.dim")
+}
 pub fn color_border() -> Color {
     theme_color("border.unfocused")
 }

@@ -20,6 +20,20 @@ pub enum Element {
         timestamp: f64,
         provider: String,
     },
+    /// Compact muted system/session event shown in the feed.
+    SystemMessage {
+        content: String,
+        timestamp: f64,
+    },
+    /// Compact context snapshot rendered in the feed by `/context`.
+    ContextInfo {
+        model: String,
+        used_tokens: usize,
+        total_tokens: usize,
+        turns: usize,
+        tool_calls: usize,
+        timestamp: f64,
+    },
     Thinking {
         started: std::time::Instant,
         timestamp: f64,
@@ -149,6 +163,42 @@ pub enum Element {
         results: Vec<WebSearchResult>,
         timestamp: f64,
     },
+    /// Inline warning card shown when the provider reports exhausted credits.
+    CreditLimit {
+        heading: String,
+        action: String,
+        url: String,
+        timestamp: f64,
+    },
+    /// Collapsed workflow lifecycle row with an inline phase trail.
+    Workflow {
+        name: String,
+        objective: String,
+        status: String,
+        phases: Vec<String>,
+        active_agents: u32,
+        duration_secs: f64,
+        timestamp: f64,
+    },
+    /// Collapsed background task lifecycle row.
+    BackgroundTask {
+        command: String,
+        task_id: String,
+        status: String,
+        description: Option<String>,
+        duration_secs: f64,
+        exit_code: Option<i32>,
+        signal: Option<String>,
+        timestamp: f64,
+    },
+    /// Inline BTW side-question interaction in the feed.
+    Btw {
+        question: String,
+        answer: Option<String>,
+        status: String,
+        expanded: bool,
+        timestamp: f64,
+    },
     /// ANSI escape sequence styled content
     AnsiStyled {
         /// Raw content with ANSI escape sequences
@@ -203,6 +253,8 @@ impl ElementBuilder {
             Element::Spacer { timestamp: ts } => *ts = timestamp,
             Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::SystemMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::ContextInfo { timestamp: ts, .. } => *ts = timestamp,
             Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
@@ -224,6 +276,10 @@ impl ElementBuilder {
             Element::MarkdownTable { timestamp: ts, .. } => *ts = timestamp,
             Element::DiffOutput { timestamp: ts, .. } => *ts = timestamp,
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
+            Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
+            Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
+            Element::BackgroundTask { timestamp: ts, .. } => *ts = timestamp,
+            Element::Btw { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -236,6 +292,11 @@ impl Element {
     }
     pub fn agent(content: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0, provider: String::new() })
+    }
+    pub fn context_info(model: impl Into<String>, used_tokens: usize, total_tokens: usize, turns: usize, tool_calls: usize) -> ElementBuilder {
+        ElementBuilder(Element::ContextInfo {
+            model: model.into(), used_tokens, total_tokens, turns, tool_calls, timestamp: 0.0,
+        })
     }
     pub fn thinking(started: std::time::Instant) -> ElementBuilder {
         ElementBuilder(Element::Thinking { started, timestamp: 0.0 })
@@ -391,6 +452,68 @@ impl Element {
     pub fn web_search_call(query: impl Into<String>, results: Vec<WebSearchResult>) -> ElementBuilder {
         ElementBuilder(Element::WebSearchCall { query: query.into(), results, timestamp: 0.0 })
     }
+    /// Credit-limit warning card in the feed.
+    pub fn credit_limit(
+        heading: impl Into<String>,
+        action: impl Into<String>,
+        url: impl Into<String>,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::CreditLimit {
+            heading: heading.into(),
+            action: action.into(),
+            url: url.into(),
+            timestamp: 0.0,
+        })
+    }
+    /// Workflow lifecycle row in the feed.
+    pub fn workflow(
+        name: impl Into<String>,
+        objective: impl Into<String>,
+        status: impl Into<String>,
+        phases: Vec<String>,
+        active_agents: u32,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::Workflow {
+            name: name.into(),
+            objective: objective.into(),
+            status: status.into(),
+            phases,
+            active_agents,
+            duration_secs: 0.0,
+            timestamp: 0.0,
+        })
+    }
+    /// Background task lifecycle row in the feed.
+    pub fn background_task(
+        command: impl Into<String>,
+        task_id: impl Into<String>,
+        status: impl Into<String>,
+        description: Option<String>,
+        duration_secs: f64,
+        exit_code: Option<i32>,
+        signal: Option<String>,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::BackgroundTask {
+            command: command.into(),
+            task_id: task_id.into(),
+            status: status.into(),
+            description,
+            duration_secs,
+            exit_code,
+            signal,
+            timestamp: 0.0,
+        })
+    }
+    /// Inline BTW side-question feed item.
+    pub fn btw(question: impl Into<String>, answer: Option<String>, status: impl Into<String>) -> ElementBuilder {
+        ElementBuilder(Element::Btw {
+            question: question.into(),
+            answer,
+            status: status.into(),
+            expanded: false,
+            timestamp: 0.0,
+        })
+    }
     /// ANSI styled content
     pub fn ansi_styled(raw: impl Into<String>, plain: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AnsiStyled { raw_content: raw.into(), plain_text: plain.into(), timestamp: 0.0 })
@@ -409,6 +532,8 @@ impl Element {
             Element::Spacer { timestamp: ts } => *ts = timestamp,
             Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::SystemMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::ContextInfo { timestamp: ts, .. } => *ts = timestamp,
             Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
@@ -425,6 +550,10 @@ impl Element {
             Element::MarkdownTable { timestamp: ts, .. } => *ts = timestamp,
             Element::DiffOutput { timestamp: ts, .. } => *ts = timestamp,
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
+            Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
+            Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
+            Element::BackgroundTask { timestamp: ts, .. } => *ts = timestamp,
+            Element::Btw { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -435,6 +564,8 @@ impl Element {
             Element::Spacer { timestamp } => *timestamp,
             Element::UserMessage { timestamp, .. } => *timestamp,
             Element::AgentMessage { timestamp, .. } => *timestamp,
+            Element::SystemMessage { timestamp, .. } => *timestamp,
+            Element::ContextInfo { timestamp, .. } => *timestamp,
             Element::Thinking { timestamp, .. } => *timestamp,
             Element::ThoughtMarker { timestamp, .. } => *timestamp,
             Element::ThoughtSummary { timestamp, .. } => *timestamp,
@@ -451,6 +582,10 @@ impl Element {
             Element::MarkdownTable { timestamp, .. } => *timestamp,
             Element::DiffOutput { timestamp, .. } => *timestamp,
             Element::WebSearchCall { timestamp, .. } => *timestamp,
+            Element::CreditLimit { timestamp, .. } => *timestamp,
+            Element::Workflow { timestamp, .. } => *timestamp,
+            Element::BackgroundTask { timestamp, .. } => *timestamp,
+            Element::Btw { timestamp, .. } => *timestamp,
             Element::AnsiStyled { timestamp, .. } => *timestamp,
         }
     }

@@ -284,6 +284,9 @@ pub enum Event {
     ShareSession,
     Suspend,
     ToggleVimMode,
+    /// Show/hide the queued-messages pane above the input (grok parity — the
+    /// queue pane lists `#N` rows with `[cancel]`/`[Send now]` actions).
+    ToggleQueuePane,
     CopyLastResponse,
     OpenSessionList,
     NewSession,

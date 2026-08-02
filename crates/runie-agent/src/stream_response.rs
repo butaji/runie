@@ -110,6 +110,15 @@ impl StreamState {
                 });
                 ControlFlow::Continue(())
             }
+            ProviderEvent::Usage { input_tokens, output_tokens } => {
+                // Forward token usage so the per-turn token counter
+                // (`⇣{Nk}` status arm) reflects the provider's final counts.
+                (self.emit)(runie_core::Event::TokenStatsUpdated {
+                    tokens_in: input_tokens,
+                    tokens_out: output_tokens,
+                });
+                ControlFlow::Continue(())
+            }
             ProviderEvent::Finish { .. } => ControlFlow::Break(Ok(())),
             ProviderEvent::Error(e) => ControlFlow::Break(Err(anyhow::anyhow!("Model error: {:?}", e))),
             _ => ControlFlow::Continue(()),
@@ -195,7 +204,7 @@ pub async fn stream_response(
                         }
                         for ev in events {
                             if let ControlFlow::Break(result) = state.handle_event(ev) {
-                                return result.map(|_| Ok(state.into_response()))?;
+                                return result.map(|_| state.into_response());
                             }
                         }
                     }

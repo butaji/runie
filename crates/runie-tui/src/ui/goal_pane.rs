@@ -249,7 +249,7 @@ mod tests {
             .collect();
 
         assert!(content.contains("Goal"), "should show Goal header");
-        assert!(content.contains("Executing"), "should show phase");
+        assert!(content.contains("Planning"), "should show the goal's initial phase");
     }
 
     #[test]

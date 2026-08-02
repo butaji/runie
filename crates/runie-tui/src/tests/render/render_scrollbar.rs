@@ -72,7 +72,7 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let buf_bottom = terminal.backend().buffer().clone();
 
     for _ in 0..20 {
-        state.update(Event::Up);
+        state.update(Event::PageUp);
     }
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");

@@ -2,18 +2,18 @@
 
 use ratatui::{
     layout::{Constraint, Rect},
-    style::Style,
+    style::{Color, Style},
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
 };
 
 use crate::theme::{
-    blend_color, color_accent, color_bg, color_monitor, color_success, monitor_glyph, pulse_brightness,
-    style_status_idle, style_timestamp, GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
+    blend_color, color_bg, color_bg_panel, color_error, color_fg, color_fg_mid, color_warning,
+    monitor_glyph, style_status_idle,
+    style_timestamp, GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
 };
-use crate::ui::{estimate_element_tokens, hstack};
-use runie_core::labels::format_elapsed_secs;
+use crate::ui::{estimate_element_tokens, hstack, progress_bar_spans};
 use runie_core::Snapshot;
 use unicode_width::UnicodeWidthStr;
 
@@ -45,16 +45,23 @@ pub fn render_context_header(f: &mut Frame, snap: &Snapshot, area: Rect) {
     f.render_widget(Paragraph::new(line).style(style_timestamp()), area);
 }
 pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    if !snap.has_models {
+    if !snap.has_models || area.width < 10 || area.height == 0 {
         return;
     }
-    let right_text = format!("{} ", build_right_status(snap));
+    // Right side is capped at half the width so the activity label always has
+    // room to truncate (grok parity: only the label truncates).
+    let right_spans = build_right_spans(snap);
+    let right_text = right_spans
+        .iter()
+        .map(|s| s.content.as_ref())
+        .collect::<String>();
     let right_width = UnicodeWidthStr::width(right_text.as_str()) as u16;
+    let capped = right_width.min(area.width / 2);
 
-    let h = hstack(area, &[Constraint::Min(0), Constraint::Length(right_width)]);
+    let h = hstack(area, &[Constraint::Min(0), Constraint::Length(capped)]);
 
     render_left(f, snap, h[0]);
-    f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
+    f.render_widget(Paragraph::new(Line::from(right_spans)).style(style_timestamp()), h[1]);
 }
 
 /// Render the left side of the status bar. The spinner frame is taken from
@@ -90,19 +97,18 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let body_str = if text_parts.is_empty() {
         String::new()
     } else {
-        // Skip the first part (activity label), join the rest as plain body.
-        let mut iter = text_parts.into_iter();
-        iter.next(); // discard activity span
-        iter.map(|s| s.content.clone())
+        // Join ALL parts — the activity label (`Thinking… 0.4s`, `Running
+        // {tool}…`, `Cancelling…`) is a normal body span, not skipped.
+        text_parts
+            .into_iter()
+            .map(|s| s.content.clone())
             .collect::<Vec<_>>()
             .join(" · ")
     };
 
     let line = if snap.is_pending_user_input {
         // Pulsing diamond: blend accent toward bg using sin² pulse (grok parity).
-        let pulse = pulse_brightness(snap.animation_frame, USER_WAITING_PULSE_SPEED);
-        let color = blend_color(color_bg(), color_accent(), 0.3 + pulse * 0.7).unwrap_or_else(color_accent);
-        let spinner = Span::styled(format!("{} · ", GLYPH_PENDING), Style::new().fg(color));
+        let spinner = Span::styled(format!("{} ", GLYPH_PENDING), idle);
         let body_span = if body_str.is_empty() {
             vec![spinner]
         } else {
@@ -110,7 +116,7 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
         };
         Line::from(body_span)
     } else {
-        let spinner = Span::styled(format!("{} · ", snap.spinner_frame), idle);
+        let spinner = Span::styled(format!("{} ", snap.spinner_frame), idle);
         let body_span = if body_str.is_empty() {
             vec![spinner]
         } else {
@@ -121,11 +127,6 @@ fn render_left(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
     f.render_widget(Paragraph::new(line).style(idle), area);
 }
-
-/// Pulse speed for every "waiting on you" diamond (grok parity).
-/// `pulse_brightness` returns `sin²(tick*speed)` with period π, so at ~30fps
-/// this gives a ~1.3s cycle (`π / (0.08 * 30) ≈ 1.31`).
-const USER_WAITING_PULSE_SPEED: f32 = 0.08;
 
 /// Build status bar text parts (spans) without the spinner char.
 /// The spinner is rendered as a colored glyph in `render_left`.
@@ -235,36 +236,39 @@ fn push_watching_label(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
 
     // Render as: "○ ◉ watching · N workers"
     let noun = if running == 1 { "worker" } else { "workers" };
-    let monitor_color = color_monitor();
-    Some(Span::styled(
-        format!("{} watching · {} {noun}", monitor_glyph_str, running),
-        idle.fg(monitor_color),
-    ))
+    Some(Span::styled(format!("{} watching · {} {noun}", monitor_glyph_str, running), idle))
 }
 
-/// Build the activity label or "Working…" status text.
-/// When a tool is running, shows "Running {tool}…" in green (grok parity).
-/// Otherwise shows "Working…" with optional elapsed time.
+/// Build the activity label driven by `snap.turn_activity` (grok parity).
+///
+/// - `ToolRunning`: `Running {tool}…` in full accent_success green, followed
+///   by a gray phase timer (`Running list_dir… 0.2s`).
+/// - `Thinking…` / `Responding…` in text_secondary.
+/// - `Cancelling…` in accent_error (stop button is hidden meanwhile).
+/// - Fallback `Working…` with the turn elapsed timer.
 fn push_turn_status_text(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
+    use runie_core::snapshot::TurnActivityKind;
     if !snap.turn_active {
         return None;
     }
-    if let Some(ref tool) = snap.current_tool_name {
-        // Activity label: "Running {tool}…" styled green (grok parity).
-        let color = blend_color(color_bg(), color_success(), 0.4).unwrap_or_else(color_success);
-        return Some(Span::styled(
-            format!("Running {}…", tool),
-            Style::new().fg(color),
-        ));
-    }
+    let phase = snap
+        .activity_elapsed_secs
+        .map(std::time::Duration::from_secs_f64)
+        .map(runie_core::labels::format_turn_timer)
+        .unwrap_or_else(|| "0.0s".to_owned());
 
-    // Fallback: "Working…" with elapsed time
-    let text = if let Some(elapsed) = snap.turn_elapsed_secs {
-        format!("Working… {}", format_elapsed_secs(elapsed))
-    } else {
-        "Working…".to_owned()
+    let label = match snap.turn_activity {
+        TurnActivityKind::ToolRunning => {
+            let tool = snap.current_tool_name.clone().unwrap_or_else(|| "tool".to_owned());
+            format!("Running {tool}…")
+        }
+        TurnActivityKind::Cancelling => "Cancelling…".to_owned(),
+        TurnActivityKind::Thinking => "Thinking…".to_owned(),
+        TurnActivityKind::Responding => "Responding…".to_owned(),
+        TurnActivityKind::Working => "Working…".to_owned(),
     };
-    let mut full = text;
+
+    let mut full = format!("{} {}", label, phase);
     if snap.queue_count > 0 {
         full.push_str(&format!(" ({} queued)", snap.queue_count));
     }
@@ -322,11 +326,7 @@ fn push_mcp_status(snap: &Snapshot) -> Option<Span<'static>> {
 /// Shows "⚡ CB: N" when the circuit breaker has tripped, where N is the threshold.
 fn push_circuit_breaker(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.circuit_breaker_tripped {
-        let warning_color = crate::theme::color_warning();
-        Some(Span::styled(
-            format!("⚡ CB: {}", snap.circuit_breaker_threshold),
-            style_status_idle().fg(warning_color),
-        ))
+        Some(Span::styled(format!("⚡ CB: {}", snap.circuit_breaker_threshold), style_status_idle()))
     } else {
         None
     }
@@ -348,27 +348,68 @@ pub(crate) fn context_piece(percent: usize) -> char {
 }
 
 pub(crate) fn build_right_status(snap: &Snapshot) -> String {
-    let usage = context_usage(snap);
-    let piece = context_piece(usage.percent);
-    let limit = usage.limit_k();
+    build_right_spans(snap)
+        .into_iter()
+        .map(|s| s.content.to_string())
+        .collect()
+}
 
-    if snap.turn_active {
-        // Grok-style turn status: M:SS ⇣Nk [stop]
-        let timer = match snap.turn_elapsed_secs {
-            Some(secs) => {
-                let total_secs = secs as u64;
-                let mins = total_secs / 60;
-                let secs = total_secs % 60;
-                format!("{}:{:02}", mins, secs)
-            }
-            None => "0:00".to_owned(),
-        };
-        let tokens_out_k = format_k_animated(snap.tokens_out_display);
-        format!("{} ⇣{} [stop]", timer, tokens_out_k)
-    } else {
+/// Build the right side of the status bar as styled spans (grok parity).
+///
+/// Turn-active arm: `{format_turn_timer} ⇣{format_tokens_short(tokens)} [stop]`
+/// — the ` ⇣…` token arm is omitted entirely when the turn has received zero
+/// tokens, and `[stop]` is hidden while the turn is cancelling. Idle arm keeps
+/// the context gauge (`12K / 128K 3% ⛀`), swapping to a progress bar +
+/// percentage when context detail is pinned (`/context-detail`).
+pub(crate) fn build_right_spans(snap: &Snapshot) -> Vec<Span<'static>> {
+    let idle_style = style_timestamp();
+    if !snap.turn_active {
+        if let Some(spans) = build_context_item(snap, snap.context_detail_pinned) {
+            return spans;
+        }
+        // No context data (limit unknown): fall back to the plain gauge.
+        let usage = context_usage(snap);
+        let piece = context_piece(usage.percent);
+        let limit = usage.limit_k();
         let used_k = format_k(usage.used);
-        format!("{}/{} {}% {}", used_k, limit, usage.percent, piece)
+        return vec![Span::styled(
+            format!("{}/{} {}% {}", used_k, limit, usage.percent, piece),
+            idle_style,
+        )];
     }
+
+    let timer_style = Style::new().fg(crate::theme::color_turn_timer());
+    let timer = snap
+        .turn_elapsed_secs
+        .map(std::time::Duration::from_secs_f64)
+        .map(runie_core::labels::format_turn_timer)
+        .unwrap_or_else(|| "0.0s".to_owned());
+
+    let mut spans: Vec<Span<'static>> = Vec::new();
+    spans.push(Span::styled(timer, timer_style));
+
+    // Token arm: ` ⇣{Nk}` — only when the current turn has received tokens.
+    if snap.current_turn_tokens > 0 {
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            format!(
+                "⇣{}",
+                runie_core::labels::format_tokens_short(snap.current_turn_tokens)
+            ),
+            timer_style,
+        ));
+    }
+
+    // `[stop]` — literal text, gray at rest (accent_error red on future hover);
+    // hidden while cancelling and never rendered on keyboard-only hosts.
+    if !snap.turn_cancelling {
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            "[stop]",
+            Style::new().fg(crate::theme::color_stop_button()),
+        ));
+    }
+    spans
 }
 
 /// Format a possibly-animated (floating point) token count for display.
@@ -377,15 +418,6 @@ fn format_k(n: usize) -> String {
         format!("{}k", n / 1_000)
     } else {
         n.to_string()
-    }
-}
-
-fn format_k_animated(n: f64) -> String {
-    let n = n.round().max(0.0);
-    if n >= 1_000.0 {
-        format!("{:.1}k", n / 1_000.0)
-    } else {
-        (n as usize).to_string()
     }
 }
 
@@ -428,9 +460,130 @@ impl ContextUsage {
     }
 }
 
+// =============================================================================
+// Context detail item (grok parity: context_bar.rs + progress_bar.rs)
+// =============================================================================
+
+/// Gap between the bar and the percentage, plus the fixed percentage width.
+/// `" "` + `"XX.X%"` (5 cols) = 6 columns; the default text is right-padded
+/// to at least this width so toggling never shifts neighboring status items.
+const BAR_PCT_GAP: u16 = 1;
+const PCT_WIDTH: u16 = 5;
+
+/// Format a token count like Grok's `fmt_tokens` (always ≤4 chars):
+/// `0`–`999` raw, `1.2K`, `12K`, `999K`, `1.2M`, `12M`.
+fn fmt_tokens(n: u64) -> String {
+    if n < 1_000 {
+        format!("{n}")
+    } else if n < 10_000 {
+        format!("{:.1}K", n as f64 / 1_000.0)
+    } else if n < 1_000_000 {
+        format!("{}K", n / 1_000)
+    } else if n < 10_000_000 {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    } else {
+        format!("{}M", n / 1_000_000)
+    }
+}
+
+/// Format a percentage exactly 5 chars wide: `0.00%`, `5.12%`, `20.1%`,
+/// `99.9%`, or `MAX %` (anything that would round to ≥100.0% clamps).
+fn fmt_pct5(pct: f64) -> String {
+    if pct >= 100.0 {
+        return "MAX %".to_string();
+    }
+    let s = if pct < 10.0 {
+        format!("{pct:.2}%")
+    } else {
+        format!("{pct:.1}%")
+    };
+    if s.len() <= 5 { s } else { "MAX %".to_string() }
+}
+
+/// Usage percentage as f64 (limit>0 guard; 0 when the limit is unknown).
+fn context_usage_pct_f64(usage: &ContextUsage) -> f64 {
+    if usage.limit == 0 {
+        0.0
+    } else {
+        usage.used as f64 / usage.limit as f64 * 100.0
+    }
+}
+
+/// Usage-urgency gradient color (grok parity breakpoints):
+/// 0% → primary text, 50% → muted text, 75% → warning, 95% → error.
+/// Between breakpoints the color is lerped in RGB.
+fn context_gradient_color(pct: f64) -> Color {
+    let bps: [(f64, Color); 4] = [
+        (0.0, color_fg()),
+        (50.0, color_fg_mid()),
+        (75.0, color_warning()),
+        (95.0, color_error()),
+    ];
+    let pct = pct.clamp(0.0, 100.0);
+    for (i, (bp_pct, bp_color)) in bps.iter().enumerate() {
+        if pct <= *bp_pct {
+            return *bp_color;
+        }
+        if let Some((next_pct, next_color)) = bps.get(i + 1) {
+            if pct <= *next_pct {
+                let t = ((pct - bp_pct) / (next_pct - bp_pct)) as f32;
+                return blend_color(*bp_color, *next_color, t).unwrap_or(*bp_color);
+            }
+        }
+    }
+    color_error()
+}
+
+/// Build the idle right-side context item.
+///
+/// - `expanded = false` (default): `{fmt_tokens(used)} / {fmt_tokens(limit)}`
+///   in the urgency gradient, right-padded to ≥6 columns.
+/// - `expanded = true` (pinned): a `bar_width`-cell 1/8-block progress bar +
+///   ` ` + `fmt_pct5(pct)`; `bar_width = total_width - 6` so the expanded
+///   line is exactly as wide as the default line (width invariant).
+/// - Returns `None` when the limit is unknown (item omitted, as in Grok).
+pub(crate) fn build_context_item(snap: &Snapshot, expanded: bool) -> Option<Vec<Span<'static>>> {
+    let usage = context_usage(snap);
+    if usage.limit == 0 {
+        return None;
+    }
+    let pct = context_usage_pct_f64(&usage);
+    let gradient = context_gradient_color(pct);
+    let piece = context_piece(usage.percent);
+
+    let text = format!(
+        "{} / {}",
+        fmt_tokens(usage.used as u64),
+        fmt_tokens(usage.limit as u64)
+    );
+    let natural_width = UnicodeWidthStr::width(text.as_str()) as u16;
+    let total_width = natural_width.max(BAR_PCT_GAP + PCT_WIDTH);
+
+    if !expanded {
+        let padded = format!("{text:<width$}", width = total_width as usize);
+        return Some(vec![
+            Span::styled(padded, Style::new().fg(gradient)),
+            Span::raw(" "),
+            Span::raw(piece.to_string()),
+        ]);
+    }
+
+    let bar_width = total_width - (BAR_PCT_GAP + PCT_WIDTH);
+    let track = color_bg_panel();
+    let mut spans = progress_bar_spans(bar_width, (pct / 100.0) as f32, gradient, track);
+    spans.push(Span::styled(" ", Style::new().bg(color_bg())));
+    spans.push(Span::styled(fmt_pct5(pct), Style::new().fg(color_fg_mid())));
+    // Chess piece sits OUTSIDE the swapped region: both forms carry it, so
+    // toggling never shifts the item's width (grok width-invariant rule).
+    spans.push(Span::raw(" "));
+    spans.push(Span::raw(piece.to_string()));
+    Some(spans)
+}
+
 #[cfg(test)]
 mod tests {
     use runie_core::model_catalog::{context_window_for, DEFAULT_CONTEXT_WINDOW};
+    use unicode_width::UnicodeWidthStr;
 
     #[test]
     fn status_bar_context_window_matches_registry() {
@@ -523,6 +676,75 @@ mod tests {
         assert!(
             !left.contains("mcp"),
             "left text should not contain MCP indicator: {left}"
+        );
+    }
+
+    // ── fmt_tokens / fmt_pct5 (grok context_bar.rs ports) ────────────────
+
+    #[test]
+    fn fmt_tokens_ports_grok_breakpoints() {
+        let f = super::fmt_tokens;
+        assert_eq!(f(0), "0");
+        assert_eq!(f(12), "12");
+        assert_eq!(f(999), "999");
+        assert_eq!(f(1_200), "1.2K");
+        assert_eq!(f(9_960), "10.0K"); // rounds up within the 1K–9.9K band
+        assert_eq!(f(12_000), "12K");
+        assert_eq!(f(999_000), "999K");
+        assert_eq!(f(1_200_000), "1.2M");
+        assert_eq!(f(12_000_000), "12M");
+        assert_eq!(f(123_000_000), "123M");
+    }
+
+    #[test]
+    fn fmt_tokens_always_five_chars_or_less() {
+        // Grok's band formats can reach 5 chars at the rounding boundary
+        // (e.g. 9_999 → "10.0K"), matching the spec's own 9_960 → "10.0K" example.
+        let f = super::fmt_tokens;
+        for n in [0u64, 999, 1_000, 9_999, 10_000, 999_999, 1_000_000, 9_999_999, 10_000_000, 100_000_000] {
+            assert!(f(n).len() <= 5, "fmt_tokens({n}) = '{}' exceeds 5 chars", f(n));
+        }
+    }
+
+    #[test]
+    fn fmt_pct5_always_five_chars() {
+        let f = super::fmt_pct5;
+        assert_eq!(f(0.0), "0.00%");
+        assert_eq!(f(5.12), "5.12%");
+        assert_eq!(f(20.1), "20.1%");
+        assert_eq!(f(99.9), "99.9%");
+        assert_eq!(f(100.0), "MAX %");
+        assert_eq!(f(150.0), "MAX %");
+        for pct in [0.0, 0.5, 9.99, 10.0, 42.0, 99.99, 100.0, 250.0] {
+            assert_eq!(f(pct).len(), 5, "fmt_pct5({pct}) = '{}' not 5 chars", f(pct));
+        }
+    }
+
+    // ── context detail width invariant ───────────────────────────────────
+
+    #[test]
+    fn context_item_width_invariant_across_toggle() {
+        let snap = runie_core::Snapshot { ..Default::default() };
+
+        let default_wide = super::build_context_item(&snap, false)
+            .expect("context item should render")
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect::<String>();
+        let expanded_wide = super::build_context_item(&snap, true)
+            .expect("context item should render")
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect::<String>();
+        // Minimum width = BAR_PCT_GAP + PCT_WIDTH = 6 (Grok degenerate rule).
+        assert!(
+            UnicodeWidthStr::width(default_wide.as_str()) >= 6,
+            "default form must be padded to >= 6 cols; got '{default_wide}'"
+        );
+        assert_eq!(
+            UnicodeWidthStr::width(default_wide.as_str()),
+            UnicodeWidthStr::width(expanded_wide.as_str()),
+            "expanded and default forms must have equal width (no layout shift); default={default_wide:?} expanded={expanded_wide:?}"
         );
     }
 }

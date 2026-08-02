@@ -7,6 +7,7 @@ mod minimax_like;
 mod parser;
 mod permissions;
 mod safety;
+mod subagent_coordinator_races;
 mod tool_marker_state;
 mod tools;
 mod turn;

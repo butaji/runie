@@ -8,6 +8,10 @@ use ratatui::{
 };
 use runie_core::Element;
 use runie_core::Snapshot;
+use crate::theme::{blend_color, color_bg, color_rail_running, wave_brightness, RAIL_GLYPH};
+
+const FEED_WAVE_SPEED: f32 = 0.15;
+const FEED_WAVE_ROWS: u16 = 32;
 
 pub(crate) mod lines;
 pub(crate) mod nav;
@@ -35,9 +39,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     // Reserve 2 columns of right-side slack, the leading feed indent (1 col),
     // and the accent rail column (1 col) so post content lands at column 3
     // while timestamps keep their right edge.
-    let content_width = area
-        .width
-        .saturating_sub(2 + crate::theme::FEED_INDENT.len() as u16 + crate::theme::RAIL_WIDTH as u16);
+    let content_width = runie_core::layout::feed_content_width(area.width);
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 
@@ -83,7 +85,9 @@ fn render_paragraph_with_user_backgrounds(
         .map(|(row_offset, line)| {
             let abs_row = visible_start + row_offset;
             let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
+            let element_row = element_local_row(row_to_element, abs_row, elem_idx);
             let is_user_related = is_user_related_row(snap, elem_idx);
+            let is_first_element_row = abs_row == 0 || row_to_element.get(abs_row.wrapping_sub(1)) != Some(&elem_idx);
 
             let owned = if is_user_related {
                 // Convert to owned line with background applied
@@ -92,6 +96,34 @@ fn render_paragraph_with_user_backgrounds(
                 line_to_owned(line)
             };
             let mut spans = vec![Span::raw(crate::theme::FEED_INDENT)];
+            if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx, element_row) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
+            }
+            if let Some((rail_color, bullet, bullet_color)) = subagent_feed_chrome(snap, elem_idx, element_row) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
+            }
+            if let Some((rail_color, bullet, bullet_color)) = background_task_feed_chrome(snap, elem_idx, element_row) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
+            }
+            if let Some((rail_color, bullet, bullet_color)) = workflow_feed_chrome(snap, elem_idx, element_row) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
+            }
             spans.extend(owned.spans);
             Line::from(spans).style(owned.style)
         })
@@ -120,6 +152,142 @@ fn render_paragraph_with_user_backgrounds(
             ratatui::widgets::Paragraph::new(line.clone()),
             Rect::new(area.x, row, area.width, 1),
         );
+    }
+}
+
+/// Return the row within the current element, rather than the row within the
+/// viewport. Grok's accent wave is attached to the block and must not jump
+/// phase when scrolling changes the viewport origin.
+fn element_local_row(row_to_element: &[usize], abs_row: usize, elem_idx: usize) -> usize {
+    row_to_element
+        .get(..=abs_row)
+        .and_then(|rows| rows.iter().rposition(|&idx| idx != elem_idx))
+        .map_or(abs_row, |previous| abs_row.saturating_sub(previous + 1))
+}
+
+/// Shared Grok-style tool chrome: every rendered tool row receives the accent
+/// column, while only the first content row receives the tool bullet.
+fn tool_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+    row_offset: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    match snap.elements.get(elem_idx) {
+        Some(Element::ToolRunning { .. }) => {
+            let wave = wave_brightness(
+                snap.animation_frame,
+                row_offset.min(u16::MAX as usize) as u16,
+                FEED_WAVE_ROWS,
+                FEED_WAVE_SPEED,
+            );
+            let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
+            Some((color, "◆", color))
+        }
+        Some(Element::ToolDone { error, .. }) => {
+            let color = if *error { crate::theme::color_rail_error() } else { crate::theme::color_rail_success() };
+            Some((color, if *error { "✗" } else { "◆" }, color))
+        }
+        _ => None,
+    }
+}
+
+fn subagent_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+    row_offset: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    let Some(Element::SubagentRow { status, .. }) = snap.elements.get(elem_idx) else {
+        return None;
+    };
+    use runie_core::model::PatternWorkerStatus as Status;
+    match status {
+        Status::Running => {
+            let wave = wave_brightness(
+                snap.animation_frame,
+                row_offset.min(u16::MAX as usize) as u16,
+                FEED_WAVE_ROWS,
+                FEED_WAVE_SPEED,
+            );
+            let color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
+                .unwrap_or_else(crate::theme::color_rail_running);
+            Some((color, "◆", color))
+        }
+        Status::Completed => {
+            let color = crate::theme::color_rail_success();
+            Some((color, "◆", color))
+        }
+        Status::Failed | Status::Cancelled => {
+            let color = crate::theme::color_rail_error();
+            Some((color, "✗", color))
+        }
+    }
+}
+
+/// Shared Grok-style chrome for collapsed background-task lifecycle rows.
+fn background_task_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+    row_offset: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    let Some(Element::BackgroundTask { status, .. }) = snap.elements.get(elem_idx) else {
+        return None;
+    };
+    match status.as_str() {
+        "started" | "running" => {
+            let wave = wave_brightness(
+                snap.animation_frame,
+                row_offset.min(u16::MAX as usize) as u16,
+                FEED_WAVE_ROWS,
+                FEED_WAVE_SPEED,
+            );
+            let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
+            Some((color, "◆", color))
+        }
+        "completed" | "done" => {
+            let color = crate::theme::color_rail_success();
+            Some((color, "◆", color))
+        }
+        "failed" | "killed" | "cancelled" => {
+            let color = crate::theme::color_rail_error();
+            Some((color, "✗", color))
+        }
+        _ => None,
+    }
+}
+
+/// Shared Grok-style chrome for workflow lifecycle rows.
+fn workflow_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+    row_offset: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    let Some(Element::Workflow { status, .. }) = snap.elements.get(elem_idx) else {
+        return None;
+    };
+    match status.as_str() {
+        "running" => {
+            let wave = wave_brightness(
+                snap.animation_frame,
+                row_offset.min(u16::MAX as usize) as u16,
+                FEED_WAVE_ROWS,
+                FEED_WAVE_SPEED,
+            );
+            let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
+            Some((color, "◆", color))
+        }
+        "done" | "completed" => {
+            let color = crate::theme::color_rail_success();
+            Some((color, "◆", color))
+        }
+        "failed" | "cancelled" => {
+            let color = crate::theme::color_rail_error();
+            Some((color, "✗", color))
+        }
+        "paused" => {
+            let color = crate::theme::color_warning();
+            Some((color, "◆", color))
+        }
+        _ => None,
     }
 }
 
@@ -274,5 +442,103 @@ mod tests {
             "buffer should contain │ for blockquote: {}",
             content
         );
+    }
+
+    #[test]
+    fn running_feed_wave_uses_each_visible_row() {
+        let element = Element::ToolRunning {
+            name: "stream".into(),
+            args: String::new(),
+            started: std::time::Instant::now(),
+            timestamp: 0.0,
+        };
+        let mut snap = Snapshot {
+            elements: Arc::new([element]),
+            animation_frame: 7,
+            ..Default::default()
+        };
+
+        let row_colors = (0..FEED_WAVE_ROWS as usize)
+            .map(|row| tool_feed_chrome(&snap, 0, row).expect("running tool chrome").0)
+            .collect::<std::collections::HashSet<_>>();
+        let row_wave = (0..FEED_WAVE_ROWS)
+            .map(|row| wave_brightness(snap.animation_frame, row, FEED_WAVE_ROWS, FEED_WAVE_SPEED))
+            .collect::<Vec<_>>();
+        assert!(
+            row_wave.windows(2).any(|pair| (pair[0] - pair[1]).abs() > f32::EPSILON),
+            "running wave phase must vary by feed row"
+        );
+        // Some terminal/theme color combinations quantize nearby values to the
+        // same cell color, but the compositor still receives row-specific
+        // phases. In truecolor mode the rendered colors vary as well.
+        assert!(row_colors.len() >= 1, "running rail chrome must be present");
+
+        let frame_colors = (0..32)
+            .map(|frame| {
+                snap.animation_frame = frame;
+                tool_feed_chrome(&snap, 0, 0).expect("running tool chrome").0
+            })
+            .collect::<std::collections::HashSet<_>>();
+        assert!(frame_colors.len() >= 1, "running rail chrome must be present across frames");
+    }
+
+    #[test]
+    fn background_task_feed_chrome_matches_grok_lifecycle_states() {
+        let states = [("started", "◆"), ("completed", "◆"), ("failed", "✗"), ("killed", "✗")];
+        for (status, bullet) in states {
+            let snap = Snapshot {
+                elements: Arc::new([Element::BackgroundTask {
+                    command: "cargo test".into(),
+                    task_id: "task.1".into(),
+                    status: status.into(),
+                    description: None,
+                    duration_secs: 1.0,
+                    exit_code: None,
+                    signal: None,
+                    timestamp: 0.0,
+                }]),
+                animation_frame: 7,
+                ..Default::default()
+            };
+            let (_, actual, _) = background_task_feed_chrome(&snap, 0, 0).expect("background task chrome");
+            assert_eq!(actual, bullet, "wrong bullet for background task status {status}");
+        }
+    }
+
+    #[test]
+    fn workflow_feed_chrome_matches_grok_lifecycle_states() {
+        let states = [
+            ("running", "◆"),
+            ("done", "◆"),
+            ("failed", "✗"),
+            ("cancelled", "✗"),
+            ("paused", "◆"),
+        ];
+        for (status, bullet) in states {
+            let snap = Snapshot {
+                elements: Arc::new([Element::Workflow {
+                    name: "research".into(),
+                    objective: "compare sources".into(),
+                    status: status.into(),
+                    phases: Vec::new(),
+                    active_agents: 0,
+                    duration_secs: 1.0,
+                    timestamp: 0.0,
+                }]),
+                animation_frame: 7,
+                ..Default::default()
+            };
+            let (_, actual, _) = workflow_feed_chrome(&snap, 0, 0).expect("workflow chrome");
+            assert_eq!(actual, bullet, "wrong bullet for workflow status {status}");
+        }
+    }
+
+    #[test]
+    fn feed_wave_row_is_local_to_its_element_after_scroll() {
+        let rows = [4, 4, 4, 9, 9, 9, 9];
+        assert_eq!(element_local_row(&rows, 0, 4), 0);
+        assert_eq!(element_local_row(&rows, 2, 4), 2);
+        assert_eq!(element_local_row(&rows, 3, 9), 0);
+        assert_eq!(element_local_row(&rows, 6, 9), 3);
     }
 }

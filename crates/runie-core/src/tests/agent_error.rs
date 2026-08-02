@@ -39,6 +39,61 @@ fn agent_error_clears_turn_active() {
 }
 
 #[test]
+fn turn_error_leaves_grok_failure_event_in_feed() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+
+    state.update(crate::Event::TurnErrored { id: "req.0".into(), message: "Unauthorized".into() });
+
+    assert!(state.session.messages.iter().any(|message| {
+        message.role == crate::model::Role::System && message.content() == "Turn failed: Unauthorized"
+    }));
+}
+
+#[test]
+fn turn_abort_leaves_grok_cancellation_event_in_feed() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+
+    state.update(crate::Event::TurnAborted);
+
+    assert!(state.session.messages.iter().any(|message| {
+        message.role == crate::model::Role::System && message.content() == "Turn cancelled by user."
+    }));
+}
+
+#[test]
+fn known_provider_failures_use_grok_actionable_feed_rows() {
+    for (input, expected) in [
+        ("context window exceeded", "This conversation is too large for the model's context window."),
+        ("invalid api key", "Authentication required — your session has expired"),
+        ("retry exhausted after 3 attempts", "Retry failed: retry exhausted after 3 attempts"),
+    ] {
+        let mut state = AppState::default();
+        state.update(crate::Event::Error { id: "req.0".into(), message: input.into() });
+        assert!(state.session.messages.iter().any(|message| message.role == crate::model::Role::System && message.content().contains(expected)), "missing actionable row for {input}");
+    }
+}
+
+#[test]
+fn grok_background_task_announcements_project_to_feed_rows() {
+    for (content, status, duration) in [
+        ("Task started: cargo test", "started", 0.0),
+        ("Task completed in 1.2s: cargo test", "completed", 1.2),
+        ("Task failed in 1m5s: cargo test (exit 2)", "failed", 65.0),
+        ("Task killed in 2.0s: cargo test", "killed", 2.0),
+    ] {
+        let mut state = AppState::default();
+        state.update(crate::Event::SystemMessage { content: content.into() });
+        assert!(feed_elements(&state).iter().any(|element| matches!(
+            element,
+            Element::BackgroundTask { status: actual, duration_secs, .. }
+                if actual == status && (*duration_secs - duration).abs() < f64::EPSILON
+        )), "missing background task projection for {content}: {:?}", feed_elements(&state));
+    }
+}
+
+#[test]
 fn agent_error_resets_timers() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
@@ -67,6 +122,26 @@ fn agent_error_inserts_error_message() {
         .iter()
         .find(|m| m.content().contains("Error: Missing API key"));
     assert!(error_msg.is_some(), "error message should be recorded");
+}
+
+#[test]
+fn credit_exhaustion_error_projects_to_credit_limit_feed_card() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+
+    state.update(crate::Event::Error {
+        id: "req.0".to_string(),
+        message: "Provider error: credits exhausted".to_string(),
+    });
+
+    assert!(feed_elements(&state).iter().any(|element| matches!(
+        element,
+        Element::CreditLimit { heading, action, url, .. }
+            if heading.contains("credit limit")
+                && action == "purchase_credits"
+                && url == "https://grok.com/usage"
+    )));
+    assert!(!feed_has_error(&state, "credits exhausted"));
 }
 
 #[test]

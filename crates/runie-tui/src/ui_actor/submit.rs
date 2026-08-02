@@ -31,7 +31,12 @@ pub(crate) async fn dispatch(ui: &mut UiActor, content: String) {
         // Not a form panel — fall through to close dialog and handle as slash command.
     }
     // Close any open dialog (e.g., command palette) before executing the command.
-    *ui.state.open_dialog_mut() = None;
+    // Restore the file-picker backup first (Esc/@-pick closes would otherwise
+    // wipe the typed prefix — the dialog router does the same on DialogBack).
+    if ui.state.open_dialog().is_some() {
+        runie_core::update::dialog::restore_file_picker_backup(&mut ui.state);
+        *ui.state.open_dialog_mut() = None;
+    }
     // Slash command handling.
     if let Some(result) = ui.state.handle_slash(&content) {
         // Extract Abort/ClearQueues from CommandResult::Events before applying,

@@ -12,6 +12,11 @@ use crate::model::AppState;
 
 impl AppState {
     pub(crate) fn submit(&mut self) {
+        // Prompt submission retires the current non-ambient ephemeral tip
+        // (grok parity: clear_on_submit in dispatch/notes.rs).
+        self.view_mut().ephemeral_tip.clear_on_submit();
+        // Close the inline slash dropdown; the `/cmd` submits normally.
+        self.view_mut().slash_dropdown = None;
         if self.completion().at_suggestions.is_some() {
             self.insert_at_suggestion();
             return;

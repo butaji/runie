@@ -5,6 +5,7 @@
 pub use super::{view, AppState, ChatMessage, DialogKind, Event, Part, Role, ScopedModel, Snapshot};
 
 mod feed_style;
+mod content_types;
 mod render_at;
 mod render_basic;
 mod render_model_selector;
@@ -73,6 +74,7 @@ mod permission_dialog;
 mod popup_bg;
 mod scoped_models;
 mod scrollbar;
+mod subagent_row;
 mod special_content;
 mod timestamps;
 mod toggle_expand;

@@ -387,7 +387,9 @@ mod tests {
             .any(|s| s.content == "italic" && s.style.add_modifier(ratatui::style::Modifier::ITALIC) == s.style);
         // tui_markdown renders inline code with a leading space; we check for that span
         // and verify it has the base color applied (tui_markdown does not give code a bg).
-        let has_code = spans.iter().any(|s| s.content == " code" && s.style.fg == Some(Color::White));
+        let has_code = spans
+            .iter()
+            .any(|s| s.content.trim() == "code" && s.style.fg == Some(Color::White));
         assert!(has_bold, "missing bold span");
         assert!(has_italic, "missing italic span");
         assert!(has_code, "missing code span");

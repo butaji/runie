@@ -137,6 +137,18 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
+    /// Toggle the queued-messages pane (grok parity). Opening the pane focuses
+    /// it; closing it returns focus to the chat input.
+    pub(crate) fn toggle_queue_pane(&mut self) {
+        let visible = !self.view().queue_pane_visible;
+        self.view_mut().queue_pane_visible = visible;
+        self.view_mut().queue_pane_focused = visible;
+        if !visible {
+            self.view_mut().queue_pane_selected = 0;
+        }
+        self.view_mut().dirty = true;
+    }
+
     pub(crate) fn page_up(&mut self) {
         crate::update::input::scroll_event(self, Event::PageUp);
     }
@@ -261,15 +273,16 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::Abort => handle_abort(state),
         Event::ClearQueues => handle_clear_queues(state),
         Event::ExternalEditorDone { content } => handle_editor_done(state, content),
-        Event::ToggleExpand => {
-            // In normal mode, ctrl+o toggles fold/expand for the last user message.
-            // In vim nav mode, it toggles individual posts (handled in nav.rs).
-            state.toggle_last_user_message_fold();
-        }
+        // Ctrl+O is the global expand/collapse command. Per-post folding is
+        // handled explicitly by feed navigation; keeping this event global
+        // preserves the documented keybinding contract and makes the action
+        // deterministic for tool/thinking posts.
+        Event::ToggleExpand => state.toggle_expand_all(),
         Event::ToggleTasksPane => state.toggle_tasks_pane(),
         Event::FollowUp => state.queue_follow_up(),
         Event::Dequeue => state.dequeue(),
         Event::ToggleVimMode => handle_toggle_vim_mode(state),
+        Event::ToggleQueuePane => state.toggle_queue_pane(),
         Event::NewSession => handle_new_session(state),
         Event::ResumeSession | Event::OpenSessionList => {
             // Close welcome and open session tree
@@ -451,17 +464,20 @@ pub(super) fn handle_goal_event(state: &mut AppState, event: Event) {
         Event::GoalCreate { objective } => {
             let goal = crate::model::GoalState::new(objective.clone(), None);
             *state.goal_state_mut() = Some(goal);
+            state.add_system_msg(format!("Workflow goal: {objective}"));
         }
         Event::GoalComplete { objective } => {
             if let Some(g) = state.goal_state_mut() {
                 g.status = crate::model::GoalStatus::Completed;
             }
-            state.add_system_msg(format!("Goal completed: {}", objective));
+            state.add_system_msg(format!("Workflow goal done: {objective}"));
         }
         Event::GoalPause => {
             if let Some(g) = state.goal_state_mut() {
                 if g.status == crate::model::GoalStatus::Active {
+                    let objective = g.objective.clone();
                     g.status = crate::model::GoalStatus::Paused;
+                    state.add_system_msg(format!("Workflow goal paused: {objective}"));
                     state.notify("Goal paused.".into(), TransientLevel::Info);
                 }
             }
@@ -469,7 +485,9 @@ pub(super) fn handle_goal_event(state: &mut AppState, event: Event) {
         Event::GoalResume => {
             if let Some(g) = state.goal_state_mut() {
                 if g.status == crate::model::GoalStatus::Paused {
+                    let objective = g.objective.clone();
                     g.status = crate::model::GoalStatus::Active;
+                    state.add_system_msg(format!("Workflow goal: {objective}"));
                     state.notify("Goal resumed.".into(), TransientLevel::Info);
                 }
             }
@@ -478,7 +496,7 @@ pub(super) fn handle_goal_event(state: &mut AppState, event: Event) {
             if let Some(g) = state.goal_state_mut() {
                 let obj = g.objective.clone();
                 *state.goal_state_mut() = None;
-                state.add_system_msg(format!("Goal cancelled: {}", obj));
+                state.add_system_msg(format!("Workflow goal cancelled: {obj}"));
             }
         }
         _ => {}

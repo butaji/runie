@@ -28,8 +28,9 @@ fn get_cached_http_client(provider_key: &str, base_url: &str) -> Arc<reqwest::Cl
     guard
         .entry(key)
         .or_insert_with(|| {
+            // NOTE: REQUEST_TIMEOUT is NOT applied. Per-read idle timeout handles
+            // streaming timing; reqwest's total timeout would kill long streams.
             let client = reqwest::Client::builder()
-                .timeout(REQUEST_TIMEOUT)
                 .connect_timeout(CONNECT_TIMEOUT)
                 .build()
                 .unwrap_or_else(|_| reqwest::Client::new());

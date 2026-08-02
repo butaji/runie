@@ -232,13 +232,15 @@ struct ErrorEvent {
 /// Classify an Anthropic error type into a `ModelError` variant.
 fn classify_error(error_type: &str, message: &str) -> ModelError {
     match error_type {
-        "rate_limit" => ModelError::RateLimit { retry_after_secs: None },
-        "overloaded_error" => ModelError::Overloaded { retry_after_secs: None },
-        "invalid_request" if message.to_lowercase().contains("context") => {
+        // Accept both Anthropic's wire type ("rate_limit_error") and the
+        // shorter form ("rate_limit") used by some OpenAI-compatible providers.
+        "rate_limit_error" | "rate_limit" => ModelError::RateLimit { retry_after_secs: None },
+        "overloaded_error" | "overloaded" => ModelError::Overloaded { retry_after_secs: None },
+        "invalid_request_error" | "invalid_request" if message.to_lowercase().contains("context") => {
             ModelError::ContextLength { limit: 0, used: 0 }
         }
         "authentication_error" => ModelError::Other(format!("authentication error: {}", message)),
-        "server_error" => ModelError::Other(format!("server error: {}", message)),
+        "api_error" => ModelError::Other(format!("server error: {}", message)),
         _ => ModelError::Other(message.to_string()),
     }
 }
@@ -347,6 +349,48 @@ data: {"type":"invalid_request","message":"Context length exceeded."}
     }
 
     #[test]
+    // ── classify_error tests ──────────────────────────────────────────────────
+
+    // Regression (task 22): `rate_limit_error` was misspelled as `"rate_limit"`.
+    #[test]
+    fn classify_error_rate_limit_error() {
+        let result = classify_error("rate_limit_error", "rate limit exceeded");
+        assert!(
+            matches!(result, ModelError::RateLimit { .. }),
+            "rate_limit_error → RateLimit, got: {result:?}"
+        );
+    }
+
+    // Regression (task 22): `invalid_request_error` was misspelled as `"invalid_request"`.
+    #[test]
+    fn classify_error_invalid_request_error_context() {
+        let result = classify_error("invalid_request_error", "context length exceeded");
+        assert!(
+            matches!(result, ModelError::ContextLength { .. }),
+            "invalid_request_error with context → ContextLength, got: {result:?}"
+        );
+    }
+
+    // Regression (task 22): `api_error` was misspelled as `"server_error"`.
+    #[test]
+    fn classify_error_api_error() {
+        let result = classify_error("api_error", "internal error");
+        assert!(
+            matches!(result, ModelError::Other(ref msg) if msg.contains("server error: internal error")),
+            "api_error → Other with prefix, got: {result:?}"
+        );
+    }
+
+    // Negative: unknown type falls through to Other.
+    #[test]
+    fn classify_error_unknown_falls_through() {
+        let result = classify_error("unknown_error", "some message");
+        assert!(
+            matches!(result, ModelError::Other(ref msg) if msg.as_str() == "some message"),
+            "unknown_error → Other(msg), got: {result:?}"
+        );
+    }
+
     fn anthropic_auth_error() {
         let text = r#"event: message_start
 data: {"type":"message_start","message":{"id":"msg_err","type":"message","role":"assistant","stop_reason":null,"content":[],"usage":{"input_tokens":10,"output_tokens":0}}}

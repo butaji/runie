@@ -5,12 +5,12 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    blend_color, color_accent, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
+    blend_color, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
     color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
     color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent, style_feed_timestamp,
-    style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
-    style_turn_complete, wave_brightness, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SPINNER, GLYPH_SUBAGENT_BAR,
-    GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, GLYPH_X, RAIL_GLYPH,
+    color_agent_text, style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
+    style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND,
+    GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, RAIL_GLYPH,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -40,16 +40,10 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
     lines
 }
 
-pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    // Grok-style thinking line with dim rail: `┃` + `◆ ⠋ Waiting...`
-    let rail_color = crate::theme::color_rail_thinking();
-    let line_text = crate::theme::thinking_line(started.elapsed().as_secs_f64());
-    vec![Line::from(vec![
-        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
-        Span::styled(" ", style_thinking()),
-        Span::raw(line_text),
-    ])
-    .style(style_thinking())]
+pub fn render_thinking() -> Vec<Line<'static>> {
+    // Grok keeps the block text stable. Its shared feed compositor owns the
+    // accent/bullet animation; this renderer must not emit chrome.
+    vec![Line::from("Thinking…").style(style_thinking())]
 }
 
 /// Number of thought body lines to show in truncated (default) mode.
@@ -61,18 +55,16 @@ const ELLIPSIS_LINE: &str = "  …";
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
     let style = style_thought();
     let first_line = content.lines().next().unwrap_or(content);
-    // Grok-style summary: `◆ ` + bold "Thought" + plain " for Xs", all dim.
+    // Grok-style summary: bold "Thought" + plain " for Xs", all dim.
     // Truncated default: if body lines > THOUGHT_TRUNCATED_LINES, show
     // header + `…` + last THOUGHT_TRUNCATED_LINES lines.
     let header = match first_line.strip_prefix("◆ ") {
         Some(rest) => match rest.split_once(' ') {
             Some((word, tail)) => vec![Line::from(vec![
-                Span::styled(GLYPH_AGENT, style),
                 Span::styled(word.to_owned(), style.bold()),
                 Span::styled(format!(" {tail}"), style),
             ])],
             None => vec![Line::from(vec![
-                Span::styled(GLYPH_AGENT, style),
                 Span::styled(rest.to_owned(), style.bold()),
             ])],
         },
@@ -111,48 +103,13 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
     lines
 }
 
-/// Animation speed for running blocks (radians per tick).
-/// ~0.15 gives a nice smooth wave that travels the block in ~40 ticks (grok parity).
-const WAVE_SPEED: f32 = 0.15;
-
-/// Number of rows per wave cycle (grok parity).
-const WAVE_ROWS: u16 = 32;
-
-pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, animation_frame: u32) -> Vec<Line<'static>> {
-    let (verb, args_part) = format_tool_label_parts(name, args);
-    // Use wave_brightness on the rail and spinner glyph colors for running tools (grok parity).
-    // The wave travels through the glyph row using WAVE_ROWS phase offset.
-    let wave = wave_brightness(animation_frame, 0, WAVE_ROWS, WAVE_SPEED);
+pub fn render_tool_running(name: &str, args: &str, _duration_secs: f64, _animation_frame: u32) -> Vec<Line<'static>> {
+    let (verb, args_part) = feed_tool_label_parts(name, args);
     let base_style = style_tool_running();
-    let rail_color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
-        .unwrap_or_else(crate::theme::color_rail_running);
-    let spinner_color = blend_color(color_bg(), color_accent(), wave).unwrap_or_else(color_accent);
     vec![Line::from(vec![
-        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
-        Span::styled(GLYPH_SPINNER.to_string(), Style::new().fg(spinner_color)),
-        Span::styled(" ", base_style),
         Span::styled(verb, base_style.bold()),
         Span::styled(args_part, base_style),
-        Span::styled(format!(" {:.1}s", duration_secs), base_style),
     ])]
-}
-
-/// Grok-style finish-flash: linear decay over 400ms after tool completion.
-/// Returns brightness in [0.0, 1.0] — 1.0 = peak flash (just finished),
-/// 0.0 = settled (flash done).
-/// `finished_at` is the monotonic Instant when the tool finished.
-fn finish_flash(finished_at: &Option<std::time::Instant>, _animation_frame: u32) -> f32 {
-    const FLASH_DURATION_MS: f64 = 400.0;
-
-    let Some(finished) = finished_at else {
-        return 0.0;
-    };
-    let elapsed_ms = finished.elapsed().as_secs_f64() * 1000.0;
-    if elapsed_ms >= FLASH_DURATION_MS {
-        return 0.0;
-    }
-    // Linear decay: 1.0 → 0.0 over FLASH_DURATION_MS
-    (1.0 - elapsed_ms / FLASH_DURATION_MS) as f32
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -162,44 +119,17 @@ pub fn render_tool_done(
     _duration_secs: f64,
     output: &str,
     bytes_transferred: Option<u64>,
-    error: bool,
-    finished_at: &Option<std::time::Instant>,
-    animation_frame: u32,
+    _error: bool,
+    _finished_at: &Option<std::time::Instant>,
+    _animation_frame: u32,
 ) -> Vec<Line<'static>> {
-    let (verb, args_part) = format_tool_label_parts(name, args);
+    let (verb, args_part) = feed_tool_done_label_parts(name, args, output);
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
     let base_style = style_tool_header();
 
-    // Rail color: green for success, red for error.
-    let rail_color = if error {
-        crate::theme::color_rail_error()
-    } else {
-        crate::theme::color_rail_success()
-    };
-
-    // Grok-style finish-flash: blend accent toward bg at peak, then settle.
-    // The flash uses the same wave brightness function as tool-running.
-    let flash = finish_flash(finished_at, animation_frame);
-    let glyph_style = if flash > 0.0 {
-        // At peak flash, blend accent toward bg, creating a bright flash.
-        let glyph_color = blend_color(color_bg(), color_accent(), 0.3 + flash * 0.7).unwrap_or_else(color_accent);
-        Style::new().fg(glyph_color)
-    } else {
-        base_style
-    };
-
-    // Grok-style done post: `┃` rail + `◆ ` + bold verb/name + plain args, all dim.
-    // No ✓, no trailing duration. Errors keep the ✗ marker.
-    let glyph = if error {
-        format!("{GLYPH_X} ")
-    } else {
-        GLYPH_AGENT.to_string()
-    };
     let mut spans = vec![
-        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
-        Span::styled(glyph, glyph_style),
         Span::styled(verb, base_style.bold()),
     ];
     let tail = format!("{args_part}{bytes_str}");
@@ -221,7 +151,8 @@ pub fn render_tool_done(
                 for line in output_lines.iter().take(2) {
                     lines.push(Line::from(line.to_string()).style(output_style));
                 }
-                lines.push(Line::from("  …").style(output_style));
+                let hidden = output_lines.len() - 5;
+                lines.push(Line::from(format!("… +{hidden} lines")).style(output_style));
                 for line in output_lines.iter().rev().take(3).rev() {
                     lines.push(Line::from(line.to_string()).style(output_style));
                 }
@@ -236,7 +167,7 @@ pub fn render_tool_done(
 }
 
 pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<Line<'static>> {
-    let (verb, args_part) = format_tool_label_parts(name, args);
+    let (verb, args_part) = feed_tool_label_parts(name, args);
     let style = style_tool_summary();
     let mut spans = vec![Span::styled(GLYPH_AGENT, style), Span::styled(verb, style.bold())];
     if !args_part.is_empty() {
@@ -246,7 +177,223 @@ pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<L
 }
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    vec![Line::from(format!("Worked for {:.1}s.", duration_secs)).style(style_turn_complete())]
+    let duration = runie_core::labels::format_turn_timer(std::time::Duration::from_secs_f64(duration_secs.max(0.0)));
+    vec![Line::from(format!("Worked for {duration}.")).style(style_turn_complete())]
+}
+
+/// Render Grok-style compact system/session text without assistant or tool
+/// glyphs. System messages stay muted and wrap to the feed content width.
+pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'static>> {
+    let style = style_turn_complete();
+    if let Some(summary) = content.strip_prefix("Recap — ") {
+        let preview = summary.lines().next().unwrap_or(summary).trim();
+        let mut line = vec![Span::styled("Recap", style.bold())];
+        if !preview.is_empty() {
+            line.push(Span::styled(format!("  {preview}"), style));
+        }
+        return vec![Line::from(line)];
+    }
+    let width = content_width.max(1);
+    let mut lines = Vec::new();
+    for raw in content.lines() {
+        let wrapped = word_wrap(raw, width, width);
+        if wrapped.is_empty() {
+            lines.push(Line::from("").style(style));
+        } else {
+            lines.extend(wrapped.into_iter().map(|line| Line::from(line.to_string()).style(style)));
+        }
+    }
+    if lines.is_empty() {
+        lines.push(Line::from("").style(style));
+    }
+    lines
+}
+
+pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize, tool_calls: usize, width: u16) -> Vec<Line<'static>> {
+    let pct = if total == 0 { 0.0 } else { used as f64 / total as f64 * 100.0 };
+    let short = |n: usize| if n >= 1_000_000 { format!("{:.1}m", n as f64 / 1_000_000.0) } else if n >= 1_000 { format!("{:.1}k", n as f64 / 1_000.0) } else { n.to_string() };
+    // Grok's context block uses a 100-cell bar arranged as five rows of 20.
+    // Runie currently has only aggregate usage, so cells represent used/free
+    // capacity rather than Grok's richer per-category breakdown.
+    let bar_used = ((pct / 100.0) * 100.0).round().min(100.0) as usize;
+    let narrow = width < 50;
+    let row_len = if narrow { 10 } else { 20 };
+    let row_count = 100 / row_len;
+    let bar_lines = (0..row_count)
+        .map(|row| {
+            let used_in_row = bar_used.saturating_sub(row * row_len).min(row_len);
+            Line::from(format!("{}{}", "◆ ".repeat(used_in_row), "◇ ".repeat(row_len - used_in_row)))
+                .style(style_tool_summary())
+        })
+        .collect::<Vec<_>>();
+    let free = total.saturating_sub(used);
+    let mut lines = vec![
+        Line::from("Context").style(style_tool_summary().bold()),
+        Line::from(format!("{} / {} tokens ({:.1}%)", short(used), short(total), pct)).style(style_tool_summary()),
+        Line::from(model.to_owned()).style(style_tool_summary()),
+    ];
+    lines.extend(bar_lines);
+    lines.extend([
+        Line::from(format!("Auto-compact at 85% · ~{} tokens remaining", short(free))).style(style_tool_summary()),
+        Line::from(format!("Turns: {turns} · Tool calls: {tool_calls}")).style(style_tool_summary()),
+    ]);
+    lines
+}
+
+/// Render Grok's non-foldable credit-limit warning card in the feed.
+pub fn render_credit_limit(heading: &str, action: &str, url: &str) -> Vec<Line<'static>> {
+    let heading_style = Style::default().fg(crate::theme::color_warning()).bold();
+    let muted = style_turn_complete();
+    let body = match action {
+        "increase_payg_limit" => "You can continue by increasing your spending limit.",
+        "purchase_credits" => "You can continue by purchasing more credits.",
+        _ => "You can continue by enabling pay-as-you-go usage.",
+    };
+    vec![
+        Line::from(Span::styled(heading.to_owned(), heading_style)),
+        Line::from(""),
+        Line::from(Span::styled(body, muted)),
+        Line::from(Span::styled(url.to_owned(), Style::default().fg(crate::theme::color_agent_text()))),
+    ]
+}
+
+/// Render Grok's collapsed workflow lifecycle row with its phase trail.
+pub fn render_workflow(
+    name: &str,
+    objective: &str,
+    status: &str,
+    phases: &[String],
+    active_agents: u32,
+    duration_secs: f64,
+) -> Vec<Line<'static>> {
+    let style = style_tool_summary();
+    let verb = match status {
+        "done" | "completed" => format!("{name} done in {}: ", format_elapsed(duration_secs)),
+        "failed" => format!("{name} failed in {}: ", format_elapsed(duration_secs)),
+        "cancelled" => format!("{name} ◌ cancelled after {}: ", format_elapsed(duration_secs)),
+        "paused" => format!("{name} paused at {}: ", format_elapsed(duration_secs)),
+        _ => format!("{name}: "),
+    };
+    let trail = phases
+        .iter()
+        .map(|phase| {
+            let (state, title) = phase.split_once(':').unwrap_or(("pending", phase));
+            let mark = match state {
+                "done" => "✓",
+                "active" => "●",
+                _ => "○",
+            };
+            format!("{title} {mark}")
+        })
+        .collect::<Vec<_>>()
+        .join(" · ");
+    let mut text = format!("Workflow {verb}{objective}");
+    if !trail.is_empty() {
+        text.push_str(&format!("  [{trail}]"));
+    }
+    if status == "running" && active_agents > 0 {
+        text.push_str(&format!("  ({active_agents} agents)"));
+    }
+    vec![Line::from(text).style(style)]
+}
+
+fn format_elapsed(seconds: f64) -> String {
+    runie_core::labels::format_elapsed_secs(seconds)
+}
+
+/// Render Grok's collapsed background-task lifecycle row.
+pub fn render_background_task(
+    command: &str,
+    status: &str,
+    description: Option<&str>,
+    duration_secs: f64,
+    exit_code: Option<i32>,
+    signal: Option<&str>,
+) -> Vec<Line<'static>> {
+    let style = style_tool_summary();
+    let display = description.filter(|text| !text.trim().is_empty()).unwrap_or(command).replace('\n', " ");
+    let signal_is_kill = signal.is_some_and(|value| matches!(value, "killed" | "SIGTERM" | "SIGKILL" | "oom"));
+    let elapsed = runie_core::labels::format_turn_timer(std::time::Duration::from_secs_f64(duration_secs.max(0.0)));
+    let (verb, suffix) = match status {
+        "completed" => ("completed", format!(" in {elapsed}")),
+        "failed" if signal_is_kill => {
+            ("killed", format!(" in {elapsed}"))
+        }
+        "failed" => {
+            ("failed", format!(" in {elapsed}"))
+        }
+        "killed" | "cancelled" => ("killed", format!(" in {elapsed}")),
+        _ => ("started", String::new()),
+    };
+    let detail = if status == "failed" && !signal_is_kill {
+        signal
+            .map(|s| format!(" ({s})"))
+            .or_else(|| exit_code.map(|code| format!(" (exit {code})")))
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+    vec![Line::from(format!("Task {verb}{suffix}: {display}{detail}")).style(style)]
+}
+
+/// Render Grok's inline BTW side-question item.
+pub fn render_btw(question: &str, answer: Option<&str>, status: &str, expanded: bool) -> Vec<Line<'static>> {
+    let style = style_tool_summary();
+    let marker = if status == "running" { "/btw…" } else { "/btw" };
+    let mut lines = vec![Line::from(format!("{marker} {question}")).style(style)];
+    if expanded {
+        if let Some(answer) = answer.filter(|text| !text.is_empty()) {
+            // Grok keeps the expanded BTW response as a proper body block:
+            // preserve each source row and indent it, including intentional
+            // blank rows, instead of embedding newlines in one Ratatui line.
+            lines.push(Line::from(""));
+            for source_line in answer.lines() {
+                let styled = apply_color_to_inlines(source_line, color_agent_text());
+                let mut body = vec![Span::styled("  ", style)];
+                body.extend(md_to_spans(&styled));
+                lines.push(Line::from(body).style(style));
+            }
+        }
+    }
+    lines
+}
+
+/// Grok's feed names built-in tools by action, while preserving `Run` for
+/// shell and unknown integrations. This belongs to feed presentation only;
+/// protocol/tool names remain unchanged everywhere else.
+fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
+    let action = match name {
+        "read" | "read_file" => Some("Read"),
+        "list_dir" | "list_directory" => Some("List"),
+        "grep" | "find" | "search" | "search_files" => Some("Search"),
+        "edit" | "edit_file" | "write_file" => Some("Edit"),
+        "fetch" | "fetch_docs" | "web_fetch" => Some("Fetch"),
+        "web_search" | "search_web" => Some("Web Search"),
+        "memory_search" | "search_memory" => Some("Memory Search"),
+        _ => None,
+    };
+    if let Some(action) = action {
+        let trimmed = args.trim();
+        if trimmed.is_empty() {
+            (action.to_string(), String::new())
+        } else {
+            (action.to_string(), format!(" {}", trimmed.trim_matches('\"')))
+        }
+    } else {
+        format_tool_label_parts(name, args)
+    }
+}
+
+fn feed_tool_done_label_parts(name: &str, args: &str, output: &str) -> (String, String) {
+    let (verb, args_part) = feed_tool_label_parts(name, args);
+    if matches!(name, "list_dir" | "list_directory") {
+        let count = output.lines().filter(|line| !line.trim().is_empty()).count();
+        if count > 0 {
+            let noun = if count == 1 { "entry" } else { "entries" };
+            return (verb, format!("{args_part} ({count} {noun})"));
+        }
+    }
+    (verb, args_part)
 }
 
 /// Render a swarm subagent lifecycle row (GROK.md §26).
@@ -368,6 +515,17 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
     if *expanded && !output.is_empty() {
         for line in output.lines() {
             lines.push(Line::from(format!("{GLYPH_INDENT}{line}")).style(style_thought()));
+        }
+    }
+    // Feed-level accent/bullet chrome is composed by the shared feed wrapper.
+    // Strip the legacy inline chrome before returning the block content.
+    for line in &mut lines {
+        if let Some(index) = line
+            .spans
+            .iter()
+            .position(|span| span.content.starts_with("Subagent "))
+        {
+            line.spans.drain(..index);
         }
     }
     lines
@@ -926,11 +1084,23 @@ pub fn render_web_search_call(query: &str, results: &[WebSearchResult], _timesta
     let style = style_agent();
     let mut lines = Vec::new();
 
-    // Search header
+    let site_count = results
+        .iter()
+        .filter_map(|result| web_search_domain(&result.url))
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    let suffix = match site_count {
+        0 => String::new(),
+        1 => " (1 site)".to_string(),
+        count => format!(" ({count} sites)"),
+    };
+
+    // Grok-style search header includes a deduplicated citation-domain summary.
     lines.push(Line::from(vec![
         Span::styled(GLYPH_INDENT, style),
-        Span::styled("Web Search: ", style.bold()),
-        Span::styled(format!("\"{}\"", query), style),
+        Span::styled("Web Search ", style.bold()),
+        Span::styled(query.to_string(), style),
+        Span::styled(suffix, style.dim()),
     ]));
 
     // Results
@@ -961,6 +1131,19 @@ pub fn render_web_search_call(query: &str, results: &[WebSearchResult], _timesta
     }
 
     lines
+}
+
+fn web_search_domain(url: &str) -> Option<String> {
+    let host = url
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(url)
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or_default()
+        .trim_start_matches("www.")
+        .to_ascii_lowercase();
+    (!host.is_empty() && host.contains('.')).then_some(host)
 }
 
 /// Render ANSI escape sequence styled content.
