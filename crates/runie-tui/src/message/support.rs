@@ -305,15 +305,16 @@ pub fn render_background_task(
     let style = style_tool_summary();
     let display = description.filter(|text| !text.trim().is_empty()).unwrap_or(command).replace('\n', " ");
     let signal_is_kill = signal.is_some_and(|value| matches!(value, "killed" | "SIGTERM" | "SIGKILL" | "oom"));
+    let elapsed = runie_core::labels::format_turn_timer(std::time::Duration::from_secs_f64(duration_secs.max(0.0)));
     let (verb, suffix) = match status {
-        "completed" => ("completed", format!(" in {:.1}s", duration_secs)),
+        "completed" => ("completed", format!(" in {elapsed}")),
         "failed" if signal_is_kill => {
-            ("killed", format!(" in {:.1}s", duration_secs))
+            ("killed", format!(" in {elapsed}"))
         }
         "failed" => {
-            ("failed", format!(" in {:.1}s", duration_secs))
+            ("failed", format!(" in {elapsed}"))
         }
-        "killed" | "cancelled" => ("killed", format!(" in {:.1}s", duration_secs)),
+        "killed" | "cancelled" => ("killed", format!(" in {elapsed}")),
         _ => ("started", String::new()),
     };
     let detail = if status == "failed" && !signal_is_kill {

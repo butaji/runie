@@ -363,6 +363,14 @@ fn background_task_feed_row_covers_grok_lifecycle_variants() {
         assert!(text.contains("Task killed in 1.2s: run tests"), "kill signal {signal} must use killed wording: {text}");
         assert!(!text.contains(&format!(" ({signal})")), "kill signal detail leaked into Grok killed row for {signal}: {text}");
     }
+
+    let long = Element::background_task("cargo test", "task-1", "completed", None, 24.0, None, None).at(1.0);
+    let long_text = crate::ui::to_lines_internal(&long, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(long_text.contains("Task completed in 24s: cargo test"), "Grok omits decimals at 10s+: {long_text}");
 }
 
 #[test]
