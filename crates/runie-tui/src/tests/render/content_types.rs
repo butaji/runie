@@ -477,3 +477,16 @@ fn expanded_btw_preserves_multiline_answer_rows() {
     assert!(text.iter().any(|line| line == "  Second point"), "missing second answer row: {text:?}");
     assert!(text.iter().any(|line| line == "  Final note"), "missing final answer row: {text:?}");
 }
+
+#[test]
+fn expanded_btw_layout_count_matches_separator_and_body_rows() {
+    let element = Element::Btw {
+        question: "Explain".into(),
+        answer: Some("one\ntwo\nthree".into()),
+        status: "answered".into(),
+        expanded: true,
+        timestamp: 1.0,
+    };
+    let rendered = crate::ui::to_lines_internal(&element, 80).len();
+    assert_eq!(runie_core::layout::element_line_count(&element, 80), rendered);
+}
