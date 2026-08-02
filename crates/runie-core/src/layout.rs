@@ -51,7 +51,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
             .map(|line| word_wrap(line, width.max(1), width.max(1)).len().max(1))
             .sum::<usize>()
             .max(1),
-        Element::ContextInfo { .. } => 5,
+        Element::ContextInfo { .. } => 6,
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
@@ -95,7 +95,7 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::UserMessage { content, .. } => content.lines().count().max(1) + 2,
         Element::AgentMessage { content, .. } => content.lines().count().max(1),
         Element::SystemMessage { content, .. } => content.lines().count().max(1),
-        Element::ContextInfo { .. } => 5,
+        Element::ContextInfo { .. } => 6,
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
         Element::ThoughtSummary { .. } => 1,

@@ -206,11 +206,13 @@ pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize,
     let short = |n: usize| if n >= 1_000_000 { format!("{:.1}m", n as f64 / 1_000_000.0) } else if n >= 1_000 { format!("{:.1}k", n as f64 / 1_000.0) } else { n.to_string() };
     let bar_used = ((pct / 5.0).round() as usize).min(20);
     let bar = format!("{}{}", "◆ ".repeat(bar_used), "◇ ".repeat(20 - bar_used));
+    let free = total.saturating_sub(used);
     vec![
         Line::from("Context").style(style_tool_summary().bold()),
         Line::from(format!("{} / {} tokens ({:.1}%)", short(used), short(total), pct)).style(style_tool_summary()),
         Line::from(model.to_owned()).style(style_tool_summary()),
         Line::from(bar.trim_end().to_owned()).style(style_tool_summary()),
+        Line::from(format!("Auto-compact at 85% · ~{} tokens remaining", short(free))).style(style_tool_summary()),
         Line::from(format!("Turns: {turns} · Tool calls: {tool_calls}")).style(style_tool_summary()),
     ]
 }

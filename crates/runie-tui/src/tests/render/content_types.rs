@@ -260,6 +260,7 @@ fn context_info_feed_snapshot_shows_usage_and_counts() {
     assert!(text.contains("Context"), "missing context heading: {text}");
     assert!(text.contains("36.7k / 1.0m tokens"), "missing usage: {text}");
     assert!(text.contains("Turns: 5 · Tool calls: 12"), "missing counts: {text}");
+    assert!(text.contains("Auto-compact at 85%"), "missing compaction line: {text}");
 }
 
 #[test]
