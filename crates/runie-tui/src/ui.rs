@@ -31,7 +31,7 @@ pub(crate) mod tasks_pane;
 mod utils;
 
 pub use input::count_input_lines;
-pub use render_lines::element_line_count;
+pub use render_lines::{element_line_count, to_lines_internal};
 pub use scroll::render_scrollbar;
 
 pub(crate) use hints::parse_hint_spans;

@@ -49,11 +49,15 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
-        Element::AnthropicThinking { content, .. } => thought_marker_line_count(content, width),
+        Element::AnthropicThinking { content, signature, redacted, .. } => {
+            anthropic_thinking_line_count(content, signature.as_deref(), *redacted)
+        }
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
-        Element::ToolConfirmation { .. } => 1,
+        Element::ToolConfirmation { args, description, .. } => {
+            tool_confirmation_line_count(args, description)
+        }
         Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
@@ -63,18 +67,15 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         }
         Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
-        Element::Image { .. } => 1, // Image placeholder height
-        Element::DataPart { data, .. } => data.lines().count().max(1),
-        Element::MarkdownTable { rows, .. } => {
-            // Header + separator + rows
-            1 + 1 + rows.len()
-        }
-        Element::DiffOutput { content, .. } => content.lines().count().max(1),
+        Element::Image { .. } => 2, // Header plus terminal-protocol detail row
+        Element::DataPart { .. } => 2, // Label plus formatted payload
+        Element::MarkdownTable { rows, .. } => 4 + rows.len(),
+        Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
         Element::WebSearchCall { results, .. } => {
-            // Query line + result headers + separator
-            1 + results.len() * 2
+            // Query line + title, snippet, and URL for each result.
+            1 + results.len().min(5) * 3
         }
-        Element::AnsiStyled { plain_text, .. } => plain_text.lines().count().max(1),
+        Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
 }
 
@@ -86,7 +87,9 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
         Element::ThoughtSummary { .. } => 1,
-        Element::AnthropicThinking { content, .. } => content.lines().count().max(1),
+        Element::AnthropicThinking { content, signature, redacted, .. } => {
+            anthropic_thinking_line_count(content, signature.as_deref(), *redacted)
+        }
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => {
             if output.is_empty() {
@@ -96,7 +99,9 @@ fn fallback_line_count(element: &Element) -> usize {
             }
         }
         Element::ToolSummary { .. } => 1,
-        Element::ToolConfirmation { .. } => 1,
+        Element::ToolConfirmation { args, description, .. } => {
+            tool_confirmation_line_count(args, description)
+        }
         Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
@@ -106,12 +111,12 @@ fn fallback_line_count(element: &Element) -> usize {
         }
         Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
-        Element::Image { .. } => 1,
-        Element::DataPart { data, .. } => data.lines().count().max(1),
-        Element::MarkdownTable { rows, .. } => 1 + 1 + rows.len(),
-        Element::DiffOutput { content, .. } => content.lines().count().max(1),
-        Element::WebSearchCall { results, .. } => 1 + results.len() * 2,
-        Element::AnsiStyled { plain_text, .. } => plain_text.lines().count().max(1),
+        Element::Image { .. } => 2,
+        Element::DataPart { .. } => 2,
+        Element::MarkdownTable { rows, .. } => 4 + rows.len(),
+        Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
+        Element::WebSearchCall { results, .. } => 1 + results.len().min(5) * 3,
+        Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
 }
 
@@ -279,6 +284,32 @@ fn thought_marker_line_count(content: &str, width: u16) -> usize {
         }
     }
     lines.max(1)
+}
+
+/// Matches `render_anthropic_thinking`: header, optional signature row, and
+/// either wrapped content or the single redaction placeholder row.
+fn anthropic_thinking_line_count(content: &str, signature: Option<&str>, redacted: bool) -> usize {
+    let mut lines = 1; // header
+    if signature.is_some() {
+        lines += 1;
+    }
+    if redacted {
+        lines + 1
+    } else {
+        lines + content.lines().map(|line| word_wrap(line, 80, 80).len().max(1)).sum::<usize>()
+    }
+}
+
+/// Matches `render_tool_confirmation`: fixed header/detail/action rows plus
+/// at most five argument rows.
+fn tool_confirmation_line_count(args: &str, description: &str) -> usize {
+    1 // warning header
+        + 1 // tool name
+        + usize::from(!description.is_empty())
+        + usize::from(!args.is_empty()) // args label
+        + args.lines().take(5).count()
+        + 1 // request id
+        + 1 // action hint
 }
 
 fn tool_done_line_count(output: &str) -> usize {
