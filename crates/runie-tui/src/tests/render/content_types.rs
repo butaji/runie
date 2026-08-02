@@ -490,3 +490,10 @@ fn expanded_btw_layout_count_matches_separator_and_body_rows() {
     let rendered = crate::ui::to_lines_internal(&element, 80).len();
     assert_eq!(runie_core::layout::element_line_count(&element, 80), rendered);
 }
+
+#[test]
+fn recap_system_event_uses_grok_feed_header_and_preview() {
+    let lines = crate::message::render_system_message("Recap — Investigated the feed parity gaps.\nDetails follow.", 80);
+    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
+    assert_eq!(text, vec!["Recap  Investigated the feed parity gaps."], "wrong Grok recap row: {text:?}");
+}

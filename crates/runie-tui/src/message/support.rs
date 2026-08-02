@@ -185,6 +185,14 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
 /// glyphs. System messages stay muted and wrap to the feed content width.
 pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'static>> {
     let style = style_turn_complete();
+    if let Some(summary) = content.strip_prefix("Recap — ") {
+        let preview = summary.lines().next().unwrap_or(summary).trim();
+        let mut line = vec![Span::styled("Recap", style.bold())];
+        if !preview.is_empty() {
+            line.push(Span::styled(format!("  {preview}"), style));
+        }
+        return vec![Line::from(line)];
+    }
     let width = content_width.max(1);
     let mut lines = Vec::new();
     for raw in content.lines() {
