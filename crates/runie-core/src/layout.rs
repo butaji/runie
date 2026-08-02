@@ -46,9 +46,9 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::Spacer { .. } => 1,
         Element::UserMessage { content, timestamp, expanded } => user_message_line_count(content, *timestamp, width, *expanded),
         Element::AgentMessage { content, timestamp, .. } => agent_message_line_count(content, *timestamp, width),
-        Element::Thinking { .. } => 3,
+        Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
-        Element::ThoughtSummary { content, .. } => thought_summary_line_count(content),
+        Element::ThoughtSummary { .. } => 1,
         Element::AnthropicThinking { content, .. } => thought_marker_line_count(content, width),
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
@@ -83,9 +83,9 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::Spacer { .. } => 1,
         Element::UserMessage { content, .. } => content.lines().count().max(1) + 2,
         Element::AgentMessage { content, .. } => content.lines().count().max(1),
-        Element::Thinking { .. } => 3,
+        Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
-        Element::ThoughtSummary { content, .. } => thought_summary_line_count(content),
+        Element::ThoughtSummary { .. } => 1,
         Element::AnthropicThinking { content, .. } => content.lines().count().max(1),
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => {
@@ -117,15 +117,6 @@ fn fallback_line_count(element: &Element) -> usize {
 
 /// Header line plus, when expanded, one row per output line (unwrapped,
 /// matching `render_subagent_row` in the TUI).
-/// Grok thinking blocks use one line of vertical padding above and below the
-/// header/body. The body is truncated to the header plus an ellipsis and the
-/// last three lines by the TUI renderer.
-fn thought_summary_line_count(content: &str) -> usize {
-    let body = content.lines().skip(1).count();
-    let content_lines = if body == 0 { 1 } else { 1 + body.min(3) + usize::from(body > 3) };
-    content_lines + 2
-}
-
 fn subagent_row_line_count(output: &str, expanded: bool) -> usize {
     if expanded && !output.is_empty() {
         1 + output.lines().count()

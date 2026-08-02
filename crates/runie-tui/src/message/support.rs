@@ -46,14 +46,10 @@ pub fn render_thinking(animation_frame: u32) -> Vec<Line<'static>> {
     let wave = wave_brightness(animation_frame, 0, WAVE_ROWS, WAVE_SPEED);
     let rail_color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
         .unwrap_or_else(crate::theme::color_rail_running);
-    vec![
-        Line::from(""),
-        Line::from(vec![
+    vec![Line::from(vec![
             Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
             Span::styled(" Thinking…", style_thinking()),
-        ]),
-        Line::from(""),
-    ]
+        ])]
 }
 
 /// Number of thought body lines to show in truncated (default) mode.
@@ -65,18 +61,16 @@ const ELLIPSIS_LINE: &str = "  …";
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
     let style = style_thought();
     let first_line = content.lines().next().unwrap_or(content);
-    // Grok-style summary: `◆ ` + bold "Thought" + plain " for Xs", all dim.
+    // Grok-style summary: bold "Thought" + plain " for Xs", all dim.
     // Truncated default: if body lines > THOUGHT_TRUNCATED_LINES, show
     // header + `…` + last THOUGHT_TRUNCATED_LINES lines.
     let header = match first_line.strip_prefix("◆ ") {
         Some(rest) => match rest.split_once(' ') {
             Some((word, tail)) => vec![Line::from(vec![
-                Span::styled(GLYPH_AGENT, style),
                 Span::styled(word.to_owned(), style.bold()),
                 Span::styled(format!(" {tail}"), style),
             ])],
             None => vec![Line::from(vec![
-                Span::styled(GLYPH_AGENT, style),
                 Span::styled(rest.to_owned(), style.bold()),
             ])],
         },
@@ -86,10 +80,7 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
     // Collect body lines (everything after the first line).
     let body_lines: Vec<&str> = content.lines().skip(1).collect();
     if body_lines.is_empty() {
-        let mut padded = vec![Line::from("")];
-        padded.extend(header);
-        padded.push(Line::from(""));
-        return padded;
+        return header;
     }
 
     // Truncated default mode: show `…` + last THOUGHT_TRUNCATED_LINES body lines.
@@ -115,8 +106,6 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
             lines.push(styled);
         }
     }
-    lines.insert(0, Line::from(""));
-    lines.push(Line::from(""));
     lines
 }
 
