@@ -103,13 +103,12 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
     lines
 }
 
-pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, _animation_frame: u32) -> Vec<Line<'static>> {
+pub fn render_tool_running(name: &str, args: &str, _duration_secs: f64, _animation_frame: u32) -> Vec<Line<'static>> {
     let (verb, args_part) = feed_tool_label_parts(name, args);
     let base_style = style_tool_running();
     vec![Line::from(vec![
         Span::styled(verb, base_style.bold()),
         Span::styled(args_part, base_style),
-        Span::styled(format!(" {:.1}s", duration_secs), base_style),
     ])]
 }
 

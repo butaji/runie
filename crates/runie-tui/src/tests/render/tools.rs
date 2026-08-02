@@ -65,12 +65,12 @@ fn render_tool_running_shows_args() {
 }
 
 #[test]
-fn render_tool_running_shows_duration() {
+fn render_tool_running_does_not_append_duration_to_grok_header() {
     let lines = render_tool_running("ls", ".", 12.5, 0);
     let output = render_to_string(lines, 80, 3);
     assert!(
-        output.contains("12.5s"),
-        "Output should contain duration: {}",
+        output.contains("Run ls") && !output.contains("12.5s"),
+        "Grok live tool headers do not append elapsed duration: {}",
         output
     );
 }
