@@ -513,12 +513,13 @@ impl LazyCache {
         }
     }
 
-    /// Mark a subagent row expanded when its post was individually expanded
-    /// with Enter in feed navigation. Running rows never expand (no output).
+    /// Mark a subagent row expanded when the feed is globally expanded or its
+    /// post was individually expanded with Enter in feed navigation. Running
+    /// rows never expand (they have no completed output body).
     fn maybe_expand_subagent(mut elem: Element, state: &AppState, post_index: usize) -> Element {
         if let Element::SubagentRow { expanded, status, .. } = &mut elem {
             *expanded = !matches!(status, crate::model::PatternWorkerStatus::Running)
-                && state.view().expanded_posts.contains(&post_index);
+                && (state.view().all_collapsed || state.view().expanded_posts.contains(&post_index));
         }
         elem
     }

@@ -270,3 +270,19 @@ fn expanding_completed_post_reveals_worker_output() {
         _ => unreachable!(),
     }
 }
+
+#[test]
+fn global_feed_expand_reveals_completed_worker_output() {
+    let mut state = fresh_state();
+    spawn(&mut state, "w.1", "Summarize the task", "echo");
+    finish(&mut state, "w.1", "completed", 100, "line one\nline two");
+    state.view_mut().all_collapsed = true;
+
+    let rows = subagent_rows(&state);
+    match &rows[0] {
+        Element::SubagentRow { expanded, .. } => {
+            assert!(*expanded, "global feed expansion must reveal worker output");
+        }
+        _ => unreachable!(),
+    }
+}
