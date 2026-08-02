@@ -40,16 +40,10 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
     lines
 }
 
-pub fn render_thinking(animation_frame: u32) -> Vec<Line<'static>> {
-    // Grok keeps the header text stable and animates the feed accent/bullet.
-    // Do not put a second spinner or decorative rail into the text itself.
-    let wave = wave_brightness(animation_frame, 0, WAVE_ROWS, WAVE_SPEED);
-    let rail_color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
-        .unwrap_or_else(crate::theme::color_rail_running);
-    vec![Line::from(vec![
-            Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
-            Span::styled(" Thinking…", style_thinking()),
-        ])]
+pub fn render_thinking() -> Vec<Line<'static>> {
+    // Grok keeps the block text stable. Its shared feed compositor owns the
+    // accent/bullet animation; this renderer must not emit chrome.
+    vec![Line::from("Thinking…").style(style_thinking())]
 }
 
 /// Number of thought body lines to show in truncated (default) mode.

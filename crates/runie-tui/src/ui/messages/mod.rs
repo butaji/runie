@@ -8,6 +8,10 @@ use ratatui::{
 };
 use runie_core::Element;
 use runie_core::Snapshot;
+use crate::theme::{blend_color, color_bg, color_rail_running, wave_brightness, RAIL_GLYPH};
+
+const FEED_WAVE_SPEED: f32 = 0.15;
+const FEED_WAVE_ROWS: u16 = 32;
 
 pub(crate) mod lines;
 pub(crate) mod nav;
@@ -90,6 +94,12 @@ fn render_paragraph_with_user_backgrounds(
                 line_to_owned(line)
             };
             let mut spans = vec![Span::raw(crate::theme::FEED_INDENT)];
+            if matches!(snap.elements.get(elem_idx), Some(Element::Thinking { .. })) && !line.spans.is_empty() {
+                let wave = wave_brightness(snap.animation_frame, 0, FEED_WAVE_ROWS, FEED_WAVE_SPEED);
+                let rail_color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                spans.push(Span::raw(" "));
+            }
             spans.extend(owned.spans);
             Line::from(spans).style(owned.style)
         })
