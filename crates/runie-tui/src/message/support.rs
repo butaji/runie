@@ -41,11 +41,10 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    // Keep the thinking indicator flush with the feed content. The thinking
-    // glyph already carries the visual identity; a leading rail adds a
-    // distracting extra column and misaligns the row.
-    let line_text = crate::theme::thinking_line(started.elapsed().as_secs_f64());
-    vec![Line::from(Span::raw(line_text)).style(style_thinking())]
+    // Grok animates the thinking feed item itself with one braille spinner.
+    // Keep that animation self-contained: no rail, diamond, or second spinner.
+    let elapsed_secs = started.elapsed().as_secs_f64();
+    vec![Line::from(Span::raw(crate::theme::thinking_line(elapsed_secs))).style(style_thinking())]
 }
 
 /// Number of thought body lines to show in truncated (default) mode.

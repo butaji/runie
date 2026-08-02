@@ -128,22 +128,15 @@ pub fn pulse_brightness(tick: u32, speed: f32) -> f32 {
     sin_val * sin_val
 }
 
-/// Thinking/waiting indicator line (grok parity — GROK.md §24).
+/// Animated feed-item label for an active thinking block.
 ///
-/// `◆ ⠋ Thinking… 0.4s` — the braille frame is derived from the
-/// elapsed wall time (~120ms per frame), so the row animates at a steady
-/// cadence regardless of render rate. Timer: one decimal below 10s, integer
-/// at ≥10s.
+/// Keep exactly one braille spinner before the label; the feed item owns this
+/// animation while it is active, without a decorative rail or extra glyph.
 pub fn thinking_line(elapsed_secs: f64) -> String {
-    use runie_core::labels::{format_elapsed_secs, BRAILLE_EIGHT};
+    use runie_core::labels::BRAILLE_EIGHT;
     const FRAME_MS: f64 = 120.0;
     let idx = ((elapsed_secs * 1000.0 / FRAME_MS) as usize) % BRAILLE_EIGHT.len();
-    format!(
-        "{}{} Thinking… {}",
-        GLYPH_AGENT,
-        BRAILLE_EIGHT[idx],
-        format_elapsed_secs(elapsed_secs)
-    )
+    format!("{} Thinking…", BRAILLE_EIGHT[idx])
 }
 
 /// Tool running line.

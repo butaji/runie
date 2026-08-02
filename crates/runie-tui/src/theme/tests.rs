@@ -242,52 +242,24 @@ fn glyph_download_is_correct() {
     assert_eq!(GLYPH_DOWNLOAD, "⇣");
 }
 
-/// The thinking/waiting line must use an animated braille spinner (not the
-/// static ◐), the grok wording with a single `…` glyph, and grok's timer
-/// format: one decimal below 10s, integer at ≥10s. See GROK.md §24.
+/// The thinking feed item is stable; animation is owned by the live status row.
 #[test]
 fn thinking_line_matches_grok_waiting_row() {
     let line = crate::theme::thinking_line(0.4);
-    assert!(
-        runie_core::labels::BRAILLE_EIGHT
-            .iter()
-            .any(|g| line.contains(*g)),
-        "thinking line must carry a braille spinner frame, got: {line}"
-    );
-    assert!(
-        line.contains("Thinking…"),
-        "thinking line must use grok wording 'Thinking…', got: {line}"
-    );
-    assert!(
-        line.contains("0.4s"),
-        "sub-10s timer keeps a decimal: {line}"
-    );
-    assert!(!line.contains('◐'), "static ◐ is gone: {line}");
-    assert!(
-        line.starts_with(runie_core::layout::GLYPH_AGENT),
-        "feed row keeps the agent glyph prefix: {line}"
-    );
-    assert!(
-        !line.contains("  "),
-        "no double space after the agent glyph (GLYPH_AGENT includes its own): {line}"
-    );
-
-    let line = crate::theme::thinking_line(24.0);
-    assert!(
-        line.contains("24s") && !line.contains("24.0"),
-        "≥10s timer drops the decimal: {line}"
-    );
+    assert!(line.ends_with(" Thinking…"));
+    assert_eq!(line.chars().count(), "⠋ Thinking…".chars().count());
+    assert!(runie_core::labels::BRAILLE_EIGHT.iter().any(|g| line.starts_with(*g)));
 }
 
-/// The waiting-row spinner is wall-clock driven: different elapsed buckets
-/// yield different braille frames (~120ms per frame).
 #[test]
-fn thinking_line_spinner_advances_with_elapsed() {
-    let early = crate::theme::thinking_line(0.24); // frame 2 → BRAILLE_EIGHT[2]
-    let late = crate::theme::thinking_line(0.84); // frame 7 → BRAILLE_EIGHT[7]
-    assert_ne!(early, late);
-    assert!(early.contains(runie_core::labels::BRAILLE_EIGHT[2]));
-    assert!(late.contains(runie_core::labels::BRAILLE_EIGHT[7]));
+fn thinking_line_spinner_advances_without_extra_rail() {
+    let first = crate::theme::thinking_line(0.0);
+    let next = crate::theme::thinking_line(0.24);
+    assert_ne!(first, next);
+    assert!(first.ends_with(" Thinking…"));
+    assert!(next.ends_with(" Thinking…"));
+    assert!(!first.contains('│'));
+    assert!(!next.contains('│'));
 }
 
 /// Verifies that all box drawing glyphs have correct values.
