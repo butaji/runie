@@ -124,7 +124,7 @@ pub fn render_tool_done(
     _finished_at: &Option<std::time::Instant>,
     _animation_frame: u32,
 ) -> Vec<Line<'static>> {
-    let (verb, args_part) = feed_tool_label_parts(name, args);
+    let (verb, args_part) = feed_tool_done_label_parts(name, args, output);
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
@@ -223,6 +223,18 @@ fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
     } else {
         format_tool_label_parts(name, args)
     }
+}
+
+fn feed_tool_done_label_parts(name: &str, args: &str, output: &str) -> (String, String) {
+    let (verb, args_part) = feed_tool_label_parts(name, args);
+    if matches!(name, "list_dir" | "list_directory") {
+        let count = output.lines().filter(|line| !line.trim().is_empty()).count();
+        if count > 0 {
+            let noun = if count == 1 { "entry" } else { "entries" };
+            return (verb, format!("{args_part} ({count} {noun})"));
+        }
+    }
+    (verb, args_part)
 }
 
 /// Render a swarm subagent lifecycle row (GROK.md §26).

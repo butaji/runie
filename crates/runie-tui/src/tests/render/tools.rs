@@ -84,6 +84,22 @@ fn render_builtin_tool_uses_grok_action_label() {
 }
 
 #[test]
+fn completed_list_tool_shows_entry_count() {
+    let lines = render_tool_done(
+        "list_dir",
+        ".",
+        0.5,
+        "one.txt\ntwo.txt",
+        None,
+        false,
+        &None,
+        0,
+    );
+    let output = render_to_string(lines, 80, 2);
+    assert!(output.contains("List . (2 entries)"), "list summary: {output}");
+}
+
+#[test]
 fn render_unknown_tool_keeps_run_label() {
     let lines = render_tool_running("custom_tool", "arg", 0.5, 0);
     let output = render_to_string(lines, 80, 2);
