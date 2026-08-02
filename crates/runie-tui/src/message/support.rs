@@ -338,6 +338,7 @@ pub fn render_btw(question: &str, answer: Option<&str>, status: &str, expanded: 
             // Grok keeps the expanded BTW response as a proper body block:
             // preserve each source row and indent it, including intentional
             // blank rows, instead of embedding newlines in one Ratatui line.
+            lines.push(Line::from(""));
             lines.extend(answer.lines().map(|line| Line::from(format!("  {line}")).style(style)));
         }
     }

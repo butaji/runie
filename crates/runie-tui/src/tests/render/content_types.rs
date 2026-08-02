@@ -471,6 +471,8 @@ fn expanded_btw_preserves_multiline_answer_rows() {
 
     let lines = crate::ui::to_lines_internal(&expanded, 80);
     let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
+    let header_index = text.iter().position(|line| line.contains("/btw Explain the change")).unwrap();
+    assert_eq!(text.get(header_index + 1).map(String::as_str), Some(""), "BTW body needs Grok's separator row: {text:?}");
     assert!(text.iter().any(|line| line == "  First point"), "missing first answer row: {text:?}");
     assert!(text.iter().any(|line| line == "  Second point"), "missing second answer row: {text:?}");
     assert!(text.iter().any(|line| line == "  Final note"), "missing final answer row: {text:?}");
