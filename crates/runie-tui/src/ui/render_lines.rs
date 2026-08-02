@@ -61,6 +61,7 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
         }
         DiffOutput { content, diff_type, timestamp } => msg::render_diff_output(content, *diff_type, *timestamp),
         WebSearchCall { query, results, timestamp } => msg::render_web_search_call(query, results, *timestamp),
+        CreditLimit { heading, action, url, .. } => msg::render_credit_limit(heading, action, url),
         AnsiStyled { raw_content, plain_text, timestamp } => {
             msg::render_ansi_styled(raw_content, plain_text, *timestamp)
         }

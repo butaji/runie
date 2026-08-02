@@ -93,6 +93,7 @@ impl LazyCache {
             E::MarkdownTable { .. } => PostKind::AgentResponse,
             E::DiffOutput { .. } => PostKind::AgentResponse,
             E::WebSearchCall { .. } => PostKind::AgentResponse,
+            E::CreditLimit { .. } => PostKind::System,
             E::AnsiStyled { .. } => PostKind::AgentResponse,
         }
     }

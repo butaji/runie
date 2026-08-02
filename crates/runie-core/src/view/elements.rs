@@ -154,6 +154,13 @@ pub enum Element {
         results: Vec<WebSearchResult>,
         timestamp: f64,
     },
+    /// Inline warning card shown when the provider reports exhausted credits.
+    CreditLimit {
+        heading: String,
+        action: String,
+        url: String,
+        timestamp: f64,
+    },
     /// ANSI escape sequence styled content
     AnsiStyled {
         /// Raw content with ANSI escape sequences
@@ -230,6 +237,7 @@ impl ElementBuilder {
             Element::MarkdownTable { timestamp: ts, .. } => *ts = timestamp,
             Element::DiffOutput { timestamp: ts, .. } => *ts = timestamp,
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
+            Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -397,6 +405,19 @@ impl Element {
     pub fn web_search_call(query: impl Into<String>, results: Vec<WebSearchResult>) -> ElementBuilder {
         ElementBuilder(Element::WebSearchCall { query: query.into(), results, timestamp: 0.0 })
     }
+    /// Credit-limit warning card in the feed.
+    pub fn credit_limit(
+        heading: impl Into<String>,
+        action: impl Into<String>,
+        url: impl Into<String>,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::CreditLimit {
+            heading: heading.into(),
+            action: action.into(),
+            url: url.into(),
+            timestamp: 0.0,
+        })
+    }
     /// ANSI styled content
     pub fn ansi_styled(raw: impl Into<String>, plain: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AnsiStyled { raw_content: raw.into(), plain_text: plain.into(), timestamp: 0.0 })
@@ -432,6 +453,7 @@ impl Element {
             Element::MarkdownTable { timestamp: ts, .. } => *ts = timestamp,
             Element::DiffOutput { timestamp: ts, .. } => *ts = timestamp,
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
+            Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -459,6 +481,7 @@ impl Element {
             Element::MarkdownTable { timestamp, .. } => *timestamp,
             Element::DiffOutput { timestamp, .. } => *timestamp,
             Element::WebSearchCall { timestamp, .. } => *timestamp,
+            Element::CreditLimit { timestamp, .. } => *timestamp,
             Element::AnsiStyled { timestamp, .. } => *timestamp,
         }
     }

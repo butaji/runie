@@ -131,6 +131,12 @@ fn feed_elements() -> Vec<Element> {
             }],
             timestamp: 0.0,
         },
+        Element::CreditLimit {
+            heading: "You've hit your credit limit.".into(),
+            action: "purchase_credits".into(),
+            url: "https://grok.com/usage".into(),
+            timestamp: 0.0,
+        },
         Element::AnsiStyled {
             raw_content: "\x1b[31mred\x1b[0m".into(),
             plain_text: "red".into(),
@@ -189,4 +195,22 @@ fn system_feed_message_is_muted_and_has_no_assistant_glyph() {
     assert!(text.contains("Context compacted"));
     assert!(!text.contains('◆'), "system feed content must not use assistant glyph: {text}");
     assert!(!text.contains('❯'), "system feed content must not use user glyph: {text}");
+}
+
+#[test]
+fn credit_limit_feed_card_has_warning_copy_and_link() {
+    let element = Element::credit_limit(
+        "You've hit your credit limit.",
+        "purchase_credits",
+        "https://grok.com/usage",
+    )
+    .at(1.0);
+    let text = crate::ui::to_lines_internal(&element, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("credit limit"), "missing warning heading: {text}");
+    assert!(text.contains("purchasing more credits"), "missing action copy: {text}");
+    assert!(text.contains("grok.com/usage"), "missing usage link: {text}");
 }

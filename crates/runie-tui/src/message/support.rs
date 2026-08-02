@@ -201,6 +201,23 @@ pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'sta
     lines
 }
 
+/// Render Grok's non-foldable credit-limit warning card in the feed.
+pub fn render_credit_limit(heading: &str, action: &str, url: &str) -> Vec<Line<'static>> {
+    let heading_style = Style::default().fg(crate::theme::color_warning()).bold();
+    let muted = style_turn_complete();
+    let body = match action {
+        "increase_payg_limit" => "You can continue by increasing your spending limit.",
+        "purchase_credits" => "You can continue by purchasing more credits.",
+        _ => "You can continue by enabling pay-as-you-go usage.",
+    };
+    vec![
+        Line::from(Span::styled(heading.to_owned(), heading_style)),
+        Line::from(""),
+        Line::from(Span::styled(body, muted)),
+        Line::from(Span::styled(url.to_owned(), Style::default().fg(crate::theme::color_agent_text()))),
+    ]
+}
+
 /// Grok's feed names built-in tools by action, while preserving `Run` for
 /// shell and unknown integrations. This belongs to feed presentation only;
 /// protocol/tool names remain unchanged everywhere else.
