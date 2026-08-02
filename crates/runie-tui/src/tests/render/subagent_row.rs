@@ -100,6 +100,17 @@ fn failed_row_has_stable_text_without_inline_chrome() {
     assert!(!output.contains("◆"), "bullet belongs to shared feed chrome: {output}");
 }
 
+#[test]
+fn cancelled_row_has_stable_grok_text_without_inline_chrome() {
+    let elem = subagent_row(PatternWorkerStatus::Cancelled, None, Some(3200), "cancelled", false);
+    let output = render_to_string(render_subagent_row(&elem, 0), 100, 3);
+    assert!(
+        output.contains("Subagent cancelled in 3.2s: “find callers”"),
+        "cancelled row format: {output}"
+    );
+    assert!(!output.contains("◆"), "bullet belongs to shared feed chrome: {output}");
+}
+
 // ─── Expanded body ──────────────────────────────────────────────────────────
 
 #[test]
