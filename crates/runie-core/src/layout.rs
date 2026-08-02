@@ -51,7 +51,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
             .map(|line| word_wrap(line, width.max(1), width.max(1)).len().max(1))
             .sum::<usize>()
             .max(1),
-        Element::ContextInfo { .. } => 10,
+        Element::ContextInfo { .. } => if width < 50 { 15 } else { 10 },
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,

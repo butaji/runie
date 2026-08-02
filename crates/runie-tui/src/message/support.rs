@@ -201,17 +201,20 @@ pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'sta
     lines
 }
 
-pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize, tool_calls: usize) -> Vec<Line<'static>> {
+pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize, tool_calls: usize, width: u16) -> Vec<Line<'static>> {
     let pct = if total == 0 { 0.0 } else { used as f64 / total as f64 * 100.0 };
     let short = |n: usize| if n >= 1_000_000 { format!("{:.1}m", n as f64 / 1_000_000.0) } else if n >= 1_000 { format!("{:.1}k", n as f64 / 1_000.0) } else { n.to_string() };
     // Grok's context block uses a 100-cell bar arranged as five rows of 20.
     // Runie currently has only aggregate usage, so cells represent used/free
     // capacity rather than Grok's richer per-category breakdown.
     let bar_used = ((pct / 100.0) * 100.0).round().min(100.0) as usize;
-    let bar_lines = (0..5)
+    let narrow = width < 50;
+    let row_len = if narrow { 10 } else { 20 };
+    let row_count = 100 / row_len;
+    let bar_lines = (0..row_count)
         .map(|row| {
-            let used_in_row = bar_used.saturating_sub(row * 20).min(20);
-            Line::from(format!("{}{}", "◆ ".repeat(used_in_row), "◇ ".repeat(20 - used_in_row)))
+            let used_in_row = bar_used.saturating_sub(row * row_len).min(row_len);
+            Line::from(format!("{}{}", "◆ ".repeat(used_in_row), "◇ ".repeat(row_len - used_in_row)))
                 .style(style_tool_summary())
         })
         .collect::<Vec<_>>();

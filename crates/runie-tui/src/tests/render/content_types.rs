@@ -262,7 +262,14 @@ fn context_info_feed_snapshot_shows_usage_and_counts() {
     assert!(text.contains("Turns: 5 · Tool calls: 12"), "missing counts: {text}");
     assert!(text.contains("Auto-compact at 85%"), "missing compaction line: {text}");
     assert_eq!(text.matches('◆').count() + text.matches('◇').count(), 100, "context bar must have 100 cells: {text}");
-    assert_eq!(text.lines().count(), 10, "context snapshot layout must reserve five bar rows: {text}");
+    assert_eq!(text.lines().count(), 10, "wide context snapshot must reserve five bar rows: {text}");
+
+    let narrow = crate::ui::to_lines_internal(&element, 40)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(narrow.len(), 15, "narrow context snapshot must reserve ten bar rows");
+    assert_eq!(narrow.iter().map(|line| line.matches('◆').count() + line.matches('◇').count()).sum::<usize>(), 100);
 }
 
 #[test]
