@@ -177,7 +177,8 @@ pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<L
 }
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    vec![Line::from(format!("Worked for {:.1}s.", duration_secs)).style(style_turn_complete())]
+    let duration = runie_core::labels::format_turn_timer(std::time::Duration::from_secs_f64(duration_secs.max(0.0)));
+    vec![Line::from(format!("Worked for {duration}.")).style(style_turn_complete())]
 }
 
 /// Render Grok-style compact system/session text without assistant or tool

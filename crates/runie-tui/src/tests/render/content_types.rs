@@ -232,6 +232,20 @@ fn system_feed_message_is_muted_and_has_no_assistant_glyph() {
 }
 
 #[test]
+fn turn_completion_uses_grok_duration_boundaries() {
+    let short = crate::message::render_turn_complete(2.5)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>().join("\n");
+    let long = crate::message::render_turn_complete(24.5)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>().join("\n");
+    assert_eq!(short, "Worked for 2.5s.");
+    assert_eq!(long, "Worked for 24s.");
+}
+
+#[test]
 fn credit_limit_feed_card_has_warning_copy_and_link() {
     let element = Element::credit_limit(
         "You've hit your credit limit.",
