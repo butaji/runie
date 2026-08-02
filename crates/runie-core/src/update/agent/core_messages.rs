@@ -290,6 +290,15 @@ impl AppState {
             self.maybe_end_streaming();
             return;
         }
+        if lower.contains("retry exhausted") || lower.contains("retry failed") || lower.contains("retries exhausted") {
+            let mut event = ChatMessage::new(Role::System, format!("Retry failed: {message}"));
+            event.id = format!("retry-failed.{}", id);
+            self.session_mut().messages.push(event);
+            self.messages_changed();
+            self.deliver_queued();
+            self.maybe_end_streaming();
+            return;
+        }
 
         if let Some(heading) = Self::credit_limit_heading(&message) {
             let mut card = ChatMessage::new(Role::System, heading);

@@ -67,6 +67,7 @@ fn known_provider_failures_use_grok_actionable_feed_rows() {
     for (input, expected) in [
         ("context window exceeded", "This conversation is too large for the model's context window."),
         ("invalid api key", "Authentication required — your session has expired"),
+        ("retry exhausted after 3 attempts", "Retry failed: retry exhausted after 3 attempts"),
     ] {
         let mut state = AppState::default();
         state.update(crate::Event::Error { id: "req.0".into(), message: input.into() });
