@@ -39,6 +39,7 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
             crate::view::Element::Workflow { .. } => "Workflow".to_string(),
             crate::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
             crate::view::Element::Btw { .. } => "Btw".to_string(),
+            crate::view::Element::ContextInfo { .. } => "ContextInfo".to_string(),
         })
         .filter(|k| k != "Spacer")
         .collect()

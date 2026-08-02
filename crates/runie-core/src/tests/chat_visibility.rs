@@ -36,6 +36,7 @@ fn visible_kinds(state: &mut AppState, height: usize) -> Vec<String> {
             crate::view::Element::Workflow { .. } => "Workflow".to_string(),
             crate::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
             crate::view::Element::Btw { .. } => "Btw".to_string(),
+            crate::view::Element::ContextInfo { .. } => "ContextInfo".to_string(),
         })
         .filter(|k| k != "Spacer")
         .collect()

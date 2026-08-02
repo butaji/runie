@@ -33,6 +33,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             crate::view::Element::Workflow { .. } => "Workflow".to_string(),
             crate::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
             crate::view::Element::Btw { .. } => "Btw".to_string(),
+            crate::view::Element::ContextInfo { .. } => "ContextInfo".to_string(),
         })
         .collect()
 }
