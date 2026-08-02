@@ -304,9 +304,12 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
     // Feed-level accent/bullet chrome is composed by the shared feed wrapper.
     // Strip the legacy inline chrome before returning the block content.
     for line in &mut lines {
-        if line.spans.first().is_some_and(|s| s.content.as_ref() == RAIL_GLYPH.to_string()) {
-            let remove = line.spans.len().min(3);
-            line.spans.drain(..remove);
+        if let Some(index) = line
+            .spans
+            .iter()
+            .position(|span| span.content.starts_with("Subagent "))
+        {
+            line.spans.drain(..index);
         }
     }
     lines
