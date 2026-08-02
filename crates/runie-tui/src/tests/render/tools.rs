@@ -78,14 +78,10 @@ fn render_tool_running_shows_duration() {
 // ─── render_tool_done ───────────────────────────────────────────────────────
 
 #[test]
-fn render_tool_done_shows_diamond() {
+fn render_tool_done_content_excludes_feed_diamond() {
     let lines = render_tool_done("ls", ".", 2.5, "file1\nfile2", None, false, &None, 0);
     let output = render_to_string(lines, 80, 5);
-    assert!(
-        output.contains("◆"),
-        "Output should contain the tool diamond: {}",
-        output
-    );
+    assert!(!output.contains("◆"), "feed diamond belongs to the compositor: {output}");
     assert!(
         !output.contains("✓"),
         "Output should not contain the old checkmark: {}",
@@ -125,14 +121,10 @@ fn render_tool_done_shows_bytes() {
 }
 
 #[test]
-fn render_tool_done_shows_error_icon() {
+fn render_tool_done_content_excludes_feed_error_icon() {
     let lines = render_tool_done("bash", "exit 1", 0.5, "error", None, true, &None, 0);
     let output = render_to_string(lines, 80, 5);
-    assert!(
-        output.contains("✗") || output.contains("[✗]"),
-        "Output should contain error icon: {}",
-        output
-    );
+    assert!(!output.contains("✗"), "feed error icon belongs to the compositor: {output}");
 }
 
 #[test]
@@ -158,7 +150,7 @@ fn render_tool_done_no_bytes_when_none() {
 }
 
 #[test]
-fn render_tool_done_shows_error_text() {
+fn render_tool_done_content_preserves_error_text() {
     let lines = render_tool_done(
         "bash",
         "exit 1",
@@ -170,11 +162,6 @@ fn render_tool_done_shows_error_text() {
         0,
     );
     let output = render_to_string(lines, 80, 5);
-    assert!(
-        output.contains("✗"),
-        "Output should contain error icon: {}",
-        output
-    );
     assert!(
         output.contains("command not found"),
         "Output should contain error text: {}",

@@ -108,6 +108,13 @@ fn render_paragraph_with_user_backgrounds(
                     spans.push(Span::raw(" "));
                 }
             }
+            if let Some((rail_color, bullet, bullet_color)) = subagent_feed_chrome(snap, elem_idx) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
+            }
             spans.extend(owned.spans);
             Line::from(spans).style(owned.style)
         })
@@ -153,6 +160,32 @@ fn tool_feed_chrome(snap: &Snapshot, elem_idx: usize) -> Option<(ratatui::style:
             Some((color, if *error { "✗" } else { "◆" }, color))
         }
         _ => None,
+    }
+}
+
+fn subagent_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    let Some(Element::SubagentRow { status, .. }) = snap.elements.get(elem_idx) else {
+        return None;
+    };
+    use runie_core::model::PatternWorkerStatus as Status;
+    match status {
+        Status::Running => {
+            let wave = wave_brightness(snap.animation_frame, 0, FEED_WAVE_ROWS, FEED_WAVE_SPEED);
+            let color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
+                .unwrap_or_else(crate::theme::color_rail_running);
+            Some((color, "◆", color))
+        }
+        Status::Completed => {
+            let color = crate::theme::color_rail_success();
+            Some((color, "◆", color))
+        }
+        Status::Failed | Status::Cancelled => {
+            let color = crate::theme::color_rail_error();
+            Some((color, "✗", color))
+        }
     }
 }
 

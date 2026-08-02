@@ -205,13 +205,7 @@ fn thought_summary_is_dim_bold_thought_without_affordance() {
     );
 
     let row = find_row(&buf, "Thought for").expect("thought summary row");
-    let diamond = find_col(&buf, row, "◆").expect("thought diamond");
-    assert_eq!(diamond, 2, "thought glyph must sit at column 2");
-    assert_eq!(
-        buf[(diamond, row)].style().fg,
-        Some(FEED_DIM),
-        "thought glyph must be dim"
-    );
+    assert!(!row_text(&buf, row).contains('◆'), "completed thinking has no embedded bullet");
 
     let t_col = col_of(&row_text(&buf, row), "Thought").expect("Thought word");
     assert!(is_bold(&buf, t_col, row), "the word 'Thought' must be bold");
@@ -260,7 +254,7 @@ fn expanded_thought_body_is_dim() {
 // ── Tool posts ───────────────────────────────────────────────────────────────
 
 #[test]
-fn tool_done_post_is_dim_diamond_bold_name_no_duration() {
+fn tool_done_post_uses_shared_diamond_bold_name_no_duration() {
     let _guard = dark_theme();
     let mut state = AppState::default();
     add_message(
@@ -287,8 +281,8 @@ fn tool_done_post_is_dim_diamond_bold_name_no_duration() {
     assert_eq!(diamond, 3, "tool glyph must sit after the rail and feed indent");
     assert_eq!(
         buf[(diamond, row)].style().fg,
-        Some(crate::theme::color_accent()),
-        "tool glyph uses the finish-flash accent on its initial frame"
+        Some(crate::theme::color_rail_success()),
+        "tool glyph uses the completed-tool accent"
     );
 
     let name_col = col_of(&text, "Run list_files").expect("tool name");
@@ -320,7 +314,7 @@ fn tool_output_lines_are_dim_and_indented() {
     let buf = draw(&mut state, 60, 20);
     let row = find_row(&buf, "file1").expect("tool output row");
     let x = find_col(&buf, row, "f").expect("output text");
-    assert_eq!(x, 2, "tool output must align under the post at column 2");
+    assert_eq!(x, 3, "tool output must align after the shared accent column");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),

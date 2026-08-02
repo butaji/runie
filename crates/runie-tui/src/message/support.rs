@@ -301,6 +301,14 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             lines.push(Line::from(format!("{GLYPH_INDENT}{line}")).style(style_thought()));
         }
     }
+    // Feed-level accent/bullet chrome is composed by the shared feed wrapper.
+    // Strip the legacy inline chrome before returning the block content.
+    for line in &mut lines {
+        if line.spans.first().is_some_and(|s| s.content.as_ref() == RAIL_GLYPH.to_string()) {
+            let remove = line.spans.len().min(3);
+            line.spans.drain(..remove);
+        }
+    }
     lines
 }
 
