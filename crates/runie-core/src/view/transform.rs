@@ -37,6 +37,7 @@ impl LazyCache {
             };
             let elem = Self::maybe_expand_subagent(elem, state, feed.post_count());
             let elem = Self::maybe_expand_user_message(elem, state, feed.post_count());
+            let elem = Self::maybe_expand_btw(elem, state, feed.post_count());
             let kind = Self::post_kind(&elem);
             let expanded = match &elem {
                 Element::ThoughtSummary { .. } | Element::ToolSummary { .. } => false,
@@ -50,7 +51,7 @@ impl LazyCache {
                 // folded in the normal feed and expanded by the feed-wide
                 // Ctrl+O toggle. Individual expansion still wins.
                 Element::UserMessage { expanded, .. } => *expanded,
-                Element::Btw { expanded, .. } => *expanded || state.view().all_collapsed,
+                Element::Btw { expanded, .. } => *expanded,
                 _ => true,
             };
 
@@ -473,6 +474,17 @@ impl LazyCache {
             // User messages start folded. Ctrl+O participates in the same
             // feed-wide expand/collapse cycle as tool/thought sections, while
             // an individually expanded post remains expanded in either mode.
+            *expanded = state.view().all_collapsed
+                || state.view().expanded_posts.contains(&post_index);
+        }
+        elem
+    }
+
+    /// Mark a BTW response expanded when its post is selected for feed-wide or
+    /// individual expansion. The renderer owns the answer visibility, so the
+    /// element must carry the projection rather than only the Post metadata.
+    fn maybe_expand_btw(mut elem: Element, state: &AppState, post_index: usize) -> Element {
+        if let Element::Btw { expanded, .. } = &mut elem {
             *expanded = state.view().all_collapsed
                 || state.view().expanded_posts.contains(&post_index);
         }
