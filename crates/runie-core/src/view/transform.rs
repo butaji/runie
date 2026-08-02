@@ -277,7 +277,15 @@ impl LazyCache {
             Role::System => {
                 let content = msg.content().to_string();
                 let lower = content.to_ascii_lowercase();
-                if lower.contains("credit limit") || lower.contains("spending cap") {
+                if let Some(objective) = content.strip_prefix("Workflow goal: ") {
+                    vec![(Element::workflow("goal", objective, "running", Vec::new(), 0).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal done: ") {
+                    vec![(Element::workflow("goal", objective, "done", Vec::new(), 0).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal paused: ") {
+                    vec![(Element::workflow("goal", objective, "paused", Vec::new(), 0).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal cancelled: ") {
+                    vec![(Element::workflow("goal", objective, "cancelled", Vec::new(), 0).at(ts), false)]
+                } else if lower.contains("credit limit") || lower.contains("spending cap") {
                     let action = if lower.contains("spending cap") {
                         "increase_payg_limit"
                     } else {
