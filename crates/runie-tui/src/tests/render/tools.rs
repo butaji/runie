@@ -100,6 +100,28 @@ fn completed_list_tool_shows_entry_count() {
 }
 
 #[test]
+fn completed_list_tool_uses_singular_entry_count() {
+    let output = render_to_string(
+        render_tool_done("list_dir", ".", 0.5, "one.txt", None, false, &None, 0),
+        80,
+        2,
+    );
+    assert!(output.contains("List . (1 entry)"), "list summary: {output}");
+    assert!(!output.contains("1 entries"), "singular count must not be plural: {output}");
+}
+
+#[test]
+fn completed_empty_list_tool_has_no_zero_count_suffix() {
+    let output = render_to_string(
+        render_tool_done("list_dir", ".", 0.5, "", None, false, &None, 0),
+        80,
+        2,
+    );
+    assert!(output.contains("List ."), "list summary: {output}");
+    assert!(!output.contains("(0 entry"), "empty listing must omit count: {output}");
+}
+
+#[test]
 fn render_unknown_tool_keeps_run_label() {
     let lines = render_tool_running("custom_tool", "arg", 0.5, 0);
     let output = render_to_string(lines, 80, 2);
