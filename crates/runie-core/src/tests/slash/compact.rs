@@ -76,3 +76,17 @@ fn compact_with_focus_includes_focus_in_summary() {
         last.content()
     );
 }
+
+#[test]
+fn automatic_compaction_leaves_a_grok_session_event_in_the_feed() {
+    let mut state = fresh_state();
+    add_messages(&mut state, 10);
+
+    state.update(Event::CompactionTriggered { ratio: 0.85, tokens_in: 1_000, context_window: 100 });
+
+    assert!(
+        state.session.messages.iter().any(|message| message.role == Role::System && message.content() == "Context compacted → 70 tokens"),
+        "automatic compaction should leave a visible feed event: {:?}",
+        state.session.messages.iter().map(|message| (message.role.clone(), message.content())).collect::<Vec<_>>()
+    );
+}

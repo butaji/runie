@@ -122,6 +122,9 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             use crate::session::store::COMPACT_TOKEN_RATIO;
             let keep = (*context_window as f64 * COMPACT_TOKEN_RATIO) as usize;
             let _ = state.compact(keep);
+            // Grok keeps compaction visible in the feed as a muted session
+            // event instead of making the history rewrite silent.
+            state.add_system_msg(format!("Context compacted → {keep} tokens"));
             true
         }
         Event::UserMessageSubmitted { id, content } => {
