@@ -168,6 +168,7 @@ pub enum Element {
         status: String,
         phases: Vec<String>,
         active_agents: u32,
+        duration_secs: f64,
         timestamp: f64,
     },
     /// Collapsed background task lifecycle row.
@@ -463,6 +464,7 @@ impl Element {
             status: status.into(),
             phases,
             active_agents,
+            duration_secs: 0.0,
             timestamp: 0.0,
         })
     }

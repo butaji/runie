@@ -225,13 +225,14 @@ pub fn render_workflow(
     status: &str,
     phases: &[String],
     active_agents: u32,
+    duration_secs: f64,
 ) -> Vec<Line<'static>> {
     let style = style_tool_summary();
     let verb = match status {
-        "done" | "completed" => format!("{name} done: "),
-        "failed" => format!("{name} failed: "),
-        "cancelled" => format!("{name} ◌ cancelled: "),
-        "paused" => format!("{name} paused: "),
+        "done" | "completed" => format!("{name} done in {}: ", format_elapsed(duration_secs)),
+        "failed" => format!("{name} failed in {}: ", format_elapsed(duration_secs)),
+        "cancelled" => format!("{name} ◌ cancelled after {}: ", format_elapsed(duration_secs)),
+        "paused" => format!("{name} paused at {}: ", format_elapsed(duration_secs)),
         _ => format!("{name}: "),
     };
     let trail = phases
@@ -255,6 +256,10 @@ pub fn render_workflow(
         text.push_str(&format!("  ({active_agents} agents)"));
     }
     vec![Line::from(text).style(style)]
+}
+
+fn format_elapsed(seconds: f64) -> String {
+    runie_core::labels::format_elapsed_secs(seconds)
 }
 
 /// Render Grok's collapsed background-task lifecycle row.

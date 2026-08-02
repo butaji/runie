@@ -143,6 +143,7 @@ fn feed_elements() -> Vec<Element> {
             status: "running".into(),
             phases: vec!["done:Plan".into(), "active:Research".into(), "pending:Write".into()],
             active_agents: 2,
+            duration_secs: 0.0,
             timestamp: 0.0,
         },
         Element::BackgroundTask {
@@ -258,6 +259,25 @@ fn workflow_feed_row_shows_phase_trail_and_active_agents() {
     assert!(text.contains("Workflow research: compare sources"), "missing workflow row: {text}");
     assert!(text.contains("Plan ✓ · Research ●"), "missing phase trail: {text}");
     assert!(text.contains("(2 agents)"), "missing active-agent count: {text}");
+}
+
+#[test]
+fn workflow_terminal_rows_include_elapsed_time() {
+    for status in ["done", "failed", "cancelled", "paused"] {
+        let element = Element::workflow("research", "compare sources", status, Vec::new(), 0).at(1.0);
+        let element = match element {
+            Element::Workflow { name, objective, status, phases, active_agents, timestamp, .. } => {
+                Element::Workflow { name, objective, status, phases, active_agents, duration_secs: 2.5, timestamp }
+            }
+            _ => unreachable!(),
+        };
+        let text = crate::ui::to_lines_internal(&element, 80)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains("2.5s"), "missing workflow duration for {status}: {text}");
+    }
 }
 
 #[test]
