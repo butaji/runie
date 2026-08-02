@@ -271,7 +271,20 @@ impl LazyCache {
             } // filtered in collect_entries
             // System messages (trust banner, /sessions, compaction summary)
             // reuse the thought element for styling but are never collapsed.
-            Role::System => vec![(Element::SystemMessage { content: msg.content().to_string(), timestamp: ts }, false)],
+            Role::System => {
+                let content = msg.content().to_string();
+                let lower = content.to_ascii_lowercase();
+                if lower.contains("credit limit") || lower.contains("spending cap") {
+                    let action = if lower.contains("spending cap") {
+                        "increase_payg_limit"
+                    } else {
+                        "purchase_credits"
+                    };
+                    vec![(Element::credit_limit(content, action, "https://grok.com/usage").at(ts), false)]
+                } else {
+                    vec![(Element::SystemMessage { content, timestamp: ts }, false)]
+                }
+            }
         }
     }
 

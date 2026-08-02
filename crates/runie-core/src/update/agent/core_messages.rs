@@ -265,6 +265,22 @@ impl AppState {
     pub(crate) fn add_error(&mut self, id: String, message: String) {
         self.reset_agent_state();
 
+        if let Some(heading) = Self::credit_limit_heading(&message) {
+            let mut card = ChatMessage::new(Role::System, heading);
+            card.id = format!("credit-limit.{}", id);
+            card.provider = self.config_mut().current_provider.clone();
+            if let Some(idx) = self.session().messages.iter().position(|m| m.role == Role::TurnComplete) {
+                card.timestamp = self.session_mut().messages[idx].timestamp;
+                self.session_mut().messages.insert(idx, card);
+            } else {
+                self.session_mut().messages.push(card);
+            }
+            self.messages_changed();
+            self.deliver_queued();
+            self.maybe_end_streaming();
+            return;
+        }
+
         let mut error = ChatMessage {
             role: Role::Assistant,
             timestamp: now(),
@@ -287,6 +303,17 @@ impl AppState {
         self.messages_changed();
         self.deliver_queued();
         self.maybe_end_streaming();
+    }
+
+    fn credit_limit_heading(message: &str) -> Option<&'static str> {
+        let lower = message.to_ascii_lowercase();
+        if lower.contains("credit limit") || lower.contains("credits exhausted") {
+            Some("You've hit your credit limit.")
+        } else if lower.contains("spending cap") {
+            Some("You've hit your spending cap.")
+        } else {
+            None
+        }
     }
 
     fn reset_agent_state(&mut self) {

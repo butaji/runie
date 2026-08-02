@@ -29,6 +29,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             crate::view::Element::WebSearchCall { .. } => "WebSearchCall".to_string(),
             crate::view::Element::AnsiStyled { .. } => "AnsiStyled".to_string(),
             crate::view::Element::Spacer { .. } => "Spacer".to_string(),
+            crate::view::Element::CreditLimit { .. } => "CreditLimit".to_string(),
         })
         .collect()
 }

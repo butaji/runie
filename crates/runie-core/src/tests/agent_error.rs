@@ -70,6 +70,26 @@ fn agent_error_inserts_error_message() {
 }
 
 #[test]
+fn credit_exhaustion_error_projects_to_credit_limit_feed_card() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+
+    state.update(crate::Event::Error {
+        id: "req.0".to_string(),
+        message: "Provider error: credits exhausted".to_string(),
+    });
+
+    assert!(feed_elements(&state).iter().any(|element| matches!(
+        element,
+        Element::CreditLimit { heading, action, url, .. }
+            if heading.contains("credit limit")
+                && action == "purchase_credits"
+                && url == "https://grok.com/usage"
+    )));
+    assert!(!feed_has_error(&state, "credits exhausted"));
+}
+
+#[test]
 fn agent_error_clears_current_request_id() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
