@@ -211,6 +211,8 @@ fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
         "grep" | "find" | "search" | "search_files" => Some("Search"),
         "edit" | "edit_file" | "write_file" => Some("Edit"),
         "fetch" | "fetch_docs" | "web_fetch" => Some("Fetch"),
+        "web_search" | "search_web" => Some("Web Search"),
+        "memory_search" | "search_memory" => Some("Memory Search"),
         _ => None,
     };
     if let Some(action) = action {

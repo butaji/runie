@@ -106,6 +106,14 @@ fn render_unknown_tool_keeps_run_label() {
     assert!(output.contains("Run custom_tool"), "unknown tool label: {output}");
 }
 
+#[test]
+fn render_search_tool_variants_use_grok_action_labels() {
+    let web = render_to_string(render_tool_running("web_search", "rust", 0.5, 0), 80, 2);
+    let memory = render_to_string(render_tool_running("memory_search", "rust", 0.5, 0), 80, 2);
+    assert!(web.contains("Web Search rust"), "web search label: {web}");
+    assert!(memory.contains("Memory Search rust"), "memory search label: {memory}");
+}
+
 // ─── render_tool_done ───────────────────────────────────────────────────────
 
 #[test]
