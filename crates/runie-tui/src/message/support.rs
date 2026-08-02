@@ -335,7 +335,10 @@ pub fn render_btw(question: &str, answer: Option<&str>, status: &str, expanded: 
     let mut lines = vec![Line::from(format!("{marker} {question}")).style(style)];
     if expanded {
         if let Some(answer) = answer.filter(|text| !text.is_empty()) {
-            lines.push(Line::from(format!("  {answer}")).style(style));
+            // Grok keeps the expanded BTW response as a proper body block:
+            // preserve each source row and indent it, including intentional
+            // blank rows, instead of embedding newlines in one Ratatui line.
+            lines.extend(answer.lines().map(|line| Line::from(format!("  {line}")).style(style)));
         }
     }
     lines

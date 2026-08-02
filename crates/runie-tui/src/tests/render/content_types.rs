@@ -449,3 +449,29 @@ fn btw_running_and_empty_answer_follow_grok_collapsed_rules() {
         .join("\n");
     assert_eq!(expanded_text.lines().count(), 1, "empty BTW answers must not add a blank body: {expanded_text:?}");
 }
+
+#[test]
+fn expanded_btw_preserves_multiline_answer_rows() {
+    let element = Element::btw(
+        "Explain the change",
+        Some("First point\nSecond point\n\nFinal note".into()),
+        "answered",
+    )
+    .at(1.0);
+    let expanded = match element {
+        Element::Btw { question, answer, status, timestamp, .. } => Element::Btw {
+            question,
+            answer,
+            status,
+            expanded: true,
+            timestamp,
+        },
+        _ => unreachable!(),
+    };
+
+    let lines = crate::ui::to_lines_internal(&expanded, 80);
+    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
+    assert!(text.iter().any(|line| line == "  First point"), "missing first answer row: {text:?}");
+    assert!(text.iter().any(|line| line == "  Second point"), "missing second answer row: {text:?}");
+    assert!(text.iter().any(|line| line == "  Final note"), "missing final answer row: {text:?}");
+}
