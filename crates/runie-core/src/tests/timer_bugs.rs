@@ -30,6 +30,9 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             crate::view::Element::AnsiStyled { .. } => "AnsiStyled".to_string(),
             crate::view::Element::Spacer { .. } => "Spacer".to_string(),
             crate::view::Element::CreditLimit { .. } => "CreditLimit".to_string(),
+            crate::view::Element::Workflow { .. } => "Workflow".to_string(),
+            crate::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
+            crate::view::Element::Btw { .. } => "Btw".to_string(),
         })
         .collect()
 }
