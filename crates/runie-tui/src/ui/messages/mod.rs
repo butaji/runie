@@ -85,6 +85,7 @@ fn render_paragraph_with_user_backgrounds(
         .map(|(row_offset, line)| {
             let abs_row = visible_start + row_offset;
             let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
+            let element_row = element_local_row(row_to_element, abs_row, elem_idx);
             let is_user_related = is_user_related_row(snap, elem_idx);
             let is_first_element_row = abs_row == 0 || row_to_element.get(abs_row.wrapping_sub(1)) != Some(&elem_idx);
 
@@ -98,7 +99,7 @@ fn render_paragraph_with_user_backgrounds(
             if matches!(snap.elements.get(elem_idx), Some(Element::Thinking { .. })) && !line.spans.is_empty() {
                 let wave = wave_brightness(
                     snap.animation_frame,
-                    row_offset.min(u16::MAX as usize) as u16,
+                    element_row.min(u16::MAX as usize) as u16,
                     FEED_WAVE_ROWS,
                     FEED_WAVE_SPEED,
                 );
@@ -106,14 +107,14 @@ fn render_paragraph_with_user_backgrounds(
                 spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
                 spans.push(Span::raw(" "));
             }
-            if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx, row_offset) {
+            if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx, element_row) {
                 spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
                 if is_first_element_row {
                     spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
                     spans.push(Span::raw(" "));
                 }
             }
-            if let Some((rail_color, bullet, bullet_color)) = subagent_feed_chrome(snap, elem_idx, row_offset) {
+            if let Some((rail_color, bullet, bullet_color)) = subagent_feed_chrome(snap, elem_idx, element_row) {
                 spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
                 if is_first_element_row {
                     spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
@@ -149,6 +150,16 @@ fn render_paragraph_with_user_backgrounds(
             Rect::new(area.x, row, area.width, 1),
         );
     }
+}
+
+/// Return the row within the current element, rather than the row within the
+/// viewport. Grok's accent wave is attached to the block and must not jump
+/// phase when scrolling changes the viewport origin.
+fn element_local_row(row_to_element: &[usize], abs_row: usize, elem_idx: usize) -> usize {
+    row_to_element
+        .get(..=abs_row)
+        .and_then(|rows| rows.iter().rposition(|&idx| idx != elem_idx))
+        .map_or(abs_row, |previous| abs_row.saturating_sub(previous + 1))
 }
 
 /// Shared Grok-style tool chrome: every rendered tool row receives the accent
@@ -398,5 +409,14 @@ mod tests {
             })
             .collect::<std::collections::HashSet<_>>();
         assert!(frame_colors.len() >= 1, "running rail chrome must be present across frames");
+    }
+
+    #[test]
+    fn feed_wave_row_is_local_to_its_element_after_scroll() {
+        let rows = [4, 4, 4, 9, 9, 9, 9];
+        assert_eq!(element_local_row(&rows, 0, 4), 0);
+        assert_eq!(element_local_row(&rows, 2, 4), 2);
+        assert_eq!(element_local_row(&rows, 3, 9), 0);
+        assert_eq!(element_local_row(&rows, 6, 9), 3);
     }
 }
