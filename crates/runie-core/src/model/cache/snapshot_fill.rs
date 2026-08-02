@@ -112,6 +112,9 @@ pub(crate) fn fill_snapshot_config(s: &mut Snapshot, state: &AppState) {
     s.model = config.current_model.clone();
     s.has_models = state.has_models();
     s.theme_name = config.theme_name.clone();
+    s.reduced_motion = config.reduced_motion;
+    s.animation_wave_rows = config.animation_wave_rows;
+    s.feed_right_slack = config.feed_right_slack;
     s.thinking_level = state.effective_thinking_level();
     s.read_only = config.read_only;
     s.input_title = build_input_title(

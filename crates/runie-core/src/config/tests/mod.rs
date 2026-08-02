@@ -34,6 +34,35 @@ fn ui_section_has_tunable_page_size() {
 }
 
 #[test]
+fn ui_section_clamps_animation_settings_to_renderable_ranges() {
+    let defaults = UiSection::default();
+    assert_eq!(defaults.animation_fps(), 60);
+    assert_eq!(defaults.animation_wave_rows(), 32);
+
+    let lower = UiSection {
+        animation_fps: 0,
+        animation_wave_rows: 0,
+        ..defaults.clone()
+    };
+    assert_eq!(lower.animation_fps(), 1);
+    assert_eq!(lower.animation_wave_rows(), 1);
+
+    let upper = UiSection {
+        animation_fps: u16::MAX,
+        animation_wave_rows: u16::MAX,
+        ..defaults
+    };
+    assert_eq!(upper.animation_fps(), 60);
+    assert_eq!(upper.animation_wave_rows(), 256);
+}
+
+#[test]
+fn ui_section_clamps_feed_right_slack() {
+    let section = UiSection { feed_right_slack: 9, ..UiSection::default() };
+    assert_eq!(section.feed_right_slack(), 4);
+}
+
+#[test]
 fn http_section_has_tunable_timeouts() {
     let section = HttpSection::default();
     assert_eq!(section.request_timeout_secs, 120);

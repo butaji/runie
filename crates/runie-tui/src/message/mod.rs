@@ -403,6 +403,10 @@ fn render_agent_code_block(
     is_first: bool,
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
+    if lang.eq_ignore_ascii_case("mermaid") || lang.eq_ignore_ascii_case("mmd") {
+        lines.extend(code::render_mermaid_fallback(content));
+        return false;
+    }
     lines.push(code::render_code_header(
         lang,
         is_first,

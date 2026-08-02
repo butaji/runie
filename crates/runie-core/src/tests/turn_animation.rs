@@ -40,6 +40,19 @@ fn spinner_frame_is_wall_clock_driven_when_turn_started() {
 #[test]
 fn spinner_frame_falls_back_to_animation_frame_without_turn_start() {
     let mut state = AppState::default();
-    state.view.animation_frame = 5;
+    state.set_animation_frame(5);
     assert_eq!(state.spinner_frame(), BRAILLE_SIX[5]);
+}
+
+#[test]
+fn animation_frame_injection_is_repeatable_and_marks_view_dirty() {
+    let mut state = AppState::default();
+    state.view.dirty = false;
+    state.set_animation_frame(42);
+    assert_eq!(state.view.animation_frame, 42);
+    assert!(state.view.dirty);
+    state.view.dirty = false;
+    state.set_animation_frame(42);
+    assert_eq!(state.view.animation_frame, 42);
+    assert!(state.view.dirty);
 }

@@ -9,6 +9,7 @@ use crate::message::{
     render_list_item_from_spans, render_markdown_table, render_tool_confirmation, render_web_search_call,
 };
 use runie_core::view::elements::{DiffType, ImageProtocol, WebSearchResult};
+use crate::terminal::caps::{MouseCapability, TermCaps};
 
 // ─── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -128,6 +129,26 @@ mod images {
             output.contains("80 cells wide"),
             "Should show width: {}",
             output
+        );
+    }
+
+    #[test]
+    fn image_has_actionable_fallback_without_unicode_capability() {
+        let _lock = crate::theme::test_lock();
+        crate::theme::set_current_theme_with_caps(
+            "runie",
+            TermCaps { unicode: false, mouse: MouseCapability::None, ..Default::default() },
+        );
+        let output = render_to_string(
+            render_image("base64data", "image/png", Some(40), Some(20), ImageProtocol::Kitty, 0.0),
+            80,
+            3,
+        );
+        assert!(output.contains("Image unavailable"));
+        assert!(output.contains("graphics-capable terminal"));
+        crate::theme::set_current_theme_with_caps(
+            "runie",
+            TermCaps { color_depth: crate::terminal::caps::ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
         );
     }
 }

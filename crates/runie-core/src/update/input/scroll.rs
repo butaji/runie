@@ -109,23 +109,15 @@ fn scroll_up(state: &mut AppState) {
 }
 
 fn scroll_down(state: &mut AppState) {
-    let snap = state.snapshot();
-    let visible = state.view().last_visible_height.max(3) as usize;
-    let max_scroll = snap.total_lines.saturating_sub(visible);
-
     if state.view_mut().scroll == 0 {
         state.input_mut().input_flash = 3;
     }
 
     let new_scroll = state.view_mut().scroll.saturating_sub(1);
 
-    // Grok-style: overscroll to bottom while at max re-engages follow mode.
-    // If user is at max scroll and scrolls down (toward bottom), jump to bottom
-    // and enable follow mode so new content auto-scrolls.
-    if state.view().follow_mode && state.view().scroll == max_scroll && new_scroll >= state.view().scroll {
-        state.view_mut().scroll = 0;
-    } else {
-        state.view_mut().scroll = new_scroll;
+    state.view_mut().scroll = new_scroll;
+    if new_scroll == 0 {
+        state.view_mut().follow_mode = true;
     }
 }
 
@@ -134,6 +126,7 @@ fn page_up(state: &mut AppState) {
         state.input_mut().input_flash = 3;
     }
     state.view_mut().scroll = state.view_mut().scroll.saturating_add(PAGE_SIZE);
+    state.view_mut().follow_mode = false;
 }
 
 fn page_down(state: &mut AppState) {
@@ -141,6 +134,9 @@ fn page_down(state: &mut AppState) {
         state.input_mut().input_flash = 3;
     }
     state.view_mut().scroll = state.view_mut().scroll.saturating_sub(PAGE_SIZE);
+    if state.view().scroll == 0 {
+        state.view_mut().follow_mode = true;
+    }
 }
 
 fn go_to_top(state: &mut AppState) {

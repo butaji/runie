@@ -37,6 +37,17 @@ pub struct TermCaps {
     pub unicode: bool,
 }
 
+impl TermCaps {
+    /// Stable, human-readable capability summary for the in-app diagnostics
+    /// feed. Keep this compact so it remains useful on narrow terminals.
+    pub fn diagnostics_summary(&self) -> String {
+        format!(
+            "color={:?}, unicode={}, hyperlinks={}, mouse={:?}, clipboard={}, focus_tracking={}",
+            self.color_depth, self.unicode, self.hyperlinks, self.mouse, self.clipboard, self.focus_tracking
+        )
+    }
+}
+
 impl Default for TermCaps {
     fn default() -> Self {
         Self {

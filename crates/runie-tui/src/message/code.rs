@@ -37,3 +37,47 @@ pub(super) fn render_code_block_lines(content: &str, lang: &str) -> Vec<Line<'st
         })
         .collect()
 }
+
+/// Render Mermaid source as a bounded, deterministic text preview.
+///
+/// A terminal graphics backend is optional, so the source must remain useful
+/// everywhere. Keeping this preview separate from syntax highlighting also
+/// gives a future graphics backend a stable replacement point.
+pub(super) fn render_mermaid_fallback(content: &str) -> Vec<Line<'static>> {
+    let style = crate::theme::style_code_header();
+    let mut lines = vec![Line::from(vec![
+        Span::styled(crate::theme::GLYPH_INDENT, style),
+        Span::styled("[Mermaid diagram]", style),
+    ])];
+    for source_line in content.lines().take(12) {
+        lines.push(Line::from(vec![
+            Span::raw(crate::theme::GLYPH_INDENT),
+            Span::raw("  "),
+            Span::raw(source_line.to_owned()),
+        ]));
+    }
+    if content.lines().count() > 12 {
+        lines.push(Line::from(vec![
+            Span::raw(crate::theme::GLYPH_INDENT),
+            Span::styled("  … diagram preview truncated", crate::theme::style_feed_timestamp()),
+        ]));
+    }
+    lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_mermaid_fallback;
+
+    #[test]
+    fn mermaid_preview_is_bounded_and_has_text_fallback() {
+        let source = (0..20).map(|i| format!("node{i}")).collect::<Vec<_>>().join("\n");
+        let lines = render_mermaid_fallback(&source);
+        assert_eq!(lines.len(), 14, "header + 12 source rows + truncation marker");
+        let rendered = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+        assert!(rendered.contains("[Mermaid diagram]"));
+        assert!(rendered.contains("node0"));
+        assert!(rendered.contains("diagram preview truncated"));
+        assert!(!rendered.contains("node19"));
+    }
+}

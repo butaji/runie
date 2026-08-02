@@ -82,6 +82,27 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
     }
 }
 
+/// Return the first rendered row of the element currently at `offset` when
+/// that element began above the viewport. This is the stable anchor used by a
+/// sticky feed header; `None` means the viewport already starts at a block
+/// boundary or has no mapped row.
+pub(crate) fn sticky_header_row(row_to_element: &[usize], offset: usize) -> Option<(usize, usize)> {
+    let &element = row_to_element.get(offset)?;
+    let start = row_to_element[..=offset]
+        .iter()
+        .rposition(|&idx| idx != element)
+        .map_or(0, |idx| idx + 1);
+    (start < offset).then_some((start, element))
+}
+
+pub(crate) fn sticky_header_row_for_mode(
+    row_to_element: &[usize],
+    offset: usize,
+    following: bool,
+) -> Option<(usize, usize)> {
+    if following { None } else { sticky_header_row(row_to_element, offset) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,6 +122,22 @@ mod tests {
                 .collect();
             assert_eq!(direct, adapted, "width {width}");
         }
+    }
+
+    #[test]
+    fn sticky_header_anchor_only_exists_inside_a_block() {
+        let mapping = [0, 0, 0, 1, 1, 2];
+        assert_eq!(sticky_header_row(&mapping, 0), None);
+        assert_eq!(sticky_header_row(&mapping, 2), Some((0, 0)));
+        assert_eq!(sticky_header_row(&mapping, 4), Some((3, 1)));
+        assert_eq!(sticky_header_row(&mapping, 5), None);
+    }
+
+    #[test]
+    fn sticky_header_is_disabled_while_following_tail() {
+        let mapping = [0, 0, 1, 1];
+        assert_eq!(sticky_header_row_for_mode(&mapping, 3, true), None);
+        assert_eq!(sticky_header_row_for_mode(&mapping, 3, false), Some((2, 1)));
     }
 
     fn assert_count_matches(element: Element, width: u16) {
@@ -195,5 +232,14 @@ mod tests {
         );
         assert_count_matches(Element::tool_summary("ls", 0.5).at(0.0), 80);
         assert_count_matches(Element::turn_complete(1.0).at(0.0), 80);
+    }
+
+    #[test]
+    fn multiline_typed_tool_output_count_matches_rendered_rows() {
+        let output = "heading:\nfirst paragraph line\nsecond paragraph line\n\nfinal line";
+        assert_count_matches(
+            Element::tool_done("list_dir", ".", 0.5, output, None, false).at(0.0),
+            24,
+        );
     }
 }

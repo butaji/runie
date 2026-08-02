@@ -200,6 +200,10 @@ impl AppState {
         self.config_mut().model_thinking = config.models.thinking.clone();
         self.config_mut().vim_mode = config.vim_mode();
         self.config_mut().compact_mode = config.ui.compact_mode;
+        self.config_mut().reduced_motion = config.ui.reduced_motion;
+        self.config_mut().animation_fps = config.ui.animation_fps();
+        self.config_mut().animation_wave_rows = config.ui.animation_wave_rows();
+        self.config_mut().feed_right_slack = config.ui.feed_right_slack();
         let prompts_section = config.prompts();
         *self.prompts_mut() = crate::prompts::load_prompts(
             prompts_section.default.as_deref(),

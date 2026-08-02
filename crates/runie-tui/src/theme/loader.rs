@@ -51,6 +51,7 @@ pub(crate) fn default_theme() -> Result<opaline::Theme, opaline::OpalineError> {
 
 /// Load a theme by name: builtin → custom file → default fallback (no style registration).
 pub(crate) fn load_theme_raw(name: &str) -> Result<opaline::Theme, opaline::OpalineError> {
+    let name = resolve_theme_name(name);
     // Only use the builtin loader if the name is actually a builtin.
     // "runie" is not a builtin — it uses the embedded DEFAULT_THEME_TOML.
     if let Some(t) = opaline::load_by_name(name) {
@@ -67,9 +68,97 @@ pub(crate) fn load_theme_raw(name: &str) -> Result<opaline::Theme, opaline::Opal
     default_theme()
 }
 
+/// Resolve Grok-compatible `auto`/`system` aliases without adding a second
+/// theme-loading path. Explicit themes always win; desktop hints are only
+/// consulted for the aliases.
+fn resolve_theme_name(name: &str) -> &str {
+    if !matches!(name.to_ascii_lowercase().as_str(), "auto" | "system") {
+        return name;
+    }
+    let light = std::env::var("RUNIE_THEME_APPEARANCE")
+        .or_else(|_| std::env::var("COLORFGBG"))
+        .map(|value| {
+            let value = value.to_ascii_lowercase();
+            value.contains("light") || value.ends_with(";15") || value.ends_with(";default")
+        })
+        .unwrap_or(false);
+    if light { "catppuccin-latte" } else { "runie" }
+}
+
 /// Load a theme by name: builtin → custom file → default fallback.
 pub(crate) fn load_theme(name: &str) -> Result<opaline::Theme, opaline::OpalineError> {
-    load_theme_raw(name).map(crate::theme::styles::register_runie_styles)
+    load_theme_raw(name)
+        .map(ensure_runie_tokens)
+        .map(|theme| {
+            debug_assert!(validate_theme(&theme).is_ok(), "loaded theme violates Runie semantic contract");
+            theme
+        })
+        .map(crate::theme::styles::register_runie_styles)
+}
+
+/// Add Runie-specific semantic roles to every theme without changing roles
+/// that the theme already defines. Built-in palettes therefore keep their own
+/// hue family while the feed can rely on one stable token vocabulary.
+pub(crate) fn ensure_runie_tokens(mut theme: opaline::Theme) -> opaline::Theme {
+    let derived = [
+        ("accent.thinking", "accent.primary"),
+        ("accent.plan", "warning"),
+        ("accent.feedback", "text.secondary"),
+        ("accent.monitor", "accent.primary"),
+        ("rail.running", "accent.primary"),
+        ("rail.success", "success"),
+        ("rail.error", "error"),
+        ("rail.thinking", "text.dim"),
+    ];
+    for (token, source) in derived {
+        if theme.try_color(token).is_none() {
+            let color = theme.color(source);
+            theme.register_token(token, color);
+        }
+    }
+    theme
+}
+
+/// Validate the semantic contract consumed by the renderer. This is kept
+/// separate from loading so diagnostics and theme tests can report the exact
+/// missing role instead of silently displaying opaline's fallback color.
+pub(crate) fn validate_theme(theme: &opaline::Theme) -> Result<(), String> {
+    const REQUIRED: &[&str] = &[
+        "bg.base", "bg.selection", "text.primary", "text.dim", "border.unfocused", "border.focused",
+        "accent.primary", "success", "warning", "error", "rail.running", "rail.success",
+        "rail.error", "rail.thinking",
+    ];
+    for token in REQUIRED {
+        if theme.try_color(token).is_none() {
+            return Err(format!("missing semantic token {token}"));
+        }
+    }
+    let bg = theme.color("bg.base");
+    let fg = theme.color("text.primary");
+    if relative_luminance_contrast(bg, fg) < 2.0 {
+        return Err("text.primary has insufficient contrast against bg.base".into());
+    }
+    let dim = theme.color("text.dim");
+    if relative_luminance_contrast(bg, dim) < 1.2 {
+        return Err("text.dim has insufficient contrast against bg.base".into());
+    }
+    let selection = theme.color("bg.selection");
+    if relative_luminance_contrast(bg, selection) < 1.05 {
+        return Err("bg.selection is indistinguishable from bg.base".into());
+    }
+    Ok(())
+}
+
+fn relative_luminance_contrast(a: opaline::OpalineColor, b: opaline::OpalineColor) -> f32 {
+    fn lum(c: opaline::OpalineColor) -> f32 {
+        let channel = |v: u8| {
+            let v = f32::from(v) / 255.0;
+            if v <= 0.03928 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+        };
+        0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
+    }
+    let (high, low) = (lum(a).max(lum(b)), lum(a).min(lum(b)));
+    (high + 0.05) / (low + 0.05)
 }
 
 /// Load a theme and quantize its colors to the terminal's color depth.
@@ -113,7 +202,7 @@ fn quantize_theme(
     }
 
     // Reconstruct: load fresh theme and register quantized tokens on top.
-    let mut result = load_theme_raw(name)?;
+    let mut result = ensure_runie_tokens(load_theme_raw(name)?);
     for (k, v) in &quantized {
         result.register_token(k, *v);
     }

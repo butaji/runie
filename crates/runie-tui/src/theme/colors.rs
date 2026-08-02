@@ -6,11 +6,17 @@ use ratatui::style::Color;
 
 /// Simple color accessor for a required theme key.
 fn theme_color(key: &str) -> Color {
+    if crate::theme::is_monochrome() {
+        return Color::Reset;
+    }
     Color::from(crate::theme::current_theme().color(key))
 }
 
 /// Color accessor with a fallback when the key is not found.
 fn theme_color_fallback(key: &str, fallback: Color) -> Color {
+    if crate::theme::is_monochrome() {
+        return Color::Reset;
+    }
     crate::theme::current_theme()
         .try_color(key)
         .map(Color::from)
@@ -24,7 +30,23 @@ pub fn color_bg() -> Color {
 pub fn color_bg_panel() -> Color {
     theme_color_fallback("bg.panel", Color::Reset)
 }
+/// Design-system surface roles with fallbacks for older themes.
+pub fn color_surface() -> Color {
+    theme_color_fallback("surface.base", color_bg())
+}
+pub fn color_surface_muted() -> Color {
+    theme_color_fallback("surface.muted", color_bg_panel())
+}
+pub fn color_surface_elevated() -> Color {
+    theme_color_fallback("surface.elevated", color_bg_panel())
+}
+pub fn color_surface_interactive() -> Color {
+    theme_color_fallback("surface.interactive", color_surface_elevated())
+}
 pub fn color_bg_user() -> Color {
+    if crate::theme::is_monochrome() {
+        return Color::Reset;
+    }
     Color::from(crate::theme::styles::bg_user_color(
         &crate::theme::current_theme(),
     ))

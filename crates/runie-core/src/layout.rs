@@ -31,7 +31,18 @@ pub const RAIL_WIDTH: usize = 1;
 /// indent and accent-rail columns. Cache/scroll math in core MUST use this
 /// exact formula so cached `total_lines` matches the rendered line count.
 pub fn feed_content_width(area_width: u16) -> u16 {
-    area_width.saturating_sub(2 + FEED_INDENT.len() as u16 + RAIL_WIDTH as u16)
+    feed_content_width_for_layout(area_width, false)
+}
+
+/// Feed width with compact mode reclaiming one optional slack column.
+/// The indent and lifecycle rail remain invariant to preserve alignment.
+pub fn feed_content_width_for_layout(area_width: u16, compact: bool) -> u16 {
+    feed_content_width_with_slack(area_width, compact, 2)
+}
+
+pub fn feed_content_width_with_slack(area_width: u16, compact: bool, configured_slack: u8) -> u16 {
+    let optional_slack = if compact { configured_slack.saturating_sub(1) } else { configured_slack };
+    area_width.saturating_sub(u16::from(optional_slack) + FEED_INDENT.len() as u16 + RAIL_WIDTH as u16)
 }
 
 /// Number of terminal rows an element renders to at the given viewport
@@ -395,6 +406,13 @@ pub fn word_wrap(text: &str, first_width: u16, rest_width: u16) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compact_feed_width_reclaims_only_optional_slack() {
+        assert_eq!(feed_content_width_for_layout(80, false), 76);
+        assert_eq!(feed_content_width_for_layout(80, true), 77);
+        assert_eq!(feed_content_width_for_layout(2, true), 0);
+    }
 
     #[test]
     fn word_wrap_empty_yields_one_empty_line() {

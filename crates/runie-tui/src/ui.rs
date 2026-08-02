@@ -168,7 +168,7 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
                 Constraint::Length(1), // empty margin above status
                 Constraint::Length(1), // status
                 Constraint::Length(input_height), // input — one line when empty
-                Constraint::Length(1), // margin
+                Constraint::Length(0), // no gap: input border directly precedes hints
                 Constraint::Length(1), // hints
             ]);
             c

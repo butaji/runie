@@ -112,11 +112,29 @@ pub struct UiSection {
     pub page_size: usize,
     /// Manually enable compact layout (reduces margins to save vertical space).
     pub compact_mode: bool,
+    /// Disable animated spinners, pulses, and active-feed accent waves while
+    /// retaining their static semantic glyphs and colors.
+    pub reduced_motion: bool,
+    /// Animation frame rate (1–60 FPS).
+    pub animation_fps: u16,
+    /// Rows in one accent-wave cycle.
+    pub animation_wave_rows: u16,
+    /// Optional right-side feed slack columns (0–4).
+    pub feed_right_slack: u8,
 }
 
 impl Default for UiSection {
     fn default() -> Self {
-        Self { vim_mode: true, history_max_entries: 1000, page_size: 5, compact_mode: false }
+        Self {
+            vim_mode: true,
+            history_max_entries: 1000,
+            page_size: 5,
+            compact_mode: false,
+            reduced_motion: false,
+            animation_fps: 60,
+            animation_wave_rows: 32,
+            feed_right_slack: 2,
+        }
     }
 }
 
@@ -129,6 +147,18 @@ impl UiSection {
     /// Number of items per page in list dialogs.
     pub fn page_size(&self) -> usize {
         self.page_size
+    }
+
+    pub fn animation_fps(&self) -> u16 {
+        self.animation_fps.clamp(1, 60)
+    }
+
+    pub fn animation_wave_rows(&self) -> u16 {
+        self.animation_wave_rows.clamp(1, 256)
+    }
+
+    pub fn feed_right_slack(&self) -> u8 {
+        self.feed_right_slack.min(4)
     }
 }
 

@@ -59,12 +59,34 @@ fn handle_goal_status(state: &AppState) -> CommandResult {
         GoalStatus::Cancelled => "❌",
     };
 
+    let agent = state.agent_state();
+    let usage = format!("Tokens: {} in / {} out", agent.tokens_in, agent.tokens_out);
+    let workers = {
+        use crate::model::PatternWorkerStatus;
+        let mut counts = [0usize; 4];
+        for worker in &agent.pattern_workers {
+            let index = match worker.status {
+                PatternWorkerStatus::Running => 0,
+                PatternWorkerStatus::Completed => 1,
+                PatternWorkerStatus::Failed => 2,
+                PatternWorkerStatus::Cancelled => 3,
+            };
+            counts[index] += 1;
+        }
+        format!(
+            "Workers: {} (running {}, completed {}, failed {}, cancelled {})",
+            agent.pattern_workers.len(), counts[0], counts[1], counts[2], counts[3]
+        )
+    };
+
     let content = format!(
-        "Goal: {}\nStatus: {} {}\nElapsed: {}\nCompletion criterion: {}",
+        "Goal: {}\nStatus: {} {}\nElapsed: {}\n{}\n{}\nCompletion criterion: {}",
         goal.objective,
         status_icon,
         goal.status.label(),
         elapsed_str,
+        usage,
+        workers,
         goal.completion_criterion
             .as_deref()
             .unwrap_or("(not specified)")

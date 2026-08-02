@@ -49,15 +49,15 @@ impl UiActor {
                 if matches!(effective.trim(), "/q" | "/quit" | "/exit") {
                     return false;
                 }
-                // Type the "/" through the InputActor (authoritative) and open
-                // the inline dropdown (grok parity). The "/" lives in the
-                // projection; the pending mirror stays empty so the "/" echo
-                // drops nothing (guarded by `!pending.is_empty()`).
+                // Type the "/" through the InputActor (authoritative), then
+                // open the same command palette used by Ctrl+P. The "/" is
+                // only the trigger; subsequent characters filter the dialog.
                 self.pending_input_chars.clear();
                 self.state.input_mut().input = "/".to_string();
                 self.state.input_mut().cursor_pos = 1;
                 self.send_input_msg(InputMsg::InsertChar('/')).await;
-                self.state.open_slash_dropdown();
+                self.apply_event(runie_core::Event::ToggleCommandPalette);
+                self.state.command_palette_from_input = true;
                 true
             }
             _ => false,

@@ -82,9 +82,11 @@ pub async fn test_leader_handle() -> LeaderHandle {
 
     let (cmd_tx, _cmd_rx) = mpsc::channel(4);
     let agent: Arc<dyn LeaderAgentHandle> = Arc::new(NoOpAgentHandle);
-    // Spawn a dummy task as the agent join handle (agent is not a real ractor actor
-    // in tests; the NoOpAgentHandle::run returns pending which never completes).
-    let agent_join: tokio::task::JoinHandle<()> = tokio::spawn(std::future::pending::<()>());
+    // The test agent is not a real ractor actor, so there is no agent task to
+    // await. Use an already-completed join handle rather than a permanently
+    // pending placeholder, which would force every test shutdown through the
+    // full global shutdown timeout.
+    let agent_join: tokio::task::JoinHandle<()> = tokio::spawn(async {});
     let all_joins = vec![
         config_join,
         provider_join,
@@ -96,8 +98,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
         agent_join,
     ];
 
-    // Dummy coordinator join for tests.
-    let coordinator_join = tokio::spawn(std::future::pending::<()>());
+    // No coordinator is spawned by this minimal test harness.
+    let coordinator_join = tokio::spawn(async {});
 
     LeaderHandle::new(
         cmd_tx,

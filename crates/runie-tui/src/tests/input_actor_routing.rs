@@ -66,9 +66,9 @@ async fn input_event_routes_to_input_actor() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // Advance virtual time to let actor start.
-    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
-    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
+    // Let the actor start on the real test runtime; this test waits on an
+    // event, so pausing Tokio time would also pause its timeout and shutdown.
+    tokio::task::yield_now().await;
 
     // Send Input('h') through the submit channel.
     submit_tx
@@ -77,17 +77,16 @@ async fn input_event_routes_to_input_actor() {
         .expect("submit channel open");
 
     // Wait for InputChanged event (InputActor emits it in response to InsertChar).
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
     let mut found_input_changed = false;
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
     while tokio::time::Instant::now() < deadline {
-        let rem = deadline - tokio::time::Instant::now();
-        match tokio::time::timeout(rem, sub.recv()).await {
-            Ok(Ok(evt)) => {
-                if matches!(evt, Event::InputChanged { state } if state.input == "h") {
-                    found_input_changed = true;
-                    break;
-                }
+        let remaining = deadline - tokio::time::Instant::now();
+        match tokio::time::timeout(remaining, sub.recv()).await {
+            Ok(Ok(Event::InputChanged { state })) if state.input == "h" => {
+                found_input_changed = true;
+                break;
             }
+            Ok(Ok(_)) => {}
             Ok(Err(_)) | Err(_) => break,
         }
     }
@@ -96,8 +95,10 @@ async fn input_event_routes_to_input_actor() {
         "Expected InputChanged event with 'h' after Event::Input('h')"
     );
 
-    // Quit to shut down the actor.
-    submit_tx.send(Event::Quit).await.expect("submit open");
+    // This test owns the actor task; abort it after asserting delivery. The
+    // graceful shutdown path is covered by the dedicated quit tests, and a
+    // blocked actor shutdown must not stall this routing regression test.
+    ui_handle.abort();
     let _ = ui_handle.await;
 
     leader.shutdown().await;
@@ -142,9 +143,7 @@ async fn input_accumulates_via_input_actor() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // Advance virtual time to let actor start.
-    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
-    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
+    tokio::task::yield_now().await;
 
     // Type "hi" character by character.
     submit_tx
@@ -175,8 +174,7 @@ async fn input_accumulates_via_input_actor() {
         "Input should accumulate to 'hi' via InputActor routing"
     );
 
-    // Quit to shut down the actor.
-    submit_tx.send(Event::Quit).await.expect("submit open");
+    ui_handle.abort();
     let _ = ui_handle.await;
 
     leader.shutdown().await;
@@ -460,8 +458,8 @@ async fn slash_opens_command_palette_synchronously() {
     ui.handle_event(Event::Input('/'), effect_tx).await;
 
     assert!(
-        ui.state.view().slash_dropdown.is_some(),
-        "'/' should open the command dropdown synchronously"
+        matches!(ui.state.open_dialog(), Some(runie_core::commands::DialogState::Active { kind: runie_core::commands::DialogKind::CommandPalette, .. })),
+        "'/' should open the shared command palette synchronously"
     );
 
     leader.shutdown().await;

@@ -58,6 +58,19 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 
     restore_or_pop_dialog(state, dialog, close_result, is_palette_activation);
 
+    // A palette opened by `/` is an ephemeral command trigger. Closing it
+    // must consume the trigger instead of leaving a stray slash in the chat
+    // composer. Ctrl+P palettes keep the normal draft untouched.
+    if is_dialog_back && state.open_dialog().is_none() && state.command_palette_from_input {
+        state.input_mut().input.clear();
+        state.input_mut().cursor_pos = 0;
+        state.input_mut().chips.clear();
+        if let Some(handles) = state.actor_handles() {
+            let _ = handles.input.send_message(crate::actors::InputMsg::Clear);
+        }
+        state.command_palette_from_input = false;
+    }
+
     // Login flow: after a generic pop (Esc/DialogBack), re-sync the logical
     // `flow.step` to the panel now on top (push_login_panel only syncs pushes).
     crate::login_flow::panel_ops::sync_step_from_current_panel(state);

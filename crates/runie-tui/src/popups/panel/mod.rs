@@ -6,7 +6,7 @@ use runie_core::Snapshot;
 use crate::popups::layout_constants::HOTKEY_AREA_HEIGHT;
 
 use crate::popups::{clear_panel_bg, palette_popup_rect};
-use crate::theme::{block_popup, color_bg_panel};
+use crate::theme::{block_popup, color_surface_elevated};
 
 mod form;
 mod list;
@@ -45,7 +45,7 @@ pub(crate) fn setup_popup(f: &mut Frame, title: &str) -> Rect {
     let inner = block.inner(popup_area);
     f.render_widget(Paragraph::new("").block(block), popup_area);
     f.buffer_mut()
-        .set_style(inner, Style::default().bg(color_bg_panel()));
+        .set_style(inner, Style::default().bg(color_surface_elevated()));
     // 1-symbol / 1-line empty margin on all sides
     Rect {
         x: inner.x + 1,
@@ -62,7 +62,7 @@ pub(crate) fn setup_panel(f: &mut Frame, area: Rect, title: &str) -> Rect {
     let inner = block.inner(area);
     f.render_widget(Paragraph::new("").block(block), area);
     f.buffer_mut()
-        .set_style(inner, Style::default().bg(color_bg_panel()));
+        .set_style(inner, Style::default().bg(color_surface_elevated()));
     // 1-symbol / 1-line empty margin on all sides
     Rect {
         x: inner.x + 1,

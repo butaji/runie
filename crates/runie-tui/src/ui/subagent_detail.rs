@@ -172,7 +172,7 @@ fn render_footer(f: &mut Frame, area: Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::terminal::caps::{MouseCapability, TermCaps};
+    use crate::terminal::caps::{ColorDepth, MouseCapability, TermCaps};
     use crate::theme::set_current_theme_with_caps;
     use ratatui::{backend::TestBackend, Terminal};
     use runie_core::model::PatternWorkerStatus;
@@ -180,7 +180,7 @@ mod tests {
     use std::sync::Arc;
 
     fn truecolor_caps() -> TermCaps {
-        TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() }
+        TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() }
     }
 
     fn worker(status: PatternWorkerStatus, output: &str) -> PatternWorkerRow {

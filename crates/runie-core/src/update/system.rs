@@ -39,7 +39,7 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
-    pub(crate) fn add_system_msg(&mut self, content: String) {
+    pub fn add_system_msg(&mut self, content: String) {
         self.session_mut().messages.push(ChatMessage {
             role: Role::System,
             timestamp: crate::update::now(),

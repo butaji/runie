@@ -9,8 +9,8 @@ use crate::theme::glyph::{
     GLYPH_UNCHECKED, GLYPH_UNSELECTED, GLYPH_X, INDICATOR_COLLAPSED, INDICATOR_ERROR, PANEL_CHAT, PANEL_INPUT,
     SCROLLBAR_THUMB, SCROLLBAR_TRACK,
 };
-use crate::theme::loader::{default_theme, minimal_fallback_theme};
-use crate::theme::{current_theme, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES};
+use crate::theme::loader::{default_theme, minimal_fallback_theme, validate_theme};
+use crate::theme::{current_theme, current_theme_name, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES};
 
 #[test]
 fn theme_cache_returns_same_instance() {
@@ -64,6 +64,29 @@ fn non_truecolor_quantizes_to_indexed_approximations() {
 }
 
 #[test]
+fn monochrome_caps_suppress_theme_colors_but_keep_rendering_available() {
+    let _lock = test_lock();
+    let caps = TermCaps { color_depth: crate::terminal::caps::ColorDepth::None, ..Default::default() };
+    set_current_theme_with_caps("runie", caps);
+    assert!(crate::theme::is_monochrome());
+    assert_eq!(crate::theme::color_accent(), ratatui::style::Color::Reset);
+    assert_eq!(crate::theme::color_bg(), ratatui::style::Color::Reset);
+    assert_eq!(crate::theme::style_agent().fg, Some(ratatui::style::Color::Reset));
+    set_current_theme_with_caps("runie", truecolor_caps());
+}
+
+#[test]
+fn limited_unicode_caps_use_ascii_feed_fallbacks() {
+    let _lock = test_lock();
+    let caps = TermCaps { unicode: false, ..truecolor_caps() };
+    set_current_theme_with_caps("runie", caps);
+    assert_eq!(crate::theme::rail_glyph(), "|");
+    assert_eq!(crate::theme::scrollbar_track_glyph(), "|");
+    assert_eq!(crate::theme::scrollbar_thumb_glyph(), "#");
+    set_current_theme_with_caps("runie", truecolor_caps());
+}
+
+#[test]
 fn quantization_is_idempotent() {
     let _lock = test_lock();
     set_current_theme_with_caps("runie", ansi256_caps());
@@ -78,7 +101,7 @@ fn quantization_is_idempotent() {
 #[test]
 fn builtin_theme_names_load_from_opaline() {
     let _lock = test_lock();
-    for name in BUILTIN_THEMES {
+    for name in BUILTIN_THEMES.iter().copied().filter(|name| !matches!(*name, "auto" | "system")) {
         set_current_theme(name);
         let theme = current_theme();
         assert!(
@@ -86,6 +109,75 @@ fn builtin_theme_names_load_from_opaline() {
             "theme {} should have tokens",
             name
         );
+    }
+    set_current_theme("runie");
+}
+
+#[test]
+fn auto_theme_alias_resolves_from_appearance_hint() {
+    let _lock = test_lock();
+    std::env::set_var("RUNIE_THEME_APPEARANCE", "light");
+    set_current_theme_with_caps("auto", truecolor_caps());
+    assert_eq!(current_theme_name(), "auto");
+    assert!(current_theme().color("bg.base").r > 200);
+    std::env::set_var("RUNIE_THEME_APPEARANCE", "dark");
+    set_current_theme_with_caps("system", truecolor_caps());
+    assert!(current_theme().color("bg.base").r < 100);
+    std::env::remove_var("RUNIE_THEME_APPEARANCE");
+    set_current_theme_with_caps("runie", truecolor_caps());
+}
+
+#[test]
+fn every_builtin_theme_supports_runie_feed_tokens() {
+    let _lock = test_lock();
+    let required = [
+        "accent.thinking",
+        "accent.plan",
+        "accent.feedback",
+        "accent.monitor",
+        "rail.running",
+        "rail.success",
+        "rail.error",
+        "rail.thinking",
+    ];
+    for name in BUILTIN_THEMES.iter().copied().filter(|name| *name != "auto" && *name != "system") {
+        set_current_theme(name);
+        let theme = current_theme();
+        for token in required {
+            assert!(theme.try_color(token).is_some(), "{name} missing {token}");
+        }
+    }
+    set_current_theme("runie");
+}
+
+#[test]
+fn every_builtin_theme_passes_renderer_contract() {
+    let _lock = test_lock();
+    for name in BUILTIN_THEMES {
+        set_current_theme_with_caps(name, truecolor_caps());
+        validate_theme(&current_theme()).unwrap_or_else(|error| panic!("{name}: {error}"));
+    }
+    set_current_theme("runie");
+}
+
+#[test]
+fn every_builtin_theme_has_stable_roles_at_each_terminal_depth() {
+    let _lock = test_lock();
+    let caps = [
+        TermCaps { color_depth: crate::terminal::caps::ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
+        TermCaps { color_depth: crate::terminal::caps::ColorDepth::ANSI256, mouse: MouseCapability::Legacy, ..Default::default() },
+        TermCaps { color_depth: crate::terminal::caps::ColorDepth::ANSI16, mouse: MouseCapability::None, ..Default::default() },
+        TermCaps { color_depth: crate::terminal::caps::ColorDepth::None, unicode: false, ..Default::default() },
+    ];
+    let required = ["text.primary", "text.dim", "border.unfocused", "border.focused", "bg.selection", "rail.running", "rail.success", "rail.error"];
+    for name in BUILTIN_THEMES.iter().copied().filter(|name| *name != "auto" && *name != "system") {
+        for cap in caps {
+            set_current_theme_with_caps(name, cap);
+            let theme = current_theme();
+            for role in required {
+                assert!(theme.try_color(role).is_some(), "{name} missing {role} at {:?}", cap.color_depth);
+            }
+        }
     }
     set_current_theme("runie");
 }

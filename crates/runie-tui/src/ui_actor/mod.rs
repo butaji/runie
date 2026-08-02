@@ -14,7 +14,7 @@ pub mod submit;
 pub use crate::ui_actor_agent_handles::{AgentActorHandle, AgentHandleBox, LeaderAgentActorHandle};
 
 use std::collections::HashMap;
-use std::time::Duration;
+use std::{io, time::Duration};
 
 use runie_agent::truncate::TruncationPolicy;
 use runie_agent::AgentCommand;
@@ -30,9 +30,11 @@ use crate::channels::EFFECT_FORWARDER_CHANNEL_CAPACITY;
 use crate::pace::PacedRenderer;
 use crate::terminal::caps::TermCaps;
 
-/// Animation frame rate: 60fps = ~16.67ms per frame.
-/// Public for testing.
-pub(crate) const ANIM_MS: u64 = 16;
+/// Resolve the single animation cadence used by the actor.
+pub(crate) fn animation_interval_ms(state: &AppState) -> u64 {
+    let fps = state.config().animation_fps.clamp(1, 60) as u64;
+    (1000 / fps).max(1)
+}
 
 /// Actor that owns the application state.
 pub struct UiActor {
@@ -332,7 +334,7 @@ impl UiActor {
             }
         }
 
-        let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
+        let mut anim = tokio::time::interval(Duration::from_millis(animation_interval_ms(&self.state)));
         self.state.ensure_fresh();
         let snap = self.build_paced_snapshot();
         let _ = self.render_tx.send(snap);
@@ -468,6 +470,17 @@ impl UiActor {
         // Track whether `Done` was just applied so `agent_running()` stays true until
         // `TurnCompleted`/`Abort`. Done clears `turn_active` but must not clear the guard.
         self.handle_input_event(&evt).await;
+
+        if matches!(&evt, Event::ShowDiagnostics) {
+            self.state.add_system_msg(format!(
+                "Terminal capabilities: {}",
+                self.caps.diagnostics_summary()
+            ));
+        }
+        if let Event::TurnErrored { message, .. } = &evt {
+            let mut stdout = io::stdout();
+            let _ = crate::terminal_setup::notify_terminal(&mut stdout, &format!("Runie turn failed: {message}"));
+        }
 
         if !matches!(&evt, Event::InputChanged { .. }) {
             self.update_paced_renderer(&evt);
@@ -933,7 +946,9 @@ impl UiActor {
             if effective.trim().contains(' ') || !effective.trim_start().starts_with('/') {
                 self.state.slash_close();
             } else {
-                self.state.open_slash_dropdown_for(effective.trim());
+                // Slash commands are hosted by the shared command palette;
+                // never reopen the legacy inline dropdown.
+                self.state.slash_close();
                 if let Some(name) = self
                     .state
                     .view()

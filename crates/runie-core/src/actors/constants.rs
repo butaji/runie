@@ -7,8 +7,9 @@
 /// Sized for burst of concurrent commands without significant backpressure.
 pub const LEADER_CMD_CHANNEL_CAPACITY: usize = 32;
 
-/// Shutdown timeout for actors and JoinHandle await in graceful shutdown paths.
-pub const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
+/// Shutdown grace period for actors and JoinHandle await in graceful shutdown
+/// paths. Remaining tasks are aborted and drained after this bound.
+pub const SHUTDOWN_TIMEOUT_SECS: u64 = 1;
 
 /// Debounce interval for config file watcher.
 pub const CONFIG_WATCHER_DEBOUNCE_MS: u64 = 300;

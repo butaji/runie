@@ -5,7 +5,7 @@
 use ratatui::{
     layout::Rect,
     style::Style,
-    text::{Line, Span, Text},
+    text::{Line, Text},
     widgets::{Clear, Paragraph},
     Frame,
 };
@@ -127,42 +127,11 @@ pub fn slash_dropdown(f: &mut Frame, snap: &Snapshot) {
         _ => return,
     };
     let count = dd.matches.len().min(model_slash_max_rows());
-    let panel_height = (count + 2) as u16;
-    let area = f.area();
-    // Anchor at the top, below the context header: the input box absorbs all
-    // leftover vertical space, so a bottom-anchored panel would overlap it.
-    let y = 1u16;
-    if area.height < panel_height + 3 {
-        return;
-    }
-    let rect = Rect {
-        x: area.x + 1,
-        y,
-        width: area.width.saturating_sub(2).min(60),
-        height: panel_height,
-    };
-
-    clear_panel_bg(f, rect);
-    // Top border with the match-count hint right-aligned.
-    let top = format!("{}{}", "─".repeat(rect.width as usize - 3), format!(" {} ", dd.matches.len()));
-    f.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled(top, Style::new().fg(color_bg_panel())),
-        ])),
-        Rect { x: rect.x, y: rect.y, width: rect.width, height: 1 },
-    );
-    f.render_widget(
-        Paragraph::new(Line::from("─".repeat(rect.width as usize))).style(Style::new().fg(color_bg_panel())),
-        Rect { x: rect.x, y: rect.y + rect.height - 1, width: rect.width, height: 1 },
-    );
-
-    let inner = Rect {
-        x: rect.x + 1,
-        y: rect.y + 1,
-        width: rect.width.saturating_sub(2),
-        height: rect.height.saturating_sub(2),
-    };
-    let lines: Vec<Line<'static>> = dd
+    // Slash-triggered command selection is the same command palette as
+    // Ctrl+P. Keep the shell identical; the match count belongs in the list,
+    // not in a second window title variant.
+    let inner = panel::setup_popup(f, " Commands ");
+    let mut lines: Vec<Line<'static>> = dd
         .matches
         .iter()
         .take(count)
@@ -178,6 +147,8 @@ pub fn slash_dropdown(f: &mut Frame, snap: &Snapshot) {
             Line::from(format!("{prefix}/{}  {}", m.name, m.desc)).style(style)
         })
         .collect();
+    lines.push(Line::from(""));
+    lines.push(Line::from("↑↓ navigate · enter select · esc close").style(style_hint()));
     f.render_widget(Paragraph::new(Text::from(lines)), inner);
 }
 

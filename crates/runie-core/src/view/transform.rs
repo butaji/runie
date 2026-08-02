@@ -503,20 +503,23 @@ impl LazyCache {
     /// feed-navigation expansion reveals its body without changing the
     /// global collapse state used by tool sections.
     fn maybe_collapse_thought(elem: Element, state: &AppState, post_index: usize) -> Element {
+        // `all_collapsed` is historically named from the collapse command,
+        // but the feed-wide toggle's expanded state is represented by true
+        // throughout the projection (user/tool/subagent rows use the same
+        // convention). Honor it here as well as per-post expansion.
         if state.view().expanded_posts.contains(&post_index) {
             return elem;
         }
         match elem {
             Element::ThoughtMarker { content, timestamp } => {
-                let first_line = content.lines().next().unwrap_or(&content).to_owned();
-                Element::thought_summary(first_line, Self::parse_thought_dur(&content)).at(timestamp)
+                let summary = content.lines().next().unwrap_or(&content).to_string();
+                Element::thought_summary(summary, Self::parse_thought_dur(&content)).at(timestamp)
             }
             Element::AnthropicThinking { content, signature, redacted, timestamp } => {
-                let first_line = content.lines().next().unwrap_or(&content).to_owned();
                 let summary = if redacted {
                     format!("[Redacted thinking - {} chars]", content.len())
                 } else {
-                    first_line
+                    content.clone()
                 };
                 Element::AnthropicThinking { content: summary, signature, redacted, timestamp }
             }

@@ -49,7 +49,7 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
     state.config_mut().model_source = runie_core::model::ModelSource::UserOverride;
 
     let bus_rx = bus.subscribe();
-    let (submit_tx, submit_rx) = tokio::sync::mpsc::channel(16);
+    let (_submit_tx, submit_rx) = tokio::sync::mpsc::channel(16);
 
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
@@ -82,9 +82,9 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // Advance virtual time to let UiActor drain and enter select! loop.
-    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
-    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(100)).await;
+    // Let UiActor drain and enter its select! loop without pausing Tokio time;
+    // the bounded event wait below must continue to make real progress.
+    tokio::task::yield_now().await;
 
     // Publish a subsequent event that WILL be re-emitted so we know the actor
     // is alive and processing events from the select! loop.
@@ -110,9 +110,9 @@ async fn uiactor_drains_buffered_config_loaded_before_first_snapshot() {
         "UiActor should process InputChanged after drain loop"
     );
 
-    // Shut down cleanly.
+    // The test owns the UI task; abort it after asserting the routing result.
     drop(shutdown_rx);
-    let _ = submit_tx.send(Event::Quit).await;
+    ui_handle.abort();
     let _ = ui_handle.await;
     leader.shutdown().await;
 }
@@ -134,7 +134,7 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
 
     // Subscribe before UiActor starts — buffer is empty.
     let bus_rx = bus.subscribe();
-    let (submit_tx, submit_rx) = tokio::sync::mpsc::channel(16);
+    let (_submit_tx, submit_rx) = tokio::sync::mpsc::channel(16);
 
     let (kb_tx, _kb_rx) = tokio::sync::watch::channel(Default::default());
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
@@ -162,9 +162,8 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
         ui.run_with_external_rx(submit_rx).await;
     });
 
-    // Advance virtual time for UiActor to enter select! loop.
-    let _guard = runie_testing::TestTimeGuard::new().expect("should support time pausing");
-    runie_testing::TestTimeGuard::advance(std::time::Duration::from_millis(50)).await;
+    // Let UiActor enter its select! loop without pausing Tokio time.
+    tokio::task::yield_now().await;
 
     // Publish an event — UiActor should process it.
     bus.publish(Event::Input('x'));
@@ -188,9 +187,9 @@ async fn uiactor_drain_loop_handles_empty_buffer() {
         "UiActor should process events even with empty initial buffer"
     );
 
-    // Shut down.
+    // The test owns the UI task; abort it after asserting the routing result.
     drop(shutdown_rx);
-    let _ = submit_tx.send(Event::Quit).await;
+    ui_handle.abort();
     let _ = ui_handle.await;
     leader.shutdown().await;
 }

@@ -119,6 +119,12 @@ pub struct Snapshot {
     pub theme_name: String,
     /// Global animation frame counter for deterministic overlays.
     pub animation_frame: u32,
+    /// When true, animated renderers must use their resting frame/color.
+    pub reduced_motion: bool,
+    /// Configured rows per active-feed accent wave cycle.
+    pub animation_wave_rows: u16,
+    /// Configured optional right-side feed slack columns.
+    pub feed_right_slack: u8,
     /// Current thinking level for status display
     pub thinking_level: crate::model::ThinkingLevel,
     /// Read-only mode active — only safe tools exposed to LLM

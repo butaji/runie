@@ -201,6 +201,26 @@ fn unicode_defaults_to_true() {
     assert!(detect_unicode(&env));
 }
 
+#[test]
+fn diagnostics_summary_includes_all_capability_axes() {
+    let caps = TermCaps {
+        color_depth: ColorDepth::ANSI256,
+        truecolor: false,
+        hyperlinks: true,
+        mouse: MouseCapability::Sgr,
+        clipboard: true,
+        focus_tracking: false,
+        unicode: true,
+    };
+    let summary = caps.diagnostics_summary();
+    assert!(summary.contains("color=ANSI256"));
+    assert!(summary.contains("unicode=true"));
+    assert!(summary.contains("hyperlinks=true"));
+    assert!(summary.contains("mouse=Sgr"));
+    assert!(summary.contains("clipboard=true"));
+    assert!(summary.contains("focus_tracking=false"));
+}
+
 // ── Full detection tests ─────────────────────────────────────────────────────
 
 #[cfg(test)]

@@ -8,15 +8,27 @@ use ratatui::{
 };
 use runie_core::Element;
 use runie_core::Snapshot;
-use crate::theme::{blend_color, color_bg, color_rail_running, wave_brightness, RAIL_GLYPH};
+use crate::theme::{blend_color, color_bg, color_rail_running, wave_brightness};
+use crate::theme::{monitor_glyph, GLYPH_STATUS_CANCELLED, GLYPH_STATUS_COMPLETED, GLYPH_STATUS_FAILED, GLYPH_STATUS_QUEUED, GLYPH_STATUS_RUNNING};
 
 const FEED_WAVE_SPEED: f32 = 0.15;
-const FEED_WAVE_ROWS: u16 = 32;
+
+/// One lifecycle-to-chrome mapping shared by workflow-like feed elements.
+fn lifecycle_visual(status: &str) -> Option<(&'static str, ratatui::style::Color, bool)> {
+    match status {
+        "running" | "started" => Some((GLYPH_STATUS_RUNNING, color_rail_running(), true)),
+        "completed" | "done" => Some((GLYPH_STATUS_COMPLETED, crate::theme::color_rail_success(), false)),
+        "failed" | "killed" => Some((GLYPH_STATUS_FAILED, crate::theme::color_rail_error(), false)),
+        "cancelled" => Some((GLYPH_STATUS_CANCELLED, crate::theme::color_rail_error(), false)),
+        "paused" => Some((GLYPH_STATUS_QUEUED, crate::theme::color_warning(), false)),
+        _ => None,
+    }
+}
 
 pub(crate) mod lines;
 pub(crate) mod nav;
 
-pub(crate) use lines::{build_lines_with_mapping, estimate_element_tokens};
+pub(crate) use lines::{build_lines_with_mapping, estimate_element_tokens, sticky_header_row_for_mode};
 
 pub(crate) fn render_messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     if snap.elements.is_empty() {
@@ -39,18 +51,96 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     // Reserve 2 columns of right-side slack, the leading feed indent (1 col),
     // and the accent rail column (1 col) so post content lands at column 3
     // while timestamps keep their right edge.
-    let content_width = runie_core::layout::feed_content_width(area.width);
+    let content_width = runie_core::layout::feed_content_width_with_slack(
+        area.width,
+        snap.compact_layout,
+        snap.feed_right_slack,
+    );
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 
     // Render lines with user message backgrounds applied directly to lines
-    render_paragraph_with_user_backgrounds(f, snap, area, lines, offset, &row_to_element);
+    render_paragraph_with_user_backgrounds(f, snap, area, &lines, offset, &row_to_element);
+
+    if let Some((header_row, _)) = sticky_header_row_for_mode(&row_to_element, offset as usize, snap.follow_mode) {
+        render_sticky_header(f, area, &lines[header_row]);
+    }
+
+    // Rails belong to the feed edge, like the vim-selection marker, rather
+    // than consuming a content column or competing with the scrollbar.
+    draw_feed_edge_rails(f, snap, area, offset, &row_to_element);
 
     if snap.vim_nav_mode {
         nav::highlight_selected_post(f, snap, area, &row_to_element, offset);
     }
 
     render_scrollbar_if_needed(f, area, row_to_element.len(), offset, height, snap.follow_mode);
+    render_follow_affordance(f, snap, area, height);
+}
+
+fn render_sticky_header(f: &mut Frame, area: Rect, line: &Line<'_>) {
+    if area.height == 0 || area.width < 2 {
+        return;
+    }
+    let header = line_to_owned(line).style(crate::theme::style_hint());
+    f.render_widget(
+        Paragraph::new(header),
+        Rect::new(area.x, area.y, area.width.saturating_sub(1), 1),
+    );
+}
+
+fn draw_feed_edge_rails(f: &mut Frame, snap: &Snapshot, area: Rect, offset: u16, row_to_element: &[usize]) {
+    for row_offset in 0..area.height as usize {
+        let abs_row = offset as usize + row_offset;
+        let Some(&elem_idx) = row_to_element.get(abs_row) else { continue };
+        let element_row = element_local_row(row_to_element, abs_row, elem_idx);
+        let color = tool_feed_chrome(snap, elem_idx, element_row)
+            .map(|(c, _, _)| c)
+            .or_else(|| subagent_feed_chrome(snap, elem_idx, element_row).map(|(c, _, _)| c))
+            .or_else(|| background_task_feed_chrome(snap, elem_idx, element_row).map(|(c, _, _)| c))
+            .or_else(|| workflow_feed_chrome(snap, elem_idx, element_row).map(|(c, _, _)| c));
+        if let Some(color) = color {
+            let cell = &mut f.buffer_mut()[(area.x.saturating_sub(1), area.y + row_offset as u16)];
+            // Match the vim-selection edge marker exactly: one thin block in
+            // the column immediately left of the feed viewport.
+            let _ = cell.set_char('▎');
+            let _ = cell.set_fg(color);
+        }
+    }
+}
+
+/// Shared prefix geometry for every lifecycle-bearing feed element.
+/// The edge rail is painted separately; this function owns only the content
+/// column and marker so tools, workers, workflows, and subagents cannot drift.
+fn push_lifecycle_prefix(spans: &mut Vec<Span<'static>>, first_row: bool, marker: &str, color: ratatui::style::Color) {
+    if first_row {
+        spans.push(Span::raw(crate::theme::FEED_INDENT));
+        if marker == "◆" {
+            spans.push(Span::raw(" "));
+        }
+        spans.push(Span::styled(marker.to_owned(), ratatui::style::Style::default().fg(color)));
+        spans.push(Span::raw(" "));
+    }
+}
+
+/// Tell the user when new feed content is below the protected reading
+/// position. `scroll` is the distance from the newest tail in core's
+/// bottom-oriented scroll model, so it is also the unread row count.
+fn render_follow_affordance(f: &mut Frame, snap: &Snapshot, area: Rect, height: usize) {
+    if snap.follow_mode || snap.scroll == 0 || height == 0 {
+        return;
+    }
+    let lines_below = snap.scroll.min(usize::MAX / 2);
+    let text = format!("{lines_below} lines below · press End/G to follow");
+    let width = area.width.saturating_sub(2).max(1);
+    let line = ratatui::text::Line::from(ratatui::text::Span::styled(
+        text,
+        crate::theme::style_hint(),
+    ));
+    f.render_widget(
+        ratatui::widgets::Paragraph::new(line),
+        Rect::new(area.x, area.y + area.height.saturating_sub(1), width, 1),
+    );
 }
 
 /// Render lines with user message backgrounds applied to the lines.
@@ -64,7 +154,7 @@ fn render_paragraph_with_user_backgrounds(
     f: &mut Frame,
     snap: &Snapshot,
     area: Rect,
-    lines: Vec<Line<'_>>,
+    lines: &[Line<'_>],
     offset: u16,
     row_to_element: &[usize],
 ) {
@@ -95,42 +185,69 @@ fn render_paragraph_with_user_backgrounds(
             } else {
                 line_to_owned(line)
             };
-            let mut spans = vec![Span::raw(crate::theme::FEED_INDENT)];
-            if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx, element_row) {
-                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+            let mut spans = Vec::new();
+            let mut has_rail = false;
+            if let Some((_rail_color, bullet, bullet_color)) = thinking_feed_chrome(snap, elem_idx, element_row) {
+                // Thought rows use the lifecycle marker without a persistent
+                // rail. Grok reserves the vertical rail for active tool and
+                // worker grouping; a rail on completed thoughts reads like a
+                // stray border.
                 if is_first_element_row {
+                    spans.push(Span::raw(crate::theme::FEED_INDENT));
                     spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
                     spans.push(Span::raw(" "));
                 }
+            }
+            if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx, element_row) {
+                has_rail = true;
+                let _ = rail_color;
+                push_lifecycle_prefix(&mut spans, is_first_element_row, bullet, bullet_color);
             }
             if let Some((rail_color, bullet, bullet_color)) = subagent_feed_chrome(snap, elem_idx, element_row) {
-                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
-                if is_first_element_row {
-                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
-                    spans.push(Span::raw(" "));
-                }
+                has_rail = true;
+                let _ = rail_color;
+                push_lifecycle_prefix(&mut spans, is_first_element_row, bullet, bullet_color);
             }
             if let Some((rail_color, bullet, bullet_color)) = background_task_feed_chrome(snap, elem_idx, element_row) {
-                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
-                if is_first_element_row {
-                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
-                    spans.push(Span::raw(" "));
-                }
+                has_rail = true;
+                let _ = rail_color;
+                push_lifecycle_prefix(&mut spans, is_first_element_row, bullet, bullet_color);
             }
             if let Some((rail_color, bullet, bullet_color)) = workflow_feed_chrome(snap, elem_idx, element_row) {
-                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
-                if is_first_element_row {
-                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
-                    spans.push(Span::raw(" "));
-                }
+                has_rail = true;
+                let _ = rail_color;
+                push_lifecycle_prefix(&mut spans, is_first_element_row, bullet, bullet_color);
             }
             // Grok BTW blocks have the shared default bullet but no accent
             // rail. Keep it on the first header row only.
             if matches!(snap.elements.get(elem_idx), Some(Element::Btw { .. })) && is_first_element_row {
+                spans.push(Span::raw(crate::theme::FEED_INDENT));
                 spans.push(Span::raw("◆ "));
             }
-            spans.extend(owned.spans);
-            Line::from(spans).style(owned.style)
+            if has_rail && !is_first_element_row {
+                spans.push(Span::raw(crate::theme::FEED_INDENT));
+                spans.push(Span::raw(" "));
+            } else if spans.is_empty() {
+                spans.push(Span::raw(crate::theme::FEED_INDENT));
+            }
+            let mut content_spans = owned.spans;
+            if matches!(snap.elements.get(elem_idx), Some(Element::ToolDone { .. }))
+                && !is_first_element_row
+            {
+                let output_fg = crate::theme::style_tool_output().fg.unwrap_or_else(crate::theme::color_dim);
+                for span in &mut content_spans {
+                    span.style = span.style.fg(output_fg);
+                }
+            }
+            spans.extend(content_spans);
+            let line_style = if matches!(snap.elements.get(elem_idx), Some(Element::ToolDone { .. }))
+                && !is_first_element_row
+            {
+                crate::theme::style_tool_output().bg(crate::theme::color_code_bg())
+            } else {
+                owned.style
+            };
+            Line::from(spans).style(line_style)
         })
         .collect();
 
@@ -160,6 +277,34 @@ fn render_paragraph_with_user_backgrounds(
     }
 }
 
+/// Thinking is an active feed block too: keep the body text stable while its
+/// shared rail carries the only animation. Thought summaries are completed
+/// and therefore use a static success marker.
+fn thinking_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+    _row_offset: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    match snap.elements.get(elem_idx) {
+        Some(Element::Thinking { .. }) => {
+            let color = crate::theme::color_rail_running();
+            let glyph = if snap.reduced_motion {
+                GLYPH_STATUS_RUNNING
+            } else {
+                monitor_glyph((snap.animation_frame / crate::theme::MONITOR_PULSE_DIVISOR) as usize)
+            };
+            Some((color, glyph, color))
+        }
+        Some(Element::ThoughtSummary { .. }) => {
+            // Completed reasoning is historical context, not a successful
+            // operation. Keep its marker and rail quiet like the summary.
+            let color = crate::theme::color_dim();
+            Some((color, GLYPH_STATUS_COMPLETED, color))
+        }
+        _ => None,
+    }
+}
+
 /// Return the row within the current element, rather than the row within the
 /// viewport. Grok's accent wave is attached to the block and must not jump
 /// phase when scrolling changes the viewport origin.
@@ -168,6 +313,15 @@ fn element_local_row(row_to_element: &[usize], abs_row: usize, elem_idx: usize) 
         .get(..=abs_row)
         .and_then(|rows| rows.iter().rposition(|&idx| idx != elem_idx))
         .map_or(abs_row, |previous| abs_row.saturating_sub(previous + 1))
+}
+
+fn feed_wave(snap: &Snapshot, row: u16) -> f32 {
+    if snap.reduced_motion {
+        // Keep the active rail visible, but remove temporal/spatial motion.
+        1.0
+    } else {
+        wave_brightness(snap.animation_frame, row, snap.animation_wave_rows.max(1), FEED_WAVE_SPEED)
+    }
 }
 
 /// Shared Grok-style tool chrome: every rendered tool row receives the accent
@@ -179,18 +333,13 @@ fn tool_feed_chrome(
 ) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
     match snap.elements.get(elem_idx) {
         Some(Element::ToolRunning { .. }) => {
-            let wave = wave_brightness(
-                snap.animation_frame,
-                row_offset.min(u16::MAX as usize) as u16,
-                FEED_WAVE_ROWS,
-                FEED_WAVE_SPEED,
-            );
+            let wave = feed_wave(snap, row_offset.min(u16::MAX as usize) as u16);
             let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
-            Some((color, "◆", color))
+            Some((color, GLYPH_STATUS_RUNNING, color))
         }
         Some(Element::ToolDone { error, .. }) => {
             let color = if *error { crate::theme::color_rail_error() } else { crate::theme::color_rail_success() };
-            Some((color, if *error { "✗" } else { "◆" }, color))
+            Some((color, if *error { GLYPH_STATUS_FAILED } else { "◆" }, color))
         }
         _ => None,
     }
@@ -207,23 +356,18 @@ fn subagent_feed_chrome(
     use runie_core::model::PatternWorkerStatus as Status;
     match status {
         Status::Running => {
-            let wave = wave_brightness(
-                snap.animation_frame,
-                row_offset.min(u16::MAX as usize) as u16,
-                FEED_WAVE_ROWS,
-                FEED_WAVE_SPEED,
-            );
+            let wave = feed_wave(snap, row_offset.min(u16::MAX as usize) as u16);
             let color = blend_color(color_bg(), crate::theme::color_rail_running(), wave)
                 .unwrap_or_else(crate::theme::color_rail_running);
-            Some((color, "◆", color))
+            Some((color, GLYPH_STATUS_RUNNING, color))
         }
         Status::Completed => {
             let color = crate::theme::color_rail_success();
-            Some((color, "◆", color))
+            Some((color, GLYPH_STATUS_COMPLETED, color))
         }
         Status::Failed | Status::Cancelled => {
             let color = crate::theme::color_rail_error();
-            Some((color, "✗", color))
+            Some((color, if matches!(status, Status::Cancelled) { GLYPH_STATUS_CANCELLED } else { GLYPH_STATUS_FAILED }, color))
         }
     }
 }
@@ -237,26 +381,13 @@ fn background_task_feed_chrome(
     let Some(Element::BackgroundTask { status, .. }) = snap.elements.get(elem_idx) else {
         return None;
     };
-    match status.as_str() {
-        "started" | "running" => {
-            let wave = wave_brightness(
-                snap.animation_frame,
-                row_offset.min(u16::MAX as usize) as u16,
-                FEED_WAVE_ROWS,
-                FEED_WAVE_SPEED,
-            );
+    let (marker, base_color, running) = lifecycle_visual(status)?;
+    if running {
+            let wave = feed_wave(snap, row_offset.min(u16::MAX as usize) as u16);
             let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
-            Some((color, "◆", color))
-        }
-        "completed" | "done" => {
-            let color = crate::theme::color_rail_success();
-            Some((color, "◆", color))
-        }
-        "failed" | "killed" | "cancelled" => {
-            let color = crate::theme::color_rail_error();
-            Some((color, "✗", color))
-        }
-        _ => None,
+            Some((color, marker, color))
+    } else {
+        Some((base_color, marker, base_color))
     }
 }
 
@@ -269,30 +400,13 @@ fn workflow_feed_chrome(
     let Some(Element::Workflow { status, .. }) = snap.elements.get(elem_idx) else {
         return None;
     };
-    match status.as_str() {
-        "running" => {
-            let wave = wave_brightness(
-                snap.animation_frame,
-                row_offset.min(u16::MAX as usize) as u16,
-                FEED_WAVE_ROWS,
-                FEED_WAVE_SPEED,
-            );
+    let (marker, base_color, running) = lifecycle_visual(status)?;
+    if running {
+            let wave = feed_wave(snap, row_offset.min(u16::MAX as usize) as u16);
             let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
-            Some((color, "◆", color))
-        }
-        "done" | "completed" => {
-            let color = crate::theme::color_rail_success();
-            Some((color, "◆", color))
-        }
-        "failed" | "cancelled" => {
-            let color = crate::theme::color_rail_error();
-            Some((color, "✗", color))
-        }
-        "paused" => {
-            let color = crate::theme::color_warning();
-            Some((color, "◆", color))
-        }
-        _ => None,
+            Some((color, marker, color))
+    } else {
+        Some((base_color, marker, base_color))
     }
 }
 
@@ -460,14 +574,15 @@ mod tests {
         let mut snap = Snapshot {
             elements: Arc::new([element]),
             animation_frame: 7,
+            animation_wave_rows: 32,
             ..Default::default()
         };
 
-        let row_colors = (0..FEED_WAVE_ROWS as usize)
+        let row_colors = (0..snap.animation_wave_rows as usize)
             .map(|row| tool_feed_chrome(&snap, 0, row).expect("running tool chrome").0)
             .collect::<std::collections::HashSet<_>>();
-        let row_wave = (0..FEED_WAVE_ROWS)
-            .map(|row| wave_brightness(snap.animation_frame, row, FEED_WAVE_ROWS, FEED_WAVE_SPEED))
+        let row_wave = (0..snap.animation_wave_rows)
+            .map(|row| wave_brightness(snap.animation_frame, row, snap.animation_wave_rows.max(1), FEED_WAVE_SPEED))
             .collect::<Vec<_>>();
         assert!(
             row_wave.windows(2).any(|pair| (pair[0] - pair[1]).abs() > f32::EPSILON),
@@ -489,7 +604,7 @@ mod tests {
 
     #[test]
     fn background_task_feed_chrome_matches_grok_lifecycle_states() {
-        let states = [("started", "◆"), ("completed", "◆"), ("failed", "✗"), ("killed", "✗")];
+        let states = [("started", GLYPH_STATUS_RUNNING), ("completed", GLYPH_STATUS_COMPLETED), ("failed", GLYPH_STATUS_FAILED), ("killed", GLYPH_STATUS_FAILED)];
         for (status, bullet) in states {
             let snap = Snapshot {
                 elements: Arc::new([Element::BackgroundTask {
@@ -513,11 +628,11 @@ mod tests {
     #[test]
     fn workflow_feed_chrome_matches_grok_lifecycle_states() {
         let states = [
-            ("running", "◆"),
-            ("done", "◆"),
-            ("failed", "✗"),
-            ("cancelled", "✗"),
-            ("paused", "◆"),
+            ("running", GLYPH_STATUS_RUNNING),
+            ("done", GLYPH_STATUS_COMPLETED),
+            ("failed", GLYPH_STATUS_FAILED),
+            ("cancelled", GLYPH_STATUS_CANCELLED),
+            ("paused", GLYPH_STATUS_QUEUED),
         ];
         for (status, bullet) in states {
             let snap = Snapshot {

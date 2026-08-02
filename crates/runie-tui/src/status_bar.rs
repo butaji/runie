@@ -11,7 +11,7 @@ use ratatui::{
 use crate::theme::{
     blend_color, color_bg, color_bg_panel, color_error, color_fg, color_fg_mid, color_warning,
     monitor_glyph, style_status_idle,
-    style_timestamp, GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
+    GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
 };
 use crate::ui::{estimate_element_tokens, hstack, progress_bar_spans};
 use runie_core::Snapshot;
@@ -21,7 +21,7 @@ use unicode_width::UnicodeWidthStr;
 ///
 /// Grok parity: top row above the feed showing current directory and context
 /// window usage. Updates live as context grows.
-/// Example: `/private/tmp …                              18K / 500K`
+/// Example: `/private/tmp …                              18k/500k 3%`
 pub fn render_context_header(f: &mut Frame, snap: &Snapshot, area: Rect) {
     if !snap.has_models || area.width < 10 || area.height == 0 {
         return;
@@ -35,14 +35,14 @@ pub fn render_context_header(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let left = format!("{}", cwd);
 
     // Right: token usage
-    let right = format!("{} / {}", used_k, limit);
+    let right = format!("{}/{} {}%", used_k, limit, usage.percent);
 
     let line = Line::from(vec![
-        Span::styled(left, style_timestamp()),
+        Span::styled(left, style_status_idle()),
         Span::raw(" "),
-        Span::styled(right, style_timestamp()),
+        Span::styled(right, style_status_idle()),
     ]);
-    f.render_widget(Paragraph::new(line).style(style_timestamp()), area);
+    f.render_widget(Paragraph::new(line).style(style_status_idle()), area);
 }
 pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     if !snap.has_models || area.width < 10 || area.height == 0 {
@@ -61,7 +61,7 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let h = hstack(area, &[Constraint::Min(0), Constraint::Length(capped)]);
 
     render_left(f, snap, h[0]);
-    f.render_widget(Paragraph::new(Line::from(right_spans)).style(style_timestamp()), h[1]);
+    f.render_widget(Paragraph::new(Line::from(right_spans)).style(style_status_idle()), h[1]);
 }
 
 /// Render the left side of the status bar. The spinner frame is taken from
@@ -362,7 +362,7 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
 /// the context gauge (`12K / 128K 3% ⛀`), swapping to a progress bar +
 /// percentage when context detail is pinned (`/context-detail`).
 pub(crate) fn build_right_spans(snap: &Snapshot) -> Vec<Span<'static>> {
-    let idle_style = style_timestamp();
+    let idle_style = style_status_idle();
     if !snap.turn_active {
         if let Some(spans) = build_context_item(snap, snap.context_detail_pinned) {
             return spans;
@@ -539,8 +539,9 @@ fn context_gradient_color(pct: f64) -> Color {
 /// - `expanded = false` (default): `{fmt_tokens(used)} / {fmt_tokens(limit)}`
 ///   in the urgency gradient, right-padded to ≥6 columns.
 /// - `expanded = true` (pinned): a `bar_width`-cell 1/8-block progress bar +
-///   ` ` + `fmt_pct5(pct)`; `bar_width = total_width - 6` so the expanded
-///   line is exactly as wide as the default line (width invariant).
+///   ` ` + `fmt_pct5(pct)` + a chess-piece indicator; the bar width reserves
+///   the percentage gap and the two fixed suffix columns so the expanded line
+///   is exactly as wide as the default line (width invariant).
 /// - Returns `None` when the limit is unknown (item omitted, as in Grok).
 pub(crate) fn build_context_item(snap: &Snapshot, expanded: bool) -> Option<Vec<Span<'static>>> {
     let usage = context_usage(snap);
@@ -551,24 +552,19 @@ pub(crate) fn build_context_item(snap: &Snapshot, expanded: bool) -> Option<Vec<
     let gradient = context_gradient_color(pct);
     let piece = context_piece(usage.percent);
 
-    let text = format!(
-        "{} / {}",
-        fmt_tokens(usage.used as u64),
-        fmt_tokens(usage.limit as u64)
-    );
+    let text = format!("{}/{} {}%", format_k(usage.used), usage.limit_k(), usage.percent);
     let natural_width = UnicodeWidthStr::width(text.as_str()) as u16;
-    let total_width = natural_width.max(BAR_PCT_GAP + PCT_WIDTH);
+    const EXPANDED_SUFFIX_WIDTH: u16 = 2; // separator + chess-piece indicator
+    let total_width = natural_width.max(BAR_PCT_GAP + PCT_WIDTH + EXPANDED_SUFFIX_WIDTH);
 
     if !expanded {
         let padded = format!("{text:<width$}", width = total_width as usize);
         return Some(vec![
-            Span::styled(padded, Style::new().fg(gradient)),
-            Span::raw(" "),
-            Span::raw(piece.to_string()),
+            Span::styled(padded, style_status_idle()),
         ]);
     }
 
-    let bar_width = total_width - (BAR_PCT_GAP + PCT_WIDTH);
+    let bar_width = total_width - (BAR_PCT_GAP + PCT_WIDTH + EXPANDED_SUFFIX_WIDTH);
     let track = color_bg_panel();
     let mut spans = progress_bar_spans(bar_width, (pct / 100.0) as f32, gradient, track);
     spans.push(Span::styled(" ", Style::new().bg(color_bg())));
@@ -736,9 +732,9 @@ mod tests {
             .iter()
             .map(|s| s.content.as_ref())
             .collect::<String>();
-        // Minimum width = BAR_PCT_GAP + PCT_WIDTH = 6 (Grok degenerate rule).
+        // Minimum width reserves the percentage and fixed indicator suffix.
         assert!(
-            UnicodeWidthStr::width(default_wide.as_str()) >= 6,
+            UnicodeWidthStr::width(default_wide.as_str()) >= 8,
             "default form must be padded to >= 6 cols; got '{default_wide}'"
         );
         assert_eq!(

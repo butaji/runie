@@ -263,6 +263,7 @@ fn pageup_scrolls_by_five_lines() {
 
     state.update(Event::PageUp);
     assert_eq!(state.view.scroll, 10, "PageUp should accumulate");
+    assert!(!state.view.follow_mode, "PageUp must detach from tail following");
 }
 
 #[test]
@@ -289,6 +290,27 @@ fn pagedown_scrolls_down_by_five_lines() {
 
     state.update(Event::PageDown);
     assert_eq!(state.view.scroll, 10, "PageDown should accumulate");
+}
+
+#[test]
+fn page_down_to_tail_reengages_following() {
+    let mut state = fresh_state();
+    for i in 0..30 {
+        state.session.messages.push(runie_core::model::ChatMessage {
+            role: runie_core::model::Role::User,
+            parts: vec![Part::Text { content: format!("msg{i}") }],
+            timestamp: i as f64,
+            id: format!("u{i}"),
+            ..Default::default()
+        });
+    }
+    state.refresh_after_message_change();
+    state.view.scroll = 3;
+    state.view.follow_mode = false;
+
+    state.update(Event::PageDown);
+    assert_eq!(state.view.scroll, 0);
+    assert!(state.view.follow_mode, "reaching the tail must re-engage following");
 }
 
 #[test]

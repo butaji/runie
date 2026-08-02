@@ -8,9 +8,9 @@ use crate::theme::{
     blend_color, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
     color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
     color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent, style_feed_timestamp,
-    color_agent_text, style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
+    color_agent_text, rail_glyph, style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
     style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND,
-    GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, RAIL_GLYPH,
+    GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -46,18 +46,12 @@ pub fn render_thinking() -> Vec<Line<'static>> {
     vec![Line::from("Thinking…").style(style_thinking())]
 }
 
-/// Number of thought body lines to show in truncated (default) mode.
-const THOUGHT_TRUNCATED_LINES: usize = 3;
-
-/// Ellipsis line shown between header and last N truncated lines.
-const ELLIPSIS_LINE: &str = "  …";
-
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
     let style = style_thought();
     let first_line = content.lines().next().unwrap_or(content);
     // Grok-style summary: bold "Thought" + plain " for Xs", all dim.
-    // Truncated default: if body lines > THOUGHT_TRUNCATED_LINES, show
-    // header + `…` + last THOUGHT_TRUNCATED_LINES lines.
+    // Collapsed thoughts are summary-only; the full reasoning body is
+    // rendered by the expanded ThoughtMarker path.
     let header = match first_line.strip_prefix("◆ ") {
         Some(rest) => match rest.split_once(' ') {
             Some((word, tail)) => vec![Line::from(vec![
@@ -71,36 +65,7 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
         None => vec![Line::from(first_line.to_owned()).style(style)],
     };
 
-    // Collect body lines (everything after the first line).
-    let body_lines: Vec<&str> = content.lines().skip(1).collect();
-    if body_lines.is_empty() {
-        return header;
-    }
-
-    // Truncated default mode: show `…` + last THOUGHT_TRUNCATED_LINES body lines.
-    let mut lines = header;
-    if body_lines.len() > THOUGHT_TRUNCATED_LINES {
-        lines.push(Line::from(ELLIPSIS_LINE).style(style));
-        for line in body_lines.iter().rev().take(THOUGHT_TRUNCATED_LINES).rev() {
-            let styled = if line.is_empty() {
-                Line::from("").style(style)
-            } else {
-                Line::from(format!("  {line}")).style(style)
-            };
-            lines.push(styled);
-        }
-    } else {
-        // Fewer than threshold — show all body lines.
-        for line in &body_lines {
-            let styled = if line.is_empty() {
-                Line::from("").style(style)
-            } else {
-                Line::from(format!("  {line}")).style(style)
-            };
-            lines.push(styled);
-        }
-    }
-    lines
+    header
 }
 
 pub fn render_tool_running(name: &str, args: &str, _duration_secs: f64, _animation_frame: u32) -> Vec<Line<'static>> {
@@ -146,24 +111,86 @@ pub fn render_tool_done(
         if runie_core::diff::Diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
         } else {
-            let output_lines: Vec<&str> = output.lines().collect();
-            if output_lines.len() > 5 {
-                for line in output_lines.iter().take(2) {
-                    lines.push(Line::from(line.to_string()).style(output_style));
+            let output_blocks = format_tool_output_blocks(name, output);
+            if output_blocks.len() > 5 {
+                for block in output_blocks.iter().take(2) {
+                    lines.extend(render_markdown_output_block(block, output_style));
                 }
-                let hidden = output_lines.len() - 5;
+                let hidden = output_blocks.len() - 5;
                 lines.push(Line::from(format!("… +{hidden} lines")).style(output_style));
-                for line in output_lines.iter().rev().take(3).rev() {
-                    lines.push(Line::from(line.to_string()).style(output_style));
+                for block in output_blocks.iter().rev().take(3).rev() {
+                    lines.extend(render_markdown_output_block(block, output_style));
                 }
             } else {
-                for line in &output_lines {
-                    lines.push(Line::from(line.to_string()).style(output_style));
+                for block in &output_blocks {
+                    lines.extend(render_markdown_output_block(block, output_style));
                 }
             }
         }
     }
     lines
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ToolOutputBlock {
+    Blank,
+    Heading(String),
+    DirectoryEntry(String),
+    Bullet(String),
+    Paragraph(String),
+}
+
+/// Parse tool output into the same logical blocks used by the renderer and
+/// truncation counter. Directory entries are typed instead of being decorated
+/// strings, so their presentation can evolve without changing tool data.
+fn format_tool_output_blocks(name: &str, output: &str) -> Vec<ToolOutputBlock> {
+    let is_listing = matches!(name, "list_dir" | "ls" | "list-files");
+    let mut blocks = Vec::new();
+    for line in output.lines() {
+        let block = {
+            if line.trim().is_empty() {
+                ToolOutputBlock::Blank
+            } else if is_listing && line.trim_start().starts_with("Contents of ") {
+                ToolOutputBlock::Heading(line.to_owned())
+            } else if line.trim_end().ends_with(":**") {
+                ToolOutputBlock::Heading(line.trim_end_matches("**").to_owned())
+            } else if line.trim_start().chars().next().is_some_and(|c| matches!(c, '•' | '▸' | '-' | '*')) {
+                let content = line.trim_start().trim_start_matches(['•', '▸', '-', '*']).trim().to_owned();
+                if is_listing { ToolOutputBlock::DirectoryEntry(content) } else { ToolOutputBlock::Bullet(content) }
+            } else if is_listing {
+                ToolOutputBlock::DirectoryEntry(line.to_owned())
+            } else {
+                ToolOutputBlock::Paragraph(line.to_owned())
+            }
+        };
+        // Preserve physical output lines as independent blocks so ordinary
+        // command output participates in Grok's 2+…+3 truncation rule.
+        blocks.push(block);
+    }
+    blocks
+}
+
+fn render_markdown_output_block(block: &ToolOutputBlock, style: Style) -> Vec<Line<'static>> {
+    let (prefix, raw_body, prefix_style) = match block {
+        ToolOutputBlock::Blank => return vec![Line::from("")],
+        ToolOutputBlock::Heading(text) => (None, text.as_str(), style.bold()),
+        ToolOutputBlock::DirectoryEntry(text) => (Some("• "), text.as_str(), style),
+        ToolOutputBlock::Bullet(text) => (Some("• "), text.as_str(), style),
+        ToolOutputBlock::Paragraph(text) => (None, text.as_str(), style),
+    };
+    let normalized = raw_body.replace("**", "").replace('`', "");
+    let body = normalized.as_str();
+    body.split('\n')
+        .map(|line| {
+            let mut rendered = Vec::new();
+            if let Some(prefix) = prefix {
+                rendered.push(Span::styled(prefix, prefix_style));
+            }
+            let spans = apply_color_to_inlines(line, color_agent_text());
+            rendered.extend(spans.into_iter().map(|span| Span::styled(span.content, prefix_style.patch(span.style))));
+            Line::from(rendered)
+        })
+        .collect()
 }
 
 pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<Line<'static>> {
@@ -461,7 +488,7 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
             let dim_color =
                 blend_color(color_bg(), color_subagent_running_dim(), pulse).unwrap_or(color_subagent_running_dim());
             Line::from(vec![
-                Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
+                Span::styled(rail_glyph().to_owned(), Style::new().fg(rail_color)),
                 Span::styled(GLYPH_SUBAGENT_BAR, Style::new().fg(bar_color)),
                 Span::styled(" ", Style::new().fg(bar_color)),
                 Span::styled(GLYPH_SUBAGENT_DIAMOND, Style::new().fg(diamond_color)),
@@ -477,7 +504,7 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
         }
         S::Completed => Line::from(vec![
             Span::styled(
-                RAIL_GLYPH.to_string(),
+                rail_glyph().to_owned(),
                 Style::new().fg(crate::theme::color_rail_success()),
             ),
             Span::styled(
@@ -495,7 +522,7 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
         ]),
         S::Failed => Line::from(vec![
             Span::styled(
-                RAIL_GLYPH.to_string(),
+                rail_glyph().to_owned(),
                 Style::new().fg(crate::theme::color_rail_error()),
             ),
             Span::styled(
@@ -513,7 +540,7 @@ pub fn render_subagent_row(elem: &runie_core::Element, animation_frame: u32) -> 
         ]),
         S::Cancelled => Line::from(vec![
             Span::styled(
-                RAIL_GLYPH.to_string(),
+                rail_glyph().to_owned(),
                 Style::new().fg(crate::theme::color_rail_error()),
             ),
             Span::styled(
@@ -803,6 +830,16 @@ pub fn render_image(
     use crate::theme::{style_agent, GLYPH_INDENT};
 
     let style = style_agent();
+    if !crate::theme::unicode_supported() {
+        return vec![Line::from(vec![
+            Span::styled(GLYPH_INDENT, style),
+            Span::styled("[Image unavailable] ", style.bold()),
+            Span::styled(
+                format!("{} requires a graphics-capable terminal; text fallback retained", mime_type),
+                style,
+            ),
+        ])];
+    }
     let dim_str = match (width_cells, height_cells) {
         (Some(w), Some(h)) => format!("{}x{}", w, h),
         (Some(w), None) => format!("{} cells wide", w),

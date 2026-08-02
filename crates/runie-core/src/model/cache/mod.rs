@@ -188,7 +188,11 @@ impl AppState {
         // line counts match the actual rendered row count (see
         // `layout::feed_content_width`); a mismatch makes the scroll offset
         // land past the rendered lines and blanks the feed.
-        let width = crate::layout::feed_content_width(self.view().last_content_width);
+        let width = crate::layout::feed_content_width_with_slack(
+            self.view().last_content_width,
+            self.config().compact_mode,
+            self.config().feed_right_slack,
+        );
         let line_counts: Vec<usize> = feed
             .elements
             .iter()
@@ -215,6 +219,24 @@ impl AppState {
         let was_streaming = self.agent_state().streaming;
         let prev_scroll = self.view().scroll;
         let prev_selected_post = self.view().selected_post;
+        let prev_all_collapsed = self.view().all_collapsed;
+        let prev_expanded_posts = self.view().expanded_posts.clone();
+        let prev_anchor = self.view().cached_feed.as_ref().and_then(|cache| {
+            let visible_height = self.view().last_visible_height as usize;
+            if visible_height == 0 || cache.total_lines == 0 {
+                return None;
+            }
+            let offset = crate::snapshot::scroll_offset(cache.total_lines, prev_scroll, visible_height) as usize;
+            let element = compute_current_top_element(
+                &cache.elements,
+                &cache.line_counts,
+                cache.total_lines,
+                prev_scroll,
+                self.view().last_visible_height,
+            )?;
+            let start = cache.line_counts[..element].iter().sum::<usize>();
+            Some((element, offset.saturating_sub(start)))
+        });
 
         // Build the view cache on-demand and store for reuse by snapshot_feed().
         let cache = self.build_view_cache();
@@ -240,11 +262,29 @@ impl AppState {
         self.view_mut().total_lines = total_lines;
         self.view_mut().line_counts = line_counts;
 
-        // While streaming, preserve the user's scroll position so new content
-        // does not auto-scroll the viewport when the user has scrolled up.
-        if was_streaming && prev_scroll > 0 {
-            let delta = total_lines.saturating_sub(prev_total_lines);
-            self.view_mut().scroll = prev_scroll.saturating_add(delta);
+        // Folding/expanding changes the line count before the user's viewport.
+        // Preserve the same element and intra-element row when possible so the
+        // visible anchor does not jump during Ctrl+O or Enter expansion.
+        let fold_state_changed = prev_all_collapsed != self.view().all_collapsed
+            || prev_expanded_posts != self.view().expanded_posts;
+        if !was_streaming && prev_scroll > 0 && fold_state_changed && prev_total_lines != total_lines {
+            if let Some((element, intra_row)) = prev_anchor {
+                let new_start = self.view().line_counts[..element.min(self.view().line_counts.len())]
+                    .iter()
+                    .sum::<usize>();
+                let desired_offset = new_start.saturating_add(intra_row);
+                let max_scroll = total_lines.saturating_sub(self.view().last_visible_height as usize);
+                let new_offset = desired_offset.min(max_scroll);
+                self.view_mut().scroll = max_scroll.saturating_sub(new_offset);
+            }
+        }
+
+        // While streaming, preserve the user's visible viewport as new rows
+        // are appended. Scroll is measured from the tail, so preserving the
+        // viewport requires increasing the offset by the rows added before
+        // it; leaving it numeric would make the feed jump toward new output.
+        if was_streaming && prev_scroll > 0 && total_lines > prev_total_lines {
+            self.view_mut().scroll = prev_scroll.saturating_add(total_lines - prev_total_lines);
         }
 
         self.view_mut().dirty = false;

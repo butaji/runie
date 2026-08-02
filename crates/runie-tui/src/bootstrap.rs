@@ -596,6 +596,8 @@ async fn async_render_loop(
     caps: terminal::caps::TermCaps,
 ) {
     let mut last_size: Option<(u16, u16)> = None;
+    let mut previous_turn_active = false;
+    let mut previous_permission_pending = false;
     let term = std::sync::Arc::new(parking_lot::Mutex::new(RenderTerminal { inner: terminal }));
 
     loop {
@@ -604,6 +606,18 @@ async fn async_render_loop(
         }
 
         let snap = render_rx.borrow().clone();
+
+        let permission_pending = snap.permission_request.is_some();
+        if let Some(message) = terminal_notification(
+            previous_turn_active,
+            snap.turn_active,
+            previous_permission_pending,
+            permission_pending,
+        ) {
+            let _ = terminal_setup::notify_terminal(&mut io::stdout(), message);
+        }
+        previous_turn_active = snap.turn_active;
+        previous_permission_pending = permission_pending;
 
         let term_clone = Arc::clone(&term);
         let new_size = match tokio::task::spawn_blocking(move || {
@@ -644,6 +658,31 @@ async fn async_render_loop(
             result
         })
         .await;
+    }
+}
+
+fn terminal_notification(
+    previous_turn: bool,
+    turn: bool,
+    previous_permission: bool,
+    permission: bool,
+) -> Option<&'static str> {
+    if previous_turn && !turn {
+        Some("Runie turn complete")
+    } else if !previous_permission && permission {
+        Some("Runie permission required")
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod notification_tests {
+    #[test]
+    fn permission_notification_only_fires_on_transition() {
+        assert_eq!(super::terminal_notification(false, false, false, true), Some("Runie permission required"));
+        assert_eq!(super::terminal_notification(false, false, true, true), None);
+        assert_eq!(super::terminal_notification(true, false, false, false), Some("Runie turn complete"));
     }
 }
 

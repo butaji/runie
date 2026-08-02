@@ -3,6 +3,7 @@
 /// This is the canonical source. `runie_tui::theme::BUILTIN_THEMES` re-exports this
 /// list so the public API stays consistent.
 pub const BUILTIN_THEMES: &[&str] = &[
+    "auto",
     "runie",
     "silkcircuit-neon",
     "silkcircuit-glow",

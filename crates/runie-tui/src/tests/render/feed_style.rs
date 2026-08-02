@@ -9,7 +9,7 @@
 #![allow(clippy::too_many_lines)]
 
 use super::*;
-use crate::terminal::caps::{MouseCapability, TermCaps};
+use crate::terminal::caps::{ColorDepth, MouseCapability, TermCaps};
 use ratatui::backend::TestBackend;
 use ratatui::style::{Color, Modifier};
 use ratatui::Terminal;
@@ -27,7 +27,7 @@ fn dark_theme() -> std::sync::MutexGuard<'static, ()> {
     let guard = crate::theme::test_lock();
     crate::theme::set_current_theme_with_caps(
         "runie",
-        TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
+        TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
     );
     guard
 }
@@ -405,7 +405,7 @@ fn light_theme() -> std::sync::MutexGuard<'static, ()> {
     let guard = crate::theme::test_lock();
     crate::theme::set_current_theme_with_caps(
         "catppuccin-latte",
-        TermCaps { truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
+        TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
     );
     guard
 }

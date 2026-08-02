@@ -151,16 +151,19 @@ impl LeaderHandle {
             all_joins.push(tp);
         }
 
-        // Await all join handles in parallel with a timeout.
+        // Await all join handles in parallel with a timeout. Keep the handles
+        // in a JoinSet so a timed-out shutdown can abort the underlying tasks;
+        // dropping JoinHandles alone detaches them and leaks one actor set per
+        // test/runtime shutdown.
         let timeout_duration = std::time::Duration::from_secs(SHUTDOWN_TIMEOUT_SECS);
+        let mut join_set = tokio::task::JoinSet::new();
+        for join in all_joins {
+            join_set.spawn(async move {
+                let _ = join.await;
+            });
+        }
         let result = tokio::time::timeout(timeout_duration, async {
-            let mut errors = Vec::new();
-            for join in all_joins {
-                if let Err(e) = join.await {
-                    errors.push(e);
-                }
-            }
-            errors
+            while join_set.join_next().await.is_some() {}
         })
         .await;
 
@@ -169,6 +172,8 @@ impl LeaderHandle {
                 "Leader shutdown timed out after {:?}, aborting remaining actors",
                 timeout_duration,
             );
+            join_set.abort_all();
+            while join_set.join_next().await.is_some() {}
         }
     }
 

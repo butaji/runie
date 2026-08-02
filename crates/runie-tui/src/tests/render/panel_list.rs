@@ -424,7 +424,7 @@ fn popup_list_renders_selection() {
     );
 
     // Description "Show help" should be dimmer (panel bg as fg)
-    let desc_x = name_x + 4; // "help" is 4 chars
+    let desc_x = find_symbol_x(&buf, first_item_y, 'S').expect("selected description");
     let desc_cell = &buf[(desc_x, first_item_y)];
     let panel_bg = color_bg_panel();
     assert_eq!(

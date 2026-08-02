@@ -12,6 +12,12 @@ pub const GLYPH_X: &str = "✗";
 pub const GLYPH_SELECTED: &str = "▸ ";
 pub const GLYPH_UNSELECTED: &str = "  ";
 pub const GLYPH_THINKING: char = '◐';
+/// Canonical feed lifecycle markers shared by tools, workflows, and agents.
+pub const GLYPH_STATUS_QUEUED: &str = "○";
+pub const GLYPH_STATUS_RUNNING: &str = "◐";
+pub const GLYPH_STATUS_COMPLETED: &str = "●";
+pub const GLYPH_STATUS_FAILED: &str = "!";
+pub const GLYPH_STATUS_CANCELLED: &str = "×";
 pub const GLYPH_FILTER: char = '❯'; // filter input prompt indicator
 
 // Tool / status glyphs
@@ -70,6 +76,18 @@ pub const BOX_BOTTOM_RIGHT: &str = "┘";
 // Scrollbar glyphs
 pub const SCROLLBAR_TRACK: &str = "│"; // visible track (U+2502 BOX DRAWINGS LIGHT VERTICAL)
 pub const SCROLLBAR_THUMB: &str = "▐"; // right half-block — visible but not heavy
+
+pub fn rail_glyph() -> &'static str {
+    if crate::theme::unicode_supported() { "┃" } else { "|" }
+}
+
+pub fn scrollbar_track_glyph() -> &'static str {
+    if crate::theme::unicode_supported() { SCROLLBAR_TRACK } else { "|" }
+}
+
+pub fn scrollbar_thumb_glyph() -> &'static str {
+    if crate::theme::unicode_supported() { SCROLLBAR_THUMB } else { "#" }
+}
 
 // Panel headers
 pub const PANEL_CHAT: &str = " Chat ";

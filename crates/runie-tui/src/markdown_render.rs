@@ -167,21 +167,23 @@ fn apply_osc8_hyperlinks(spans: Vec<MdSpan>, links: Vec<(std::ops::Range<usize>,
     }
 
     let mut result = Vec::new();
+    let mut global_offset = 0usize;
 
     for span in spans {
         let content = &span.content;
-        let mut pos = 0;
+        let pos = global_offset;
 
         // Find all links that overlap with this span.
         let mut overlapping: Vec<(usize, &std::ops::Range<usize>, &String)> = Vec::new();
         for (range, url) in &links {
             // Check if range overlaps with current span content.
-            if range.start < pos + content.len() && range.end > pos {
+            if range.start < global_offset + content.len() && range.end > global_offset {
                 overlapping.push((pos, range, url));
             }
         }
 
         if overlapping.is_empty() {
+            global_offset += content.len();
             result.push(span);
             continue;
         }
@@ -225,6 +227,7 @@ fn apply_osc8_hyperlinks(spans: Vec<MdSpan>, links: Vec<(std::ops::Range<usize>,
                 style: span.style,
             });
         }
+        global_offset += content.len();
     }
 
     result
@@ -449,6 +452,18 @@ mod tests {
             .any(|s| s.content == "emphasis" && s.style.add_modifier(ratatui::style::Modifier::ITALIC) == s.style);
         assert!(has_strong, "missing strong span via tui_markdown");
         assert!(has_emphasis, "missing emphasis span via tui_markdown");
+    }
+
+    #[test]
+    fn plain_urls_are_hyperlinked_after_prior_styled_spans() {
+        let spans = apply_color_to_inlines(
+            "**See** https://example.com/docs for details",
+            Color::White,
+        );
+        let rendered = spans.iter().map(|span| span.content.as_str()).collect::<String>();
+        assert!(rendered.contains("\x1b]8;;https://example.com/docs\x1b\\"));
+        assert!(rendered.contains("https://example.com/docs"));
+        assert!(rendered.contains("\x1b]8;;\x1b\\"));
     }
 
     #[test]

@@ -75,10 +75,14 @@ fn register_tool_styles(theme: &mut opaline::Theme) {
 }
 
 fn register_status_styles(theme: &mut opaline::Theme) {
-    let dim = theme.color("text.dim");
     let success = theme.color("success");
     let warning = theme.color("warning");
-    theme.register_default_style("runie.status.idle", opaline::OpalineStyle::fg(dim));
+    // Inactive status text is the same neutral role as the unfocused input
+    // border, so the lower chrome reads as one quiet surface.
+    theme.register_default_style(
+        "runie.status.idle",
+        opaline::OpalineStyle::fg(theme.color("border.unfocused")),
+    );
     theme.register_default_style("runie.status.active", opaline::OpalineStyle::fg(success));
     theme.register_default_style(
         "runie.border",
@@ -178,6 +182,11 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
         "runie.popup.border",
         opaline::OpalineStyle::fg(border_focused),
     );
+    theme.register_default_style("runie.dialog.border", opaline::OpalineStyle::fg(border_focused));
+    theme.register_default_style(
+        "runie.selection",
+        opaline::OpalineStyle::fg(accent_secondary).with_bg(bg_highlight).bold(),
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,7 +194,12 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn style_fn(token: &str) -> Style {
-    Style::from(crate::theme::current_theme().style(token))
+    let style = Style::from(crate::theme::current_theme().style(token));
+    if crate::theme::is_monochrome() {
+        style.fg(ratatui::style::Color::Reset).bg(ratatui::style::Color::Reset)
+    } else {
+        style
+    }
 }
 
 pub fn style_user() -> Style {
@@ -271,6 +285,12 @@ pub fn style_popup_unselected() -> Style {
 pub fn style_popup_border() -> Style {
     style_fn("runie.popup.border")
 }
+pub fn style_dialog_border() -> Style {
+    style_fn("runie.dialog.border")
+}
+pub fn style_selection() -> Style {
+    style_fn("runie.selection")
+}
 pub fn style_thought_summary() -> Style {
     style_fn("runie.thought.summary")
 }
@@ -337,6 +357,6 @@ pub fn block_popup(title: &str) -> Block<'_> {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .title(title)
-        .border_style(style_popup_border())
-        .style(Style::default().bg(crate::theme::color_bg_panel()))
+        .border_style(style_dialog_border())
+        .style(Style::default().bg(crate::theme::color_surface_elevated()))
 }

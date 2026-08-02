@@ -68,7 +68,11 @@ fn render_item_list(
     *list_state.offset_mut() = scroll.offset;
 
     f.render_stateful_widget(
-        List::new(list_items).style(bg),
+        List::new(list_items)
+            .style(bg)
+            // Preserve per-span foregrounds (notably the lower-contrast
+            // selected description) while still filling the selected row.
+            .highlight_style(Style::default().bg(color_accent())),
         scroll.area,
         &mut list_state,
     );

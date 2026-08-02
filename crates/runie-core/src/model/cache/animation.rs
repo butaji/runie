@@ -3,6 +3,13 @@
 use crate::model::state::AppState;
 
 impl AppState {
+    /// Inject a deterministic animation frame for replay, snapshots, and
+    /// renderer tests. This does not start or advance animation by itself.
+    pub fn set_animation_frame(&mut self, frame: u32) {
+        self.view_mut().animation_frame = frame;
+        self.view_mut().dirty = true;
+    }
+
     /// Advance animation state on each tick.
     pub fn tick_animation(&mut self) {
         let mut changed = false;
@@ -16,7 +23,7 @@ impl AppState {
                 .iter()
                 .any(|w| w.status == crate::model::PatternWorkerStatus::Running);
         let _ = agent;
-        if any_work_active {
+        if any_work_active && !self.config().reduced_motion {
             self.view_mut().animation_frame = self.view_mut().animation_frame.wrapping_add(1);
             self.update_speed();
             changed = true;
@@ -28,7 +35,7 @@ impl AppState {
         if self.clear_expired_transient() {
             changed = true;
         }
-        if self.animate_tokens() {
+        if !self.config().reduced_motion && self.animate_tokens() {
             changed = true;
         }
         if changed {

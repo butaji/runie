@@ -13,7 +13,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::theme::{color_dim, SCROLLBAR_THUMB, SCROLLBAR_TRACK};
+use crate::theme::{color_dim, scrollbar_thumb_glyph, scrollbar_track_glyph};
 
 /// Render a vertical scrollbar with follow-mode-aware colors.
 ///
@@ -42,14 +42,14 @@ pub fn render_scrollbar(
     };
 
     // Use default symbols when no custom track symbol given.
-    let t = track_symbol.unwrap_or(SCROLLBAR_TRACK);
+    let t = track_symbol.unwrap_or_else(scrollbar_track_glyph);
 
     let scrollbar = Scrollbar::default()
         .orientation(ScrollbarOrientation::VerticalRight)
         .begin_symbol(None)
         .end_symbol(None)
         .track_symbol(Some(t))
-        .thumb_symbol(SCROLLBAR_THUMB)
+        .thumb_symbol(scrollbar_thumb_glyph())
         .thumb_style(thumb)
         .track_style(track);
 
@@ -66,5 +66,5 @@ pub fn render_scrollbar(
 
 /// Convenience: visible track scrollbar with follow mode colors.
 pub fn render_scrollbar_visible(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize, is_following: bool) {
-    render_scrollbar(f, area, total, offset, height, is_following, Some("│"));
+    render_scrollbar(f, area, total, offset, height, is_following, Some(scrollbar_track_glyph()));
 }

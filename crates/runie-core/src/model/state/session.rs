@@ -130,6 +130,11 @@ pub struct ConfigState {
     pub vim_mode: bool,
     /// Manually enable compact layout (reduces margins to save vertical space).
     pub compact_mode: bool,
+    /// Disable animated UI effects while retaining static state indicators.
+    pub reduced_motion: bool,
+    pub animation_fps: u16,
+    pub animation_wave_rows: u16,
+    pub feed_right_slack: u8,
     pub steering_mode: crate::model::DeliveryMode,
     pub follow_up_mode: crate::model::DeliveryMode,
     pub recent_models: Vec<String>,
@@ -179,6 +184,10 @@ impl Default for ConfigState {
             swarm_variant: None,
             vim_mode: true,
             compact_mode: false,
+            reduced_motion: false,
+            animation_fps: 60,
+            animation_wave_rows: 32,
+            feed_right_slack: 2,
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),

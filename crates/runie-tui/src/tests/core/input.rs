@@ -284,6 +284,19 @@ fn tick_animation_noop_when_not_turn_active() {
 }
 
 #[test]
+fn reduced_motion_freezes_animation_frame_while_working() {
+    let mut state = fresh_state();
+    state.config.reduced_motion = true;
+    state.agent.turn_active = true;
+    state.ensure_fresh();
+    let before = state.view.animation_frame;
+
+    state.tick_animation();
+
+    assert_eq!(state.view.animation_frame, before, "reduced motion must freeze animation");
+}
+
+#[test]
 fn external_editor_done_updates_input() {
     let mut state = fresh_state();
     state.update(Event::Input('o'));

@@ -30,7 +30,19 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
 pub fn test_lock() -> std::sync::MutexGuard<'static, ()> {
-    TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    // Render tests share process-global theme state. Establish a deterministic
+    // baseline for every locked test; capability-specific tests may override
+    // it after acquiring the guard.
+    set_current_theme_with_caps(
+        DEFAULT_THEME_NAME,
+        crate::terminal::caps::TermCaps {
+            color_depth: crate::terminal::caps::ColorDepth::Truecolor,
+            truecolor: true,
+            ..Default::default()
+        },
+    );
+    guard
 }
 
 pub const DEFAULT_THEME_NAME: &str = "runie";
@@ -68,6 +80,19 @@ fn current_caps() -> Option<crate::terminal::caps::TermCaps> {
     *CURRENT_CAPS.read()
 }
 
+/// Whether the terminal requested monochrome rendering (NO_COLOR or an
+/// equivalent capability result). Structure, glyphs, and modifiers remain;
+/// only foreground/background colours are suppressed.
+pub fn is_monochrome() -> bool {
+    current_caps().is_some_and(|caps| matches!(caps.color_depth, crate::terminal::caps::ColorDepth::None))
+}
+
+/// Whether Unicode box-drawing and block glyphs are safe for the active
+/// terminal. Unknown capability state remains optimistic for normal startup.
+pub fn unicode_supported() -> bool {
+    current_caps().map_or(true, |caps| caps.unicode)
+}
+
 /// Get the currently active theme (falls back to default).
 pub fn current_theme() -> Arc<opaline::Theme> {
     let guard = CURRENT_THEME.read();
@@ -83,7 +108,10 @@ pub fn current_theme() -> Arc<opaline::Theme> {
         // minimal theme, intentionally left unregistered to avoid panicking on
         // its deliberately tiny token set.
         loader::default_theme()
-            .map(|t| Arc::new(crate::theme::styles::register_runie_styles(t)))
+            .map(|t| {
+                let t = loader::ensure_runie_tokens(t);
+                Arc::new(crate::theme::styles::register_runie_styles(t))
+            })
             .unwrap_or_else(|_| Arc::new(loader::minimal_fallback_theme()))
     })
 }

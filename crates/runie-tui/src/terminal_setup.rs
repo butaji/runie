@@ -115,6 +115,7 @@ fn hide_cursor_and_set_block<W: io::Write>(writer: &mut W) -> io::Result<()> {
 /// 2026-aware terminals buffer grid updates indefinitely.
 pub fn enter_tui_mode<W: io::Write>(writer: &mut W, caps: &caps::TermCaps) -> io::Result<()> {
     writer.queue(EnterAlternateScreen)?;
+    set_terminal_title(writer, "Runie")?;
     enable_focus_tracking(writer, caps)?;
     enable_bracketed_paste(writer)?;
     hide_cursor_and_set_block(writer)?;
@@ -161,7 +162,24 @@ pub fn leave_tui_mode<W: io::Write>(writer: &mut W) -> io::Result<()> {
     disable_focus_tracking(writer)?;
     disable_all_mouse_modes(writer)?;
     leave_alternate_screen(writer)?;
+    reset_terminal_title(writer)?;
     writer.flush()
+}
+
+pub fn set_terminal_title<W: io::Write>(writer: &mut W, title: &str) -> io::Result<()> {
+    let sanitized = title.replace(['\x07', '\x1b', '\n', '\r'], " ");
+    write!(writer, "\x1b]0;{sanitized}\x07")
+}
+
+pub fn reset_terminal_title<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    writer.write_all(b"\x1b]0;\x07")
+}
+
+/// Emit a best-effort terminal notification. OSC 9 is understood by common
+/// terminals and ignored safely by terminals that do not support it.
+pub fn notify_terminal<W: io::Write>(writer: &mut W, message: &str) -> io::Result<()> {
+    let sanitized = message.replace(['\x07', '\x1b', '\n', '\r'], " ");
+    write!(writer, "\x1b]9;{sanitized}\x07")
 }
 
 #[cfg(test)]
@@ -222,6 +240,7 @@ mod tests {
         );
         assert!(s.contains("\x1b[?25l"), "missing ?25l (hide cursor)");
         assert!(s.contains("\x1b[1 q"), "missing block cursor");
+        assert!(s.contains("\x1b]0;Runie\x07"), "missing terminal title");
     }
 
     #[test]
@@ -258,5 +277,20 @@ mod tests {
         // selection back.
         assert!(s.contains("\x1b[?1000l"), "missing ?1000l");
         assert!(s.contains("\x1b[?1049l"), "missing ?1049l (exit alternate)");
+        assert!(s.contains("\x1b]0;\x07"), "missing terminal title reset");
+    }
+
+    #[test]
+    fn terminal_title_sanitizes_control_characters() {
+        let mut buf = Vec::new();
+        set_terminal_title(&mut buf, "Runie\n\x1b[31m").unwrap();
+        assert_eq!(String::from_utf8(buf).unwrap(), "\x1b]0;Runie  [31m\x07");
+    }
+
+    #[test]
+    fn terminal_notification_sanitizes_control_characters() {
+        let mut buf = Vec::new();
+        notify_terminal(&mut buf, "Done\n\x1b").unwrap();
+        assert_eq!(String::from_utf8(buf).unwrap(), "\x1b]9;Done  \x07");
     }
 }

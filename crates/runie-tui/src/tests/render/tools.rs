@@ -162,6 +162,53 @@ fn render_tool_done_shows_label() {
 }
 
 #[test]
+fn render_tool_done_formats_markdown_output() {
+    let lines = render_tool_done("bash", "", 0.0, "## **Files**\n- `Cargo.toml`", None, false, &None, 0);
+    let output = render_to_string(lines, 80, 5);
+    assert!(output.contains("Files"), "heading text should remain: {output}");
+    assert!(output.contains("Cargo.toml"), "inline code text should remain: {output}");
+    assert!(!output.contains("**"), "bold markers should be rendered: {output}");
+    assert!(!output.contains('`'), "code markers should be rendered: {output}");
+}
+
+#[test]
+fn render_directory_listing_normalizes_section_labels() {
+    let lines = render_tool_done(
+        "list_dir",
+        ".",
+        0.0,
+        "Config & Project Files:**\n.cargo/",
+        None,
+        false,
+        &None,
+        0,
+    );
+    let output = render_to_string(lines, 80, 5);
+    assert!(output.contains("Config & Project Files:"), "section label: {output}");
+    assert!(!output.contains("**"), "pseudo-markdown markers: {output}");
+    assert!(output.contains("• .cargo/"), "directory bullet: {output}");
+}
+
+#[test]
+fn render_tool_output_does_not_leak_malformed_markdown_markers() {
+    let lines = render_tool_done(
+        "list_dir",
+        "",
+        0.0,
+        "Config:**\n• `Cargo.toml`\n**broken",
+        None,
+        false,
+        &None,
+        0,
+    );
+    let output = render_to_string(lines, 80, 8);
+    assert!(!output.contains("**"), "emphasis markers leaked: {output}");
+    assert!(!output.contains('`'), "code markers leaked: {output}");
+    assert!(output.contains("Config:"));
+    assert!(output.contains("Cargo.toml"));
+}
+
+#[test]
 fn render_tool_done_shows_bytes() {
     let lines = render_tool_done(
         "bash",

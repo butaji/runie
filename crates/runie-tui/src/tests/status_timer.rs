@@ -24,6 +24,17 @@ fn status_line_shows_timer_when_turn_active() {
 }
 
 #[test]
+fn inactive_context_status_uses_compact_fraction_and_percent() {
+    let mut state = AppState::default();
+    connect_model(&mut state);
+    state.agent.turn_active = false;
+    state.ensure_fresh();
+
+    let out = render_status(&mut state);
+    assert!(out.contains("0/128k 0%"), "inactive context status should be compact and lowercase: {out}");
+}
+
+#[test]
 fn status_line_shows_spinner_and_timer() {
     let mut state = AppState::default();
     connect_model(&mut state);
