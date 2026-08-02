@@ -89,4 +89,5 @@ fn automatic_compaction_leaves_a_grok_session_event_in_the_feed() {
         "automatic compaction should leave a visible feed event: {:?}",
         state.session.messages.iter().map(|message| (message.role.clone(), message.content())).collect::<Vec<_>>()
     );
+    assert!(state.session.messages.iter().any(|message| message.role == Role::System && message.content() == "Context 85% full. Compacting…"));
 }
