@@ -2,6 +2,19 @@ use crate::message::Part;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::view::elements::{Element, Feed, PostKind};
 
+fn parse_elapsed_seconds(value: &str) -> Option<f64> {
+    let value = value.trim();
+    if let Some(seconds) = value.strip_suffix('s').filter(|seconds| !seconds.contains('m')) {
+        return seconds.parse().ok();
+    }
+    if let Some(index) = value.find('m') {
+        let minutes = value[..index].parse::<f64>().ok()?;
+        let seconds = value[index + 1..].strip_suffix('s')?.parse::<f64>().ok()?;
+        return Some(minutes * 60.0 + seconds);
+    }
+    None
+}
+
 pub struct LazyCache;
 
 impl LazyCache {
@@ -296,6 +309,8 @@ impl LazyCache {
                     vec![(Element::workflow("goal", objective, "paused", Vec::new(), 0).at(ts), false)]
                 } else if let Some(objective) = content.strip_prefix("Workflow goal cancelled: ") {
                     vec![(Element::workflow("goal", objective, "cancelled", Vec::new(), 0).at(ts), false)]
+                } else if let Some(task) = Self::background_task_elem(&content, ts) {
+                    vec![(task, false)]
                 } else if lower.contains("credit limit") || lower.contains("spending cap") {
                     let action = if lower.contains("spending cap") {
                         "increase_payg_limit"
@@ -308,6 +323,39 @@ impl LazyCache {
                 }
             }
         }
+    }
+
+    /// Project Grok-compatible background-task lifecycle announcements into a
+    /// collapsed feed row. These messages deliberately use a strict prefix
+    /// and shape so ordinary system text is never misclassified.
+    fn background_task_elem(content: &str, ts: f64) -> Option<Element> {
+        let (status, rest) = if let Some(rest) = content.strip_prefix("Task started: ") {
+            ("started", rest)
+        } else if let Some(rest) = content.strip_prefix("Task completed in ") {
+            ("completed", rest)
+        } else if let Some(rest) = content.strip_prefix("Task failed in ") {
+            ("failed", rest)
+        } else if let Some(rest) = content.strip_prefix("Task killed in ") {
+            ("killed", rest)
+        } else {
+            return None;
+        };
+
+        let (duration_secs, display) = if status == "started" {
+            (0.0, rest)
+        } else {
+            let (duration, display) = rest.split_once(": ")?;
+            (parse_elapsed_seconds(duration)?, display)
+        };
+        Some(Element::background_task(
+            display,
+            "",
+            status,
+            Some(display.to_owned()),
+            duration_secs,
+            None,
+            None,
+        ).at(ts))
     }
 
     fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<(Element, bool)> {

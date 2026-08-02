@@ -76,6 +76,24 @@ fn known_provider_failures_use_grok_actionable_feed_rows() {
 }
 
 #[test]
+fn grok_background_task_announcements_project_to_feed_rows() {
+    for (content, status, duration) in [
+        ("Task started: cargo test", "started", 0.0),
+        ("Task completed in 1.2s: cargo test", "completed", 1.2),
+        ("Task failed in 1m5s: cargo test (exit 2)", "failed", 65.0),
+        ("Task killed in 2.0s: cargo test", "killed", 2.0),
+    ] {
+        let mut state = AppState::default();
+        state.update(crate::Event::SystemMessage { content: content.into() });
+        assert!(feed_elements(&state).iter().any(|element| matches!(
+            element,
+            Element::BackgroundTask { status: actual, duration_secs, .. }
+                if actual == status && (*duration_secs - duration).abs() < f64::EPSILON
+        )), "missing background task projection for {content}: {:?}", feed_elements(&state));
+    }
+}
+
+#[test]
 fn agent_error_resets_timers() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
