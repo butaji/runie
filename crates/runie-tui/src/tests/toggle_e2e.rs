@@ -96,7 +96,7 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
         "Tool output should be expanded by default"
     );
 
-    // Ctrl+O collapses tools and thinking globally.
+    // Ctrl+O collapses the tools globally; thinking remains summarized.
     state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
@@ -305,7 +305,7 @@ fn e2e_full_turn_with_global_toggle() {
         "Enter should expand the thought body"
     );
 
-    // Ctrl+O collapses tools and thinking globally and clears per-post expansions.
+    // Ctrl+O collapses tools globally and clears per-post expansions.
     // Establish the documented precondition explicitly: this test is about
     // the collapse transition, independent of the preceding nav simulation.
     state.view.all_collapsed = false;
@@ -323,7 +323,7 @@ fn e2e_full_turn_with_global_toggle() {
         "Ctrl+O should clear the per-post thought expansion"
     );
 
-    // Second Ctrl+O restores tool output and the thinking body.
+    // Second Ctrl+O restores tool output; thinking remains summarized.
     state.update(Event::ToggleExpand);
     assert!(
         !state.view.all_collapsed,

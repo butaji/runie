@@ -498,12 +498,12 @@ impl LazyCache {
         Element::thought(content).at(ts)
     }
 
-    /// Collapse a full thought element to its one-line summary. Thoughts are
-    /// collapsed by default and participate in the global feed fold toggle,
-    /// just like Grok's thinking block. A post individually expanded with
-    /// Enter in feed navigation also keeps its full body.
+    /// Collapse a full thought element to its one-line summary. Finished
+    /// thinking defaults to Grok's collapsed display mode; an individual
+    /// feed-navigation expansion reveals its body without changing the
+    /// global collapse state used by tool sections.
     fn maybe_collapse_thought(elem: Element, state: &AppState, post_index: usize) -> Element {
-        if state.view().all_collapsed || state.view().expanded_posts.contains(&post_index) {
+        if state.view().expanded_posts.contains(&post_index) {
             return elem;
         }
         match elem {
