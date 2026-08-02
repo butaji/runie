@@ -41,6 +41,14 @@ fn long_tool_output_truncated_with_ellipsis() {
 }
 
 #[test]
+fn tool_output_truncation_reports_hidden_line_count() {
+    let output = (1..=8).map(|n| format!("line {n}")).collect::<Vec<_>>().join("\n");
+    let lines = crate::message::render_tool_done("bash", "", 0.0, &output, None, false, &None, 0);
+    let text = lines.into_iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+    assert!(text.contains("… +3 lines"), "Grok-style truncation marker missing: {text}");
+}
+
+#[test]
 fn truncated_tool_output_keeps_header() {
     let mut state = runie_core::AppState::default();
     state.config.truncation.max_lines = 2;

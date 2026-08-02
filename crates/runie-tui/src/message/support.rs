@@ -152,7 +152,8 @@ pub fn render_tool_done(
                 for line in output_lines.iter().take(2) {
                     lines.push(Line::from(line.to_string()).style(output_style));
                 }
-                lines.push(Line::from("  …").style(output_style));
+                let hidden = output_lines.len() - 5;
+                lines.push(Line::from(format!("… +{hidden} lines")).style(output_style));
                 for line in output_lines.iter().rev().take(3).rev() {
                     lines.push(Line::from(line.to_string()).style(output_style));
                 }
