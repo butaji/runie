@@ -516,6 +516,17 @@ fn recap_system_event_uses_grok_feed_header_and_preview() {
 }
 
 #[test]
+fn expanded_recap_keeps_body_for_global_feed_toggle() {
+    let lines = crate::message::render_system_message(
+        "Recap +— Investigated the feed parity gaps.\nDetails follow in the recap body.",
+        80,
+    );
+    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+    assert!(text.starts_with("Recap  Investigated the feed parity gaps."), "{text}");
+    assert!(text.contains("Details follow in the recap body."), "{text}");
+}
+
+#[test]
 fn expanded_btw_renders_markdown_without_source_markers() {
     let element = Element::Btw {
         question: "Explain".into(),

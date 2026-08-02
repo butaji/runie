@@ -318,6 +318,17 @@ impl LazyCache {
                         "purchase_credits"
                     };
                     vec![(Element::credit_limit(content, action, "https://grok.com/usage").at(ts), false)]
+                } else if let Some(summary) = content.strip_prefix("Recap — ") {
+                    // Grok recaps are foldable session blocks: the body is
+                    // open initially and Ctrl+O switches the shared feed to
+                    // the one-line preview. Keep the existing SystemMessage
+                    // element so recap remains in the same feed compositor.
+                    let recap = if state.view().all_collapsed {
+                        format!("Recap — {}", summary.lines().next().unwrap_or(summary))
+                    } else {
+                        format!("Recap +— {summary}")
+                    };
+                    vec![(Element::SystemMessage { content: recap, timestamp: ts }, false)]
                 } else {
                     vec![(Element::SystemMessage { content, timestamp: ts }, false)]
                 }
