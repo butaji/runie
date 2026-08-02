@@ -257,6 +257,29 @@ pub fn render_workflow(
     vec![Line::from(text).style(style)]
 }
 
+/// Render Grok's collapsed background-task lifecycle row.
+pub fn render_background_task(
+    command: &str,
+    status: &str,
+    description: Option<&str>,
+    duration_secs: f64,
+    exit_code: Option<i32>,
+    signal: Option<&str>,
+) -> Vec<Line<'static>> {
+    let style = style_tool_summary();
+    let display = description.filter(|text| !text.trim().is_empty()).unwrap_or(command).replace('\n', " ");
+    let (verb, suffix) = match status {
+        "completed" => ("completed", format!(" in {:.1}s", duration_secs)),
+        "failed" => {
+            let detail = signal.map(|s| format!(" ({s})")).or_else(|| exit_code.map(|code| format!(" (exit {code})"))).unwrap_or_default();
+            ("failed", format!(" in {:.1}s{detail}", duration_secs))
+        }
+        "killed" | "cancelled" => ("killed", format!(" in {:.1}s", duration_secs)),
+        _ => ("started", String::new()),
+    };
+    vec![Line::from(format!("Task {verb}{suffix}: {display}")).style(style)]
+}
+
 /// Grok's feed names built-in tools by action, while preserving `Run` for
 /// shell and unknown integrations. This belongs to feed presentation only;
 /// protocol/tool names remain unchanged everywhere else.

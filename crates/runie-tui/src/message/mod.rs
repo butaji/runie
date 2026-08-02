@@ -35,7 +35,7 @@ pub use support::{
     render_horizontal_rule, render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row,
     render_thinking, render_thought_marker, render_thought_summary, render_tool_confirmation, render_tool_done,
     render_system_message, render_tool_running, render_tool_summary, render_turn_complete, render_web_search_call,
-    render_workflow,
+    render_workflow, render_background_task,
 };
 
 fn span_width(spans: &[Span<'_>]) -> u16 {

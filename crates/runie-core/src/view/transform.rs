@@ -95,6 +95,7 @@ impl LazyCache {
             E::WebSearchCall { .. } => PostKind::AgentResponse,
             E::CreditLimit { .. } => PostKind::System,
             E::Workflow { .. } => PostKind::System,
+            E::BackgroundTask { .. } => PostKind::System,
             E::AnsiStyled { .. } => PostKind::AgentResponse,
         }
     }

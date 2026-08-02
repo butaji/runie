@@ -42,6 +42,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::WebSearchCall { .. } => "Search".to_string(),
             runie_core::view::Element::CreditLimit { .. } => "CreditLimit".to_string(),
             runie_core::view::Element::Workflow { .. } => "Workflow".to_string(),
+            runie_core::view::Element::BackgroundTask { .. } => "BackgroundTask".to_string(),
             runie_core::view::Element::AnsiStyled { .. } => "ANSI".to_string(),
         })
         .collect()

@@ -170,6 +170,17 @@ pub enum Element {
         active_agents: u32,
         timestamp: f64,
     },
+    /// Collapsed background task lifecycle row.
+    BackgroundTask {
+        command: String,
+        task_id: String,
+        status: String,
+        description: Option<String>,
+        duration_secs: f64,
+        exit_code: Option<i32>,
+        signal: Option<String>,
+        timestamp: f64,
+    },
     /// ANSI escape sequence styled content
     AnsiStyled {
         /// Raw content with ANSI escape sequences
@@ -248,6 +259,7 @@ impl ElementBuilder {
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
             Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
             Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
+            Element::BackgroundTask { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -445,6 +457,27 @@ impl Element {
             timestamp: 0.0,
         })
     }
+    /// Background task lifecycle row in the feed.
+    pub fn background_task(
+        command: impl Into<String>,
+        task_id: impl Into<String>,
+        status: impl Into<String>,
+        description: Option<String>,
+        duration_secs: f64,
+        exit_code: Option<i32>,
+        signal: Option<String>,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::BackgroundTask {
+            command: command.into(),
+            task_id: task_id.into(),
+            status: status.into(),
+            description,
+            duration_secs,
+            exit_code,
+            signal,
+            timestamp: 0.0,
+        })
+    }
     /// ANSI styled content
     pub fn ansi_styled(raw: impl Into<String>, plain: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AnsiStyled { raw_content: raw.into(), plain_text: plain.into(), timestamp: 0.0 })
@@ -482,6 +515,7 @@ impl Element {
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
             Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
             Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
+            Element::BackgroundTask { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -511,6 +545,7 @@ impl Element {
             Element::WebSearchCall { timestamp, .. } => *timestamp,
             Element::CreditLimit { timestamp, .. } => *timestamp,
             Element::Workflow { timestamp, .. } => *timestamp,
+            Element::BackgroundTask { timestamp, .. } => *timestamp,
             Element::AnsiStyled { timestamp, .. } => *timestamp,
         }
     }

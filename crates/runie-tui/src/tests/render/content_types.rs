@@ -145,6 +145,16 @@ fn feed_elements() -> Vec<Element> {
             active_agents: 2,
             timestamp: 0.0,
         },
+        Element::BackgroundTask {
+            command: "cargo test".into(),
+            task_id: "task-1".into(),
+            status: "completed".into(),
+            description: Some("run tests".into()),
+            duration_secs: 1.2,
+            exit_code: Some(0),
+            signal: None,
+            timestamp: 0.0,
+        },
         Element::AnsiStyled {
             raw_content: "\x1b[31mred\x1b[0m".into(),
             plain_text: "red".into(),
@@ -241,4 +251,24 @@ fn workflow_feed_row_shows_phase_trail_and_active_agents() {
     assert!(text.contains("Workflow research: compare sources"), "missing workflow row: {text}");
     assert!(text.contains("Plan ✓ · Research ●"), "missing phase trail: {text}");
     assert!(text.contains("(2 agents)"), "missing active-agent count: {text}");
+}
+
+#[test]
+fn background_task_feed_row_shows_completion_state() {
+    let element = Element::background_task(
+        "cargo test",
+        "task-1",
+        "completed",
+        Some("run tests".into()),
+        1.2,
+        Some(0),
+        None,
+    )
+    .at(1.0);
+    let text = crate::ui::to_lines_internal(&element, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("Task completed in 1.2s: run tests"), "missing task row: {text}");
 }
