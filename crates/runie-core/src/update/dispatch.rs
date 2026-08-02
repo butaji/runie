@@ -80,6 +80,7 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
     match event {
         Event::TurnAborted => {
             state.apply_turn_aborted();
+            state.add_system_msg("Turn cancelled by user.".to_owned());
             true
         }
         Event::QueueAborted { content } => {
