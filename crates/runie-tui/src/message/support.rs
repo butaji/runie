@@ -222,19 +222,31 @@ pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize,
     let bar_lines = (0..row_count)
         .map(|row| {
             let used_in_row = bar_used.saturating_sub(row * row_len).min(row_len);
-            Line::from(format!("{}{}", "◆ ".repeat(used_in_row), "◇ ".repeat(row_len - used_in_row)))
+            let cells = (0..row_len)
+                .map(|cell| if cell < used_in_row { "◆" } else { "◇" })
+                .collect::<Vec<_>>()
+                .join(" ");
+            Line::from(cells)
                 .style(style_tool_summary())
         })
         .collect::<Vec<_>>();
     let free = total.saturating_sub(used);
     let mut lines = vec![
         Line::from("Context").style(style_tool_summary().bold()),
-        Line::from(format!("{} / {} tokens ({:.1}%)", short(used), short(total), pct)).style(style_tool_summary()),
+        Line::from(""),
+        Line::from(format!("{} / {} tokens ({:.2}%)", short(used), short(total), pct)).style(style_tool_summary()),
         Line::from(model.to_owned()).style(style_tool_summary()),
+        Line::from(""),
     ];
     lines.extend(bar_lines);
+    lines.push(Line::from(""));
+    lines.push(Line::from(format!("◆ Used              {} tokens ({:.2}%)", short(used), pct)).style(style_tool_summary()));
+    let free_pct = 100.0 - pct;
+    lines.push(Line::from(format!("◇ Free              {} tokens ({:.2}%)", short(free), free_pct.max(0.0))).style(style_tool_summary()));
+    lines.push(Line::from(""));
     lines.extend([
         Line::from(format!("Auto-compact at 85% · ~{} tokens remaining", short(free))).style(style_tool_summary()),
+        Line::from(""),
         Line::from(format!("Turns: {turns} · Tool calls: {tool_calls}")).style(style_tool_summary()),
     ]);
     lines

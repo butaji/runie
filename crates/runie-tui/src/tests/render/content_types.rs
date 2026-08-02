@@ -266,7 +266,8 @@ fn credit_limit_feed_card_has_warning_copy_and_link() {
 #[test]
 fn context_info_feed_snapshot_shows_usage_and_counts() {
     let element = Element::context_info("echo", 36_700, 1_000_000, 5, 12).at(1.0);
-    let text = crate::ui::to_lines_internal(&element, 100)
+    let rendered = crate::ui::to_lines_internal(&element, 100);
+    let text = rendered
         .into_iter()
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
@@ -275,15 +276,31 @@ fn context_info_feed_snapshot_shows_usage_and_counts() {
     assert!(text.contains("36.7k / 1.0m tokens"), "missing usage: {text}");
     assert!(text.contains("Turns: 5 · Tool calls: 12"), "missing counts: {text}");
     assert!(text.contains("Auto-compact at 85%"), "missing compaction line: {text}");
-    assert_eq!(text.matches('◆').count() + text.matches('◇').count(), 100, "context bar must have 100 cells: {text}");
-    assert_eq!(text.lines().count(), 10, "wide context snapshot must reserve five bar rows: {text}");
+    let bar = crate::ui::to_lines_internal(&element, 100)[5..10]
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_eq!(bar.matches('◆').count() + bar.matches('◇').count(), 100, "context bar must have 100 cells: {text}");
+    assert_eq!(text.lines().count(), 17, "wide context snapshot must reserve five bar rows and Grok separators: {text}");
 
     let narrow = crate::ui::to_lines_internal(&element, 40)
         .into_iter()
         .map(|line| line.to_string())
         .collect::<Vec<_>>();
-    assert_eq!(narrow.len(), 15, "narrow context snapshot must reserve ten bar rows");
-    assert_eq!(narrow.iter().map(|line| line.matches('◆').count() + line.matches('◇').count()).sum::<usize>(), 100);
+    assert_eq!(narrow.len(), 22, "narrow context snapshot must reserve ten bar rows and Grok separators");
+    assert_eq!(narrow[5..15].iter().map(|line| line.matches('◆').count() + line.matches('◇').count()).sum::<usize>(), 100);
+}
+
+#[test]
+fn context_info_uses_grok_spacing_and_two_decimal_usage() {
+    let element = Element::context_info("echo", 36_700, 1_000_000, 5, 12).at(0.0);
+    let lines = crate::ui::to_lines_internal(&element, 100);
+    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+    assert!(text.contains("36.7k / 1.0m tokens (3.67%)"), "{text}");
+    assert!(text.contains("◆ Used"), "{text}");
+    assert!(text.contains("◇ Free"), "{text}");
+    assert!(text.contains("Context\n\n"), "{text}");
 }
 
 #[test]
