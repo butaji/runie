@@ -265,6 +265,32 @@ impl AppState {
     pub(crate) fn add_error(&mut self, id: String, message: String) {
         self.reset_agent_state();
 
+        let lower = message.to_ascii_lowercase();
+        if lower.contains("context too large") || lower.contains("context window") || lower.contains("max_prompt_length") {
+            let mut event = ChatMessage::new(
+                Role::System,
+                "This conversation is too large for the model's context window. Use /new to start a new session.",
+            );
+            event.id = format!("context-too-large.{}", id);
+            self.session_mut().messages.push(event);
+            self.messages_changed();
+            self.deliver_queued();
+            self.maybe_end_streaming();
+            return;
+        }
+        if lower.contains("unauthorized") || lower.contains("authentication") || lower.contains("invalid api key") {
+            let mut event = ChatMessage::new(
+                Role::System,
+                "Authentication required — your session has expired or your credentials were rejected. Run /login to re-authenticate, then resend your message.",
+            );
+            event.id = format!("reauth-required.{}", id);
+            self.session_mut().messages.push(event);
+            self.messages_changed();
+            self.deliver_queued();
+            self.maybe_end_streaming();
+            return;
+        }
+
         if let Some(heading) = Self::credit_limit_heading(&message) {
             let mut card = ChatMessage::new(Role::System, heading);
             card.id = format!("credit-limit.{}", id);

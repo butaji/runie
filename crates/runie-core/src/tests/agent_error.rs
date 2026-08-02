@@ -63,6 +63,18 @@ fn turn_abort_leaves_grok_cancellation_event_in_feed() {
 }
 
 #[test]
+fn known_provider_failures_use_grok_actionable_feed_rows() {
+    for (input, expected) in [
+        ("context window exceeded", "This conversation is too large for the model's context window."),
+        ("invalid api key", "Authentication required — your session has expired"),
+    ] {
+        let mut state = AppState::default();
+        state.update(crate::Event::Error { id: "req.0".into(), message: input.into() });
+        assert!(state.session.messages.iter().any(|message| message.role == crate::model::Role::System && message.content().contains(expected)), "missing actionable row for {input}");
+    }
+}
+
+#[test]
 fn agent_error_resets_timers() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
