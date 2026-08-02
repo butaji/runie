@@ -39,6 +39,18 @@ fn agent_error_clears_turn_active() {
 }
 
 #[test]
+fn turn_error_leaves_grok_failure_event_in_feed() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+
+    state.update(crate::Event::TurnErrored { id: "req.0".into(), message: "Unauthorized".into() });
+
+    assert!(state.session.messages.iter().any(|message| {
+        message.role == crate::model::Role::System && message.content() == "Turn failed: Unauthorized"
+    }));
+}
+
+#[test]
 fn agent_error_resets_timers() {
     let mut state = AppState::default();
     state.agent.turn_active = true;

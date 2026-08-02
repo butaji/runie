@@ -94,8 +94,11 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
             state.apply_turn_completed();
             true
         }
-        Event::TurnErrored { .. } => {
+        Event::TurnErrored { message, .. } => {
             state.apply_turn_errored();
+            // Grok preserves a compact, muted session-event row for a failed
+            // turn instead of exposing only the internal state transition.
+            state.add_system_msg(format!("Turn failed: {message}"));
             true
         }
         Event::TokenStatsUpdated { tokens_in, tokens_out } => {
