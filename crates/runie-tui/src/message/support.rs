@@ -281,16 +281,14 @@ pub fn render_background_task(
 }
 
 /// Render Grok's inline BTW side-question item.
-pub fn render_btw(question: &str, answer: Option<&str>, status: &str) -> Vec<Line<'static>> {
+pub fn render_btw(question: &str, answer: Option<&str>, status: &str, expanded: bool) -> Vec<Line<'static>> {
     let style = style_tool_summary();
-    let marker = match status {
-        "running" => "BTW…",
-        "answered" | "completed" => "BTW",
-        _ => "BTW",
-    };
-    let mut lines = vec![Line::from(format!("{marker}: {question}")).style(style)];
-    if let Some(answer) = answer.filter(|text| !text.is_empty()) {
-        lines.push(Line::from(format!("  {answer}")).style(style));
+    let marker = if status == "running" { "/btw…" } else { "/btw" };
+    let mut lines = vec![Line::from(format!("{marker} {question}")).style(style)];
+    if expanded {
+        if let Some(answer) = answer.filter(|text| !text.is_empty()) {
+            lines.push(Line::from(format!("  {answer}")).style(style));
+        }
     }
     lines
 }

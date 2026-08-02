@@ -68,7 +68,9 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
         BackgroundTask { command, status, description, duration_secs, exit_code, signal, .. } => {
             msg::render_background_task(command, status, description.as_deref(), *duration_secs, *exit_code, signal.as_deref())
         }
-        Btw { question, answer, status, .. } => msg::render_btw(question, answer.as_deref(), status),
+        Btw { question, answer, status, expanded, .. } => {
+            msg::render_btw(question, answer.as_deref(), status, *expanded)
+        }
         AnsiStyled { raw_content, plain_text, timestamp } => {
             msg::render_ansi_styled(raw_content, plain_text, *timestamp)
         }

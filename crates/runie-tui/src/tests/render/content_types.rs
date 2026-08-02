@@ -159,6 +159,7 @@ fn feed_elements() -> Vec<Element> {
             question: "What changed?".into(),
             answer: Some("The feed model was updated.".into()),
             status: "answered".into(),
+            expanded: false,
             timestamp: 0.0,
         },
         Element::AnsiStyled {
@@ -292,6 +293,23 @@ fn btw_feed_item_shows_question_and_answer() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(text.contains("BTW: What changed?"), "missing BTW question: {text}");
-    assert!(text.contains("The feed model was updated."), "missing BTW answer: {text}");
+    assert!(text.contains("/btw What changed?"), "missing BTW question: {text}");
+    assert!(!text.contains("The feed model was updated."), "collapsed BTW leaked answer: {text}");
+
+    let expanded = match element {
+        Element::Btw { question, answer, status, timestamp, .. } => Element::Btw {
+            question,
+            answer,
+            status,
+            expanded: true,
+            timestamp,
+        },
+        _ => unreachable!(),
+    };
+    let expanded_text = crate::ui::to_lines_internal(&expanded, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(expanded_text.contains("The feed model was updated."), "expanded BTW lost answer: {expanded_text}");
 }

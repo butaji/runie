@@ -83,7 +83,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::CreditLimit { .. } => 4,
         Element::Workflow { .. } => 1,
         Element::BackgroundTask { .. } => 1,
-        Element::Btw { answer, .. } => 1 + usize::from(answer.is_some()),
+        Element::Btw { answer, expanded, .. } => 1 + usize::from(*expanded && answer.is_some()),
         Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
 }
@@ -129,7 +129,7 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::CreditLimit { .. } => 4,
         Element::Workflow { .. } => 1,
         Element::BackgroundTask { .. } => 1,
-        Element::Btw { answer, .. } => 1 + usize::from(answer.is_some()),
+        Element::Btw { answer, expanded, .. } => 1 + usize::from(*expanded && answer.is_some()),
         Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
 }

@@ -186,6 +186,7 @@ pub enum Element {
         question: String,
         answer: Option<String>,
         status: String,
+        expanded: bool,
         timestamp: f64,
     },
     /// ANSI escape sequence styled content
@@ -492,6 +493,7 @@ impl Element {
             question: question.into(),
             answer,
             status: status.into(),
+            expanded: false,
             timestamp: 0.0,
         })
     }

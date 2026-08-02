@@ -50,6 +50,7 @@ impl LazyCache {
                 // folded in the normal feed and expanded by the feed-wide
                 // Ctrl+O toggle. Individual expansion still wins.
                 Element::UserMessage { expanded, .. } => *expanded,
+                Element::Btw { expanded, .. } => *expanded || state.view().all_collapsed,
                 _ => true,
             };
 
