@@ -8,7 +8,7 @@ use crate::theme::{
     blend_color, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
     color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
     color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent, style_feed_timestamp,
-    style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
+    color_agent_text, style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
     style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND,
     GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT, RAIL_GLYPH,
 };
@@ -347,7 +347,12 @@ pub fn render_btw(question: &str, answer: Option<&str>, status: &str, expanded: 
             // preserve each source row and indent it, including intentional
             // blank rows, instead of embedding newlines in one Ratatui line.
             lines.push(Line::from(""));
-            lines.extend(answer.lines().map(|line| Line::from(format!("  {line}")).style(style)));
+            for source_line in answer.lines() {
+                let styled = apply_color_to_inlines(source_line, color_agent_text());
+                let mut body = vec![Span::styled("  ", style)];
+                body.extend(md_to_spans(&styled));
+                lines.push(Line::from(body).style(style));
+            }
         }
     }
     lines

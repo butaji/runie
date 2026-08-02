@@ -497,3 +497,19 @@ fn recap_system_event_uses_grok_feed_header_and_preview() {
     let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
     assert_eq!(text, vec!["Recap  Investigated the feed parity gaps."], "wrong Grok recap row: {text:?}");
 }
+
+#[test]
+fn expanded_btw_renders_markdown_without_source_markers() {
+    let element = Element::Btw {
+        question: "Explain".into(),
+        answer: Some("A **bold** answer with *emphasis*.".into()),
+        status: "answered".into(),
+        expanded: true,
+        timestamp: 1.0,
+    };
+    let lines = crate::ui::to_lines_internal(&element, 80);
+    let body = lines.last().expect("BTW body row");
+    let text = body.to_string();
+    assert_eq!(text, "  A bold answer with emphasis.", "BTW markdown markers leaked: {text:?}");
+    assert!(body.spans.iter().any(|span| span.content == "bold"), "bold span missing: {body:?}");
+}
