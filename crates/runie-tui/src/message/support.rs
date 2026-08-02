@@ -204,17 +204,29 @@ pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'sta
 pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize, tool_calls: usize) -> Vec<Line<'static>> {
     let pct = if total == 0 { 0.0 } else { used as f64 / total as f64 * 100.0 };
     let short = |n: usize| if n >= 1_000_000 { format!("{:.1}m", n as f64 / 1_000_000.0) } else if n >= 1_000 { format!("{:.1}k", n as f64 / 1_000.0) } else { n.to_string() };
-    let bar_used = ((pct / 5.0).round() as usize).min(20);
-    let bar = format!("{}{}", "◆ ".repeat(bar_used), "◇ ".repeat(20 - bar_used));
+    // Grok's context block uses a 100-cell bar arranged as five rows of 20.
+    // Runie currently has only aggregate usage, so cells represent used/free
+    // capacity rather than Grok's richer per-category breakdown.
+    let bar_used = ((pct / 100.0) * 100.0).round().min(100.0) as usize;
+    let bar_lines = (0..5)
+        .map(|row| {
+            let used_in_row = bar_used.saturating_sub(row * 20).min(20);
+            Line::from(format!("{}{}", "◆ ".repeat(used_in_row), "◇ ".repeat(20 - used_in_row)))
+                .style(style_tool_summary())
+        })
+        .collect::<Vec<_>>();
     let free = total.saturating_sub(used);
-    vec![
+    let mut lines = vec![
         Line::from("Context").style(style_tool_summary().bold()),
         Line::from(format!("{} / {} tokens ({:.1}%)", short(used), short(total), pct)).style(style_tool_summary()),
         Line::from(model.to_owned()).style(style_tool_summary()),
-        Line::from(bar.trim_end().to_owned()).style(style_tool_summary()),
+    ];
+    lines.extend(bar_lines);
+    lines.extend([
         Line::from(format!("Auto-compact at 85% · ~{} tokens remaining", short(free))).style(style_tool_summary()),
         Line::from(format!("Turns: {turns} · Tool calls: {tool_calls}")).style(style_tool_summary()),
-    ]
+    ]);
+    lines
 }
 
 /// Render Grok's non-foldable credit-limit warning card in the feed.
