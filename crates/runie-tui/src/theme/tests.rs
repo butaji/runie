@@ -246,20 +246,15 @@ fn glyph_download_is_correct() {
 #[test]
 fn thinking_line_matches_grok_waiting_row() {
     let line = crate::theme::thinking_line(0.4);
-    assert!(line.ends_with(" Thinking…"));
-    assert_eq!(line.chars().count(), "⠋ Thinking…".chars().count());
-    assert!(runie_core::labels::BRAILLE_EIGHT.iter().any(|g| line.starts_with(*g)));
+    assert_eq!(line, "Thinking…");
+    assert!(!runie_core::labels::BRAILLE_EIGHT.iter().any(|g| line.contains(*g)));
 }
 
 #[test]
-fn thinking_line_spinner_advances_without_extra_rail() {
+fn thinking_line_header_is_not_the_animation_source() {
     let first = crate::theme::thinking_line(0.0);
     let next = crate::theme::thinking_line(0.24);
-    assert_ne!(first, next);
-    assert!(first.ends_with(" Thinking…"));
-    assert!(next.ends_with(" Thinking…"));
-    assert!(!first.contains('│'));
-    assert!(!next.contains('│'));
+    assert_eq!(first, next);
 }
 
 /// Verifies that all box drawing glyphs have correct values.

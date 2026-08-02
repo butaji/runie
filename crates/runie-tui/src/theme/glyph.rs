@@ -128,15 +128,10 @@ pub fn pulse_brightness(tick: u32, speed: f32) -> f32 {
     sin_val * sin_val
 }
 
-/// Animated feed-item label for an active thinking block.
-///
-/// Keep exactly one braille spinner before the label; the feed item owns this
-/// animation while it is active, without a decorative rail or extra glyph.
-pub fn thinking_line(elapsed_secs: f64) -> String {
-    use runie_core::labels::BRAILLE_EIGHT;
-    const FRAME_MS: f64 = 120.0;
-    let idx = ((elapsed_secs * 1000.0 / FRAME_MS) as usize) % BRAILLE_EIGHT.len();
-    format!("{} Thinking…", BRAILLE_EIGHT[idx])
+/// Stable active thinking header. Grok animates the feed accent/bullet,
+/// not the header text.
+pub fn thinking_line(_elapsed_secs: f64) -> String {
+    "Thinking…".to_owned()
 }
 
 /// Tool running line.

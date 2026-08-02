@@ -210,11 +210,10 @@ fn test_render_thinking_indicator() {
         "Thinking should show the active thinking wording. Got: {}",
         content
     );
+    assert!(content.contains('┃'), "Thinking should show Grok's animated accent rail. Got: {}", content);
     assert!(
-        runie_core::labels::BRAILLE_EIGHT
-            .iter()
-            .any(|g| content.contains(*g)),
-        "Thinking should show an animated braille spinner frame. Got: {}",
+        !runie_core::labels::BRAILLE_EIGHT.iter().any(|g| content.contains(*g)),
+        "Thinking feed text must not contain a duplicate braille spinner. Got: {}",
         content
     );
 }
