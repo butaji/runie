@@ -1,8 +1,7 @@
 //! Rendering tests for expand/collapse of feed posts.
 //!
-//! Ctrl+O toggles the global collapsed state of TOOL posts. Thought posts
-//! render as one-line summaries by default (grok parity) and are expanded
-//! individually with Enter in feed navigation (Esc, then Enter on the post).
+//! Ctrl+O toggles the global collapsed state of expandable feed posts,
+//! including tool and thought posts.
 
 use super::*;
 use crate::ui::view;
