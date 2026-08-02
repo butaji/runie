@@ -13,6 +13,7 @@ fn visible_kinds(state: &mut AppState, height: usize) -> Vec<String> {
         .map(|e| match e {
             crate::view::Element::UserMessage { .. } => "User".to_string(),
             crate::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            crate::view::Element::SystemMessage { .. } => "System".to_string(),
             crate::view::Element::Thinking { .. } => "Thinking".to_string(),
             crate::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
             crate::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),

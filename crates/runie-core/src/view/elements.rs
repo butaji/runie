@@ -20,6 +20,11 @@ pub enum Element {
         timestamp: f64,
         provider: String,
     },
+    /// Compact muted system/session event shown in the feed.
+    SystemMessage {
+        content: String,
+        timestamp: f64,
+    },
     Thinking {
         started: std::time::Instant,
         timestamp: f64,
@@ -203,6 +208,7 @@ impl ElementBuilder {
             Element::Spacer { timestamp: ts } => *ts = timestamp,
             Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::SystemMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
@@ -409,6 +415,7 @@ impl Element {
             Element::Spacer { timestamp: ts } => *ts = timestamp,
             Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::SystemMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
@@ -435,6 +442,7 @@ impl Element {
             Element::Spacer { timestamp } => *timestamp,
             Element::UserMessage { timestamp, .. } => *timestamp,
             Element::AgentMessage { timestamp, .. } => *timestamp,
+            Element::SystemMessage { timestamp, .. } => *timestamp,
             Element::Thinking { timestamp, .. } => *timestamp,
             Element::ThoughtMarker { timestamp, .. } => *timestamp,
             Element::ThoughtSummary { timestamp, .. } => *timestamp,

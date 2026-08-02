@@ -180,6 +180,26 @@ pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
     vec![Line::from(format!("Worked for {:.1}s.", duration_secs)).style(style_turn_complete())]
 }
 
+/// Render Grok-style compact system/session text without assistant or tool
+/// glyphs. System messages stay muted and wrap to the feed content width.
+pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'static>> {
+    let style = style_turn_complete();
+    let width = content_width.max(1);
+    let mut lines = Vec::new();
+    for raw in content.lines() {
+        let wrapped = word_wrap(raw, width, width);
+        if wrapped.is_empty() {
+            lines.push(Line::from("").style(style));
+        } else {
+            lines.extend(wrapped.into_iter().map(|line| Line::from(line.to_string()).style(style)));
+        }
+    }
+    if lines.is_empty() {
+        lines.push(Line::from("").style(style));
+    }
+    lines
+}
+
 /// Grok's feed names built-in tools by action, while preserving `Run` for
 /// shell and unknown integrations. This belongs to feed presentation only;
 /// protocol/tool names remain unchanged everywhere else.

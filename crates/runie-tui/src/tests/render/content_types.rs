@@ -22,6 +22,10 @@ fn feed_elements() -> Vec<Element> {
             timestamp: 0.0,
             provider: "echo".into(),
         },
+        Element::SystemMessage {
+            content: "system event".into(),
+            timestamp: 0.0,
+        },
         Element::Thinking { started: now, timestamp: 0.0 },
         Element::ThoughtMarker {
             content: "reasoning".into(),

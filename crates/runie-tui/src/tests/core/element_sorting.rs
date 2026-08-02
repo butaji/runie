@@ -21,6 +21,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
         .map(|e| match e {
             runie_core::view::Element::UserMessage { .. } => "User".to_string(),
             runie_core::view::Element::AgentMessage { .. } => "Agent".to_string(),
+            runie_core::view::Element::SystemMessage { .. } => "System".to_string(),
             runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
             runie_core::view::Element::ThoughtMarker { .. } => "Thought".to_string(),
             runie_core::view::Element::ThoughtSummary { .. } => "ThoughtSum".to_string(),

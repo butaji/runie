@@ -46,6 +46,11 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::Spacer { .. } => 1,
         Element::UserMessage { content, timestamp, expanded } => user_message_line_count(content, *timestamp, width, *expanded),
         Element::AgentMessage { content, timestamp, .. } => agent_message_line_count(content, *timestamp, width),
+        Element::SystemMessage { content, .. } => content
+            .lines()
+            .map(|line| word_wrap(line, width.max(1), width.max(1)).len().max(1))
+            .sum::<usize>()
+            .max(1),
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
@@ -84,6 +89,7 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::Spacer { .. } => 1,
         Element::UserMessage { content, .. } => content.lines().count().max(1) + 2,
         Element::AgentMessage { content, .. } => content.lines().count().max(1),
+        Element::SystemMessage { content, .. } => content.lines().count().max(1),
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
         Element::ThoughtSummary { .. } => 1,

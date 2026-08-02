@@ -78,6 +78,7 @@ impl LazyCache {
             E::Spacer { .. } => PostKind::System,
             E::UserMessage { .. } => PostKind::UserInput,
             E::AgentMessage { .. } => PostKind::AgentResponse,
+            E::SystemMessage { .. } => PostKind::System,
             E::Thinking { .. } => PostKind::Thinking,
             E::ThoughtMarker { .. } | E::ThoughtSummary { .. } | E::AnthropicThinking { .. } => PostKind::Thought,
             E::ToolRunning { .. } => PostKind::ToolRunning,
@@ -269,7 +270,7 @@ impl LazyCache {
             } // filtered in collect_entries
             // System messages (trust banner, /sessions, compaction summary)
             // reuse the thought element for styling but are never collapsed.
-            Role::System => vec![(Element::thought(msg.content()).at(ts), false)],
+            Role::System => vec![(Element::SystemMessage { content: msg.content().to_string(), timestamp: ts }, false)],
         }
     }
 
