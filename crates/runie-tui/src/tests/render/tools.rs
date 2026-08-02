@@ -75,6 +75,21 @@ fn render_tool_running_shows_duration() {
     );
 }
 
+#[test]
+fn render_builtin_tool_uses_grok_action_label() {
+    let lines = render_tool_running("read_file", "src/main.rs", 0.5, 0);
+    let output = render_to_string(lines, 80, 2);
+    assert!(output.contains("Read src/main.rs"), "read tool label: {output}");
+    assert!(!output.contains("Run read_file"), "raw protocol name must not replace action label: {output}");
+}
+
+#[test]
+fn render_unknown_tool_keeps_run_label() {
+    let lines = render_tool_running("custom_tool", "arg", 0.5, 0);
+    let output = render_to_string(lines, 80, 2);
+    assert!(output.contains("Run custom_tool"), "unknown tool label: {output}");
+}
+
 // ─── render_tool_done ───────────────────────────────────────────────────────
 
 #[test]

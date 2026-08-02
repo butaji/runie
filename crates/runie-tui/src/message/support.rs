@@ -104,7 +104,7 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
 }
 
 pub fn render_tool_running(name: &str, args: &str, duration_secs: f64, _animation_frame: u32) -> Vec<Line<'static>> {
-    let (verb, args_part) = format_tool_label_parts(name, args);
+    let (verb, args_part) = feed_tool_label_parts(name, args);
     let base_style = style_tool_running();
     vec![Line::from(vec![
         Span::styled(verb, base_style.bold()),
@@ -124,7 +124,7 @@ pub fn render_tool_done(
     _finished_at: &Option<std::time::Instant>,
     _animation_frame: u32,
 ) -> Vec<Line<'static>> {
-    let (verb, args_part) = format_tool_label_parts(name, args);
+    let (verb, args_part) = feed_tool_label_parts(name, args);
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
@@ -167,7 +167,7 @@ pub fn render_tool_done(
 }
 
 pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<Line<'static>> {
-    let (verb, args_part) = format_tool_label_parts(name, args);
+    let (verb, args_part) = feed_tool_label_parts(name, args);
     let style = style_tool_summary();
     let mut spans = vec![Span::styled(GLYPH_AGENT, style), Span::styled(verb, style.bold())];
     if !args_part.is_empty() {
@@ -178,6 +178,30 @@ pub fn render_tool_summary(name: &str, args: &str, _duration_secs: f64) -> Vec<L
 
 pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
     vec![Line::from(format!("Worked for {:.1}s.", duration_secs)).style(style_turn_complete())]
+}
+
+/// Grok's feed names built-in tools by action, while preserving `Run` for
+/// shell and unknown integrations. This belongs to feed presentation only;
+/// protocol/tool names remain unchanged everywhere else.
+fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
+    let action = match name {
+        "read" | "read_file" => Some("Read"),
+        "list_dir" | "list_directory" => Some("List"),
+        "grep" | "find" | "search" | "search_files" => Some("Search"),
+        "edit" | "edit_file" | "write_file" => Some("Edit"),
+        "fetch" | "fetch_docs" | "web_fetch" => Some("Fetch"),
+        _ => None,
+    };
+    if let Some(action) = action {
+        let trimmed = args.trim();
+        if trimmed.is_empty() {
+            (action.to_string(), String::new())
+        } else {
+            (action.to_string(), format!(" {}", trimmed.trim_matches('\"')))
+        }
+    } else {
+        format_tool_label_parts(name, args)
+    }
 }
 
 /// Render a swarm subagent lifecycle row (GROK.md §26).
