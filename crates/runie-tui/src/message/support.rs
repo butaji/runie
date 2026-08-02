@@ -268,10 +268,12 @@ pub fn render_credit_limit(heading: &str, action: &str, url: &str) -> Vec<Line<'
         _ => "You can continue by enabling pay-as-you-go usage.",
     };
     vec![
+        Line::from(""),
         Line::from(Span::styled(heading.to_owned(), heading_style)),
         Line::from(""),
         Line::from(Span::styled(body, muted)),
         Line::from(Span::styled(url.to_owned(), Style::default().fg(crate::theme::color_agent_text()))),
+        Line::from(""),
     ]
 }
 

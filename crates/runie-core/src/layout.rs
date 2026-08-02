@@ -51,7 +51,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
             .map(|line| word_wrap(line, width.max(1), width.max(1)).len().max(1))
             .sum::<usize>()
             .max(1),
-        Element::ContextInfo { .. } => if width < 50 { 15 } else { 10 },
+        Element::ContextInfo { .. } => if width < 50 { 22 } else { 17 },
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
@@ -81,7 +81,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
             // Query line + title, snippet, and URL for each result.
             1 + results.len().min(5) * 3
         }
-        Element::CreditLimit { .. } => 4,
+        Element::CreditLimit { .. } => 6,
         Element::Workflow { .. } => 1,
         Element::BackgroundTask { .. } => 1,
         Element::Btw { answer, expanded, .. } => {
@@ -97,7 +97,7 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::UserMessage { content, .. } => content.lines().count().max(1) + 2,
         Element::AgentMessage { content, .. } => content.lines().count().max(1),
         Element::SystemMessage { content, .. } => content.lines().count().max(1),
-        Element::ContextInfo { .. } => 10,
+        Element::ContextInfo { .. } => 17,
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
         Element::ThoughtSummary { .. } => 1,
@@ -130,7 +130,7 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::MarkdownTable { rows, .. } => 4 + rows.len(),
         Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
         Element::WebSearchCall { results, .. } => 1 + results.len().min(5) * 3,
-        Element::CreditLimit { .. } => 4,
+        Element::CreditLimit { .. } => 6,
         Element::Workflow { .. } => 1,
         Element::BackgroundTask { .. } => 1,
         Element::Btw { answer, expanded, .. } => {
