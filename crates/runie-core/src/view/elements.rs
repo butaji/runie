@@ -181,6 +181,13 @@ pub enum Element {
         signal: Option<String>,
         timestamp: f64,
     },
+    /// Inline BTW side-question interaction in the feed.
+    Btw {
+        question: String,
+        answer: Option<String>,
+        status: String,
+        timestamp: f64,
+    },
     /// ANSI escape sequence styled content
     AnsiStyled {
         /// Raw content with ANSI escape sequences
@@ -260,6 +267,7 @@ impl ElementBuilder {
             Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
             Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
             Element::BackgroundTask { timestamp: ts, .. } => *ts = timestamp,
+            Element::Btw { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -478,6 +486,15 @@ impl Element {
             timestamp: 0.0,
         })
     }
+    /// Inline BTW side-question feed item.
+    pub fn btw(question: impl Into<String>, answer: Option<String>, status: impl Into<String>) -> ElementBuilder {
+        ElementBuilder(Element::Btw {
+            question: question.into(),
+            answer,
+            status: status.into(),
+            timestamp: 0.0,
+        })
+    }
     /// ANSI styled content
     pub fn ansi_styled(raw: impl Into<String>, plain: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AnsiStyled { raw_content: raw.into(), plain_text: plain.into(), timestamp: 0.0 })
@@ -516,6 +533,7 @@ impl Element {
             Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
             Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
             Element::BackgroundTask { timestamp: ts, .. } => *ts = timestamp,
+            Element::Btw { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -546,6 +564,7 @@ impl Element {
             Element::CreditLimit { timestamp, .. } => *timestamp,
             Element::Workflow { timestamp, .. } => *timestamp,
             Element::BackgroundTask { timestamp, .. } => *timestamp,
+            Element::Btw { timestamp, .. } => *timestamp,
             Element::AnsiStyled { timestamp, .. } => *timestamp,
         }
     }

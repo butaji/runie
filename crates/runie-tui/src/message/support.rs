@@ -280,6 +280,21 @@ pub fn render_background_task(
     vec![Line::from(format!("Task {verb}{suffix}: {display}")).style(style)]
 }
 
+/// Render Grok's inline BTW side-question item.
+pub fn render_btw(question: &str, answer: Option<&str>, status: &str) -> Vec<Line<'static>> {
+    let style = style_tool_summary();
+    let marker = match status {
+        "running" => "BTW…",
+        "answered" | "completed" => "BTW",
+        _ => "BTW",
+    };
+    let mut lines = vec![Line::from(format!("{marker}: {question}")).style(style)];
+    if let Some(answer) = answer.filter(|text| !text.is_empty()) {
+        lines.push(Line::from(format!("  {answer}")).style(style));
+    }
+    lines
+}
+
 /// Grok's feed names built-in tools by action, while preserving `Run` for
 /// shell and unknown integrations. This belongs to feed presentation only;
 /// protocol/tool names remain unchanged everywhere else.

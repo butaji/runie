@@ -96,6 +96,7 @@ impl LazyCache {
             E::CreditLimit { .. } => PostKind::System,
             E::Workflow { .. } => PostKind::System,
             E::BackgroundTask { .. } => PostKind::System,
+            E::Btw { .. } => PostKind::System,
             E::AnsiStyled { .. } => PostKind::AgentResponse,
         }
     }

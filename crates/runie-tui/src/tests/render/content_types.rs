@@ -155,6 +155,12 @@ fn feed_elements() -> Vec<Element> {
             signal: None,
             timestamp: 0.0,
         },
+        Element::Btw {
+            question: "What changed?".into(),
+            answer: Some("The feed model was updated.".into()),
+            status: "answered".into(),
+            timestamp: 0.0,
+        },
         Element::AnsiStyled {
             raw_content: "\x1b[31mred\x1b[0m".into(),
             plain_text: "red".into(),
@@ -271,4 +277,21 @@ fn background_task_feed_row_shows_completion_state() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(text.contains("Task completed in 1.2s: run tests"), "missing task row: {text}");
+}
+
+#[test]
+fn btw_feed_item_shows_question_and_answer() {
+    let element = Element::btw(
+        "What changed?",
+        Some("The feed model was updated.".into()),
+        "answered",
+    )
+    .at(1.0);
+    let text = crate::ui::to_lines_internal(&element, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("BTW: What changed?"), "missing BTW question: {text}");
+    assert!(text.contains("The feed model was updated."), "missing BTW answer: {text}");
 }
