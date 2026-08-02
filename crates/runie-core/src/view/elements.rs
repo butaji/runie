@@ -25,6 +25,15 @@ pub enum Element {
         content: String,
         timestamp: f64,
     },
+    /// Compact context snapshot rendered in the feed by `/context`.
+    ContextInfo {
+        model: String,
+        used_tokens: usize,
+        total_tokens: usize,
+        turns: usize,
+        tool_calls: usize,
+        timestamp: f64,
+    },
     Thinking {
         started: std::time::Instant,
         timestamp: f64,
@@ -245,6 +254,7 @@ impl ElementBuilder {
             Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::SystemMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::ContextInfo { timestamp: ts, .. } => *ts = timestamp,
             Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
@@ -282,6 +292,11 @@ impl Element {
     }
     pub fn agent(content: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0, provider: String::new() })
+    }
+    pub fn context_info(model: impl Into<String>, used_tokens: usize, total_tokens: usize, turns: usize, tool_calls: usize) -> ElementBuilder {
+        ElementBuilder(Element::ContextInfo {
+            model: model.into(), used_tokens, total_tokens, turns, tool_calls, timestamp: 0.0,
+        })
     }
     pub fn thinking(started: std::time::Instant) -> ElementBuilder {
         ElementBuilder(Element::Thinking { started, timestamp: 0.0 })
@@ -518,6 +533,7 @@ impl Element {
             Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
             Element::SystemMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::ContextInfo { timestamp: ts, .. } => *ts = timestamp,
             Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
             Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
@@ -549,6 +565,7 @@ impl Element {
             Element::UserMessage { timestamp, .. } => *timestamp,
             Element::AgentMessage { timestamp, .. } => *timestamp,
             Element::SystemMessage { timestamp, .. } => *timestamp,
+            Element::ContextInfo { timestamp, .. } => *timestamp,
             Element::Thinking { timestamp, .. } => *timestamp,
             Element::ThoughtMarker { timestamp, .. } => *timestamp,
             Element::ThoughtSummary { timestamp, .. } => *timestamp,

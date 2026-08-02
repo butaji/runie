@@ -2,6 +2,7 @@
 //!
 
 pub mod ask;
+pub mod context;
 pub mod goal;
 pub mod help;
 pub mod macros_;
@@ -34,6 +35,7 @@ fn init_handler_registry() -> HandlerRegistry {
     status::register_handlers(&mut registry);
     registry.register("goal", NamedHandler::Handler(goal::handle_goal));
     registry.register("ask", NamedHandler::Handler(ask::handle_ask));
+    registry.register("context", NamedHandler::Handler(context::handle_context));
     registry.register("swarm", NamedHandler::Handler(swarm::handle_swarm));
 
     // Register built-in handlers that are defined inline in model.rs

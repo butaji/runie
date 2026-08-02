@@ -26,6 +26,14 @@ fn feed_elements() -> Vec<Element> {
             content: "system event".into(),
             timestamp: 0.0,
         },
+        Element::ContextInfo {
+            model: "echo".into(),
+            used_tokens: 36_700,
+            total_tokens: 1_000_000,
+            turns: 5,
+            tool_calls: 12,
+            timestamp: 0.0,
+        },
         Element::Thinking { started: now, timestamp: 0.0 },
         Element::ThoughtMarker {
             content: "reasoning".into(),
@@ -239,6 +247,19 @@ fn credit_limit_feed_card_has_warning_copy_and_link() {
     assert!(text.contains("credit limit"), "missing warning heading: {text}");
     assert!(text.contains("purchasing more credits"), "missing action copy: {text}");
     assert!(text.contains("grok.com/usage"), "missing usage link: {text}");
+}
+
+#[test]
+fn context_info_feed_snapshot_shows_usage_and_counts() {
+    let element = Element::context_info("echo", 36_700, 1_000_000, 5, 12).at(1.0);
+    let text = crate::ui::to_lines_internal(&element, 100)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("Context"), "missing context heading: {text}");
+    assert!(text.contains("36.7k / 1.0m tokens"), "missing usage: {text}");
+    assert!(text.contains("Turns: 5 · Tool calls: 12"), "missing counts: {text}");
 }
 
 #[test]

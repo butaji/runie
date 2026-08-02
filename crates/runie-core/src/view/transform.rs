@@ -88,6 +88,7 @@ impl LazyCache {
             E::ToolSummary { .. } => PostKind::ToolSummary,
             E::ToolConfirmation { .. } => PostKind::ToolRunning,
             E::ContextGroup { .. } => PostKind::ContextGroup,
+            E::ContextInfo { .. } => PostKind::System,
             E::SubagentRow { .. } => PostKind::SubagentRow,
             E::TurnComplete { .. } => PostKind::TurnComplete,
             E::Image { .. } => PostKind::AgentResponse,
@@ -279,7 +280,15 @@ impl LazyCache {
             Role::System => {
                 let content = msg.content().to_string();
                 let lower = content.to_ascii_lowercase();
-                if let Some(objective) = content.strip_prefix("Workflow goal: ") {
+                if let Some(snapshot) = content.strip_prefix("Context snapshot: ") {
+                    let mut fields = snapshot.split('|');
+                    let model = fields.next().unwrap_or_default().to_owned();
+                    let used_tokens = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    let total_tokens = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    let turns = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    let tool_calls = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
+                    vec![(Element::context_info(model, used_tokens, total_tokens, turns, tool_calls).at(ts), false)]
+                } else if let Some(objective) = content.strip_prefix("Workflow goal: ") {
                     vec![(Element::workflow("goal", objective, "running", Vec::new(), 0).at(ts), false)]
                 } else if let Some(objective) = content.strip_prefix("Workflow goal done: ") {
                     vec![(Element::workflow("goal", objective, "done", Vec::new(), 0).at(ts), false)]

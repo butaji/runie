@@ -47,6 +47,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
         | SystemMessage { content, .. }
         | ThoughtMarker { content, .. }
         | AnthropicThinking { content, .. } => content.len() / 4,
+        ContextInfo { model, .. } => model.len() / 4 + 20,
         Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,

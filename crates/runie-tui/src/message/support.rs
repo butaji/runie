@@ -201,6 +201,20 @@ pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'sta
     lines
 }
 
+pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize, tool_calls: usize) -> Vec<Line<'static>> {
+    let pct = if total == 0 { 0.0 } else { used as f64 / total as f64 * 100.0 };
+    let short = |n: usize| if n >= 1_000_000 { format!("{:.1}m", n as f64 / 1_000_000.0) } else if n >= 1_000 { format!("{:.1}k", n as f64 / 1_000.0) } else { n.to_string() };
+    let bar_used = ((pct / 5.0).round() as usize).min(20);
+    let bar = format!("{}{}", "◆ ".repeat(bar_used), "◇ ".repeat(20 - bar_used));
+    vec![
+        Line::from("Context").style(style_tool_summary().bold()),
+        Line::from(format!("{} / {} tokens ({:.1}%)", short(used), short(total), pct)).style(style_tool_summary()),
+        Line::from(model.to_owned()).style(style_tool_summary()),
+        Line::from(bar.trim_end().to_owned()).style(style_tool_summary()),
+        Line::from(format!("Turns: {turns} · Tool calls: {tool_calls}")).style(style_tool_summary()),
+    ]
+}
+
 /// Render Grok's non-foldable credit-limit warning card in the feed.
 pub fn render_credit_limit(heading: &str, action: &str, url: &str) -> Vec<Line<'static>> {
     let heading_style = Style::default().fg(crate::theme::color_warning()).bold();

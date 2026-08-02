@@ -11,6 +11,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
             runie_core::view::Element::UserMessage { .. } => "User".to_string(),
             runie_core::view::Element::AgentMessage { .. } => "Agent".to_string(),
             runie_core::view::Element::SystemMessage { .. } => "System".to_string(),
+            runie_core::view::Element::ContextInfo { .. } => "ContextInfo".to_string(),
             runie_core::view::Element::Thinking { .. } => "Thinking".to_string(),
             // A thought post renders as a full marker or (by default) a
             // one-line summary — both are the same post for ordering.

@@ -37,6 +37,9 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
         UserMessage { content, timestamp, expanded } => msg::render_user_message(content, *timestamp, *expanded, content_width),
         AgentMessage { content, timestamp, .. } => msg::render_agent_message(content, *timestamp, content_width),
         SystemMessage { content, .. } => msg::render_system_message(content, content_width),
+        ContextInfo { model, used_tokens, total_tokens, turns, tool_calls, .. } => {
+            msg::render_context_info(model, *used_tokens, *total_tokens, *turns, *tool_calls)
+        }
         Thinking { .. } => msg::render_thinking(),
         ThoughtSummary { content, duration_secs, .. } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
