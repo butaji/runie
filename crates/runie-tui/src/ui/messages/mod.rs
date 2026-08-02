@@ -117,6 +117,13 @@ fn render_paragraph_with_user_backgrounds(
                     spans.push(Span::raw(" "));
                 }
             }
+            if let Some((rail_color, bullet, bullet_color)) = workflow_feed_chrome(snap, elem_idx, element_row) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
+            }
             spans.extend(owned.spans);
             Line::from(spans).style(owned.style)
         })
@@ -243,6 +250,42 @@ fn background_task_feed_chrome(
         "failed" | "killed" | "cancelled" => {
             let color = crate::theme::color_rail_error();
             Some((color, "✗", color))
+        }
+        _ => None,
+    }
+}
+
+/// Shared Grok-style chrome for workflow lifecycle rows.
+fn workflow_feed_chrome(
+    snap: &Snapshot,
+    elem_idx: usize,
+    row_offset: usize,
+) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    let Some(Element::Workflow { status, .. }) = snap.elements.get(elem_idx) else {
+        return None;
+    };
+    match status.as_str() {
+        "running" => {
+            let wave = wave_brightness(
+                snap.animation_frame,
+                row_offset.min(u16::MAX as usize) as u16,
+                FEED_WAVE_ROWS,
+                FEED_WAVE_SPEED,
+            );
+            let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
+            Some((color, "◆", color))
+        }
+        "done" | "completed" => {
+            let color = crate::theme::color_rail_success();
+            Some((color, "◆", color))
+        }
+        "failed" | "cancelled" => {
+            let color = crate::theme::color_rail_error();
+            Some((color, "✗", color))
+        }
+        "paused" => {
+            let color = crate::theme::color_warning();
+            Some((color, "◆", color))
         }
         _ => None,
     }
@@ -459,6 +502,34 @@ mod tests {
             };
             let (_, actual, _) = background_task_feed_chrome(&snap, 0, 0).expect("background task chrome");
             assert_eq!(actual, bullet, "wrong bullet for background task status {status}");
+        }
+    }
+
+    #[test]
+    fn workflow_feed_chrome_matches_grok_lifecycle_states() {
+        let states = [
+            ("running", "◆"),
+            ("done", "◆"),
+            ("failed", "✗"),
+            ("cancelled", "✗"),
+            ("paused", "◆"),
+        ];
+        for (status, bullet) in states {
+            let snap = Snapshot {
+                elements: Arc::new([Element::Workflow {
+                    name: "research".into(),
+                    objective: "compare sources".into(),
+                    status: status.into(),
+                    phases: Vec::new(),
+                    active_agents: 0,
+                    duration_secs: 1.0,
+                    timestamp: 0.0,
+                }]),
+                animation_frame: 7,
+                ..Default::default()
+            };
+            let (_, actual, _) = workflow_feed_chrome(&snap, 0, 0).expect("workflow chrome");
+            assert_eq!(actual, bullet, "wrong bullet for workflow status {status}");
         }
     }
 
