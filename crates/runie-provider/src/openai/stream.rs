@@ -191,23 +191,34 @@ async fn stream_sse_events(
                 Err(e) => {
                     // Non-200 status, DNS/connect/TLS failure, mid-stream reset,
                     // or timeout.
+                    //
+                    // After removing the reqwest total timeout from HTTP clients,
+                    // the only timeouts possible here are pre-existing ones (e.g.
+                    // a slow-connect before this stream started) or mid-stream
+                    // transport errors — both indicate genuine failure, not benign
+                    // truncation. Only `StreamEnded` (clean EOF without [DONE],
+                    // e.g. minimax) is treated as a valid partial completion.
+                    // `Transport` covers all reqwest errors including timeouts.
                     if event_count > 0 {
-                        // The stream already emitted content and then dropped
-                        // (e.g. minimax closing the connection after the last
-                        // chunk). Treat as a benign truncation: preserve what
-                        // we streamed and finish normally rather than retrying
-                        // (which would hit a now-dead endpoint and lose the
-                        // content) or surfacing a spurious error.
-                        tracing::warn!(
-                            error = ?crate::retry::from_sse_error(&e),
-                            event_count,
-                            "SSE stream dropped after emitting content; treating as truncation"
-                        );
-                        break;
+                        match &e {
+                            reqwest_eventsource::Error::StreamEnded => {
+                                // Clean EOF without [DONE]: benign truncation, preserve content.
+                                tracing::warn!(
+                                    error = ?crate::retry::from_sse_error(&e),
+                                    event_count,
+                                    "SSE stream ended after emitting content; treating as truncation"
+                                );
+                                break;
+                            }
+                            _ => {
+                                // Transport error (includes timeouts), HTTP errors, etc.:
+                                // surface as a genuine failure, not a silent truncation.
+                                tracing::warn!(error = ?crate::retry::from_sse_error(&e), "SSE stream error");
+                                return Err(crate::retry::from_sse_error(&e).into());
+                            }
+                        }
                     }
-                    // No content yet: a genuine failure. Return a *typed*
-                    // ProviderError so callers (and the retry wrapper) can
-                    // classify it via downcast.
+                    // No content yet: always a genuine failure.
                     tracing::warn!(error = ?crate::retry::from_sse_error(&e), "SSE stream error");
                     return Err(crate::retry::from_sse_error(&e).into());
                 }
@@ -1008,6 +1019,58 @@ pub mod tests {
                 .iter()
                 .any(|i| matches!(i, Ok(ProviderEvent::Finish { .. }))),
             "a failed stream must not report a normal Finish, got: {items:?}"
+        );
+    }
+
+    /// After the reqwest total timeout is removed from HTTP clients, mid-stream
+    /// transport errors MUST surface as `Err`, not as a benign truncated
+    /// completion. Uses a real connection-refused `reqwest::Error` (the
+    /// standard test construction — `Error::new` is private).
+    #[tokio::test]
+    async fn stream_timeout_error_after_content_is_not_benign_truncation() {
+        let reqwest_err = reqwest::Client::new()
+            .get("http://127.0.0.1:1/")
+            .send()
+            .await
+            .expect_err("connection to port 1 must fail");
+
+        let items: Vec<Result<reqwest_eventsource::Event, reqwest_eventsource::Error>> = vec![
+            sse_message(r#"{"choices":[{"delta":{"content":"Hello"}}]}"#),
+            sse_message(r#"{"choices":[{"delta":{"content":" world"}}]}"#),
+            // A Transport error mid-stream (covers reqwest timeouts): must NOT be
+            // treated as benign truncation.
+            Err(reqwest_eventsource::Error::Transport(reqwest_err)),
+        ];
+        let mut stream = futures::stream::iter(items);
+
+        let result = stream_sse_events(&mut stream, std::time::Duration::from_secs(60)).await;
+        assert!(
+            result.is_err(),
+            "timeout/transport error after content must be Err, not Ok: {result:?}"
+        );
+    }
+
+    /// HTTP error mid-stream must surface as an `Err`, not silently truncated
+    /// and shown as complete. (Constructed via a Transport error — the
+    /// `InvalidStatusCode` variant needs an unconstructible `reqwest::Response`.)
+    #[tokio::test]
+    async fn stream_midstream_http_error_surfaced_not_truncated() {
+        let reqwest_err = reqwest::Client::new()
+            .get("http://127.0.0.1:1/")
+            .send()
+            .await
+            .expect_err("connection to port 1 must fail");
+
+        let items: Vec<Result<reqwest_eventsource::Event, reqwest_eventsource::Error>> = vec![
+            sse_message(r#"{"choices":[{"delta":{"content":"partial"}}]}"#),
+            Err(reqwest_eventsource::Error::Transport(reqwest_err)),
+        ];
+        let mut stream = futures::stream::iter(items);
+
+        let result = stream_sse_events(&mut stream, std::time::Duration::from_secs(60)).await;
+        assert!(
+            result.is_err(),
+            "mid-stream error must be Err, got: {result:?}"
         );
     }
 }

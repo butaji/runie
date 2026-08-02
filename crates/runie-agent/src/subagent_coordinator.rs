@@ -58,7 +58,7 @@ pub struct ProgressSnapshot {
 }
 
 /// Subagent entry in the coordinator.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SubagentEntry {
     /// Shared state: the same `Arc` is handed to the `SubagentHandle`, so
     /// transitions made through the coordinator are visible via the handle.
@@ -67,8 +67,11 @@ struct SubagentEntry {
     last_heard: Instant,
     cancel_token: tokio_util::sync::CancellationToken,
     completion_notify: Arc<Notify>,
-    #[allow(dead_code)]
     metadata: SubagentMetadata,
+    /// Guards against TOCTOU race between terminal methods and `detect_orphans`.
+    /// The first terminal transition that sees `false` sets it `true` and decrements
+    /// `running_count`; subsequent calls skip the decrement.
+    has_been_counted: bool,
 }
 
 /// Subagent metadata for tracking.
@@ -297,6 +300,8 @@ impl SubagentCoordinator {
             cancel_token: cancel_token.clone(),
             completion_notify: Arc::new(Notify::new()),
             metadata: metadata.clone(),
+            // Not counted yet; running_count is incremented below after insertion.
+            has_been_counted: false,
         };
 
         {
@@ -318,6 +323,12 @@ impl SubagentCoordinator {
 
         debug!("Spawned subagent: {}", subagent_id);
         handle
+    }
+
+    /// Returns the current `running_count` — used by race-regression tests.
+    #[cfg(test)]
+    pub fn running_count(&self) -> usize {
+        self.running_count.load(std::sync::atomic::Ordering::SeqCst)
     }
 
     /// Transition a subagent to running state.
@@ -362,8 +373,11 @@ impl SubagentCoordinator {
                 tool_calls,
                 turns,
             };
-            self.running_count
-                .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+            if !entry.has_been_counted {
+                self.running_count
+                    .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                entry.has_been_counted = true;
+            }
             entry.completion_notify.notify_waiters();
             debug!("Subagent {} completed", subagent_id);
         }
@@ -376,8 +390,11 @@ impl SubagentCoordinator {
         let mut entries = self.entries.write().await;
         if let Some(entry) = entries.get_mut(&subagent_id) {
             *entry.state.write().await = SubagentState::Failed { error };
-            self.running_count
-                .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+            if !entry.has_been_counted {
+                self.running_count
+                    .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                entry.has_been_counted = true;
+            }
             entry.completion_notify.notify_waiters();
         }
         self.completion_notify.notify_waiters();
@@ -392,8 +409,11 @@ impl SubagentCoordinator {
             }
             entry.cancel_token.cancel();
             *entry.state.write().await = SubagentState::Cancelled { reason };
-            self.running_count
-                .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+            if !entry.has_been_counted {
+                self.running_count
+                    .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                entry.has_been_counted = true;
+            }
             entry.completion_notify.notify_waiters();
             info!("Subagent {} cancelled", subagent_id);
             return CancelOutcome::Cancelled;
@@ -424,8 +444,12 @@ impl SubagentCoordinator {
         for (id, entry) in entries.iter_mut() {
             if !entry.state.read().await.is_terminal() && now.duration_since(entry.last_heard) > self.orphan_timeout {
                 *entry.state.write().await = SubagentState::Orphaned;
-                self.running_count
-                    .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                // Only decrement if not already counted by another terminal method.
+                if !entry.has_been_counted {
+                    self.running_count
+                        .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                    entry.has_been_counted = true;
+                }
                 entry.completion_notify.notify_waiters();
                 orphans.push(*id);
                 warn!("Subagent {} marked as orphaned", id);
@@ -452,10 +476,6 @@ impl SubagentCoordinator {
     }
 
     /// Get count of running subagents.
-    pub fn running_count(&self) -> usize {
-        self.running_count
-            .load(std::sync::atomic::Ordering::SeqCst)
-    }
 
     /// Remove a completed subagent entry.
     pub async fn evict(&self, subagent_id: Uuid) {
@@ -531,14 +551,6 @@ impl SubagentCoordinator {
             });
         }
         None
-    }
-
-    /// Update a tracker's effective model ID.
-    pub async fn set_effective_model(&self, subagent_id: Uuid, _model_id: String) {
-        let mut entries = self.entries.write().await;
-        if let Some(entry) = entries.get_mut(&subagent_id) {
-            entry.metadata.subagent_id = subagent_id; // Ensure ID is set
-        }
     }
 }
 

@@ -105,7 +105,7 @@ fn command_palette_has_panel_background() {
 }
 
 #[test]
-fn empty_line_between_input_box_and_hints() {
+fn input_box_border_precedes_hints() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     connect_model(&mut state);
@@ -127,8 +127,10 @@ fn empty_line_between_input_box_and_hints() {
     let above_line: String = (0..buf.area().width)
         .map(|x| buf[(x, above_y)].symbol())
         .collect();
-    let non_space = above_line.chars().filter(|c| !c.is_whitespace()).count();
-    assert!(non_space <= 2);
+    assert!(
+        above_line.contains('╰') || above_line.contains('╯'),
+        "the input box bottom border should immediately precede hints: {above_line:?}"
+    );
 }
 
 #[test]

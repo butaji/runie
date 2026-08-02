@@ -56,7 +56,10 @@ fn wrap_span_row(spans: &[MdSpan], width: u16) -> Vec<Vec<MdSpan>> {
     let mut out = Vec::new();
     let mut cursor = 0;
     for line in wrapped {
-        let start = text[cursor..].find(&line).unwrap_or(0) + cursor;
+        let find_result = text[cursor..]
+            .find(&line)
+            .expect("wrapped line must be a substring of text starting at cursor (word_wrap invariant)");
+        let start = find_result + cursor;
         let end = start + line.len();
         out.push(spans_for_range(start, end, &text, &runs));
         cursor = end;

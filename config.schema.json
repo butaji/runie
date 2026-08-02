@@ -171,6 +171,7 @@
       "description": "UI settings.",
       "$ref": "#/$defs/UiSection",
       "default": {
+        "compact_mode": false,
         "history_max_entries": 1000,
         "page_size": 5,
         "vim_mode": true
@@ -728,6 +729,11 @@
       "description": "UI configuration section.",
       "type": "object",
       "properties": {
+        "compact_mode": {
+          "description": "Manually enable compact layout (reduces margins to save vertical space).",
+          "type": "boolean",
+          "default": false
+        },
         "history_max_entries": {
           "description": "Maximum number of input history entries to retain.",
           "type": "integer",

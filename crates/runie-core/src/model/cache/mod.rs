@@ -183,10 +183,12 @@ impl AppState {
     /// This is called by ensure_fresh and snapshot methods.
     fn build_view_cache(&mut self) -> ViewCache {
         let feed = crate::view::LazyCache::feed(self);
-        // `last_content_width` is the area width (from `f.area().inner(margin)`).
-        // Rendering computes `content_width = area.width.saturating_sub(2)` for glyph
-        // margins, so we use the same value here to keep cached line counts in sync.
-        let width = self.view().last_content_width.saturating_sub(2).max(1);
+        // `last_content_width` is the feed area width (from `f.area().inner(margin)`).
+        // Use the SAME content-width formula as the TUI feed renderer so cached
+        // line counts match the actual rendered row count (see
+        // `layout::feed_content_width`); a mismatch makes the scroll offset
+        // land past the rendered lines and blanks the feed.
+        let width = crate::layout::feed_content_width(self.view().last_content_width);
         let line_counts: Vec<usize> = feed
             .elements
             .iter()
@@ -204,6 +206,10 @@ impl AppState {
 
     /// Rebuild caches when inputs changed — O(n) but gated.
     pub fn ensure_fresh(&mut self) {
+        // Advance the ephemeral-tip TTL (wall-clock; the 30fps redraw cadence
+        // makes expiry land within a frame or two of the target TTL).
+        self.view_mut().ephemeral_tip.tick();
+
         // Extract view state values first to avoid borrow conflicts.
         let prev_total_lines = self.view().total_lines;
         let was_streaming = self.agent_state().streaming;

@@ -107,8 +107,14 @@ impl ThinkFilter {
     fn consume_post_thought(&mut self, text: &str, pos: usize, out: &mut Vec<ProviderEvent>) -> usize {
         self.state = ThinkState::Outside;
         let remaining = &text[pos..];
-        let ws_len = remaining.chars().take_while(|c| c.is_whitespace()).count();
-        let after_ws = pos + ws_len;
+        // Use byte length, not char count: `after_ws` must be a valid byte index
+        // so `&text[after_ws..]` doesn't panic on non-ASCII characters.
+        let ws_byte_len: usize = remaining
+            .chars()
+            .take_while(|c| c.is_whitespace())
+            .map(|c| c.len_utf8())
+            .sum();
+        let after_ws = pos + ws_byte_len;
         let after_ws_text = &text[after_ws..];
         if after_ws_text.is_empty() {
             return text.len();

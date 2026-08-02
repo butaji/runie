@@ -189,6 +189,7 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
     let debug_path = std::env::var("RUNIE_TEST_DATA_DIR")
         .map(|d| std::path::PathBuf::from(d).join("mock_provider_debug.txt"))
         .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/mock_provider_debug.txt"));
+    #[cfg(test)]
     let _ = std::fs::write(&debug_path, format!(
         "key={} model={} mock={} script={} script_file={}\n",
         key, model,

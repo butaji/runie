@@ -16,7 +16,7 @@ license = "MIT OR Apache-2.0"
 # Note: `too_many_lines` is prefixed with `clippy::` as it was renamed from the
 # bare lint name in clippy 0.1.96.
 [workspace.lints.clippy]
-too_many_lines = "warn"  # threshold set in clippy.toml (500 lines)
+too_many_lines = "warn"  # threshold set in clippy.toml (40 lines per function)
 cognitive_complexity = "warn"
 
 [workspace.dependencies]
@@ -124,7 +124,6 @@ runie-agent = { path = "crates/runie-agent" }
 runie-provider = { path = "crates/runie-provider" }
 runie-testing = { path = "crates/runie-testing" }
 runie-patterns = { path = "crates/runie-patterns" }
-runie-acp = { path = "crates/runie-acp" }
 url = "2"
 once_cell = "1"
 

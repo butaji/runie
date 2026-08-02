@@ -107,6 +107,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ShareSession
             | Event::Suspend
             | Event::ToggleVimMode
+            | Event::ToggleQueuePane
             | Event::CopyLastResponse
             | Event::OpenSessionList
             | Event::NewSession

@@ -58,6 +58,10 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 
     restore_or_pop_dialog(state, dialog, close_result, is_palette_activation);
 
+    // Login flow: after a generic pop (Esc/DialogBack), re-sync the logical
+    // `flow.step` to the panel now on top (push_login_panel only syncs pushes).
+    crate::login_flow::panel_ops::sync_step_from_current_panel(state);
+
     if is_dialog_back && state.open_dialog().is_none() {
         // Closing a hosted permission dialog without resolving it (e.g. pressing
         // Escape) must cancel the underlying request so the agent is not left
@@ -80,9 +84,8 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 /// @ picker) and re-sync the authoritative InputActor, which was cleared
 /// when the picker opened — without the sync its next InputChanged echo
 /// clobbers the restored text on the following keystroke.
-fn restore_file_picker_backup(state: &mut AppState) {
-    if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
-        state.input_mut().input = input.clone();
+pub fn restore_file_picker_backup(state: &mut AppState) {
+    if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {        state.input_mut().input = input.clone();
         state.input_mut().cursor_pos = state.input().input.len();
         let chips = state.input().chips.clone();
         if let Some(handles) = state.actor_handles() {

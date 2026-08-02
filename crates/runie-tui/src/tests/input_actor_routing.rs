@@ -450,10 +450,8 @@ async fn manual_ui_actor() -> (
     (ui, effect_tx, leader)
 }
 
-/// Regression: the '/' autocomplete trigger must open the command palette
-/// synchronously, before the next key event is processed. Otherwise rapid
-/// typing can leave the palette filter empty and cause Enter to run the
-/// first palette item (/approve) instead of the intended command.
+/// Regression: the '/' autocomplete trigger must open the inline command
+/// dropdown synchronously, before the next key event is processed.
 #[tokio::test]
 async fn slash_opens_command_palette_synchronously() {
     let (mut ui, effect_tx, leader) = manual_ui_actor().await;
@@ -462,8 +460,8 @@ async fn slash_opens_command_palette_synchronously() {
     ui.handle_event(Event::Input('/'), effect_tx).await;
 
     assert!(
-        ui.state.open_dialog().is_some(),
-        "'/' should open the command palette synchronously"
+        ui.state.view().slash_dropdown.is_some(),
+        "'/' should open the command dropdown synchronously"
     );
 
     leader.shutdown().await;
@@ -602,18 +600,10 @@ async fn submit_after_fast_typing_keeps_full_content() {
         ui.handle_event(Event::Input(c), effect_tx.clone()).await;
     }
     ui.handle_event(Event::Submit, effect_tx.clone()).await;
-    // Deliver the cleared-input echo the InputActor emits on submit; this
-    // triggers dispatch of the pending submit content.
-    ui.handle_event(
-        Event::InputChanged { state: Box::new(runie_core::InputState::default()) },
-        effect_tx.clone(),
-    )
-    .await;
 
-    // Dispatch routes user messages through the async TurnActor (unobservable
-    // in this manual harness), but it synchronously records the submitted
-    // content in the input history — so a complete entry here proves the
-    // full fast-typed text reached the submit path.
+    // Submit is dispatched synchronously (exactly once) from handle_submit_event,
+    // so the full content is recorded in the input history immediately — before
+    // any cleared-input echo arrives.
     assert!(
         ui.state
             .input()
@@ -623,6 +613,22 @@ async fn submit_after_fast_typing_keeps_full_content() {
         "full fast-typed content must be submitted, history: {:?}",
         ui.state.input().input_history
     );
+
+    // The InputActor's cleared-input echo must NOT trigger a second submit
+    // (regression: it used to dispatch the pending content again → two turns).
+    ui.handle_event(
+        Event::InputChanged { state: Box::new(runie_core::InputState::default()) },
+        effect_tx.clone(),
+    )
+    .await;
+    let count = ui
+        .state
+        .input()
+        .input_history
+        .iter()
+        .filter(|h| h.as_str() == "quickbrownfox")
+        .count();
+    assert!(count <= 1, "submit must be dispatched exactly once, got {count}");
 
     leader.shutdown().await;
 }
@@ -659,8 +665,7 @@ async fn up_on_empty_input_recalls_history_in_production() {
         .input
         .send_message(runie_core::actors::InputMsg::HistoryLoaded {
             entries: vec!["first".to_string(), "second".to_string()],
-        })
-        .expect("input actor should accept HistoryLoaded");
+        });
     let seeded = next_input_changed(&mut sub).await;
     assert_eq!(seeded.input_history.len(), 2);
 
@@ -723,8 +728,7 @@ async fn up_with_multiline_moves_cursor_not_history_in_production() {
     // Seed history: if Up recalled it, the draft would be replaced by "zzz".
     leader
         .input
-        .send_message(runie_core::actors::InputMsg::HistoryLoaded { entries: vec!["zzz".to_string()] })
-        .expect("input actor should accept HistoryLoaded");
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded { entries: vec!["zzz".to_string()] });
     let _ = next_input_changed(&mut sub).await;
 
     // Type "a", newline, "b" through the real routing path. Each event is
@@ -763,8 +767,7 @@ async fn up_down_with_single_line_moves_cursor_in_production() {
 
     leader
         .input
-        .send_message(runie_core::actors::InputMsg::HistoryLoaded { entries: vec!["zzz".to_string()] })
-        .expect("input actor should accept HistoryLoaded");
+        .send_message(runie_core::actors::InputMsg::HistoryLoaded { entries: vec!["zzz".to_string()] });
     let _ = next_input_changed(&mut sub).await;
 
     for c in "draft".chars() {
@@ -903,7 +906,6 @@ async fn slash_model_selects_model_synchronously() {
 #[tokio::test]
 async fn at_file_pick_preserves_prefix_and_syncs_input_actor() {
     let (mut ui, effect_tx, leader) = manual_ui_actor().await;
-    crate::tests::core::inject_mock_file_entries(&mut ui.state);
     let mut sub = leader.event_bus().subscribe();
 
     // Type "read " (routed to the InputActor), then '@' — the trigger opens
@@ -913,6 +915,7 @@ async fn at_file_pick_preserves_prefix_and_syncs_input_actor() {
     }
     ui.handle_event(Event::Input('@'), effect_tx.clone()).await;
     assert!(ui.state.open_dialog().is_some(), "picker should open");
+    crate::tests::core::inject_mock_file_entries(&mut ui.state);
 
     // Production ordering: the Clear echo arrives AFTER the picker opened.
     ui.handle_event(

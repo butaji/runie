@@ -40,7 +40,7 @@ fn input_chevron_is_gray_when_token_released() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let dim = crate::theme::color_dim();
+    let dim = crate::theme::color_accent();
     let mut found = false;
     for y in (0..buf.area().height).rev() {
         for x in 0..buf.area().width.saturating_sub(2) {

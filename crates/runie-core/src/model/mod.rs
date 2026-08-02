@@ -30,6 +30,8 @@ pub type ModelSelectorItem = (String, String, String, bool, bool);
 
 mod cache;
 mod compaction;
+pub mod slash;
+pub mod tips;
 pub mod feed_detail;
 mod pattern_worker;
 pub mod state;

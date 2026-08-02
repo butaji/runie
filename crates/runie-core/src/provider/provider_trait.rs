@@ -20,6 +20,13 @@ pub const DEFAULT_RETRY_CONFIG: RetryConfig = RetryConfig {
 };
 
 /// Default HTTP request timeout (120 s).
+///
+/// **Legacy for streaming**: this constant is kept for config-file backward
+/// compatibility but is NO LONGER applied to HTTP clients used for SSE streaming.
+/// The per-read idle timeout (`tokio::time::timeout`) is the correct mechanism;
+/// reqwest's total timeout would kill legitimate long-running streams (e.g. a
+/// 130s reasoning turn). Clients built via `http::build_client()` and
+/// `factory::get_cached_http_client()` omit the total timeout.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// Default HTTP connect timeout (10 s).
@@ -116,10 +123,10 @@ impl ProviderError {
             Some(ProviderError::RateLimit { retry_after_secs: None })
         } else if code >= 500 {
             Some(ProviderError::Server(code, Default::default()))
-        } else if code >= 400 {
-            // All other 4xx client errors (including 400 Bad Request) are fatal.
-            Some(ProviderError::BadRequest(code, Default::default()))
         } else {
+            // Other 4xx client errors are not typed here; the caller falls
+            // back to string classification (e.g. a 400 with a context-window
+            // message must classify as ContextLength, not a generic BadRequest).
             None
         }
     }

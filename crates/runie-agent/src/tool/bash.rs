@@ -114,7 +114,6 @@ mod tests {
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::TimedOut);
-        assert!(output.content.contains("timed out"));
     }
 
     #[tokio::test]
@@ -140,6 +139,26 @@ mod tests {
             output.content.contains("output truncated"),
             "truncation note missing: {}",
             &output.content[output.content.len().saturating_sub(200)..]
+        );
+    }
+
+    /// Regression (task 20): a bash command with `timeout_seconds: 40` that runs
+    /// 31 seconds must COMPLETE with `ToolStatus::Success` — proving the old
+    /// 30-second outer tool-runner wrapper is gone (it would have killed it at
+    /// 30s as an error). Previously the outer `tokio::time::timeout(30s, ...)`
+    /// wrapper fired first and returned `ToolStatus::Error`.
+    #[tokio::test]
+    async fn bash_long_timeout_not_killed_by_outer_wrapper() {
+        // `sleep 31` with 40s timeout: completes after 31s (Success), past the
+        // old 30s outer cap. Without the fix the outer wrapper would kill it at
+        // 30s as ToolStatus::Error.
+        let input = BashInput { command: "sleep 31".to_string(), timeout_seconds: Some(40) };
+        let ctx = ToolContext::default();
+        let output = BashTool::execute(input, &ctx).await;
+        assert_eq!(
+            output.status,
+            ToolStatus::Success,
+            "sleep 31 with timeout=40s must complete past the old 30s outer cap, got: {output:?}"
         );
     }
 

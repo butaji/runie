@@ -1,4 +1,9 @@
 //! Tests for animation frame rate (60fps).
+//!
+//! Task 25 (idle redraw): the render loop is not flooded at 60fps when idle —
+//! the UiActor's animation tick only publishes a snapshot when the state is
+//! dirty, and `tick_animation` does not mark an idle state dirty (covered by
+//! `crate::tests::token_counters::animation` in runie-core).
 
 use crate::ui_actor::ANIM_MS;
 

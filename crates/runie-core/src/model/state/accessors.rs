@@ -98,6 +98,56 @@ impl AppState {
         self.question_state.as_ref()
     }
 
+    /// Open or refresh the inline slash dropdown for the current `/…` input.
+    pub fn open_slash_dropdown(&mut self) {
+        let input = self.input().input.clone();
+        if !input.starts_with('/') || input == "/" {
+            // "/" alone: show all commands; other non-slash input closes it.
+            if input.starts_with('/') {
+                self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown::open(self.registry(), ""));
+            } else {
+                self.view_mut().slash_dropdown = None;
+            }
+            return;
+        }
+        let query = input.trim_start_matches('/').to_owned();
+        let matches = crate::model::slash::SlashDropdown::filter(self.registry(), &query);
+        self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown {
+            query,
+            selected: 0,
+            matches,
+        });
+    }
+
+    /// Recompute the dropdown matches from an explicit input text (used at
+    /// submit time, where the projection may lag the keystrokes by an echo
+    /// round-trip — the optimistic effective content is authoritative).
+    pub fn open_slash_dropdown_for(&mut self, input: &str) {
+        if !input.starts_with('/') {
+            self.view_mut().slash_dropdown = None;
+            return;
+        }
+        let query = input.trim_start_matches('/').to_owned();
+        let matches = crate::model::slash::SlashDropdown::filter(self.registry(), &query);
+        self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown {
+            query,
+            selected: 0,
+            matches,
+        });
+    }
+
+    /// Move the dropdown selection by `delta` (wrap). No-op when closed.
+    pub fn slash_move_selection(&mut self, delta: isize) {
+        if let Some(dd) = &mut self.view_mut().slash_dropdown {
+            dd.move_selection(delta);
+        }
+    }
+
+    /// Close the dropdown, keeping the typed `/…` text.
+    pub fn slash_close(&mut self) {
+        self.view_mut().slash_dropdown = None;
+    }
+
     pub fn actor_handles(&self) -> Option<&crate::actors::LeaderHandle> {
         self.actor_handles.as_ref()
     }
@@ -247,6 +297,10 @@ impl AppState {
             .iter()
             .find(|m| m.provider == *provider && m.name == *model)
             .and_then(|m| m.context_window)
+            // A 0 window means "unknown/not configured" (e.g. the mock
+            // provider) — treat it like None so auto-compaction (which keeps
+            // `window * ratio` tokens) is never triggered with keep=0.
+            .filter(|w| *w > 0)
     }
 
     /// Get the pending model role (set when picking lead/worker from `/mode` dialog).

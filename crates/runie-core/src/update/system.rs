@@ -137,6 +137,18 @@ impl AppState {
         self.view_mut().dirty = true;
     }
 
+    /// Toggle the queued-messages pane (grok parity). Opening the pane focuses
+    /// it; closing it returns focus to the chat input.
+    pub(crate) fn toggle_queue_pane(&mut self) {
+        let visible = !self.view().queue_pane_visible;
+        self.view_mut().queue_pane_visible = visible;
+        self.view_mut().queue_pane_focused = visible;
+        if !visible {
+            self.view_mut().queue_pane_selected = 0;
+        }
+        self.view_mut().dirty = true;
+    }
+
     pub(crate) fn page_up(&mut self) {
         crate::update::input::scroll_event(self, Event::PageUp);
     }
@@ -261,15 +273,16 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::Abort => handle_abort(state),
         Event::ClearQueues => handle_clear_queues(state),
         Event::ExternalEditorDone { content } => handle_editor_done(state, content),
-        Event::ToggleExpand => {
-            // In normal mode, ctrl+o toggles fold/expand for the last user message.
-            // In vim nav mode, it toggles individual posts (handled in nav.rs).
-            state.toggle_last_user_message_fold();
-        }
+        // Ctrl+O is the global expand/collapse command. Per-post folding is
+        // handled explicitly by feed navigation; keeping this event global
+        // preserves the documented keybinding contract and makes the action
+        // deterministic for tool/thinking posts.
+        Event::ToggleExpand => state.toggle_expand_all(),
         Event::ToggleTasksPane => state.toggle_tasks_pane(),
         Event::FollowUp => state.queue_follow_up(),
         Event::Dequeue => state.dequeue(),
         Event::ToggleVimMode => handle_toggle_vim_mode(state),
+        Event::ToggleQueuePane => state.toggle_queue_pane(),
         Event::NewSession => handle_new_session(state),
         Event::ResumeSession | Event::OpenSessionList => {
             // Close welcome and open session tree

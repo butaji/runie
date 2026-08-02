@@ -7,6 +7,39 @@ use std::sync::Arc;
 
 pub use crate::model::{FeedElementDetail, SubagentDetail};
 
+/// A queued message projected for the queue pane.
+#[derive(Clone, Debug)]
+pub struct QueuedMessageView {
+    /// 1-based position in the queue (matches the `#N` row prefix).
+    pub position: usize,
+    /// First non-empty trimmed line of the message content.
+    pub first_line: String,
+    /// Total non-empty line count (drives the `(+N lines)` suffix).
+    pub line_count: usize,
+    /// Message kind (follow-up vs steering) for per-kind styling.
+    pub kind: crate::model::QueuedMessageKind,
+}
+
+/// What the active turn is currently doing (grok parity — `compute_activity`).
+///
+/// Minimal viable set driving the status-line activity label:
+/// `Thinking…` / `Responding…` / `Running {tool}…` / `Cancelling…`, with
+/// `Working` as the fallback for states without a dedicated label.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TurnActivityKind {
+    /// Generic active turn with no more specific activity.
+    #[default]
+    Working,
+    /// Model is reasoning before producing output.
+    Thinking,
+    /// Model output is streaming (or waiting on the model response).
+    Responding,
+    /// A tool is executing.
+    ToolRunning,
+    /// The turn is being cancelled (stop button hidden).
+    Cancelling,
+}
+
 /// Git repository info detected from current working directory.
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GitInfo {
@@ -51,6 +84,11 @@ pub struct Snapshot {
     /// Cursor position in `input_display` coordinates.
     pub cursor_display: usize,
     pub hint_text: String,
+    /// Active ephemeral tip spans (grok parity) — None when no tip is
+    /// renderable (none active, occluded, or terminal too short).
+    pub ephemeral_tip: Option<Vec<crate::model::tips::TipSpan>>,
+    /// Inline slash-command dropdown rows (grok parity) — None when closed.
+    pub slash_dropdown: Option<crate::model::slash::SlashDropdown>,
     pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
     pub path_selected: Option<usize>,
     pub turn_active: bool,
@@ -61,6 +99,20 @@ pub struct Snapshot {
     /// Name of the currently running tool, if any. Used by the status bar to
     /// display an activity label and by the monitor pulse glyph.
     pub current_tool_name: Option<String>,
+    /// Output tokens received since the current turn started (per-turn, not
+    /// session-cumulative). 0 before the first tokens of the turn arrive.
+    /// Grok parity: the status line shows `⇣{Nk}` from this counter.
+    pub current_turn_tokens: u64,
+    /// Elapsed seconds since the current activity (tool call / phase) started.
+    /// Reset on each activity transition; falls back to the turn elapsed when
+    /// no narrower activity is in flight. Drives the status-line phase timer.
+    pub activity_elapsed_secs: Option<f64>,
+    /// What the turn is currently doing. Drives the status-line activity label
+    /// (`Thinking…` / `Responding…` / `Running {tool}…` / `Cancelling…`).
+    pub turn_activity: TurnActivityKind,
+    /// True while a cancellation of the active turn is in flight. The status
+    /// line shows `Cancelling…` (accent_error) and hides `[stop]`.
+    pub turn_cancelling: bool,
     pub provider: String,
     pub model: String,
     /// Active theme name for the render actor
@@ -82,6 +134,15 @@ pub struct Snapshot {
     pub ghost_completion: Option<String>,
     /// Queue count (pending messages in queue)
     pub queue_count: usize,
+    /// Queued messages projected for the queue pane (grok parity — numbered
+    /// `#N` rows above the input). FIFO order; `position` is 1-based.
+    pub queued_messages: Vec<QueuedMessageView>,
+    /// Whether the queued-messages pane is shown above the input.
+    pub queue_pane_visible: bool,
+    /// Whether the queue pane holds input focus (j/k navigate, x removes).
+    pub queue_pane_focused: bool,
+    /// Index of the selected queue row.
+    pub queue_pane_selected: usize,
     /// Currently open dialog state for rendering overlays.
     pub dialog: Option<crate::commands::DialogState>,
     /// Filtered command list for palette rendering (name, description, category).
@@ -129,6 +190,11 @@ pub struct Snapshot {
     pub last_visible_height: u16,
     /// Width of the message content area (updated by the render actor).
     pub content_width: u16,
+    /// Total terminal rows. `0` = unmeasured. Used for auto-compact derivation.
+    pub terminal_rows: u16,
+    /// Derived compact layout flag: `effective_compact(user_setting, terminal_rows)`.
+    /// In-memory only; never persisted.
+    pub compact_layout: bool,
     /// Index of the element currently at the top of the message
     /// viewport. `None` if the feed is empty.
     pub current_top_element: Option<usize>,
@@ -150,6 +216,9 @@ pub struct Snapshot {
     /// Auto-approve mode active — read, edit and shell tools run without
     /// confirmation. Session-scoped (never persisted).
     pub auto_mode: bool,
+    /// Context-detail pinned: idle right status shows the usage progress bar
+    /// + percentage instead of the compact token text.
+    pub context_detail_pinned: bool,
     /// Content of the active plan (markdown).
     pub active_plan_content: String,
     /// ID of the active plan file.

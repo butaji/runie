@@ -114,24 +114,26 @@ async fn enter_in_feed_nav_expands_thought_via_production_routing() {
 }
 
 #[tokio::test]
-async fn enter_on_non_collapsible_post_keeps_global_toggle_fallback() {
+async fn enter_on_user_post_toggles_its_fold_state() {
     let mut ui = make_ui_actor();
     let (effect_tx, _effect_rx) = tokio::sync::mpsc::channel(16);
 
-    // Only a user message: no collapsible (thought) posts in the feed.
+    // User messages are foldable when their content needs it; Enter acts on
+    // the selected post rather than changing the global tool/thought mode.
     push_message(&mut ui, Role::User, "hi", 0.0, "u1");
 
     ui.handle_event_inner(Event::DialogBack, effect_tx.clone())
         .await;
     assert!(ui.state.view().vim_nav_mode);
 
-    // Legacy behavior: Enter on a non-collapsible post toggles the global
-    // expand/collapse flag (same as Ctrl+O) — now through production routing.
+    // Production routing keeps the global mode unchanged and records the
+    // selected user post as individually expanded/folded.
     assert!(!ui.state.view().all_collapsed);
     ui.handle_event_inner(Event::Submit, effect_tx.clone())
         .await;
     assert!(
-        ui.state.view().all_collapsed,
-        "Enter on a non-collapsible post should toggle global collapse"
+        ui.state.view().expanded_posts.contains(&0),
+        "Enter on a user post should toggle its individual fold state"
     );
+    assert!(!ui.state.view().all_collapsed);
 }

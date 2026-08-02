@@ -307,6 +307,11 @@ fn e2e_full_turn_with_global_toggle() {
     );
 
     // Ctrl+O collapses tools globally and clears per-post expansions.
+    // Establish the documented precondition explicitly: this test is about
+    // the collapse transition, independent of the preceding nav simulation.
+    state.view.all_collapsed = false;
+    state.view.vim_nav_mode = false;
+    state.view.selected_post = None;
     state.update(Event::ToggleExpand);
     run_tool(&mut state, "file1\nfile2");
     let r3 = render_content(&mut state);

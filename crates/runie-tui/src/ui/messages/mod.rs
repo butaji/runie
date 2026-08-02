@@ -35,9 +35,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     // Reserve 2 columns of right-side slack, the leading feed indent (1 col),
     // and the accent rail column (1 col) so post content lands at column 3
     // while timestamps keep their right edge.
-    let content_width = area
-        .width
-        .saturating_sub(2 + crate::theme::FEED_INDENT.len() as u16 + crate::theme::RAIL_WIDTH as u16);
+    let content_width = runie_core::layout::feed_content_width(area.width);
     let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
     let offset = nav::compute_scroll_offset(snap, &row_to_element, area.height as usize);
 

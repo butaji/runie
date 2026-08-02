@@ -49,6 +49,7 @@ impl ExceptionClassifier {
                 // Explicit rate limit indicators
                 "rate limit",
                 "rate_limit",
+                "ratelimit",
                 "rate-limit",
                 "too many requests",
                 "429",
@@ -89,6 +90,7 @@ impl ExceptionClassifier {
                 "input length",
                 "output length",
                 "total length",
+                "exceeds model limit",
             ]
             .into(),
             // Content policy violation patterns
@@ -110,10 +112,12 @@ impl ExceptionClassifier {
                 "cannot assist",
                 "unable to assist",
                 "cannot provide",
+                "unable to provide",
                 "blocked by policy",
                 "harmfulness",
                 "moderation",
                 "flagged content",
+                "flagged for review",
                 // Harm categories
                 "hate speech",
                 "violence",
@@ -128,6 +132,7 @@ impl ExceptionClassifier {
                 "connect failed",
                 "connection refused",
                 "connection reset",
+                "failed to connect",
                 "connection timed out",
                 "network error",
                 "network failure",
@@ -210,7 +215,7 @@ impl ExceptionClassifier {
 
         // Priority 2: Content policy violations (fatal - won't be fixed by retry)
         if self.matches_any(&msg, &self.content_policy_patterns) {
-            return ProviderError::Source(anyhow::anyhow!("Content policy violation: {}", error_msg));
+            return ProviderError::BadRequest(0, format!("Content policy violation: {error_msg}"));
         }
 
         // Priority 3: Rate limit errors (retryable)
@@ -227,7 +232,8 @@ impl ExceptionClassifier {
         // Priority 5: Timeout errors (retryable)
         {
             let timeout_patterns: HashSet<_> = ["timeout", "timed out", "timedout"].into();
-            if self.matches_any(&msg, &timeout_patterns) {
+            // 504 gateway timeout is a Server(504) error, not a plain timeout
+            if !msg.contains("gateway") && self.matches_any(&msg, &timeout_patterns) {
                 return ProviderError::Timeout;
             }
         }
@@ -382,17 +388,15 @@ impl RetryPolicy {
     /// Returns `None` if this error should not be retried at all.
     /// Returns `Some(n)` with the number of additional retry attempts allowed.
     pub fn max_retries_for(&self, err: &Error) -> Option<u32> {
-        if !is_retryable(err) {
-            return None;
-        }
-
-        // Try to get typed ProviderError first
+        // Try to get typed ProviderError first.
         if let Some(typed) = err.downcast_ref::<ProviderError>() {
             return self.max_retries_for_typed(typed);
         }
-
-        // Fallback to string heuristics - use global config (None = no override)
-        Some(u32::MAX)
+        // String errors: classify them, then map the classified variant to the
+        // configured bucket ("rate limit exceeded" → rate-limit bucket, etc.).
+        let classifier = ExceptionClassifier::new();
+        let classified = classifier.classify(&err.to_string());
+        self.max_retries_for_typed(&classified)
     }
 
     fn max_retries_for_typed(&self, err: &ProviderError) -> Option<u32> {
@@ -422,10 +426,14 @@ pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
         SseErr::Transport(e) => ProviderError::from_reqwest(e),
         // Content-type mismatch
         SseErr::InvalidContentType(_, _) => ProviderError::Source(anyhow::anyhow!("{err}")),
-        // HTTP status code error (5xx, 429, 401, 403) — use shared classifier
+        // HTTP status code error (5xx, 429, 401, 403) — use shared classifier.
+        // Unmapped 4xx (400/404/...) fall back to a non-retryable BadRequest:
+        // client errors are fatal and must not be retried.
         SseErr::InvalidStatusCode(status, _) => {
             let code = status.as_u16();
-            ProviderError::classify_http_status(code).unwrap_or_else(|| ProviderError::Source(anyhow::anyhow!("{err}")))
+            ProviderError::classify_http_status(code).unwrap_or_else(|| {
+                ProviderError::BadRequest(code, format!("HTTP {code} error"))
+            })
         }
         // Invalid Last-Event-ID header
         SseErr::InvalidLastEventId(_) => ProviderError::Source(anyhow::anyhow!("{err}")),
@@ -610,8 +618,28 @@ where
                     _ => return true, // Use global config for other error types
                 }
             } else {
-                // Unknown error type - use global config
-                return true;
+                // String errors (e.g. anyhow-wrapped provider messages): classify
+                // them so "rate limit exceeded" honors the rate-limit bucket.
+                let classifier = ExceptionClassifier::new();
+                match classifier.classify(&err.to_string()) {
+                    ProviderError::RateLimit { .. } => (
+                        "rate_limit",
+                        &rate_limit_retries,
+                        &policy.rate_limit_retries,
+                    ),
+                    ProviderError::Timeout => ("timeout", &timeout_retries, &policy.timeout_retries),
+                    ProviderError::ContextLength(_) => (
+                        "context_window",
+                        &context_window_retries,
+                        &policy.context_window_retries,
+                    ),
+                    ProviderError::Auth(_) => (
+                        "bad_request",
+                        &bad_request_retries,
+                        &policy.bad_request_retries,
+                    ),
+                    _ => return true, // Unclassifiable — global config
+                }
             };
 
             // Check if this category has a specific retry limit
@@ -1030,14 +1058,15 @@ mod tests {
 
     // ── ExceptionClassifier: Auth Errors ────────────────────────────────────────
 
-    #[test_case("401 Unauthorized", true; "unauthorized_401")]
-    #[test_case("403 Forbidden", true; "forbidden_403")]
-    #[test_case("invalid api key", true; "invalid_api_key_space")]
-    #[test_case("invalid api_key", true; "invalid_api_key_underscore")]
-    #[test_case("authentication failed", true; "auth_failed")]
-    #[test_case("auth error", true; "auth_error")]
-    #[test_case("api key required", true; "api_key_required")]
-    #[test_case("unauthorized access", true; "unauthorized_access")]
+    // Auth errors are FATAL — never retried (is_retryable = false).
+    #[test_case("401 Unauthorized", false; "unauthorized_401")]
+    #[test_case("403 Forbidden", false; "forbidden_403")]
+    #[test_case("invalid api key", false; "invalid_api_key_space")]
+    #[test_case("invalid api_key", false; "invalid_api_key_underscore")]
+    #[test_case("authentication failed", false; "auth_failed")]
+    #[test_case("auth error", false; "auth_error")]
+    #[test_case("api key required", false; "api_key_required")]
+    #[test_case("unauthorized access", false; "unauthorized_access")]
     fn classify_auth_errors(msg: &str, retryable: bool) {
         let classifier = ExceptionClassifier::new();
         let result = classifier.classify(msg);
@@ -1252,9 +1281,8 @@ mod tests {
             .with_context_window_retries(Some(1))
             .with_bad_request_retries(Some(2));
 
-        // ContextLength is not retryable
-        let err: anyhow::Error = ProviderError::ContextLength(128_000).into();
-        // The policy says we can retry it, but is_retryable says no
+        // UnknownProvider is not retryable and has no policy bucket: no override.
+        let err: anyhow::Error = ProviderError::UnknownProvider("nope".into()).into();
         assert!(!is_retryable(&err));
         assert_eq!(policy.max_retries_for(&err), None);
     }

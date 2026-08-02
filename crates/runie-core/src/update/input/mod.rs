@@ -32,7 +32,50 @@ pub fn input_event(state: &mut AppState, event: crate::Event) {
 }
 
 fn apply_input_event(state: &mut AppState, event: crate::Event) {
+    // Inline slash dropdown key interception (grok parity: prompt.rs).
+    // Up/Down navigate (wrap), Esc closes keeping the text, Enter submits
+    // the accepted `/cmd` through the normal path. Any other key falls
+    // through to normal editing, which refreshes the dropdown via the
+    // InputChanged echo.
+    if state.view().slash_dropdown.is_some() {
+        match event {
+            crate::Event::Up => {
+                state.slash_move_selection(-1);
+                return;
+            }
+            crate::Event::Down => {
+                state.slash_move_selection(1);
+                return;
+            }
+            crate::Event::Escape => {
+                state.slash_close();
+                return;
+            }
+            crate::Event::Submit => {
+                // Accept the SELECTED command (grok parity: Enter accepts the
+                // highlighted row), not the raw typed text — then submit the
+                // full `/cmd` through the normal slash-command path.
+                if let Some(name) = state
+                    .view()
+                    .slash_dropdown
+                    .as_ref()
+                    .and_then(|d| d.selected_name())
+                {
+                    let full = format!("/{}", name);
+                    state.input_mut().input = full.clone();
+                    state.input_mut().cursor_pos = full.len();
+                }
+                state.slash_close();
+            }
+            crate::Event::Backspace | crate::Event::Input(_) | crate::Event::Newline => {
+                // Fall through to normal editing; the InputChanged echo
+                // refreshes the dropdown.
+            }
+            _ => {}
+        }
+    }
     match event {
+        crate::Event::Input('\t') => state.tab_complete(),
         crate::Event::Input(c) => state.push_input(c),
         crate::Event::Backspace => state.pop_input(),
         crate::Event::Newline => state.insert_newline(),
@@ -70,6 +113,7 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
 
 fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
     state.set_last_content_width(width);
+    state.set_terminal_rows(height);
     // Approximate message viewport height: full terminal minus input box,
     // status bar, and margins. This matches the legacy `view()` heuristic.
     let viewport_height = height.saturating_sub(8).max(3);

@@ -8,69 +8,11 @@ use runie_core::{AppState, Event as CoreEvent};
 pub(crate) mod login;
 
 // ---------------------------------------------------------------------------
-// Effect payload
-// ---------------------------------------------------------------------------
-
-/// Self-contained description of a user-initiated side effect.
-#[derive(Debug, Clone)]
-pub enum EffectPayload {
-    /// Open the system editor with the given text.
-    OpenExternalEditor { text: String },
-    /// Copy the given text to the clipboard.
-    CopyToClipboard { text: String },
-    /// Share the given session messages.
-    ShareSession { messages: Vec<runie_core::ChatMessage>, display_name: Option<String> },
-    /// Validate a provider API key.
-    LoginValidateKey { provider: String, key: String },
-    /// Suspend the terminal process.
-    Suspend,
-}
-
-/// Extract an effect payload from an event and the current state.
-fn extract(event: &CoreEvent, state: &mut AppState) -> Option<EffectPayload> {
-    match event {
-        CoreEvent::OpenExternalEditor => {
-            Some(EffectPayload::OpenExternalEditor { text: state.input().input().to_string() })
-        }
-        CoreEvent::CopyToClipboard(text) => Some(EffectPayload::CopyToClipboard { text: text.clone() }),
-        CoreEvent::CopyLastResponse => {
-            let text = last_assistant_text(state.session().messages());
-            if text.is_empty() {
-                return None;
-            }
-            Some(EffectPayload::CopyToClipboard { text })
-        }
-        CoreEvent::CopySelectedBlock => state
-            .copy_selected_post_text()
-            .map(|text| EffectPayload::CopyToClipboard { text }),
-        CoreEvent::CopyBlockMetadata => state
-            .copy_selected_post_metadata()
-            .map(|text| EffectPayload::CopyToClipboard { text }),
-        CoreEvent::ShareSession => Some(EffectPayload::ShareSession {
-            messages: state.session().messages().to_vec(),
-            display_name: state.session().session_display_name().map(String::from),
-        }),
-        CoreEvent::Suspend => Some(EffectPayload::Suspend),
-        CoreEvent::SubmitKey { provider, key } => {
-            Some(EffectPayload::LoginValidateKey { provider: provider.clone(), key: key.clone() })
-        }
-        _ => None,
-    }
-}
-
-fn last_assistant_text(messages: &[runie_core::ChatMessage]) -> String {
-    messages
-        .iter()
-        .rev()
-        .find(|m| m.role == runie_core::Role::Assistant)
-        .map(|m| m.content())
-        .unwrap_or_default()
-}
-
-// ---------------------------------------------------------------------------
 // Effect command
 // ---------------------------------------------------------------------------
 
+/// User-initiated side effects dispatched from the event loop to IoActor.
+#[derive(Debug)]
 pub enum EffectCommand {
     OpenExternalEditor { text: String },
     CopyToClipboard { text: String },
@@ -81,19 +23,40 @@ pub enum EffectCommand {
 
 impl EffectCommand {
     /// Build an effect command from a core event, if the event is an effect.
+    /// Returns `None` for events that are not side effects.
     pub fn try_from_event(
         evt: &CoreEvent,
         state: &mut AppState,
         _caps: &crate::terminal::caps::TermCaps,
     ) -> Option<Self> {
-        let payload = extract(evt, state)?;
-        Some(match payload {
-            EffectPayload::OpenExternalEditor { text } => Self::OpenExternalEditor { text },
-            EffectPayload::CopyToClipboard { text } => Self::CopyToClipboard { text },
-            EffectPayload::ShareSession { messages, display_name } => Self::ShareSession { messages, display_name },
-            EffectPayload::LoginValidateKey { provider, key } => Self::LoginFlowSubmitKey { provider, key },
-            EffectPayload::Suspend => Self::Suspend,
-        })
+        match evt {
+            CoreEvent::OpenExternalEditor => {
+                Some(Self::OpenExternalEditor { text: state.input().input().to_string() })
+            }
+            CoreEvent::CopyToClipboard(text) => Some(Self::CopyToClipboard { text: text.clone() }),
+            CoreEvent::CopyLastResponse => {
+                let text = last_assistant_text(state.session().messages());
+                if text.is_empty() {
+                    return None;
+                }
+                Some(Self::CopyToClipboard { text })
+            }
+            CoreEvent::CopySelectedBlock => {
+                state.copy_selected_post_text().map(|text| Self::CopyToClipboard { text })
+            }
+            CoreEvent::CopyBlockMetadata => {
+                state.copy_selected_post_metadata().map(|text| Self::CopyToClipboard { text })
+            }
+            CoreEvent::ShareSession => Some(Self::ShareSession {
+                messages: state.session().messages().to_vec(),
+                display_name: state.session().session_display_name().map(String::from),
+            }),
+            CoreEvent::Suspend => Some(Self::Suspend),
+            CoreEvent::SubmitKey { provider, key } => {
+                Some(Self::LoginFlowSubmitKey { provider: provider.clone(), key: key.clone() })
+            }
+            _ => None,
+        }
     }
 
     /// Dispatch the effect via IoActor (async).
@@ -123,6 +86,16 @@ impl EffectCommand {
     }
 }
 
+/// Extract assistant message text from a message list.
+fn last_assistant_text(messages: &[runie_core::ChatMessage]) -> String {
+    messages
+        .iter()
+        .rev()
+        .find(|m| m.role == runie_core::Role::Assistant)
+        .map(|m| m.content())
+        .unwrap_or_default()
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -133,7 +106,7 @@ mod tests {
     use runie_core::message::ChatMessage;
 
     #[test]
-    fn copy_last_response_extracts_assistant_text() {
+    fn effect_command_copy_last_response_extracts_assistant_text() {
         let mut state = AppState::default();
         state
             .session_mut()
@@ -143,13 +116,33 @@ mod tests {
             .session
             .messages
             .push(ChatMessage::assistant("the answer".to_string()));
-        let payload = extract(&CoreEvent::CopyLastResponse, &mut state);
-        assert!(matches!(payload, Some(EffectPayload::CopyToClipboard { text }) if text == "the answer"));
+        let caps = crate::terminal::caps::TermCaps::default();
+        let cmd = EffectCommand::try_from_event(&CoreEvent::CopyLastResponse, &mut state, &caps);
+        assert!(matches!(cmd, Some(EffectCommand::CopyToClipboard { text }) if text == "the answer"));
     }
 
     #[test]
-    fn copy_last_response_empty_when_no_assistant() {
+    fn effect_command_copy_last_response_empty_when_no_assistant() {
         let mut state = AppState::default();
-        assert!(extract(&CoreEvent::CopyLastResponse, &mut state).is_none());
+        let caps = crate::terminal::caps::TermCaps::default();
+        assert!(EffectCommand::try_from_event(&CoreEvent::CopyLastResponse, &mut state, &caps).is_none());
+    }
+
+    #[test]
+    fn effect_command_submit_key_roundtrips() {
+        let mut state = AppState::default();
+        let caps = crate::terminal::caps::TermCaps::default();
+        let cmd = EffectCommand::try_from_event(
+            &CoreEvent::SubmitKey { provider: "anthropic".into(), key: "sk-123".into() },
+            &mut state,
+            &caps,
+        );
+        match cmd {
+            Some(EffectCommand::LoginFlowSubmitKey { provider, key }) => {
+                assert_eq!(provider, "anthropic");
+                assert_eq!(key, "sk-123");
+            }
+            other => panic!("expected LoginFlowSubmitKey, got {other:?}"),
+        }
     }
 }

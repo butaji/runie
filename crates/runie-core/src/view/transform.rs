@@ -46,8 +46,9 @@ impl LazyCache {
                 Element::SubagentRow { status, expanded, .. } => {
                     *expanded || matches!(status, crate::model::PatternWorkerStatus::Running)
                 }
-                // User messages fold when expanded=false (user collapsed their own post
-                // with ctrl+o). User messages default to expanded=true.
+                // User messages use the inverse global fold state: they are
+                // folded in the normal feed and expanded by the feed-wide
+                // Ctrl+O toggle. Individual expansion still wins.
                 Element::UserMessage { expanded, .. } => *expanded,
                 _ => true,
             };
@@ -442,10 +443,11 @@ impl LazyCache {
     /// expanded=false and content exceeds 3 visual lines.
     fn maybe_expand_user_message(mut elem: Element, state: &AppState, post_index: usize) -> Element {
         if let Element::UserMessage { expanded, .. } = &mut elem {
-            // User messages start folded (expanded=false). When the user explicitly
-            // expands the post (pressed ctrl+o or Enter on it in vim nav), the post
-            // index is added to expanded_posts — meaning "I expanded this".
-            *expanded = state.view().expanded_posts.contains(&post_index);
+            // User messages start folded. Ctrl+O participates in the same
+            // feed-wide expand/collapse cycle as tool/thought sections, while
+            // an individually expanded post remains expanded in either mode.
+            *expanded = state.view().all_collapsed
+                || state.view().expanded_posts.contains(&post_index);
         }
         elem
     }

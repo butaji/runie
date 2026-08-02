@@ -26,6 +26,9 @@ pub struct AgentState {
     pub current_request_id: Option<String>,
     pub turn_started_at: Option<std::time::Instant>,
     pub turn_active: bool,
+    /// True while a cancellation of the active turn is in flight (stop button
+    /// hidden, status label `Cancelling…`). Cleared when the turn fully ends.
+    pub turn_cancelling: bool,
     pub inflight: usize,
 
     // ── Tool execution (mirrors TurnState) ─────────────────────────────────────
@@ -85,6 +88,7 @@ impl From<&TurnState> for AgentState {
             current_request_id: ts.current_request_id.clone(),
             turn_started_at: ts.turn_started_at,
             turn_active: ts.turn_active,
+            turn_cancelling: false,
             inflight: ts.inflight,
             current_tool_name: ts.current_tool_name.clone(),
             tool_started_at: ts.tool_started_at,

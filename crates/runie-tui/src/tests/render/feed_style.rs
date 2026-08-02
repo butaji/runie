@@ -284,11 +284,11 @@ fn tool_done_post_is_dim_diamond_bold_name_no_duration() {
     );
 
     let diamond = find_col(&buf, row, "◆").expect("tool diamond");
-    assert_eq!(diamond, 2, "tool glyph must sit at column 2");
+    assert_eq!(diamond, 3, "tool glyph must sit after the rail and feed indent");
     assert_eq!(
         buf[(diamond, row)].style().fg,
-        Some(FEED_DIM),
-        "tool glyph must be dim"
+        Some(crate::theme::color_accent()),
+        "tool glyph uses the finish-flash accent on its initial frame"
     );
 
     let name_col = col_of(&text, "Run list_files").expect("tool name");
@@ -394,8 +394,8 @@ fn turn_completed_line_is_dim_with_trailing_period() {
         text.contains("Worked for 1.0s."),
         "turn line must end with a period: {text:?}"
     );
-    let x = find_col(&buf, row, "T").expect("turn text");
-    assert_eq!(x, 2, "turn line must start at column 2");
+    let x = find_col(&buf, row, "W").expect("turn text");
+    assert_eq!(x, 2, "turn-complete lines use the feed indent without a rail");
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),

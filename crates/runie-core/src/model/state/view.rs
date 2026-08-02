@@ -28,6 +28,9 @@ pub struct ViewState {
     /// the render actor on each draw. Used to compute per-element line
     /// counts so that scroll math matches the actual wrapped output.
     pub last_content_width: u16,
+    /// Total terminal rows from the last TerminalSize event. `0` = unmeasured.
+    /// Used to derive auto-compact layout.
+    pub terminal_rows: u16,
     /// Index of the post currently selected in vim nav mode.
     /// A post is a logical unit in the feed (e.g. a user message, a
     /// thought, a tool call). Independent of scroll; used to highlight
@@ -76,6 +79,16 @@ pub struct ViewState {
     /// confirmation (sensitive paths still ask). Session-scoped; never
     /// persisted across restarts.
     pub auto_mode: bool,
+    /// Context-detail pinned: the idle right status shows the usage progress
+    /// bar + percentage instead of the compact `used / total` token text.
+    /// Keyboard-only toggle (`/context-detail`); session-scoped.
+    pub context_detail_pinned: bool,
+    /// Single-slot ephemeral tip (grok parity) — TTL'd, seen-gated hint.
+    pub ephemeral_tip: crate::model::tips::EphemeralTipState,
+    /// Inline slash-command dropdown (grok parity) — Some while open.
+    pub slash_dropdown: Option<crate::model::slash::SlashDropdown>,
+    /// Per-session seen counts for tips (in-memory only, never persisted).
+    pub tip_seen_counts: std::collections::HashMap<String, crate::model::tips::TipSeen>,
     /// Content of the active plan (markdown).
     pub active_plan_content: String,
     /// ID of the active plan file.
@@ -84,6 +97,12 @@ pub struct ViewState {
     pub tasks_pane_visible: bool,
     /// Show completed workers in the tasks pane (true when no workers are running).
     pub tasks_pane_show_done: bool,
+    /// Whether the queued-messages pane is shown above the input.
+    pub queue_pane_visible: bool,
+    /// Whether the queue pane holds input focus (j/k navigate, x removes).
+    pub queue_pane_focused: bool,
+    /// Index of the selected queue row.
+    pub queue_pane_selected: usize,
     /// Open subagent detail overlay state.
     pub subagent_detail: Option<crate::model::SubagentDetail>,
     /// Open feed element detail overlay state.
@@ -148,6 +167,10 @@ impl ViewState {
     pub fn auto_mode_mut(&mut self) -> &mut bool {
         &mut self.auto_mode
     }
+    /// Accessor for the context-detail pin state.
+    pub fn context_detail_pinned_mut(&mut self) -> &mut bool {
+        &mut self.context_detail_pinned
+    }
 
     pub fn active_plan_content_mut(&mut self) -> &mut String {
         &mut self.active_plan_content
@@ -168,6 +191,7 @@ impl Default for ViewState {
             all_collapsed: false,
             last_visible_height: 20,
             last_content_width: 82, // area width; rendering subtracts 2 for glyph margins
+            terminal_rows: 0,
             selected_post: None,
             expanded_posts: std::collections::HashSet::new(),
             total_lines: 0,
@@ -188,10 +212,17 @@ impl Default for ViewState {
             input_receiver: InputReceiver::default(),
             plan_mode: false,
             auto_mode: false,
+            context_detail_pinned: false,
+            ephemeral_tip: Default::default(),
+            tip_seen_counts: Default::default(),
+            slash_dropdown: None,
             active_plan_content: String::new(),
             active_plan_id: None,
             tasks_pane_visible: false,
             tasks_pane_show_done: false,
+            queue_pane_visible: false,
+            queue_pane_focused: false,
+            queue_pane_selected: 0,
             subagent_detail: None,
             feed_element_detail: None,
             current_turn: None,

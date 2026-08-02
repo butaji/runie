@@ -41,15 +41,11 @@ pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'sta
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    // Grok-style thinking line with dim rail: `┃` + `◆ ⠋ Waiting...`
-    let rail_color = crate::theme::color_rail_thinking();
+    // Keep the thinking indicator flush with the feed content. The thinking
+    // glyph already carries the visual identity; a leading rail adds a
+    // distracting extra column and misaligns the row.
     let line_text = crate::theme::thinking_line(started.elapsed().as_secs_f64());
-    vec![Line::from(vec![
-        Span::styled(RAIL_GLYPH.to_string(), Style::new().fg(rail_color)),
-        Span::styled(" ", style_thinking()),
-        Span::raw(line_text),
-    ])
-    .style(style_thinking())]
+    vec![Line::from(Span::raw(line_text)).style(style_thinking())]
 }
 
 /// Number of thought body lines to show in truncated (default) mode.

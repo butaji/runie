@@ -56,7 +56,48 @@ pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
     s.animation_frame = state.view().animation_frame;
     s.turn_elapsed_secs = state.turn_elapsed_secs();
     s.current_tool_name = agent.current_tool_name.clone();
+    // Per-turn token counter (delta since the turn started) — grok parity for
+    // the `⇣{Nk}` status arm; 0 before the first tokens of the turn arrive.
+    s.current_turn_tokens = agent.turn_tokens_out as u64;
+    // Phase timer: elapsed since the current activity started. Prefer the
+    // tool-start time while a tool runs, else the turn start (thinking/responding).
+    s.activity_elapsed_secs = state.tool_elapsed_secs().or(state.turn_elapsed_secs());
+    s.turn_cancelling = agent.turn_cancelling;
+    s.turn_activity = if agent.turn_cancelling {
+        crate::snapshot::TurnActivityKind::Cancelling
+    } else if agent.current_tool_name.is_some() {
+        crate::snapshot::TurnActivityKind::ToolRunning
+    } else if agent.turn_active {
+        // Minimal viable distinction: no tool running → the model phase
+        // (thinking before the first delta / responding while streaming).
+        if agent.turn_tokens_out == 0 {
+            crate::snapshot::TurnActivityKind::Thinking
+        } else {
+            crate::snapshot::TurnActivityKind::Responding
+        }
+    } else {
+        crate::snapshot::TurnActivityKind::Working
+    };
     s.queue_count = agent.message_queue.len() + agent.request_queue.len();
+    // Queue pane projection (message queue only — request_queue entries are
+    // pending *runs*, not user-visible queued prompts).
+    s.queued_messages = agent
+        .message_queue
+        .iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let lines: Vec<&str> = m.content.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+            crate::snapshot::QueuedMessageView {
+                position: i + 1,
+                first_line: lines.first().unwrap_or(&"").to_string(),
+                line_count: lines.len(),
+                kind: m.kind.clone(),
+            }
+        })
+        .collect();
+    s.queue_pane_visible = state.view().queue_pane_visible;
+    s.queue_pane_focused = state.view().queue_pane_focused;
+    s.queue_pane_selected = state.view().queue_pane_selected;
     s.tokens_in = agent.tokens_in;
     s.tokens_out = agent.tokens_out;
     s.speed_tps = agent.speed_tps;
@@ -107,6 +148,19 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
     s.active_plan_id = state.view().active_plan_id.clone();
     // Auto-approve mode projection
     s.auto_mode = state.view().auto_mode;
+    // Context-detail pin projection
+    s.context_detail_pinned = state.view().context_detail_pinned;
+    // Ephemeral-tip projection (grok parity) — gated on renderability.
+    s.ephemeral_tip = if state.open_dialog.is_none()
+        && state.permission_request_opt().is_none()
+        && state.view().terminal_rows > crate::model::tips::SHORT_TERMINAL_ROWS
+    {
+        state.view().ephemeral_tip.slot.as_ref().map(|t| t.spans.clone())
+    } else {
+        None
+    };
+    // Slash-command dropdown projection.
+    s.slash_dropdown = state.view().slash_dropdown.clone();
     // Tasks pane and subagent detail projection
     s.tasks_pane_visible = state.view().tasks_pane_visible;
     s.tasks_pane_show_done = state.view().tasks_pane_show_done;

@@ -18,10 +18,7 @@ use runie_core::tool::ParsedToolCall;
 use runie_core::tool::{
     is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext, ToolOutput, ToolResultCache, ToolStatus,
 };
-use tokio::time::timeout;
 
-/// Default timeout for tool execution (30 seconds).
-const DEFAULT_TOOL_TIMEOUT_SECS: u64 = 30;
 
 /// Execute a single parsed tool call, respecting the permission gate and tool-result cache.
 ///
@@ -50,11 +47,10 @@ pub async fn execute_tool_call(
                 }
             }
 
-            let duration = Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS);
-            let output = match timeout(duration, dispatch_tool(tool_name, &tool_call.args, ctx)).await {
-                Ok(o) => o,
-                Err(_) => timeout_error(tool_name),
-            };
+            // NOTE: No outer timeout wrapper here. Each tool is responsible for its own
+            // timeout. The bash tool enforces `timeout_seconds` via `run_bash(..., timeout)`.
+            // A future safety-net ceiling (e.g. 120s) can be added as a follow-up if needed.
+            let output = dispatch_tool(tool_name, &tool_call.args, ctx).await;
 
             // Cache successful read-only results.
             if let (Some(ref c), ToolStatus::Success) = (&cache, &output.status) {
@@ -92,20 +88,6 @@ async fn dispatch_tool(name: &str, args: &serde_json::Value, ctx: &ToolContext) 
 /// Check if a tool name is known.
 pub fn is_known_tool(name: &str) -> bool {
     is_builtin_tool(name)
-}
-
-fn timeout_error(tool_name: &str) -> ToolOutput {
-    ToolOutput {
-        tool_name: tool_name.to_owned(),
-        tool_args: serde_json::json!({}),
-        content: format!(
-            "Tool execution timed out after {} seconds",
-            DEFAULT_TOOL_TIMEOUT_SECS
-        ),
-        bytes_transferred: None,
-        duration: Duration::from_secs(DEFAULT_TOOL_TIMEOUT_SECS),
-        status: ToolStatus::Error,
-    }
 }
 
 pub fn build_permission_context<'a>(
@@ -310,6 +292,7 @@ pub(crate) fn fire_skill_after_hook(skills: Option<&SkillRegistry>, tool_call: &
 
 #[cfg(test)]
 mod tests {
+    use tokio::time::timeout;
     use super::*;
 
     #[tokio::test]

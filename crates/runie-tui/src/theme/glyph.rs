@@ -27,9 +27,9 @@ pub const GLYPH_SUBAGENT_QUOTE_LEFT: &str = "“";
 pub const GLYPH_SUBAGENT_QUOTE_RIGHT: &str = "”";
 
 // Monitor pulse glyph frames (grok-build parity).
-// Concentric circles: outer ring breathing to solid to inner breathing to solid.
+// A single 1-column glyph breathing from outer ring to solid to inner ring.
 // Used when pattern workers are running but no named tool is active yet.
-pub const GLYPH_MONITOR_FRAMES: [&str; 4] = ["○ ◉", "◉ ○", "◉ ○", "◉ ◉"];
+pub const GLYPH_MONITOR_FRAMES: [&str; 4] = ["○", "◎", "◉", "◎"];
 
 // Monitor pulse speed divisor - every N animation frames, advance one pulse frame.
 // pulse_brightness cycles at period pi, so at ~30fps this gives a ~2.1s cycle.

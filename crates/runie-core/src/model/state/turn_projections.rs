@@ -419,6 +419,11 @@ impl AppState {
             .message_queue
             .push(crate::model::QueuedMessage { content, kind: QueuedMessageKind::FollowUp });
         self.view_mut().scroll = 0;
+        // Auto-show the queue pane when the queue grows (grok parity). The pane
+        // also takes focus so `x`/`j`/`k` act on it immediately; Esc returns
+        // focus to the chat input.
+        self.view_mut().queue_pane_visible = true;
+        self.view_mut().queue_pane_focused = true;
         self.view_mut().dirty = true;
     }
 
@@ -430,6 +435,11 @@ impl AppState {
             .message_queue
             .push(crate::model::QueuedMessage { content, kind: QueuedMessageKind::Steering });
         self.view_mut().scroll = 0;
+        // Auto-show the queue pane when the queue grows (grok parity). The pane
+        // also takes focus so `x`/`j`/`k` act on it immediately; Esc returns
+        // focus to the chat input.
+        self.view_mut().queue_pane_visible = true;
+        self.view_mut().queue_pane_focused = true;
         self.view_mut().dirty = true;
     }
 

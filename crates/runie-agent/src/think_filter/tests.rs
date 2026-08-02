@@ -253,6 +253,89 @@ fn whitespace_between_closes() {
     assert!(text_content(&out).contains("b"));
 }
 
+/// Regression (task 19): non-ASCII text between closing tag and next opening tag
+/// must not panic when skipping whitespace. Previously `ws_len` was a char count
+/// but was added to a byte index, causing `&text[after_ws..]` to slice mid-codepoint.
+#[test]
+fn whitespace_between_closes_nonascii() {
+    let mut f = ThinkFilter::new();
+    // "日" is 3 bytes. After </thinking>, whitespace = 1 byte, then </thinking>.
+    // The bug would compute ws_len=1 (char count) and after_ws=pos+1 (byte index),
+    // slicing into the middle of "日" and panicking.
+    let out: Vec<_> = f
+        .feed(ev("<thinking>hi</thinking>日 </thinking>rest"))
+        .into_iter()
+        .collect();
+    assert_eq!(
+        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(),
+        1,
+        "expected exactly 1 ThinkingStart"
+    );
+    assert_eq!(
+        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(),
+        1,
+        "expected exactly 1 ThinkingEnd"
+    );
+    assert!(
+        text_content(&out).contains("rest"),
+        "expected 'rest' to appear after second </thinking>, got: {:?}", text_content(&out)
+    );
+}
+
+/// Regression (task 19): emoji whitespace between tags (emoji is 4 bytes).
+#[test]
+fn whitespace_between_closes_emoji() {
+    let mut f = ThinkFilter::new();
+    let out: Vec<_> = f
+        .feed(ev("<thinking>x</thinking>😀 </thinking>y"))
+        .into_iter()
+        .collect();
+    assert_eq!(
+        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(),
+        1
+    );
+    assert_eq!(
+        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(),
+        1
+    );
+    assert!(
+        text_content(&out).contains("y"),
+        "expected 'y' to appear after second </thinking>, got: {:?}", text_content(&out)
+    );
+}
+
+/// Regression (task 19): non-ASCII text after close tag with no second open.
+#[test]
+fn post_thought_empty_nonascii() {
+    let mut f = ThinkFilter::new();
+    let out: Vec<_> = f
+        .feed(ev("<thinking>test</thinking>日"))
+        .into_iter()
+        .collect();
+    assert_eq!(
+        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(),
+        1
+    );
+    assert!(
+        text_content(&out).contains("日"),
+        "expected '日' to be emitted as text, got: {:?}", text_content(&out)
+    );
+}
+
+/// Regression (task 19): CJK chars immediately after close tag, then another close.
+#[test]
+fn whitespace_only_nonascii_then_close() {
+    let mut f = ThinkFilter::new();
+    let out: Vec<_> = f
+        .feed(ev("<thinking>a</thinking>中文</thinking>b"))
+        .into_iter()
+        .collect();
+    assert!(
+        text_content(&out).contains("b"),
+        "expected 'b' after second </thinking>, got: {:?}", text_content(&out)
+    );
+}
+
 /// Layer 1: emit helpers produce correct events.
 #[test]
 fn emit_helpers() {

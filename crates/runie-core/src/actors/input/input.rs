@@ -26,9 +26,16 @@ impl InputHandle {
         let _ = self.tx.send(msg);
     }
 
-    /// Backward-compat alias for `send`.
-    #[allow(dead_code)]
-    pub async fn send_message(&self, msg: InputMsg) {
+    /// Backward-compat alias for `send` (fire-and-forget).
+    ///
+    /// Deliberately synchronous: it is only an `UnboundedSender::send`, which
+    /// has no await points. Being `async` made the routing call sites in the
+    /// TUI (`input_mapping::handle_input`, `UiActor::send_input_msg`, core
+    /// `update/input/*`) drop the future un-awaited, so the message never
+    /// reached the InputActor and its `InputChanged` echo — the single source
+    /// of truth for the input projection — never fired, leaving the input box
+    /// blank while typing.
+    pub fn send_message(&self, msg: InputMsg) {
         let _ = self.tx.send(msg);
     }
 

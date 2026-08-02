@@ -292,10 +292,12 @@ impl AppState {
                         // Skip elements that already have their own dedicated overlay
                         // (SubagentRow above) and skip non-visual kinds (Thinking).
                         use crate::model::feed_detail::FeedElementDetail;
-                        if let Some(detail) = FeedElementDetail::from_postkind(post.kind, post.start) {
-                            self.view_mut().feed_element_detail = Some(detail);
-                            self.view_mut().dirty = true;
-                            return Some(true);
+                        if post.kind != crate::view::elements::PostKind::Thought {
+                            if let Some(detail) = FeedElementDetail::from_postkind(post.kind, post.start) {
+                                self.view_mut().feed_element_detail = Some(detail);
+                                self.view_mut().dirty = true;
+                                return Some(true);
+                            }
                         }
                     }
                     let collapsible = snap.posts.get(sel).is_some_and(|p| !p.expanded);
@@ -332,7 +334,10 @@ impl AppState {
                     }
                 }
                 // Default: toggle global expand/collapse (thoughts, tools).
-                self.update(crate::Event::ToggleExpand);
+                // Call the global toggle DIRECTLY — re-dispatching
+                // `update(ToggleExpand)` would re-enter this nav handler
+                // (vim_nav_mode is still true) and recurse forever.
+                self.toggle_expand_all();
                 Some(true)
             }
             _ => Some(true),

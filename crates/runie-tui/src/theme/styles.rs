@@ -315,12 +315,11 @@ pub fn style_chevron(token_held: bool) -> Style {
 
 /// Build the input panel block with rounded borders.
 /// Title is placed at the bottom-right.
-/// Uses a brighter border when focused (user typing), dim when unfocused.
-pub fn block_input(title: &str, flash: bool, focused: bool) -> Block<'_> {
+/// The border stays low-contrast in both focus states; only the input cursor
+/// and chevron communicate focus.
+pub fn block_input(title: &str, flash: bool, _focused: bool) -> Block<'_> {
     let border_style = if flash {
         style_border_flash()
-    } else if focused {
-        style_border_focused()
     } else {
         style_border()
     };

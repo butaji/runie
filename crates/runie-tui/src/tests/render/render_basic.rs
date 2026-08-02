@@ -206,8 +206,8 @@ fn test_render_thinking_indicator() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content().iter().map(|c| c.symbol()).collect();
     assert!(
-        content.contains("Waiting for response…"),
-        "Thinking should show the grok waiting wording. Got: {}",
+        content.contains("Thinking…"),
+        "Thinking should show the active thinking wording. Got: {}",
         content
     );
     assert!(

@@ -181,3 +181,26 @@ pub(crate) fn rebuild_login_dialog(state: &mut crate::model::AppState) {
         state.view_mut().dirty = true;
     }
 }
+
+/// Sync `LoginFlowState.step` to the current login panel after a generic
+/// dialog pop (e.g. `DialogBack` via the dialog router) that does not go
+/// through `push_login_panel`. Without this, `flow.step` stays on the popped
+/// panel while the UI shows the previous one (state/UI mismatch).
+pub(crate) fn sync_step_from_current_panel(state: &mut crate::model::AppState) {
+    let step = state
+        .open_dialog()
+        .and_then(|d| d.panel_stack())
+        .and_then(|s| s.current())
+        .and_then(|p| match p.id.as_str() {
+            "login-provider" => Some(super::state::LoginStep::ProviderPicker),
+            "login-key" => Some(super::state::LoginStep::KeyInput),
+            "login-validating" => Some(super::state::LoginStep::Validating),
+            "login-models" => Some(super::state::LoginStep::ModelSelect),
+            _ => None,
+        });
+    if let Some(step) = step {
+        if let Some(flow) = state.login_flow_mut() {
+            flow.step = step;
+        }
+    }
+}

@@ -22,6 +22,17 @@ pub const GLYPH_INDENT: &str = "  ";
 /// (must match `runie_tui::theme::FEED_INDENT`). Combined with the 1-column
 /// terminal margin this places post content at column 2 (0-indexed).
 pub const FEED_INDENT: &str = " ";
+/// Width of the accent-rail column at the feed's left edge (must match
+/// `runie_tui::theme::RAIL_WIDTH`).
+pub const RAIL_WIDTH: usize = 1;
+
+/// Content width the TUI feed renderer wraps to for a feed area of
+/// `area_width` columns: `area_width - 2` (right-side slack) minus the feed
+/// indent and accent-rail columns. Cache/scroll math in core MUST use this
+/// exact formula so cached `total_lines` matches the rendered line count.
+pub fn feed_content_width(area_width: u16) -> u16 {
+    area_width.saturating_sub(2 + FEED_INDENT.len() as u16 + RAIL_WIDTH as u16)
+}
 
 /// Number of terminal rows an element renders to at the given viewport
 /// width. This uses the same wrapping rules as `runie_tui::ui::messages::to_lines`,
@@ -274,7 +285,11 @@ fn tool_done_line_count(output: &str) -> usize {
     if output.is_empty() {
         1
     } else {
-        1 + output.lines().count()
+        // Must match the TUI renderer (message/support.rs): header row +
+        // blank separator + output panel, where panels longer than 5 lines
+        // are truncated to `first 2 + … + last 3` (6 rows).
+        let n = output.lines().count();
+        2 + if n > 5 { 6 } else { n }
     }
 }
 

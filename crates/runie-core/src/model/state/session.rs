@@ -128,6 +128,8 @@ pub struct ConfigState {
     pub swarm_variant: Option<String>,
     /// Vim-style scrollback navigation (opt-in).
     pub vim_mode: bool,
+    /// Manually enable compact layout (reduces margins to save vertical space).
+    pub compact_mode: bool,
     pub steering_mode: crate::model::DeliveryMode,
     pub follow_up_mode: crate::model::DeliveryMode,
     pub recent_models: Vec<String>,
@@ -176,6 +178,7 @@ impl Default for ConfigState {
             mode: crate::config::ModeSection::default(),
             swarm_variant: None,
             vim_mode: true,
+            compact_mode: false,
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),

@@ -195,6 +195,13 @@ fn handle_turn_events(state: &mut AppState, event: &Event) -> bool {
         }
         Event::QueueFollowUpAdded { id, content } => {
             state.apply_queue_follow_up_added(id.clone(), content.clone());
+            // Send-now tip: advertise that bare Enter force-sends the top
+            // queued item (grok parity: send_now.rs).
+            let (tip_state, seen_counts) = {
+                let view = state.view_mut();
+                (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+            };
+            tip_state.show(crate::model::tips::send_now_tip(), seen_counts);
             true
         }
         Event::QueueSteeringAdded { id, content } => {

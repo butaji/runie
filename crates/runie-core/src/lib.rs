@@ -69,8 +69,6 @@ pub mod notification;
 pub mod path_complete;
 pub mod prompts;
 pub mod provider;
-pub mod result;
-pub use result::{RunieContext, RunieResult};
 /// OS-level sandboxing with profile support.
 #[cfg(target_os = "macos")]
 pub mod sandbox;
@@ -147,8 +145,6 @@ pub use diff::{Diff, DiffHunk, DiffLine};
 pub use dry_run::{run_dry_run, DryRunReport, DryRunStatus};
 pub use edit_preview::EditPreview;
 // NOTE: RunieError/RunieErrorKind were deleted — see crates/runie-core/src/error.rs note.
-pub mod agentic_loop;
-pub use agentic_loop::{check_agentic_loop_safety, fingerprint_tools, AgenticLoopConfig, AgenticLoopTracker};
 pub use event::Event;
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
 pub use goal::{
