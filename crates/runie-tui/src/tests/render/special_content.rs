@@ -450,6 +450,24 @@ mod web_search {
     }
 
     #[test]
+    fn search_header_summarizes_unique_sites() {
+        let results = vec![
+            WebSearchResult { title: "One".into(), url: "https://example.com/one".into(), snippet: "a".into() },
+            WebSearchResult { title: "Two".into(), url: "https://www.example.com/two".into(), snippet: "b".into() },
+            WebSearchResult { title: "Three".into(), url: "https://docs.rs/three".into(), snippet: "c".into() },
+        ];
+        let output = render_to_string(render_web_search_call("rust", &results, 0.0), 80, 20);
+        assert!(output.contains("Web Search rust (2 sites)"), "search header: {output}");
+    }
+
+    #[test]
+    fn empty_search_has_no_site_summary() {
+        let output = render_to_string(render_web_search_call("rust", &[], 0.0), 80, 20);
+        assert!(output.contains("Web Search rust"));
+        assert!(!output.contains("site"));
+    }
+
+    #[test]
     fn search_shows_results() {
         let results = vec![WebSearchResult {
             title: "Rust Docs".to_string(),

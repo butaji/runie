@@ -925,11 +925,23 @@ pub fn render_web_search_call(query: &str, results: &[WebSearchResult], _timesta
     let style = style_agent();
     let mut lines = Vec::new();
 
-    // Search header
+    let site_count = results
+        .iter()
+        .filter_map(|result| web_search_domain(&result.url))
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    let suffix = match site_count {
+        0 => String::new(),
+        1 => " (1 site)".to_string(),
+        count => format!(" ({count} sites)"),
+    };
+
+    // Grok-style search header includes a deduplicated citation-domain summary.
     lines.push(Line::from(vec![
         Span::styled(GLYPH_INDENT, style),
-        Span::styled("Web Search: ", style.bold()),
-        Span::styled(format!("\"{}\"", query), style),
+        Span::styled("Web Search ", style.bold()),
+        Span::styled(query.to_string(), style),
+        Span::styled(suffix, style.dim()),
     ]));
 
     // Results
@@ -960,6 +972,19 @@ pub fn render_web_search_call(query: &str, results: &[WebSearchResult], _timesta
     }
 
     lines
+}
+
+fn web_search_domain(url: &str) -> Option<String> {
+    let host = url
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(url)
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or_default()
+        .trim_start_matches("www.")
+        .to_ascii_lowercase();
+    (!host.is_empty() && host.contains('.')).then_some(host)
 }
 
 /// Render ANSI escape sequence styled content.
