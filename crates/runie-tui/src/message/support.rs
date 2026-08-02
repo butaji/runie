@@ -292,13 +292,20 @@ pub fn render_background_task(
     let (verb, suffix) = match status {
         "completed" => ("completed", format!(" in {:.1}s", duration_secs)),
         "failed" => {
-            let detail = signal.map(|s| format!(" ({s})")).or_else(|| exit_code.map(|code| format!(" (exit {code})"))).unwrap_or_default();
-            ("failed", format!(" in {:.1}s{detail}", duration_secs))
+            ("failed", format!(" in {:.1}s", duration_secs))
         }
         "killed" | "cancelled" => ("killed", format!(" in {:.1}s", duration_secs)),
         _ => ("started", String::new()),
     };
-    vec![Line::from(format!("Task {verb}{suffix}: {display}")).style(style)]
+    let detail = if status == "failed" {
+        signal
+            .map(|s| format!(" ({s})"))
+            .or_else(|| exit_code.map(|code| format!(" (exit {code})")))
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+    vec![Line::from(format!("Task {verb}{suffix}: {display}{detail}")).style(style)]
 }
 
 /// Render Grok's inline BTW side-question item.

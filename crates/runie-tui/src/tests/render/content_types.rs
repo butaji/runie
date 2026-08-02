@@ -285,7 +285,12 @@ fn workflow_feed_row_shows_phase_trail_and_active_agents() {
 
 #[test]
 fn workflow_terminal_rows_include_elapsed_time() {
-    for status in ["done", "failed", "cancelled", "paused"] {
+    for (status, marker) in [
+        ("done", "research done in 2.5s:"),
+        ("failed", "research failed in 2.5s:"),
+        ("cancelled", "research ◌ cancelled after 2.5s:"),
+        ("paused", "research paused at 2.5s:"),
+    ] {
         let element = Element::workflow("research", "compare sources", status, Vec::new(), 0).at(1.0);
         let element = match element {
             Element::Workflow { name, objective, status, phases, active_agents, timestamp, .. } => {
@@ -298,28 +303,37 @@ fn workflow_terminal_rows_include_elapsed_time() {
             .map(|line| line.to_string())
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(text.contains("2.5s"), "missing workflow duration for {status}: {text}");
+        assert!(text.contains(marker), "wrong workflow terminal wording for {status}: {text}");
     }
 }
 
 #[test]
-fn background_task_feed_row_shows_completion_state() {
-    let element = Element::background_task(
-        "cargo test",
-        "task-1",
-        "completed",
-        Some("run tests".into()),
-        1.2,
-        Some(0),
-        None,
-    )
-    .at(1.0);
-    let text = crate::ui::to_lines_internal(&element, 80)
-        .into_iter()
-        .map(|line| line.to_string())
-        .collect::<Vec<_>>()
-        .join("\n");
-    assert!(text.contains("Task completed in 1.2s: run tests"), "missing task row: {text}");
+fn background_task_feed_row_covers_grok_lifecycle_variants() {
+    let cases = [
+        ("started", None, "Task started: run tests"),
+        ("completed", Some(0), "Task completed in 1.2s: run tests"),
+        ("failed", Some(2), "Task failed in 1.2s: run tests (exit 2)"),
+        ("killed", None, "Task killed in 1.2s: run tests"),
+        ("cancelled", None, "Task killed in 1.2s: run tests"),
+    ];
+    for (status, exit_code, expected) in cases {
+        let element = Element::background_task(
+            "cargo test",
+            "task-1",
+            status,
+            Some("run tests".into()),
+            1.2,
+            exit_code,
+            None,
+        )
+        .at(1.0);
+        let text = crate::ui::to_lines_internal(&element, 80)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains(expected), "wrong background-task wording for {status}: {text}");
+    }
 }
 
 #[test]
@@ -354,4 +368,33 @@ fn btw_feed_item_shows_question_and_answer() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(expanded_text.contains("The feed model was updated."), "expanded BTW lost answer: {expanded_text}");
+}
+
+#[test]
+fn btw_running_and_empty_answer_follow_grok_collapsed_rules() {
+    let running = Element::btw("Is this live?", None, "running").at(1.0);
+    let running_text = crate::ui::to_lines_internal(&running, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(running_text.contains("/btw… Is this live?"), "missing running BTW marker: {running_text}");
+
+    let empty_answer = Element::btw("No answer yet", Some(String::new()), "answered").at(1.0);
+    let expanded = match empty_answer {
+        Element::Btw { question, answer, status, timestamp, .. } => Element::Btw {
+            question,
+            answer,
+            status,
+            expanded: true,
+            timestamp,
+        },
+        _ => unreachable!(),
+    };
+    let expanded_text = crate::ui::to_lines_internal(&expanded, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_eq!(expanded_text.lines().count(), 1, "empty BTW answers must not add a blank body: {expanded_text:?}");
 }
