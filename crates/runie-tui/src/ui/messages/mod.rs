@@ -86,6 +86,7 @@ fn render_paragraph_with_user_backgrounds(
             let abs_row = visible_start + row_offset;
             let elem_idx = *row_to_element.get(abs_row).unwrap_or(&usize::MAX);
             let is_user_related = is_user_related_row(snap, elem_idx);
+            let is_first_element_row = abs_row == 0 || row_to_element.get(abs_row.wrapping_sub(1)) != Some(&elem_idx);
 
             let owned = if is_user_related {
                 // Convert to owned line with background applied
@@ -99,6 +100,13 @@ fn render_paragraph_with_user_backgrounds(
                 let rail_color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
                 spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
                 spans.push(Span::raw(" "));
+            }
+            if let Some((rail_color, bullet, bullet_color)) = tool_feed_chrome(snap, elem_idx) {
+                spans.push(Span::styled(RAIL_GLYPH.to_string(), ratatui::style::Style::default().fg(rail_color)));
+                if is_first_element_row {
+                    spans.push(Span::styled(bullet.to_owned(), ratatui::style::Style::default().fg(bullet_color)));
+                    spans.push(Span::raw(" "));
+                }
             }
             spans.extend(owned.spans);
             Line::from(spans).style(owned.style)
@@ -128,6 +136,23 @@ fn render_paragraph_with_user_backgrounds(
             ratatui::widgets::Paragraph::new(line.clone()),
             Rect::new(area.x, row, area.width, 1),
         );
+    }
+}
+
+/// Shared Grok-style tool chrome: every rendered tool row receives the accent
+/// column, while only the first content row receives the tool bullet.
+fn tool_feed_chrome(snap: &Snapshot, elem_idx: usize) -> Option<(ratatui::style::Color, &'static str, ratatui::style::Color)> {
+    match snap.elements.get(elem_idx) {
+        Some(Element::ToolRunning { .. }) => {
+            let wave = wave_brightness(snap.animation_frame, 0, FEED_WAVE_ROWS, FEED_WAVE_SPEED);
+            let color = blend_color(color_bg(), color_rail_running(), wave).unwrap_or_else(color_rail_running);
+            Some((color, "◆", color))
+        }
+        Some(Element::ToolDone { error, .. }) => {
+            let color = if *error { crate::theme::color_rail_error() } else { crate::theme::color_rail_success() };
+            Some((color, if *error { "✗" } else { "◆" }, color))
+        }
+        _ => None,
     }
 }
 

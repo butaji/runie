@@ -31,13 +31,13 @@ fn row_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
 // ─── render_tool_running ────────────────────────────────────────────────────
 
 #[test]
-fn render_tool_running_shows_spinner() {
+fn render_tool_running_uses_stable_header_text() {
     let lines = render_tool_running("ls", ".", 1.5, 0);
     let output = render_to_string(lines, 80, 3);
-    // Should contain spinner char
+    // Grok owns the braille spinner in the live turn-status row, not here.
     assert!(
-        output.contains("⠋") || output.contains("⠙"),
-        "Output should contain spinner char: {}",
+        output.contains("Run ls") && !output.contains("⠋") && !output.contains("⠙"),
+        "Tool feed content must not contain a duplicate spinner: {}",
         output
     );
 }
