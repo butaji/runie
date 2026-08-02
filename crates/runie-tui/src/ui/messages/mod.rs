@@ -124,6 +124,11 @@ fn render_paragraph_with_user_backgrounds(
                     spans.push(Span::raw(" "));
                 }
             }
+            // Grok BTW blocks have the shared default bullet but no accent
+            // rail. Keep it on the first header row only.
+            if matches!(snap.elements.get(elem_idx), Some(Element::Btw { .. })) && is_first_element_row {
+                spans.push(Span::raw("◆ "));
+            }
             spans.extend(owned.spans);
             Line::from(spans).style(owned.style)
         })

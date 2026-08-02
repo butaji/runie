@@ -359,8 +359,8 @@ pub fn render_background_task(
 /// Render Grok's inline BTW side-question item.
 pub fn render_btw(question: &str, answer: Option<&str>, status: &str, expanded: bool) -> Vec<Line<'static>> {
     let style = style_tool_summary();
-    let marker = if status == "running" { "/btw…" } else { "/btw" };
-    let mut lines = vec![Line::from(format!("{marker} {question}")).style(style)];
+    let _running = status == "running";
+    let mut lines = vec![Line::from(format!("/btw {question}")).style(style)];
     if expanded {
         if let Some(answer) = answer.filter(|text| !text.is_empty()) {
             // Grok keeps the expanded BTW response as a proper body block:

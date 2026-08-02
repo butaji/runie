@@ -446,7 +446,7 @@ fn btw_running_and_empty_answer_follow_grok_collapsed_rules() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(running_text.contains("/btw… Is this live?"), "missing running BTW marker: {running_text}");
+    assert!(running_text.contains("/btw Is this live?"), "missing running BTW marker: {running_text}");
 
     let empty_answer = Element::btw("No answer yet", Some(String::new()), "answered").at(1.0);
     let expanded = match empty_answer {
