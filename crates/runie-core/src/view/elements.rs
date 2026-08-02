@@ -161,6 +161,15 @@ pub enum Element {
         url: String,
         timestamp: f64,
     },
+    /// Collapsed workflow lifecycle row with an inline phase trail.
+    Workflow {
+        name: String,
+        objective: String,
+        status: String,
+        phases: Vec<String>,
+        active_agents: u32,
+        timestamp: f64,
+    },
     /// ANSI escape sequence styled content
     AnsiStyled {
         /// Raw content with ANSI escape sequences
@@ -238,6 +247,7 @@ impl ElementBuilder {
             Element::DiffOutput { timestamp: ts, .. } => *ts = timestamp,
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
             Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
+            Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
         e
@@ -418,6 +428,23 @@ impl Element {
             timestamp: 0.0,
         })
     }
+    /// Workflow lifecycle row in the feed.
+    pub fn workflow(
+        name: impl Into<String>,
+        objective: impl Into<String>,
+        status: impl Into<String>,
+        phases: Vec<String>,
+        active_agents: u32,
+    ) -> ElementBuilder {
+        ElementBuilder(Element::Workflow {
+            name: name.into(),
+            objective: objective.into(),
+            status: status.into(),
+            phases,
+            active_agents,
+            timestamp: 0.0,
+        })
+    }
     /// ANSI styled content
     pub fn ansi_styled(raw: impl Into<String>, plain: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AnsiStyled { raw_content: raw.into(), plain_text: plain.into(), timestamp: 0.0 })
@@ -454,6 +481,7 @@ impl Element {
             Element::DiffOutput { timestamp: ts, .. } => *ts = timestamp,
             Element::WebSearchCall { timestamp: ts, .. } => *ts = timestamp,
             Element::CreditLimit { timestamp: ts, .. } => *ts = timestamp,
+            Element::Workflow { timestamp: ts, .. } => *ts = timestamp,
             Element::AnsiStyled { timestamp: ts, .. } => *ts = timestamp,
         }
     }
@@ -482,6 +510,7 @@ impl Element {
             Element::DiffOutput { timestamp, .. } => *timestamp,
             Element::WebSearchCall { timestamp, .. } => *timestamp,
             Element::CreditLimit { timestamp, .. } => *timestamp,
+            Element::Workflow { timestamp, .. } => *timestamp,
             Element::AnsiStyled { timestamp, .. } => *timestamp,
         }
     }

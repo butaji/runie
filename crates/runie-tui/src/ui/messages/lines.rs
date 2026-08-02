@@ -74,6 +74,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
                     / 4
         }
         CreditLimit { heading, url, .. } => (heading.len() + url.len()) / 4 + 10,
+        Workflow { objective, phases, .. } => (objective.len() + phases.iter().map(String::len).sum::<usize>()) / 4 + 10,
         AnsiStyled { plain_text, .. } => plain_text.len() / 4,
     }
 }

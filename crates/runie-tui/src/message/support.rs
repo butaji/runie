@@ -218,6 +218,45 @@ pub fn render_credit_limit(heading: &str, action: &str, url: &str) -> Vec<Line<'
     ]
 }
 
+/// Render Grok's collapsed workflow lifecycle row with its phase trail.
+pub fn render_workflow(
+    name: &str,
+    objective: &str,
+    status: &str,
+    phases: &[String],
+    active_agents: u32,
+) -> Vec<Line<'static>> {
+    let style = style_tool_summary();
+    let verb = match status {
+        "done" | "completed" => format!("{name} done: "),
+        "failed" => format!("{name} failed: "),
+        "cancelled" => format!("{name} ◌ cancelled: "),
+        "paused" => format!("{name} paused: "),
+        _ => format!("{name}: "),
+    };
+    let trail = phases
+        .iter()
+        .map(|phase| {
+            let (state, title) = phase.split_once(':').unwrap_or(("pending", phase));
+            let mark = match state {
+                "done" => "✓",
+                "active" => "●",
+                _ => "○",
+            };
+            format!("{title} {mark}")
+        })
+        .collect::<Vec<_>>()
+        .join(" · ");
+    let mut text = format!("Workflow {verb}{objective}");
+    if !trail.is_empty() {
+        text.push_str(&format!("  [{trail}]"));
+    }
+    if status == "running" && active_agents > 0 {
+        text.push_str(&format!("  ({active_agents} agents)"));
+    }
+    vec![Line::from(text).style(style)]
+}
+
 /// Grok's feed names built-in tools by action, while preserving `Run` for
 /// shell and unknown integrations. This belongs to feed presentation only;
 /// protocol/tool names remain unchanged everywhere else.

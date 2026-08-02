@@ -137,6 +137,14 @@ fn feed_elements() -> Vec<Element> {
             url: "https://grok.com/usage".into(),
             timestamp: 0.0,
         },
+        Element::Workflow {
+            name: "research".into(),
+            objective: "compare sources".into(),
+            status: "running".into(),
+            phases: vec!["done:Plan".into(), "active:Research".into(), "pending:Write".into()],
+            active_agents: 2,
+            timestamp: 0.0,
+        },
         Element::AnsiStyled {
             raw_content: "\x1b[31mred\x1b[0m".into(),
             plain_text: "red".into(),
@@ -213,4 +221,24 @@ fn credit_limit_feed_card_has_warning_copy_and_link() {
     assert!(text.contains("credit limit"), "missing warning heading: {text}");
     assert!(text.contains("purchasing more credits"), "missing action copy: {text}");
     assert!(text.contains("grok.com/usage"), "missing usage link: {text}");
+}
+
+#[test]
+fn workflow_feed_row_shows_phase_trail_and_active_agents() {
+    let element = Element::workflow(
+        "research",
+        "compare sources",
+        "running",
+        vec!["done:Plan".into(), "active:Research".into()],
+        2,
+    )
+    .at(1.0);
+    let text = crate::ui::to_lines_internal(&element, 80)
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("Workflow research: compare sources"), "missing workflow row: {text}");
+    assert!(text.contains("Plan ✓ · Research ●"), "missing phase trail: {text}");
+    assert!(text.contains("(2 agents)"), "missing active-agent count: {text}");
 }
