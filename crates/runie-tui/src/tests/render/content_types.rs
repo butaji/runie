@@ -181,3 +181,12 @@ fn every_subagent_lifecycle_state_renders_a_header() {
         assert!(text.contains("Subagent"), "missing subagent header for {status:?}: {text}");
     }
 }
+
+#[test]
+fn system_feed_message_is_muted_and_has_no_assistant_glyph() {
+    let lines = crate::message::render_system_message("Context compacted", 80);
+    let text = lines.into_iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+    assert!(text.contains("Context compacted"));
+    assert!(!text.contains('◆'), "system feed content must not use assistant glyph: {text}");
+    assert!(!text.contains('❯'), "system feed content must not use user glyph: {text}");
+}
