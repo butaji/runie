@@ -200,6 +200,15 @@ impl AppState {
                 if let Some(plan) = plan.filter(|value| !value.is_empty()) {
                     self.view_mut().plan_mode = true;
                     self.view_mut().active_plan_content = plan.to_owned();
+                    // Keep protocol-submitted plans in the same durable plan
+                    // store used by `/plan`. This is the supported Runie
+                    // persistence surface when the alternate terminal
+                    // screen is torn down on quit.
+                    if let Some(plans_dir) = crate::session::plan_persistence::default_plans_dir() {
+                        if let Ok(Some(plan_id)) = crate::session::plan_persistence::save_plan(&plans_dir, &call_id, plan) {
+                            self.view_mut().active_plan_id = Some(plan_id);
+                        }
+                    }
                     self.upsert_parked_plan(&call_id, plan);
                     self.view_mut().dirty = true;
                 }
