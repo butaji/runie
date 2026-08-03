@@ -822,6 +822,15 @@ impl UiActor {
     #[allow(clippy::cognitive_complexity)]
     #[allow(clippy::too_many_lines)]
     async fn handle_input_event(&mut self, evt: &Event) {
+        // Plan approval owns Enter/Esc while its feed overlay is visible.
+        // Intercept before the InputActor route so a declarative/PTTY Enter
+        // cannot be consumed as ordinary composer submission.
+        if self.state.view().plan_mode
+            && matches!(evt, Event::Submit | Event::Newline | Event::Escape | Event::DialogBack)
+        {
+            self.apply_event(evt.clone());
+            return;
+        }
         // Grok's scrollback-focused editing flow uses Tab to move focus from
         // an empty composer into the feed, where Up/Down select posts. Keep
         // Tab's completion behavior for an empty session or a non-empty
