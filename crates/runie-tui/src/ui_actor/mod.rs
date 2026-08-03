@@ -827,6 +827,19 @@ impl UiActor {
         if self.state.view().input_receiver == runie_core::model::InputReceiver::InlineEdit
             && matches!(evt, Event::Submit | Event::DialogBack | Event::Escape)
         {
+            // InputActor echoes edits asynchronously.  Submit can therefore
+            // arrive while the inline editor still contains the original
+            // prompt even though the terminal already rendered the typed
+            // suffix.  Fold the optimistic input mirror into the editor
+            // before the core reducer decides whether this is unchanged or
+            // should open the shared resubmit dialog.
+            if matches!(evt, Event::Submit) {
+                let effective = self.effective_input_content();
+                if let Some(edit) = self.state.view_mut().inline_edit.as_mut() {
+                    edit.edited = effective.clone();
+                    edit.cursor_pos = effective.len();
+                }
+            }
             self.apply_event(evt.clone());
             return;
         }
@@ -952,6 +965,19 @@ impl UiActor {
             match evt {
                 Event::Input(_) | Event::Submit | Event::HistoryPrev | Event::HistoryNext | Event::Backspace => {
                     self.apply_event(evt.clone());
+                    // Feed-selected inline editing seeds the core projection
+                    // synchronously. Keep the InputActor authoritative buffer
+                    // in lockstep before the first edited character arrives.
+                    if matches!(evt, Event::Submit)
+                        && self.state.view().input_receiver
+                            == runie_core::model::InputReceiver::InlineEdit
+                    {
+                        let text = self.state.input().input.clone();
+                        let _ = self.send_input_msg(runie_core::actors::InputMsg::SetText {
+                            text,
+                            chips: Vec::new(),
+                        }).await;
+                    }
                     return;
                 }
                 _ => {}
