@@ -71,6 +71,12 @@ impl SessionStore {
         if let Ok(dir) = std::env::var("RUNIE_SESSIONS_DIR") {
             return Some(Self::new(PathBuf::from(dir)));
         }
+        // Black-box runs provide an isolated data root. Prefer it over the
+        // host platform data directory so durable plans/session journals do
+        // not leak across tests or mutate the developer's profile.
+        if let Ok(dir) = std::env::var("RUNIE_TEST_DATA_DIR") {
+            return Some(Self::new(PathBuf::from(dir).join("sessions")));
+        }
         dirs::data_dir().map(|d| Self::new(d.join("runie").join("sessions")))
     }
 
