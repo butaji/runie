@@ -867,6 +867,13 @@ impl UiActor {
                 self.apply_event(Event::InputChanged { state: Box::new(projected) });
                 return;
             }
+            if let Event::Paste(text) = evt {
+                let mut projected = self.state.input().clone();
+                projected.input.insert_str(projected.cursor_pos, text);
+                projected.cursor_pos += text.len();
+                self.apply_event(Event::InputChanged { state: Box::new(projected) });
+                return;
+            }
         }
         // SendNow is Grok's cancel-and-send chord: stop the current agent,
         // preserve local queued rows, and submit the composer as a normal next
