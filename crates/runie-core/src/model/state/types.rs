@@ -234,6 +234,8 @@ pub enum InputReceiver {
     ChatInput,
     /// A dialog/overlay is open and receiving input
     Dialog,
+    /// A previously submitted user prompt is being edited in place
+    InlineEdit,
 }
 
 #[cfg(test)]

@@ -35,6 +35,7 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
     if state.view().inline_edit.is_some() {
         if matches!(event, crate::Event::Escape | crate::Event::DialogBack) {
             state.view_mut().inline_edit = None;
+            state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
             state.input_mut().input.clear();
             state.input_mut().cursor_pos = 0;
             state.view_mut().dirty = true;
@@ -48,6 +49,7 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
                 .is_some_and(|edit| edit.original == edit.edited);
             if unchanged {
                 state.view_mut().inline_edit = None;
+                state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
                 state.input_mut().input.clear();
                 state.input_mut().cursor_pos = 0;
                 state.view_mut().dirty = true;

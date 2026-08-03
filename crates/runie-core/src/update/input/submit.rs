@@ -163,6 +163,7 @@ impl AppState {
         let Some(edit) = self.view().inline_edit.clone() else { return };
         if self.agent_state().turn_active {
             self.view_mut().inline_edit = None;
+            self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
             self.input_mut().input.clear();
             self.input_mut().cursor_pos = 0;
             self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
@@ -217,6 +218,7 @@ impl AppState {
         self.agent_state_mut().request_queue.clear();
         self.agent_state_mut().message_queue.clear();
         self.view_mut().inline_edit = None;
+        self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
         self.input_mut().input.clear();
         self.input_mut().cursor_pos = 0;
         self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;

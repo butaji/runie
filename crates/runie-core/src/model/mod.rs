@@ -13,7 +13,7 @@ pub use crate::model::state::agent::AgentState;
 pub use crate::model::state::input::{InputChip, InputState};
 pub use crate::model::state::session::{CompletionState, ConfigState, SessionState};
 pub use crate::model::state::types::DeliveryMode;
-pub(crate) use crate::model::state::types::InputReceiver;
+pub use crate::model::state::types::InputReceiver;
 pub use crate::model::state::types::PermissionRequestState;
 pub use crate::model::state::types::{Answer, Question, QuestionOption, QuestionState};
 pub use crate::model::state::types::{GoalState, GoalStatus};

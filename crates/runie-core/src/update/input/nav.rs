@@ -323,6 +323,7 @@ impl AppState {
                                     cursor_pos: content.len(),
                                 });
                                 self.view_mut().vim_nav_mode = false;
+                                self.view_mut().input_receiver = crate::model::InputReceiver::InlineEdit;
                                 self.input_mut().input = content.clone();
                                 self.input_mut().cursor_pos = content.len();
                                 self.view_mut().dirty = true;

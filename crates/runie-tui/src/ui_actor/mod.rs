@@ -822,6 +822,14 @@ impl UiActor {
     #[allow(clippy::cognitive_complexity)]
     #[allow(clippy::too_many_lines)]
     async fn handle_input_event(&mut self, evt: &Event) {
+        // Inline editing has its own receiver so the actor cannot mistake an
+        // edited historical prompt for a fresh composer submission.
+        if self.state.view().input_receiver == runie_core::model::InputReceiver::InlineEdit
+            && matches!(evt, Event::Submit | Event::DialogBack | Event::Escape)
+        {
+            self.apply_event(evt.clone());
+            return;
+        }
         // SendNow is Grok's cancel-and-send chord: stop the current agent,
         // preserve local queued rows, and submit the composer as a normal next
         // turn without exposing a cancellation marker.
