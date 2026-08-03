@@ -14,21 +14,21 @@ use super::profiles::{Profile, SandboxConfig};
 /// Check if sandbox-exec is available on macOS.
 #[cfg(target_os = "macos")]
 pub fn sandbox_available() -> super::manager::SandboxStatus {
-    if Command::new("sandbox-exec").arg("--version").output().is_ok() {
+    if Command::new("sandbox-exec")
+        .arg("--version")
+        .output()
+        .is_ok()
+    {
         super::manager::SandboxStatus::Available
     } else {
-        super::manager::SandboxStatus::Unavailable {
-            reason: "sandbox-exec not available".to_owned(),
-        }
+        super::manager::SandboxStatus::Unavailable { reason: "sandbox-exec not available".to_owned() }
     }
 }
 
 /// Check if sandbox is available (non-macOS stub).
 #[cfg(not(target_os = "macos"))]
 pub fn sandbox_available() -> super::manager::SandboxStatus {
-    super::manager::SandboxStatus::Unavailable {
-        reason: "sandbox-exec only available on macOS".to_owned(),
-    }
+    super::manager::SandboxStatus::Unavailable { reason: "sandbox-exec only available on macOS".to_owned() }
 }
 
 /// Execute a command with OS-level sandboxing if available.
@@ -131,9 +131,7 @@ pub fn run_mac_sandboxed(
     env: &[(String, String)],
     config: &SandboxConfig,
 ) -> Result<std::process::ExitStatus, String> {
-    warn!(
-        "macOS sandbox not available on this platform, running unsandboxed"
-    );
+    warn!("macOS sandbox not available on this platform, running unsandboxed");
     run_unsandboxed(program, args, working_dir, env)
 }
 
@@ -189,11 +187,7 @@ pub fn run_landlock_native(
     for path in &config.read_only_paths {
         if let Some(path_str) = path.to_str() {
             let _ = ruleset.add_rule(
-                Rule::Directory {
-                    path: path_str,
-                    access: AccessFs::from_bits(Access::Read.bits()),
-                }
-                .least_access(),
+                Rule::Directory { path: path_str, access: AccessFs::from_bits(Access::Read.bits()) }.least_access(),
             );
         }
     }
@@ -219,23 +213,15 @@ pub fn run_landlock_native(
             } else {
                 Access::Read.bits() | Access::Write.bits()
             };
-            let _ = ruleset.add_rule(
-                Rule::Directory {
-                    path: ws_str,
-                    access: AccessFs::from_bits(access),
-                }
-                .least_access(),
-            );
+            let _ =
+                ruleset.add_rule(Rule::Directory { path: ws_str, access: AccessFs::from_bits(access) }.least_access());
         }
     }
 
     // Add tmp
     let _ = ruleset.add_rule(
-        Rule::Directory {
-            path: "/tmp",
-            access: AccessFs::from_bits(Access::Read.bits() | Access::Write.bits()),
-        }
-        .least_access(),
+        Rule::Directory { path: "/tmp", access: AccessFs::from_bits(Access::Read.bits() | Access::Write.bits()) }
+            .least_access(),
     );
 
     let ruleset = ruleset

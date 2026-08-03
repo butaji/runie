@@ -23,4 +23,4 @@ pub use category::CommandCategory;
 pub use command::{cmd, Action, Command, FormHandler};
 pub use flow::{CommandFlow, CommandResult, DialogType};
 // Legacy re-exports still needed by yaml.rs
-pub use spec::{CommandKind, CommandDef, CommandSpec, FormHandler as SpecFormHandler};
+pub use spec::{CommandDef, CommandKind, CommandSpec, FormHandler as SpecFormHandler};

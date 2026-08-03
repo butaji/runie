@@ -20,8 +20,20 @@
 //! runtime.run().await;
 //! ```
 
-use std::{collections::HashMap, io::{self, IsTerminal, Write}, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    io::{self, IsTerminal, Write},
+    sync::Arc,
+    time::Duration,
+};
 
+use crate::notifications::focus::FocusTracker;
+use crate::notifications::hooks::run_hook;
+use crate::notifications::progress::ProgressState;
+use crate::notifications::protocol::emit_notification;
+use crate::notifications::sleep::SleepInhibitor;
+use crate::notifications::title::{TitleManager, TitleState};
+use crate::terminal::context::terminal_context;
 use futures::StreamExt;
 use ratatui::backend::TestBackend;
 use runie_agent::AgentActorFactoryImpl;
@@ -598,6 +610,11 @@ async fn async_render_loop(
     let mut last_size: Option<(u16, u16)> = None;
     let mut previous_turn_active = false;
     let mut previous_permission_pending = false;
+    let mut title_manager = TitleManager::default();
+    let mut focus_tracker = FocusTracker::new(std::time::Duration::from_secs(3));
+    let mut pending_notification: Option<&'static str> = None;
+    let mut progress_state = ProgressState::default();
+    let sleep_inhibitor = SleepInhibitor::new(true);
     let term = std::sync::Arc::new(parking_lot::Mutex::new(RenderTerminal { inner: terminal }));
 
     loop {
@@ -606,6 +623,60 @@ async fn async_render_loop(
         }
 
         let snap = render_rx.borrow().clone();
+        if snap.turn_active {
+            sleep_inhibitor.inhibit();
+        } else {
+            sleep_inhibitor.release();
+        }
+        if snap.terminal_focused {
+            focus_tracker.on_focus_gained();
+        } else {
+            focus_tracker.on_focus_lost();
+        }
+        if let Some(sequence) = progress_state.update(
+            terminal_context(),
+            snap.turn_active,
+            std::time::Instant::now(),
+        ) {
+            let sequence = if crate::notifications::tmux::passthrough_available(terminal_context()) {
+                crate::notifications::tmux::tmux_passthrough(sequence)
+            } else {
+                sequence.to_owned()
+            };
+            let mut stdout = io::stdout();
+            let _ = stdout.write_all(sequence.as_bytes());
+            let _ = stdout.flush();
+        }
+
+        let activity = if snap.turn_active {
+            Some(
+                match snap.turn_activity {
+                    runie_core::snapshot::TurnActivityKind::Thinking => "Thinking",
+                    runie_core::snapshot::TurnActivityKind::Responding => "Responding",
+                    runie_core::snapshot::TurnActivityKind::ToolRunning => "Running tool",
+                    runie_core::snapshot::TurnActivityKind::Cancelling => "Cancelling",
+                    runie_core::snapshot::TurnActivityKind::Working => "Working",
+                }
+                .to_owned(),
+            )
+        } else {
+            None
+        };
+        let title_state = TitleState {
+            session_name: None,
+            model: (!snap.model.is_empty()).then(|| snap.model.clone()),
+            activity,
+            cwd: (!snap.cwd_name.is_empty()).then(|| snap.cwd_name.clone()),
+            busy: snap.turn_active,
+            pending_permissions: snap.permission_request.is_some(),
+            focused: snap.terminal_focused,
+            frame: snap.animation_frame as u64,
+        };
+        if let Some(escape) = title_manager.update(&title_state) {
+            let mut stdout = io::stdout();
+            let _ = stdout.write_all(escape.as_bytes());
+            let _ = stdout.flush();
+        }
 
         let permission_pending = snap.permission_request.is_some();
         if let Some(message) = terminal_notification(
@@ -614,7 +685,19 @@ async fn async_render_loop(
             previous_permission_pending,
             permission_pending,
         ) {
-            let _ = terminal_setup::notify_terminal(&mut io::stdout(), message);
+            let event = if message.contains("permission") {
+                "ApprovalRequired"
+            } else {
+                "TurnComplete"
+            };
+            run_hook(event, message);
+            pending_notification = Some(message);
+        }
+        if let Some(message) = pending_notification {
+            if focus_tracker.should_notify() {
+                let _ = emit_notification(&mut io::stdout(), terminal_context(), "Runie", message);
+                pending_notification = None;
+            }
         }
         previous_turn_active = snap.turn_active;
         previous_permission_pending = permission_pending;
@@ -640,7 +723,6 @@ async fn async_render_loop(
             last_size = Some(new_size);
         }
 
-
         theme::set_current_theme_with_caps(&snap.theme_name, caps);
 
         let term_clone = Arc::clone(&term);
@@ -659,6 +741,10 @@ async fn async_render_loop(
         })
         .await;
     }
+    let reset = title_manager.reset();
+    let mut stdout = io::stdout();
+    let _ = stdout.write_all(reset.as_bytes());
+    let _ = stdout.flush();
 }
 
 fn terminal_notification(
@@ -680,9 +766,15 @@ fn terminal_notification(
 mod notification_tests {
     #[test]
     fn permission_notification_only_fires_on_transition() {
-        assert_eq!(super::terminal_notification(false, false, false, true), Some("Runie permission required"));
+        assert_eq!(
+            super::terminal_notification(false, false, false, true),
+            Some("Runie permission required")
+        );
         assert_eq!(super::terminal_notification(false, false, true, true), None);
-        assert_eq!(super::terminal_notification(true, false, false, false), Some("Runie turn complete"));
+        assert_eq!(
+            super::terminal_notification(true, false, false, false),
+            Some("Runie turn complete")
+        );
     }
 }
 
@@ -773,6 +865,7 @@ async fn input_reader(input_tx: mpsc::Sender<Event>, mut kb_rx: watch::Receiver<
             // Timeout: no input events arrived on non-TTY stdin. Send ForceQuit
             // to break the app loop.
             Err(_) => {
+                tracing::warn!("input timeout fired on non-TTY; forcing exit");
                 let _ = input_tx.send(Event::ForceQuit).await;
                 break;
             }

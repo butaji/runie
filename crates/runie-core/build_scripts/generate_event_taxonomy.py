@@ -19,7 +19,7 @@ UNIT_VARIANTS = {
     "CopyLastResponse", "CopySelectedBlock", "CursorEnd", "CursorLeft", "CursorRight",
     "CursorStart", "CursorWordLeft", "CursorWordRight", "CycleModelNext", "CycleModelPrev",
     "CycleThinkingLevel", "Dequeue", "DeleteToEnd", "DeleteToStart", "DeleteWord", "DialogBack",
-    "Down", "FollowUp", "ForceQuit",
+    "Down", "FollowUp", "SendNow", "ForceQuit",
     "Escape", "FocusGained", "FocusLost", "GoToBottom", "GoToTop", "HistoryNext",
     "HistoryPrev", "KeybindingsReloaded", "KillChar", "ModelSelectorBackspace",
     "ModelSelectorClose", "ModelSelectorDown", "ModelSelectorSelect", "ModelSelectorUp",
@@ -80,8 +80,8 @@ VARIANTS_WITH_FIELDS = {
 
 # Control variants that are also intents (from taxonomy.json intent_variants for Control)
 CONTROL_INTENT_VARIANTS = {
-    "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp",
-    "ToggleExpand", "ToggleTasksPane", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
+    "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp", "SendNow",
+    "ToggleExpand", "ToggleTasksPane", "ToggleQueuePane", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
     "ShareSession", "Suspend", "ToggleVimMode", "CopyLastResponse",
     "OpenSessionList", "NewSession", "ResumeSession", "SelectSession",
     "StarSession", "RenameSession", "DeleteSession",

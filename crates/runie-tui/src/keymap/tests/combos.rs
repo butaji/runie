@@ -13,6 +13,13 @@ fn key_event_to_combo_alt_enter() {
 }
 
 #[test]
+fn ctrl_enter_maps_to_send_now() {
+    let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL);
+    let result = crate::keymap::convert_event(&crossterm::event::Event::Key(key), &std::collections::HashMap::new());
+    assert_eq!(result, Some(runie_core::Event::SendNow));
+}
+
+#[test]
 fn key_event_to_combo_shift_enter() {
     let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT);
     assert_eq!(crate::keymap::key_event_to_combo(&key), "shift+enter");

@@ -9,7 +9,9 @@ use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Event;
 
 fn count_matching_lines(state: &AppState, markers: &[&str]) -> usize {
-    let backend = TestBackend::new(40, 12);
+    // Keep enough rows for the feed plus the persistent status/input regions;
+    // the compact 12-row fixture has no room to display tool output.
+    let backend = TestBackend::new(40, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state.clone())).unwrap();
     let buf = terminal.backend().buffer();
@@ -69,6 +71,7 @@ fn enter_expands_thought_post_in_feed() {
 fn ctrl_shift_e_collapses_tool_post_in_feed() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
+    crate::tests::connect_model(&mut state);
 
     state.session.messages.push(ChatMessage {
         role: Role::User,

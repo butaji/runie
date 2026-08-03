@@ -89,7 +89,11 @@ async fn concurrent_fail_and_detect_orphans_no_underflow() {
     t2.await.unwrap();
     t1.await.unwrap();
 
-    assert_eq!(coord_arc.running_count(), 0, "no underflow after fail + detect_orphans");
+    assert_eq!(
+        coord_arc.running_count(),
+        0,
+        "no underflow after fail + detect_orphans"
+    );
 }
 
 /// Regression (task 23): concurrent `cancel` + `detect_orphans` on the same entry.
@@ -120,7 +124,11 @@ async fn concurrent_cancel_and_detect_orphans_no_underflow() {
     t2.await.unwrap();
     t1.await.unwrap();
 
-    assert_eq!(coord_arc.running_count(), 0, "no underflow after cancel + detect_orphans");
+    assert_eq!(
+        coord_arc.running_count(),
+        0,
+        "no underflow after cancel + detect_orphans"
+    );
 }
 
 /// Regression (task 23): multiple terminal calls racing on the same entry must
@@ -155,7 +163,11 @@ async fn multiple_concurrent_terminal_calls_same_entry() {
         }),
     );
 
-    assert_eq!(coord_arc.running_count(), 0, "final count must be 0, not underflowed");
+    assert_eq!(
+        coord_arc.running_count(),
+        0,
+        "final count must be 0, not underflowed"
+    );
 }
 
 /// Sanity: normal flow (spawn N, complete M, fail K) gives exact count.
@@ -163,13 +175,11 @@ async fn multiple_concurrent_terminal_calls_same_entry() {
 async fn normal_flow_exact_count() {
     let coord = SubagentCoordinator::new(std::time::Duration::from_secs(300));
 
-    let ids: Vec<_> = futures::future::join_all(
-        (0..5).map(|_| coord.spawn(make_metadata())),
-    )
-    .await
-    .into_iter()
-    .map(|h| h.subagent_id)
-    .collect();
+    let ids: Vec<_> = futures::future::join_all((0..5).map(|_| coord.spawn(make_metadata())))
+        .await
+        .into_iter()
+        .map(|h| h.subagent_id)
+        .collect();
 
     assert_eq!(coord.running_count(), 5);
 
@@ -188,5 +198,9 @@ async fn normal_flow_exact_count() {
 
     // Leave 1 orphan.
     let _ = coord.detect_orphans().await;
-    assert_eq!(coord.running_count(), 1, "only 1 still running; orphan detection must not decrement");
+    assert_eq!(
+        coord.running_count(),
+        1,
+        "only 1 still running; orphan detection must not decrement"
+    );
 }

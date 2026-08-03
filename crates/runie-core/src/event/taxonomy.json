@@ -218,8 +218,8 @@
     "Control": {
       "kind": "Control",
       "variants": [
-        "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp",
-        "ToggleExpand", "ToggleTasksPane", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
+        "Quit", "ForceQuit", "Reset", "Abort", "ClearQueues", "FollowUp", "SendNow",
+        "ToggleExpand", "ToggleTasksPane", "ToggleQueuePane", "Dequeue", "OpenExternalEditor", "ExternalEditorDone",
         "ShareSession", "Suspend", "ToggleVimMode", "CopyLastResponse",
         "OpenSessionList", "NewSession", "ResumeSession", "SelectSession",
         "StarSession", "RenameSession", "DeleteSession"

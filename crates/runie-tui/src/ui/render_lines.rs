@@ -34,12 +34,19 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
-        UserMessage { content, timestamp, expanded } => msg::render_user_message(content, *timestamp, *expanded, content_width),
+        UserMessage { content, timestamp, expanded } => {
+            msg::render_user_message(content, *timestamp, *expanded, content_width)
+        }
         AgentMessage { content, timestamp, .. } => msg::render_agent_message(content, *timestamp, content_width),
         SystemMessage { content, .. } => msg::render_system_message(content, content_width),
-        ContextInfo { model, used_tokens, total_tokens, turns, tool_calls, .. } => {
-            msg::render_context_info(model, *used_tokens, *total_tokens, *turns, *tool_calls, content_width)
-        }
+        ContextInfo { model, used_tokens, total_tokens, turns, tool_calls, .. } => msg::render_context_info(
+            model,
+            *used_tokens,
+            *total_tokens,
+            *turns,
+            *tool_calls,
+            content_width,
+        ),
         Thinking { .. } => msg::render_thinking(),
         ThoughtSummary { content, duration_secs, .. } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
@@ -65,11 +72,23 @@ fn render_element(elem: &Element, animation_frame: u32, content_width: u16) -> V
         DiffOutput { content, diff_type, timestamp } => msg::render_diff_output(content, *diff_type, *timestamp),
         WebSearchCall { query, results, timestamp } => msg::render_web_search_call(query, results, *timestamp),
         CreditLimit { heading, action, url, .. } => msg::render_credit_limit(heading, action, url),
-        Workflow { name, objective, status, phases, active_agents, duration_secs, .. } => {
-            msg::render_workflow(name, objective, status, phases, *active_agents, *duration_secs)
-        }
+        Workflow { name, objective, status, phases, active_agents, duration_secs, .. } => msg::render_workflow(
+            name,
+            objective,
+            status,
+            phases,
+            *active_agents,
+            *duration_secs,
+        ),
         BackgroundTask { command, status, description, duration_secs, exit_code, signal, .. } => {
-            msg::render_background_task(command, status, description.as_deref(), *duration_secs, *exit_code, signal.as_deref())
+            msg::render_background_task(
+                command,
+                status,
+                description.as_deref(),
+                *duration_secs,
+                *exit_code,
+                signal.as_deref(),
+            )
         }
         Btw { question, answer, status, expanded, .. } => {
             msg::render_btw(question, answer.as_deref(), status, *expanded)

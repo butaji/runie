@@ -1,6 +1,5 @@
 use runie_core::plugins::{
-    discover_plugins, LoadedPlugin, PluginDiscovery, PluginManager, PluginManifest, PluginRegistry,
-    PluginScope,
+    discover_plugins, LoadedPlugin, PluginDiscovery, PluginManager, PluginManifest, PluginRegistry, PluginScope,
 };
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -100,16 +99,10 @@ fn test_plugin_registry_unregister() {
 #[test]
 fn test_plugin_registry_enabled_list() {
     let mut registry = PluginRegistry::new();
-    let plugin1 = LoadedPlugin {
-        manifest: temp_manifest("plugin1", "1.0.0"),
-        root: PathBuf::from("/tmp/test"),
-        enabled: true,
-    };
-    let plugin2 = LoadedPlugin {
-        manifest: temp_manifest("plugin2", "1.0.0"),
-        root: PathBuf::from("/tmp/test"),
-        enabled: false,
-    };
+    let plugin1 =
+        LoadedPlugin { manifest: temp_manifest("plugin1", "1.0.0"), root: PathBuf::from("/tmp/test"), enabled: true };
+    let plugin2 =
+        LoadedPlugin { manifest: temp_manifest("plugin2", "1.0.0"), root: PathBuf::from("/tmp/test"), enabled: false };
     registry.register(plugin1);
     registry.register(plugin2);
     assert_eq!(registry.enabled().len(), 1);

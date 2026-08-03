@@ -5,12 +5,12 @@ use ratatui::text::{Line, Span};
 
 use crate::markdown_render::{apply_color_to_inlines, md_to_spans, MdSpan};
 use crate::theme::{
-    blend_color, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
+    blend_color, color_agent_text, color_bg, color_subagent_completed_bright, color_subagent_completed_diamond,
     color_subagent_failed_bright, color_subagent_failed_diamond, color_subagent_running_bar,
-    color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, style_agent, style_feed_timestamp,
-    color_agent_text, rail_glyph, style_thinking, style_thought, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
-    style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT, GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND,
-    GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT,
+    color_subagent_running_diamond, color_subagent_running_dim, pulse_brightness, rail_glyph, style_agent,
+    style_feed_timestamp, style_thinking, style_thought, style_thought_summary, style_tool_header, style_tool_output,
+    style_tool_running, style_tool_summary, style_turn_complete, GLYPH_AGENT, GLYPH_BULLET, GLYPH_INDENT,
+    GLYPH_SUBAGENT_BAR, GLYPH_SUBAGENT_DIAMOND, GLYPH_SUBAGENT_QUOTE_LEFT, GLYPH_SUBAGENT_QUOTE_RIGHT,
 };
 use runie_core::tool::{format_bytes, format_tool_label_parts};
 use unicode_width::UnicodeWidthStr;
@@ -47,7 +47,7 @@ pub fn render_thinking() -> Vec<Line<'static>> {
 }
 
 pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
-    let style = style_thought();
+    let style = style_thought_summary();
     let first_line = content.lines().next().unwrap_or(content);
     // Grok-style summary: bold "Thought" + plain " for Xs", all dim.
     // Collapsed thoughts are summary-only; the full reasoning body is
@@ -58,9 +58,7 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
                 Span::styled(word.to_owned(), style.bold()),
                 Span::styled(format!(" {tail}"), style),
             ])],
-            None => vec![Line::from(vec![
-                Span::styled(rest.to_owned(), style.bold()),
-            ])],
+            None => vec![Line::from(vec![Span::styled(rest.to_owned(), style.bold())])],
         },
         None => vec![Line::from(first_line.to_owned()).style(style)],
     };
@@ -84,7 +82,7 @@ pub fn render_tool_done(
     _duration_secs: f64,
     output: &str,
     bytes_transferred: Option<u64>,
-    _error: bool,
+    error: bool,
     _finished_at: &Option<std::time::Instant>,
     _animation_frame: u32,
 ) -> Vec<Line<'static>> {
@@ -92,11 +90,13 @@ pub fn render_tool_done(
     let bytes_str = bytes_transferred
         .map(|b| format!(" ⇣{}", format_bytes(b)))
         .unwrap_or_default();
-    let base_style = style_tool_header();
+    let base_style = if error {
+        style_tool_header().fg(crate::theme::color_error())
+    } else {
+        style_tool_header()
+    };
 
-    let mut spans = vec![
-        Span::styled(verb, base_style.bold()),
-    ];
+    let mut spans = vec![Span::styled(verb, base_style.bold())];
     let tail = format!("{args_part}{bytes_str}");
     if !tail.is_empty() {
         spans.push(Span::styled(tail, base_style));
@@ -106,10 +106,24 @@ pub fn render_tool_done(
         // Blank separator line before output panel (Grok parity).
         lines.push(Line::from(""));
         // Tool output panel: bg_dark background across all output rows to content width.
-        let output_style = style_tool_output().bg(crate::theme::color_code_bg());
+        let output_style = if error {
+            style_tool_output()
+                .fg(crate::theme::color_error())
+                .bg(crate::theme::color_code_bg())
+        } else {
+            style_tool_output().bg(crate::theme::color_code_bg())
+        };
         // Grok 2+…+3 truncation: show first 2 + … + last 3 for long outputs.
         if runie_core::diff::Diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
+        } else if matches!(name, "web_fetch" | "fetch" | "fetch_docs") {
+            let body: Vec<&str> = output.lines().collect();
+            for line in body.iter().take(10) {
+                lines.push(Line::from((*line).to_owned()).style(output_style));
+            }
+            if body.len() > 10 {
+                lines.push(Line::from(format!("… +{} more lines", body.len() - 10)).style(output_style));
+            }
         } else {
             let output_blocks = format_tool_output_blocks(name, output);
             if output_blocks.len() > 5 {
@@ -127,6 +141,19 @@ pub fn render_tool_done(
                 }
             }
         }
+        if error {
+            for line in &mut lines[1..] {
+                for span in &mut line.spans {
+                    span.style = span.style.fg(crate::theme::color_error());
+                }
+            }
+        }
+    }
+    if error && output.trim().is_empty() {
+        lines.push(Line::from(Span::styled(
+            "✗ Tool failed",
+            Style::default().fg(crate::theme::color_error()),
+        )));
     }
     lines
 }
@@ -138,6 +165,7 @@ enum ToolOutputBlock {
     DirectoryEntry(String),
     Bullet(String),
     Paragraph(String),
+    ReadLine { number: usize, text: String },
 }
 
 /// Parse tool output into the same logical blocks used by the renderer and
@@ -145,18 +173,34 @@ enum ToolOutputBlock {
 /// strings, so their presentation can evolve without changing tool data.
 fn format_tool_output_blocks(name: &str, output: &str) -> Vec<ToolOutputBlock> {
     let is_listing = matches!(name, "list_dir" | "ls" | "list-files");
+    let is_read = matches!(name, "read" | "read_file");
     let mut blocks = Vec::new();
-    for line in output.lines() {
+    for (line_number, line) in output.lines().enumerate() {
         let block = {
-            if line.trim().is_empty() {
+            if is_read {
+                ToolOutputBlock::ReadLine { number: line_number + 1, text: line.to_owned() }
+            } else if line.trim().is_empty() {
                 ToolOutputBlock::Blank
             } else if is_listing && line.trim_start().starts_with("Contents of ") {
                 ToolOutputBlock::Heading(line.to_owned())
             } else if line.trim_end().ends_with(":**") {
                 ToolOutputBlock::Heading(line.trim_end_matches("**").to_owned())
-            } else if line.trim_start().chars().next().is_some_and(|c| matches!(c, '•' | '▸' | '-' | '*')) {
-                let content = line.trim_start().trim_start_matches(['•', '▸', '-', '*']).trim().to_owned();
-                if is_listing { ToolOutputBlock::DirectoryEntry(content) } else { ToolOutputBlock::Bullet(content) }
+            } else if line
+                .trim_start()
+                .chars()
+                .next()
+                .is_some_and(|c| matches!(c, '•' | '▸' | '-' | '*'))
+            {
+                let content = line
+                    .trim_start()
+                    .trim_start_matches(['•', '▸', '-', '*'])
+                    .trim()
+                    .to_owned();
+                if is_listing {
+                    ToolOutputBlock::DirectoryEntry(content)
+                } else {
+                    ToolOutputBlock::Bullet(content)
+                }
             } else if is_listing {
                 ToolOutputBlock::DirectoryEntry(line.to_owned())
             } else {
@@ -177,6 +221,15 @@ fn render_markdown_output_block(block: &ToolOutputBlock, style: Style) -> Vec<Li
         ToolOutputBlock::DirectoryEntry(text) => (Some("• "), text.as_str(), style),
         ToolOutputBlock::Bullet(text) => (Some("• "), text.as_str(), style),
         ToolOutputBlock::Paragraph(text) => (None, text.as_str(), style),
+        ToolOutputBlock::ReadLine { number, text } => {
+            return vec![Line::from(vec![
+                Span::styled(
+                    format!("{number:>4} │ "),
+                    style.fg(crate::theme::color_dim()),
+                ),
+                Span::styled(text.clone(), style),
+            ])];
+        }
     };
     let normalized = raw_body.replace("**", "").replace('`', "");
     let body = normalized.as_str();
@@ -187,7 +240,11 @@ fn render_markdown_output_block(block: &ToolOutputBlock, style: Style) -> Vec<Li
                 rendered.push(Span::styled(prefix, prefix_style));
             }
             let spans = apply_color_to_inlines(line, color_agent_text());
-            rendered.extend(spans.into_iter().map(|span| Span::styled(span.content, prefix_style.patch(span.style))));
+            rendered.extend(
+                spans
+                    .into_iter()
+                    .map(|span| Span::styled(span.content, prefix_style.patch(span.style))),
+            );
             Line::from(rendered)
         })
         .collect()
@@ -222,18 +279,33 @@ pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'sta
         let mut lines = vec![Line::from(line)];
         if content.starts_with("Recap +— ") {
             lines.push(Line::from(""));
-            lines.extend(summary.lines().skip(1).map(|body| Line::from(body.to_owned()).style(style)));
+            lines.extend(
+                summary
+                    .lines()
+                    .skip(1)
+                    .map(|body| Line::from(body.to_owned()).style(style)),
+            );
         }
         return lines;
     }
     let width = content_width.max(1);
     let mut lines = Vec::new();
     for raw in content.lines() {
+        let normalized = crate::message::normalize_sgr_fragments(raw);
+        if normalized.contains('\x1b') {
+            let spans = ansi_to_spans(&normalized, style);
+            lines.push(Line::from(spans));
+            continue;
+        }
         let wrapped = word_wrap(raw, width, width);
         if wrapped.is_empty() {
             lines.push(Line::from("").style(style));
         } else {
-            lines.extend(wrapped.into_iter().map(|line| Line::from(line.to_string()).style(style)));
+            lines.extend(
+                wrapped
+                    .into_iter()
+                    .map(|line| Line::from(line.to_string()).style(style)),
+            );
         }
     }
     if lines.is_empty() {
@@ -242,9 +314,28 @@ pub fn render_system_message(content: &str, content_width: u16) -> Vec<Line<'sta
     lines
 }
 
-pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize, tool_calls: usize, width: u16) -> Vec<Line<'static>> {
-    let pct = if total == 0 { 0.0 } else { used as f64 / total as f64 * 100.0 };
-    let short = |n: usize| if n >= 1_000_000 { format!("{:.1}m", n as f64 / 1_000_000.0) } else if n >= 1_000 { format!("{:.1}k", n as f64 / 1_000.0) } else { n.to_string() };
+pub fn render_context_info(
+    model: &str,
+    used: usize,
+    total: usize,
+    turns: usize,
+    tool_calls: usize,
+    width: u16,
+) -> Vec<Line<'static>> {
+    let pct = if total == 0 {
+        0.0
+    } else {
+        used as f64 / total as f64 * 100.0
+    };
+    let short = |n: usize| {
+        if n >= 1_000_000 {
+            format!("{:.1}m", n as f64 / 1_000_000.0)
+        } else if n >= 1_000 {
+            format!("{:.1}k", n as f64 / 1_000.0)
+        } else {
+            n.to_string()
+        }
+    };
     // Grok's context block uses a 100-cell bar arranged as five rows of 20.
     // Runie currently has only aggregate usage, so cells represent used/free
     // capacity rather than Grok's richer per-category breakdown.
@@ -259,26 +350,51 @@ pub fn render_context_info(model: &str, used: usize, total: usize, turns: usize,
                 .map(|cell| if cell < used_in_row { "◆" } else { "◇" })
                 .collect::<Vec<_>>()
                 .join(" ");
-            Line::from(cells)
-                .style(style_tool_summary())
+            Line::from(cells).style(style_tool_summary())
         })
         .collect::<Vec<_>>();
     let free = total.saturating_sub(used);
     let mut lines = vec![
-        Line::from("Context").style(style_tool_summary().bold()),
+        // Keep the context representation aligned with the status bar's
+        // terminal-safe coins-stack glyph.
+        Line::from("⛀ Context").style(style_tool_summary().bold()),
         Line::from(""),
-        Line::from(format!("{} / {} tokens ({:.2}%)", short(used), short(total), pct)).style(style_tool_summary()),
+        Line::from(format!(
+            "{} / {} tokens ({:.2}%)",
+            short(used),
+            short(total),
+            pct
+        ))
+        .style(style_tool_summary()),
         Line::from(model.to_owned()).style(style_tool_summary()),
         Line::from(""),
     ];
     lines.extend(bar_lines);
     lines.push(Line::from(""));
-    lines.push(Line::from(format!("◆ Used              {} tokens ({:.2}%)", short(used), pct)).style(style_tool_summary()));
+    lines.push(
+        Line::from(format!(
+            "◆ Used              {} tokens ({:.2}%)",
+            short(used),
+            pct
+        ))
+        .style(style_tool_summary()),
+    );
     let free_pct = 100.0 - pct;
-    lines.push(Line::from(format!("◇ Free              {} tokens ({:.2}%)", short(free), free_pct.max(0.0))).style(style_tool_summary()));
+    lines.push(
+        Line::from(format!(
+            "◇ Free              {} tokens ({:.2}%)",
+            short(free),
+            free_pct.max(0.0)
+        ))
+        .style(style_tool_summary()),
+    );
     lines.push(Line::from(""));
     lines.extend([
-        Line::from(format!("Auto-compact at 85% · ~{} tokens remaining", short(free))).style(style_tool_summary()),
+        Line::from(format!(
+            "Auto-compact at 85% · ~{} tokens remaining",
+            short(free)
+        ))
+        .style(style_tool_summary()),
         Line::from(""),
         Line::from(format!("Turns: {turns} · Tool calls: {tool_calls}")).style(style_tool_summary()),
     ]);
@@ -299,7 +415,10 @@ pub fn render_credit_limit(heading: &str, action: &str, url: &str) -> Vec<Line<'
         Line::from(Span::styled(heading.to_owned(), heading_style)),
         Line::from(""),
         Line::from(Span::styled(body, muted)),
-        Line::from(Span::styled(url.to_owned(), Style::default().fg(crate::theme::color_agent_text()))),
+        Line::from(Span::styled(
+            url.to_owned(),
+            Style::default().fg(crate::theme::color_agent_text()),
+        )),
         Line::from(""),
     ]
 }
@@ -317,7 +436,10 @@ pub fn render_workflow(
     let verb = match status {
         "done" | "completed" => format!("{name} done in {}: ", format_elapsed(duration_secs)),
         "failed" => format!("{name} failed in {}: ", format_elapsed(duration_secs)),
-        "cancelled" => format!("{name} ◌ cancelled after {}: ", format_elapsed(duration_secs)),
+        "cancelled" => format!(
+            "{name} ◌ cancelled after {}: ",
+            format_elapsed(duration_secs)
+        ),
         "paused" => format!("{name} paused at {}: ", format_elapsed(duration_secs)),
         _ => format!("{name}: "),
     };
@@ -358,17 +480,16 @@ pub fn render_background_task(
     signal: Option<&str>,
 ) -> Vec<Line<'static>> {
     let style = style_tool_summary();
-    let display = description.filter(|text| !text.trim().is_empty()).unwrap_or(command).replace('\n', " ");
+    let display = description
+        .filter(|text| !text.trim().is_empty())
+        .unwrap_or(command)
+        .replace('\n', " ");
     let signal_is_kill = signal.is_some_and(|value| matches!(value, "killed" | "SIGTERM" | "SIGKILL" | "oom"));
     let elapsed = runie_core::labels::format_turn_timer(std::time::Duration::from_secs_f64(duration_secs.max(0.0)));
     let (verb, suffix) = match status {
         "completed" => ("completed", format!(" in {elapsed}")),
-        "failed" if signal_is_kill => {
-            ("killed", format!(" in {elapsed}"))
-        }
-        "failed" => {
-            ("failed", format!(" in {elapsed}"))
-        }
+        "failed" if signal_is_kill => ("killed", format!(" in {elapsed}")),
+        "failed" => ("failed", format!(" in {elapsed}")),
         "killed" | "cancelled" => ("killed", format!(" in {elapsed}")),
         _ => ("started", String::new()),
     };
@@ -414,9 +535,12 @@ fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
         "list_dir" | "list_directory" => Some("List"),
         "grep" | "find" | "search" | "search_files" => Some("Search"),
         "edit" | "edit_file" | "write_file" => Some("Edit"),
+        "write" | "create_file" => Some("Creating"),
         "fetch" | "fetch_docs" | "web_fetch" => Some("Fetch"),
         "web_search" | "search_web" => Some("Web Search"),
         "memory_search" | "search_memory" => Some("Memory Search"),
+        "skill" => Some("Skill"),
+        "use_tool" => Some("Use Tool"),
         _ => None,
     };
     if let Some(action) = action {
@@ -424,7 +548,10 @@ fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
         if trimmed.is_empty() {
             (action.to_string(), String::new())
         } else {
-            (action.to_string(), format!(" {}", trimmed.trim_matches('\"')))
+            (
+                action.to_string(),
+                format!(" {}", trimmed.trim_matches('\"')),
+            )
         }
     } else {
         format_tool_label_parts(name, args)
@@ -433,8 +560,39 @@ fn feed_tool_label_parts(name: &str, args: &str) -> (String, String) {
 
 fn feed_tool_done_label_parts(name: &str, args: &str, output: &str) -> (String, String) {
     let (verb, args_part) = feed_tool_label_parts(name, args);
+    if matches!(name, "read" | "read_file") && output.trim().is_empty() {
+        return (verb, format!("{args_part} (empty)"));
+    }
+    if matches!(name, "grep" | "find" | "search" | "search_files") {
+        let matches = output
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count();
+        if matches > 0 {
+            let noun = if matches == 1 { "match" } else { "matches" };
+            return (verb, format!("{args_part} ({matches} {noun})"));
+        }
+    }
+    if matches!(name, "edit" | "edit_file" | "write_file" | "apply_patch")
+        && runie_core::diff::Diff::is_diff_output(output)
+    {
+        let inserted = output
+            .lines()
+            .filter(|line| line.starts_with('+') && !line.starts_with("+++"))
+            .count();
+        let deleted = output
+            .lines()
+            .filter(|line| line.starts_with('-') && !line.starts_with("---"))
+            .count();
+        if inserted > 0 || deleted > 0 {
+            return (verb, format!("{args_part} +{inserted}/-{deleted}"));
+        }
+    }
     if matches!(name, "list_dir" | "list_directory") {
-        let count = output.lines().filter(|line| !line.trim().is_empty()).count();
+        let count = output
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count();
         if count > 0 {
             let noun = if count == 1 { "entry" } else { "entries" };
             return (verb, format!("{args_part} ({count} {noun})"));
@@ -677,7 +835,9 @@ pub fn render_horizontal_rule(content_width: u16, ts_str: &str, is_first: bool) 
     if is_first {
         // Add padding before rule to align with content.
         let text_width = str_width(&rule) as u16;
-        let padding = content_width.saturating_sub(text_width).saturating_sub(ts_width);
+        let padding = content_width
+            .saturating_sub(text_width)
+            .saturating_sub(ts_width);
         if padding > 0 {
             line_spans.push(Span::raw(" ".repeat(padding as usize)));
         }
@@ -835,7 +995,10 @@ pub fn render_image(
             Span::styled(GLYPH_INDENT, style),
             Span::styled("[Image unavailable] ", style.bold()),
             Span::styled(
-                format!("{} requires a graphics-capable terminal; text fallback retained", mime_type),
+                format!(
+                    "{} requires a graphics-capable terminal; text fallback retained",
+                    mime_type
+                ),
                 style,
             ),
         ])];
@@ -954,7 +1117,10 @@ pub fn render_markdown_table(
             Some(false) => format!("{:^width$}", header, width = width), // center
             None => format!("{:<width$}", header, width = width),       // left
         };
-        header_spans.push(Span::styled(format!(" {} │", cell_str), style.bold().underlined()));
+        header_spans.push(Span::styled(
+            format!(" {} │", cell_str),
+            style.bold().underlined(),
+        ));
     }
     lines.push(Line::from(header_spans));
 
@@ -1240,7 +1406,7 @@ pub fn render_ansi_styled(raw_content: &str, _plain_text: &str, _timestamp: f64)
 /// Convert ANSI escape sequences to ratatui spans.
 #[allow(clippy::cognitive_complexity)]
 #[allow(clippy::too_many_lines)]
-fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<'static>> {
+pub(crate) fn ansi_to_spans(input: &str, default_style: ratatui::style::Style) -> Vec<Span<'static>> {
     use ratatui::style::Color;
 
     let mut spans = Vec::new();

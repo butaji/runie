@@ -381,7 +381,10 @@ fn skills_event_is_relevant(events: &[DebouncedEvent]) -> bool {
 #[cfg(feature = "watch")]
 fn skills_watch_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
-    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from).or_else(dirs::home_dir) {
+    if let Some(home) = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .or_else(dirs::home_dir)
+    {
         dirs.push(home.join(".runie").join("skills"));
     }
     if let Ok(cwd) = std::env::current_dir() {
@@ -412,10 +415,7 @@ fn spawn_skills_watcher(myself: ActorRef<IoMsg>) {
         let mut debouncer = debouncer;
         for dir in skills_watch_dirs() {
             if dir.exists() {
-                if let Err(e) = debouncer
-                    .watcher()
-                    .watch(&dir, RecursiveMode::Recursive)
-                {
+                if let Err(e) = debouncer.watcher().watch(&dir, RecursiveMode::Recursive) {
                     tracing::error!("skills watcher: watch {:?} failed: {e:?}", dir);
                 }
             }

@@ -6,49 +6,8 @@ use crate::Event;
 // Re-export for backward compatibility
 pub use crate::tool_markers::has_tool_markers as content_has_tool_markers;
 pub use crate::tool_markers::strip_tool_markers;
-
-/// Strip `<think>...</think>` thinking tags from content.
-/// Returns only the visible text, dropping the reasoning content.
-/// Handles unclosed tags by stripping from the last `<think>` to end of input.
-pub fn strip_thinking_tags(content: &str) -> String {
-    static THINK_BLOCK_REGEX: std::sync::LazyLock<regex::Regex> =
-        std::sync::LazyLock::new(|| regex::Regex::new(r"(?s)<think>.*?</think>").unwrap());
-    static THINK_OPEN_REGEX: std::sync::LazyLock<regex::Regex> =
-        std::sync::LazyLock::new(|| regex::Regex::new(r"<think>").unwrap());
-
-    let caps: Vec<_> = THINK_BLOCK_REGEX.captures_iter(content).collect();
-    let has_unclosed = THINK_OPEN_REGEX.find_iter(content).count() > caps.len();
-
-    if has_unclosed {
-        strip_with_unclosed(content, &caps)
-    } else {
-        THINK_BLOCK_REGEX.replace_all(content, "").to_string()
-    }
-}
-
-fn strip_with_unclosed(content: &str, caps: &[regex::Captures]) -> String {
-    // Find the position after the last complete block
-    let after_last_block = caps
-        .last()
-        .and_then(|c| c.get(0))
-        .map(|m| m.end())
-        .unwrap_or(0);
-
-    // Look for unclosed <think> after the last complete block
-    let remaining = &content[after_last_block..];
-    if let Some(pos) = remaining.find("<think>") {
-        // Content before last block + content before unclosed tag
-        let before_block = &content[..after_last_block];
-        let before_unclosed = &remaining[..pos];
-        // Strip complete blocks from the before_block portion
-        static THINK_BLOCK_REGEX: std::sync::LazyLock<regex::Regex> =
-            std::sync::LazyLock::new(|| regex::Regex::new(r"(?s)<think>.*?</think>").unwrap());
-        let stripped_before = THINK_BLOCK_REGEX.replace_all(before_block, "");
-        format!("{stripped_before}{before_unclosed}")
-    } else {
-        content.to_string()
-    }
-}
+pub mod think_tag;
+pub use think_tag::strip_thinking_tags;
 
 #[cfg(test)]
 mod tests {
@@ -131,6 +90,12 @@ impl AppState {
             let chips = self.input().chips.clone();
             let picker_open = picker_backup.is_some();
             *self.input_mut() = *state;
+            let inline_text = self.input().input.clone();
+            let inline_cursor = self.input().cursor_pos;
+            if let Some(edit) = self.view_mut().inline_edit.as_mut() {
+                edit.edited = inline_text;
+                edit.cursor_pos = inline_cursor;
+            }
             self.input_mut().file_picker_backup = picker_backup;
             self.input_mut().file_picker_range_suffix = range_suffix;
             if picker_open {
@@ -152,6 +117,11 @@ impl AppState {
         }
         if let Event::AuthLoaded { providers } = event {
             self.set_auth_providers(providers);
+            return;
+        }
+        if matches!(event, Event::FocusGained | Event::FocusLost) {
+            self.view_mut().terminal_focused = matches!(event, Event::FocusGained);
+            self.view_mut().dirty = true;
             return;
         }
         if self.try_handle_dialog_event_input(&event) {

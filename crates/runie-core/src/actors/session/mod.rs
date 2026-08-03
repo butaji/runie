@@ -13,5 +13,5 @@ mod ractor_session_handle;
 mod session_handlers;
 
 pub use messages::SessionMsg;
-pub use session::{spawn_session_actor, SessionHandle, RactorSessionHandle};
+pub use session::{spawn_session_actor, RactorSessionHandle, SessionHandle};
 pub use session_handlers::RactorSessionActor;

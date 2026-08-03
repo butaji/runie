@@ -39,19 +39,11 @@ fn ui_section_clamps_animation_settings_to_renderable_ranges() {
     assert_eq!(defaults.animation_fps(), 60);
     assert_eq!(defaults.animation_wave_rows(), 32);
 
-    let lower = UiSection {
-        animation_fps: 0,
-        animation_wave_rows: 0,
-        ..defaults.clone()
-    };
+    let lower = UiSection { animation_fps: 0, animation_wave_rows: 0, ..defaults.clone() };
     assert_eq!(lower.animation_fps(), 1);
     assert_eq!(lower.animation_wave_rows(), 1);
 
-    let upper = UiSection {
-        animation_fps: u16::MAX,
-        animation_wave_rows: u16::MAX,
-        ..defaults
-    };
+    let upper = UiSection { animation_fps: u16::MAX, animation_wave_rows: u16::MAX, ..defaults };
     assert_eq!(upper.animation_fps(), 60);
     assert_eq!(upper.animation_wave_rows(), 256);
 }

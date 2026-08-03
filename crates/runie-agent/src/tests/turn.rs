@@ -460,9 +460,7 @@ async fn denied_tool_does_not_loop_in_turn() {
     let cmd = agent_cmd("native tool").build();
     let (events, emit) = capture_events();
 
-    let gate = crate::PermissionGate::new(
-        Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>,
-    );
+    let gate = crate::PermissionGate::new(Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>);
 
     // High cap: without the fix the loop would re-issue the bash call every
     // round up to the cap.

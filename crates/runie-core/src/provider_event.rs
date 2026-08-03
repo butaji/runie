@@ -382,7 +382,10 @@ mod tests {
     fn provider_event_turn_complete_roundtrip() {
         let event = ProviderEvent::TurnComplete { duration_secs: 2.5 };
         let json = serde_json::to_string(&event).unwrap();
-        assert_eq!(json, r#"{"type":"turnComplete","data":{"durationSecs":2.5}}"#);
+        assert_eq!(
+            json,
+            r#"{"type":"turnComplete","data":{"durationSecs":2.5}}"#
+        );
         let parsed: ProviderEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, event);
     }

@@ -267,18 +267,23 @@ fn whitespace_between_closes_nonascii() {
         .into_iter()
         .collect();
     assert_eq!(
-        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(),
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+            .count(),
         1,
         "expected exactly 1 ThinkingStart"
     );
     assert_eq!(
-        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(),
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
+            .count(),
         1,
         "expected exactly 1 ThinkingEnd"
     );
     assert!(
         text_content(&out).contains("rest"),
-        "expected 'rest' to appear after second </thinking>, got: {:?}", text_content(&out)
+        "expected 'rest' to appear after second </thinking>, got: {:?}",
+        text_content(&out)
     );
 }
 
@@ -291,16 +296,21 @@ fn whitespace_between_closes_emoji() {
         .into_iter()
         .collect();
     assert_eq!(
-        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(),
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+            .count(),
         1
     );
     assert_eq!(
-        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. })).count(),
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingEnd { .. }))
+            .count(),
         1
     );
     assert!(
         text_content(&out).contains("y"),
-        "expected 'y' to appear after second </thinking>, got: {:?}", text_content(&out)
+        "expected 'y' to appear after second </thinking>, got: {:?}",
+        text_content(&out)
     );
 }
 
@@ -313,12 +323,15 @@ fn post_thought_empty_nonascii() {
         .into_iter()
         .collect();
     assert_eq!(
-        out.iter().filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. })).count(),
+        out.iter()
+            .filter(|e| matches!(e, ProviderEvent::ThinkingStart { .. }))
+            .count(),
         1
     );
     assert!(
         text_content(&out).contains("日"),
-        "expected '日' to be emitted as text, got: {:?}", text_content(&out)
+        "expected '日' to be emitted as text, got: {:?}",
+        text_content(&out)
     );
 }
 
@@ -332,7 +345,8 @@ fn whitespace_only_nonascii_then_close() {
         .collect();
     assert!(
         text_content(&out).contains("b"),
-        "expected 'b' after second </thinking>, got: {:?}", text_content(&out)
+        "expected 'b' after second </thinking>, got: {:?}",
+        text_content(&out)
     );
 }
 

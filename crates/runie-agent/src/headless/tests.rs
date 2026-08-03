@@ -213,9 +213,7 @@ async fn denied_tool_does_not_loop() {
     use runie_core::permissions::DenyAllSink;
 
     // Create a deny-all gate (simulates headless mode with no permissions)
-    let gate = PermissionGate::new(
-        Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>,
-    );
+    let gate = PermissionGate::new(Arc::new(DenyAllSink) as Arc<dyn runie_core::permissions::ApprovalSink>);
 
     let options = HeadlessOptions {
         execute_tools: true,

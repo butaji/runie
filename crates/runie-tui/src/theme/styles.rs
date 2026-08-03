@@ -54,9 +54,15 @@ fn register_chat_styles(theme: &mut opaline::Theme) {
         opaline::OpalineStyle::fg(accent).bold(),
     );
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
-    theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style(
+        "runie.thought",
+        opaline::OpalineStyle::fg(feed_dim).dim().italic(),
+    );
     theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(feed_dim));
-    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(feed_dim));
+    theme.register_default_style(
+        "runie.thought.summary",
+        opaline::OpalineStyle::fg(feed_dim).dim(),
+    );
     theme.register_default_style("runie.empty", opaline::OpalineStyle::fg(dim));
     // Status-bar timestamp (out of feed scope) keeps the legacy dim shade;
     // feed timestamps use the grok-parity dim.
@@ -182,10 +188,15 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
         "runie.popup.border",
         opaline::OpalineStyle::fg(border_focused),
     );
-    theme.register_default_style("runie.dialog.border", opaline::OpalineStyle::fg(border_focused));
+    theme.register_default_style(
+        "runie.dialog.border",
+        opaline::OpalineStyle::fg(border_focused),
+    );
     theme.register_default_style(
         "runie.selection",
-        opaline::OpalineStyle::fg(accent_secondary).with_bg(bg_highlight).bold(),
+        opaline::OpalineStyle::fg(accent_secondary)
+            .with_bg(bg_highlight)
+            .bold(),
     );
 }
 
@@ -196,7 +207,9 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
 fn style_fn(token: &str) -> Style {
     let style = Style::from(crate::theme::current_theme().style(token));
     if crate::theme::is_monochrome() {
-        style.fg(ratatui::style::Color::Reset).bg(ratatui::style::Color::Reset)
+        style
+            .fg(ratatui::style::Color::Reset)
+            .bg(ratatui::style::Color::Reset)
     } else {
         style
     }
@@ -275,6 +288,10 @@ pub fn style_hint() -> Style {
 }
 pub fn style_hint_key() -> Style {
     style_fn("runie.hint.key")
+}
+/// Grok-style prompt suggestion: muted italic text, without an accept glyph.
+pub fn style_prompt_ghost() -> Style {
+    style_hint().add_modifier(ratatui::style::Modifier::ITALIC)
 }
 pub fn style_popup_selected() -> Style {
     style_fn("runie.popup.selected")

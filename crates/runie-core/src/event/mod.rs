@@ -274,7 +274,11 @@ pub enum Event {
     Abort,
     ClearQueues,
     FollowUp,
+    /// Cancel the active turn silently and submit the composer immediately.
+    SendNow,
     ToggleExpand,
+    /// Open or close the selected feed block viewer (Grok Ctrl-F parity).
+    OpenBlockViewer,
     ToggleTasksPane,
     Dequeue,
     OpenExternalEditor,

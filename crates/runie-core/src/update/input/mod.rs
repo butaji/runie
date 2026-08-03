@@ -32,6 +32,47 @@ pub fn input_event(state: &mut AppState, event: crate::Event) {
 }
 
 fn apply_input_event(state: &mut AppState, event: crate::Event) {
+    if state.view().inline_edit.is_some() {
+        if matches!(event, crate::Event::Escape | crate::Event::DialogBack) {
+            state.view_mut().inline_edit = None;
+            state.input_mut().input.clear();
+            state.input_mut().cursor_pos = 0;
+            state.view_mut().dirty = true;
+            return;
+        }
+        if matches!(event, crate::Event::Submit) {
+            let unchanged = state
+                .view()
+                .inline_edit
+                .as_ref()
+                .is_some_and(|edit| edit.original == edit.edited);
+            if unchanged {
+                state.view_mut().inline_edit = None;
+                state.input_mut().input.clear();
+                state.input_mut().cursor_pos = 0;
+                state.view_mut().dirty = true;
+                return;
+            }
+            let panel = crate::commands::dsl::handlers::system::inline_edit_panel("inline-edit-mode")
+                .expect("inline edit mode panel");
+            *state.open_dialog_mut() = Some(crate::commands::DialogState::Active {
+                kind: crate::commands::DialogKind::Generic,
+                panels: crate::dialog::PanelStack::new(panel),
+            });
+            state.view_mut().input_receiver = crate::model::InputReceiver::Dialog;
+            state.view_mut().dirty = true;
+            return;
+        }
+    }
+    // A feed detail overlay owns navigation before vim/input routing. The
+    // renderer already applies `scroll`; keeping this state transition here
+    // prevents arrows/page keys from mutating the background feed or composer.
+    if state.view().feed_element_detail.is_some() {
+        if handle_feed_detail_event(state, &event) {
+            return;
+        }
+    }
+
     // Inline slash dropdown key interception (grok parity: prompt.rs).
     // Up/Down navigate (wrap), Esc closes keeping the text, Enter submits
     // the accepted `/cmd` through the normal path. Any other key falls
@@ -109,6 +150,121 @@ fn apply_input_event(state: &mut AppState, event: crate::Event) {
         // intentionally ignored: other input events fall through
         _ => {}
     }
+}
+
+fn handle_feed_detail_event(state: &mut AppState, event: &crate::Event) -> bool {
+    let page = state.view().last_visible_height.max(1) as usize;
+    if matches!(event, crate::Event::Input('y') | crate::Event::Input('Y'))
+        && state
+            .view()
+            .feed_element_detail
+            .as_ref()
+            .is_some_and(|detail| !detail.search_editing)
+    {
+        let text = state.view().feed_element_detail.as_ref().map(|detail| {
+            if matches!(event, crate::Event::Input('Y')) {
+                detail.metadata_text()
+            } else if let Some(anchor) = detail.visual_anchor {
+                let (start, end) = if anchor <= detail.scroll {
+                    (anchor, detail.scroll)
+                } else {
+                    (detail.scroll, anchor)
+                };
+                detail
+                    .body_text()
+                    .lines()
+                    .skip(start)
+                    .take(end - start + 1)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            } else {
+                detail.body_text()
+            }
+        });
+        if let Some(text) = text {
+            state.update(crate::Event::CopyToClipboard(text));
+            state.view_mut().dirty = true;
+        }
+        return true;
+    }
+    let Some(detail) = state.view_mut().feed_element_detail.as_mut() else {
+        return false;
+    };
+    match event {
+        crate::Event::Escape | crate::Event::DialogBack if detail.search_editing => {
+            detail.search_editing = false;
+        }
+        crate::Event::Escape | crate::Event::DialogBack => {
+            state.view_mut().feed_element_detail = None;
+        }
+        crate::Event::Input('/') if !detail.search_editing => {
+            detail.search_filter = false;
+            detail.search_editing = true;
+        }
+        crate::Event::Input('f') if !detail.search_editing => {
+            detail.search_filter = true;
+            detail.search_editing = true;
+        }
+        crate::Event::Input('v') if !detail.search_editing => {
+            detail.visual_anchor = if detail.visual_anchor.is_some() {
+                None
+            } else {
+                Some(detail.scroll)
+            };
+        }
+        crate::Event::Input('w') if !detail.search_editing => {
+            detail.wrap = !detail.wrap;
+        }
+        crate::Event::OpenBlockViewer => {
+            state.view_mut().feed_element_detail = None;
+        }
+        crate::Event::Input(c) if detail.search_editing => {
+            detail.search_query.push(*c);
+            detail.refresh_search();
+        }
+        crate::Event::Backspace if detail.search_editing => {
+            detail.search_query.pop();
+            detail.refresh_search();
+        }
+        crate::Event::Submit | crate::Event::Newline if detail.search_editing => {
+            detail.search_editing = false;
+        }
+        crate::Event::Input('n') if !detail.search_editing && !detail.search_matches.is_empty() => {
+            detail.search_current = (detail.search_current + 1) % detail.search_matches.len();
+            detail.scroll = detail.search_matches[detail.search_current];
+        }
+        crate::Event::Input('N') if !detail.search_editing && !detail.search_matches.is_empty() => {
+            detail.search_current = if detail.search_current == 0 {
+                detail.search_matches.len() - 1
+            } else {
+                detail.search_current - 1
+            };
+            detail.scroll = detail.search_matches[detail.search_current];
+        }
+        crate::Event::Up | crate::Event::HistoryPrev | crate::Event::Input('k') => {
+            detail.scroll = detail.scroll.saturating_sub(1);
+        }
+        crate::Event::Down | crate::Event::HistoryNext | crate::Event::Input('j') => {
+            detail.scroll = detail.scroll.saturating_add(1);
+        }
+        crate::Event::PageUp => {
+            detail.scroll = detail.scroll.saturating_sub(page);
+        }
+        crate::Event::PageDown => {
+            detail.scroll = detail.scroll.saturating_add(page);
+        }
+        crate::Event::GoToTop | crate::Event::Input('g') => detail.scroll = 0,
+        crate::Event::GoToBottom | crate::Event::Input('G') => {
+            // The renderer clamps this against the wrapped body height; a
+            // large sentinel gives the same effect without duplicating wrap
+            // measurement in the core state layer.
+            detail.scroll = usize::MAX;
+        }
+        crate::Event::Input('q') => state.view_mut().feed_element_detail = None,
+        _ => return false,
+    }
+    state.view_mut().dirty = true;
+    true
 }
 
 fn handle_terminal_resize(state: &mut AppState, width: u16, height: u16) {
@@ -243,6 +399,11 @@ fn handle_history_next(state: &mut AppState) {
 }
 
 fn handle_escape(state: &mut AppState) {
+    if state.input().input.is_empty() && state.view().prompt_suggestion.ghost_for("").is_some() {
+        state.view_mut().prompt_suggestion.dismiss();
+        state.view_mut().dirty = true;
+        return;
+    }
     // Close feed_element_detail overlay first
     if state.view().feed_element_detail.is_some() {
         state.view_mut().feed_element_detail = None;

@@ -46,9 +46,6 @@ impl PermissionGate {
 
     /// Clone this gate for a subagent, inheriting the parent's sink.
     pub fn clone_for_subagent(&self) -> Self {
-        Self {
-            sink: Arc::clone(&self.sink),
-            cancel_token: CancellationToken::new(),
-        }
+        Self { sink: Arc::clone(&self.sink), cancel_token: CancellationToken::new() }
     }
 }

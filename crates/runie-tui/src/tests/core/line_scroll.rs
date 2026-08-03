@@ -420,9 +420,11 @@ fn scroll_preserved_when_not_at_bottom() {
     });
     state.refresh_after_message_change();
 
-    // scroll preserved when not at bottom
+    // Scroll is tail-relative: the new four-row message is inserted below the
+    // detached viewport, so the offset increases by those rows to preserve
+    // the same visible content.
     assert_eq!(
-        state.view.scroll, 5,
-        "Scroll position should be preserved when not at bottom"
+        state.view.scroll, 9,
+        "Tail-relative scroll should preserve the detached viewport"
     );
 }

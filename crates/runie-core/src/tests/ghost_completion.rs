@@ -85,4 +85,19 @@ fn ghost_shows_directory_suffix() {
     assert!(state.input.ghost_completion.unwrap().contains('/'));
 }
 
+#[test]
+fn prompt_suggestion_load_is_generation_guarded_and_projects_suffix() {
+    let mut state = fresh_state();
+    let generation = state.begin_prompt_suggestion_fetch();
+    assert!(!state.load_prompt_suggestion(Some("stale".into()), generation.wrapping_sub(1)));
+    assert!(state.load_prompt_suggestion(Some("list files".into()), generation));
+    state.input.input = "list".into();
+    state.input.cursor_pos = 4;
+    state.ensure_fresh();
+    assert_eq!(
+        state.view.prompt_suggestion.ghost_for("list"),
+        Some(" files")
+    );
+}
+
 use crate::event::Event;

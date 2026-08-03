@@ -28,6 +28,11 @@ pub enum TurnMsg {
     RunIfQueued,
     /// Abort the current turn and stop the queue.
     AbortTurn,
+    /// Stop the active turn but keep queued prompts for SendNow.
+    AbortTurnForSendNow,
+    /// Atomically stop the current turn, preserve queued prompts, and start
+    /// this fresh urgent prompt before any queued-row delivery can run.
+    SendNow { content: String, id: String },
     /// Submit a user message to the queue.
     /// `source` indicates whether this is a fresh submit (should emit UserMessageSubmitted)
     /// or a queued/delivered message (content already in session via FollowUpDelivered).
@@ -82,6 +87,8 @@ impl Clone for TurnMsg {
         match self {
             TurnMsg::RunIfQueued => TurnMsg::RunIfQueued,
             TurnMsg::AbortTurn => TurnMsg::AbortTurn,
+            TurnMsg::AbortTurnForSendNow => TurnMsg::AbortTurnForSendNow,
+            TurnMsg::SendNow { content, id } => TurnMsg::SendNow { content: content.clone(), id: id.clone() },
             TurnMsg::SubmitUserMessage { content, id, source } => {
                 TurnMsg::SubmitUserMessage { content: content.clone(), id: id.clone(), source: *source }
             }

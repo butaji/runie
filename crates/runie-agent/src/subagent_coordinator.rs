@@ -16,17 +16,9 @@ pub enum SubagentState {
     /// Subagent is being initialized.
     New,
     /// Subagent is actively running.
-    Running {
-        turn_count: u32,
-        tool_call_count: u32,
-        tokens_used: u64,
-    },
+    Running { turn_count: u32, tool_call_count: u32, tokens_used: u64 },
     /// Subagent completed successfully.
-    Completed {
-        output: String,
-        tool_calls: u32,
-        turns: u32,
-    },
+    Completed { output: String, tool_calls: u32, turns: u32 },
     /// Subagent was cancelled.
     Cancelled { reason: Option<String> },
     /// Subagent failed with error.
@@ -125,20 +117,12 @@ impl SubagentTracker {
 
     /// Mark the tracker as running.
     pub fn mark_running(&mut self) {
-        self.state = SubagentState::Running {
-            turn_count: 0,
-            tool_call_count: 0,
-            tokens_used: 0,
-        };
+        self.state = SubagentState::Running { turn_count: 0, tool_call_count: 0, tokens_used: 0 };
     }
 
     /// Mark the tracker as completed.
     pub fn mark_completed(&mut self, output: String, tool_calls: u32, turns: u32) {
-        self.state = SubagentState::Completed {
-            output,
-            tool_calls,
-            turns,
-        };
+        self.state = SubagentState::Completed { output, tool_calls, turns };
     }
 
     /// Mark the tracker as failed.
@@ -335,31 +319,17 @@ impl SubagentCoordinator {
     pub async fn set_running(&self, subagent_id: Uuid) {
         let mut entries = self.entries.write().await;
         if let Some(entry) = entries.get_mut(&subagent_id) {
-            *entry.state.write().await = SubagentState::Running {
-                turn_count: 0,
-                tool_call_count: 0,
-                tokens_used: 0,
-            };
+            *entry.state.write().await = SubagentState::Running { turn_count: 0, tool_call_count: 0, tokens_used: 0 };
             entry.last_heard = Instant::now();
             debug!("Subagent {} is now running", subagent_id);
         }
     }
 
     /// Update progress for a running subagent.
-    pub async fn update_progress(
-        &self,
-        subagent_id: Uuid,
-        turn_count: u32,
-        tool_call_count: u32,
-        tokens_used: u64,
-    ) {
+    pub async fn update_progress(&self, subagent_id: Uuid, turn_count: u32, tool_call_count: u32, tokens_used: u64) {
         let mut entries = self.entries.write().await;
         if let Some(entry) = entries.get_mut(&subagent_id) {
-            *entry.state.write().await = SubagentState::Running {
-                turn_count,
-                tool_call_count,
-                tokens_used,
-            };
+            *entry.state.write().await = SubagentState::Running { turn_count, tool_call_count, tokens_used };
             entry.last_heard = Instant::now();
         }
     }
@@ -368,11 +338,7 @@ impl SubagentCoordinator {
     pub async fn complete(&self, subagent_id: Uuid, output: String, tool_calls: u32, turns: u32) {
         let mut entries = self.entries.write().await;
         if let Some(entry) = entries.get_mut(&subagent_id) {
-            *entry.state.write().await = SubagentState::Completed {
-                output,
-                tool_calls,
-                turns,
-            };
+            *entry.state.write().await = SubagentState::Completed { output, tool_calls, turns };
             if !entry.has_been_counted {
                 self.running_count
                     .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
@@ -496,10 +462,7 @@ impl SubagentCoordinator {
     /// Handle a subagent request: creates a tracker and spawns the subagent.
     ///
     /// Returns the tracker and handle for the spawned subagent.
-    pub async fn handle_subagent_request(
-        &self,
-        request: SubagentRequest,
-    ) -> (SubagentTracker, SubagentHandle) {
+    pub async fn handle_subagent_request(&self, request: SubagentRequest) -> (SubagentTracker, SubagentHandle) {
         let metadata = request.to_metadata();
         let tracker = SubagentTracker::new(&metadata);
         let handle = self.spawn(metadata).await;
@@ -507,10 +470,7 @@ impl SubagentCoordinator {
     }
 
     /// List all subagents, optionally filtered by parent session.
-    pub async fn list_subagents(
-        &self,
-        parent_session_id: Option<&str>,
-    ) -> Vec<SubagentTracker> {
+    pub async fn list_subagents(&self, parent_session_id: Option<&str>) -> Vec<SubagentTracker> {
         let entries = self.entries.read().await;
         let mut trackers = Vec::new();
         for e in entries.values() {
@@ -617,7 +577,9 @@ mod tests {
         };
 
         let handle = coord.spawn(metadata.clone()).await;
-        let outcome = coord.cancel(handle.subagent_id, Some("user cancelled".to_string())).await;
+        let outcome = coord
+            .cancel(handle.subagent_id, Some("user cancelled".to_string()))
+            .await;
 
         assert_eq!(outcome, CancelOutcome::Cancelled);
         let state = handle.query_status().await;
@@ -666,7 +628,9 @@ mod tests {
         let coord_clone = Arc::clone(&coord_arc);
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(10)).await;
-            coord_clone.complete(subagent_id, "done".to_string(), 1, 1).await;
+            coord_clone
+                .complete(subagent_id, "done".to_string(), 1, 1)
+                .await;
         });
 
         let state = handle.wait_with_timeout(Duration::from_secs(5)).await;

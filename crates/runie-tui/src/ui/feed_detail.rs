@@ -7,6 +7,7 @@
 
 use ratatui::{
     layout::{Margin, Rect},
+    style::{Modifier, Style},
     text::{Line, Span, Text},
     widgets::Paragraph,
     Frame,
@@ -28,28 +29,96 @@ pub fn render_feed_detail(f: &mut Frame, snap: &Snapshot, _area: Rect) {
         return;
     }
 
-    // Body area is the full inner rect; footer is the last row
-    let body_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: inner.height - 1 };
+    // Reserve Grok-style selection chrome above the shortcut footer.
+    let selection_chrome = detail.visual_anchor.is_some() && inner.height >= 4;
+    let reserved = if selection_chrome { 3 } else { 1 };
+    let body_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: inner.height - reserved };
     let footer_area = Rect { x: inner.x, y: inner.y + inner.height - 1, width: inner.width, height: 1 };
 
     render_body(f, detail, body_area);
-    render_footer(f, footer_area);
+    if selection_chrome {
+        let status_area = Rect { x: inner.x, y: inner.y + inner.height - 3, width: inner.width, height: 1 };
+        let divider_area = Rect { x: inner.x, y: inner.y + inner.height - 2, width: inner.width, height: 1 };
+        render_selection_status(f, status_area, detail);
+        f.render_widget(
+            Paragraph::new("─".repeat(divider_area.width as usize)),
+            divider_area,
+        );
+    }
+    render_footer(f, footer_area, detail);
+}
+
+fn render_selection_status(f: &mut Frame, area: Rect, detail: &runie_core::model::feed_detail::FeedElementDetail) {
+    let anchor = detail.visual_anchor.unwrap_or(detail.scroll);
+    let (start, end) = if anchor <= detail.scroll {
+        (anchor, detail.scroll)
+    } else {
+        (detail.scroll, anchor)
+    };
+    let text = format!("Selected: {} line(s)", end - start + 1);
+    f.render_widget(
+        Paragraph::new(Line::from(Span::styled(text, crate::theme::style_hint()))),
+        area,
+    );
 }
 
 fn render_body(f: &mut Frame, detail: &runie_core::model::FeedElementDetail, area: Rect) {
     let content_width = area.width.saturating_sub(2).max(1);
-    let body = detail.body_text();
+    let body = if detail.search_filter && !detail.search_query.is_empty() {
+        detail
+            .body_text()
+            .lines()
+            .enumerate()
+            .filter(|(index, _)| detail.search_matches.contains(index))
+            .map(|(_, line)| line.to_owned())
+            .collect::<Vec<_>>()
+            .join("\n")
+    } else {
+        detail.body_text()
+    };
 
     // Wrap text at content width, preserving newlines
-    let lines: Vec<Line<'static>> = wrap_text_lines(&body, content_width);
+    let lines: Vec<Line<'static>> = if detail.wrap {
+        wrap_text_lines(&body, content_width)
+    } else {
+        body.lines()
+            .map(|line| Line::from(line.to_owned()))
+            .collect()
+    };
 
     let max_scroll = lines.len().saturating_sub(area.height as usize);
     let offset = detail.scroll.min(max_scroll);
-    let visible: Vec<Line<'static>> = lines
+    let mut visible: Vec<Line<'static>> = lines
         .into_iter()
         .skip(offset)
         .take(area.height as usize)
         .collect();
+
+    if let Some(anchor) = detail.visual_anchor {
+        let (start, end) = if anchor <= detail.scroll {
+            (anchor, detail.scroll)
+        } else {
+            (detail.scroll, anchor)
+        };
+        let selection_bg = crate::theme::color_bg_panel();
+        for (index, line) in visible.iter_mut().enumerate() {
+            let source_line = offset + index;
+            if (start..=end).contains(&source_line) {
+                line.style = Style::new().bg(selection_bg);
+            }
+        }
+    }
+
+    if !detail.search_filter && !detail.search_query.is_empty() {
+        let match_style = Style::new()
+            .fg(crate::theme::color_bg())
+            .bg(crate::theme::color_accent())
+            .add_modifier(Modifier::BOLD);
+        for line in &mut visible {
+            let text = line.to_string();
+            *line = highlight_matches(&text, &detail.search_query, match_style);
+        }
+    }
 
     let margin = Margin::new(1, 0);
     let padded = area.inner(margin);
@@ -62,14 +131,58 @@ fn render_body(f: &mut Frame, detail: &runie_core::model::FeedElementDetail, are
     f.render_widget(Paragraph::new(text), padded);
 }
 
-fn render_footer(f: &mut Frame, area: Rect) {
-    let spans = vec![
-        Span::styled("q/Esc", crate::theme::style_hint_key()),
-        Span::styled(":back", crate::theme::style_hint()),
-        Span::styled(" │ ", crate::theme::style_hint()),
-        Span::styled("↑/↓", crate::theme::style_hint_key()),
-        Span::styled(":scroll", crate::theme::style_hint()),
-    ];
+fn highlight_matches(text: &str, query: &str, match_style: Style) -> Line<'static> {
+    if query.is_empty() {
+        return Line::from(text.to_owned());
+    }
+    let haystack = text.to_lowercase();
+    let needle = query.to_lowercase();
+    let Some(start) = haystack.find(&needle) else {
+        return Line::from(text.to_owned());
+    };
+    let end = start + needle.len();
+    Line::from(vec![
+        Span::raw(text[..start].to_owned()),
+        Span::styled(text[start..end].to_owned(), match_style),
+        Span::raw(text[end..].to_owned()),
+    ])
+}
+
+fn render_footer(f: &mut Frame, area: Rect, detail: &runie_core::model::FeedElementDetail) {
+    let text = if detail.search_editing {
+        let mode = if detail.search_filter {
+            "Filter"
+        } else {
+            "Search"
+        };
+        format!(
+            "{mode}: {} │ Enter:accept │ Esc:cancel",
+            detail.search_query
+        )
+    } else if !detail.search_query.is_empty() {
+        let mode = if detail.search_filter {
+            "filter"
+        } else {
+            "search"
+        };
+        format!(
+            "{mode}: {} │ n/N:next/prev │ q/Esc:back",
+            detail.search_query
+        )
+    } else {
+        if detail.visual_anchor.is_some() {
+            format!(
+                "v:clear │ y:copy │ w:{}",
+                if detail.wrap { "nowrap" } else { "wrap" }
+            )
+        } else {
+            format!(
+                "q/Esc:back │ /:search │ f:filter │ v:select │ w:{} │ ↑/↓:scroll",
+                if detail.wrap { "wrap" } else { "nowrap" }
+            )
+        }
+    };
+    let spans = vec![Span::styled(text, crate::theme::style_hint())];
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
@@ -137,6 +250,13 @@ mod tests {
             element_index: 0,
             scroll: 0,
             kind: FeedElementKind::UserInput { content: "Hello world".to_string() },
+            search_query: String::new(),
+            search_editing: false,
+            search_filter: false,
+            search_matches: Vec::new(),
+            search_current: 0,
+            visual_anchor: None,
+            wrap: true,
         };
         let snap = make_snap(Some(detail));
         let backend = ratatui::backend::TestBackend::new(80, 10);
@@ -162,6 +282,13 @@ mod tests {
             element_index: 0,
             scroll: 0,
             kind: FeedElementKind::Thought { content: "thinking...".to_string() },
+            search_query: String::new(),
+            search_editing: false,
+            search_filter: false,
+            search_matches: Vec::new(),
+            search_current: 0,
+            visual_anchor: None,
+            wrap: true,
         };
         let snap = make_snap(Some(detail));
         let backend = ratatui::backend::TestBackend::new(80, 8);
@@ -179,11 +306,64 @@ mod tests {
     }
 
     #[test]
+    fn renders_visual_selection_status_and_divider() {
+        let detail = FeedElementDetail {
+            element_index: 0,
+            scroll: 2,
+            kind: FeedElementKind::Thought { content: "one\ntwo\nthree\nfour".to_string() },
+            search_query: String::new(),
+            search_editing: false,
+            search_filter: false,
+            search_matches: Vec::new(),
+            search_current: 0,
+            visual_anchor: Some(0),
+            wrap: false,
+        };
+        let snap = make_snap(Some(detail));
+        let backend = ratatui::backend::TestBackend::new(80, 10);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| render_feed_detail(f, &snap, f.area()))
+            .unwrap();
+        let text = buffer_string(&terminal);
+        assert!(
+            text.contains("Selected: 3 line(s)"),
+            "selection status missing: {text}"
+        );
+        assert!(
+            text.contains("────────────────"),
+            "selection divider missing: {text}"
+        );
+        let selected_bg = crate::theme::color_bg_panel();
+        let has_selected_background = (0..terminal.backend().buffer().area().height).any(|y| {
+            (0..terminal.backend().buffer().area().width).any(|x| terminal.backend().buffer()[(x, y)].bg == selected_bg)
+        });
+        assert!(
+            has_selected_background,
+            "selected line must use theme background"
+        );
+    }
+
+    #[test]
+    fn highlights_case_insensitive_search_match() {
+        let line = highlight_matches("Prefix Needle suffix", "needle", Style::default());
+        assert_eq!(line.spans.len(), 3);
+        assert_eq!(line.spans[1].content, "Needle");
+    }
+
+    #[test]
     fn renders_tool_running_with_name() {
         let detail = FeedElementDetail {
             element_index: 0,
             scroll: 0,
             kind: FeedElementKind::ToolRunning { name: "Read".to_string(), args: "path/to/file".to_string() },
+            search_query: String::new(),
+            search_editing: false,
+            search_filter: false,
+            search_matches: Vec::new(),
+            search_current: 0,
+            visual_anchor: None,
+            wrap: true,
         };
         let snap = make_snap(Some(detail));
         let backend = ratatui::backend::TestBackend::new(80, 12);

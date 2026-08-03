@@ -99,7 +99,9 @@ impl EphemeralTipState {
                 return false;
             }
         }
-        let entry = seen_counts.entry(tip.key.clone()).or_insert((0, tip.seen_cap));
+        let entry = seen_counts
+            .entry(tip.key.clone())
+            .or_insert((0, tip.seen_cap));
         if entry.0 >= entry.1 {
             return false;
         }
@@ -157,17 +159,8 @@ pub const SHORT_TERMINAL_ROWS: u16 = 16;
 
 /// Plan-nudge keywords (whole-word, case-insensitive; `explain`, `planet`,
 /// `redesign` must NOT match).
-pub const PLAN_NUDGE_KEYWORDS: &[&str] = &[
-    "plan",
-    "planning",
-    "design",
-    "architect",
-    "step by step",
-    "break this down",
-    "lay out",
-    "approach",
-    "strategy",
-];
+pub const PLAN_NUDGE_KEYWORDS: &[&str] =
+    &["plan", "planning", "design", "architect", "step by step", "break this down", "lay out", "approach", "strategy"];
 
 /// Whole-word, case-insensitive match of the plan keywords against the input.
 pub fn plan_nudge_matches(input: &str) -> bool {
@@ -185,6 +178,15 @@ pub fn plan_nudge_matches(input: &str) -> bool {
             tokens.contains(kw)
         }
     })
+}
+
+/// Grok-compatible master switch for contextual hints. Missing or any value
+/// other than an explicit false value keeps the default-on behavior.
+pub fn contextual_hints_enabled() -> bool {
+    !matches!(
+        std::env::var("GROK_CONTEXTUAL_HINTS").ok().as_deref(),
+        Some("0") | Some("false") | Some("off")
+    )
 }
 
 /// Builder: plan-nudge tip (`Planning? Check out plan mode via shift+tab`).
@@ -205,11 +207,16 @@ pub fn plan_nudge_tip() -> EphemeralTip {
 pub fn send_now_tip() -> EphemeralTip {
     EphemeralTip::new(
         "send_now_tip",
-        vec![
-            TipSpan::new("Queued · "),
-            TipSpan::new("Enter").bold(),
-            TipSpan::new(" to send now"),
-        ],
+        vec![TipSpan::new("Queued · "), TipSpan::new("Enter").bold(), TipSpan::new(" to send now")],
+    )
+    .with_seen_cap(3)
+}
+
+/// Undo affordance shown after a substantial user-initiated draft wipe.
+pub fn undo_tip() -> EphemeralTip {
+    EphemeralTip::new(
+        "undo_tip",
+        vec![TipSpan::new("Input cleared · "), TipSpan::new("Ctrl+Z").bold(), TipSpan::new(" to undo")],
     )
     .with_seen_cap(3)
 }
@@ -219,10 +226,7 @@ pub fn send_now_tip() -> EphemeralTip {
 pub fn small_screen_tip() -> EphemeralTip {
     EphemeralTip::new(
         "small_screen_tip",
-        vec![
-            TipSpan::new("Tight on space? Try "),
-            TipSpan::new("/compact-mode").bold(),
-        ],
+        vec![TipSpan::new("Tight on space? Try "), TipSpan::new("/compact-mode").bold()],
     )
     .with_seen_cap(1)
     .ambient()
@@ -255,7 +259,10 @@ mod tests {
     fn same_key_refreshes_without_gate_or_count() {
         let mut state = EphemeralTipState::default();
         let mut counts: HashMap<String, TipSeen> = HashMap::new();
-        state.show(EphemeralTip::new("k", spans("a")).with_seen_cap(1), &mut counts);
+        state.show(
+            EphemeralTip::new("k", spans("a")).with_seen_cap(1),
+            &mut counts,
+        );
         assert_eq!(counts.get("k"), Some(&(1, 1)));
         // A same-key refresh while visible always succeeds.
         assert!(!state.show(EphemeralTip::new("k", spans("c")), &mut counts));
@@ -266,7 +273,10 @@ mod tests {
     fn seen_cap_blocks_after_replacement() {
         let mut state = EphemeralTipState::default();
         let mut counts: HashMap<String, TipSeen> = HashMap::new();
-        assert!(state.show(EphemeralTip::new("k", spans("a")).with_seen_cap(1), &mut counts));
+        assert!(state.show(
+            EphemeralTip::new("k", spans("a")).with_seen_cap(1),
+            &mut counts
+        ));
         // Force replacement: different key.
         assert!(state.show(EphemeralTip::new("other", spans("b")), &mut counts));
         // k has hit its cap: no-op, count unchanged.

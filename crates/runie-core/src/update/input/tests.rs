@@ -2,6 +2,60 @@ use super::{get_history_nav_mode, HistoryNavMode};
 use crate::model::AppState;
 use crate::Event;
 
+#[test]
+fn inline_edit_resubmit_truncates_tail_and_submits_edited_prompt() {
+    let mut state = AppState::default();
+    state.session_mut().messages = vec![
+        crate::message::ChatMessage::new(crate::message::Role::User, "first"),
+        crate::message::ChatMessage::new(crate::message::Role::Assistant, "first answer"),
+        crate::message::ChatMessage::new(crate::message::Role::User, "second"),
+        crate::message::ChatMessage::new(crate::message::Role::Assistant, "stale tail"),
+    ];
+    state.ensure_fresh();
+    let first_user_post = state
+        .snapshot()
+        .posts
+        .iter()
+        .position(|post| post.kind == crate::view::elements::PostKind::UserInput)
+        .expect("first user post");
+    state.view_mut().inline_edit = Some(crate::model::InlineEditState {
+        post_index: first_user_post,
+        original: "first".into(),
+        edited: "first revised".into(),
+        cursor_pos: "first revised".len(),
+    });
+
+    state.resubmit_inline_edit();
+
+    let contents: Vec<_> = state.session().messages.iter().map(|message| message.content()).collect();
+    assert_eq!(contents, ["first", "first revised"]);
+    assert!(state.view().inline_edit.is_none());
+    assert!(state.agent_state().request_queue.iter().any(|(content, _)| content == "first revised"));
+}
+
+#[test]
+fn inline_edit_resubmit_during_active_turn_does_not_rewrite_history() {
+    let mut state = AppState::default();
+    state.session_mut().messages = vec![
+        crate::message::ChatMessage::new(crate::message::Role::User, "keep me"),
+        crate::message::ChatMessage::new(crate::message::Role::Assistant, "active response"),
+    ];
+    state.agent_state_mut().turn_active = true;
+    state.view_mut().inline_edit = Some(crate::model::InlineEditState {
+        post_index: 0,
+        original: "keep me".into(),
+        edited: "dangerous rewrite".into(),
+        cursor_pos: 16,
+    });
+
+    state.resubmit_inline_edit();
+
+    let contents: Vec<_> = state.session().messages.iter().map(|message| message.content()).collect();
+    assert_eq!(contents, ["keep me", "active response"]);
+    assert!(state.agent_state().request_queue.is_empty());
+    assert!(state.view().inline_edit.is_none());
+}
+
 // ============================================================================
 // Layer 2 — Event Handling: history recall from an EMPTY input (grok parity)
 // ============================================================================

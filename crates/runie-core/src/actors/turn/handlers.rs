@@ -40,6 +40,21 @@ pub(super) fn handle_abort_turn(state: &mut TurnActorState) {
     emit(state, Event::TurnAborted);
 }
 
+/// Abort the active turn for SendNow while preserving queued prompts.
+pub(super) fn handle_abort_turn_for_send_now(state: &mut TurnActorState) {
+    state.turn_state.stop_turn();
+    emit(state, Event::TurnAborted);
+}
+
+/// Atomically replace the active turn with an urgent fresh prompt while
+/// leaving `message_queue` untouched. This closes the race between a separate
+/// abort event and the subsequent submit event.
+pub(super) fn handle_send_now(state: &mut TurnActorState, content: String, id: String) {
+    state.turn_state.stop_turn();
+    emit(state, Event::TurnAborted);
+    handle_submit_user_message(state, content, id, MessageSource::Fresh);
+}
+
 /// Handle `TurnMsg::SubmitUserMessage` — queue a new message and optionally start turn.
 pub(super) fn handle_submit_user_message(
     state: &mut TurnActorState,

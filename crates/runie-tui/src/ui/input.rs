@@ -19,7 +19,8 @@ use ratatui::{
 use runie_core::Snapshot;
 
 use crate::theme::{
-    block_input, style_agent, style_chevron, style_hint, style_input_cursor, style_input_cursor_disabled, GLYPH_USER,
+    block_input, color_feedback, style_agent, style_chevron, style_hint, style_input_cursor,
+    style_input_cursor_disabled, style_prompt_ghost, GLYPH_USER,
 };
 
 /// Render the input box.
@@ -136,10 +137,11 @@ fn render_input_content(f: &mut Frame, snap: &Snapshot, area: Rect, block: &Bloc
                 )
             } else {
                 // Regular line without cursor
-                Line::from(vec![
-                    Span::styled(prefix, chevron_style),
-                    Span::styled(line_content.to_string(), text_style),
-                ])
+                Line::from({
+                    let mut spans = vec![Span::styled(prefix, chevron_style)];
+                    spans.extend(style_skill_tokens(line_content, text_style));
+                    spans
+                })
             }
         })
         .collect();
@@ -197,12 +199,52 @@ fn build_line_with_cursor_owned(
         (" ".to_string(), String::new())
     };
 
-    Line::from(vec![
-        Span::styled(prefix, style_chevron(true)),
-        Span::styled(before.to_string(), text_style),
-        Span::styled(at_cursor, cursor_style),
-        Span::styled(after, text_style),
-    ])
+    let mut spans = vec![Span::styled(prefix, style_chevron(true))];
+    spans.extend(style_skill_tokens(before, text_style));
+    spans.push(Span::styled(at_cursor, cursor_style));
+    spans.extend(style_skill_tokens(&after, text_style));
+    Line::from(spans)
+}
+
+/// Style an invocable `/skill-name` token in the composer with the semantic
+/// feedback accent used by Grok. The boundary rule avoids coloring filesystem
+/// paths and mid-word slashes as skill invocations.
+fn style_skill_tokens(content: &str, base: Style) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    let bytes = content.as_bytes();
+    let mut cursor = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'/'
+            && (i == 0 || bytes[i - 1].is_ascii_whitespace())
+            && i + 1 < bytes.len()
+            && bytes[i + 1].is_ascii_alphabetic()
+        {
+            let mut end = i + 2;
+            while end < bytes.len() && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'-' || bytes[end] == b'_')
+            {
+                end += 1;
+            }
+            if cursor < i {
+                spans.push(Span::styled(content[cursor..i].to_owned(), base));
+            }
+            spans.push(Span::styled(
+                content[i..end].to_owned(),
+                base.fg(color_feedback()),
+            ));
+            cursor = end;
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+    if cursor < content.len() {
+        spans.push(Span::styled(content[cursor..].to_owned(), base));
+    }
+    if spans.is_empty() {
+        spans.push(Span::styled(content.to_owned(), base));
+    }
+    spans
 }
 
 /// Build a line with cursor and ghost completion (owned strings).
@@ -225,14 +267,12 @@ fn build_line_with_cursor_and_ghost_owned(
         (" ".to_string(), String::new())
     };
 
-    Line::from(vec![
-        Span::styled(prefix, chevron_style),
-        Span::styled(before.to_string(), text_style),
-        Span::styled(at_cursor, cursor_style),
-        Span::styled(after, text_style),
-        Span::styled(ghost, style_hint()),
-        Span::styled("→", style_hint()),
-    ])
+    let mut spans = vec![Span::styled(prefix, chevron_style)];
+    spans.extend(style_skill_tokens(before, text_style));
+    spans.push(Span::styled(at_cursor, cursor_style));
+    spans.extend(style_skill_tokens(&after, text_style));
+    spans.push(Span::styled(ghost, style_prompt_ghost()));
+    Line::from(spans)
 }
 
 /// Build a trailing cursor line (shown when cursor is after the last character).

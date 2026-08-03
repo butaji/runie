@@ -46,8 +46,7 @@ pub fn render_subagent_detail(f: &mut Frame, snap: &Snapshot, area: Rect) {
     // Same body/footer split as original: body takes all but the last row.
     let body_height = inner.height - 1;
     let body_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: body_height };
-    let footer_area =
-        Rect { x: inner.x, y: inner.y + body_height, width: inner.width, height: 1 };
+    let footer_area = Rect { x: inner.x, y: inner.y + body_height, width: inner.width, height: 1 };
 
     render_body(f, worker, snap.animation_frame, detail.scroll, body_area);
     render_footer(f, footer_area);
@@ -93,17 +92,14 @@ fn pulse_color(base: Color, frame: u32) -> Color {
     Color::Rgb(adjust(r), adjust(g), adjust(b))
 }
 
-fn render_body(
-    f: &mut Frame,
-    worker: &PatternWorkerRow,
-    frame: u32,
-    scroll: usize,
-    area: Rect,
-) {
+fn render_body(f: &mut Frame, worker: &PatternWorkerRow, frame: u32, scroll: usize, area: Rect) {
     // Build header row: status icon + General + description + model + duration + [✗]
     let header_spans = vec![
         build_status_icon(worker, frame),
-        Span::styled(" General ", Style::default().fg(pulse_color_for_status(worker.status, frame))),
+        Span::styled(
+            " General ",
+            Style::default().fg(pulse_color_for_status(worker.status, frame)),
+        ),
         Span::styled(
             worker.description.clone(),
             Style::default().add_modifier(Modifier::BOLD),
@@ -118,8 +114,7 @@ fn render_body(
     let header = Line::from(header_spans);
 
     let content_width = area.width.saturating_sub(2).max(1);
-    let spans =
-        crate::markdown_render::apply_color_to_inlines(&worker.output, crate::theme::color_agent_text());
+    let spans = crate::markdown_render::apply_color_to_inlines(&worker.output, crate::theme::color_agent_text());
     let rows = crate::message::wrap_styled_spans(&spans, content_width, content_width);
 
     let mut lines: Vec<Line<'static>> = rows
@@ -151,9 +146,7 @@ fn render_body(
 fn pulse_color_for_status(status: PatternWorkerStatus, frame: u32) -> Color {
     match status {
         PatternWorkerStatus::Completed => crate::theme::color_subagent_completed(),
-        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => {
-            crate::theme::color_subagent_failed()
-        }
+        PatternWorkerStatus::Failed | PatternWorkerStatus::Cancelled => crate::theme::color_subagent_failed(),
         PatternWorkerStatus::Running => pulse_color(crate::theme::color_subagent_running(), frame),
     }
 }
@@ -180,7 +173,12 @@ mod tests {
     use std::sync::Arc;
 
     fn truecolor_caps() -> TermCaps {
-        TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() }
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        }
     }
 
     fn worker(status: PatternWorkerStatus, output: &str) -> PatternWorkerRow {

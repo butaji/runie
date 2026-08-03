@@ -32,7 +32,9 @@ pub mod swarm;
 
 pub use improve::ImprovePattern;
 pub use single::SinglePattern;
-pub use swarm::{SwarmPattern, SwarmVariant, SwarmWorkerStatus, OrphanedWorkerTracker, StatusCounts, DEFAULT_ORPHAN_TIMEOUT_SECS};
+pub use swarm::{
+    OrphanedWorkerTracker, StatusCounts, SwarmPattern, SwarmVariant, SwarmWorkerStatus, DEFAULT_ORPHAN_TIMEOUT_SECS,
+};
 
 use std::sync::Arc;
 

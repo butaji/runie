@@ -39,6 +39,9 @@ pub fn test_lock() -> std::sync::MutexGuard<'static, ()> {
         crate::terminal::caps::TermCaps {
             color_depth: crate::terminal::caps::ColorDepth::Truecolor,
             truecolor: true,
+            // Render tests exercise the OSC-8 path by default; capability
+            // downgrade tests install explicit caps after taking the lock.
+            hyperlinks: true,
             ..Default::default()
         },
     );
@@ -91,6 +94,13 @@ pub fn is_monochrome() -> bool {
 /// terminal. Unknown capability state remains optimistic for normal startup.
 pub fn unicode_supported() -> bool {
     current_caps().map_or(true, |caps| caps.unicode)
+}
+
+/// Whether the active terminal can receive OSC-8 hyperlinks. Unknown
+/// capability state stays optimistic for isolated render/unit tests; the
+/// bootstrap render loop installs detected capabilities before drawing.
+pub fn hyperlinks_supported() -> bool {
+    current_caps().map_or(true, |caps| caps.hyperlinks)
 }
 
 /// Get the currently active theme (falls back to default).

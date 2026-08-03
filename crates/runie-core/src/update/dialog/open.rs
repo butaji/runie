@@ -2,7 +2,9 @@
 #![allow(clippy::too_many_lines)]
 
 use crate::commands::{DialogKind, DialogState};
-use crate::dialog::builders::{command_palette, file_picker, mcp_servers, model_selector, scoped_models, session_tree, skills};
+use crate::dialog::builders::{
+    command_palette, file_picker, mcp_servers, model_selector, scoped_models, session_tree, skills,
+};
 use crate::file_refs::find_file_entries;
 use crate::model::{AppState, InputReceiver};
 
@@ -257,10 +259,8 @@ pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     let v = state.view_mut();
     v.input_receiver = InputReceiver::Dialog;
     v.dirty = true;
-    *state.open_dialog_mut() = Some(DialogState::Active {
-        kind: DialogKind::Generic,
-        panels: file_picker(picker_entries),
-    });
+    *state.open_dialog_mut() =
+        Some(DialogState::Active { kind: DialogKind::Generic, panels: file_picker(picker_entries) });
 }
 
 /// Opens the file picker without any filter (shows all files).

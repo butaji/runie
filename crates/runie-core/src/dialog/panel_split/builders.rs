@@ -11,10 +11,14 @@ impl Panel {
             title: crate::dialog::panel_split::helpers::normalize_title(title),
             items: Vec::new(),
             selected: 0,
+            inline_help: std::collections::HashMap::new(),
+            inline_help_expanded: false,
             filter: String::new(),
             // List-style panels are searchable by default. Forms should opt-out
             // explicitly since they use keyboard input for field editing.
             filterable: true,
+            vim_filter_mode: false,
+            vim_picker_enabled: false,
             keep_open_on_activate: false,
             closable: true,
             form_values: std::collections::HashMap::new(),
@@ -27,6 +31,15 @@ impl Panel {
     /// Set the visual layout to a list view.
     pub fn list(mut self) -> Self {
         self.view = PanelView::List;
+        self
+    }
+
+    /// Enable Grok-style Vim input/navigation behavior for this searchable
+    /// picker. The command palette opts in; ordinary lists keep legacy Esc
+    /// close semantics.
+    pub fn vim_picker(mut self) -> Self {
+        self.vim_filter_mode = true;
+        self.vim_picker_enabled = true;
         self
     }
 
@@ -51,6 +64,19 @@ impl Panel {
     pub fn item(mut self, label: impl Into<String>, action: super::ItemAction) -> Self {
         self.items
             .push(PanelItem::Action { label: label.into(), action });
+        self
+    }
+
+    pub fn item_with_help(
+        mut self,
+        label: impl Into<String>,
+        action: super::ItemAction,
+        help: impl Into<String>,
+    ) -> Self {
+        let index = self.items.len();
+        self.items
+            .push(PanelItem::Action { label: label.into(), action });
+        self.inline_help.insert(index, help.into());
         self
     }
 

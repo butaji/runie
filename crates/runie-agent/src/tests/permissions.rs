@@ -17,9 +17,7 @@ fn read_only_tools_recognized() {
 /// Gate always evaluates to Allow (policy engine removed).
 #[tokio::test]
 async fn gate_always_allows() {
-    let gate = crate::PermissionGate::new(std::sync::Arc::new(
-        runie_core::permissions::AutoAllowSink,
-    ));
+    let gate = crate::PermissionGate::new(std::sync::Arc::new(runie_core::permissions::AutoAllowSink));
     let ctx = runie_core::permissions::PermissionContext {
         tool: "bash",
         path: None,
@@ -28,5 +26,8 @@ async fn gate_always_allows() {
         #[cfg(feature = "mcp")]
         annotations: None,
     };
-    assert_eq!(gate.evaluate(&ctx).await, runie_core::permissions::PermissionAction::Allow);
+    assert_eq!(
+        gate.evaluate(&ctx).await,
+        runie_core::permissions::PermissionAction::Allow
+    );
 }

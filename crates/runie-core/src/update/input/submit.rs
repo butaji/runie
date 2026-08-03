@@ -81,7 +81,7 @@ impl AppState {
         self.agent_state_mut().tokens_in += tokens;
     }
 
-    fn try_handle_bang_command(&mut self, content: &str) -> Option<()> {
+    pub fn try_handle_bang_command(&mut self, content: &str) -> Option<()> {
         let stripped = content.strip_prefix('!')?;
         let command = stripped.trim().to_owned();
         if !command.is_empty() {
@@ -134,9 +134,122 @@ impl AppState {
         let handles = self.actor_handles().cloned();
         if let Some(h) = handles {
             let id = self.next_id();
+            // Commit the prompt to the local feed before the actor round trip.
+            // Grok's page-flip-on-send behavior makes the new prompt visible
+            // immediately even while the model turn is still blocked.
+            self.session_mut().messages.push(ChatMessage {
+                role: Role::User,
+                timestamp: now(),
+                id: id.clone(),
+                parts: vec![runie_core::message::Part::Text { content: content.clone() }],
+                ..Default::default()
+            });
+            self.messages_changed();
             let _ = h
                 .turn
                 .try_send(TurnMsg::SubmitUserMessage { content, id, source: MessageSource::Fresh });
+        } else {
+            self.apply_user_message_sync(content);
+        }
+        self.view_mut().scroll = 0;
+        self.messages_changed();
+    }
+
+    /// Replace the conversation tail at the prompt selected by inline edit and
+    /// submit the edited prompt as a fresh turn. The feed cache is rebuilt from
+    /// the truncated durable message list, so stale assistant/tool elements
+    /// cannot survive the rewind.
+    pub fn resubmit_inline_edit(&mut self) {
+        let Some(edit) = self.view().inline_edit.clone() else { return };
+        if self.agent_state().turn_active {
+            self.view_mut().inline_edit = None;
+            self.input_mut().input.clear();
+            self.input_mut().cursor_pos = 0;
+            self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+            self.view_mut().dirty = true;
+            return;
+        }
+
+        self.ensure_fresh();
+        let element_index = self
+            .view()
+            .cached_feed
+            .as_ref()
+            .and_then(|cache| cache.posts.get(edit.post_index))
+            .map(|post| post.start);
+        let user_message_ordinal = self
+            .view()
+            .cached_feed
+            .as_ref()
+            .and_then(|cache| element_index.and_then(|index| cache.elements.get(index)))
+            .and_then(|element| matches!(element, crate::view::Element::UserMessage { .. }).then_some(()))
+            .map(|_| {
+                self.view()
+                    .cached_feed
+                    .as_ref()
+                    .map(|cache| {
+                        cache.elements[..=element_index.expect("validated inline-edit post")]
+                            .iter()
+                            .filter(|element| matches!(element, crate::view::Element::UserMessage { .. }))
+                            .count()
+                    })
+                    .unwrap_or(0)
+            })
+            .unwrap_or(0);
+
+        if user_message_ordinal == 0 {
+            return;
+        }
+        let mut seen_users = 0;
+        let keep_through = self
+            .session()
+            .messages
+            .iter()
+            .position(|message| {
+                if message.role == crate::message::Role::User {
+                    seen_users += 1;
+                }
+                seen_users == user_message_ordinal
+            });
+        let Some(keep_through) = keep_through else { return };
+
+        self.session_mut().messages.truncate(keep_through + 1);
+        self.agent_state_mut().request_queue.clear();
+        self.agent_state_mut().message_queue.clear();
+        self.view_mut().inline_edit = None;
+        self.input_mut().input.clear();
+        self.input_mut().cursor_pos = 0;
+        self.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
+        self.messages_changed();
+        self.submit_user_message(edit.edited);
+    }
+
+    /// Send an urgent prompt as an atomic TurnActor transition. Unlike a
+    /// normal submit, this is used after SendNow has stopped the old turn and
+    /// must not allow queued follow-ups to be promoted first.
+    pub fn submit_send_now(&mut self, mut content: String) {
+        if !self.session().image_attachments.is_empty() {
+            for uri in std::mem::take(&mut self.session_mut().image_attachments) {
+                if !content.is_empty() {
+                    content.push('\n');
+                }
+                content.push_str("![image](");
+                content.push_str(&uri);
+                content.push(')');
+            }
+        }
+        let handles = self.actor_handles().cloned();
+        if let Some(h) = handles {
+            let id = self.next_id();
+            self.session_mut().messages.push(ChatMessage {
+                role: Role::User,
+                timestamp: now(),
+                id: id.clone(),
+                parts: vec![runie_core::message::Part::Text { content: content.clone() }],
+                ..Default::default()
+            });
+            self.messages_changed();
+            let _ = h.turn.try_send(TurnMsg::SendNow { content, id });
         } else {
             self.apply_user_message_sync(content);
         }

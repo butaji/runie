@@ -96,7 +96,8 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
         "Tool output should be expanded by default"
     );
 
-    // Ctrl+O collapses the tools globally; thinking remains summarized.
+    // Ctrl+O expands thinking and collapses completed tool output, matching
+    // Grok's shared expand-all action for mixed feed blocks.
     state.update(Event::ToggleExpand);
     assert!(
         state.view.all_collapsed,
@@ -104,7 +105,10 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
     );
 
     let after = render_content(&mut state);
-    assert_collapsed(&after, "after toggle");
+    assert!(
+        after.contains("I'll list files"),
+        "Ctrl+O should expand reasoning"
+    );
     assert!(
         !after.contains("file1"),
         "Tool output should collapse on global toggle"
@@ -149,8 +153,8 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
     run_tool(&mut state, "file1\nfile2");
     let during_tool = render_content(&mut state);
     assert!(
-        !during_tool.contains("I'll list files"),
-        "Thought should stay collapsed during tool execution"
+        during_tool.contains("I'll list files"),
+        "Thought should expand with Ctrl+O"
     );
     assert!(
         !during_tool.contains("file1"),
@@ -181,8 +185,8 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
     );
     let after_done = render_content(&mut state);
     assert!(
-        !after_done.contains("I'll list files"),
-        "Thought should stay collapsed after agent done"
+        after_done.contains("I'll list files"),
+        "Thought should stay expanded after agent done"
     );
     assert!(
         !after_done.contains("file1"),
@@ -319,8 +323,8 @@ fn e2e_full_turn_with_global_toggle() {
         "Tool should be collapsed with global flag"
     );
     assert!(
-        !r3.contains("I'll list files"),
-        "Ctrl+O should clear the per-post thought expansion"
+        r3.contains("I'll list files"),
+        "Ctrl+O should leave reasoning expanded"
     );
 
     // Second Ctrl+O restores tool output; thinking remains summarized.

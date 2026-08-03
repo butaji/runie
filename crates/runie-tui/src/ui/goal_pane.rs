@@ -2,6 +2,7 @@
 //!
 //! Renders alongside the chat messages when goal mode is active.
 
+use super::utils::truncate_to_width;
 use ratatui::{
     layout::Rect,
     text::{Line, Span},
@@ -10,7 +11,6 @@ use ratatui::{
 };
 use runie_core::{goal::GoalState, GoalPhase, GoalStatus, Snapshot};
 use unicode_width::UnicodeWidthStr;
-use super::utils::truncate_to_width;
 
 /// Width of the goal pane.
 #[allow(dead_code)]
@@ -57,8 +57,12 @@ fn draw_pane_box(f: &mut Frame, area: Rect) {
             .set_string(area.x + area.width - 1, y, "│", border_style.bg(bg));
     }
 
-    f.buffer_mut()
-        .set_string(area.x + area.width - 1, area.y + area.height - 1, bottom.clone(), base);
+    f.buffer_mut().set_string(
+        area.x + area.width - 1,
+        area.y + area.height - 1,
+        bottom.clone(),
+        base,
+    );
     f.buffer_mut()
         .set_string(area.x, area.y + area.height - 1, bottom, base);
 }
@@ -69,13 +73,7 @@ fn render_no_goal(f: &mut Frame, x: u16, y: u16, width: u16) {
     f.render_widget(Paragraph::new(text), Rect { x, y, width, height: 1 });
 }
 
-fn render_goal_content(
-    f: &mut Frame,
-    goal: &GoalState,
-    x: u16,
-    y: u16,
-    width: u16,
-) {
+fn render_goal_content(f: &mut Frame, goal: &GoalState, x: u16, y: u16, width: u16) {
     // Header with phase and status
     render_header(f, goal, x, y, width);
 
@@ -152,7 +150,10 @@ fn render_progress_bar(f: &mut Frame, goal: &GoalState, x: u16, y: u16, width: u
     );
 
     let span = Span::styled(bar, bar_style);
-    f.render_widget(Paragraph::new(Line::from(span)), Rect { x, y, width, height: 1 });
+    f.render_widget(
+        Paragraph::new(Line::from(span)),
+        Rect { x, y, width, height: 1 },
+    );
 }
 
 fn render_objective(f: &mut Frame, goal: &GoalState, x: u16, y: u16, width: u16) {
@@ -160,10 +161,7 @@ fn render_objective(f: &mut Frame, goal: &GoalState, x: u16, y: u16, width: u16)
     let objective_style = Style::default().fg(crate::theme::color_fg()).bold();
     let truncated = truncate_to_width(&goal.objective, (width as usize).saturating_sub(4));
 
-    let spans = vec![
-        Span::styled("   ", objective_style),
-        Span::styled(truncated, objective_style),
-    ];
+    let spans = vec![Span::styled("   ", objective_style), Span::styled(truncated, objective_style)];
 
     f.render_widget(
         Paragraph::new(Line::from(spans)),
@@ -189,13 +187,17 @@ fn render_tasks(f: &mut Frame, goal: &GoalState, x: u16, start_y: u16, width: u1
             ("○", running_style)
         };
 
-        let desc = truncate_to_width(
-            &checkpoint.description,
-            (width as usize).saturating_sub(6),
-        );
+        let desc = truncate_to_width(&checkpoint.description, (width as usize).saturating_sub(6));
         let line = format!("   {} {}", icon, desc);
 
-        let span = Span::styled(line, if checkpoint.completed { dim_style } else { style });
+        let span = Span::styled(
+            line,
+            if checkpoint.completed {
+                dim_style
+            } else {
+                style
+            },
+        );
         f.render_widget(
             Paragraph::new(Line::from(span)),
             Rect { x, y, width, height: 1 },
@@ -205,10 +207,10 @@ fn render_tasks(f: &mut Frame, goal: &GoalState, x: u16, start_y: u16, width: u1
 
 #[cfg(test)]
 mod tests {
+    use super::super::utils::truncate_to_width;
     use super::*;
     use ratatui::{backend::TestBackend, Terminal};
     use runie_core::goal::GoalState;
-    use super::super::utils::truncate_to_width;
 
     fn sample_goal() -> GoalState {
         let mut goal = GoalState::new(
@@ -223,10 +225,7 @@ mod tests {
     }
 
     fn make_snap_with_goal(goal: GoalState) -> Snapshot {
-        Snapshot {
-            goal_state: Some(goal),
-            ..Default::default()
-        }
+        Snapshot { goal_state: Some(goal), ..Default::default() }
     }
 
     #[test]
@@ -249,7 +248,10 @@ mod tests {
             .collect();
 
         assert!(content.contains("Goal"), "should show Goal header");
-        assert!(content.contains("Planning"), "should show the goal's initial phase");
+        assert!(
+            content.contains("Planning"),
+            "should show the goal's initial phase"
+        );
     }
 
     #[test]
@@ -271,7 +273,10 @@ mod tests {
             .map(|c| c.symbol())
             .collect();
 
-        assert!(content.contains("Test the feature"), "should show objective");
+        assert!(
+            content.contains("Test the feature"),
+            "should show objective"
+        );
     }
 
     #[test]

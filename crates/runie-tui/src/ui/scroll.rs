@@ -65,6 +65,21 @@ pub fn render_scrollbar(
 }
 
 /// Convenience: visible track scrollbar with follow mode colors.
-pub fn render_scrollbar_visible(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize, is_following: bool) {
-    render_scrollbar(f, area, total, offset, height, is_following, Some(scrollbar_track_glyph()));
+pub fn render_scrollbar_visible(
+    f: &mut Frame,
+    area: Rect,
+    total: usize,
+    offset: u16,
+    height: usize,
+    is_following: bool,
+) {
+    render_scrollbar(
+        f,
+        area,
+        total,
+        offset,
+        height,
+        is_following,
+        Some(scrollbar_track_glyph()),
+    );
 }

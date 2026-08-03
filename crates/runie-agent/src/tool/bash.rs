@@ -127,14 +127,15 @@ mod tests {
 
     #[tokio::test]
     async fn bash_output_is_capped() {
-        let input = BashInput {
-            command: "seq 1 5000".to_string(),
-            timeout_seconds: Some(10),
-        };
+        let input = BashInput { command: "seq 1 5000".to_string(), timeout_seconds: Some(10) };
         let ctx = ToolContext::default();
         let output = BashTool::execute(input, &ctx).await;
         assert_eq!(output.status, ToolStatus::Success);
-        assert!(output.content.len() < 60_000, "output not capped: {} bytes", output.content.len());
+        assert!(
+            output.content.len() < 60_000,
+            "output not capped: {} bytes",
+            output.content.len()
+        );
         assert!(
             output.content.contains("output truncated"),
             "truncation note missing: {}",

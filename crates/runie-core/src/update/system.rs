@@ -373,11 +373,19 @@ fn handle_quit_event(state: &mut AppState, event: Event) {
     // Quit/exit/:q must always close the app, even when a non-closable
     // onboarding dialog is open.
     if !state.input_mut().input.is_empty() {
+        let substantial = state.input().input.len() >= 20;
         state.input_mut().input.clear();
         state.input_mut().cursor_pos = 0;
         state.input_mut().input_scroll = 0;
         state.input_mut().undo_stack.clear();
         state.input_mut().redo_stack.clear();
+        if substantial {
+            let (tip_state, seen_counts) = {
+                let view = state.view_mut();
+                (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+            };
+            tip_state.show(crate::model::tips::undo_tip(), seen_counts);
+        }
         state.view_mut().dirty = true;
     } else {
         *state.should_quit_mut() = true;
@@ -412,7 +420,24 @@ fn handle_abort(state: &mut AppState) {
     } else if state.agent_state_mut().turn_active {
         state.stop_turn();
     } else {
-        state.abort_queue();
+        let substantial_draft = state.input().input.len() >= 20;
+        if substantial_draft && !state.input().input.is_empty() {
+            state.input_mut().input.clear();
+            state.input_mut().cursor_pos = 0;
+            state.input_mut().undo_stack.clear();
+            state.input_mut().redo_stack.clear();
+            state.input_mut().chips.clear();
+            if let Some(handles) = state.actor_handles() {
+                let _ = handles.input.send_message(crate::actors::InputMsg::Clear);
+            }
+            let (tip_state, seen_counts) = {
+                let view = state.view_mut();
+                (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+            };
+            tip_state.show(crate::model::tips::undo_tip(), seen_counts);
+        } else {
+            state.abort_queue();
+        }
     }
 }
 

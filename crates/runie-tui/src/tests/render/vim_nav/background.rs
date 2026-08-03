@@ -70,13 +70,17 @@ fn input_box_chevron_has_no_accent_background() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     connect_model(&mut state);
+    state.refresh_after_message_change();
 
-    let buf = draw(&mut state.clone(), 60, 12);
+    let buf = draw(&mut state.clone(), 60, 24);
     let bg = accent_bg();
     let mut found = false;
     for y in 0..buf.area().height {
         for x in 0..buf.area().width {
-            if buf[(x, y)].symbol() == "❯" {
+            // Runie keeps the feed/input indent in the shared glyph constant,
+            // so the cell may contain the chevron plus its trailing spacing.
+            // Assert the visible glyph rather than the whole cell string.
+            if buf[(x, y)].symbol().starts_with('❯') {
                 assert_ne!(
                     buf[(x, y)].style().bg,
                     Some(bg),

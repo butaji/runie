@@ -28,11 +28,11 @@ pub fn file_picker(entries: Vec<(String, bool, Event)>) -> PanelStack {
         let label = if is_dir { format!("{}/", name) } else { name };
         panel = panel.item(label, ItemAction::Emit(evt));
     }
-    // Skip the header (item 0) and select the first file item instead.
-    // The default selected=0 points at the non-navigable header, so Enter
-    // would return Consumed and keep the dialog open indefinitely.
+    // `selected` is an index in the navigable-item list, not the raw item
+    // vector. The first file is therefore navigable index zero even though a
+    // non-selectable header precedes it in `items`.
     if !is_empty {
-        panel.selected = 1;
+        panel.selected = 0;
     }
     PanelStack::new(panel)
 }

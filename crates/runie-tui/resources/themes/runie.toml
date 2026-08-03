@@ -78,7 +78,7 @@ feed_agent_fg = "#C8C8C8"
 # Grok-style semantic accents (grok-build parity).
 "accent.thinking" = "amber_400"
 "accent.plan" = "orange_300"
-"accent.feedback" = "text_secondary"
+"accent.feedback" = "orange_400"
 "accent.monitor" = "orange_400"
 
 # Feed lifecycle rails: restrained semantic accents. Rails are secondary

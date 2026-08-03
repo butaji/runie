@@ -41,6 +41,11 @@ where
                     Style::None => spans.push(MdInline::Text(t.to_string())),
                 }
             }
+            // Entity-decoded generics such as `<T>` are represented by
+            // pulldown as HTML. They are ordinary model text, not markup.
+            Event::Html(t) | Event::InlineHtml(t) => {
+                spans.push(MdInline::Text(t.to_string()));
+            }
             Event::Code(code) => spans.push(MdInline::Code(code.to_string())),
             Event::SoftBreak => spans.push(MdInline::SoftBreak),
             Event::HardBreak => spans.push(MdInline::HardBreak),
@@ -242,7 +247,8 @@ impl BlockParser {
         // Emit any remaining quote blocks (including from the stack)
         if let BlockState::Quote { inlines, depth } = &mut self.state {
             if !inlines.is_empty() {
-                self.blocks.push(CodeBlock::Blockquote(std::mem::take(inlines), *depth));
+                self.blocks
+                    .push(CodeBlock::Blockquote(std::mem::take(inlines), *depth));
             }
         }
         for (depth, inlines) in self.quotes_stack.into_iter().rev() {
@@ -284,6 +290,7 @@ impl BlockParser {
             Event::Start(tag) => self.start_tag(tag),
             Event::End(tag_end) => self.end_tag(tag_end),
             Event::Text(t) => self.push_text(&t),
+            Event::Html(t) | Event::InlineHtml(t) => self.push_text(&t),
             Event::Code(t) => self.push_code(&t),
             Event::SoftBreak => self.push_break(),
             Event::HardBreak => self.push_break(),
@@ -324,12 +331,15 @@ impl BlockParser {
                 self.flush_text();
                 self.state = BlockState::Table {
                     headers: Vec::new(),
-                    alignments: alignments.iter().map(|a| match a {
-                        Alignment::Left => Some(false),
-                        Alignment::Right => Some(true),
-                        Alignment::Center => None,
-                        Alignment::None => None,
-                    }).collect(),
+                    alignments: alignments
+                        .iter()
+                        .map(|a| match a {
+                            Alignment::Left => Some(false),
+                            Alignment::Right => Some(true),
+                            Alignment::Center => None,
+                            Alignment::None => None,
+                        })
+                        .collect(),
                     rows: Vec::new(),
                     current_row: Vec::new(),
                     in_header: true,
@@ -372,7 +382,8 @@ impl BlockParser {
                 // start a fresh quote for the nested level
                 if let BlockState::Quote { inlines, depth } = std::mem::take(&mut self.state) {
                     if !inlines.is_empty() {
-                        self.blocks.push(CodeBlock::Blockquote(inlines.clone(), depth));
+                        self.blocks
+                            .push(CodeBlock::Blockquote(inlines.clone(), depth));
                     }
                     self.quotes_stack.push((depth, inlines));
                     self.state = BlockState::Quote { inlines: Vec::new(), depth: depth + 1 };
@@ -495,7 +506,8 @@ impl BlockParser {
             TagEnd::Heading(_level) => {
                 if let BlockState::Heading { level: lvl, inlines } = std::mem::take(&mut self.state) {
                     let content = std::mem::take(&mut self.content_buf);
-                    self.blocks.push(CodeBlock::Heading { level: lvl, content, inlines });
+                    self.blocks
+                        .push(CodeBlock::Heading { level: lvl, content, inlines });
                 }
             }
             TagEnd::CodeBlock => {
@@ -504,14 +516,18 @@ impl BlockParser {
                 }
             }
             TagEnd::Table => {
-                if let BlockState::Table { headers, alignments, rows, current_row, .. } = std::mem::take(&mut self.state) {
+                if let BlockState::Table { headers, alignments, rows, current_row, .. } =
+                    std::mem::take(&mut self.state)
+                {
                     // Push last row if not empty
                     if !current_row.is_empty() {
                         let mut all_rows = rows;
                         all_rows.push(current_row);
-                        self.blocks.push(CodeBlock::Table { headers, alignments, rows: all_rows });
+                        self.blocks
+                            .push(CodeBlock::Table { headers, alignments, rows: all_rows });
                     } else if !headers.is_empty() {
-                        self.blocks.push(CodeBlock::Table { headers, alignments, rows });
+                        self.blocks
+                            .push(CodeBlock::Table { headers, alignments, rows });
                     }
                 }
             }

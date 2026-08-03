@@ -263,7 +263,10 @@ fn pageup_scrolls_by_five_lines() {
 
     state.update(Event::PageUp);
     assert_eq!(state.view.scroll, 10, "PageUp should accumulate");
-    assert!(!state.view.follow_mode, "PageUp must detach from tail following");
+    assert!(
+        !state.view.follow_mode,
+        "PageUp must detach from tail following"
+    );
 }
 
 #[test]
@@ -310,7 +313,10 @@ fn page_down_to_tail_reengages_following() {
 
     state.update(Event::PageDown);
     assert_eq!(state.view.scroll, 0);
-    assert!(state.view.follow_mode, "reaching the tail must re-engage following");
+    assert!(
+        state.view.follow_mode,
+        "reaching the tail must re-engage following"
+    );
 }
 
 #[test]

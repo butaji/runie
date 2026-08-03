@@ -4,6 +4,30 @@ use crate::dialog::PanelStack;
 use crate::model::AppState;
 use crate::Event;
 
+/// Grok picker contract: searchable dialogs open in input mode; Esc first
+/// clears a query, then switches to navigation mode before a later Esc closes.
+pub fn handle_vim_picker_escape(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
+    if !matches!(event, Event::DialogBack) {
+        return false;
+    }
+    let Some(panel) = stack.current_mut() else { return false };
+    // Slash autocomplete is an ephemeral composer route: Esc should close it
+    // immediately and return to the input. Ctrl+P/opened command palettes use
+    // the Grok Vim picker state machine.
+    if !state.config().vim_mode || !panel.vim_picker_enabled || state.command_palette_from_input {
+        return false;
+    }
+    if !panel.filter.is_empty() {
+        panel.set_filter("");
+        return true;
+    }
+    if panel.vim_filter_mode {
+        panel.set_vim_filter_mode(false);
+        return true;
+    }
+    false
+}
+
 /// Handle panel close events (Escape, close button, back).
 pub fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
     match event {
@@ -23,6 +47,14 @@ pub fn handle_panel_close(state: &mut AppState, event: &Event, stack: &mut Panel
 
 /// Handle panel navigation events (up/down/left/right).
 pub fn handle_panel_navigation(_state: &mut AppState, event: &Event, stack: &mut PanelStack) -> bool {
+    if let Some(panel) = stack.current_mut() {
+        if matches!(event, Event::CursorRight) && panel.toggle_inline_help(true) {
+            return true;
+        }
+        if matches!(event, Event::CursorLeft) && panel.toggle_inline_help(false) {
+            return true;
+        }
+    }
     match event {
         Event::HistoryPrev | Event::SettingsUp | Event::PaletteUp | Event::ModelSelectorUp => {
             stack.select_up();

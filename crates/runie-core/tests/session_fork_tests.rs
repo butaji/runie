@@ -186,10 +186,7 @@ fn fallback_fork_index_only_assistant() {
     use runie_core::commands::dsl::handlers::session::run::fallback_fork_index;
 
     let mut state = runie_core::model::AppState::default();
-    state.session_mut().messages = vec![
-        msg(Role::Assistant, "Hello", "a1"),
-        msg(Role::Assistant, "World", "a2"),
-    ];
+    state.session_mut().messages = vec![msg(Role::Assistant, "Hello", "a1"), msg(Role::Assistant, "World", "a2")];
 
     let index = fallback_fork_index(&state);
 
@@ -207,17 +204,17 @@ fn fork_serialization_roundtrip() {
     let snapshot = tree.to_snapshot().expect("snapshot should succeed");
 
     // Verify snapshot contains fork node
-    assert!(snapshot.nodes.iter().any(|n| n.data.message.id.starts_with("fork.")));
+    assert!(snapshot
+        .nodes
+        .iter()
+        .any(|n| n.data.message.id.starts_with("fork.")));
 
     // Deserialize
     let restored = SessionTree::from_snapshot(&snapshot).expect("restore should succeed");
 
     // Verify fork is preserved
     assert_eq!(restored.node_count(), tree.node_count());
-    assert!(restored
-        .id_index()
-        .keys()
-        .any(|k| k.starts_with("fork.")));
+    assert!(restored.id_index().keys().any(|k| k.starts_with("fork.")));
 }
 
 #[test]
@@ -248,7 +245,10 @@ fn run_fork_with_valid_index() {
     // Should emit ForkSession event
     match result {
         runie_core::commands::CommandResult::Event(evt) => {
-            assert!(matches!(evt, runie_core::Event::ForkSession { message_index: 2 }));
+            assert!(matches!(
+                evt,
+                runie_core::Event::ForkSession { message_index: 2 }
+            ));
         }
         _ => panic!("expected ForkSession event"),
     }
@@ -266,7 +266,10 @@ fn run_fork_with_empty_index() {
     // Should use fallback index (2 = last user message)
     match result {
         runie_core::commands::CommandResult::Event(evt) => {
-            assert!(matches!(evt, runie_core::Event::ForkSession { message_index: 2 }));
+            assert!(matches!(
+                evt,
+                runie_core::Event::ForkSession { message_index: 2 }
+            ));
         }
         _ => panic!("expected ForkSession event"),
     }

@@ -34,9 +34,7 @@ pub struct PluginDiscovery {
 
 impl PluginDiscovery {
     pub fn new() -> Self {
-        Self {
-            config_paths: Vec::new(),
-        }
+        Self { config_paths: Vec::new() }
     }
 
     pub fn with_config_paths(mut self, paths: Vec<PathBuf>) -> Self {
@@ -95,11 +93,7 @@ impl PluginDiscovery {
             }
             match PluginManifest::load(&manifest_path) {
                 Ok(manifest) => {
-                    plugins.push(DiscoveredPlugin {
-                        manifest,
-                        root: path,
-                        scope,
-                    });
+                    plugins.push(DiscoveredPlugin { manifest, root: path, scope });
                 }
                 Err(e) => {
                     tracing::warn!(?path, ?e, "failed to load plugin manifest");

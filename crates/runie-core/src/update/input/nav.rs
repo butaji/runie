@@ -85,7 +85,17 @@ impl AppState {
             self.accept_ghost();
             return;
         }
+        let draft = self.input().input.clone();
         let at_end = self.input().cursor_pos >= self.input().input.len();
+        if at_end {
+            if let Some(remainder) = self.view_mut().prompt_suggestion.accept(&draft) {
+                let input = self.input_mut();
+                input.input.push_str(&remainder);
+                input.cursor_pos = input.input.len();
+                self.view_mut().dirty = true;
+                return;
+            }
+        }
         try_send_input(self, crate::actors::InputMsg::CursorRight);
         if at_end {
             self.input_mut().input_flash = 3;
@@ -254,6 +264,28 @@ impl AppState {
                 crate::update::dialog::dialog_toggle_event(self, crate::Event::ToggleCommandPalette);
                 Some(false)
             }
+            // Grok parity: Ctrl-F opens the selected block viewer without
+            // changing the composer cursor or toggling expansion.
+            crate::Event::OpenBlockViewer => {
+                let Some(sel) = self.view().selected_post else { return Some(true) };
+                let snap = self.snapshot();
+                let Some(post) = snap.posts.get(sel) else { return Some(true) };
+                if post.kind == crate::view::elements::PostKind::Thought
+                    || post.kind == crate::view::elements::PostKind::UserInput
+                    || post.kind == crate::view::elements::PostKind::SubagentRow
+                {
+                    return Some(true);
+                }
+                if let Some(element) = snap.elements.get(post.start) {
+                    if let Some(detail) =
+                        crate::model::feed_detail::FeedElementDetail::from_element(post.kind, post.start, element)
+                    {
+                        self.view_mut().feed_element_detail = Some(detail);
+                        self.view_mut().dirty = true;
+                    }
+                }
+                Some(true)
+            }
             // Enter in vim nav mode: on a subagent row open the subagent detail
             // overlay; on any other feed element open the feed_element_detail
             // overlay (Grok-style: Enter opens a full-detail dialog for the
@@ -281,6 +313,21 @@ impl AppState {
                         // User messages start expanded; entering their index in
                         // expanded_posts marks them as collapsed (3 lines + ` …`).
                         if post.kind == crate::view::elements::PostKind::UserInput {
+                            if let Some(crate::view::elements::Element::UserMessage { content, .. }) =
+                                snap.elements.get(post.start)
+                            {
+                                self.view_mut().inline_edit = Some(crate::model::InlineEditState {
+                                    post_index: sel,
+                                    original: content.clone(),
+                                    edited: content.clone(),
+                                    cursor_pos: content.len(),
+                                });
+                                self.view_mut().vim_nav_mode = false;
+                                self.input_mut().input = content.clone();
+                                self.input_mut().cursor_pos = content.len();
+                                self.view_mut().dirty = true;
+                                return Some(true);
+                            }
                             let set = &mut self.view_mut().expanded_posts;
                             if !set.remove(&sel) {
                                 set.insert(sel);
@@ -293,10 +340,12 @@ impl AppState {
                         // (SubagentRow above) and skip non-visual kinds (Thinking).
                         use crate::model::feed_detail::FeedElementDetail;
                         if post.kind != crate::view::elements::PostKind::Thought {
-                            if let Some(detail) = FeedElementDetail::from_postkind(post.kind, post.start) {
-                                self.view_mut().feed_element_detail = Some(detail);
-                                self.view_mut().dirty = true;
-                                return Some(true);
+                            if let Some(element) = snap.elements.get(post.start) {
+                                if let Some(detail) = FeedElementDetail::from_element(post.kind, post.start, element) {
+                                    self.view_mut().feed_element_detail = Some(detail);
+                                    self.view_mut().dirty = true;
+                                    return Some(true);
+                                }
                             }
                         }
                     }

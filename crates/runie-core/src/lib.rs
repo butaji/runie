@@ -61,8 +61,8 @@ pub mod proto;
 pub mod provider_event;
 pub use hidden_params::{AsHiddenParams, HiddenParams, ProviderEventWithHiddenParams, ResponseCost};
 pub use message::Part;
-pub mod harness_skills;
 pub mod goal;
+pub mod harness_skills;
 pub mod model;
 pub mod model_catalog;
 pub mod notification;
@@ -105,7 +105,10 @@ pub mod trust;
 pub mod update;
 pub mod view;
 
-pub use plugins::{discover_plugins, LoadedPlugin, PluginDiscovery, PluginError, PluginManager, PluginManifest, PluginRegistry, PluginScope};
+pub use plugins::{
+    discover_plugins, LoadedPlugin, PluginDiscovery, PluginError, PluginManager, PluginManifest, PluginRegistry,
+    PluginScope,
+};
 /// Worktree pool for subagent isolation.
 pub mod worktree;
 
@@ -147,9 +150,7 @@ pub use edit_preview::EditPreview;
 // NOTE: RunieError/RunieErrorKind were deleted — see crates/runie-core/src/error.rs note.
 pub use event::Event;
 pub use file_refs::{find_files, is_image_file, read_file_ref, FileRef};
-pub use goal::{
-    Checkpoint, GoalPhase, GoalRole, GoalState, GoalStatus, GoalTracker,
-};
+pub use goal::{Checkpoint, GoalPhase, GoalRole, GoalState, GoalStatus, GoalTracker};
 pub use harness_skills::{
     HarnessConfig, HarnessSkill, HashlineEdit, HashlineEditConfig, HashlineEditSkill, SkillRegistry, ToolCallCtx,
     ToolCallPhase, ToolCallResult, TurnEndCtx, TurnEndResult, TurnStartCtx, TurnStartResult, VerificationConfig,
@@ -164,8 +165,8 @@ pub use login_flow::{
 };
 pub use model_catalog::{filter_models, model_catalog, ModelCapabilities, ModelInfo};
 pub use permissions::{
-    is_read_only_tool, ApprovalSink, AutoAllowSink, PermissionAction,
-    PermissionGate, PermissionRule, PermissionSet, ScriptedSink, TuiApprovalSink,
+    is_read_only_tool, ApprovalSink, AutoAllowSink, PermissionAction, PermissionGate, PermissionRule, PermissionSet,
+    ScriptedSink, TuiApprovalSink,
 };
 pub use prompts::{build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS};
 pub use provider::{

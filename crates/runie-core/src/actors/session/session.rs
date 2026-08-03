@@ -43,7 +43,9 @@ impl SessionHandle {
     /// Request a trust decision change.
     pub async fn set_trust(&self, path: PathBuf, decision: TrustDecision) {
         let path_utf8 = Utf8PathBuf::from_path_buf(path).unwrap_or_else(|_| Utf8PathBuf::from("."));
-        let _ = self.tx.send(SessionMsg::SetTrust { path: path_utf8, decision });
+        let _ = self
+            .tx
+            .send(SessionMsg::SetTrust { path: path_utf8, decision });
     }
 
     /// Append an entry to the history file.
@@ -98,12 +100,16 @@ impl SessionHandle {
 
     /// Try to add a tool message (fire-and-forget).
     pub fn try_add_tool_message(&self, id: String, name: String, content: String) {
-        let _ = self.tx.send(SessionMsg::AddToolMessage { id, name, content });
+        let _ = self
+            .tx
+            .send(SessionMsg::AddToolMessage { id, name, content });
     }
 
     /// Try to update a tool message (fire-and-forget).
     pub fn try_update_tool_message(&self, id_contains: String, content: String) {
-        let _ = self.tx.send(SessionMsg::UpdateToolMessage { id_contains, content });
+        let _ = self
+            .tx
+            .send(SessionMsg::UpdateToolMessage { id_contains, content });
     }
 
     /// Try to add a turn-complete message (fire-and-forget).
@@ -397,7 +403,10 @@ impl SessionActorState {
             _ => {
                 self.emit(Event::SessionOperationFailed {
                     operation: "load".to_owned(),
-                    error: format!("Session '{}' not found. Use /sessions to list saved sessions.", name),
+                    error: format!(
+                        "Session '{}' not found. Use /sessions to list saved sessions.",
+                        name
+                    ),
                 });
             }
         }
@@ -410,7 +419,10 @@ impl SessionActorState {
         let events = session_to_durable_events(&session);
         let meta = SessionMetadata {
             id: name_for_task.clone(),
-            display_name: session.display_name.clone().unwrap_or_else(|| name_for_task.clone()),
+            display_name: session
+                .display_name
+                .clone()
+                .unwrap_or_else(|| name_for_task.clone()),
             created_at: session.created_at,
             updated_at: now(),
             message_count: session.messages.len(),
@@ -432,9 +444,7 @@ impl SessionActorState {
             Ok(Err(e)) => {
                 self.emit(Event::SessionOperationFailed { operation: "save".to_owned(), error: e.to_string() })
             }
-            Err(e) => {
-                self.emit(Event::SessionOperationFailed { operation: "save".to_owned(), error: e.to_string() })
-            }
+            Err(e) => self.emit(Event::SessionOperationFailed { operation: "save".to_owned(), error: e.to_string() }),
         }
     }
 
@@ -449,12 +459,13 @@ impl SessionActorState {
             Ok(Err(_)) => {
                 self.emit(Event::SessionOperationFailed {
                     operation: "delete".to_owned(),
-                    error: format!("Session '{}' not found. Use /sessions to list saved sessions.", name),
+                    error: format!(
+                        "Session '{}' not found. Use /sessions to list saved sessions.",
+                        name
+                    ),
                 });
             }
-            Err(e) => {
-                self.emit(Event::SessionOperationFailed { operation: "delete".to_owned(), error: e.to_string() })
-            }
+            Err(e) => self.emit(Event::SessionOperationFailed { operation: "delete".to_owned(), error: e.to_string() }),
         }
     }
 
@@ -468,9 +479,7 @@ impl SessionActorState {
             Ok(Err(e)) => {
                 self.emit(Event::SessionOperationFailed { operation: "list".to_owned(), error: e.to_string() })
             }
-            Err(e) => {
-                self.emit(Event::SessionOperationFailed { operation: "list".to_owned(), error: e.to_string() })
-            }
+            Err(e) => self.emit(Event::SessionOperationFailed { operation: "list".to_owned(), error: e.to_string() }),
         }
     }
 
@@ -520,9 +529,7 @@ impl SessionActorState {
             Ok(Err(e)) => {
                 self.emit(Event::SessionOperationFailed { operation: "import".to_owned(), error: e.to_string() })
             }
-            Err(e) => {
-                self.emit(Event::SessionOperationFailed { operation: "import".to_owned(), error: e.to_string() })
-            }
+            Err(e) => self.emit(Event::SessionOperationFailed { operation: "import".to_owned(), error: e.to_string() }),
         }
     }
 
@@ -537,15 +544,11 @@ impl SessionActorState {
             }
         };
         match tokio::task::spawn_blocking(move || std::fs::write(&path, json)).await {
-            Ok(Ok(())) => {
-                self.emit(Event::SessionExported { path: path_clone.to_string_lossy().to_string() })
-            }
+            Ok(Ok(())) => self.emit(Event::SessionExported { path: path_clone.to_string_lossy().to_string() }),
             Ok(Err(e)) => {
                 self.emit(Event::SessionOperationFailed { operation: "export".to_owned(), error: e.to_string() })
             }
-            Err(e) => {
-                self.emit(Event::SessionOperationFailed { operation: "export".to_owned(), error: e.to_string() })
-            }
+            Err(e) => self.emit(Event::SessionOperationFailed { operation: "export".to_owned(), error: e.to_string() }),
         }
     }
 }
@@ -580,9 +583,9 @@ impl SessionActor {
             SessionMsg::AddUserMessage { content, images } => self.state.handle_add_user_message(content, images),
             SessionMsg::AddSystemMessage { content } => self.state.handle_add_system_message(content),
             SessionMsg::AddToolMessage { id, name, content } => self.state.handle_add_tool_message(id, name, content),
-            SessionMsg::UpdateToolMessage { id_contains, content } => {
-                self.state.handle_update_tool_message(&id_contains, &content)
-            }
+            SessionMsg::UpdateToolMessage { id_contains, content } => self
+                .state
+                .handle_update_tool_message(&id_contains, &content),
             SessionMsg::AddTurnComplete { id, content } => self.state.handle_add_turn_complete(id, content),
             SessionMsg::AddErrorMessage { id, content } => self.state.handle_add_error_message(id, content),
             SessionMsg::Reset => self.state.handle_reset(),
@@ -602,7 +605,11 @@ impl SessionActor {
 /// Spawn a SessionActor and return (handle, stop_cell, join_handle).
 pub fn spawn_session_actor(
     bus: EventBus<Event>,
-) -> (SessionHandle, crate::actors::StopCell, tokio::task::JoinHandle<()>) {
+) -> (
+    SessionHandle,
+    crate::actors::StopCell,
+    tokio::task::JoinHandle<()>,
+) {
     let (tx, rx) = mpsc::unbounded_channel();
 
     let join = tokio::spawn(async move {
@@ -624,7 +631,9 @@ pub fn spawn_session_actor(
         let mut actor = SessionActor { rx, state };
 
         // Emit initial events
-        actor.state.emit(Event::TrustLoaded { decisions: trust.decisions() });
+        actor
+            .state
+            .emit(Event::TrustLoaded { decisions: trust.decisions() });
         let entries = tokio::task::spawn_blocking(crate::input_history::load_history)
             .await
             .ok()
@@ -637,5 +646,3 @@ pub fn spawn_session_actor(
 
     (SessionHandle::new(tx), crate::actors::StopCell, join)
 }
-
-

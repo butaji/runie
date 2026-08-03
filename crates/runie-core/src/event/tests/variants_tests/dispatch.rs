@@ -100,6 +100,7 @@ fn dispatcher_handles_all_variants() {
             | Event::ClearQueues
             | Event::FollowUp
             | Event::ToggleExpand
+            | Event::OpenBlockViewer
             | Event::ToggleTasksPane
             | Event::Dequeue
             | Event::OpenExternalEditor
@@ -354,11 +355,9 @@ fn dispatcher_handles_all_variants() {
             }
 
             // Circuit breaker
-            Event::CircuitBreakerTripped { .. } => Event::CircuitBreakerTripped {
-                failures: 0,
-                threshold: 3,
-            },
+            Event::CircuitBreakerTripped { .. } => Event::CircuitBreakerTripped { failures: 0, threshold: 3 },
             Event::CircuitBreakerReset => Event::CircuitBreakerReset,
+            Event::SendNow => Event::SendNow,
         }
     }
     let _ = assert_exhaustive(Event::Submit);

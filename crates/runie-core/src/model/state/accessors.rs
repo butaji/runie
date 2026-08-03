@@ -3,9 +3,7 @@
 //! These methods provide the canonical read and write interface to AppState's
 //! private fields. Handlers and actors use these instead of direct field access.
 
-use crate::model::state::{
-    AgentState, AppState, CompletionState, ConfigState, InputState, SessionState, ViewState,
-};
+use crate::model::state::{AgentState, AppState, CompletionState, ConfigState, InputState, SessionState, ViewState};
 
 impl AppState {
     // ── Immutable domain slice accessors ──────────────────────────────────────
@@ -104,7 +102,10 @@ impl AppState {
         if !input.starts_with('/') || input == "/" {
             // "/" alone: show all commands; other non-slash input closes it.
             if input.starts_with('/') {
-                self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown::open(self.registry(), ""));
+                self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown::open(
+                    self.registry(),
+                    "",
+                ));
             } else {
                 self.view_mut().slash_dropdown = None;
             }
@@ -112,11 +113,7 @@ impl AppState {
         }
         let query = input.trim_start_matches('/').to_owned();
         let matches = crate::model::slash::SlashDropdown::filter(self.registry(), &query);
-        self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown {
-            query,
-            selected: 0,
-            matches,
-        });
+        self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown { query, selected: 0, matches });
     }
 
     /// Recompute the dropdown matches from an explicit input text (used at
@@ -129,11 +126,7 @@ impl AppState {
         }
         let query = input.trim_start_matches('/').to_owned();
         let matches = crate::model::slash::SlashDropdown::filter(self.registry(), &query);
-        self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown {
-            query,
-            selected: 0,
-            matches,
-        });
+        self.view_mut().slash_dropdown = Some(crate::model::slash::SlashDropdown { query, selected: 0, matches });
     }
 
     /// Move the dropdown selection by `delta` (wrap). No-op when closed.

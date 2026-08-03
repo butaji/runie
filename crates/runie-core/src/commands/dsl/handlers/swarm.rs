@@ -18,7 +18,10 @@ pub fn handle_swarm(state: &mut AppState, args: &str) -> CommandResult {
         "status" => handle_swarm_status(state),
         "reset" => handle_swarm_reset(state),
         "" => handle_swarm_status(state),
-        _ => CommandResult::Warning(format!("Unknown swarm command: {}. Use /swarm cleanup, /swarm status, or /swarm reset.", args)),
+        _ => CommandResult::Warning(format!(
+            "Unknown swarm command: {}. Use /swarm cleanup, /swarm status, or /swarm reset.",
+            args
+        )),
     }
 }
 
@@ -52,19 +55,17 @@ fn handle_swarm_cleanup(state: &mut AppState) -> CommandResult {
 fn handle_swarm_status(state: &AppState) -> CommandResult {
     let counts = state.swarm_status_counts();
     let cb_status = if state.circuit_breaker_tripped {
-        format!("\nCircuit Breaker: TRIPPED (threshold: {})", state.circuit_breaker_threshold)
+        format!(
+            "\nCircuit Breaker: TRIPPED (threshold: {})",
+            state.circuit_breaker_threshold
+        )
     } else {
         "\nCircuit Breaker: OK".to_string()
     };
 
     let content = format!(
         "Swarm Workers:\n  Running: {}\n  Completed: {}\n  Failed: {}\n  Cancelled: {}\n  Orphaned: {}{}",
-        counts.running,
-        counts.completed,
-        counts.failed,
-        counts.cancelled,
-        counts.orphaned,
-        cb_status,
+        counts.running, counts.completed, counts.failed, counts.cancelled, counts.orphaned, cb_status,
     );
 
     CommandResult::Message(content)
@@ -78,7 +79,10 @@ fn handle_swarm_reset(state: &mut AppState) -> CommandResult {
 
     state.circuit_breaker_tripped = false;
     state.circuit_breaker_threshold = 0;
-    state.notify("Circuit breaker reset. Dispatch resumed.".to_string(), TransientLevel::Success);
+    state.notify(
+        "Circuit breaker reset. Dispatch resumed.".to_string(),
+        TransientLevel::Success,
+    );
 
     CommandResult::Message("Circuit breaker reset. Dispatch resumed.".to_string())
 }

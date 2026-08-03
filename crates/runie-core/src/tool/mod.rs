@@ -71,16 +71,8 @@ pub use types::{repair_partial_json, ParsedToolCall, ToolParseError};
 ///
 /// Protocol-level names like `ask_user`, `select_model`, `done` are NOT
 /// included here because they are signals, not implemented tools.
-pub const BUILTIN_TOOL_NAMES: &[&str] = &[
-    "bash",
-    "read_file",
-    "write_file",
-    "edit_file",
-    "list_dir",
-    "grep",
-    "find",
-    "fetch_docs",
-];
+pub const BUILTIN_TOOL_NAMES: &[&str] =
+    &["bash", "read_file", "write_file", "edit_file", "list_dir", "grep", "find", "fetch_docs"];
 
 /// Check if a tool name is a known built-in.
 #[inline]

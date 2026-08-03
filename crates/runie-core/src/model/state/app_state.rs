@@ -85,6 +85,26 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Start a prompt-suggestion request and return its generation token.
+    /// Providers must echo this token when delivering the response so stale
+    /// completions cannot overwrite a newer turn's suggestion.
+    pub fn begin_prompt_suggestion_fetch(&mut self) -> u64 {
+        self.view_mut().prompt_suggestion.begin_fetch()
+    }
+
+    /// Install a provider response if it belongs to the current suggestion
+    /// request. Returns false for stale or malformed responses.
+    pub fn load_prompt_suggestion(&mut self, suggestion: Option<String>, generation: u64) -> bool {
+        let accepted = self
+            .view_mut()
+            .prompt_suggestion
+            .on_loaded(suggestion, generation);
+        if accepted {
+            self.view_mut().dirty = true;
+        }
+        accepted
+    }
+
     /// Create a test AppState with specific transient message.
     #[doc(hidden)]
     pub fn __with_transient_test(msg: Option<String>, level: Option<crate::event::TransientLevel>) -> Self {
@@ -139,6 +159,12 @@ impl AppState {
     pub fn submit_user_message_and_update_history(&mut self, content: String) {
         let history_content = content.clone();
         self.submit_user_message(content);
+        self.push_to_input_history(&history_content);
+    }
+
+    pub fn submit_send_now_and_update_history(&mut self, content: String) {
+        let history_content = content.clone();
+        self.submit_send_now(content);
         self.push_to_input_history(&history_content);
     }
 

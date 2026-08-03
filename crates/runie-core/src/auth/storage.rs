@@ -499,7 +499,8 @@ mod tests {
         // priority-4 file fallback. Build the resolver directly from the auth
         // file (not from process env/dotenv/keyring) to keep this test hermetic.
         let file_tokens = super::super::CredentialResolver::load_auth_file_from(&path);
-        let resolved = file_tokens.get("minimax")
+        let resolved = file_tokens
+            .get("minimax")
             .expect("minimax key should resolve from auth.json");
         assert_eq!(resolved.expose_secret(), "sk-test");
 

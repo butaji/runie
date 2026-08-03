@@ -458,7 +458,13 @@ async fn slash_opens_command_palette_synchronously() {
     ui.handle_event(Event::Input('/'), effect_tx).await;
 
     assert!(
-        matches!(ui.state.open_dialog(), Some(runie_core::commands::DialogState::Active { kind: runie_core::commands::DialogKind::CommandPalette, .. })),
+        matches!(
+            ui.state.open_dialog(),
+            Some(runie_core::commands::DialogState::Active {
+                kind: runie_core::commands::DialogKind::CommandPalette,
+                ..
+            })
+        ),
         "'/' should open the shared command palette synchronously"
     );
 
@@ -626,7 +632,10 @@ async fn submit_after_fast_typing_keeps_full_content() {
         .iter()
         .filter(|h| h.as_str() == "quickbrownfox")
         .count();
-    assert!(count <= 1, "submit must be dispatched exactly once, got {count}");
+    assert!(
+        count <= 1,
+        "submit must be dispatched exactly once, got {count}"
+    );
 
     leader.shutdown().await;
 }

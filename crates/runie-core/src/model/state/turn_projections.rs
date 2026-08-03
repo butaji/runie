@@ -343,6 +343,20 @@ impl AppState {
         use crate::message::{now, ChatMessage, Part, Role};
         // Idempotency guard: skip if this exact message ID is already in session.
         if self.session().messages.iter().any(|m| m.id == id) {
+            // The UI may optimistically commit a freshly submitted prompt so
+            // Grok-style page-flip rendering can show it before the TurnActor
+            // round-trip completes. The actor event remains authoritative for
+            // the request queue, so repair that projection if needed.
+            if !self
+                .agent_state()
+                .request_queue
+                .iter()
+                .any(|(_, queued_id)| queued_id == &id)
+            {
+                self.agent_state_mut()
+                    .request_queue
+                    .push_back((content, id));
+            }
             return;
         }
         self.session_mut().messages.push(ChatMessage {

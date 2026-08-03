@@ -32,8 +32,8 @@ pub use profiles::{resolve_profile, Profile, ProfileConfig, PROFILE_NAMES};
 
 #[cfg(target_os = "macos")]
 pub use crate::sandbox::macos::{
-    build_mac_sandbox_profile, run_linux_sandboxed, run_mac_sandboxed, run_sandboxed,
-    run_sandboxed_direct_async, run_sandboxed_shell_async, run_unsandboxed, sandbox_available,
+    build_mac_sandbox_profile, run_linux_sandboxed, run_mac_sandboxed, run_sandboxed, run_sandboxed_direct_async,
+    run_sandboxed_shell_async, run_unsandboxed, sandbox_available,
 };
 
 /// Sandbox configuration.

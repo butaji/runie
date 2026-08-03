@@ -68,6 +68,7 @@ impl DurableCoreEvent {
             | Event::MessageDequeued { .. }
             | Event::IdGenerated(_)
             | Event::AssistantMessageReady { .. }
+            | Event::SendNow
             | Event::PatternWorkerSpawned { .. }
             | Event::PatternWorkerFinished { .. }
             | Event::CircuitBreakerTripped { .. }
@@ -264,6 +265,7 @@ impl DurableCoreEvent {
             | Event::ClearQueues
             | Event::FollowUp
             | Event::ToggleExpand
+            | Event::OpenBlockViewer
             | Event::Dequeue
             | Event::OpenExternalEditor
             | Event::ExternalEditorDone { .. }

@@ -13,7 +13,8 @@ fn animation_frame_rate_is_60fps() {
     // 60fps = 1000ms / 60 = ~16.67ms per frame
     // We use 16ms which gives 62.5fps, close enough for smooth rendering
     assert_eq!(
-        animation_interval_ms(&AppState::default()), 16,
+        animation_interval_ms(&AppState::default()),
+        16,
         "Animation interval should be 16ms for ~60fps rendering"
     );
 }

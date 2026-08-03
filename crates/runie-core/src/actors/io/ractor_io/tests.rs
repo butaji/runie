@@ -109,7 +109,10 @@ mod skills_watcher {
             .into_iter()
             .find(|d| d.ends_with(".runie/skills"))
             .expect("user skills dir should be present");
-        let evt = event(dir.join("nested/SKILL.md"), DebouncedEventKind::AnyContinuous);
+        let evt = event(
+            dir.join("nested/SKILL.md"),
+            DebouncedEventKind::AnyContinuous,
+        );
         assert!(skills_event_is_relevant(&[evt]));
     }
 

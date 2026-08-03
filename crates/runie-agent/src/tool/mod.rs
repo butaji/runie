@@ -62,16 +62,7 @@ mod tests {
     #[test]
     fn builtin_tool_names_contains_all_tools() {
         // Verify the list contains all our tool implementations
-        let tools = [
-            "bash",
-            "read_file",
-            "write_file",
-            "edit_file",
-            "list_dir",
-            "grep",
-            "find",
-            "fetch_docs",
-        ];
+        let tools = ["bash", "read_file", "write_file", "edit_file", "list_dir", "grep", "find", "fetch_docs"];
         for name in tools {
             assert!(
                 BUILTIN_TOOL_NAMES.contains(&name),

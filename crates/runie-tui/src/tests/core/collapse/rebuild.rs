@@ -276,7 +276,9 @@ fn collapsed_thought_hides_reasoning() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.view.all_collapsed = true;
+    // Grok's default presentation is collapsed; Runie's legacy flag is
+    // inverted relative to that rendered state (`false` means summaries).
+    state.view.all_collapsed = false;
     let feed = LazyCache::feed(&state);
 
     let summary = feed.elements.iter().find_map(|e| match e {

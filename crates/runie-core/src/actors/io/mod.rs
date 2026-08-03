@@ -7,6 +7,6 @@ pub mod ractor_io;
 // mpsc-based implementation (primary).
 mod io;
 
-pub use messages::IoMsg;
 pub use io::{spawn_io_actor, IoActorHandle, RactorIoHandle};
+pub use messages::IoMsg;
 pub use ractor_io::RactorIoActor;

@@ -41,6 +41,8 @@ impl Actor for RactorTurnActor {
         match msg {
             TurnMsg::RunIfQueued => handlers::handle_run_if_queued(state),
             TurnMsg::AbortTurn => handlers::handle_abort_turn(state),
+            TurnMsg::AbortTurnForSendNow => handlers::handle_abort_turn_for_send_now(state),
+            TurnMsg::SendNow { content, id } => handlers::handle_send_now(state, content, id),
             TurnMsg::SubmitUserMessage { content, id, source } => {
                 handlers::handle_submit_user_message(state, content, id, source)
             }

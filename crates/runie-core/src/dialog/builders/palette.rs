@@ -14,6 +14,7 @@ pub fn command_palette(items: Vec<crate::commands::CommandRow>) -> PanelStack {
     // returns to the palette instead of closing the whole bar.
     let mut panel = Panel::new("palette", " Commands ")
         .with_filter()
+        .vim_picker()
         .keep_open();
     let mut last_category = String::new();
     for row in items {

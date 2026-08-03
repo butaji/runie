@@ -76,7 +76,11 @@ impl RactorPermissionActor {
     pub async fn spawn(
         bus: EventBus<Event>,
         _config_h: RactorConfigHandle,
-    ) -> anyhow::Result<(RactorPermissionHandle, ActorCell, ractor::concurrency::JoinHandle<()>)> {
+    ) -> anyhow::Result<(
+        RactorPermissionHandle,
+        ActorCell,
+        ractor::concurrency::JoinHandle<()>,
+    )> {
         let (_actor_ref, join, cell) = spawn_ractor(None, Self, bus).await?;
         Ok((RactorPermissionHandle::new(cell.clone()), cell, join))
     }
@@ -84,7 +88,11 @@ impl RactorPermissionActor {
     /// Spawn a stub permission actor (no config needed, all bypass).
     pub async fn spawn_for_testing(
         bus: EventBus<Event>,
-    ) -> anyhow::Result<(RactorPermissionHandle, ActorCell, ractor::concurrency::JoinHandle<()>)> {
+    ) -> anyhow::Result<(
+        RactorPermissionHandle,
+        ActorCell,
+        ractor::concurrency::JoinHandle<()>,
+    )> {
         let (_actor_ref, join, cell) = spawn_ractor(None, Self, bus).await?;
         Ok((RactorPermissionHandle::new(cell.clone()), cell, join))
     }

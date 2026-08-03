@@ -14,14 +14,73 @@ pub const COMPACT_DEFAULT_KEEP_TOKENS: &str = "2000";
 pub const FORK_DEFAULT_MESSAGE_INDEX: &str = "0";
 
 pub fn register_handlers(registry: &mut crate::commands::dsl::handlers::registry::HandlerRegistry) {
-    registry.register("save", NamedHandler::FormWithHandler { title: "Save Session", fields: &[("Name", "session-name", "name")], handler: run::run_save });
-    registry.register("load", NamedHandler::FormWithHandler { title: "Load Session", fields: &[("Name", "session-name", "name")], handler: run::run_load });
-    registry.register("delete", NamedHandler::FormWithHandler { title: "Delete Session", fields: &[("Name", "session-name", "name")], handler: run::run_delete });
-    registry.register("export", NamedHandler::FormWithHandler { title: "Export Session", fields: &[("Path", "session.json", "path")], handler: run::run_export });
-    registry.register("import", NamedHandler::FormWithHandler { title: "Import Session", fields: &[("Path", "session.json", "path")], handler: run::run_import });
-    registry.register("compact", NamedHandler::FormWithHandler { title: "Compact Context", fields: &[("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"), ("Focus", "optional focus keyword", "focus")], handler: run::run_compact });
-    registry.register("fork", NamedHandler::FormWithHandler { title: "Fork Session", fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")], handler: run::run_fork });
-    registry.register("name", NamedHandler::FormWithHandler { title: "Set Session Name", fields: &[("Name", "session-name", "name")], handler: run::run_name });
+    registry.register(
+        "save",
+        NamedHandler::FormWithHandler {
+            title: "Save Session",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_save,
+        },
+    );
+    registry.register(
+        "load",
+        NamedHandler::FormWithHandler {
+            title: "Load Session",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_load,
+        },
+    );
+    registry.register(
+        "delete",
+        NamedHandler::FormWithHandler {
+            title: "Delete Session",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_delete,
+        },
+    );
+    registry.register(
+        "export",
+        NamedHandler::FormWithHandler {
+            title: "Export Session",
+            fields: &[("Path", "session.json", "path")],
+            handler: run::run_export,
+        },
+    );
+    registry.register(
+        "import",
+        NamedHandler::FormWithHandler {
+            title: "Import Session",
+            fields: &[("Path", "session.json", "path")],
+            handler: run::run_import,
+        },
+    );
+    registry.register(
+        "compact",
+        NamedHandler::FormWithHandler {
+            title: "Compact Context",
+            fields: &[
+                ("Keep tokens", COMPACT_DEFAULT_KEEP_TOKENS, "keep"),
+                ("Focus", "optional focus keyword", "focus"),
+            ],
+            handler: run::run_compact,
+        },
+    );
+    registry.register(
+        "fork",
+        NamedHandler::FormWithHandler {
+            title: "Fork Session",
+            fields: &[("Message index", FORK_DEFAULT_MESSAGE_INDEX, "index")],
+            handler: run::run_fork,
+        },
+    );
+    registry.register(
+        "name",
+        NamedHandler::FormWithHandler {
+            title: "Set Session Name",
+            fields: &[("Name", "session-name", "name")],
+            handler: run::run_name,
+        },
+    );
     registry.register("sessions", NamedHandler::Handler(handle_sessions));
     registry.register("new", NamedHandler::Handler(handle_new));
     registry.register("reset", NamedHandler::Handler(handle_reset));
@@ -52,15 +111,14 @@ pub fn handle_sessions(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 pub fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
-    // Send actor messages first (synchronously) to abort turns before events are processed.
-    // handle_new_session (via Event::NewSession) will configure the token tracker via
-    // TurnMsg::ConfigureTokenTracker and reset the session state.
+    // Dismiss permission state before events are processed. The NewSession
+    // event owns the single TurnActor abort; sending AbortTurn here as well
+    // races that event and can produce duplicate "Turn cancelled" rows.
     //
     // In test mode (no actor handles), emit PermissionRequestDismissed event instead
     // of mutating state directly. This keeps the event-driven pattern consistent.
     if let Some(handles) = state.actor_handles() {
         let _ = handles.permission.try_send(PermissionMsg::DismissRequest);
-        let _ = handles.turn.try_send(crate::actors::TurnMsg::AbortTurn);
     }
     // Emit events that handle_new_session processes for full state reset.
     // UiActor::clear_turn_state(is_abort=true) sends TurnMsg::ClearQueues after

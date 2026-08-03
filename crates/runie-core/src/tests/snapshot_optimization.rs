@@ -277,3 +277,30 @@ fn test_refresh_after_message_change_updates_flags() {
     let snap = state.snapshot();
     assert!(!snap.elements.is_empty());
 }
+
+#[test]
+fn snapshot_derives_grok_compact_layout_from_terminal_rows() {
+    let mut state = AppState::default();
+    state.set_terminal_rows(20);
+    let compact = state.snapshot();
+    assert_eq!(compact.terminal_rows, 20);
+    assert!(compact.compact_layout);
+
+    state.set_terminal_rows(21);
+    let normal = state.snapshot();
+    assert_eq!(normal.terminal_rows, 21);
+    assert!(!normal.compact_layout);
+
+    state.config.compact_mode = true;
+    assert!(state.snapshot().compact_layout);
+}
+
+#[test]
+fn snapshot_projects_double_press_hint_from_pending_escape() {
+    let mut state = AppState::default();
+    state.view_mut().vim_nav_pending = true;
+    assert_eq!(
+        state.snapshot().pending_hint,
+        Some(("Esc".to_owned(), "enter feed navigation".to_owned()))
+    );
+}

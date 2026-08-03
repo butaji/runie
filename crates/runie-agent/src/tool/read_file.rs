@@ -186,7 +186,11 @@ mod tests {
         let input = ReadFileInput { path: path.to_string_lossy().into_owned(), offset: None, limit: None };
         let ctx = ToolContext::default();
         let out = ReadFileTool::execute(input, &ctx).await;
-        assert!(out.content.contains("[Lines 1-2000 of 5000]"), "got: {}", &out.content[..100.min(out.content.len())]);
+        assert!(
+            out.content.contains("[Lines 1-2000 of 5000]"),
+            "got: {}",
+            &out.content[..100.min(out.content.len())]
+        );
         assert!(out.content.contains("[3000 more lines]"));
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -202,7 +206,10 @@ mod tests {
         let input = ReadFileInput { path: path.to_string_lossy().into_owned(), offset: Some(2000), limit: Some(1000) };
         let ctx = ToolContext::default();
         let out = ReadFileTool::execute(input, &ctx).await;
-        assert!(out.content.contains("line3000"), "explicit paging must work past the default cap");
+        assert!(
+            out.content.contains("line3000"),
+            "explicit paging must work past the default cap"
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 }

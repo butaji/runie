@@ -6,6 +6,18 @@ use crate::model::InputReceiver;
 use crate::model::ModelSelectorItem;
 use crate::view::turns::{Turn, ViewMode};
 
+/// In-place editor state for a previously submitted user prompt.
+///
+/// The selected feed post remains authoritative until a conversation rewind
+/// is confirmed; this state only owns the draft and cursor while editing.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InlineEditState {
+    pub post_index: usize,
+    pub original: String,
+    pub edited: String,
+    pub cursor_pos: usize,
+}
+
 /// View state — scroll, animation, and UI dimensions.
 ///
 /// NOTE: View cache (elements, posts) has been moved out of `ViewState` into
@@ -31,6 +43,9 @@ pub struct ViewState {
     /// Total terminal rows from the last TerminalSize event. `0` = unmeasured.
     /// Used to derive auto-compact layout.
     pub terminal_rows: u16,
+    /// Whether the terminal currently has focus (for notification gating and
+    /// title presentation). Focus events are projected by the core reducer.
+    pub terminal_focused: bool,
     /// Index of the post currently selected in vim nav mode.
     /// A post is a logical unit in the feed (e.g. a user message, a
     /// thought, a tool call). Independent of scroll; used to highlight
@@ -85,6 +100,8 @@ pub struct ViewState {
     pub context_detail_pinned: bool,
     /// Single-slot ephemeral tip (grok parity) — TTL'd, seen-gated hint.
     pub ephemeral_tip: crate::model::tips::EphemeralTipState,
+    /// Grok-style model-predicted next prompt, separate from file completion.
+    pub prompt_suggestion: crate::model::prompt_suggestion::PromptSuggestionState,
     /// Inline slash-command dropdown (grok parity) — Some while open.
     pub slash_dropdown: Option<crate::model::slash::SlashDropdown>,
     /// Per-session seen counts for tips (in-memory only, never persisted).
@@ -107,6 +124,7 @@ pub struct ViewState {
     pub subagent_detail: Option<crate::model::SubagentDetail>,
     /// Open feed element detail overlay state.
     pub feed_element_detail: Option<FeedElementDetail>,
+    pub inline_edit: Option<InlineEditState>,
     /// Current turn index (for h/l turn navigation).
     pub current_turn: Option<usize>,
     /// How the scrollback feed is displayed.
@@ -135,6 +153,7 @@ impl PartialEq for ViewState {
             && self.expanded_posts == other.expanded_posts
             && self.vim_nav_mode == other.vim_nav_mode
             && self.follow_mode == other.follow_mode
+            && self.inline_edit == other.inline_edit
     }
 }
 
@@ -192,6 +211,7 @@ impl Default for ViewState {
             last_visible_height: 20,
             last_content_width: 82, // area width; rendering subtracts 2 for glyph margins
             terminal_rows: 0,
+            terminal_focused: true,
             selected_post: None,
             expanded_posts: std::collections::HashSet::new(),
             total_lines: 0,
@@ -214,6 +234,7 @@ impl Default for ViewState {
             auto_mode: false,
             context_detail_pinned: false,
             ephemeral_tip: Default::default(),
+            prompt_suggestion: Default::default(),
             tip_seen_counts: Default::default(),
             slash_dropdown: None,
             active_plan_content: String::new(),
@@ -225,6 +246,7 @@ impl Default for ViewState {
             queue_pane_selected: 0,
             subagent_detail: None,
             feed_element_detail: None,
+            inline_edit: None,
             current_turn: None,
             view_mode: ViewMode::AllTurns,
             follow_mode: false,

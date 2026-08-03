@@ -3,9 +3,7 @@
 //! These tests verify the SubagentCoordinator correctly tracks subagent
 //! lifecycles and the SubagentTracker provides proper metadata.
 
-use runie_agent::{
-    SubagentCoordinator, SubagentMetadata, SubagentRequest, SubagentState,
-};
+use runie_agent::{SubagentCoordinator, SubagentMetadata, SubagentRequest, SubagentState};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -20,9 +18,9 @@ fn tracker_tracks_metadata() {
         description: "test worker".to_string(),
         run_in_background: false,
     };
-    
+
     let tracker = runie_agent::SubagentTracker::new(&metadata);
-    
+
     assert_eq!(tracker.subagent_id, metadata.subagent_id);
     assert_eq!(tracker.parent_session_id, Some("session-1".to_string()));
     assert_eq!(tracker.subagent_type, "worker");
@@ -41,13 +39,13 @@ fn tracker_state_transitions() {
         description: "test".to_string(),
         run_in_background: false,
     };
-    
+
     let mut tracker = runie_agent::SubagentTracker::new(&metadata);
-    
+
     // New -> Running
     tracker.mark_running();
     assert!(matches!(tracker.state, SubagentState::Running { .. }));
-    
+
     // Running -> Completed
     tracker.mark_completed("output".to_string(), 5, 2);
     assert!(matches!(tracker.state, SubagentState::Completed { ref output, .. } if *output == "output"));
@@ -65,9 +63,9 @@ fn tracker_marks_explicit_kill() {
         description: "test".to_string(),
         run_in_background: false,
     };
-    
+
     let mut tracker = runie_agent::SubagentTracker::new(&metadata);
-    
+
     tracker.mark_explicitly_killed();
     assert!(tracker.explicitly_killed);
 }
@@ -82,9 +80,9 @@ fn request_to_metadata() {
         description: "plan the work".to_string(),
         surface_completion: true,
     };
-    
+
     let metadata = request.to_metadata();
-    
+
     assert_eq!(metadata.subagent_id, request.subagent_id);
     assert_eq!(metadata.parent_session_id, request.parent_session_id);
     assert_eq!(metadata.subagent_type, request.subagent_type);
@@ -95,7 +93,7 @@ fn request_to_metadata() {
 #[tokio::test]
 async fn handle_subagent_request() {
     let coordinator = SubagentCoordinator::default();
-    
+
     let request = SubagentRequest {
         subagent_id: Uuid::new_v4(),
         parent_session_id: Some("session-1".to_string()),
@@ -103,9 +101,9 @@ async fn handle_subagent_request() {
         description: "do the work".to_string(),
         surface_completion: true,
     };
-    
+
     let (tracker, handle) = coordinator.handle_subagent_request(request).await;
-    
+
     assert_eq!(tracker.subagent_type, "worker");
     assert_eq!(tracker.parent_session_id, Some("session-1".to_string()));
     assert_eq!(handle.subagent_id, tracker.subagent_id);
@@ -115,7 +113,7 @@ async fn handle_subagent_request() {
 #[tokio::test]
 async fn list_subagents_filters_by_session() {
     let coordinator = SubagentCoordinator::default();
-    
+
     // Spawn workers in different sessions
     let meta1 = SubagentMetadata {
         subagent_id: Uuid::new_v4(),
@@ -125,7 +123,7 @@ async fn list_subagents_filters_by_session() {
         description: "task 1".to_string(),
         run_in_background: false,
     };
-    
+
     let meta2 = SubagentMetadata {
         subagent_id: Uuid::new_v4(),
         parent_session_id: Some("session-B".to_string()),
@@ -134,15 +132,18 @@ async fn list_subagents_filters_by_session() {
         description: "task 2".to_string(),
         run_in_background: false,
     };
-    
+
     coordinator.spawn(meta1).await;
     coordinator.spawn(meta2).await;
-    
+
     // List workers for session-A
     let session_a_workers = coordinator.list_subagents(Some("session-A")).await;
     assert_eq!(session_a_workers.len(), 1);
-    assert_eq!(session_a_workers[0].parent_session_id, Some("session-A".to_string()));
-    
+    assert_eq!(
+        session_a_workers[0].parent_session_id,
+        Some("session-A".to_string())
+    );
+
     // List all workers
     let all_workers = coordinator.list_subagents(None).await;
     assert_eq!(all_workers.len(), 2);
@@ -152,7 +153,7 @@ async fn list_subagents_filters_by_session() {
 #[tokio::test]
 async fn get_subagent_retrieves_tracker() {
     let coordinator = SubagentCoordinator::default();
-    
+
     let metadata = SubagentMetadata {
         subagent_id: Uuid::new_v4(),
         parent_session_id: Some("session-1".to_string()),
@@ -161,11 +162,11 @@ async fn get_subagent_retrieves_tracker() {
         description: "plan the work".to_string(),
         run_in_background: false,
     };
-    
+
     coordinator.spawn(metadata.clone()).await;
-    
+
     let tracker = coordinator.get_subagent(metadata.subagent_id).await;
-    
+
     assert!(tracker.is_some());
     let tracker = tracker.unwrap();
     assert_eq!(tracker.subagent_id, metadata.subagent_id);
@@ -176,9 +177,9 @@ async fn get_subagent_retrieves_tracker() {
 #[tokio::test]
 async fn get_subagent_unknown_id() {
     let coordinator = SubagentCoordinator::default();
-    
+
     let tracker = coordinator.get_subagent(Uuid::new_v4()).await;
-    
+
     assert!(tracker.is_none());
 }
 
@@ -186,28 +187,20 @@ async fn get_subagent_unknown_id() {
 #[test]
 fn subagent_states_are_terminal() {
     // Completed is terminal
-    assert!(SubagentState::Completed { 
-        output: "test".to_string(), 
-        tool_calls: 1, 
-        turns: 1 
-    }.is_terminal());
-    
+    assert!(SubagentState::Completed { output: "test".to_string(), tool_calls: 1, turns: 1 }.is_terminal());
+
     // Cancelled is terminal
     assert!(SubagentState::Cancelled { reason: None }.is_terminal());
-    
+
     // Failed is terminal
     assert!(SubagentState::Failed { error: "error".to_string() }.is_terminal());
-    
+
     // Orphaned is terminal
     assert!(SubagentState::Orphaned.is_terminal());
-    
+
     // Running is not terminal
-    assert!(!SubagentState::Running { 
-        turn_count: 1, 
-        tool_call_count: 1, 
-        tokens_used: 100 
-    }.is_terminal());
-    
+    assert!(!SubagentState::Running { turn_count: 1, tool_call_count: 1, tokens_used: 100 }.is_terminal());
+
     // New is not terminal
     assert!(!SubagentState::New.is_terminal());
 }
@@ -223,9 +216,9 @@ fn tracker_elapsed_time() {
         description: "test".to_string(),
         run_in_background: false,
     };
-    
+
     let tracker = runie_agent::SubagentTracker::new(&metadata);
-    
+
     // Should have some elapsed time (may be 0 or very small)
     let elapsed = tracker.elapsed();
     assert!(elapsed >= Duration::from_secs(0));

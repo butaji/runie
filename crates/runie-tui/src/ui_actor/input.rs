@@ -49,13 +49,13 @@ impl UiActor {
                 if matches!(effective.trim(), "/q" | "/quit" | "/exit") {
                     return false;
                 }
-                // Type the "/" through the InputActor (authoritative), then
-                // open the same command palette used by Ctrl+P. The "/" is
-                // only the trigger; subsequent characters filter the dialog.
+                // The "/" is only a routing trigger; never commit it to the
+                // composer or InputActor, otherwise it can reappear after the
+                // palette closes as an invisible/stale draft.
                 self.pending_input_chars.clear();
-                self.state.input_mut().input = "/".to_string();
-                self.state.input_mut().cursor_pos = 1;
-                self.send_input_msg(InputMsg::InsertChar('/')).await;
+                self.state.input_mut().input.clear();
+                self.state.input_mut().cursor_pos = 0;
+                self.send_input_msg(InputMsg::Clear).await;
                 self.apply_event(runie_core::Event::ToggleCommandPalette);
                 self.state.command_palette_from_input = true;
                 true

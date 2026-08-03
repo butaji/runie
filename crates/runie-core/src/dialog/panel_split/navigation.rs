@@ -5,6 +5,22 @@
 use super::{Panel, PanelItem};
 
 impl Panel {
+    pub fn toggle_inline_help(&mut self, expanded: bool) -> bool {
+        let Some(raw_index) = self.raw_index(self.selected) else { return false };
+        if !self.inline_help.contains_key(&raw_index) {
+            return false;
+        }
+        self.inline_help_expanded = expanded;
+        true
+    }
+    /// Select a navigable item by zero-based index, clamping to the available
+    /// range. Used by numbered permission shortcuts and shared by all panels.
+    pub fn select_index(&mut self, index: usize) -> usize {
+        let count = self.navigable_count();
+        self.selected = index.min(count.saturating_sub(1));
+        self.selected
+    }
+
     /// Move selection up, wrapping around.
     pub fn select_up(&mut self) -> usize {
         let count = self.navigable_count();
@@ -116,6 +132,10 @@ impl Panel {
         self.filter.clear();
         self.filter.push_str(filter);
         self.selected = 0;
+    }
+
+    pub fn set_vim_filter_mode(&mut self, enabled: bool) {
+        self.vim_filter_mode = enabled;
     }
 
     /// Raw indices of navigable items that match the current filter.

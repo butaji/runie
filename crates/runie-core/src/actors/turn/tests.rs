@@ -54,6 +54,49 @@ async fn abort_turn_clears_state() {
 }
 
 #[tokio::test]
+async fn send_now_starts_urgent_before_queued_delivery() {
+    let bus = EventBus::<Event>::new(32);
+    let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();
+    let mut sub = bus.subscribe();
+    handle
+        .send(crate::actors::turn::TurnMsg::SubmitUserMessage {
+            content: "first".into(),
+            id: "req.0".into(),
+            source: MessageSource::Fresh,
+        })
+        .await;
+    handle
+        .send(crate::actors::turn::TurnMsg::QueueFollowUp { content: "queued".into() })
+        .await;
+    handle
+        .send(crate::actors::turn::TurnMsg::SendNow { content: "urgent".into(), id: "req.1".into() })
+        .await;
+
+    let mut events = Vec::new();
+    while events.len() < 6 {
+        if let Ok(evt) = sub.recv().await {
+            events.push(evt);
+        }
+    }
+    let abort = events
+        .iter()
+        .position(|e| matches!(e, Event::TurnAborted))
+        .unwrap();
+    let urgent = events
+        .iter()
+        .position(|e| matches!(e, Event::UserMessageSubmitted { content, .. } if content == "urgent"))
+        .unwrap();
+    let started = events
+        .iter()
+        .position(|e| matches!(e, Event::TurnStarted { content, .. } if content.contains("urgent")))
+        .unwrap_or_else(|| panic!("events: {events:?}"));
+    assert!(abort < urgent && urgent < started);
+    assert!(!events
+        .iter()
+        .any(|e| matches!(e, Event::FollowUpDelivered { .. })));
+}
+
+#[tokio::test]
 async fn error_emits_turned_errored() {
     let bus = EventBus::<Event>::new(16);
     let (handle, _, _) = RactorTurnActor::spawn(bus.clone()).await.unwrap();

@@ -98,10 +98,10 @@ fn test_scrollbar_moves_when_scrolled_up() {
     );
 }
 
-/// Tests that scrollbar shows when content exceeds viewport.
-/// Note: Even a short message has 3 lines (content + top/bottom margin)
-/// plus 1 spacer, totaling 4 lines. With messages_area height of 3,
-/// this means scrollbar WILL show even for single short messages.
+/// Tests that a genuinely overflowing feed shows a scrollbar in a compact
+/// terminal. The input and status regions consume part of the viewport, so a
+/// one-line message must not be treated as overflow merely because margins
+/// exist.
 #[test]
 fn test_scrollbar_shows_when_content_overflows_small() {
     let backend = TestBackend::new(40, 10);
@@ -109,25 +109,19 @@ fn test_scrollbar_shows_when_content_overflows_small() {
     let mut state = AppState::default();
     connect_model(&mut state);
 
-    // Single short message - still overflows due to margins
-    state.session.messages.push(ChatMessage {
-        role: Role::User,
-        parts: vec![Part::Text { content: "Hi".into() }],
-        timestamp: 0.0,
-        id: "u1".into(),
-        ..Default::default()
-    });
+    state.session.messages = make_messages(5);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let area = buf.area();
     let scrollbar_col = area.width - 1;
 
-    // With margins and spacers, even short content overflows
+    // The five messages exceed the actual feed viewport after the persistent
+    // status/input regions have been reserved.
     let has_scrollbar_content =
         (0..area.height).any(|y| buf[(scrollbar_col, y)].symbol() == "▐" || buf[(scrollbar_col, y)].symbol() == "│");
     assert!(
         has_scrollbar_content,
-        "Scrollbar should show when content has margins"
+        "Scrollbar should show when feed content overflows"
     );
 }

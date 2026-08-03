@@ -75,7 +75,11 @@ fn handle_goal_status(state: &AppState) -> CommandResult {
         }
         format!(
             "Workers: {} (running {}, completed {}, failed {}, cancelled {})",
-            agent.pattern_workers.len(), counts[0], counts[1], counts[2], counts[3]
+            agent.pattern_workers.len(),
+            counts[0],
+            counts[1],
+            counts[2],
+            counts[3]
         )
     };
 

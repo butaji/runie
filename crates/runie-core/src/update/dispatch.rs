@@ -24,7 +24,10 @@ pub(crate) fn dispatch_event(state: &mut AppState, event: Event) {
         Event::CircuitBreakerReset => {
             state.circuit_breaker_tripped = false;
             state.circuit_breaker_threshold = 0;
-            state.notify("Circuit breaker reset. Dispatch resumed.".to_string(), crate::event::TransientLevel::Success);
+            state.notify(
+                "Circuit breaker reset. Dispatch resumed.".to_string(),
+                crate::event::TransientLevel::Success,
+            );
         }
         _ => {}
     }
@@ -423,7 +426,10 @@ fn dispatch_dialog_event(state: &mut AppState, event: crate::Event) {
         super::dialog::dialog_toggle_event(state, event);
     } else if is_form_dialog_event(&event) {
         super::dialog::handle_form_dialog(state, event);
-    } else if matches!(&event, crate::Event::SkillAction { .. } | crate::Event::McpServerAction { .. }) {
+    } else if matches!(
+        &event,
+        crate::Event::SkillAction { .. } | crate::Event::McpServerAction { .. }
+    ) {
         // Panel actions (skills / MCP servers) handled in the dialog router.
         super::dialog::update_dialog(state, event);
     } else if let crate::Event::InsertAtRef(path) = event {

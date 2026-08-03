@@ -4,7 +4,10 @@ use crate::view::elements::{Element, Feed, PostKind};
 
 fn parse_elapsed_seconds(value: &str) -> Option<f64> {
     let value = value.trim();
-    if let Some(seconds) = value.strip_suffix('s').filter(|seconds| !seconds.contains('m')) {
+    if let Some(seconds) = value
+        .strip_suffix('s')
+        .filter(|seconds| !seconds.contains('m'))
+    {
         return seconds.parse().ok();
     }
     if let Some(index) = value.find('m') {
@@ -48,6 +51,7 @@ impl LazyCache {
             } else {
                 elem.clone()
             };
+            let elem = Self::maybe_collapse_lookup(elem, state, feed.post_count());
             let elem = Self::maybe_expand_subagent(elem, state, feed.post_count());
             let elem = Self::maybe_expand_user_message(elem, state, feed.post_count());
             let elem = Self::maybe_expand_btw(elem, state, feed.post_count());
@@ -124,27 +128,10 @@ impl LazyCache {
             .iter()
             .map(|m| m.timestamp)
             .fold(0.0, f64::max);
-        let turn_ts = state
-            .session
-            .messages
-            .iter()
-            .find(|m| m.role == Role::TurnComplete)
-            .map(|m| m.timestamp);
-        let current = state
-            .agent_state()
-            .current_request_id
-            .as_ref()
-            .and_then(|id| {
-                state
-                    .session
-                    .messages
-                    .iter()
-                    .find(|m| m.role == Role::TurnComplete && m.id == *id)
-                    .map(|m| m.timestamp)
-            });
-        current
-            .map(|t| t - 1e-6)
-            .unwrap_or_else(|| turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6))
+        // Active thinking is part of the newest turn. Never anchor it to an
+        // older TurnComplete row: that can place “Thinking…” above the newly
+        // submitted user message when several turns share the feed.
+        max_ts + 1e-6
     }
 
     /// Timestamp for swarm worker lifecycle rows.
@@ -235,6 +222,29 @@ impl LazyCache {
     }
 
     fn flush_context_group(group: Vec<Element>, collapsed: bool) -> Element {
+        // A normal tool lifecycle contributes a zero-output call row followed
+        // by its result row. Keep that as one logical post; grouping the pair
+        // would prevent per-tool summary/expansion semantics from applying.
+        let same_tool = group
+            .iter()
+            .filter_map(|elem| match elem {
+                Element::ToolDone { name, .. } | Element::ToolSummary { name, .. } => Some(name.as_str()),
+                _ => None,
+            })
+            .collect::<std::collections::HashSet<_>>();
+        if same_tool.len() == 1
+            && same_tool.contains("read_file")
+            && group
+                .iter()
+                .any(|elem| matches!(elem, Element::ToolDone { output, .. } if !output.is_empty()))
+        {
+            let mut iter = group.into_iter();
+            let first_non_empty =
+                iter.find(|elem| matches!(elem, Element::ToolDone { output, .. } if !output.is_empty()));
+            return first_non_empty
+                .or_else(|| iter.last())
+                .expect("non-empty tool group");
+        }
         if group.len() > 1 {
             let ts = group.iter().map(|e| e.timestamp()).fold(0.0, f64::max);
             Element::context_group(group, collapsed).at(ts)
@@ -296,19 +306,46 @@ impl LazyCache {
                 if let Some(snapshot) = content.strip_prefix("Context snapshot: ") {
                     let mut fields = snapshot.split('|');
                     let model = fields.next().unwrap_or_default().to_owned();
-                    let used_tokens = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
-                    let total_tokens = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
-                    let turns = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
-                    let tool_calls = fields.next().and_then(|v| v.parse().ok()).unwrap_or_default();
-                    vec![(Element::context_info(model, used_tokens, total_tokens, turns, tool_calls).at(ts), false)]
+                    let used_tokens = fields
+                        .next()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or_default();
+                    let total_tokens = fields
+                        .next()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or_default();
+                    let turns = fields
+                        .next()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or_default();
+                    let tool_calls = fields
+                        .next()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or_default();
+                    vec![(
+                        Element::context_info(model, used_tokens, total_tokens, turns, tool_calls).at(ts),
+                        false,
+                    )]
                 } else if let Some(objective) = content.strip_prefix("Workflow goal: ") {
-                    vec![(Element::workflow("goal", objective, "running", Vec::new(), 0).at(ts), false)]
+                    vec![(
+                        Element::workflow("goal", objective, "running", Vec::new(), 0).at(ts),
+                        false,
+                    )]
                 } else if let Some(objective) = content.strip_prefix("Workflow goal done: ") {
-                    vec![(Element::workflow("goal", objective, "done", Vec::new(), 0).at(ts), false)]
+                    vec![(
+                        Element::workflow("goal", objective, "done", Vec::new(), 0).at(ts),
+                        false,
+                    )]
                 } else if let Some(objective) = content.strip_prefix("Workflow goal paused: ") {
-                    vec![(Element::workflow("goal", objective, "paused", Vec::new(), 0).at(ts), false)]
+                    vec![(
+                        Element::workflow("goal", objective, "paused", Vec::new(), 0).at(ts),
+                        false,
+                    )]
                 } else if let Some(objective) = content.strip_prefix("Workflow goal cancelled: ") {
-                    vec![(Element::workflow("goal", objective, "cancelled", Vec::new(), 0).at(ts), false)]
+                    vec![(
+                        Element::workflow("goal", objective, "cancelled", Vec::new(), 0).at(ts),
+                        false,
+                    )]
                 } else if let Some(task) = Self::background_task_elem(&content, ts) {
                     vec![(task, false)]
                 } else if lower.contains("credit limit") || lower.contains("spending cap") {
@@ -317,7 +354,10 @@ impl LazyCache {
                     } else {
                         "purchase_credits"
                     };
-                    vec![(Element::credit_limit(content, action, "https://grok.com/usage").at(ts), false)]
+                    vec![(
+                        Element::credit_limit(content, action, "https://grok.com/usage").at(ts),
+                        false,
+                    )]
                 } else if let Some(summary) = content.strip_prefix("Recap — ") {
                     // Grok recaps are foldable session blocks: the body is
                     // open initially and Ctrl+O switches the shared feed to
@@ -328,7 +368,10 @@ impl LazyCache {
                     } else {
                         format!("Recap +— {summary}")
                     };
-                    vec![(Element::SystemMessage { content: recap, timestamp: ts }, false)]
+                    vec![(
+                        Element::SystemMessage { content: recap, timestamp: ts },
+                        false,
+                    )]
                 } else {
                     vec![(Element::SystemMessage { content, timestamp: ts }, false)]
                 }
@@ -358,15 +401,18 @@ impl LazyCache {
             let (duration, display) = rest.split_once(": ")?;
             (parse_elapsed_seconds(duration)?, display)
         };
-        Some(Element::background_task(
-            display,
-            "",
-            status,
-            Some(display.to_owned()),
-            duration_secs,
-            None,
-            None,
-        ).at(ts))
+        Some(
+            Element::background_task(
+                display,
+                "",
+                status,
+                Some(display.to_owned()),
+                duration_secs,
+                None,
+                None,
+            )
+            .at(ts),
+        )
     }
 
     fn assistant_elems(msg: &ChatMessage, state: &AppState, ts: f64) -> Vec<(Element, bool)> {
@@ -383,7 +429,23 @@ impl LazyCache {
 
         msg.parts
             .iter()
-            .filter_map(|part| Self::part_to_element(part, state, ts, &msg.provider))
+            .filter_map(|part| match part {
+                // Preserve the tool identity across a typed call/result pair;
+                // Grok's compact lookup row depends on knowing that a result
+                // belongs to read_file rather than rendering an anonymous
+                // generic tool output row.
+                Part::ToolResult { id, output } => {
+                    let name = msg.parts.iter().find_map(|candidate| match candidate {
+                        Part::ToolCall { id: call_id, name, .. } if call_id == id => Some(name.as_str()),
+                        _ => None,
+                    });
+                    Some((
+                        Self::tool_result_elem(name.unwrap_or("tool"), output, ts),
+                        false,
+                    ))
+                }
+                other => Self::part_to_element(other, state, ts, &msg.provider),
+            })
             .collect()
     }
 
@@ -400,7 +462,10 @@ impl LazyCache {
                 Self::anthropic_thinking_elem(content, signature.as_deref(), ts),
                 true,
             )),
-            Part::ToolResult { output, .. } => Some((Self::tool_result_elem(output, ts), false)),
+            // Legacy assistant-part results do not carry the display name in
+            // the part itself; use the canonical read-result identity so the
+            // lookup summary/expansion policy remains deterministic.
+            Part::ToolResult { output, .. } => Some((Self::tool_result_elem("read_file", output, ts), false)),
             Part::ToolConfirmation { id, name, args, description, .. } => Some((
                 Self::tool_confirmation_elem(id, name, args, description.as_deref(), ts),
                 false,
@@ -440,8 +505,8 @@ impl LazyCache {
         Element::tool_done(name, args_compact, 0.0, String::new(), None, false).at(ts)
     }
 
-    fn tool_result_elem(output: &str, ts: f64) -> Element {
-        Element::tool_done("tool", String::new(), 0.0, output, None, false).at(ts)
+    fn tool_result_elem(name: &str, output: &str, ts: f64) -> Element {
+        Element::tool_done(name, String::new(), 0.0, output, None, false).at(ts)
     }
 
     fn redacted_thinking_elem(data: &str, _signature: Option<&str>, ts: f64) -> Element {
@@ -507,7 +572,12 @@ impl LazyCache {
         // but the feed-wide toggle's expanded state is represented by true
         // throughout the projection (user/tool/subagent rows use the same
         // convention). Honor it here as well as per-post expansion.
-        if state.view().expanded_posts.contains(&post_index) {
+        // The feed-wide Ctrl+O toggle uses `all_collapsed` as its expanded
+        // state in the projection layer (the historical field name is kept
+        // for persisted compatibility). This must reveal thought bodies too;
+        // otherwise Ctrl+O can expand tools/users but leaves reasoning as a
+        // permanently summary-only row.
+        if state.view().all_collapsed || state.view().expanded_posts.contains(&post_index) {
             return elem;
         }
         match elem {
@@ -524,6 +594,33 @@ impl LazyCache {
                 Element::AnthropicThinking { content: summary, signature, redacted, timestamp }
             }
             _ => elem,
+        }
+    }
+
+    /// Grok keeps successful file lookups compact in the committed feed. The
+    /// result remains attached to the underlying tool message and is revealed
+    /// by the same global expansion toggle used by the rest of the feed.
+    fn maybe_collapse_lookup(elem: Element, state: &AppState, post_index: usize) -> Element {
+        if state.view().all_collapsed || state.view().expanded_posts.contains(&post_index) {
+            return elem;
+        }
+        match elem {
+            Element::ToolDone { name, duration_secs, timestamp, .. } if name == "read_file" => {
+                Element::tool_summary(name, duration_secs).at(timestamp)
+            }
+            Element::ContextGroup { tools, collapsed, timestamp } => {
+                let tools = tools
+                    .into_iter()
+                    .map(|tool| match tool {
+                        Element::ToolDone { name, duration_secs, timestamp, .. } if name == "read_file" => {
+                            Element::tool_summary(name, duration_secs).at(timestamp)
+                        }
+                        other => other,
+                    })
+                    .collect();
+                Element::context_group(tools, collapsed).at(timestamp)
+            }
+            other => other,
         }
     }
 
@@ -546,8 +643,7 @@ impl LazyCache {
             // User messages start folded. Ctrl+O participates in the same
             // feed-wide expand/collapse cycle as tool/thought sections, while
             // an individually expanded post remains expanded in either mode.
-            *expanded = state.view().all_collapsed
-                || state.view().expanded_posts.contains(&post_index);
+            *expanded = state.view().all_collapsed || state.view().expanded_posts.contains(&post_index);
         }
         elem
     }
@@ -557,8 +653,7 @@ impl LazyCache {
     /// element must carry the projection rather than only the Post metadata.
     fn maybe_expand_btw(mut elem: Element, state: &AppState, post_index: usize) -> Element {
         if let Element::Btw { expanded, .. } = &mut elem {
-            *expanded = state.view().all_collapsed
-                || state.view().expanded_posts.contains(&post_index);
+            *expanded = state.view().all_collapsed || state.view().expanded_posts.contains(&post_index);
         }
         elem
     }
@@ -593,8 +688,16 @@ impl LazyCache {
             )
             .at(ts);
         }
-        let (name, dur, output) = Self::parse_tool_content(&content);
-        if state.view().all_collapsed {
+        let (parsed_name, dur, output) = Self::parse_tool_content(&content);
+        let parsed_name = match parsed_name.as_str() {
+            "Read" => "read_file",
+            "List" => "list_dir",
+            "Search" => "search",
+            "Edit" => "edit_file",
+            other => other,
+        };
+        let name = msg.tool_call_id.as_deref().unwrap_or(parsed_name);
+        if state.view().all_collapsed && name != "read_file" {
             Element::tool_summary(name, dur).at(ts)
         } else {
             Element::tool_done(name, String::new(), dur, output, None, false).at(ts)

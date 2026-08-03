@@ -127,7 +127,10 @@ impl WorktreePool {
             Ok(e) => e,
             Err(_) => return 0,
         };
-        entries.flatten().filter(|e| e.file_name().to_string_lossy().ends_with(READY_SUFFIX)).count()
+        entries
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().ends_with(READY_SUFFIX))
+            .count()
     }
 
     async fn release_worktree_internal(&self, path: &Path) {
@@ -142,7 +145,9 @@ impl WorktreePool {
                 .args(["clean", "-fdx"])
                 .current_dir(&p)
                 .status();
-        }).await.ok();
+        })
+        .await
+        .ok();
 
         let ready = marker_path(path, READY_SUFFIX);
         let _ = std::fs::write(&ready, "");
@@ -237,7 +242,8 @@ impl WorktreePool {
                         .current_dir(&src)
                         .output()
                 }
-            }).await;
+            })
+            .await;
 
             if !result.map(|r| r.is_ok()).unwrap_or(false) {
                 tokio::time::sleep(Duration::from_secs(5)).await;
@@ -247,7 +253,11 @@ impl WorktreePool {
             let ready = marker_path(&worktree_path, READY_SUFFIX);
             let _ = std::fs::write(&ready, "");
             let last_used = marker_path(&worktree_path, LAST_USED_SUFFIX);
-            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().to_string();
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                .to_string();
             let _ = std::fs::write(&last_used, now);
 
             ready_notify.notify_waiters();
@@ -256,7 +266,8 @@ impl WorktreePool {
     }
 
     fn count_dir_worktrees(dir: &Path) -> usize {
-        std::fs::read_dir(dir).ok()
+        std::fs::read_dir(dir)
+            .ok()
             .map(|e| e.flatten().filter(|e| e.path().is_dir()).count())
             .unwrap_or(0)
     }

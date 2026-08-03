@@ -81,10 +81,7 @@ mod ranking_tests {
         // process env, dotenv, and keyring) for a hermetic test.
         let file_tokens = CredentialResolver::load_auth_file_from(&fake_auth);
         let has = file_tokens.contains_key("minimax");
-        assert!(
-            !has,
-            "minimax should not have credentials in isolated test"
-        );
+        assert!(!has, "minimax should not have credentials in isolated test");
     }
 
     #[test]

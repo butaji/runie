@@ -60,6 +60,49 @@ pub fn format_tokens_short(tokens: u64) -> String {
     }
 }
 
+#[cfg(test)]
+mod turn_status_tests {
+    use super::{format_tokens_short, format_turn_timer};
+    use std::time::Duration;
+
+    #[test]
+    fn turn_timer_matches_grok_bands_at_boundaries() {
+        let cases = [
+            (Duration::from_millis(0), "0.0s"),
+            (Duration::from_millis(9999), "10.0s"),
+            (Duration::from_secs(10), "10s"),
+            (Duration::from_secs(59), "59s"),
+            (Duration::from_secs(60), "1m0s"),
+            (Duration::from_secs(3599), "59m59s"),
+            (Duration::from_secs(3600), "1h0m"),
+            (Duration::from_secs(3720), "1h2m"),
+        ];
+        for (duration, expected) in cases {
+            assert_eq!(format_turn_timer(duration), expected, "{duration:?}");
+        }
+    }
+
+    #[test]
+    fn token_count_matches_grok_bands_at_boundaries() {
+        let cases = [
+            (0, "0"),
+            (999, "999"),
+            (1000, "1.00k"),
+            (9999, "10.00k"),
+            (10_000, "10.0k"),
+            (99_999, "100.0k"),
+            (100_000, "100k"),
+            (999_999, "999k"),
+            (1_000_000, "1.00m"),
+            (9_999_999, "10.00m"),
+            (10_000_000, "10.0m"),
+        ];
+        for (tokens, expected) in cases {
+            assert_eq!(format_tokens_short(tokens), expected, "{tokens}");
+        }
+    }
+}
+
 // Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
 

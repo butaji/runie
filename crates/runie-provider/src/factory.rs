@@ -9,10 +9,10 @@ use std::time::{Duration, Instant};
 use crate::config::ProviderConfigResolver;
 use crate::{build_provider, find_provider, validate_api_key, ProviderError};
 use runie_core::actors::provider::{BuiltProvider, ProviderFactory};
-use runie_core::provider::is_mock_enabled;
 use runie_core::auth::KeyringStore;
 use runie_core::config::Config;
 use runie_core::proto::ProviderConfig;
+use runie_core::provider::is_mock_enabled;
 
 #[cfg(feature = "replay")]
 use crate::replay::{Protocol, ReplayProvider};
@@ -271,8 +271,14 @@ impl BuiltProviderFactory {
     fn try_build_replay_provider(provider: &str, model: &str) -> Option<BuiltProvider> {
         let fixture_list = std::env::var("RUNIE_REPLAY_FIXTURES").ok()?;
         // File marker so tests can verify replay provider was actually reached
-        let _ = std::fs::write("/tmp/replay_reached.txt", format!("replay_reached fixture={:?}\n", fixture_list));
-        tracing::debug!("[REPLAY_DEBUG] try_build_replay_provider called: fixture_list={:?}", fixture_list);
+        let _ = std::fs::write(
+            "/tmp/replay_reached.txt",
+            format!("replay_reached fixture={:?}\n", fixture_list),
+        );
+        tracing::debug!(
+            "[REPLAY_DEBUG] try_build_replay_provider called: fixture_list={:?}",
+            fixture_list
+        );
         if fixture_list.trim().is_empty() {
             tracing::debug!("[REPLAY_DEBUG] fixture_list is empty, skipping replay");
             return None;
@@ -287,8 +293,12 @@ impl BuiltProviderFactory {
             }
             match std::fs::read_to_string(path) {
                 Ok(contents) => {
-                    tracing::debug!("[REPLAY_DEBUG] loaded fixture from {}: {} bytes, first_line={:?}",
-                        path, contents.len(), contents.lines().next());
+                    tracing::debug!(
+                        "[REPLAY_DEBUG] loaded fixture from {}: {} bytes, first_line={:?}",
+                        path,
+                        contents.len(),
+                        contents.lines().next()
+                    );
                     fixtures.push(contents);
                 }
                 Err(e) => {
@@ -311,7 +321,12 @@ impl BuiltProviderFactory {
         };
 
         let replay = ReplayProvider::new(fixtures, protocol);
-        tracing::debug!("[REPLAY_DEBUG] REPLAY_PROVIDER_BUILT provider={} model={} protocol={:?}", provider, model, protocol);
+        tracing::debug!(
+            "[REPLAY_DEBUG] REPLAY_PROVIDER_BUILT provider={} model={} protocol={:?}",
+            provider,
+            model,
+            protocol
+        );
         tracing::debug!(provider, model, protocol = ?protocol, "using replay provider");
 
         // Use provided provider/model, or defaults for replay context.
@@ -331,7 +346,9 @@ impl ProviderFactory for BuiltProviderFactory {
     fn build(&self, provider: &str, model: &str, config: &Config) -> Result<BuiltProvider, ProviderError> {
         tracing::debug!(
             "BuiltProviderFactory::build() called: provider={} model={} is_mock_enabled={}",
-            provider, model, is_mock_enabled()
+            provider,
+            model,
+            is_mock_enabled()
         );
         // Check for replay mode first.
         #[cfg(feature = "replay")]

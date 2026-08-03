@@ -82,9 +82,7 @@ impl<'de> Deserialize<'de> for Profile {
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Profile::parse(&s).ok_or_else(|| {
-            serde::de::Error::custom(format!("invalid profile: {}", s))
-        })
+        Profile::parse(&s).ok_or_else(|| serde::de::Error::custom(format!("invalid profile: {}", s)))
     }
 }
 
@@ -203,7 +201,9 @@ impl SandboxConfig {
 
     /// Get the workspace root or default to current directory.
     pub fn workspace_root_or_default(&self) -> PathBuf {
-        self.workspace_root.clone().unwrap_or_else(|| PathBuf::from("."))
+        self.workspace_root
+            .clone()
+            .unwrap_or_else(|| PathBuf::from("."))
     }
 }
 
@@ -265,14 +265,12 @@ pub fn resolve_profile(
 
 /// Load a custom profile from a sandbox.toml file.
 pub fn load_profile_from_file(path: &Path) -> Result<(Profile, SandboxConfig), String> {
-    let content = std::fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read sandbox config: {}", e))?;
+    let content = std::fs::read_to_string(path).map_err(|e| format!("Failed to read sandbox config: {}", e))?;
 
-    let profile_config: ProfileConfig = toml::from_str(&content)
-        .map_err(|e| format!("Failed to parse sandbox config: {}", e))?;
+    let profile_config: ProfileConfig =
+        toml::from_str(&content).map_err(|e| format!("Failed to parse sandbox config: {}", e))?;
 
-    let profile = Profile::parse(&profile_config.name)
-        .unwrap_or(Profile::Custom);
+    let profile = Profile::parse(&profile_config.name).unwrap_or(Profile::Custom);
 
     let config = SandboxConfig::custom(
         None,

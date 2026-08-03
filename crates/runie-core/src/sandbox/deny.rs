@@ -3,8 +3,8 @@
 //! Provides `ReadDenyList` and `WriteDenyList` for path-based access control.
 //! Paths can be specified as exact matches or regex patterns.
 
-use std::path::{Path, PathBuf};
 use regex::Regex;
+use std::path::{Path, PathBuf};
 
 use super::profiles::Profile;
 
@@ -227,10 +227,7 @@ pub struct DenyList {
 impl DenyList {
     /// Create from a profile.
     pub fn from_profile(profile: Profile) -> Self {
-        Self {
-            read: ReadDenyList::from_profile(profile),
-            write: WriteDenyList::from_profile(profile),
-        }
+        Self { read: ReadDenyList::from_profile(profile), write: WriteDenyList::from_profile(profile) }
     }
 
     /// Check if a path should be denied for any operation.

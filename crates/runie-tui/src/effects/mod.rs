@@ -30,9 +30,7 @@ impl EffectCommand {
         _caps: &crate::terminal::caps::TermCaps,
     ) -> Option<Self> {
         match evt {
-            CoreEvent::OpenExternalEditor => {
-                Some(Self::OpenExternalEditor { text: state.input().input().to_string() })
-            }
+            CoreEvent::OpenExternalEditor => Some(Self::OpenExternalEditor { text: state.input().input().to_string() }),
             CoreEvent::CopyToClipboard(text) => Some(Self::CopyToClipboard { text: text.clone() }),
             CoreEvent::CopyLastResponse => {
                 let text = last_assistant_text(state.session().messages());
@@ -41,12 +39,12 @@ impl EffectCommand {
                 }
                 Some(Self::CopyToClipboard { text })
             }
-            CoreEvent::CopySelectedBlock => {
-                state.copy_selected_post_text().map(|text| Self::CopyToClipboard { text })
-            }
-            CoreEvent::CopyBlockMetadata => {
-                state.copy_selected_post_metadata().map(|text| Self::CopyToClipboard { text })
-            }
+            CoreEvent::CopySelectedBlock => state
+                .copy_selected_post_text()
+                .map(|text| Self::CopyToClipboard { text }),
+            CoreEvent::CopyBlockMetadata => state
+                .copy_selected_post_metadata()
+                .map(|text| Self::CopyToClipboard { text }),
             CoreEvent::ShareSession => Some(Self::ShareSession {
                 messages: state.session().messages().to_vec(),
                 display_name: state.session().session_display_name().map(String::from),

@@ -120,7 +120,15 @@ fn esc_from_subdialog_returns_to_palette() {
     );
     assert!(state.dialog_back_stack.is_empty());
 
-    // Esc on the palette (root) must close the bar.
+    // Grok Vim picker behavior: the first Esc clears the query, the second
+    // enters navigation mode, and the third closes the root palette.
+    state.update(Event::dialog_back());
+    assert!(state.open_dialog.is_some(), "first Esc clears picker query");
+    state.update(Event::dialog_back());
+    assert!(
+        state.open_dialog.is_some(),
+        "second Esc enters picker navigation"
+    );
     state.update(Event::dialog_back());
     assert!(state.open_dialog.is_none(), "Esc on palette must close");
 }

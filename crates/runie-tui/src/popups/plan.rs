@@ -18,15 +18,12 @@ pub fn render_plan_panel(f: &mut Frame, snap: &Snapshot) {
     let bg = color_bg_panel();
 
     let header_height = 2u16;
-    let content_height = inner.height.saturating_sub(header_height + hotkey_area_height());
+    let content_height = inner
+        .height
+        .saturating_sub(header_height + hotkey_area_height());
 
     let header_area = Rect { x: inner.x, y: inner.y, width: inner.width, height: header_height };
-    let content_area = Rect {
-        x: inner.x,
-        y: inner.y + header_height,
-        width: inner.width,
-        height: content_height,
-    };
+    let content_area = Rect { x: inner.x, y: inner.y + header_height, width: inner.width, height: content_height };
 
     let mut header_lines = Vec::new();
     header_lines.push(Line::from(vec![
@@ -34,10 +31,16 @@ pub fn render_plan_panel(f: &mut Frame, snap: &Snapshot) {
         ratatui::text::Span::raw("Plan mode active — write tools blocked"),
     ]));
     header_lines.push(Line::from(""));
-    f.render_widget(Paragraph::new(header_lines).style(Style::default().bg(bg)), header_area);
+    f.render_widget(
+        Paragraph::new(header_lines).style(Style::default().bg(bg)),
+        header_area,
+    );
 
     let content_lines = build_plan_lines(snap);
-    f.render_widget(Paragraph::new(content_lines).style(Style::default().bg(bg)), content_area);
+    f.render_widget(
+        Paragraph::new(content_lines).style(Style::default().bg(bg)),
+        content_area,
+    );
 
     let footer_line = Line::from("[Enter] Approve plan   [Esc] /plan off").style(style_hint());
     f.render_widget(Paragraph::new(footer_line), hotkey_area(&inner));

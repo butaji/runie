@@ -93,9 +93,9 @@ impl From<ractor::ActorCell> for ActorCellRef {
 pub type ActorCell = ActorCellRef;
 
 #[allow(unused_imports)]
-pub use input::{spawn_input_actor, InputActorBase, InputHandle, InputMsg, RactorInputHandle};
-#[allow(unused_imports)]
 pub use input::actor::InputActor;
+#[allow(unused_imports)]
+pub use input::{spawn_input_actor, InputActorBase, InputHandle, InputMsg, RactorInputHandle};
 pub use io::{spawn_io_actor, IoActorHandle, IoMsg, RactorIoHandle};
 pub use leader::{Leader, LeaderCommand, LeaderHandle, LeaderStatus};
 #[allow(unused_imports)]
@@ -105,4 +105,3 @@ pub use provider::{BuiltProvider, ProviderFactory, ProviderMsg, RactorProviderAc
 pub use session::{spawn_session_actor, RactorSessionHandle, SessionHandle, SessionMsg};
 #[allow(unused_imports)]
 pub use turn::{RactorTurnActor, RactorTurnHandle, TurnMsg};
-

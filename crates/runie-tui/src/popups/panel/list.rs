@@ -84,8 +84,8 @@ fn render_item_list(
             scroll.total,
             scroll.offset as u16,
             scroll.area.height as usize,
-            true,   // is_following: popup scrollbar is always following
-            None,   // track_symbol: use default SCROLLBAR_TRACK
+            true, // is_following: popup scrollbar is always following
+            None, // track_symbol: use default SCROLLBAR_TRACK
         );
     }
 }
@@ -142,6 +142,13 @@ fn build_items(panel: &Panel, width: usize) -> (Vec<Line<'_>>, Option<usize>) {
                     selected_line = Some(lines.len());
                 }
                 push_navigable_item(&mut lines, other, nav_idx == panel.selected, width);
+                if nav_idx == panel.selected && panel.inline_help_expanded {
+                    if let Some(raw_index) = panel.raw_index(nav_idx) {
+                        if let Some(help) = panel.inline_help.get(&raw_index) {
+                            lines.push(Line::from(format!("    {}", help)).style(style_hint()));
+                        }
+                    }
+                }
                 nav_idx += 1;
             }
         }

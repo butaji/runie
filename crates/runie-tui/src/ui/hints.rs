@@ -13,6 +13,12 @@ use crate::theme::{color_bg, color_bg_panel, color_error, color_success, color_w
 pub(crate) fn hints(f: &mut Frame, snap: &runie_core::Snapshot, area: Rect) {
     if let Some(ref msg) = snap.transient_message {
         render_transient(f, snap, area, msg);
+    } else if let Some((ref key, ref action)) = snap.pending_hint {
+        let line = Line::from(vec![
+            Span::styled(key.clone(), style_hint_key()),
+            Span::styled(format!(": press again to {action}"), style_hint()),
+        ]);
+        f.render_widget(Paragraph::new(line), area);
     } else if let Some(ref tip) = snap.ephemeral_tip {
         render_tip(f, area, tip);
     } else {

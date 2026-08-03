@@ -51,6 +51,9 @@ pub fn update_panel_stack(state: &mut AppState, event: Event, stack: &mut PanelS
         return update_form_panel(state, event, stack);
     }
 
+    if navigation::handle_vim_picker_escape(state, &event, stack) {
+        return PanelUpdateResult::Consumed;
+    }
     if navigation::handle_panel_close(state, &event, stack) {
         return PanelUpdateResult::Closed;
     }

@@ -12,8 +12,8 @@ use ratatui::{
 use runie_core::Snapshot;
 
 use crate::theme::{
-    block_popup, color_bg_panel, style_hint, style_popup_selected, style_popup_unselected,
-    GLYPH_SELECTED, GLYPH_UNSELECTED,
+    block_popup, color_bg_panel, style_hint, style_popup_selected, style_popup_unselected, GLYPH_SELECTED,
+    GLYPH_UNSELECTED,
 };
 
 pub mod layout_constants;
@@ -138,7 +138,11 @@ pub fn slash_dropdown(f: &mut Frame, snap: &Snapshot) {
         .enumerate()
         .map(|(i, m)| {
             let selected = i == dd.selected;
-            let prefix = if selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
+            let prefix = if selected {
+                GLYPH_SELECTED
+            } else {
+                GLYPH_UNSELECTED
+            };
             let style = if selected {
                 style_popup_selected()
             } else {

@@ -44,5 +44,7 @@ pub(crate) fn create_permission_gate(
 ) -> PermissionGate {
     // Permission engine removed: all tools are allowed immediately.
     // EmitApprovalSink emits TUI events for UX but returns Allow.
-    PermissionGate::new(std::sync::Arc::new(EmitApprovalSink::new(permission_handle)))
+    PermissionGate::new(std::sync::Arc::new(EmitApprovalSink::new(
+        permission_handle,
+    )))
 }

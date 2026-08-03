@@ -135,11 +135,8 @@ impl InputState {
             } else {
                 format!("[Pasted: {} lines]", n_lines)
             };
-            self.chips.push(InputChip {
-                start,
-                end: start + clean.len(),
-                label: Some(label),
-            });
+            self.chips
+                .push(InputChip { start, end: start + clean.len(), label: Some(label) });
         }
         self.redo_stack.clear();
     }
@@ -150,10 +147,18 @@ impl InputState {
         const MB: usize = KB * 1024;
         if bytes >= MB {
             let mb = bytes as f64 / MB as f64;
-            if mb >= 10.0 { format!("{:.0} MB", mb) } else { format!("{:.1} MB", mb) }
+            if mb >= 10.0 {
+                format!("{:.0} MB", mb)
+            } else {
+                format!("{:.1} MB", mb)
+            }
         } else {
             let kb = bytes as f64 / KB as f64;
-            if kb >= 10.0 { format!("{:.0} KB", kb) } else { format!("{:.1} KB", kb) }
+            if kb >= 10.0 {
+                format!("{:.0} KB", kb)
+            } else {
+                format!("{:.1} KB", kb)
+            }
         }
     }
 

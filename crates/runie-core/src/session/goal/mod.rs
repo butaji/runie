@@ -10,6 +10,4 @@
 
 pub mod planner;
 
-pub use crate::goal::{
-    Checkpoint, GoalPhase, GoalRole, GoalState, GoalStatus, GoalTracker,
-};
+pub use crate::goal::{Checkpoint, GoalPhase, GoalRole, GoalState, GoalStatus, GoalTracker};

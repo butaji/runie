@@ -121,4 +121,13 @@ mod tests {
         let result = strip_tool_markers(input);
         assert_eq!(result, input);
     }
+
+    #[test]
+    fn mermaid_fence_is_preserved_as_content() {
+        let input = "before\n```mermaid\nflowchart TD\n  A --> B\n```\nafter";
+        let result = strip_tool_markers(input);
+        assert!(result.contains("```mermaid"));
+        assert!(result.contains("flowchart TD"));
+        assert!(result.contains("```\nafter"));
+    }
 }

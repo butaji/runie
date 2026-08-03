@@ -18,6 +18,21 @@ use super::{
 
 /// Handles dialog-specific events. Returns whether the dialog was closed.
 pub fn update_dialog(state: &mut AppState, event: Event) {
+    // A slash typed after dismissing a command result must start a fresh
+    // palette, even if the persistent Ctrl+P palette is still the visible
+    // parent dialog. Do not append `/` to the parent's previous filter.
+    if matches!(event, Event::Input('/'))
+        && matches!(
+            state.open_dialog(),
+            Some(DialogState::Active { kind: DialogKind::CommandPalette, .. })
+        )
+    {
+        close_command_palette_if_open(state);
+        open_command_palette(state);
+        state.command_palette_from_input = true;
+        state.view_mut().dirty = true;
+        return;
+    }
     if route_global_dialog_event(state, &event) {
         return;
     }
@@ -61,7 +76,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
     // A palette opened by `/` is an ephemeral command trigger. Closing it
     // must consume the trigger instead of leaving a stray slash in the chat
     // composer. Ctrl+P palettes keep the normal draft untouched.
-    if is_dialog_back && state.open_dialog().is_none() && state.command_palette_from_input {
+    if state.open_dialog().is_none() && state.command_palette_from_input {
         state.input_mut().input.clear();
         state.input_mut().cursor_pos = 0;
         state.input_mut().chips.clear();
@@ -98,7 +113,8 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 /// when the picker opened — without the sync its next InputChanged echo
 /// clobbers the restored text on the following keystroke.
 pub fn restore_file_picker_backup(state: &mut AppState) {
-    if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {        state.input_mut().input = input.clone();
+    if let Some((input, _, _, _)) = state.input_mut().file_picker_backup.take() {
+        state.input_mut().input = input.clone();
         state.input_mut().cursor_pos = state.input().input.len();
         let chips = state.input().chips.clone();
         if let Some(handles) = state.actor_handles() {
@@ -220,6 +236,16 @@ fn close_command_palette_if_open(state: &mut AppState) {
     if let Some(DialogState::Active { kind, .. }) = state.open_dialog() {
         if *kind == DialogKind::CommandPalette {
             *state.open_dialog_mut() = None;
+            // Palette filters are transient UI state, never a chat draft.
+            // Clear both projections when the palette closes so a filter such
+            // as `status` cannot be echoed into the next `/` invocation.
+            state.input_mut().input.clear();
+            state.input_mut().cursor_pos = 0;
+            state.input_mut().chips.clear();
+            if let Some(handles) = state.actor_handles() {
+                let _ = handles.input.send_message(crate::actors::InputMsg::Clear);
+            }
+            state.command_palette_from_input = false;
             state.view_mut().input_receiver = crate::model::InputReceiver::ChatInput;
             state.view_mut().scroll = 0;
             state.view_mut().dirty = true;
@@ -268,11 +294,13 @@ fn handle_mcp_skill_action(state: &mut AppState, event: &Event) {
                     // Remove the server from the active config scope.
                     let name = name.clone();
                     if let Some(handles) = state.actor_handles() {
-                        let _ = handles.config.try_send(crate::actors::ConfigMsg::RemoveMcpServer {
-                            scope: crate::config::ConfigScope::Global,
-                            name: name.clone(),
-                            reply: None,
-                        });
+                        let _ = handles
+                            .config
+                            .try_send(crate::actors::ConfigMsg::RemoveMcpServer {
+                                scope: crate::config::ConfigScope::Global,
+                                name: name.clone(),
+                                reply: None,
+                            });
                     }
                     state.add_system_msg(format!("Removed MCP server: {}", name));
                     // Refresh the panel from config.
@@ -390,24 +418,28 @@ mod tests {
             Some(DialogState::Active { kind: DialogKind::Skills, .. })
         ));
 
-        state.update(crate::Event::SkillAction {
-            name: "to-delete".to_string(),
-            action: SkillActionKind::Delete,
-        });
+        state.update(crate::Event::SkillAction { name: "to-delete".to_string(), action: SkillActionKind::Delete });
 
         // File removed, state reloaded, dialog still open with the skill gone.
-        assert!(!dir.join("to-delete.md").exists(), "skill file should be removed");
+        assert!(
+            !dir.join("to-delete.md").exists(),
+            "skill file should be removed"
+        );
         assert!(
             !state.skills().iter().any(|s| s.name == "to-delete"),
             "state should be reloaded without the deleted skill"
         );
-        assert!(matches!(
-            state.open_dialog(),
-            Some(DialogState::Active { kind: DialogKind::Skills, .. })
-        ), "skills dialog should stay open after delete");
+        assert!(
+            matches!(
+                state.open_dialog(),
+                Some(DialogState::Active { kind: DialogKind::Skills, .. })
+            ),
+            "skills dialog should stay open after delete"
+        );
         let last = state.session().messages.last();
         assert!(
-            last.map(|m| m.content().contains("Deleted skill")).unwrap_or(false),
+            last.map(|m| m.content().contains("Deleted skill"))
+                .unwrap_or(false),
             "a confirmation message should be added"
         );
     }
@@ -418,10 +450,7 @@ mod tests {
         let tmp = tempfile::TempDir::new().unwrap();
         let mut state = state_with_home(&tmp);
 
-        state.update(crate::Event::SkillAction {
-            name: "missing".to_string(),
-            action: SkillActionKind::Delete,
-        });
+        state.update(crate::Event::SkillAction { name: "missing".to_string(), action: SkillActionKind::Delete });
 
         assert_eq!(
             state.transient_message(),

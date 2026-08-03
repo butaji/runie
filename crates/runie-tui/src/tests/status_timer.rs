@@ -31,7 +31,10 @@ fn inactive_context_status_uses_compact_fraction_and_percent() {
     state.ensure_fresh();
 
     let out = render_status(&mut state);
-    assert!(out.contains("0/128k 0%"), "inactive context status should be compact and lowercase: {out}");
+    assert!(
+        out.contains("0/128k 0% ⛀"),
+        "inactive context status should include compact context usage and coin stack: {out}"
+    );
 }
 
 #[test]

@@ -142,3 +142,19 @@ fn turn_elapsed_survives_snapshot_cloning() {
         "Elapsed must survive snapshot clone"
     );
 }
+
+#[test]
+fn snapshot_uses_thinking_start_for_activity_timer() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
+    state.agent.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_millis(700));
+    state.ensure_fresh();
+
+    let snapshot = state.snapshot();
+    let activity = snapshot.activity_elapsed_secs.expect("activity timer");
+    assert!(
+        (activity - 0.7).abs() < 0.15,
+        "expected thinking phase timer, got {activity}"
+    );
+}

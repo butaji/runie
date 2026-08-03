@@ -41,12 +41,14 @@ pub fn sandbox_available() -> SandboxStatus {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        if Command::new("sandbox-exec").arg("--version").output().is_ok() {
+        if Command::new("sandbox-exec")
+            .arg("--version")
+            .output()
+            .is_ok()
+        {
             SandboxStatus::Available
         } else {
-            SandboxStatus::Unavailable {
-                reason: "sandbox-exec not available".to_owned(),
-            }
+            SandboxStatus::Unavailable { reason: "sandbox-exec not available".to_owned() }
         }
     }
 
@@ -62,9 +64,7 @@ pub fn sandbox_available() -> SandboxStatus {
 
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     {
-        SandboxStatus::Unavailable {
-            reason: format!("Unsupported platform: {}", std::env::consts::OS),
-        }
+        SandboxStatus::Unavailable { reason: format!("Unsupported platform: {}", std::env::consts::OS) }
     }
 }
 
@@ -105,14 +105,7 @@ impl SandboxManager {
         let read_deny = ReadDenyList::from_profile(profile);
         let write_deny = WriteDenyList::from_profile(profile);
 
-        Self {
-            profile,
-            config,
-            read_deny,
-            write_deny,
-            enforced: false,
-            violation_log: None,
-        }
+        Self { profile, config, read_deny, write_deny, enforced: false, violation_log: None }
     }
 
     /// Create a sandbox manager for the workspace profile.
@@ -152,7 +145,9 @@ impl SandboxManager {
             }
             SandboxStatus::Available => {
                 // Store globally for violation logging
-                CURRENT_PROFILE.with(|p| { *p.borrow_mut() = Some(Arc::new(self.clone())); });
+                CURRENT_PROFILE.with(|p| {
+                    *p.borrow_mut() = Some(Arc::new(self.clone()));
+                });
                 SANDBOX_ACTIVE.store(true, Ordering::SeqCst);
                 self.enforced = true;
                 info!("Sandbox applied: profile={:?}", self.profile);
@@ -197,7 +192,12 @@ impl SandboxManager {
             self.profile
         );
 
-        debug!("Sandbox violation: {} {} on {}", kind, operation, path.display());
+        debug!(
+            "Sandbox violation: {} {} on {}",
+            kind,
+            operation,
+            path.display()
+        );
 
         if let Some(log_path) = &self.violation_log {
             if let Err(e) = std::fs::OpenOptions::new()
@@ -251,7 +251,9 @@ impl SandboxManager {
     #[cfg(test)]
     pub fn reset() {
         SANDBOX_ACTIVE.store(false, Ordering::SeqCst);
-        CURRENT_PROFILE.with(|p| { *p.borrow_mut() = None; });
+        CURRENT_PROFILE.with(|p| {
+            *p.borrow_mut() = None;
+        });
     }
 }
 
@@ -277,9 +279,7 @@ mod tests {
         let status = SandboxStatus::Available;
         assert!(format!("{:?}", status).contains("Available"));
 
-        let unavailable = SandboxStatus::Unavailable {
-            reason: "test".to_owned(),
-        };
+        let unavailable = SandboxStatus::Unavailable { reason: "test".to_owned() };
         assert!(format!("{:?}", unavailable).contains("Unavailable"));
     }
 

@@ -544,7 +544,11 @@ mod tests {
     fn minimax_models_have_supports_tools() {
         for name in ["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"] {
             let meta = find_model_for_provider("minimax", name).expect(&format!("minimax/{name} should exist"));
-            assert!(meta.supports_tools, "minimax/{name} supports_tools should be true, got {}", meta.supports_tools);
+            assert!(
+                meta.supports_tools,
+                "minimax/{name} supports_tools should be true, got {}",
+                meta.supports_tools
+            );
         }
     }
 }

@@ -32,10 +32,12 @@ fn goal_create_emits_event() {
 fn goal_lifecycle_is_projected_to_workflow_feed_rows() {
     let mut state = fresh_state();
     exec(&mut state, "/goal -- Track feed parity");
-    assert!(crate::view::LazyCache::rebuild(&state).iter().any(|element| {
-        matches!(element, crate::view::Element::Workflow { objective, status, .. }
+    assert!(crate::view::LazyCache::rebuild(&state)
+        .iter()
+        .any(|element| {
+            matches!(element, crate::view::Element::Workflow { objective, status, .. }
             if objective == "Track feed parity" && status == "running")
-    }));
+        }));
 }
 
 #[test]
@@ -43,14 +45,14 @@ fn goal_pause_resume_and_cancel_have_workflow_feed_states() {
     let mut state = fresh_state();
     exec(&mut state, "/goal -- Track lifecycle");
     state.update(crate::Event::GoalPause);
-    assert!(crate::view::LazyCache::rebuild(&state).iter().any(|element| {
-        matches!(element, crate::view::Element::Workflow { status, .. } if status == "paused")
-    }));
+    assert!(crate::view::LazyCache::rebuild(&state)
+        .iter()
+        .any(|element| { matches!(element, crate::view::Element::Workflow { status, .. } if status == "paused") }));
     state.update(crate::Event::GoalResume);
     state.update(crate::Event::GoalCancel);
-    assert!(crate::view::LazyCache::rebuild(&state).iter().any(|element| {
-        matches!(element, crate::view::Element::Workflow { status, .. } if status == "cancelled")
-    }));
+    assert!(crate::view::LazyCache::rebuild(&state)
+        .iter()
+        .any(|element| { matches!(element, crate::view::Element::Workflow { status, .. } if status == "cancelled") }));
 }
 
 #[test]

@@ -78,15 +78,27 @@ pub const SCROLLBAR_TRACK: &str = "│"; // visible track (U+2502 BOX DRAWINGS L
 pub const SCROLLBAR_THUMB: &str = "▐"; // right half-block — visible but not heavy
 
 pub fn rail_glyph() -> &'static str {
-    if crate::theme::unicode_supported() { "┃" } else { "|" }
+    if crate::theme::unicode_supported() {
+        "┃"
+    } else {
+        "|"
+    }
 }
 
 pub fn scrollbar_track_glyph() -> &'static str {
-    if crate::theme::unicode_supported() { SCROLLBAR_TRACK } else { "|" }
+    if crate::theme::unicode_supported() {
+        SCROLLBAR_TRACK
+    } else {
+        "|"
+    }
 }
 
 pub fn scrollbar_thumb_glyph() -> &'static str {
-    if crate::theme::unicode_supported() { SCROLLBAR_THUMB } else { "#" }
+    if crate::theme::unicode_supported() {
+        SCROLLBAR_THUMB
+    } else {
+        "#"
+    }
 }
 
 // Panel headers

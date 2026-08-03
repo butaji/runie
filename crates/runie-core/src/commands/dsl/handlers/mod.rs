@@ -8,6 +8,7 @@ pub mod help;
 pub mod macros_;
 pub mod mode;
 pub mod model;
+pub mod queue;
 pub mod registry;
 pub mod session;
 pub mod status;
@@ -33,6 +34,7 @@ fn init_handler_registry() -> HandlerRegistry {
     system::register_handlers(&mut registry);
     help::register_handlers(&mut registry);
     status::register_handlers(&mut registry);
+    registry.register("queue", NamedHandler::Handler(queue::handle_queue));
     registry.register("goal", NamedHandler::Handler(goal::handle_goal));
     registry.register("ask", NamedHandler::Handler(ask::handle_ask));
     registry.register("context", NamedHandler::Handler(context::handle_context));

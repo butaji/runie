@@ -79,7 +79,12 @@ impl ToolDef for ListDirTool {
                     truncated
                 )
             } else {
-                format!("Contents of {} ({} entries):\n{}", full_path.display(), names.len(), listing)
+                format!(
+                    "Contents of {} ({} entries):\n{}",
+                    full_path.display(),
+                    names.len(),
+                    listing
+                )
             }
         };
         ToolOutput {
@@ -139,7 +144,11 @@ mod tests {
             "output should name the listed path: {}",
             result.content
         );
-        assert!(result.content.contains("1 entries"), "got: {}", result.content);
+        assert!(
+            result.content.contains("1 entries"),
+            "got: {}",
+            result.content
+        );
         assert!(result.content.contains("a.txt"), "got: {}", result.content);
         std::fs::remove_dir_all(&dir).ok();
     }

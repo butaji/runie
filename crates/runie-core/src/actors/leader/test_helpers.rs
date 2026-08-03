@@ -23,8 +23,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
     use super::LeaderAgentCmd;
     use crate::actors::turn::RactorTurnActor;
     use crate::actors::{
-        RactorConfigActor, RactorPermissionActor, RactorProviderActor,
-        spawn_input_actor, spawn_io_actor, spawn_session_actor,
+        spawn_input_actor, spawn_io_actor, spawn_session_actor, RactorConfigActor, RactorPermissionActor,
+        RactorProviderActor,
     };
 
     struct NoOpAgentHandle;
@@ -87,16 +87,8 @@ pub async fn test_leader_handle() -> LeaderHandle {
     // pending placeholder, which would force every test shutdown through the
     // full global shutdown timeout.
     let agent_join: tokio::task::JoinHandle<()> = tokio::spawn(async {});
-    let all_joins = vec![
-        config_join,
-        provider_join,
-        io_join,
-        session_join,
-        permission_join,
-        turn_join,
-        input_join,
-        agent_join,
-    ];
+    let all_joins =
+        vec![config_join, provider_join, io_join, session_join, permission_join, turn_join, input_join, agent_join];
 
     // No coordinator is spawned by this minimal test harness.
     let coordinator_join = tokio::spawn(async {});

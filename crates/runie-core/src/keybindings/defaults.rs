@@ -11,7 +11,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+j".into(), "Newline".into());
     map.insert("ctrl+a".into(), "CursorStart".into());
     map.insert("ctrl+b".into(), "ToggleTasksPane".into());
-    map.insert("ctrl+f".into(), "CursorRight".into());
+    map.insert("ctrl+f".into(), "OpenBlockViewer".into());
     map.insert("ctrl+w".into(), "DeleteWord".into());
     map.insert("ctrl+k".into(), "DeleteToEnd".into());
     map.insert("ctrl+u".into(), "DeleteToStart".into());
@@ -31,6 +31,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+m".into(), "CycleModelNext".into());
     map.insert("ctrl+shift+m".into(), "CycleModelPrev".into());
     map.insert("alt+enter".into(), "FollowUp".into());
+    map.insert("ctrl+enter".into(), "SendNow".into());
     map.insert("alt+up".into(), "Dequeue".into());
     map.insert("alt+b".into(), "CursorWordLeft".into());
     map.insert("alt+f".into(), "CursorWordRight".into());

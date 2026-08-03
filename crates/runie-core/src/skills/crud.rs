@@ -89,11 +89,9 @@ pub fn delete_skill(name: &str) -> Result<PathBuf, String> {
     };
 
     if target.is_dir() {
-        std::fs::remove_dir_all(&target)
-            .map_err(|e| format!("Cannot delete {}: {e}", target.display()))?;
+        std::fs::remove_dir_all(&target).map_err(|e| format!("Cannot delete {}: {e}", target.display()))?;
     } else {
-        std::fs::remove_file(&target)
-            .map_err(|e| format!("Cannot delete {}: {e}", target.display()))?;
+        std::fs::remove_file(&target).map_err(|e| format!("Cannot delete {}: {e}", target.display()))?;
     }
     Ok(target)
 }

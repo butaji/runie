@@ -8,8 +8,8 @@ use crate::message::{
     render_ansi_styled, render_anthropic_thinking, render_data_part, render_diff_output, render_image,
     render_list_item_from_spans, render_markdown_table, render_tool_confirmation, render_web_search_call,
 };
-use runie_core::view::elements::{DiffType, ImageProtocol, WebSearchResult};
 use crate::terminal::caps::{MouseCapability, TermCaps};
+use runie_core::view::elements::{DiffType, ImageProtocol, WebSearchResult};
 
 // ─── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -140,7 +140,14 @@ mod images {
             TermCaps { unicode: false, mouse: MouseCapability::None, ..Default::default() },
         );
         let output = render_to_string(
-            render_image("base64data", "image/png", Some(40), Some(20), ImageProtocol::Kitty, 0.0),
+            render_image(
+                "base64data",
+                "image/png",
+                Some(40),
+                Some(20),
+                ImageProtocol::Kitty,
+                0.0,
+            ),
             80,
             3,
         );
@@ -148,7 +155,12 @@ mod images {
         assert!(output.contains("graphics-capable terminal"));
         crate::theme::set_current_theme_with_caps(
             "runie",
-            TermCaps { color_depth: crate::terminal::caps::ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
+            TermCaps {
+                color_depth: crate::terminal::caps::ColorDepth::Truecolor,
+                truecolor: true,
+                mouse: MouseCapability::Sgr,
+                ..Default::default()
+            },
         );
     }
 }
@@ -478,7 +490,10 @@ mod web_search {
             WebSearchResult { title: "Three".into(), url: "https://docs.rs/three".into(), snippet: "c".into() },
         ];
         let output = render_to_string(render_web_search_call("rust", &results, 0.0), 80, 20);
-        assert!(output.contains("Web Search rust (2 sites)"), "search header: {output}");
+        assert!(
+            output.contains("Web Search rust (2 sites)"),
+            "search header: {output}"
+        );
     }
 
     #[test]

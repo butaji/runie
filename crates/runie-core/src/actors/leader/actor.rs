@@ -9,10 +9,9 @@ use tokio::sync::mpsc;
 
 use crate::actors::leader::{AgentSpawnFuture, SpawnedAgent};
 use crate::actors::{
-    spawn_input_actor, spawn_io_actor, spawn_session_actor, ActorCellRef, InputHandle,
-    IoActorHandle, RactorConfigActor, RactorConfigHandle, RactorPermissionActor,
-    RactorPermissionHandle, RactorProviderActor, RactorProviderHandle, RactorTurnActor, SessionHandle,
-    LEADER_CMD_CHANNEL_CAPACITY,
+    spawn_input_actor, spawn_io_actor, spawn_session_actor, ActorCellRef, InputHandle, IoActorHandle,
+    RactorConfigActor, RactorConfigHandle, RactorPermissionActor, RactorPermissionHandle, RactorProviderActor,
+    RactorProviderHandle, RactorTurnActor, SessionHandle, LEADER_CMD_CHANNEL_CAPACITY,
 };
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
@@ -34,9 +33,7 @@ pub struct LeaderConfig {
 
 impl Default for LeaderConfig {
     fn default() -> Self {
-        Self {
-            tcp_addr: None,
-        }
+        Self { tcp_addr: None }
     }
 }
 
@@ -153,16 +150,8 @@ impl Leader {
         let SpawnedAgent { handle: agent_handle, join: agent_join, cell: agent_cell } = agent_factory
             .spawn_with_join(bus.clone(), provider_h.clone(), permission_h.clone())
             .await?;
-        let all_joins = vec![
-            config_join,
-            provider_join,
-            io_join,
-            session_join,
-            permission_join,
-            turn_join,
-            input_join,
-            agent_join,
-        ];
+        let all_joins =
+            vec![config_join, provider_join, io_join, session_join, permission_join, turn_join, input_join, agent_join];
 
         Ok(super::SpawnedHandles {
             config: config_h,

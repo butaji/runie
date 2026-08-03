@@ -173,6 +173,31 @@ fn shift_tab_navigates_backward_between_buttons() {
 }
 
 #[test]
+fn permission_number_shortcut_selects_and_submits_action() {
+    let mut state = AppState::default();
+    let mut panel = Panel::new("permission", "Permission Required")
+        .item("_Allow", ItemAction::Emit(crate::Event::Save))
+        .item("_Deny", ItemAction::Emit(crate::Event::Abort))
+        .item("_Always", ItemAction::Emit(crate::Event::NewSession));
+
+    let action = form_panel_action(&mut state, &mut panel, Event::Input('2'));
+    assert_eq!(panel.selected, 1);
+    assert!(matches!(
+        action,
+        FormAction::Submit(Some(crate::Event::Abort))
+    ));
+}
+
+#[test]
+fn numbered_input_remains_text_in_non_permission_forms() {
+    let mut state = AppState::default();
+    let mut panel = Panel::new("login-key", "Login").form_field_value("Key", "", "key", String::new());
+    let action = form_panel_action(&mut state, &mut panel, Event::Input('2'));
+    assert!(matches!(action, FormAction::KeepOpen));
+    assert_eq!(panel.form_values.get("key"), Some(&"2".to_string()));
+}
+
+#[test]
 fn tab_skips_past_form_field_without_typing() {
     let mut state = AppState::default();
     let mut panel = Panel::new("settings", "Settings")

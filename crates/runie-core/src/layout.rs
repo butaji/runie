@@ -41,7 +41,11 @@ pub fn feed_content_width_for_layout(area_width: u16, compact: bool) -> u16 {
 }
 
 pub fn feed_content_width_with_slack(area_width: u16, compact: bool, configured_slack: u8) -> u16 {
-    let optional_slack = if compact { configured_slack.saturating_sub(1) } else { configured_slack };
+    let optional_slack = if compact {
+        configured_slack.saturating_sub(1)
+    } else {
+        configured_slack
+    };
     area_width.saturating_sub(u16::from(optional_slack) + FEED_INDENT.len() as u16 + RAIL_WIDTH as u16)
 }
 
@@ -55,14 +59,22 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
 
     match element {
         Element::Spacer { .. } => 1,
-        Element::UserMessage { content, timestamp, expanded } => user_message_line_count(content, *timestamp, width, *expanded),
+        Element::UserMessage { content, timestamp, expanded } => {
+            user_message_line_count(content, *timestamp, width, *expanded)
+        }
         Element::AgentMessage { content, timestamp, .. } => agent_message_line_count(content, *timestamp, width),
         Element::SystemMessage { content, .. } => content
             .lines()
             .map(|line| word_wrap(line, width.max(1), width.max(1)).len().max(1))
             .sum::<usize>()
             .max(1),
-        Element::ContextInfo { .. } => if width < 50 { 22 } else { 17 },
+        Element::ContextInfo { .. } => {
+            if width < 50 {
+                22
+            } else {
+                17
+            }
+        }
         Element::Thinking { .. } => 1,
         Element::ThoughtMarker { content, .. } => thought_marker_line_count(content, width),
         Element::ThoughtSummary { .. } => 1,
@@ -72,9 +84,7 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::ToolRunning { .. } => 1,
         Element::ToolDone { output, .. } => tool_done_line_count(output),
         Element::ToolSummary { .. } => 1,
-        Element::ToolConfirmation { args, description, .. } => {
-            tool_confirmation_line_count(args, description)
-        }
+        Element::ToolConfirmation { args, description, .. } => tool_confirmation_line_count(args, description),
         Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
@@ -84,10 +94,12 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         }
         Element::SubagentRow { output, expanded, .. } => subagent_row_line_count(output, *expanded),
         Element::TurnComplete { .. } => 1,
-        Element::Image { .. } => 2, // Header plus terminal-protocol detail row
+        Element::Image { .. } => 2,    // Header plus terminal-protocol detail row
         Element::DataPart { .. } => 2, // Label plus formatted payload
         Element::MarkdownTable { rows, .. } => 4 + rows.len(),
-        Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
+        Element::DiffOutput { content, .. } => {
+            1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50)
+        }
         Element::WebSearchCall { results, .. } => {
             // Query line + title, snippet, and URL for each result.
             1 + results.len().min(5) * 3
@@ -96,7 +108,14 @@ pub fn element_line_count(element: &Element, width: u16) -> usize {
         Element::Workflow { .. } => 1,
         Element::BackgroundTask { .. } => 1,
         Element::Btw { answer, expanded, .. } => {
-            1 + if *expanded { answer.as_ref().map(|text| 1 + text.lines().count()).unwrap_or(0) } else { 0 }
+            1 + if *expanded {
+                answer
+                    .as_ref()
+                    .map(|text| 1 + text.lines().count())
+                    .unwrap_or(0)
+            } else {
+                0
+            }
         }
         Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
@@ -124,9 +143,7 @@ fn fallback_line_count(element: &Element) -> usize {
             }
         }
         Element::ToolSummary { .. } => 1,
-        Element::ToolConfirmation { args, description, .. } => {
-            tool_confirmation_line_count(args, description)
-        }
+        Element::ToolConfirmation { args, description, .. } => tool_confirmation_line_count(args, description),
         Element::ContextGroup { tools, collapsed, .. } => {
             if *collapsed {
                 1
@@ -139,13 +156,22 @@ fn fallback_line_count(element: &Element) -> usize {
         Element::Image { .. } => 2,
         Element::DataPart { .. } => 2,
         Element::MarkdownTable { rows, .. } => 4 + rows.len(),
-        Element::DiffOutput { content, .. } => 1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50),
+        Element::DiffOutput { content, .. } => {
+            1 + content.lines().take(50).count() + usize::from(content.lines().count() > 50)
+        }
         Element::WebSearchCall { results, .. } => 1 + results.len().min(5) * 3,
         Element::CreditLimit { .. } => 6,
         Element::Workflow { .. } => 1,
         Element::BackgroundTask { .. } => 1,
         Element::Btw { answer, expanded, .. } => {
-            1 + if *expanded { answer.as_ref().map(|text| 1 + text.lines().count()).unwrap_or(0) } else { 0 }
+            1 + if *expanded {
+                answer
+                    .as_ref()
+                    .map(|text| 1 + text.lines().count())
+                    .unwrap_or(0)
+            } else {
+                0
+            }
         }
         Element::AnsiStyled { raw_content, .. } => 1 + raw_content.lines().take(20).count(),
     }
@@ -327,7 +353,11 @@ fn anthropic_thinking_line_count(content: &str, signature: Option<&str>, redacte
     if redacted {
         lines + 1
     } else {
-        lines + content.lines().map(|line| word_wrap(line, 80, 80).len().max(1)).sum::<usize>()
+        lines
+            + content
+                .lines()
+                .map(|line| word_wrap(line, 80, 80).len().max(1))
+                .sum::<usize>()
     }
 }
 

@@ -8,5 +8,3 @@ pub const GREP_DEFAULT_LIMIT: usize = 100;
 
 /// Default maximum number of find results to return.
 pub const FIND_DEFAULT_LIMIT: usize = 100;
-
-

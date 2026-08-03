@@ -348,7 +348,6 @@ data: {"type":"invalid_request","message":"Context length exceeded."}
             .any(|e| matches!(e, ProviderEvent::Error(ModelError::ContextLength { .. }))));
     }
 
-    #[test]
     // ── classify_error tests ──────────────────────────────────────────────────
 
     // Regression (task 22): `rate_limit_error` was misspelled as `"rate_limit"`.

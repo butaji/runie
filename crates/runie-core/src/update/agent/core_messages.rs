@@ -266,7 +266,10 @@ impl AppState {
         self.reset_agent_state();
 
         let lower = message.to_ascii_lowercase();
-        if lower.contains("context too large") || lower.contains("context window") || lower.contains("max_prompt_length") {
+        if lower.contains("context too large")
+            || lower.contains("context window")
+            || lower.contains("max_prompt_length")
+        {
             let mut event = ChatMessage::new(
                 Role::System,
                 "This conversation is too large for the model's context window. Use /new to start a new session.",
@@ -304,7 +307,12 @@ impl AppState {
             let mut card = ChatMessage::new(Role::System, heading);
             card.id = format!("credit-limit.{}", id);
             card.provider = self.config_mut().current_provider.clone();
-            if let Some(idx) = self.session().messages.iter().position(|m| m.role == Role::TurnComplete) {
+            if let Some(idx) = self
+                .session()
+                .messages
+                .iter()
+                .position(|m| m.role == Role::TurnComplete)
+            {
                 card.timestamp = self.session_mut().messages[idx].timestamp;
                 self.session_mut().messages.insert(idx, card);
             } else {

@@ -2,9 +2,9 @@
 //!
 //! No ractor dependency. Actor is a tokio task with mpsc channel.
 
-use std::path::PathBuf;
 #[cfg(feature = "git")]
 use std::path::Path;
+use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 use tracing::instrument;
@@ -260,7 +260,11 @@ impl IoActor {
 /// Spawn an IoActor and return (handle, stop_cell, join_handle).
 pub fn spawn_io_actor(
     bus: EventBus<Event>,
-) -> (IoActorHandle, crate::actors::StopCell, tokio::task::JoinHandle<()>) {
+) -> (
+    IoActorHandle,
+    crate::actors::StopCell,
+    tokio::task::JoinHandle<()>,
+) {
     let (tx, rx) = mpsc::unbounded_channel();
     let state = IoActorState { bus };
     let mut actor = IoActor { rx, state };
@@ -271,8 +275,6 @@ pub fn spawn_io_actor(
 
     (IoActorHandle::new(tx), crate::actors::StopCell, join)
 }
-
-
 
 // ── Sync helpers ────────────────────────────────────────────────────────────
 
@@ -308,7 +310,10 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
     let repo = git2::Repository::discover(start).ok()?;
 
     // Current branch name
-    let branch = repo.head().ok().and_then(|h| h.shorthand().map(String::from));
+    let branch = repo
+        .head()
+        .ok()
+        .and_then(|h| h.shorthand().map(String::from));
 
     // Origin remote URL → repo name
     let repo_name = repo
@@ -325,7 +330,10 @@ fn detect_git_info_sync(start: &Path) -> Option<GitInfo> {
     let is_worktree = repo.is_worktree();
 
     let worktree_source = if is_worktree {
-        repo.path().parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string())
+        repo.path()
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.to_string_lossy().to_string())
     } else {
         None
     };

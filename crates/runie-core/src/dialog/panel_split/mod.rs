@@ -35,9 +35,17 @@ pub struct Panel {
     pub title: String,
     pub items: Vec<PanelItem>,
     pub selected: usize,
+    pub inline_help: std::collections::HashMap<usize, String>,
+    pub inline_help_expanded: bool,
     /// Optional filter text when the panel is filterable.
     pub filter: String,
     pub filterable: bool,
+    /// Vim-style picker input mode. Searchable panels open in input mode;
+    /// when disabled, printable keys navigate the surrounding screen instead
+    /// of changing the filter until `i` re-enters input mode.
+    pub vim_filter_mode: bool,
+    /// Whether this panel opts into the Vim picker state machine.
+    pub vim_picker_enabled: bool,
     /// When true, activating an item (Enter) does NOT close the dialog.
     /// Useful for previews (e.g. theme picker) and live toggles.
     pub keep_open_on_activate: bool,

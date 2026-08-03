@@ -94,8 +94,16 @@ impl AppState {
 
     pub(crate) fn delete_to_start(&mut self) {
         if self.input().cursor_pos > 0 {
+            let substantial = self.input().input.len() >= 20;
             try_send_input(self, crate::actors::InputMsg::DeleteToStart);
             self.handle_at_trigger();
+            if substantial {
+                let (tip_state, seen_counts) = {
+                    let view = self.view_mut();
+                    (&mut view.ephemeral_tip, &mut view.tip_seen_counts)
+                };
+                tip_state.show(crate::model::tips::undo_tip(), seen_counts);
+            }
             self.view_mut().dirty = true;
         } else {
             self.input_mut().input_flash = 3;
@@ -193,7 +201,16 @@ impl AppState {
     }
 
     fn open_command_palette_from_input(&mut self) {
-        let initial_filter = self.input().input.clone();
+        // The trigger slash is a routing key, not composer content. Remove it
+        // from both projections before opening the shared palette so it cannot
+        // remain as a visible or stale actor echo behind the overlay.
+        let initial_filter = self.input().input.trim_start_matches('/').to_owned();
+        self.input_mut().input.clear();
+        self.input_mut().cursor_pos = 0;
+        self.input_mut().chips.clear();
+        if let Some(handles) = self.actor_handles() {
+            let _ = handles.input.send_message(crate::actors::InputMsg::Clear);
+        }
         crate::update::dialog::open_command_palette_with_filter(self, &initial_filter);
         // Opened from the chat-input autocomplete: ephemeral, returns to chat.
         self.command_palette_from_input = true;

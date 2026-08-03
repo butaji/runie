@@ -293,7 +293,10 @@ fn reduced_motion_freezes_animation_frame_while_working() {
 
     state.tick_animation();
 
-    assert_eq!(state.view.animation_frame, before, "reduced motion must freeze animation");
+    assert_eq!(
+        state.view.animation_frame, before,
+        "reduced motion must freeze animation"
+    );
 }
 
 #[test]

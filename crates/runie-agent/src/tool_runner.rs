@@ -19,7 +19,6 @@ use runie_core::tool::{
     is_builtin_tool, is_cacheable_tool, CacheEntry, ToolContext, ToolOutput, ToolResultCache, ToolStatus,
 };
 
-
 /// Execute a single parsed tool call, respecting the permission gate and tool-result cache.
 ///
 /// If `cache` is `Some`, read-only tool results are cached by
@@ -148,8 +147,8 @@ fn cached_output(tool_name: &str, args: serde_json::Value, entry: runie_core::to
 pub fn tool_result_message(tool_call: &ParsedToolCall, output: &ToolOutput) -> ChatMessage {
     let id = tool_call.id.clone().unwrap_or_default();
     let content = cap_tool_result_content(&output.content);
-    let mut message = ChatMessage::tool_result(format!("{} result:\n{}", tool_call.name, content))
-        .with_tool_call_id(id.clone());
+    let mut message =
+        ChatMessage::tool_result(format!("{} result:\n{}", tool_call.name, content)).with_tool_call_id(id.clone());
     message.parts.push(Part::tool_result(id, content));
     message
 }
@@ -292,8 +291,8 @@ pub(crate) fn fire_skill_after_hook(skills: Option<&SkillRegistry>, tool_call: &
 
 #[cfg(test)]
 mod tests {
-    use tokio::time::timeout;
     use super::*;
+    use tokio::time::timeout;
 
     #[tokio::test]
     async fn tool_timeout_returns_error() {
@@ -387,11 +386,8 @@ mod tests {
 
     #[test]
     fn tool_result_message_passes_small_output_through() {
-        let tool_call = ParsedToolCall {
-            name: "bash".to_string(),
-            args: serde_json::json!({}),
-            id: Some("call_3".to_string()),
-        };
+        let tool_call =
+            ParsedToolCall { name: "bash".to_string(), args: serde_json::json!({}), id: Some("call_3".to_string()) };
         let output = ToolOutput {
             tool_name: "bash".to_string(),
             tool_args: serde_json::json!({}),

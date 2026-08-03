@@ -40,7 +40,7 @@ impl PacedRenderer {
 
         // Look for a word boundary (whitespace or punctuation) within `step + 10` chars.
         let lookahead = (step + 10).min(self.received.len() - self.displayed);
-        let end_pos = self.displayed + lookahead;
+        let end_pos = self.char_boundary_at_or_before(self.displayed + lookahead);
         let search_slice = &self.received[self.displayed..end_pos];
 
         let boundary = search_slice
@@ -49,12 +49,19 @@ impl PacedRenderer {
 
         let target = match boundary {
             Some(pos) if pos <= self.displayed + step => pos,
-            _ => (self.displayed + step).min(self.received.len()),
+            _ => self.char_boundary_at_or_before((self.displayed + step).min(self.received.len())),
         };
 
         let result = self.received[self.displayed..target].to_string();
         self.displayed = target;
         result
+    }
+
+    fn char_boundary_at_or_before(&self, mut pos: usize) -> usize {
+        while pos > self.displayed && !self.received.is_char_boundary(pos) {
+            pos -= 1;
+        }
+        pos
     }
 
     /// Flush all remaining received text to displayed.
@@ -228,5 +235,29 @@ mod tests {
             "displayed should contain text from pushes: {}",
             displayed
         );
+    }
+
+    #[test]
+    fn paced_renderer_preserves_utf8_boundaries() {
+        let mut renderer = PacedRenderer::new();
+        let text = "日本語テスト 😀 done";
+        renderer.push(text);
+        let mut output = String::new();
+        for _ in 0..32 {
+            let chunk = renderer.tick();
+            assert!(renderer
+                .displayed()
+                .is_char_boundary(renderer.displayed().len()));
+            output.push_str(&chunk);
+            if renderer.is_caught_up() {
+                break;
+            }
+        }
+        assert!(
+            renderer.is_caught_up(),
+            "UTF-8 input should eventually catch up"
+        );
+        assert_eq!(output, text);
+        assert_eq!(renderer.displayed(), text);
     }
 }

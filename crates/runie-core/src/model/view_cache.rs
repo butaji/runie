@@ -14,6 +14,7 @@ use crate::view::elements::{Element, Post};
 #[allow(dead_code, reason = "cached_gen written by view_cache(); read by UiActor after decouple")]
 pub(crate) struct ViewCache {
     pub cached_gen: u64,
+    pub content_width: u16,
     pub elements: Arc<[Element]>,
     pub posts: Arc<[Post]>,
     pub line_counts: Arc<[usize]>,

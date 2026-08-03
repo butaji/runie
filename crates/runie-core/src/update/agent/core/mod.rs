@@ -169,6 +169,7 @@ impl AppState {
             role: Role::Tool,
             timestamp: now(),
             id: tool_id,
+            tool_call_id: Some(name.clone()),
             parts: vec![Part::Text { content: tool_running(&name) }],
             ..Default::default()
         });
@@ -211,6 +212,10 @@ impl AppState {
 
     pub(crate) fn append_response(&mut self, id: String, content: String) {
         self.track_response_tokens(&content);
+        // `Response` is the complete-response/test path (streaming uses the
+        // think-tag state machine). Keep provider markup out of the feed even
+        // when this path is rendered before turn finalization.
+        let content = crate::update::think_tag::strip_thinking_tags(&content);
         if let Some(idx) = self.find_cached_assistant_index(&id) {
             self.append_to_message(idx, &content);
             return;

@@ -125,7 +125,9 @@ fn run_find(pattern: &str, path: &Path, limit: usize) -> String {
         results.sort();
         let mut out = results.join("\n");
         if results.len() >= limit {
-            out.push_str(&format!("\n... (showing first {limit} matches; narrow the pattern)"));
+            out.push_str(&format!(
+                "\n... (showing first {limit} matches; narrow the pattern)"
+            ));
         }
         out
     }
@@ -217,7 +219,9 @@ fn run_find_simple(pattern: &str, path: &Path, limit: usize) -> String {
         results.sort();
         let mut out = results.join("\n");
         if results.len() >= limit {
-            out.push_str(&format!("\n... (showing first {limit} matches; narrow the pattern)"));
+            out.push_str(&format!(
+                "\n... (showing first {limit} matches; narrow the pattern)"
+            ));
         }
         out
     }
@@ -297,7 +301,12 @@ mod tests {
 
         let result = run_find("*.txt", temp_dir.path(), 3);
         let lines: Vec<&str> = result.lines().collect();
-        assert_eq!(lines.len(), 4, "3 matches + truncation note, got: {}", result);
+        assert_eq!(
+            lines.len(),
+            4,
+            "3 matches + truncation note, got: {}",
+            result
+        );
         assert!(
             lines[3].contains("showing first 3 matches"),
             "truncation note missing: {}",

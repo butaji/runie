@@ -73,10 +73,8 @@ fn nav_enter_expands_collapsed_native_reasoning_thought() {
         thought.content()
     );
 
-    // Collapse the feed: the thought renders as a one-line summary that
-    // hides the reasoning body.
-    state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed);
+    // Grok starts finished reasoning collapsed; no global toggle is needed to
+    // establish that initial presentation.
     let collapsed = render_with_size(&mut state, WIDTH, 24);
     assert!(
         !squashed(&collapsed).contains("directorylisting"),
@@ -194,8 +192,6 @@ fn duration_only_thought_renders_without_expand_affordance() {
 
     // Even in the collapsed view, a thought with no body must still render
     // its summary line — and never an expand affordance.
-    state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed);
     let rendered = render_with_size(&mut state, WIDTH, 24);
     let thought_line = rendered_lines(&rendered)
         .into_iter()

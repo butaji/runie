@@ -182,16 +182,21 @@ fn dialog_back_closes_file_picker_and_restores_prefix() {
 
     // Open the file picker — this saves the backup
     let entries = vec![
-        ("foo.rs".into(), false, crate::Event::InsertAtRef("foo.rs".into())),
-        ("bar.rs".into(), false, crate::Event::InsertAtRef("bar.rs".into())),
+        (
+            "foo.rs".into(),
+            false,
+            crate::Event::InsertAtRef("foo.rs".into()),
+        ),
+        (
+            "bar.rs".into(),
+            false,
+            crate::Event::InsertAtRef("bar.rs".into()),
+        ),
     ];
     let stack = file_picker(entries);
     *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
 
-    assert!(
-        state.open_dialog().is_some(),
-        "file picker should be open"
-    );
+    assert!(state.open_dialog().is_some(), "file picker should be open");
     assert!(
         state.input.file_picker_backup.is_some(),
         "picker backup should be set"
@@ -244,7 +249,11 @@ fn enter_on_file_picker_inserts_path() {
     state.input.input = "read @".to_string();
     state.input.cursor_pos = 6;
 
-    let entries = vec![("foo.rs".into(), false, crate::Event::InsertAtRef("foo.rs".into()))];
+    let entries = vec![(
+        "foo.rs".into(),
+        false,
+        crate::Event::InsertAtRef("foo.rs".into()),
+    )];
     let stack = file_picker(entries);
     *state.open_dialog_mut() = Some(DialogState::Active { kind: DialogKind::Generic, panels: stack });
 

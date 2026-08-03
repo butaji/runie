@@ -213,6 +213,10 @@ fn run_logout_command(state: &mut AppState, provider: &str) {
 }
 
 fn run_palette_command(state: &mut AppState, name: &str, args: &str) {
+    if name == "inline-edit-confirm" {
+        state.resubmit_inline_edit();
+        return;
+    }
     let result = if let Some(cmd) = state.registry().get(name) {
         let cmd_name = cmd.name.clone();
         cmd.flow().clone().exec(state, &cmd_name, args)

@@ -36,8 +36,17 @@ pub(crate) fn fill_snapshot_input(s: &mut Snapshot, state: &AppState) {
     s.input_display = display;
     s.cursor_display = display_cursor;
     s.hint_text = state.hint_text();
+    s.pending_hint = state
+        .view()
+        .vim_nav_pending
+        .then(|| ("Esc".to_owned(), "enter feed navigation".to_owned()));
     s.placeholder = input.placeholder.clone();
-    s.ghost_completion = input.ghost_completion.clone();
+    let mut prompt_suggestion = state.view().prompt_suggestion.clone();
+    prompt_suggestion.refresh_enabled_from_env();
+    s.ghost_completion = input
+        .ghost_completion
+        .clone()
+        .or_else(|| prompt_suggestion.ghost_for(&input.input).map(str::to_owned));
     s.input_scroll = input.input_scroll;
     s.path_suggestions = completion.path_suggestions.clone();
     s.path_selected = completion.path_selected;
@@ -60,8 +69,12 @@ pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
     // the `⇣{Nk}` status arm; 0 before the first tokens of the turn arrive.
     s.current_turn_tokens = agent.turn_tokens_out as u64;
     // Phase timer: elapsed since the current activity started. Prefer the
-    // tool-start time while a tool runs, else the turn start (thinking/responding).
-    s.activity_elapsed_secs = state.tool_elapsed_secs().or(state.turn_elapsed_secs());
+    // tool-start time, then the thinking-start time, and finally the turn
+    // start while waiting for a provider phase that has no narrower marker.
+    s.activity_elapsed_secs = state
+        .tool_elapsed_secs()
+        .or(state.thinking_elapsed_secs())
+        .or(state.turn_elapsed_secs());
     s.turn_cancelling = agent.turn_cancelling;
     s.turn_activity = if agent.turn_cancelling {
         crate::snapshot::TurnActivityKind::Cancelling
@@ -78,6 +91,7 @@ pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
     } else {
         crate::snapshot::TurnActivityKind::Working
     };
+    s.terminal_focused = view.terminal_focused;
     s.queue_count = agent.message_queue.len() + agent.request_queue.len();
     // Queue pane projection (message queue only — request_queue entries are
     // pending *runs*, not user-visible queued prompts).
@@ -86,7 +100,12 @@ pub(crate) fn fill_snapshot_agent(s: &mut Snapshot, state: &AppState) {
         .iter()
         .enumerate()
         .map(|(i, m)| {
-            let lines: Vec<&str> = m.content.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+            let lines: Vec<&str> = m
+                .content
+                .lines()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .collect();
             crate::snapshot::QueuedMessageView {
                 position: i + 1,
                 first_line: lines.first().unwrap_or(&"").to_string(),
@@ -158,7 +177,12 @@ pub(crate) fn fill_snapshot_meta(s: &mut Snapshot, state: &AppState) {
         && state.permission_request_opt().is_none()
         && state.view().terminal_rows > crate::model::tips::SHORT_TERMINAL_ROWS
     {
-        state.view().ephemeral_tip.slot.as_ref().map(|t| t.spans.clone())
+        state
+            .view()
+            .ephemeral_tip
+            .slot
+            .as_ref()
+            .map(|t| t.spans.clone())
     } else {
         None
     };

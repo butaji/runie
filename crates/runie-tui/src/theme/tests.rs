@@ -10,7 +10,9 @@ use crate::theme::glyph::{
     SCROLLBAR_THUMB, SCROLLBAR_TRACK,
 };
 use crate::theme::loader::{default_theme, minimal_fallback_theme, validate_theme};
-use crate::theme::{current_theme, current_theme_name, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES};
+use crate::theme::{
+    current_theme, current_theme_name, set_current_theme, set_current_theme_with_caps, test_lock, BUILTIN_THEMES,
+};
 
 #[test]
 fn theme_cache_returns_same_instance() {
@@ -71,7 +73,10 @@ fn monochrome_caps_suppress_theme_colors_but_keep_rendering_available() {
     assert!(crate::theme::is_monochrome());
     assert_eq!(crate::theme::color_accent(), ratatui::style::Color::Reset);
     assert_eq!(crate::theme::color_bg(), ratatui::style::Color::Reset);
-    assert_eq!(crate::theme::style_agent().fg, Some(ratatui::style::Color::Reset));
+    assert_eq!(
+        crate::theme::style_agent().fg,
+        Some(ratatui::style::Color::Reset)
+    );
     set_current_theme_with_caps("runie", truecolor_caps());
 }
 
@@ -101,7 +106,11 @@ fn quantization_is_idempotent() {
 #[test]
 fn builtin_theme_names_load_from_opaline() {
     let _lock = test_lock();
-    for name in BUILTIN_THEMES.iter().copied().filter(|name| !matches!(*name, "auto" | "system")) {
+    for name in BUILTIN_THEMES
+        .iter()
+        .copied()
+        .filter(|name| !matches!(*name, "auto" | "system"))
+    {
         set_current_theme(name);
         let theme = current_theme();
         assert!(
@@ -140,7 +149,11 @@ fn every_builtin_theme_supports_runie_feed_tokens() {
         "rail.error",
         "rail.thinking",
     ];
-    for name in BUILTIN_THEMES.iter().copied().filter(|name| *name != "auto" && *name != "system") {
+    for name in BUILTIN_THEMES
+        .iter()
+        .copied()
+        .filter(|name| *name != "auto" && *name != "system")
+    {
         set_current_theme(name);
         let theme = current_theme();
         for token in required {
@@ -164,18 +177,48 @@ fn every_builtin_theme_passes_renderer_contract() {
 fn every_builtin_theme_has_stable_roles_at_each_terminal_depth() {
     let _lock = test_lock();
     let caps = [
-        TermCaps { color_depth: crate::terminal::caps::ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
-        TermCaps { color_depth: crate::terminal::caps::ColorDepth::ANSI256, mouse: MouseCapability::Legacy, ..Default::default() },
-        TermCaps { color_depth: crate::terminal::caps::ColorDepth::ANSI16, mouse: MouseCapability::None, ..Default::default() },
+        TermCaps {
+            color_depth: crate::terminal::caps::ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
+        TermCaps {
+            color_depth: crate::terminal::caps::ColorDepth::ANSI256,
+            mouse: MouseCapability::Legacy,
+            ..Default::default()
+        },
+        TermCaps {
+            color_depth: crate::terminal::caps::ColorDepth::ANSI16,
+            mouse: MouseCapability::None,
+            ..Default::default()
+        },
         TermCaps { color_depth: crate::terminal::caps::ColorDepth::None, unicode: false, ..Default::default() },
     ];
-    let required = ["text.primary", "text.dim", "border.unfocused", "border.focused", "bg.selection", "rail.running", "rail.success", "rail.error"];
-    for name in BUILTIN_THEMES.iter().copied().filter(|name| *name != "auto" && *name != "system") {
+    let required = [
+        "text.primary",
+        "text.dim",
+        "border.unfocused",
+        "border.focused",
+        "bg.selection",
+        "rail.running",
+        "rail.success",
+        "rail.error",
+    ];
+    for name in BUILTIN_THEMES
+        .iter()
+        .copied()
+        .filter(|name| *name != "auto" && *name != "system")
+    {
         for cap in caps {
             set_current_theme_with_caps(name, cap);
             let theme = current_theme();
             for role in required {
-                assert!(theme.try_color(role).is_some(), "{name} missing {role} at {:?}", cap.color_depth);
+                assert!(
+                    theme.try_color(role).is_some(),
+                    "{name} missing {role} at {:?}",
+                    cap.color_depth
+                );
             }
         }
     }
@@ -299,7 +342,10 @@ fn glyph_indicator_constants_are_correct() {
 /// Verifies that scrollbar glyphs have correct values.
 #[test]
 fn glyph_scrollbar_constants_are_correct() {
-    assert_eq!(SCROLLBAR_TRACK, "│", "scrollbar track should be visible vertical bar");
+    assert_eq!(
+        SCROLLBAR_TRACK, "│",
+        "scrollbar track should be visible vertical bar"
+    );
     assert_eq!(SCROLLBAR_THUMB, "▐");
 }
 
@@ -339,7 +385,9 @@ fn glyph_download_is_correct() {
 fn thinking_line_matches_grok_waiting_row() {
     let line = crate::theme::thinking_line(0.4);
     assert_eq!(line, "Thinking…");
-    assert!(!runie_core::labels::BRAILLE_EIGHT.iter().any(|g| line.contains(*g)));
+    assert!(!runie_core::labels::BRAILLE_EIGHT
+        .iter()
+        .any(|g| line.contains(*g)));
 }
 
 #[test]

@@ -29,12 +29,12 @@ use futures::future::join_all;
 use tokio::sync::Semaphore;
 use tokio::task::JoinError;
 
-use chrono::DateTime;
 use crate::primitives::dag::{CycleError, Dag};
 use crate::{
-    model_for, AgentTrace, Context, Pattern, PatternConfig, PatternOutput, TerminationReason,
-    TraceEvent, TraceSender, WorkerRunner, WorkerTask,
+    model_for, AgentTrace, Context, Pattern, PatternConfig, PatternOutput, TerminationReason, TraceEvent, TraceSender,
+    WorkerRunner, WorkerTask,
 };
+use chrono::DateTime;
 
 /// Per-worker output truncation in the synthesis prompt (~4000 chars).
 const SYNTHESIS_OUTPUT_CHARS: usize = 4000;
@@ -214,7 +214,12 @@ fn aborted() -> TerminationReason {
 }
 
 fn finish(state: &SwarmState, result: String, termination: TerminationReason) -> PatternOutput {
-    PatternOutput { result, termination, traces: state.traces.lock().unwrap().clone(), circuit_breaker_tripped: state.is_tripped() }
+    PatternOutput {
+        result,
+        termination,
+        traces: state.traces.lock().unwrap().clone(),
+        circuit_breaker_tripped: state.is_tripped(),
+    }
 }
 
 /// Shared mutable state across all agents of one swarm execution.
@@ -440,7 +445,8 @@ async fn run_worker(
     description: Option<String>,
 ) -> Result<(String, String), String> {
     let worker_id = format!("worker-{round}-{index}");
-    env.worker_tracker.spawn(worker_id.clone(), task_text.clone());
+    env.worker_tracker
+        .spawn(worker_id.clone(), task_text.clone());
     let permit = env
         .semaphore
         .acquire()
@@ -932,8 +938,7 @@ fn build_dag_task_prompt(task_text: &str, deps: &[usize], tasks: &[String], outp
 pub const DEFAULT_ORPHAN_TIMEOUT_SECS: u64 = 300;
 
 /// Status of a swarm worker over its lifetime.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum SwarmWorkerStatus {
     /// Worker is actively running.
     #[default]
@@ -949,7 +954,6 @@ pub enum SwarmWorkerStatus {
     /// coordinator tracks it.
     Orphaned,
 }
-
 
 /// One tracked swarm worker with metadata.
 #[derive(Debug, Clone)]
@@ -1036,11 +1040,7 @@ pub struct OrphanedWorkerTracker {
 
 impl Clone for OrphanedWorkerTracker {
     fn clone(&self) -> Self {
-        Self {
-            workers: std::sync::Mutex::new(
-                self.workers.lock().unwrap().clone()
-            ),
-        }
+        Self { workers: std::sync::Mutex::new(self.workers.lock().unwrap().clone()) }
     }
 }
 
@@ -1152,9 +1152,10 @@ impl OrphanedWorkerTracker {
     /// Returns the count of workers cleaned up.
     pub fn cleanup_orphaned_workers(&self) -> usize {
         let prev_len = self.workers.lock().unwrap().len();
-        self.workers.lock().unwrap().retain(|w| {
-            w.status != SwarmWorkerStatus::Orphaned && w.status != SwarmWorkerStatus::Cancelled
-        });
+        self.workers
+            .lock()
+            .unwrap()
+            .retain(|w| w.status != SwarmWorkerStatus::Orphaned && w.status != SwarmWorkerStatus::Cancelled);
         prev_len - self.workers.lock().unwrap().len()
     }
 
@@ -1175,9 +1176,7 @@ impl OrphanedWorkerTracker {
             .iter()
             .filter(|w| w.status == SwarmWorkerStatus::Orphaned || w.status == SwarmWorkerStatus::Cancelled)
             .count();
-        guard.retain(|w| {
-            w.status != SwarmWorkerStatus::Orphaned && w.status != SwarmWorkerStatus::Cancelled
-        });
+        guard.retain(|w| w.status != SwarmWorkerStatus::Orphaned && w.status != SwarmWorkerStatus::Cancelled);
         let after = Self::counts_from_slice(&guard);
 
         let delta = StatusCounts {
@@ -1212,7 +1211,9 @@ impl OrphanedWorkerTracker {
 
     /// Returns workers filtered by status.
     pub fn workers_by_status(&self, status: &SwarmWorkerStatus) -> Vec<SwarmWorker> {
-        self.workers.lock().unwrap()
+        self.workers
+            .lock()
+            .unwrap()
             .iter()
             .filter(|w| w.status == *status)
             .cloned()
@@ -1237,7 +1238,11 @@ impl OrphanedWorkerTracker {
 
     /// Check if any workers are orphaned.
     pub fn has_orphans(&self) -> bool {
-        self.workers.lock().unwrap().iter().any(|w| w.status == SwarmWorkerStatus::Orphaned)
+        self.workers
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|w| w.status == SwarmWorkerStatus::Orphaned)
     }
 
     /// Get orphaned workers.
@@ -1298,14 +1303,15 @@ mod tests {
             })
             .collect();
 
-        let total_removed: StatusCounts = results
-            .into_iter()
-            .map(|r| r.join().unwrap().0)
-            .fold(StatusCounts::default(), |mut acc, delta| {
-                acc.cancelled += delta.cancelled;
-                acc.orphaned += delta.orphaned;
-                acc
-            });
+        let total_removed: StatusCounts =
+            results
+                .into_iter()
+                .map(|r| r.join().unwrap().0)
+                .fold(StatusCounts::default(), |mut acc, delta| {
+                    acc.cancelled += delta.cancelled;
+                    acc.orphaned += delta.orphaned;
+                    acc
+                });
 
         assert_eq!(
             total_removed.cancelled, 2,
@@ -1323,21 +1329,25 @@ mod tests {
     fn concurrent_reconcile_and_cleanup_no_underflow() {
         let tracker = OrphanedWorkerTracker::new();
 
-        tracker.spawn_with_timeout("w0".to_string(), "task".to_string(), std::time::Duration::ZERO);
-        tracker.spawn_with_timeout("w1".to_string(), "task".to_string(), std::time::Duration::ZERO);
+        tracker.spawn_with_timeout(
+            "w0".to_string(),
+            "task".to_string(),
+            std::time::Duration::ZERO,
+        );
+        tracker.spawn_with_timeout(
+            "w1".to_string(),
+            "task".to_string(),
+            std::time::Duration::ZERO,
+        );
 
         // Give them a chance to become orphaned (timeout=0).
         std::thread::sleep(std::time::Duration::from_millis(10));
 
         let t1 = tracker.clone();
-        let reconcile_thread = std::thread::spawn(move || {
-            t1.reconcile_orphans_by_max_age(std::time::Duration::ZERO)
-        });
+        let reconcile_thread = std::thread::spawn(move || t1.reconcile_orphans_by_max_age(std::time::Duration::ZERO));
 
         let t2 = tracker.clone();
-        let cleanup_thread = std::thread::spawn(move || {
-            t2.cleanup_with_counts()
-        });
+        let cleanup_thread = std::thread::spawn(move || t2.cleanup_with_counts());
 
         let orphaned_count = reconcile_thread.join().unwrap();
         let (_removed, _after) = cleanup_thread.join().unwrap();

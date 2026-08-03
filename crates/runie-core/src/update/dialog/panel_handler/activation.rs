@@ -50,7 +50,17 @@ pub fn try_activate_panel(state: &mut AppState, stack: &mut PanelStack) -> Activ
 /// Handle a panel item action. Returns `true` if the dialog was closed.
 pub fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut PanelStack) -> bool {
     match action {
-        ItemAction::Push(_) | ItemAction::Pop => {
+        ItemAction::Push(id) => {
+            if let Some(panel) = crate::commands::dsl::handlers::system::hotkey_detail_panel(&id) {
+                stack.push(panel);
+            } else if let Some(panel) = crate::commands::dsl::handlers::system::inline_edit_panel(&id) {
+                stack.push(panel);
+            } else {
+                stack.pop();
+            }
+            false
+        }
+        ItemAction::Pop => {
             stack.pop();
             false
         }

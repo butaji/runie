@@ -95,6 +95,8 @@ const FENCE_LANGS: &[&str] = &[
     "json",
     "markdown",
     "md",
+    "mermaid",
+    "mmd",
     "plaintext",
     "py",
     "python",

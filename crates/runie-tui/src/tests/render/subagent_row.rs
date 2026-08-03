@@ -64,8 +64,14 @@ fn running_row_has_stable_grok_text_without_inline_chrome() {
         output.contains("Subagent running: “find callers” — Waiting for response… (echo)"),
         "running row format: {output}"
     );
-    assert!(!output.contains("❙"), "rail belongs to shared feed chrome: {output}");
-    assert!(!output.contains("◆"), "bullet belongs to shared feed chrome: {output}");
+    assert!(
+        !output.contains("❙"),
+        "rail belongs to shared feed chrome: {output}"
+    );
+    assert!(
+        !output.contains("◆"),
+        "bullet belongs to shared feed chrome: {output}"
+    );
 }
 
 // ─── Completed ──────────────────────────────────────────────────────────────
@@ -84,7 +90,10 @@ fn completed_row_has_stable_text_without_inline_chrome() {
         output.contains("Subagent completed in 2.5s: “find callers”"),
         "completed row format: {output}"
     );
-    assert!(!output.contains("◆"), "bullet belongs to shared feed chrome: {output}");
+    assert!(
+        !output.contains("◆"),
+        "bullet belongs to shared feed chrome: {output}"
+    );
 }
 
 // ─── Failed ─────────────────────────────────────────────────────────────────
@@ -97,18 +106,30 @@ fn failed_row_has_stable_text_without_inline_chrome() {
         output.contains("Subagent failed in 1.0s: “find callers”"),
         "failed row format: {output}"
     );
-    assert!(!output.contains("◆"), "bullet belongs to shared feed chrome: {output}");
+    assert!(
+        !output.contains("◆"),
+        "bullet belongs to shared feed chrome: {output}"
+    );
 }
 
 #[test]
 fn cancelled_row_has_stable_grok_text_without_inline_chrome() {
-    let elem = subagent_row(PatternWorkerStatus::Cancelled, None, Some(3200), "cancelled", false);
+    let elem = subagent_row(
+        PatternWorkerStatus::Cancelled,
+        None,
+        Some(3200),
+        "cancelled",
+        false,
+    );
     let output = render_to_string(render_subagent_row(&elem, 0), 100, 3);
     assert!(
         output.contains("Subagent cancelled in 3.2s: “find callers”"),
         "cancelled row format: {output}"
     );
-    assert!(!output.contains("◆"), "bullet belongs to shared feed chrome: {output}");
+    assert!(
+        !output.contains("◆"),
+        "bullet belongs to shared feed chrome: {output}"
+    );
 }
 
 // ─── Expanded body ──────────────────────────────────────────────────────────

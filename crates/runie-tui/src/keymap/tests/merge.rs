@@ -40,5 +40,3 @@ fn keymap_forward_paste() {
     let result = crate::keymap::convert_event(&event, &bindings);
     assert!(result.is_some(), "Paste events should be forwarded");
 }
-
-

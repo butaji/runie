@@ -19,7 +19,9 @@ async fn test_agent_loop_with_tui_gate_allows_read_only_tool() {
     let (events, emit) = capture_events();
     let gate = crate::PermissionGate::new(std::sync::Arc::new(AutoAllowSink));
 
-    run_agent_turn(&provider, &cmd, emit, 5, gate).await.unwrap();
+    run_agent_turn(&provider, &cmd, emit, 5, gate)
+        .await
+        .unwrap();
 
     let tool_starts = count_events(&events, |e| matches!(e, Event::ToolStart { .. }));
     let tool_ends = count_events(&events, |e| matches!(e, Event::ToolEnd { .. }));

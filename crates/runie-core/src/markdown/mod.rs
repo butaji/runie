@@ -91,7 +91,19 @@ pub use CodeBlock as Block;
 /// Parse markdown into a list of blocks with inline spans extracted.
 /// Single pass — both block structure and inline styling are computed together.
 pub fn parse_markdown(text: &str) -> Vec<CodeBlock> {
-    let (parse_text, trailing) = parsing::split_unclosed_fence(text);
+    // Decode entities before pulldown parses HTML, but escape `<` so a
+    // decoded generic such as `vec&lt;T&gt;` remains literal text instead of
+    // being classified as an HTML tag and discarded.
+    let normalized = text
+        .replace("&lt;", "\\<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&mdash;", "—")
+        .replace("&ndash;", "–")
+        .replace("&nbsp;", "\u{a0}");
+    let (parse_text, trailing) = parsing::split_unclosed_fence(&normalized);
     let mut blocks = parsing::extract_blocks(parse_text);
     if let Some(t) = trailing {
         let inlines = parsing::parse_inline_spans(t);

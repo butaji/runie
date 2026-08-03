@@ -205,27 +205,27 @@ fn expand_then_collapse_then_expand_same_state() {
         ..Default::default()
     });
 
-    // Toggle 1: collapse all
+    // Toggle 1: expand all from Grok's default-collapsed presentation.
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
-    // Toggle 2: expand all
+    // Toggle 2: return to collapsed presentation.
     state.update(Event::ToggleExpand);
     assert!(!state.view.all_collapsed);
 
-    // Toggle 3: collapse all again
+    // Toggle 3: expand all again.
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
 
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
-    let summary = feed.elements.iter().find_map(|e| match e {
-        Element::ThoughtSummary { .. } => Some(()),
+    let marker = feed.elements.iter().find_map(|e| match e {
+        Element::ThoughtMarker { .. } => Some(()),
         _ => None,
     });
     assert!(
-        summary.is_some(),
-        "After 3 toggles thought should be collapsed"
+        marker.is_some(),
+        "After 3 toggles thought should be expanded"
     );
 }
 
@@ -309,9 +309,6 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     add_thought_and_tool(&mut state);
     state.ensure_fresh();
 
-    state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed);
-
     state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         parts: vec![Part::Text { content: "Done".into() }],
@@ -321,7 +318,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     });
     state.refresh_after_message_change();
 
-    verify_collapsed_elements(&state);
+    verify_default_compact_elements(&state);
 }
 
 fn add_thought_and_tool(state: &mut AppState) {
@@ -341,7 +338,7 @@ fn add_thought_and_tool(state: &mut AppState) {
     });
 }
 
-fn verify_collapsed_elements(state: &AppState) {
+fn verify_default_compact_elements(state: &AppState) {
     let feed = LazyCache::feed(state);
     let elements: Vec<_> = feed
         .elements
@@ -362,9 +359,12 @@ fn verify_collapsed_elements(state: &AppState) {
         "Thought should be collapsed: {:?}",
         elements
     );
+    // Grok keeps finished reasoning compact by default, while ordinary tool
+    // output remains available in its completed row until the feed-wide
+    // expansion state is explicitly changed.
     assert!(
-        elements.contains(&"XS"),
-        "Tool should be collapsed: {:?}",
+        elements.contains(&"XD"),
+        "Tool should remain a completed row: {:?}",
         elements
     );
     assert!(

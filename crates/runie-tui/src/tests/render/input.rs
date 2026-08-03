@@ -1,6 +1,6 @@
 use super::*;
-use crate::tests::connect_model;
 use crate::terminal::caps::{ColorDepth, MouseCapability, TermCaps};
+use crate::tests::connect_model;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::Event;
@@ -9,7 +9,15 @@ use runie_core::Event;
 fn input_chevron_is_orange_when_token_held() {
     let _lock = crate::theme::test_lock();
     // Set up theme with true color to ensure styles are applied
-    crate::theme::set_current_theme_with_caps("runie", TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() });
+    crate::theme::set_current_theme_with_caps(
+        "runie",
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
+    );
     let mut state = AppState::default();
     connect_model(&mut state);
     let backend = TestBackend::new(60, 20);
@@ -33,7 +41,15 @@ fn input_chevron_is_orange_when_token_held() {
 fn input_chevron_is_gray_when_token_released() {
     let _lock = crate::theme::test_lock();
     // Set up theme with true color to ensure styles are applied
-    crate::theme::set_current_theme_with_caps("runie", TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() });
+    crate::theme::set_current_theme_with_caps(
+        "runie",
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
+    );
     let mut state = AppState::default();
     connect_model(&mut state);
     state.update(Event::ToggleCommandPalette);
@@ -105,7 +121,15 @@ fn app_background_is_theme_bg_color() {
 fn input_cursor_visible_when_empty() {
     let _lock = crate::theme::test_lock();
     // Set up theme with true color to ensure styles are applied
-    crate::theme::set_current_theme_with_caps("runie", TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() });
+    crate::theme::set_current_theme_with_caps(
+        "runie",
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
+    );
     let mut state = AppState::default();
     connect_model(&mut state);
     let backend = TestBackend::new(60, 20);
@@ -153,7 +177,15 @@ fn input_cursor_hidden_when_token_released() {
 fn input_cursor_is_orange_when_token_held() {
     let _lock = crate::theme::test_lock();
     // Set up theme with true color to ensure styles are applied
-    crate::theme::set_current_theme_with_caps("runie", TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() });
+    crate::theme::set_current_theme_with_caps(
+        "runie",
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
+    );
     let mut state = AppState::default();
     connect_model(&mut state);
     state.input.input = "hello".to_string();

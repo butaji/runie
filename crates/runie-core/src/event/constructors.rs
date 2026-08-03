@@ -5,38 +5,94 @@ use crate::Event;
 
 impl Event {
     // ── Unit variants ─────────────────────────────────────────────────────────
-    pub fn backspace() -> Self { Event::Backspace }
-    pub fn newline() -> Self { Event::Newline }
-    pub fn submit() -> Self { Event::Submit }
-    pub fn scroll_up() -> Self { Event::Up }
-    pub fn scroll_down() -> Self { Event::Down }
-    pub fn page_up() -> Self { Event::PageUp }
-    pub fn page_down() -> Self { Event::PageDown }
-    pub fn go_to_top() -> Self { Event::GoToTop }
-    pub fn go_to_bottom() -> Self { Event::GoToBottom }
-    pub fn quit() -> Self { Event::Quit }
-    pub fn force_quit() -> Self { Event::ForceQuit }
-    pub fn reset() -> Self { Event::Reset }
-    pub fn abort() -> Self { Event::Abort }
-    pub fn palette_select() -> Self { Event::PaletteSelect }
-    pub fn palette_close() -> Self { Event::PaletteClose }
-    pub fn palette_down() -> Self { Event::PaletteDown }
-    pub fn settings_close() -> Self { Event::SettingsClose }
-    pub fn show_diagnostics() -> Self { Event::ShowDiagnostics }
-    pub fn toggle_command_palette() -> Self { Event::ToggleCommandPalette }
-    pub fn dialog_back() -> Self { Event::DialogBack }
+    pub fn backspace() -> Self {
+        Event::Backspace
+    }
+    pub fn newline() -> Self {
+        Event::Newline
+    }
+    pub fn submit() -> Self {
+        Event::Submit
+    }
+    pub fn scroll_up() -> Self {
+        Event::Up
+    }
+    pub fn scroll_down() -> Self {
+        Event::Down
+    }
+    pub fn page_up() -> Self {
+        Event::PageUp
+    }
+    pub fn page_down() -> Self {
+        Event::PageDown
+    }
+    pub fn go_to_top() -> Self {
+        Event::GoToTop
+    }
+    pub fn go_to_bottom() -> Self {
+        Event::GoToBottom
+    }
+    pub fn quit() -> Self {
+        Event::Quit
+    }
+    pub fn force_quit() -> Self {
+        Event::ForceQuit
+    }
+    pub fn reset() -> Self {
+        Event::Reset
+    }
+    pub fn abort() -> Self {
+        Event::Abort
+    }
+    pub fn palette_select() -> Self {
+        Event::PaletteSelect
+    }
+    pub fn palette_close() -> Self {
+        Event::PaletteClose
+    }
+    pub fn palette_down() -> Self {
+        Event::PaletteDown
+    }
+    pub fn settings_close() -> Self {
+        Event::SettingsClose
+    }
+    pub fn show_diagnostics() -> Self {
+        Event::ShowDiagnostics
+    }
+    pub fn toggle_command_palette() -> Self {
+        Event::ToggleCommandPalette
+    }
+    pub fn dialog_back() -> Self {
+        Event::DialogBack
+    }
 
     // ── Tuple variants ────────────────────────────────────────────────────────
-    pub fn input(c: char) -> Self { Event::Input(c) }
-    pub fn palette_filter(c: char) -> Self { Event::PaletteFilter(c) }
-    pub fn paste(s: String) -> Self { Event::Paste(s) }
-    pub fn set_thinking_level(level: ThinkingLevel) -> Self { Event::SetThinkingLevel(level) }
+    pub fn input(c: char) -> Self {
+        Event::Input(c)
+    }
+    pub fn palette_filter(c: char) -> Self {
+        Event::PaletteFilter(c)
+    }
+    pub fn paste(s: String) -> Self {
+        Event::Paste(s)
+    }
+    pub fn set_thinking_level(level: ThinkingLevel) -> Self {
+        Event::SetThinkingLevel(level)
+    }
 
     // ── Struct variants ────────────────────────────────────────────────────────
-    pub fn switch_theme(name: String) -> Self { Event::SwitchTheme { name } }
-    pub fn agent_thinking(id: String) -> Self { Event::Thinking { id } }
-    pub fn agent_thought_done(id: String) -> Self { Event::ThoughtDone { id } }
-    pub fn agent_done(id: String) -> Self { Event::Done { id } }
+    pub fn switch_theme(name: String) -> Self {
+        Event::SwitchTheme { name }
+    }
+    pub fn agent_thinking(id: String) -> Self {
+        Event::Thinking { id }
+    }
+    pub fn agent_thought_done(id: String) -> Self {
+        Event::ThoughtDone { id }
+    }
+    pub fn agent_done(id: String) -> Self {
+        Event::Done { id }
+    }
 
     pub fn switch_model(provider: String, model: String) -> Self {
         Event::SwitchModel { provider, model, explicit: false }

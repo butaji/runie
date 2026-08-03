@@ -34,10 +34,7 @@ impl From<ProviderEvent> for Event {
             }
             PE::TurnEnd | PE::AgentEnd => Event::Done { id: String::new() },
             PE::Finish { reason: _ } => Event::Done { id: String::new() },
-            PE::TurnComplete { duration_secs } => Event::TurnComplete {
-                id: String::new(),
-                duration_secs,
-            },
+            PE::TurnComplete { duration_secs } => Event::TurnComplete { id: String::new(), duration_secs },
             PE::Error(e) => Event::Error { id: String::new(), message: e.to_string() },
             PE::Usage { .. } => usage_event(),
         }

@@ -102,14 +102,10 @@ fn extract_var_names(template: &str) -> Vec<String> {
     let bytes = template.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'{' && i + 1 < bytes.len()
-            && (bytes[i + 1].is_ascii_alphanumeric() || bytes[i + 1] == b'_')
-        {
+        if bytes[i] == b'{' && i + 1 < bytes.len() && (bytes[i + 1].is_ascii_alphanumeric() || bytes[i + 1] == b'_') {
             let start = i + 1;
             let mut end = start;
-            while end < bytes.len()
-                && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_')
-            {
+            while end < bytes.len() && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_') {
                 end += 1;
             }
             if end < bytes.len() && bytes[end] == b'}' {
@@ -328,7 +324,10 @@ mod tests {
     #[test]
     fn extract_var_names_simple() {
         assert_eq!(extract_var_names("hi {name} end"), vec!["name"]);
-        assert_eq!(extract_var_names("hi {name}, {value} end"), vec!["name", "value"]);
+        assert_eq!(
+            extract_var_names("hi {name}, {value} end"),
+            vec!["name", "value"]
+        );
         assert_eq!(extract_var_names("no vars here"), Vec::<String>::new());
     }
 

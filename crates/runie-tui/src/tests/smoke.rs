@@ -165,7 +165,9 @@ fn status_shows_provider_model() {
 fn status_shows_thinking_badge_when_active() {
     let mut state = AppState::default();
     connect_model(&mut state);
-    state.update(Event::SetThinkingLevel(runie_core::model::ThinkingLevel::Medium));
+    state.update(Event::SetThinkingLevel(
+        runie_core::model::ThinkingLevel::Medium,
+    ));
     assert_eq!(
         state.snapshot().thinking_level,
         runie_core::model::ThinkingLevel::Medium,

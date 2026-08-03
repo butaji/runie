@@ -42,24 +42,17 @@ fn streamed_reasoning_lands_in_thought_message() {
 }
 
 #[test]
-fn collapsed_feed_shows_expandable_thought_summary() {
+fn global_expand_reveals_thought_body() {
     let mut state = AppState::default();
     state.view.all_collapsed = true;
     drive_reasoning_turn(&mut state, "Let me think about this.", "The answer");
 
-    let has_expandable = feed_elements(&state)
+    let has_body = feed_elements(&state)
         .iter()
-        .any(|e| matches!(e, Element::ThoughtSummary { expandable: true, .. }));
+        .any(|e| matches!(e, Element::ThoughtMarker { content, .. } if content.contains("Let me think about this.")));
     assert!(
-        has_expandable,
-        "collapsed feed must show an EXPANDABLE thought summary when reasoning exists"
-    );
-    let has_dead_summary = feed_elements(&state)
-        .iter()
-        .any(|e| matches!(e, Element::ThoughtSummary { expandable: false, .. }));
-    assert!(
-        !has_dead_summary,
-        "a reasoning turn must not render a duration-only dead summary"
+        has_body,
+        "global expand must reveal the thought body when reasoning exists"
     );
 }
 

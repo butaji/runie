@@ -87,13 +87,27 @@ pub fn inject_mock_file_entries(state: &mut AppState) {
         if let Some(panel) = panels.current_mut() {
             // header("3 files") is already set by open_at_file_picker_all.
             let mock_entries = vec![
-                ("Cargo.toml".to_string(), false, Event::InsertAtRef("Cargo.toml".to_string())),
-                ("src/".to_string(), true, Event::InsertAtRef("src/".to_string())),
-                ("README.md".to_string(), false, Event::InsertAtRef("README.md".to_string())),
+                (
+                    "Cargo.toml".to_string(),
+                    false,
+                    Event::InsertAtRef("Cargo.toml".to_string()),
+                ),
+                (
+                    "src/".to_string(),
+                    true,
+                    Event::InsertAtRef("src/".to_string()),
+                ),
+                (
+                    "README.md".to_string(),
+                    false,
+                    Event::InsertAtRef("README.md".to_string()),
+                ),
             ];
             for (name, is_dir, evt) in mock_entries {
                 let label = if is_dir { name } else { name };
-                panel.items.push(PanelItem::Action { label, action: ItemAction::Emit(evt) });
+                panel
+                    .items
+                    .push(PanelItem::Action { label, action: ItemAction::Emit(evt) });
             }
             // Keep the fixture deterministic regardless of the real project
             // entries discovered before the mock rows are appended.

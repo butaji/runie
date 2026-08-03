@@ -53,6 +53,14 @@ fn is_press_or_repeat(key: &KeyEvent) -> bool {
 }
 
 fn convert_key_event(key: &KeyEvent, user_bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+    // Croskey formats punctuation control chords inconsistently across
+    // terminals (`ctrl-;` vs `ctrl+;`). Keep the queue-pane binding stable at
+    // the crossterm boundary so the documented Grok-compatible chord works
+    // in both the portable PTY and native tmux backends.
+    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char(';') {
+        return Some(CoreEvent::ToggleQueuePane);
+    }
+
     // Special handling for Enter variants.
     //
     // In a PTY (test harness, tmux), Enter sends '\r' (CR). crossterm parses
@@ -187,6 +195,13 @@ mod tests {
         let user_bindings = HashMap::new();
         let result = convert_key_event(&key, &user_bindings);
         assert_eq!(result, Some(CoreEvent::Quit));
+    }
+
+    #[test]
+    fn ctrl_semicolon_maps_to_queue_pane_toggle() {
+        let key = KeyEvent::new(KeyCode::Char(';'), KeyModifiers::CONTROL);
+        let result = convert_key_event(&key, &HashMap::new());
+        assert_eq!(result, Some(CoreEvent::ToggleQueuePane));
     }
 
     #[test]

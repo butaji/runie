@@ -204,6 +204,7 @@ impl AppState {
             posts: feed.posts.into(),
             line_counts: line_counts.into(),
             total_lines,
+            content_width: width,
             cached_gen: self.view().message_gen,
         }
     }
@@ -218,6 +219,12 @@ impl AppState {
         let prev_total_lines = self.view().total_lines;
         let was_streaming = self.agent_state().streaming;
         let prev_scroll = self.view().scroll;
+        let prev_width = self
+            .view()
+            .cached_feed
+            .as_ref()
+            .map(|cache| cache.content_width)
+            .unwrap_or(self.view().last_content_width);
         let prev_selected_post = self.view().selected_post;
         let prev_all_collapsed = self.view().all_collapsed;
         let prev_expanded_posts = self.view().expanded_posts.clone();
@@ -265,9 +272,11 @@ impl AppState {
         // Folding/expanding changes the line count before the user's viewport.
         // Preserve the same element and intra-element row when possible so the
         // visible anchor does not jump during Ctrl+O or Enter expansion.
-        let fold_state_changed = prev_all_collapsed != self.view().all_collapsed
-            || prev_expanded_posts != self.view().expanded_posts;
-        if !was_streaming && prev_scroll > 0 && fold_state_changed && prev_total_lines != total_lines {
+        let fold_state_changed =
+            prev_all_collapsed != self.view().all_collapsed || prev_expanded_posts != self.view().expanded_posts;
+        let width_changed = prev_width != self.view().last_content_width;
+        if !was_streaming && prev_scroll > 0 && (fold_state_changed || width_changed) && prev_total_lines != total_lines
+        {
             if let Some((element, intra_row)) = prev_anchor {
                 let new_start = self.view().line_counts[..element.min(self.view().line_counts.len())]
                     .iter()
@@ -339,6 +348,11 @@ impl AppState {
             posts: cache.posts,
             selected_post: view_values.selected_post,
             last_visible_height: view_values.last_visible_height,
+            terminal_rows: self.view().terminal_rows,
+            // Render-only effective compact derivation; auto-compact is never
+            // written back to the user's persisted setting.
+            compact_layout: self.config().compact_mode
+                || (self.view().terminal_rows > 0 && self.view().terminal_rows <= 20),
             ..Default::default()
         }
     }

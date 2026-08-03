@@ -87,6 +87,9 @@ pub struct Snapshot {
     /// Active ephemeral tip spans (grok parity) — None when no tip is
     /// renderable (none active, occluded, or terminal too short).
     pub ephemeral_tip: Option<Vec<crate::model::tips::TipSpan>>,
+    /// Pending double-press action shown in the shortcuts row as
+    /// `Esc: press again to ...` (Grok shortcuts-bar parity).
+    pub pending_hint: Option<(String, String)>,
     /// Inline slash-command dropdown rows (grok parity) — None when closed.
     pub slash_dropdown: Option<crate::model::slash::SlashDropdown>,
     pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
@@ -113,6 +116,8 @@ pub struct Snapshot {
     /// True while a cancellation of the active turn is in flight. The status
     /// line shows `Cancelling…` (accent_error) and hides `[stop]`.
     pub turn_cancelling: bool,
+    /// Terminal focus state used by notification/title lifecycle code.
+    pub terminal_focused: bool,
     pub provider: String,
     pub model: String,
     /// Active theme name for the render actor

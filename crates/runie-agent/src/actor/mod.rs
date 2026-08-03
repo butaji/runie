@@ -138,7 +138,9 @@ impl RactorAgentActor {
     ) {
         tracing::debug!(
             "run_turn: content={:?} provider={} model={}",
-            command.content, command.provider, command.model
+            command.content,
+            command.provider,
+            command.model
         );
         if Self::reject_if_turn_in_flight(state, &command) {
             tracing::debug!("turn rejected (in-flight)");
@@ -184,7 +186,9 @@ impl RactorAgentActor {
         };
         tracing::debug!(
             "build_provider_turn: key={} model={} is_mock={}",
-            provider_key, model, runie_core::provider::is_mock_enabled()
+            provider_key,
+            model,
+            runie_core::provider::is_mock_enabled()
         );
 
         let built = match provider.build(provider_key, model).await {

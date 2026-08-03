@@ -1,8 +1,7 @@
 //! Tests for canonical tool execution via `runie_core::tool`.
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
-    WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindTool, GrepTool, ListDirTool, ReadFileTool, WriteFileTool,
 };
 use runie_core::tool::{parse_input, ToolContext, ToolDef, ToolOutput, ToolStatus};
 

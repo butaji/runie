@@ -24,11 +24,11 @@ pub use headless::{run_headless_cli, run_headless_turn, HeadlessCliOptions, Head
 pub use runie_core::permissions::PermissionGate;
 pub use runie_core::tool::ToolOutput;
 pub use runie_core::tool::{has_tool_calls, parse_tool_calls, ParsedToolCall};
-pub use turn::{run_agent_turn, run_agent_turn_with_skills};
 pub use subagent_coordinator::{
-    CancelOutcome, ProgressSnapshot, SubagentCoordinator, SubagentHandle, SubagentMetadata, 
-    SubagentRequest, SubagentState, SubagentTracker,
+    CancelOutcome, ProgressSnapshot, SubagentCoordinator, SubagentHandle, SubagentMetadata, SubagentRequest,
+    SubagentState, SubagentTracker,
 };
+pub use turn::{run_agent_turn, run_agent_turn_with_skills};
 
 #[derive(Debug, Clone)]
 pub struct AgentCommand {

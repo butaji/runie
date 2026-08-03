@@ -172,7 +172,9 @@ fn collapsed_thought_renders_one_line_summary() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.view.all_collapsed = true;
+    // The historical field is true for the feed-wide expanded state; the
+    // default false state is the collapsed Grok-style presentation.
+    state.view.all_collapsed = false;
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ThoughtSummary { content, .. } => Some(content.as_str()),

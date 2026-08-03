@@ -125,7 +125,9 @@ pub fn build_provider(
 ) -> Result<BuiltProvider, ProviderError> {
     tracing::debug!(
         "[MOCK_DEBUG] build_provider called key={} model={} is_mock_enabled={}",
-        key, model, is_mock_enabled()
+        key,
+        model,
+        is_mock_enabled()
     );
     #[cfg(feature = "mock")]
     {
@@ -190,16 +192,23 @@ fn build_mock_provider(key: &str, model: &str) -> BuiltProvider {
         .map(|d| std::path::PathBuf::from(d).join("mock_provider_debug.txt"))
         .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/mock_provider_debug.txt"));
     #[cfg(test)]
-    let _ = std::fs::write(&debug_path, format!(
-        "key={} model={} mock={} script={} script_file={}\n",
-        key, model,
-        std::env::var("RUNIE_MOCK").unwrap_or_default(),
-        std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
-        std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
-    ));
+    let _ = std::fs::write(
+        &debug_path,
+        format!(
+            "key={} model={} mock={} script={} script_file={}\n",
+            key,
+            model,
+            std::env::var("RUNIE_MOCK").unwrap_or_default(),
+            std::env::var("RUNIE_MOCK_SCRIPT")
+                .map(|_| "set")
+                .unwrap_or("unset"),
+            std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
+        ),
+    );
     tracing::debug!(
         "[MOCK_DEBUG] build_mock_provider key={} model={}",
-        key, model
+        key,
+        model
     );
 
     let base = if std::env::var_os("RUNIE_MOCK_DELAY").is_some() {

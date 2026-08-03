@@ -82,6 +82,52 @@ fn strip_markdown_markers(text: &str) -> (String, Vec<(Range<usize>, String)>) {
     (result, link_ranges)
 }
 
+/// Decode the HTML entities commonly emitted by model Markdown. Decoding
+/// before Markdown parsing is important: otherwise `&lt;T&gt;` becomes
+/// `<T>` only after the parser has already classified it as an HTML tag and
+/// dropped it, especially inside table cells.
+fn decode_html_entities(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find('&') {
+        out.push_str(&rest[..start]);
+        let Some(end) = rest[start..].find(';') else {
+            out.push_str(&rest[start..]);
+            return out;
+        };
+        let entity = &rest[start + 1..start + end];
+        let decoded = match entity {
+            "lt" => Some('<'),
+            "gt" => Some('>'),
+            "amp" => Some('&'),
+            "quot" => Some('"'),
+            "apos" => Some('\''),
+            "mdash" => Some('—'),
+            "ndash" => Some('–'),
+            "nbsp" => Some('\u{a0}'),
+            _ => entity
+                .strip_prefix("#x")
+                .and_then(|n| u32::from_str_radix(n, 16).ok())
+                .and_then(char::from_u32)
+                .or_else(|| {
+                    entity
+                        .strip_prefix("#")
+                        .and_then(|n| n.parse::<u32>().ok())
+                        .and_then(char::from_u32)
+                }),
+        };
+        if let Some(ch) = decoded {
+            out.push(ch);
+            rest = &rest[start + end + 1..];
+        } else {
+            out.push_str(&rest[start..start + end + 1]);
+            rest = &rest[start + end + 1..];
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 /// Parse markdown text and style it using `tui_markdown`, then apply a base
 /// foreground color to all spans.
 ///
@@ -98,7 +144,7 @@ pub fn apply_color_to_inlines(text: &str, base_color: Color) -> Vec<MdSpan> {
     // Keep inline code backticks so tui_markdown detects them and applies
     // its default background styling; fix_inline_code_spans converts bg→bold.
     // Keep markdown links so tui_markdown parses them correctly.
-    let text = text;
+    let text = decode_html_entities(text).replace('<', "\\<");
 
     // Strip heading markers (e.g. "# ", "## ") from the text string before
     // tui_markdown parses it. This avoids the problem where merge_adjacent_spans
@@ -141,11 +187,14 @@ pub fn apply_color_to_inlines(text: &str, base_color: Color) -> Vec<MdSpan> {
 /// This mirrors Grok's `url_scan.rs` approach: scan the source text for bare URLs,
 /// then project those positions into the already-parsed spans.
 fn apply_osc8_from_plain_urls(spans: Vec<MdSpan>, text: &str) -> Vec<MdSpan> {
+    if !crate::theme::hyperlinks_supported() {
+        return spans;
+    }
     // Find all plain URLs in the stripped text.
     let mut finder = LinkFinder::new();
     finder.kinds(&[linkify::LinkKind::Url]);
 
-    let links: Vec<(Range<usize>, String)> = finder
+    let mut links: Vec<(Range<usize>, String)> = finder
         .links(text)
         .map(|link| {
             let start = link.start();
@@ -155,13 +204,58 @@ fn apply_osc8_from_plain_urls(spans: Vec<MdSpan>, text: &str) -> Vec<MdSpan> {
         })
         .collect();
 
+    // Grok also linkifies quoted absolute file paths as one region.  The
+    // generic URL scanner intentionally stops at whitespace, so handle the
+    // common quoted-path form explicitly and percent-encode the OSC-8 target.
+    links.extend(quoted_absolute_file_paths(text));
+    links.sort_by_key(|(range, _)| range.start);
+
     if links.is_empty() {
         return spans;
     }
 
     apply_osc8_hyperlinks(spans, links)
 }
+
+fn quoted_absolute_file_paths(text: &str) -> Vec<(Range<usize>, String)> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'"' || i + 1 >= bytes.len() || bytes[i + 1] != b'/' {
+            i += 1;
+            continue;
+        }
+        let start = i + 1;
+        let Some(end_rel) = text[start..].find('"') else { break };
+        let end = start + end_rel;
+        if end > start {
+            let path = &text[start..end];
+            out.push((
+                start..end,
+                format!("file://{}", percent_encode_file_path(path)),
+            ));
+        }
+        i = end + 1;
+    }
+    out
+}
+
+fn percent_encode_file_path(path: &str) -> String {
+    let mut out = String::with_capacity(path.len());
+    for byte in path.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~' | b'/') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
 fn apply_osc8_hyperlinks(spans: Vec<MdSpan>, links: Vec<(std::ops::Range<usize>, String)>) -> Vec<MdSpan> {
+    if !crate::theme::hyperlinks_supported() {
+        return spans;
+    }
     if links.is_empty() {
         return spans;
     }
@@ -183,6 +277,32 @@ fn apply_osc8_hyperlinks(spans: Vec<MdSpan>, links: Vec<(std::ops::Range<usize>,
         }
 
         if overlapping.is_empty() {
+            // Markdown parsing removes emphasis/link syntax before the spans
+            // reach this projection step, so the source byte offset can be
+            // ahead of the rendered offset (for example `**See** URL`).
+            // Recover that common case by matching the URL in the rendered
+            // span itself; this keeps OSC-8 hyperlinks stable after styled
+            // prefixes.
+            if let Some((url_start, url_end, url)) = links.iter().find_map(|(_, url)| {
+                content
+                    .find(url.as_str())
+                    .map(|start| (start, start + url.len(), url))
+            }) {
+                let mut linked = Vec::with_capacity(3);
+                linked.push(MdSpan { content: content[..url_start].to_string(), style: span.style });
+                linked.push(MdSpan {
+                    content: format!(
+                        "\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\",
+                        url,
+                        &content[url_start..url_end]
+                    ),
+                    style: span.style.underlined(),
+                });
+                linked.push(MdSpan { content: content[url_end..].to_string(), style: span.style });
+                result.extend(linked.into_iter().filter(|s| !s.content.is_empty()));
+                global_offset += content.len();
+                continue;
+            }
             global_offset += content.len();
             result.push(span);
             continue;
@@ -199,10 +319,7 @@ fn apply_osc8_hyperlinks(spans: Vec<MdSpan>, links: Vec<(std::ops::Range<usize>,
 
             if rel_start > current_pos {
                 // Text before the link.
-                result.push(MdSpan {
-                    content: content[current_pos..rel_start].to_string(),
-                    style: span.style,
-                });
+                result.push(MdSpan { content: content[current_pos..rel_start].to_string(), style: span.style });
             }
 
             // The link text with OSC-8 hyperlink.
@@ -212,20 +329,14 @@ fn apply_osc8_hyperlinks(spans: Vec<MdSpan>, links: Vec<(std::ops::Range<usize>,
             let osc8_end = "\x1b]8;;\x1b\\";
             let linked_content = format!("{}{}{}", osc8_start, link_text, osc8_end);
 
-            result.push(MdSpan {
-                content: linked_content,
-                style: span.style.underlined(),
-            });
+            result.push(MdSpan { content: linked_content, style: span.style.underlined() });
 
             current_pos = rel_end;
         }
 
         // Remaining text after last link.
         if current_pos < content.len() {
-            result.push(MdSpan {
-                content: content[current_pos..].to_string(),
-                style: span.style,
-            });
+            result.push(MdSpan { content: content[current_pos..].to_string(), style: span.style });
         }
         global_offset += content.len();
     }
@@ -456,11 +567,12 @@ mod tests {
 
     #[test]
     fn plain_urls_are_hyperlinked_after_prior_styled_spans() {
-        let spans = apply_color_to_inlines(
-            "**See** https://example.com/docs for details",
-            Color::White,
-        );
-        let rendered = spans.iter().map(|span| span.content.as_str()).collect::<String>();
+        let _lock = crate::theme::test_lock();
+        let spans = apply_color_to_inlines("**See** https://example.com/docs for details", Color::White);
+        let rendered = spans
+            .iter()
+            .map(|span| span.content.as_str())
+            .collect::<String>();
         assert!(rendered.contains("\x1b]8;;https://example.com/docs\x1b\\"));
         assert!(rendered.contains("https://example.com/docs"));
         assert!(rendered.contains("\x1b]8;;\x1b\\"));
@@ -482,7 +594,8 @@ mod tests {
                 span.style
             );
             assert_eq!(
-                span.style.fg, Some(teal),
+                span.style.fg,
+                Some(teal),
                 "H1 span should have teal color, got: {:?}",
                 span.style.fg
             );
@@ -510,7 +623,8 @@ mod tests {
                 span.style
             );
             assert_eq!(
-                span.style.fg, Some(teal),
+                span.style.fg,
+                Some(teal),
                 "Span should have teal color through md_to_spans"
             );
         }
@@ -544,5 +658,14 @@ mod tests {
                 span.content
             );
         }
+    }
+
+    #[test]
+    fn quoted_file_path_keeps_space_in_display_and_encodes_osc8_target() {
+        let text = r#"Open "/Users/alice/Demo App.app"."#;
+        let links = quoted_absolute_file_paths(text);
+        assert_eq!(links.len(), 1);
+        assert_eq!(&text[links[0].0.clone()], "/Users/alice/Demo App.app");
+        assert_eq!(links[0].1, "file:///Users/alice/Demo%20App.app");
     }
 }

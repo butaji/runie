@@ -33,7 +33,6 @@ pub enum GoalPhase {
     Failed,
 }
 
-
 /// Goal status (why the goal is where it is).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -71,7 +70,6 @@ impl GoalStatus {
         )
     }
 }
-
 
 /// Subagent role in goal execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -215,18 +213,11 @@ impl Default for GoalTracker {
 impl GoalTracker {
     /// Create a new goal tracker.
     pub fn new() -> Self {
-        Self {
-            state: RwLock::new(None),
-            notify: Arc::new(Notify::new()),
-        }
+        Self { state: RwLock::new(None), notify: Arc::new(Notify::new()) }
     }
 
     /// Create a new goal.
-    pub async fn create_goal(
-        &self,
-        objective: String,
-        token_budget: Option<u64>,
-    ) -> GoalState {
+    pub async fn create_goal(&self, objective: String, token_budget: Option<u64>) -> GoalState {
         let goal_id = uuid::Uuid::new_v4().to_string();
         let mut goal = GoalState::new(goal_id, objective, token_budget);
 
@@ -470,7 +461,9 @@ mod tests {
     async fn create_and_complete_goal() {
         let tracker = GoalTracker::new();
 
-        let goal = tracker.create_goal("Implement feature X".to_string(), Some(10000)).await;
+        let goal = tracker
+            .create_goal("Implement feature X".to_string(), Some(10000))
+            .await;
         assert_eq!(goal.phase, GoalPhase::Planning);
         assert_eq!(goal.objective, "Implement feature X");
         assert!(goal.checkpoints.len() == 3);
@@ -492,7 +485,9 @@ mod tests {
         tracker.create_goal("Test goal".to_string(), None).await;
         tracker.set_phase(GoalPhase::Executing).await;
 
-        tracker.pause(GoalStatus::UserPaused, Some("User requested".to_string())).await;
+        tracker
+            .pause(GoalStatus::UserPaused, Some("User requested".to_string()))
+            .await;
         let state = tracker.get_state().await.unwrap();
         assert!(state.status.is_paused());
 

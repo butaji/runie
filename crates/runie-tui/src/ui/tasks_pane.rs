@@ -240,7 +240,13 @@ fn render_dispatch_paused_overlay(f: &mut Frame, x: u16, y: u16, content_width: 
 
     let spans = vec![
         Span::raw(" ".repeat(padding as usize)),
-        Span::styled(text, Style::default().fg(warning_color).bg(bg).add_modifier(ratatui::style::Modifier::BOLD)),
+        Span::styled(
+            text,
+            Style::default()
+                .fg(warning_color)
+                .bg(bg)
+                .add_modifier(ratatui::style::Modifier::BOLD),
+        ),
         Span::raw(" ".repeat(padding as usize)),
     ];
 

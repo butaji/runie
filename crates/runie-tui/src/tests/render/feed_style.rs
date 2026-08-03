@@ -27,7 +27,12 @@ fn dark_theme() -> std::sync::MutexGuard<'static, ()> {
     let guard = crate::theme::test_lock();
     crate::theme::set_current_theme_with_caps(
         "runie",
-        TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
     );
     guard
 }
@@ -205,7 +210,10 @@ fn thought_summary_is_dim_bold_thought_without_affordance() {
     );
 
     let row = find_row(&buf, "Thought for").expect("thought summary row");
-    assert!(!row_text(&buf, row).contains('◆'), "completed thinking has no embedded bullet");
+    assert!(
+        !row_text(&buf, row).contains('◆'),
+        "completed thinking has no embedded bullet"
+    );
 
     let t_col = col_of(&row_text(&buf, row), "Thought").expect("Thought word");
     assert!(is_bold(&buf, t_col, row), "the word 'Thought' must be bold");
@@ -278,7 +286,10 @@ fn tool_done_post_uses_shared_diamond_bold_name_no_duration() {
     );
 
     let diamond = find_col(&buf, row, "◆").expect("tool diamond");
-    assert_eq!(diamond, 3, "tool glyph must sit after the rail and feed indent");
+    assert_eq!(
+        diamond, 3,
+        "tool glyph must sit after the rail and feed indent"
+    );
     assert_eq!(
         buf[(diamond, row)].style().fg,
         Some(crate::theme::color_rail_success()),
@@ -314,7 +325,10 @@ fn tool_output_lines_are_dim_and_indented() {
     let buf = draw(&mut state, 60, 20);
     let row = find_row(&buf, "file1").expect("tool output row");
     let x = find_col(&buf, row, "f").expect("output text");
-    assert_eq!(x, 3, "tool output must align after the shared accent column");
+    assert_eq!(
+        x, 3,
+        "tool output must align after the shared accent column"
+    );
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),
@@ -389,7 +403,10 @@ fn turn_completed_line_is_dim_with_trailing_period() {
         "turn line must end with a period: {text:?}"
     );
     let x = find_col(&buf, row, "W").expect("turn text");
-    assert_eq!(x, 2, "turn-complete lines use the feed indent without a rail");
+    assert_eq!(
+        x, 2,
+        "turn-complete lines use the feed indent without a rail"
+    );
     assert_eq!(
         buf[(x, row)].style().fg,
         Some(FEED_DIM),
@@ -405,7 +422,12 @@ fn light_theme() -> std::sync::MutexGuard<'static, ()> {
     let guard = crate::theme::test_lock();
     crate::theme::set_current_theme_with_caps(
         "catppuccin-latte",
-        TermCaps { color_depth: ColorDepth::Truecolor, truecolor: true, mouse: MouseCapability::Sgr, ..Default::default() },
+        TermCaps {
+            color_depth: ColorDepth::Truecolor,
+            truecolor: true,
+            mouse: MouseCapability::Sgr,
+            ..Default::default()
+        },
     );
     guard
 }

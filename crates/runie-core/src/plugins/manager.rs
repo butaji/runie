@@ -9,27 +9,17 @@ pub struct PluginManager {
 
 impl PluginManager {
     pub fn new() -> Self {
-        Self {
-            registry: PluginRegistry::new(),
-            discovery: PluginDiscovery::new(),
-        }
+        Self { registry: PluginRegistry::new(), discovery: PluginDiscovery::new() }
     }
 
     pub fn with_discovery(discovery: PluginDiscovery) -> Self {
-        Self {
-            registry: PluginRegistry::new(),
-            discovery,
-        }
+        Self { registry: PluginRegistry::new(), discovery }
     }
 
     pub fn discover(&mut self) -> anyhow::Result<()> {
         let discovered = self.discovery.discover();
         for dp in discovered {
-            let plugin = LoadedPlugin {
-                manifest: dp.manifest,
-                root: dp.root,
-                enabled: true,
-            };
+            let plugin = LoadedPlugin { manifest: dp.manifest, root: dp.root, enabled: true };
             self.registry.register(plugin);
         }
         Ok(())
@@ -45,11 +35,7 @@ impl PluginManager {
             anyhow::bail!("no manifest.json found in plugin source");
         }
         let manifest = crate::plugins::manifest::PluginManifest::load(&manifest_path)?;
-        let plugin = LoadedPlugin {
-            manifest,
-            root: path,
-            enabled: true,
-        };
+        let plugin = LoadedPlugin { manifest, root: path, enabled: true };
         self.registry.register(plugin);
         Ok(())
     }

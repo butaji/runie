@@ -123,13 +123,22 @@ fn input_box_border_precedes_hints() {
         })
         .expect("Should find hints line");
 
-    let above_y = hints_y.saturating_sub(1);
+    let gap_y = hints_y.saturating_sub(1);
+    let gap_line: String = (0..buf.area().width)
+        .map(|x| buf[(x, gap_y)].symbol())
+        .collect();
+    assert!(
+        gap_line.trim().is_empty(),
+        "a blank row must separate the input box and hotkeys: {gap_line:?}"
+    );
+
+    let above_y = hints_y.saturating_sub(2);
     let above_line: String = (0..buf.area().width)
         .map(|x| buf[(x, above_y)].symbol())
         .collect();
     assert!(
         above_line.contains('╰') || above_line.contains('╯'),
-        "the input box bottom border should immediately precede hints: {above_line:?}"
+        "the input box bottom border should precede the blank row: {above_line:?}"
     );
 }
 

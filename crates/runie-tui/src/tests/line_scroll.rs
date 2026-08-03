@@ -239,10 +239,11 @@ fn scroll_position_preserved_during_streaming() {
     });
     state.ensure_fresh();
 
-    // Scroll should be preserved
+    // Scroll is measured from the tail; the streamed row is compensated for
+    // so the detached viewport does not jump toward the new output.
     assert_eq!(
-        state.view.scroll, 8,
-        "Scroll position should be preserved when not at bottom"
+        state.view.scroll, 10,
+        "Tail-relative scroll should preserve the detached viewport"
     );
 }
 

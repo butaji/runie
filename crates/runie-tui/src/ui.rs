@@ -100,7 +100,11 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
         // Dynamic layout: compact has fewer rows, so derive indices from constraint count.
         // Normal: [feed=0, (queue), margin, status, input, margin, hints]
         // Compact: [feed=0, (queue), status, input, spacer, (hints)]
-        let queue_offset = if queue_pane::queue_pane_height(snap) > 0 { 1 } else { 0 };
+        let queue_offset = if queue_pane::queue_pane_height(snap) > 0 {
+            1
+        } else {
+            0
+        };
         let status_idx = if snap.compact_layout { 1 } else { 2 } + queue_offset;
         let input_idx = status_idx + 1;
         if queue_offset > 0 {
@@ -139,13 +143,12 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
         let input_height = (input_lines + 2).min(10) as u16;
         let queue_height = queue_pane::queue_pane_height(snap);
 
-        let show_hints = snap.terminal_rows == 0
-            || snap.terminal_rows > SHORT_TERMINAL_ROWS
-            || snap.transient_message.is_some();
+        let show_hints =
+            snap.terminal_rows == 0 || snap.terminal_rows > SHORT_TERMINAL_ROWS || snap.transient_message.is_some();
 
         if snap.compact_layout {
             let mut c = vec![
-                Constraint::Min(3),    // messages/feed
+                Constraint::Min(5), // messages/feed (Grok flex minimum)
             ];
             if queue_height > 0 {
                 c.push(Constraint::Length(queue_height)); // queue pane
@@ -159,17 +162,17 @@ fn snapshot_constraints(snap: &Snapshot) -> Vec<Constraint> {
             c
         } else {
             let mut c = vec![
-                Constraint::Min(3),    // messages/feed
+                Constraint::Min(5), // messages/feed (Grok flex minimum)
             ];
             if queue_height > 0 {
                 c.push(Constraint::Length(queue_height)); // queue pane
             }
             c.extend([
-                Constraint::Length(1), // empty margin above status
-                Constraint::Length(1), // status
+                Constraint::Length(1),            // empty margin above status
+                Constraint::Length(1),            // status
                 Constraint::Length(input_height), // input — one line when empty
-                Constraint::Length(0), // no gap: input border directly precedes hints
-                Constraint::Length(1), // hints
+                Constraint::Length(1),            // quiet blank row between input and hotkeys
+                Constraint::Length(1),            // hints
             ]);
             c
         }
@@ -190,4 +193,23 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
     state.ensure_fresh();
     let snap = state.snapshot();
     draw_snapshot(f, &snap);
+}
+
+#[cfg(test)]
+mod compact_tests {
+    use super::effective_compact;
+
+    #[test]
+    fn effective_compact_matches_grok_thresholds() {
+        assert!(!effective_compact(false, 0));
+        assert!(effective_compact(false, 16));
+        assert!(effective_compact(false, 20));
+        assert!(!effective_compact(false, 21));
+    }
+
+    #[test]
+    fn manual_compact_is_preserved_above_threshold() {
+        assert!(effective_compact(true, 0));
+        assert!(effective_compact(true, 40));
+    }
 }

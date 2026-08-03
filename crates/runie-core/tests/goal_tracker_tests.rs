@@ -5,7 +5,9 @@ use runie_core::goal::{GoalPhase, GoalRole, GoalState, GoalStatus, GoalTracker};
 #[tokio::test]
 async fn create_goal_initializes_state() {
     let tracker = GoalTracker::new();
-    let goal = tracker.create_goal("Test objective".to_string(), Some(10000)).await;
+    let goal = tracker
+        .create_goal("Test objective".to_string(), Some(10000))
+        .await;
 
     assert_eq!(goal.objective, "Test objective");
     assert_eq!(goal.phase, GoalPhase::Planning);
@@ -41,7 +43,9 @@ async fn pause_sets_status_and_phase() {
     let tracker = GoalTracker::new();
     tracker.create_goal("Test".to_string(), None).await;
 
-    tracker.pause(GoalStatus::UserPaused, Some("User requested".to_string())).await;
+    tracker
+        .pause(GoalStatus::UserPaused, Some("User requested".to_string()))
+        .await;
     let state = tracker.get_state().await.unwrap();
 
     assert!(state.status.is_paused());
@@ -85,7 +89,10 @@ async fn fail_sets_failed_phase() {
     let state = tracker.get_state().await.unwrap();
 
     assert_eq!(state.phase, GoalPhase::Failed);
-    assert_eq!(state.pause_message, Some("Implementation blocked".to_string()));
+    assert_eq!(
+        state.pause_message,
+        Some("Implementation blocked".to_string())
+    );
 }
 
 #[tokio::test]
@@ -168,10 +175,15 @@ async fn set_subagent_session_tracks_session() {
     let tracker = GoalTracker::new();
     tracker.create_goal("Test".to_string(), None).await;
 
-    tracker.set_subagent_session(GoalRole::Worker, "session-123".to_string()).await;
+    tracker
+        .set_subagent_session(GoalRole::Worker, "session-123".to_string())
+        .await;
     let state = tracker.get_state().await.unwrap();
 
-    assert_eq!(state.subagent_sessions.get(&GoalRole::Worker), Some(&"session-123".to_string()));
+    assert_eq!(
+        state.subagent_sessions.get(&GoalRole::Worker),
+        Some(&"session-123".to_string())
+    );
     assert_eq!(state.active_role, Some(GoalRole::Worker));
 }
 
@@ -250,7 +262,9 @@ async fn resume_idempotent_when_not_paused() {
 #[tokio::test]
 async fn goal_state_serialization_round_trip() {
     let tracker = GoalTracker::new();
-    let original = tracker.create_goal("Serialize test".to_string(), Some(5000)).await;
+    let original = tracker
+        .create_goal("Serialize test".to_string(), Some(5000))
+        .await;
 
     let json = serde_json::to_string(&original).unwrap();
     let restored: GoalState = serde_json::from_str(&json).unwrap();

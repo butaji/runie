@@ -293,9 +293,20 @@ impl Element {
     pub fn agent(content: impl Into<String>) -> ElementBuilder {
         ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0, provider: String::new() })
     }
-    pub fn context_info(model: impl Into<String>, used_tokens: usize, total_tokens: usize, turns: usize, tool_calls: usize) -> ElementBuilder {
+    pub fn context_info(
+        model: impl Into<String>,
+        used_tokens: usize,
+        total_tokens: usize,
+        turns: usize,
+        tool_calls: usize,
+    ) -> ElementBuilder {
         ElementBuilder(Element::ContextInfo {
-            model: model.into(), used_tokens, total_tokens, turns, tool_calls, timestamp: 0.0,
+            model: model.into(),
+            used_tokens,
+            total_tokens,
+            turns,
+            tool_calls,
+            timestamp: 0.0,
         })
     }
     pub fn thinking(started: std::time::Instant) -> ElementBuilder {

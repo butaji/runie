@@ -431,9 +431,8 @@ pub fn from_sse_error(err: &reqwest_eventsource::Error) -> ProviderError {
         // client errors are fatal and must not be retried.
         SseErr::InvalidStatusCode(status, _) => {
             let code = status.as_u16();
-            ProviderError::classify_http_status(code).unwrap_or_else(|| {
-                ProviderError::BadRequest(code, format!("HTTP {code} error"))
-            })
+            ProviderError::classify_http_status(code)
+                .unwrap_or_else(|| ProviderError::BadRequest(code, format!("HTTP {code} error")))
         }
         // Invalid Last-Event-ID header
         SseErr::InvalidLastEventId(_) => ProviderError::Source(anyhow::anyhow!("{err}")),

@@ -125,10 +125,7 @@ fn standard_popup_rect() -> ratatui::layout::Rect {
 #[test]
 fn command_palette_uses_terminal_background() {
     let _lock = crate::theme::test_lock();
-    crate::theme::set_current_theme_with_caps(
-        "runie",
-        crate::terminal::caps::TermCaps::default(),
-    );
+    crate::theme::set_current_theme_with_caps("runie", crate::terminal::caps::TermCaps::default());
     let mut state = AppState::default();
     state.session.messages.push(ChatMessage {
         role: Role::User,

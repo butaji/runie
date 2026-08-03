@@ -124,7 +124,8 @@ impl InputActorState {
     /// Publish an InputChanged event with the current input state.
     pub fn publish_input_changed(&self) {
         let state = self.input.clone();
-        self.bus.publish(Event::InputChanged { state: Box::new(state) });
+        self.bus
+            .publish(Event::InputChanged { state: Box::new(state) });
     }
 }
 
@@ -167,16 +168,11 @@ impl InputActor {
 // ── Spawn ────────────────────────────────────────────────────────────────────
 
 /// Spawn an InputActor and return (handle, stop_cell, join_handle).
-pub fn spawn_input_actor(
-    bus: EventBus<Event>,
-) -> (InputHandle, StopCell, tokio::task::JoinHandle<()>) {
+pub fn spawn_input_actor(bus: EventBus<Event>) -> (InputHandle, StopCell, tokio::task::JoinHandle<()>) {
     let (tx, rx) = mpsc::unbounded_channel();
 
     let join = tokio::spawn(async move {
-        let state = InputActorState {
-            input: InputState::default(),
-            bus: bus.clone(),
-        };
+        let state = InputActorState { input: InputState::default(), bus: bus.clone() };
         let mut actor = InputActor { rx, state };
         actor.run().await;
     });
@@ -256,7 +252,9 @@ mod tests {
         let bus = EventBus::<Event>::new(16);
         let (handle, _, _) = spawn_input_actor(bus);
 
-        let _ = handle.send(InputMsg::HistoryLoaded { entries: vec!["first".into(), "second".into()] }).await;
+        let _ = handle
+            .send(InputMsg::HistoryLoaded { entries: vec!["first".into(), "second".into()] })
+            .await;
         let _ = handle.send(InputMsg::HistoryPrev).await;
     }
 
@@ -268,7 +266,9 @@ mod tests {
         let mut sub = bus.subscribe();
 
         let (handle, _, _) = spawn_input_actor(bus.clone());
-        let _ = handle.send(InputMsg::Paste("first\nsecond\r\nthird".into())).await;
+        let _ = handle
+            .send(InputMsg::Paste("first\nsecond\r\nthird".into()))
+            .await;
 
         let found = wait_for_event(
             &mut sub,
@@ -306,7 +306,9 @@ mod tests {
         for c in "hello".chars() {
             let _ = handle.send(InputMsg::InsertChar(c)).await;
         }
-        let _ = handle.send(InputMsg::Submit { content: "hello".into() }).await;
+        let _ = handle
+            .send(InputMsg::Submit { content: "hello".into() })
+            .await;
 
         // Wait for the submit's InputChanged (cleared input).
         let cleared = wait_for_event(

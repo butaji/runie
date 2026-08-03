@@ -12,20 +12,9 @@ fn feed_elements() -> Vec<Element> {
     let now = std::time::Instant::now();
     vec![
         Element::Spacer { timestamp: 0.0 },
-        Element::UserMessage {
-            content: "hello".into(),
-            expanded: true,
-            timestamp: 0.0,
-        },
-        Element::AgentMessage {
-            content: "answer".into(),
-            timestamp: 0.0,
-            provider: "echo".into(),
-        },
-        Element::SystemMessage {
-            content: "system event".into(),
-            timestamp: 0.0,
-        },
+        Element::UserMessage { content: "hello".into(), expanded: true, timestamp: 0.0 },
+        Element::AgentMessage { content: "answer".into(), timestamp: 0.0, provider: "echo".into() },
+        Element::SystemMessage { content: "system event".into(), timestamp: 0.0 },
         Element::ContextInfo {
             model: "echo".into(),
             used_tokens: 36_700,
@@ -35,28 +24,15 @@ fn feed_elements() -> Vec<Element> {
             timestamp: 0.0,
         },
         Element::Thinking { started: now, timestamp: 0.0 },
-        Element::ThoughtMarker {
-            content: "reasoning".into(),
-            timestamp: 0.0,
-        },
-        Element::ThoughtSummary {
-            content: "Thought".into(),
-            duration_secs: 1.2,
-            expandable: false,
-            timestamp: 0.0,
-        },
+        Element::ThoughtMarker { content: "reasoning".into(), timestamp: 0.0 },
+        Element::ThoughtSummary { content: "Thought".into(), duration_secs: 1.2, expandable: false, timestamp: 0.0 },
         Element::AnthropicThinking {
             content: "encrypted reasoning".into(),
             signature: Some("sig".into()),
             redacted: false,
             timestamp: 0.0,
         },
-        Element::ToolRunning {
-            name: "list_files".into(),
-            args: "src".into(),
-            started: now,
-            timestamp: 0.0,
-        },
+        Element::ToolRunning { name: "list_files".into(), args: "src".into(), started: now, timestamp: 0.0 },
         Element::ToolDone {
             name: "list_files".into(),
             args: "src".into(),
@@ -67,11 +43,7 @@ fn feed_elements() -> Vec<Element> {
             finished_at: None,
             timestamp: 0.0,
         },
-        Element::ToolSummary {
-            name: "list_files".into(),
-            duration_secs: 1.0,
-            timestamp: 0.0,
-        },
+        Element::ToolSummary { name: "list_files".into(), duration_secs: 1.0, timestamp: 0.0 },
         Element::ToolConfirmation {
             request_id: "req-1".into(),
             name: "write_file".into(),
@@ -114,22 +86,14 @@ fn feed_elements() -> Vec<Element> {
             protocol: ImageProtocol::ITerm2,
             timestamp: 0.0,
         },
-        Element::DataPart {
-            data: "{\"ok\":true}".into(),
-            format_string: Some("json".into()),
-            timestamp: 0.0,
-        },
+        Element::DataPart { data: "{\"ok\":true}".into(), format_string: Some("json".into()), timestamp: 0.0 },
         Element::MarkdownTable {
             headers: vec!["Name".into()],
             rows: vec![vec!["Runie".into()]],
             alignments: vec![None],
             timestamp: 0.0,
         },
-        Element::DiffOutput {
-            content: "-old\n+new".into(),
-            diff_type: DiffType::Unified,
-            timestamp: 0.0,
-        },
+        Element::DiffOutput { content: "-old\n+new".into(), diff_type: DiffType::Unified, timestamp: 0.0 },
         Element::WebSearchCall {
             query: "runie".into(),
             results: vec![WebSearchResult {
@@ -171,11 +135,7 @@ fn feed_elements() -> Vec<Element> {
             expanded: false,
             timestamp: 0.0,
         },
-        Element::AnsiStyled {
-            raw_content: "\x1b[31mred\x1b[0m".into(),
-            plain_text: "red".into(),
-            timestamp: 0.0,
-        },
+        Element::AnsiStyled { raw_content: "\x1b[31mred\x1b[0m".into(), plain_text: "red".into(), timestamp: 0.0 },
     ]
 }
 
@@ -183,7 +143,10 @@ fn feed_elements() -> Vec<Element> {
 fn every_feed_element_has_rendered_content_and_matching_layout_count() {
     for (index, element) in feed_elements().iter().enumerate() {
         let rendered = crate::ui::to_lines_internal(element, 80);
-        assert!(!rendered.is_empty(), "feed element {index} rendered no lines: {element:?}");
+        assert!(
+            !rendered.is_empty(),
+            "feed element {index} rendered no lines: {element:?}"
+        );
         assert_eq!(
             rendered.len(),
             layout::element_line_count(element, 80),
@@ -218,17 +181,30 @@ fn every_subagent_lifecycle_state_renders_a_header() {
             .map(|line| line.to_string())
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(text.contains("Subagent"), "missing subagent header for {status:?}: {text}");
+        assert!(
+            text.contains("Subagent"),
+            "missing subagent header for {status:?}: {text}"
+        );
     }
 }
 
 #[test]
 fn system_feed_message_is_muted_and_has_no_assistant_glyph() {
     let lines = crate::message::render_system_message("Context compacted", 80);
-    let text = lines.into_iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+    let text = lines
+        .into_iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(text.contains("Context compacted"));
-    assert!(!text.contains('◆'), "system feed content must not use assistant glyph: {text}");
-    assert!(!text.contains('❯'), "system feed content must not use user glyph: {text}");
+    assert!(
+        !text.contains('◆'),
+        "system feed content must not use assistant glyph: {text}"
+    );
+    assert!(
+        !text.contains('❯'),
+        "system feed content must not use user glyph: {text}"
+    );
 }
 
 #[test]
@@ -236,11 +212,13 @@ fn turn_completion_uses_grok_duration_boundaries() {
     let short = crate::message::render_turn_complete(2.5)
         .into_iter()
         .map(|line| line.to_string())
-        .collect::<Vec<_>>().join("\n");
+        .collect::<Vec<_>>()
+        .join("\n");
     let long = crate::message::render_turn_complete(24.5)
         .into_iter()
         .map(|line| line.to_string())
-        .collect::<Vec<_>>().join("\n");
+        .collect::<Vec<_>>()
+        .join("\n");
     assert_eq!(short, "Worked for 2.5s.");
     assert_eq!(long, "Worked for 24s.");
 }
@@ -258,9 +236,18 @@ fn credit_limit_feed_card_has_warning_copy_and_link() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(text.contains("credit limit"), "missing warning heading: {text}");
-    assert!(text.contains("purchasing more credits"), "missing action copy: {text}");
-    assert!(text.contains("grok.com/usage"), "missing usage link: {text}");
+    assert!(
+        text.contains("credit limit"),
+        "missing warning heading: {text}"
+    );
+    assert!(
+        text.contains("purchasing more credits"),
+        "missing action copy: {text}"
+    );
+    assert!(
+        text.contains("grok.com/usage"),
+        "missing usage link: {text}"
+    );
 }
 
 #[test]
@@ -273,30 +260,61 @@ fn context_info_feed_snapshot_shows_usage_and_counts() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(text.contains("Context"), "missing context heading: {text}");
-    assert!(text.contains("36.7k / 1.0m tokens"), "missing usage: {text}");
-    assert!(text.contains("Turns: 5 · Tool calls: 12"), "missing counts: {text}");
-    assert!(text.contains("Auto-compact at 85%"), "missing compaction line: {text}");
+    assert!(
+        text.contains("36.7k / 1.0m tokens"),
+        "missing usage: {text}"
+    );
+    assert!(
+        text.contains("Turns: 5 · Tool calls: 12"),
+        "missing counts: {text}"
+    );
+    assert!(
+        text.contains("Auto-compact at 85%"),
+        "missing compaction line: {text}"
+    );
     let bar = crate::ui::to_lines_internal(&element, 100)[5..10]
         .iter()
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert_eq!(bar.matches('◆').count() + bar.matches('◇').count(), 100, "context bar must have 100 cells: {text}");
-    assert_eq!(text.lines().count(), 17, "wide context snapshot must reserve five bar rows and Grok separators: {text}");
+    assert_eq!(
+        bar.matches('◆').count() + bar.matches('◇').count(),
+        100,
+        "context bar must have 100 cells: {text}"
+    );
+    assert_eq!(
+        text.lines().count(),
+        17,
+        "wide context snapshot must reserve five bar rows and Grok separators: {text}"
+    );
 
     let narrow = crate::ui::to_lines_internal(&element, 40)
         .into_iter()
         .map(|line| line.to_string())
         .collect::<Vec<_>>();
-    assert_eq!(narrow.len(), 22, "narrow context snapshot must reserve ten bar rows and Grok separators");
-    assert_eq!(narrow[5..15].iter().map(|line| line.matches('◆').count() + line.matches('◇').count()).sum::<usize>(), 100);
+    assert_eq!(
+        narrow.len(),
+        22,
+        "narrow context snapshot must reserve ten bar rows and Grok separators"
+    );
+    assert_eq!(
+        narrow[5..15]
+            .iter()
+            .map(|line| line.matches('◆').count() + line.matches('◇').count())
+            .sum::<usize>(),
+        100
+    );
 }
 
 #[test]
 fn context_info_uses_grok_spacing_and_two_decimal_usage() {
     let element = Element::context_info("echo", 36_700, 1_000_000, 5, 12).at(0.0);
     let lines = crate::ui::to_lines_internal(&element, 100);
-    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
+    let text = lines
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
     assert!(text.contains("36.7k / 1.0m tokens (3.67%)"), "{text}");
     assert!(text.contains("◆ Used"), "{text}");
     assert!(text.contains("◇ Free"), "{text}");
@@ -318,9 +336,18 @@ fn workflow_feed_row_shows_phase_trail_and_active_agents() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(text.contains("Workflow research: compare sources"), "missing workflow row: {text}");
-    assert!(text.contains("Plan ✓ · Research ●"), "missing phase trail: {text}");
-    assert!(text.contains("(2 agents)"), "missing active-agent count: {text}");
+    assert!(
+        text.contains("Workflow research: compare sources"),
+        "missing workflow row: {text}"
+    );
+    assert!(
+        text.contains("Plan ✓ · Research ●"),
+        "missing phase trail: {text}"
+    );
+    assert!(
+        text.contains("(2 agents)"),
+        "missing active-agent count: {text}"
+    );
 }
 
 #[test]
@@ -343,7 +370,10 @@ fn workflow_terminal_rows_include_elapsed_time() {
             .map(|line| line.to_string())
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(text.contains(marker), "wrong workflow terminal wording for {status}: {text}");
+        assert!(
+            text.contains(marker),
+            "wrong workflow terminal wording for {status}: {text}"
+        );
     }
 }
 
@@ -372,7 +402,10 @@ fn background_task_feed_row_covers_grok_lifecycle_variants() {
             .map(|line| line.to_string())
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(text.contains(expected), "wrong background-task wording for {status}: {text}");
+        assert!(
+            text.contains(expected),
+            "wrong background-task wording for {status}: {text}"
+        );
     }
 
     for signal in ["killed", "SIGTERM", "SIGKILL", "oom"] {
@@ -391,8 +424,14 @@ fn background_task_feed_row_covers_grok_lifecycle_variants() {
             .map(|line| line.to_string())
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(text.contains("Task killed in 1.2s: run tests"), "kill signal {signal} must use killed wording: {text}");
-        assert!(!text.contains(&format!(" ({signal})")), "kill signal detail leaked into Grok killed row for {signal}: {text}");
+        assert!(
+            text.contains("Task killed in 1.2s: run tests"),
+            "kill signal {signal} must use killed wording: {text}"
+        );
+        assert!(
+            !text.contains(&format!(" ({signal})")),
+            "kill signal detail leaked into Grok killed row for {signal}: {text}"
+        );
     }
 
     let long = Element::background_task("cargo test", "task-1", "completed", None, 24.0, None, None).at(1.0);
@@ -401,7 +440,10 @@ fn background_task_feed_row_covers_grok_lifecycle_variants() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(long_text.contains("Task completed in 24s: cargo test"), "Grok omits decimals at 10s+: {long_text}");
+    assert!(
+        long_text.contains("Task completed in 24s: cargo test"),
+        "Grok omits decimals at 10s+: {long_text}"
+    );
 }
 
 #[test]
@@ -417,17 +459,19 @@ fn btw_feed_item_shows_question_and_answer() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(text.contains("/btw What changed?"), "missing BTW question: {text}");
-    assert!(!text.contains("The feed model was updated."), "collapsed BTW leaked answer: {text}");
+    assert!(
+        text.contains("/btw What changed?"),
+        "missing BTW question: {text}"
+    );
+    assert!(
+        !text.contains("The feed model was updated."),
+        "collapsed BTW leaked answer: {text}"
+    );
 
     let expanded = match element {
-        Element::Btw { question, answer, status, timestamp, .. } => Element::Btw {
-            question,
-            answer,
-            status,
-            expanded: true,
-            timestamp,
-        },
+        Element::Btw { question, answer, status, timestamp, .. } => {
+            Element::Btw { question, answer, status, expanded: true, timestamp }
+        }
         _ => unreachable!(),
     };
     let expanded_text = crate::ui::to_lines_internal(&expanded, 80)
@@ -435,7 +479,10 @@ fn btw_feed_item_shows_question_and_answer() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(expanded_text.contains("The feed model was updated."), "expanded BTW lost answer: {expanded_text}");
+    assert!(
+        expanded_text.contains("The feed model was updated."),
+        "expanded BTW lost answer: {expanded_text}"
+    );
 }
 
 #[test]
@@ -446,17 +493,16 @@ fn btw_running_and_empty_answer_follow_grok_collapsed_rules() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(running_text.contains("/btw Is this live?"), "missing running BTW marker: {running_text}");
+    assert!(
+        running_text.contains("/btw Is this live?"),
+        "missing running BTW marker: {running_text}"
+    );
 
     let empty_answer = Element::btw("No answer yet", Some(String::new()), "answered").at(1.0);
     let expanded = match empty_answer {
-        Element::Btw { question, answer, status, timestamp, .. } => Element::Btw {
-            question,
-            answer,
-            status,
-            expanded: true,
-            timestamp,
-        },
+        Element::Btw { question, answer, status, timestamp, .. } => {
+            Element::Btw { question, answer, status, expanded: true, timestamp }
+        }
         _ => unreachable!(),
     };
     let expanded_text = crate::ui::to_lines_internal(&expanded, 80)
@@ -464,7 +510,11 @@ fn btw_running_and_empty_answer_follow_grok_collapsed_rules() {
         .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .join("\n");
-    assert_eq!(expanded_text.lines().count(), 1, "empty BTW answers must not add a blank body: {expanded_text:?}");
+    assert_eq!(
+        expanded_text.lines().count(),
+        1,
+        "empty BTW answers must not add a blank body: {expanded_text:?}"
+    );
 }
 
 #[test]
@@ -476,23 +526,38 @@ fn expanded_btw_preserves_multiline_answer_rows() {
     )
     .at(1.0);
     let expanded = match element {
-        Element::Btw { question, answer, status, timestamp, .. } => Element::Btw {
-            question,
-            answer,
-            status,
-            expanded: true,
-            timestamp,
-        },
+        Element::Btw { question, answer, status, timestamp, .. } => {
+            Element::Btw { question, answer, status, expanded: true, timestamp }
+        }
         _ => unreachable!(),
     };
 
     let lines = crate::ui::to_lines_internal(&expanded, 80);
-    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
-    let header_index = text.iter().position(|line| line.contains("/btw Explain the change")).unwrap();
-    assert_eq!(text.get(header_index + 1).map(String::as_str), Some(""), "BTW body needs Grok's separator row: {text:?}");
-    assert!(text.iter().any(|line| line == "  First point"), "missing first answer row: {text:?}");
-    assert!(text.iter().any(|line| line == "  Second point"), "missing second answer row: {text:?}");
-    assert!(text.iter().any(|line| line == "  Final note"), "missing final answer row: {text:?}");
+    let text = lines
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>();
+    let header_index = text
+        .iter()
+        .position(|line| line.contains("/btw Explain the change"))
+        .unwrap();
+    assert_eq!(
+        text.get(header_index + 1).map(String::as_str),
+        Some(""),
+        "BTW body needs Grok's separator row: {text:?}"
+    );
+    assert!(
+        text.iter().any(|line| line == "  First point"),
+        "missing first answer row: {text:?}"
+    );
+    assert!(
+        text.iter().any(|line| line == "  Second point"),
+        "missing second answer row: {text:?}"
+    );
+    assert!(
+        text.iter().any(|line| line == "  Final note"),
+        "missing final answer row: {text:?}"
+    );
 }
 
 #[test]
@@ -505,14 +570,27 @@ fn expanded_btw_layout_count_matches_separator_and_body_rows() {
         timestamp: 1.0,
     };
     let rendered = crate::ui::to_lines_internal(&element, 80).len();
-    assert_eq!(runie_core::layout::element_line_count(&element, 80), rendered);
+    assert_eq!(
+        runie_core::layout::element_line_count(&element, 80),
+        rendered
+    );
 }
 
 #[test]
 fn recap_system_event_uses_grok_feed_header_and_preview() {
-    let lines = crate::message::render_system_message("Recap — Investigated the feed parity gaps.\nDetails follow.", 80);
-    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>();
-    assert_eq!(text, vec!["Recap  Investigated the feed parity gaps."], "wrong Grok recap row: {text:?}");
+    let lines = crate::message::render_system_message(
+        "Recap — Investigated the feed parity gaps.\nDetails follow.",
+        80,
+    );
+    let text = lines
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        text,
+        vec!["Recap  Investigated the feed parity gaps."],
+        "wrong Grok recap row: {text:?}"
+    );
 }
 
 #[test]
@@ -521,8 +599,15 @@ fn expanded_recap_keeps_body_for_global_feed_toggle() {
         "Recap +— Investigated the feed parity gaps.\nDetails follow in the recap body.",
         80,
     );
-    let text = lines.iter().map(|line| line.to_string()).collect::<Vec<_>>().join("\n");
-    assert!(text.starts_with("Recap  Investigated the feed parity gaps."), "{text}");
+    let text = lines
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(
+        text.starts_with("Recap  Investigated the feed parity gaps."),
+        "{text}"
+    );
     assert!(text.contains("Details follow in the recap body."), "{text}");
 }
 
@@ -538,6 +623,12 @@ fn expanded_btw_renders_markdown_without_source_markers() {
     let lines = crate::ui::to_lines_internal(&element, 80);
     let body = lines.last().expect("BTW body row");
     let text = body.to_string();
-    assert_eq!(text, "  A bold answer with emphasis.", "BTW markdown markers leaked: {text:?}");
-    assert!(body.spans.iter().any(|span| span.content == "bold"), "bold span missing: {body:?}");
+    assert_eq!(
+        text, "  A bold answer with emphasis.",
+        "BTW markdown markers leaked: {text:?}"
+    );
+    assert!(
+        body.spans.iter().any(|span| span.content == "bold"),
+        "bold span missing: {body:?}"
+    );
 }

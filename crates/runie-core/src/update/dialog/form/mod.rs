@@ -53,6 +53,11 @@ pub fn form_panel_action(state: &mut AppState, panel: &mut Panel, event: Event) 
             let _ = panel.select_down();
             A::KeepOpen
         }
+        crate::Event::Input(c @ '1'..='9') if panel.id == "permission" => {
+            let index = (*c as usize) - ('1' as usize);
+            let _ = panel.select_index(index);
+            handle_form_submit(state, panel)
+        }
         crate::Event::CycleThinkingLevel => {
             let _ = panel.select_up();
             A::KeepOpen

@@ -85,29 +85,15 @@ impl StreamState {
             ProviderEvent::ToolCallInputDelta { id, delta } => self.on_tool_input(id, delta),
             ProviderEvent::ToolCallEnd { id } => self.on_tool_end(id),
             ProviderEvent::ToolExecutionStart { id, name } => {
-                (self.emit)(runie_core::Event::ToolStart {
-                    id,
-                    name,
-                    input: Default::default(),
-                });
+                (self.emit)(runie_core::Event::ToolStart { id, name, input: Default::default() });
                 ControlFlow::Continue(())
             }
             ProviderEvent::ToolExecutionEnd { id } => {
-                (self.emit)(runie_core::Event::ToolEnd {
-                    id,
-                    input: None,
-                    duration_secs: 0.0,
-                    output: String::new(),
-                });
+                (self.emit)(runie_core::Event::ToolEnd { id, input: None, duration_secs: 0.0, output: String::new() });
                 ControlFlow::Continue(())
             }
             ProviderEvent::ToolExecutionResult { id, result } => {
-                (self.emit)(runie_core::Event::ToolEnd {
-                    id,
-                    input: None,
-                    duration_secs: 0.0,
-                    output: result,
-                });
+                (self.emit)(runie_core::Event::ToolEnd { id, input: None, duration_secs: 0.0, output: result });
                 ControlFlow::Continue(())
             }
             ProviderEvent::Usage { input_tokens, output_tokens } => {
@@ -144,11 +130,7 @@ impl StreamState {
     fn on_tool_start(&mut self, id: String, name: String) -> ControlFlow<Result<()>> {
         // Accumulate tool start in shared state and emit to TUI.
         self.shared.start_tool(&id, &name);
-        (self.emit)(runie_core::Event::ToolStart {
-            id,
-            name,
-            input: Default::default(),
-        });
+        (self.emit)(runie_core::Event::ToolStart { id, name, input: Default::default() });
         ControlFlow::Continue(())
     }
 

@@ -75,8 +75,12 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
                     / 4
         }
         CreditLimit { heading, url, .. } => (heading.len() + url.len()) / 4 + 10,
-        Workflow { objective, phases, .. } => (objective.len() + phases.iter().map(String::len).sum::<usize>()) / 4 + 10,
-        BackgroundTask { command, description, .. } => (command.len() + description.as_deref().unwrap_or_default().len()) / 4 + 10,
+        Workflow { objective, phases, .. } => {
+            (objective.len() + phases.iter().map(String::len).sum::<usize>()) / 4 + 10
+        }
+        BackgroundTask { command, description, .. } => {
+            (command.len() + description.as_deref().unwrap_or_default().len()) / 4 + 10
+        }
         Btw { question, answer, .. } => (question.len() + answer.as_deref().unwrap_or_default().len()) / 4 + 10,
         AnsiStyled { plain_text, .. } => plain_text.len() / 4,
     }
@@ -100,7 +104,41 @@ pub(crate) fn sticky_header_row_for_mode(
     offset: usize,
     following: bool,
 ) -> Option<(usize, usize)> {
-    if following { None } else { sticky_header_row(row_to_element, offset) }
+    if following {
+        None
+    } else {
+        sticky_header_row(row_to_element, offset)
+    }
+}
+
+/// Derive Grok-style sticky prompt descriptors from the already-wrapped feed
+/// mapping. This keeps virtual coordinates in the same unit as scroll offsets.
+pub(crate) fn prompt_descriptors(
+    snap: &runie_core::Snapshot,
+    row_to_element: &[usize],
+) -> Vec<super::sticky::PromptDescriptor> {
+    let mut descriptors = Vec::new();
+    for (entry_idx, element) in snap.elements.iter().enumerate() {
+        if !matches!(element, Element::UserMessage { .. }) {
+            continue;
+        }
+        let Some(start) = row_to_element.iter().position(|&idx| idx == entry_idx) else {
+            continue;
+        };
+        let full_height = row_to_element[start..]
+            .iter()
+            .take_while(|&&idx| idx == entry_idx)
+            .count()
+            .min(u16::MAX as usize) as u16;
+        descriptors.push(super::sticky::PromptDescriptor {
+            entry_idx,
+            y_virtual: start,
+            full_height,
+            min_height: super::sticky::MIN_PINNED_HEIGHT.min(full_height.max(1)),
+            sticky: true,
+        });
+    }
+    descriptors
 }
 
 #[cfg(test)]
@@ -138,6 +176,25 @@ mod tests {
         let mapping = [0, 0, 1, 1];
         assert_eq!(sticky_header_row_for_mode(&mapping, 3, true), None);
         assert_eq!(sticky_header_row_for_mode(&mapping, 3, false), Some((2, 1)));
+    }
+
+    #[test]
+    fn prompt_descriptors_use_wrapped_user_rows_as_virtual_positions() {
+        let snap = runie_core::Snapshot {
+            elements: std::sync::Arc::new([
+                Element::user("one").at(0.0),
+                Element::agent("answer").at(1.0),
+                Element::user("two").at(2.0),
+            ]),
+            ..Default::default()
+        };
+        let mapping = [0, 0, 1, 2, 2, 2];
+        let descriptors = prompt_descriptors(&snap, &mapping);
+        assert_eq!(
+            descriptors.iter().map(|p| p.y_virtual).collect::<Vec<_>>(),
+            vec![0, 3]
+        );
+        assert_eq!(descriptors[1].full_height, 3);
     }
 
     fn assert_count_matches(element: Element, width: u16) {

@@ -14,9 +14,7 @@ pub struct PluginRegistry {
 
 impl PluginRegistry {
     pub fn new() -> Self {
-        Self {
-            plugins: HashMap::new(),
-        }
+        Self { plugins: HashMap::new() }
     }
 
     pub fn register(&mut self, plugin: LoadedPlugin) {

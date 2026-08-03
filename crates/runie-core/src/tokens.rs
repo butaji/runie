@@ -59,8 +59,19 @@ pub fn estimate_tokens_for_model(text: &str, provider: &str, _model: &str) -> us
 fn is_openai_compatible_provider(provider: &str) -> bool {
     matches!(
         provider.to_lowercase().as_str(),
-        "openai" | "azure" | "ollama" | "groq" | "anthropic" | "gemini" | "minimax"
-            | "kimi" | "deepseek" | "mistral" | "xai" | "perplexity" | "openrouter"
+        "openai"
+            | "azure"
+            | "ollama"
+            | "groq"
+            | "anthropic"
+            | "gemini"
+            | "minimax"
+            | "kimi"
+            | "deepseek"
+            | "mistral"
+            | "xai"
+            | "perplexity"
+            | "openrouter"
     )
 }
 

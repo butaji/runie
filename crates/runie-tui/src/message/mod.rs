@@ -31,11 +31,11 @@ pub(crate) use wrap::word_wrap;
 pub(crate) use wrap::wrap_styled_spans;
 
 pub use support::{
-    render_ansi_styled, render_anthropic_thinking, render_context_group, render_credit_limit, render_data_part, render_diff_output,
-    render_horizontal_rule, render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row,
+    render_ansi_styled, render_anthropic_thinking, render_background_task, render_btw, render_context_group,
+    render_context_info, render_credit_limit, render_data_part, render_diff_output, render_horizontal_rule,
+    render_image, render_list_item_from_spans, render_markdown_table, render_subagent_row, render_system_message,
     render_thinking, render_thought_marker, render_thought_summary, render_tool_confirmation, render_tool_done,
-    render_system_message, render_context_info, render_tool_running, render_tool_summary, render_turn_complete, render_web_search_call,
-    render_workflow, render_background_task, render_btw,
+    render_tool_running, render_tool_summary, render_turn_complete, render_web_search_call, render_workflow,
 };
 
 fn span_width(spans: &[Span<'_>]) -> u16 {
@@ -86,7 +86,13 @@ struct UserLineParams {
     ellipsis_span: Option<Span<'static>>,
 }
 
-fn build_user_body(content: &str, first_w: u16, rest_w: u16, params: &UserLineParams, expanded: bool) -> Vec<Line<'static>> {
+fn build_user_body(
+    content: &str,
+    first_w: u16,
+    rest_w: u16,
+    params: &UserLineParams,
+    expanded: bool,
+) -> Vec<Line<'static>> {
     // Use tui-markdown for inline styling (applies inline styles + base color).
     // tui_markdown drops inline HTML entirely, so "<think>"-like user text
     // would vanish; escape '<' to keep user content verbatim (pulldown
@@ -159,6 +165,13 @@ fn build_user_line_from_spans(
 }
 
 pub fn render_agent_message(content: &str, timestamp: f64, content_width: u16) -> Vec<Line<'static>> {
+    // Provider/tool streams may carry SGR directly (as Grok's execute output
+    // does). Parse it before Markdown processing so escape bytes never become
+    // visible prose and their attributes survive into the terminal cells.
+    let normalized_ansi = normalize_sgr_fragments(content);
+    if normalized_ansi.contains('\x1b') {
+        return render_ansi_agent_message(&normalized_ansi, timestamp);
+    }
     let blocks = extract_code_blocks(content);
     let ts_str = format_timestamp(timestamp);
     let ts_width = str_width(&ts_str) + 1;
@@ -176,6 +189,55 @@ pub fn render_agent_message(content: &str, timestamp: f64, content_width: u16) -
         lines.push(render_empty_agent_line(inner_width, &ts_str));
     }
     lines
+}
+
+/// Provider/tool sanitization may remove the ESC byte while leaving an SGR
+/// payload such as `[1m`. Reconstitute only numeric SGR payloads so normal
+/// Markdown brackets are untouched and the ANSI renderer can consume them.
+pub(crate) fn normalize_sgr_fragments(content: &str) -> String {
+    let bytes = content.as_bytes();
+    let mut out = String::with_capacity(content.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'[' {
+            let start = i;
+            i += 1;
+            while i < bytes.len() && (bytes[i].is_ascii_digit() || bytes[i] == b';') {
+                i += 1;
+            }
+            if i > start + 1 && i < bytes.len() && bytes[i] == b'm' {
+                out.push('\x1b');
+                out.push_str(&content[start..=i]);
+                i += 1;
+                continue;
+            }
+            out.push_str(&content[start..i]);
+            continue;
+        }
+        let ch = content[i..].chars().next().expect("valid UTF-8 boundary");
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
+fn render_ansi_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
+    let base = crate::theme::style_agent();
+    let timestamp = format_timestamp(timestamp);
+    content
+        .lines()
+        .enumerate()
+        .map(|(index, line)| {
+            let mut spans = crate::message::support::ansi_to_spans(line, base);
+            if index == 0 {
+                spans.insert(
+                    0,
+                    Span::styled(format!("{} ", timestamp), style_feed_timestamp()),
+                );
+            }
+            Line::from(spans)
+        })
+        .collect()
 }
 
 fn build_agent_body(
@@ -232,15 +294,16 @@ fn render_agent_block(
             lines,
         ),
         CodeBlock::HorizontalRule => {
-            lines.extend(support::render_horizontal_rule(inner_width, ts_str, is_first));
+            lines.extend(support::render_horizontal_rule(
+                inner_width,
+                ts_str,
+                is_first,
+            ));
             is_first
         }
         CodeBlock::Table { headers, rows, alignments } => {
             lines.extend(support::render_markdown_table(
-                headers,
-                rows,
-                alignments,
-                0.0,
+                headers, rows, alignments, 0.0,
             ));
             false
         }
@@ -357,7 +420,12 @@ fn build_agent_line_from_spans_with_bold(
 ) -> Line<'static> {
     let mut line_spans: Vec<Span<'_>> = md_to_spans(spans)
         .into_iter()
-        .map(|s| Span::styled(s.content, s.style.add_modifier(ratatui::style::Modifier::BOLD)))
+        .map(|s| {
+            Span::styled(
+                s.content,
+                s.style.add_modifier(ratatui::style::Modifier::BOLD),
+            )
+        })
         .collect();
 
     if with_ts && content_width > 0 {
@@ -403,8 +471,9 @@ fn render_agent_code_block(
     is_first: bool,
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
-    if lang.eq_ignore_ascii_case("mermaid") || lang.eq_ignore_ascii_case("mmd") {
+    if code::is_mermaid_lang(lang) {
         lines.extend(code::render_mermaid_fallback(content));
+        lines.push(code::render_mermaid_affordance(inner_width));
         return false;
     }
     lines.push(code::render_code_header(
@@ -468,4 +537,23 @@ fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
         spans.push(Span::styled(format!(" {}", ts_str), style_feed_timestamp()));
     }
     Line::from(spans).style(style_agent())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_agent_message;
+
+    #[test]
+    fn completed_mermaid_message_uses_feed_affordance_renderer() {
+        let lines = render_agent_message("```mermaid\nflowchart TD\n  A --> B\n```", 0.0, 100);
+        let rendered = lines
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(rendered.contains("[Mermaid diagram]"));
+        assert!(rendered.contains("[Open Image]"));
+        assert!(rendered.contains("[Copy Image Path]"));
+        assert!(rendered.contains("[Copy Source]"));
+    }
 }

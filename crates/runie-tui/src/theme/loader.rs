@@ -82,7 +82,11 @@ fn resolve_theme_name(name: &str) -> &str {
             value.contains("light") || value.ends_with(";15") || value.ends_with(";default")
         })
         .unwrap_or(false);
-    if light { "catppuccin-latte" } else { "runie" }
+    if light {
+        "catppuccin-latte"
+    } else {
+        "runie"
+    }
 }
 
 /// Load a theme by name: builtin → custom file → default fallback.
@@ -90,7 +94,10 @@ pub(crate) fn load_theme(name: &str) -> Result<opaline::Theme, opaline::OpalineE
     load_theme_raw(name)
         .map(ensure_runie_tokens)
         .map(|theme| {
-            debug_assert!(validate_theme(&theme).is_ok(), "loaded theme violates Runie semantic contract");
+            debug_assert!(
+                validate_theme(&theme).is_ok(),
+                "loaded theme violates Runie semantic contract"
+            );
             theme
         })
         .map(crate::theme::styles::register_runie_styles)
@@ -124,9 +131,20 @@ pub(crate) fn ensure_runie_tokens(mut theme: opaline::Theme) -> opaline::Theme {
 /// missing role instead of silently displaying opaline's fallback color.
 pub(crate) fn validate_theme(theme: &opaline::Theme) -> Result<(), String> {
     const REQUIRED: &[&str] = &[
-        "bg.base", "bg.selection", "text.primary", "text.dim", "border.unfocused", "border.focused",
-        "accent.primary", "success", "warning", "error", "rail.running", "rail.success",
-        "rail.error", "rail.thinking",
+        "bg.base",
+        "bg.selection",
+        "text.primary",
+        "text.dim",
+        "border.unfocused",
+        "border.focused",
+        "accent.primary",
+        "success",
+        "warning",
+        "error",
+        "rail.running",
+        "rail.success",
+        "rail.error",
+        "rail.thinking",
     ];
     for token in REQUIRED {
         if theme.try_color(token).is_none() {
@@ -153,7 +171,11 @@ fn relative_luminance_contrast(a: opaline::OpalineColor, b: opaline::OpalineColo
     fn lum(c: opaline::OpalineColor) -> f32 {
         let channel = |v: u8| {
             let v = f32::from(v) / 255.0;
-            if v <= 0.03928 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+            if v <= 0.03928 {
+                v / 12.92
+            } else {
+                ((v + 0.055) / 1.055).powf(2.4)
+            }
         };
         0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
     }

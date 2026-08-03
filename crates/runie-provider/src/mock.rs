@@ -224,8 +224,6 @@ impl MockScript {
     }
 }
 
-
-
 /// Stream the events for a single scripted turn.
 ///
 /// `is_tool_result_turn` is true when this turn was triggered by the agent
@@ -235,7 +233,10 @@ impl MockScript {
 /// completion (prevents duplicate responses: "Listed all directories" from the
 /// stream + "Done." from the post-tool-result path).
 #[allow(clippy::too_many_lines)]
-fn script_turn_stream(turn: ScriptTurn, is_tool_result_turn: bool) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
+fn script_turn_stream(
+    turn: ScriptTurn,
+    is_tool_result_turn: bool,
+) -> Pin<Box<dyn Stream<Item = anyhow::Result<ProviderEvent>> + Send + 'static>> {
     use runie_core::provider_event::ModelError;
     Box::pin(async_stream::stream! {
         // Apply per-turn latency.
@@ -311,7 +312,28 @@ fn script_turn_stream(turn: ScriptTurn, is_tool_result_turn: bool) -> Pin<Box<dy
         // `generate()` after the tool result is processed (avoids duplicates).
         if !is_tool_result_turn {
             for chunk in &turn.chunks {
-                yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+                // Allow scripted black-box fixtures to model a native
+                // reasoning block without coupling tests to a real provider.
+                // This mirrors the Responses stream shape used by Grok's
+                // committed-thinking-body PTY case.
+                let think_bounds = chunk.find("<think>").zip(chunk.find("</think>"));
+                if let Some((open, close_rel)) = think_bounds {
+                    if close_rel <= open + "<think>".len() {
+                        yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+                        continue;
+                    }
+                    let reasoning_start = open + "<think>".len();
+                    let reasoning = &chunk[reasoning_start..close_rel];
+                    yield Ok(ProviderEvent::ThinkingStart { id: "script-reasoning".into() });
+                    yield Ok(ProviderEvent::ThinkingDelta(reasoning.to_owned()));
+                    yield Ok(ProviderEvent::ThinkingEnd { id: "script-reasoning".into() });
+                    let visible = format!("{}{}", &chunk[..open], &chunk[close_rel + "</think>".len()..]);
+                    if !visible.is_empty() {
+                        yield Ok(ProviderEvent::TextDelta(visible));
+                    }
+                } else {
+                    yield Ok(ProviderEvent::TextDelta(chunk.clone()));
+                }
             }
         }
 
@@ -954,7 +976,9 @@ impl Provider for MockProvider {
             } else {
                 tracing::debug!(
                     "[MOCK_DEBUG] no script loaded (RUNIE_MOCK_SCRIPT={}, RUNIE_MOCK_SCRIPT_FILE={})",
-                    std::env::var("RUNIE_MOCK_SCRIPT").map(|_| "set").unwrap_or("unset"),
+                    std::env::var("RUNIE_MOCK_SCRIPT")
+                        .map(|_| "set")
+                        .unwrap_or("unset"),
                     std::env::var("RUNIE_MOCK_SCRIPT_FILE").unwrap_or_default(),
                 );
             }
@@ -997,7 +1021,10 @@ impl Provider for MockProvider {
             // If a script was loaded but is now exhausted, skip `fixtures::done()`
             // to avoid duplicating the script's response chunks (the scripted turn
             // already emitted its model response before the tool call/result cycle).
-            if self.script_was_loaded.load(std::sync::atomic::Ordering::Relaxed) {
+            if self
+                .script_was_loaded
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
                 return text_chunks_stream(delay_ms, vec![]);
             }
             return text_chunks_stream(delay_ms, fixtures::done());
@@ -1007,7 +1034,8 @@ impl Provider for MockProvider {
         let fixture = self.fixture.clone().or_else(|| detect_fixture(&user_input));
         tracing::debug!(
             "[MOCK_DEBUG] fallback path: user_input={:?} fixture={:?}",
-            user_input, fixture
+            user_input,
+            fixture
         );
         let chunks = response_from_fixture(fixture, &user_input, self.echo_fallback);
         text_chunks_stream(delay_ms, chunks)

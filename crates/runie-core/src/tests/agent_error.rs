@@ -65,13 +65,29 @@ fn turn_abort_leaves_grok_cancellation_event_in_feed() {
 #[test]
 fn known_provider_failures_use_grok_actionable_feed_rows() {
     for (input, expected) in [
-        ("context window exceeded", "This conversation is too large for the model's context window."),
-        ("invalid api key", "Authentication required — your session has expired"),
-        ("retry exhausted after 3 attempts", "Retry failed: retry exhausted after 3 attempts"),
+        (
+            "context window exceeded",
+            "This conversation is too large for the model's context window.",
+        ),
+        (
+            "invalid api key",
+            "Authentication required — your session has expired",
+        ),
+        (
+            "retry exhausted after 3 attempts",
+            "Retry failed: retry exhausted after 3 attempts",
+        ),
     ] {
         let mut state = AppState::default();
         state.update(crate::Event::Error { id: "req.0".into(), message: input.into() });
-        assert!(state.session.messages.iter().any(|message| message.role == crate::model::Role::System && message.content().contains(expected)), "missing actionable row for {input}");
+        assert!(
+            state
+                .session
+                .messages
+                .iter()
+                .any(|message| message.role == crate::model::Role::System && message.content().contains(expected)),
+            "missing actionable row for {input}"
+        );
     }
 }
 
@@ -85,11 +101,15 @@ fn grok_background_task_announcements_project_to_feed_rows() {
     ] {
         let mut state = AppState::default();
         state.update(crate::Event::SystemMessage { content: content.into() });
-        assert!(feed_elements(&state).iter().any(|element| matches!(
-            element,
-            Element::BackgroundTask { status: actual, duration_secs, .. }
-                if actual == status && (*duration_secs - duration).abs() < f64::EPSILON
-        )), "missing background task projection for {content}: {:?}", feed_elements(&state));
+        assert!(
+            feed_elements(&state).iter().any(|element| matches!(
+                element,
+                Element::BackgroundTask { status: actual, duration_secs, .. }
+                    if actual == status && (*duration_secs - duration).abs() < f64::EPSILON
+            )),
+            "missing background task projection for {content}: {:?}",
+            feed_elements(&state)
+        );
     }
 }
 

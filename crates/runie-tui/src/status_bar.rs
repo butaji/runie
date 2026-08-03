@@ -9,9 +9,8 @@ use ratatui::{
 };
 
 use crate::theme::{
-    blend_color, color_bg, color_bg_panel, color_error, color_fg, color_fg_mid, color_warning,
-    monitor_glyph, style_status_idle,
-    GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
+    blend_color, color_bg, color_bg_panel, color_error, color_fg, color_fg_mid, color_warning, monitor_glyph,
+    style_status_idle, GLYPH_MONITOR_FRAMES, GLYPH_PENDING, MONITOR_PULSE_DIVISOR,
 };
 use crate::ui::{estimate_element_tokens, hstack, progress_bar_spans};
 use runie_core::Snapshot;
@@ -61,7 +60,10 @@ pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let h = hstack(area, &[Constraint::Min(0), Constraint::Length(capped)]);
 
     render_left(f, snap, h[0]);
-    f.render_widget(Paragraph::new(Line::from(right_spans)).style(style_status_idle()), h[1]);
+    f.render_widget(
+        Paragraph::new(Line::from(right_spans)).style(style_status_idle()),
+        h[1],
+    );
 }
 
 /// Render the left side of the status bar. The spinner frame is taken from
@@ -236,7 +238,10 @@ fn push_watching_label(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
 
     // Render as: "○ ◉ watching · N workers"
     let noun = if running == 1 { "worker" } else { "workers" };
-    Some(Span::styled(format!("{} watching · {} {noun}", monitor_glyph_str, running), idle))
+    Some(Span::styled(
+        format!("{} watching · {} {noun}", monitor_glyph_str, running),
+        idle,
+    ))
 }
 
 /// Build the activity label driven by `snap.turn_activity` (grok parity).
@@ -257,22 +262,31 @@ fn push_turn_status_text(snap: &Snapshot, idle: Style) -> Option<Span<'static>> 
         .map(runie_core::labels::format_turn_timer)
         .unwrap_or_else(|| "0.0s".to_owned());
 
-    let label = match snap.turn_activity {
+    let (label, activity_style) = match snap.turn_activity {
         TurnActivityKind::ToolRunning => {
-            let tool = snap.current_tool_name.clone().unwrap_or_else(|| "tool".to_owned());
-            format!("Running {tool}…")
+            let tool = snap
+                .current_tool_name
+                .clone()
+                .unwrap_or_else(|| "tool".to_owned());
+            (
+                format!("Running {tool}…"),
+                idle.fg(crate::theme::color_success()),
+            )
         }
-        TurnActivityKind::Cancelling => "Cancelling…".to_owned(),
-        TurnActivityKind::Thinking => "Thinking…".to_owned(),
-        TurnActivityKind::Responding => "Responding…".to_owned(),
-        TurnActivityKind::Working => "Working…".to_owned(),
+        TurnActivityKind::Cancelling => (
+            "Cancelling…".to_owned(),
+            idle.fg(crate::theme::color_error()),
+        ),
+        TurnActivityKind::Thinking => ("Thinking…".to_owned(), idle),
+        TurnActivityKind::Responding => ("Responding…".to_owned(), idle),
+        TurnActivityKind::Working => ("Working…".to_owned(), idle),
     };
 
     let mut full = format!("{} {}", label, phase);
     if snap.queue_count > 0 {
         full.push_str(&format!(" ({} queued)", snap.queue_count));
     }
-    Some(Span::styled(full, idle))
+    Some(Span::styled(full, activity_style))
 }
 
 fn push_thinking(snap: &Snapshot, idle: Style) -> Option<Span<'static>> {
@@ -315,7 +329,11 @@ fn push_mcp_status(snap: &Snapshot) -> Option<Span<'static>> {
     if count == 0 {
         return None;
     }
-    let noun = if count == 1 { "mcp server" } else { "mcp servers" };
+    let noun = if count == 1 {
+        "mcp server"
+    } else {
+        "mcp servers"
+    };
     Some(Span::styled(
         format!("⌘ {count} {noun}"),
         style_status_idle().fg(crate::theme::color_dim()),
@@ -326,7 +344,10 @@ fn push_mcp_status(snap: &Snapshot) -> Option<Span<'static>> {
 /// Shows "⚡ CB: N" when the circuit breaker has tripped, where N is the threshold.
 fn push_circuit_breaker(snap: &Snapshot) -> Option<Span<'static>> {
     if snap.circuit_breaker_tripped {
-        Some(Span::styled(format!("⚡ CB: {}", snap.circuit_breaker_threshold), style_status_idle()))
+        Some(Span::styled(
+            format!("⚡ CB: {}", snap.circuit_breaker_threshold),
+            style_status_idle(),
+        ))
     } else {
         None
     }
@@ -336,8 +357,14 @@ fn push_circuit_breaker(snap: &Snapshot) -> Option<Span<'static>> {
 // Right side: token throughput + context usage chess piece
 // =============================================================================
 
-/// Get chess piece for context usage percentage.
-/// 0-25% ⛀ | 26-50% ⛁ | 51-75% ⛂ | 76-100% ⛃
+pub(crate) fn build_right_status(snap: &Snapshot) -> String {
+    build_right_spans(snap)
+        .into_iter()
+        .map(|s| s.content.to_string())
+        .collect()
+}
+
+/// Get coin-stack glyph for context usage percentage.
 pub(crate) fn context_piece(percent: usize) -> char {
     match percent {
         0..=25 => '⛀',
@@ -345,13 +372,6 @@ pub(crate) fn context_piece(percent: usize) -> char {
         51..=75 => '⛂',
         _ => '⛃',
     }
-}
-
-pub(crate) fn build_right_status(snap: &Snapshot) -> String {
-    build_right_spans(snap)
-        .into_iter()
-        .map(|s| s.content.to_string())
-        .collect()
 }
 
 /// Build the right side of the status bar as styled spans (grok parity).
@@ -369,11 +389,16 @@ pub(crate) fn build_right_spans(snap: &Snapshot) -> Vec<Span<'static>> {
         }
         // No context data (limit unknown): fall back to the plain gauge.
         let usage = context_usage(snap);
-        let piece = context_piece(usage.percent);
         let limit = usage.limit_k();
         let used_k = format_k(usage.used);
         return vec![Span::styled(
-            format!("{}/{} {}% {}", used_k, limit, usage.percent, piece),
+            format!(
+                "{}/{} {}% {}",
+                used_k,
+                limit,
+                usage.percent,
+                context_piece(usage.percent)
+            ),
             idle_style,
         )];
     }
@@ -497,7 +522,11 @@ fn fmt_pct5(pct: f64) -> String {
     } else {
         format!("{pct:.1}%")
     };
-    if s.len() <= 5 { s } else { "MAX %".to_string() }
+    if s.len() <= 5 {
+        s
+    } else {
+        "MAX %".to_string()
+    }
 }
 
 /// Usage percentage as f64 (limit>0 guard; 0 when the limit is unknown).
@@ -513,12 +542,8 @@ fn context_usage_pct_f64(usage: &ContextUsage) -> f64 {
 /// 0% → primary text, 50% → muted text, 75% → warning, 95% → error.
 /// Between breakpoints the color is lerped in RGB.
 fn context_gradient_color(pct: f64) -> Color {
-    let bps: [(f64, Color); 4] = [
-        (0.0, color_fg()),
-        (50.0, color_fg_mid()),
-        (75.0, color_warning()),
-        (95.0, color_error()),
-    ];
+    let bps: [(f64, Color); 4] =
+        [(0.0, color_fg()), (50.0, color_fg_mid()), (75.0, color_warning()), (95.0, color_error())];
     let pct = pct.clamp(0.0, 100.0);
     for (i, (bp_pct, bp_color)) in bps.iter().enumerate() {
         if pct <= *bp_pct {
@@ -550,18 +575,21 @@ pub(crate) fn build_context_item(snap: &Snapshot, expanded: bool) -> Option<Vec<
     }
     let pct = context_usage_pct_f64(&usage);
     let gradient = context_gradient_color(pct);
-    let piece = context_piece(usage.percent);
 
-    let text = format!("{}/{} {}%", format_k(usage.used), usage.limit_k(), usage.percent);
+    let text = format!(
+        "{}/{} {}% {}",
+        fmt_tokens(usage.used as u64).to_lowercase(),
+        fmt_tokens(usage.limit as u64).to_lowercase(),
+        usage.percent,
+        context_piece(usage.percent)
+    );
     let natural_width = UnicodeWidthStr::width(text.as_str()) as u16;
-    const EXPANDED_SUFFIX_WIDTH: u16 = 2; // separator + chess-piece indicator
+    const EXPANDED_SUFFIX_WIDTH: u16 = 2;
     let total_width = natural_width.max(BAR_PCT_GAP + PCT_WIDTH + EXPANDED_SUFFIX_WIDTH);
 
     if !expanded {
         let padded = format!("{text:<width$}", width = total_width as usize);
-        return Some(vec![
-            Span::styled(padded, style_status_idle()),
-        ]);
+        return Some(vec![Span::styled(padded, style_status_idle())]);
     }
 
     let bar_width = total_width - (BAR_PCT_GAP + PCT_WIDTH + EXPANDED_SUFFIX_WIDTH);
@@ -569,10 +597,8 @@ pub(crate) fn build_context_item(snap: &Snapshot, expanded: bool) -> Option<Vec<
     let mut spans = progress_bar_spans(bar_width, (pct / 100.0) as f32, gradient, track);
     spans.push(Span::styled(" ", Style::new().bg(color_bg())));
     spans.push(Span::styled(fmt_pct5(pct), Style::new().fg(color_fg_mid())));
-    // Chess piece sits OUTSIDE the swapped region: both forms carry it, so
-    // toggling never shifts the item's width (grok width-invariant rule).
     spans.push(Span::raw(" "));
-    spans.push(Span::raw(piece.to_string()));
+    spans.push(Span::raw(context_piece(usage.percent).to_string()));
     Some(spans)
 }
 
@@ -625,6 +651,60 @@ mod tests {
             !left.contains("⚡ Auto"),
             "left text should not contain the auto badge: {left}"
         );
+    }
+
+    #[test]
+    fn status_bar_renders_idle_context_once() {
+        let snap = runie_core::Snapshot { cwd_name: "runie".to_string(), ..Default::default() };
+        let left = super::build_left_text(&snap);
+        assert_eq!(
+            left.matches("runie/").count(),
+            1,
+            "idle context must not be duplicated: {left}"
+        );
+    }
+
+    #[test]
+    fn status_bar_restores_coin_stack_context_indicator() {
+        let snap = runie_core::Snapshot::default();
+        let rendered = super::build_right_status(&snap);
+        assert!(
+            rendered.contains('⛀'),
+            "idle context should include the coin-stack indicator: {rendered}"
+        );
+        assert_eq!(super::context_piece(25), '⛀');
+        assert_eq!(super::context_piece(100), '⛃');
+    }
+
+    #[test]
+    fn status_bar_colors_tool_activity_with_success_theme_token() {
+        let snap = runie_core::Snapshot {
+            turn_active: true,
+            turn_activity: runie_core::snapshot::TurnActivityKind::ToolRunning,
+            current_tool_name: Some("list".to_string()),
+            ..Default::default()
+        };
+        let parts = super::build_left_text_parts(&snap);
+        let activity = parts
+            .iter()
+            .find(|span| span.content.contains("Running list"))
+            .expect("activity span");
+        assert_eq!(activity.style.fg, Some(crate::theme::color_success()));
+    }
+
+    #[test]
+    fn status_bar_colors_cancelling_with_error_theme_token() {
+        let snap = runie_core::Snapshot {
+            turn_active: true,
+            turn_activity: runie_core::snapshot::TurnActivityKind::Cancelling,
+            ..Default::default()
+        };
+        let parts = super::build_left_text_parts(&snap);
+        let activity = parts
+            .iter()
+            .find(|span| span.content.contains("Cancelling"))
+            .expect("activity span");
+        assert_eq!(activity.style.fg, Some(crate::theme::color_error()));
     }
 
     #[test]
@@ -698,7 +778,11 @@ mod tests {
         // (e.g. 9_999 → "10.0K"), matching the spec's own 9_960 → "10.0K" example.
         let f = super::fmt_tokens;
         for n in [0u64, 999, 1_000, 9_999, 10_000, 999_999, 1_000_000, 9_999_999, 10_000_000, 100_000_000] {
-            assert!(f(n).len() <= 5, "fmt_tokens({n}) = '{}' exceeds 5 chars", f(n));
+            assert!(
+                f(n).len() <= 5,
+                "fmt_tokens({n}) = '{}' exceeds 5 chars",
+                f(n)
+            );
         }
     }
 
@@ -712,7 +796,12 @@ mod tests {
         assert_eq!(f(100.0), "MAX %");
         assert_eq!(f(150.0), "MAX %");
         for pct in [0.0, 0.5, 9.99, 10.0, 42.0, 99.99, 100.0, 250.0] {
-            assert_eq!(f(pct).len(), 5, "fmt_pct5({pct}) = '{}' not 5 chars", f(pct));
+            assert_eq!(
+                f(pct).len(),
+                5,
+                "fmt_pct5({pct}) = '{}' not 5 chars",
+                f(pct)
+            );
         }
     }
 

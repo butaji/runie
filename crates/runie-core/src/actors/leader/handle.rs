@@ -7,9 +7,9 @@ const SPAWNED_ACTOR_COUNT: usize = 8;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::actors::SHUTDOWN_TIMEOUT_SECS;
+use crate::actors::{ActorCellRef, IoActorHandle, SessionHandle};
 use crate::bus::EventBus;
 use crate::Event as CoreEvent;
-use crate::actors::{ActorCellRef, IoActorHandle, SessionHandle};
 
 use super::messages::LeaderStatus;
 use super::{LeaderAgentHandle, SpawnedHandles};

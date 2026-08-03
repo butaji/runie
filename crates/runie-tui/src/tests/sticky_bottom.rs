@@ -166,10 +166,11 @@ fn user_scrolled_up_does_not_see_new_content() {
     });
     state.ensure_fresh();
 
-    // When scrolled up, new content may not be visible. Key: scroll position preserved.
+    // When scrolled up, new content must not move the detached viewport. The
+    // tail-relative offset compensates for the two rows appended below it.
     assert_eq!(
-        state.view.scroll, 10,
-        "Scroll position should be preserved when user is not at bottom"
+        state.view.scroll, 12,
+        "Tail-relative scroll should preserve the detached viewport"
     );
 }
 

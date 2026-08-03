@@ -167,7 +167,11 @@ fn global_collapse_persists_through_rapid_events() {
         .iter()
         .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
         .collect();
-    assert_eq!(thoughts.len(), 1, "Thought should be collapsed");
+    assert_eq!(
+        thoughts.len(),
+        0,
+        "Thought should expand under the global toggle"
+    );
     let tools: Vec<_> = feed
         .elements
         .iter()
@@ -232,12 +236,16 @@ fn multiple_thoughts_all_follow_global_flag() {
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
 
-    assert_summary_count(&state, 3, "All three thoughts should be collapsed");
+    assert_summary_count(
+        &state,
+        0,
+        "All three thoughts should expand under the global toggle",
+    );
     let feed = LazyCache::feed(&state);
     let markers: Vec<_> = feed
         .elements
         .iter()
         .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
         .collect();
-    assert_eq!(markers.len(), 0, "No thoughts should be expanded");
+    assert_eq!(markers.len(), 3, "All thoughts should be expanded");
 }

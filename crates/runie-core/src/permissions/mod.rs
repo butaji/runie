@@ -23,11 +23,11 @@
 //! - `is_read_only_tool()` — still used by other code
 //! - `is_sensitive_path()` — kept for reference, not enforced
 
-use std::path::Path;
 #[cfg(feature = "mcp")]
 use rmcp::model::ToolAnnotations;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::Path;
 
 pub mod gate;
 mod sink;
@@ -202,5 +202,8 @@ impl PermissionSetPolicy {
 
 /// Tools that are read-only (safe for auto-approval).
 pub fn is_read_only_tool(tool: &str) -> bool {
-    matches!(tool, "read_file" | "grep" | "find" | "list_dir" | "fetch_docs")
+    matches!(
+        tool,
+        "read_file" | "grep" | "find" | "list_dir" | "fetch_docs"
+    )
 }

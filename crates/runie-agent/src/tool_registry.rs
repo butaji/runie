@@ -15,16 +15,14 @@
 use serde_json::Value;
 
 use crate::tool::{
-    BashTool, EditFileTool, FetchDocsTool, FindTool, GrepTool, ListDirTool, ReadFileTool,
-    WriteFileTool,
+    BashTool, EditFileTool, FetchDocsTool, FindTool, GrepTool, ListDirTool, ReadFileTool, WriteFileTool,
 };
 use runie_core::tool::to_openai_function;
 
 // ── Tool categories ────────────────────────────────────────────────────────────
 
 /// Read-only tools (no write side effects — allowed in read-only mode).
-pub const READ_ONLY_TOOL_NAMES: &[&str] =
-    &["read_file", "list_dir", "grep", "find", "fetch_docs"];
+pub const READ_ONLY_TOOL_NAMES: &[&str] = &["read_file", "list_dir", "grep", "find", "fetch_docs"];
 
 /// Write tools (require trust / read-write mode).
 pub const WRITE_TOOL_NAMES: &[&str] = &["bash", "write_file", "edit_file"];
@@ -38,16 +36,8 @@ pub const WRITE_TOOL_NAMES: &[&str] = &["bash", "write_file", "edit_file"];
 
 /// All tool names (must match runie_core::tool::BUILTIN_TOOL_NAMES).
 /// Order must match BUILTIN_TOOL_NAMES from runie_core.
-pub const TOOL_NAMES: &[&str] = &[
-    "bash",
-    "read_file",
-    "write_file",
-    "edit_file",
-    "list_dir",
-    "grep",
-    "find",
-    "fetch_docs",
-];
+pub const TOOL_NAMES: &[&str] =
+    &["bash", "read_file", "write_file", "edit_file", "list_dir", "grep", "find", "fetch_docs"];
 
 // ── Dispatch (generated from tool list) ──────────────────────────────────────
 

@@ -1,5 +1,3 @@
-#![allow(clippy::too_many_lines)]
-
 // AUTO-GENERATED from taxonomy.json — do not edit manually
 // Regenerate: python3 build_scripts/generate_event_taxonomy.py
 
@@ -7,7 +5,6 @@ use super::{Event, EventCategory, EventKind};
 
 impl Event {
     /// Return the [`EventKind`] for this event variant.
-    #[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
     pub fn kind(&self) -> EventKind {
         match self {
             Event::Abort => EventKind::Control,
@@ -19,6 +16,8 @@ impl Event {
             Event::Backspace => EventKind::Intent,
             Event::BashOutput { .. } => EventKind::Fact,
             Event::Cancel => EventKind::Intent,
+            Event::CircuitBreakerReset { .. } => EventKind::Fact,
+            Event::CircuitBreakerTripped { .. } => EventKind::Fact,
             Event::ClearQueues => EventKind::Control,
             Event::ClearTransient => EventKind::Intent,
             Event::ClipboardRead { .. } => EventKind::Fact,
@@ -117,8 +116,6 @@ impl Event {
             Event::PathCompletionUp => EventKind::Intent,
             Event::PatternWorkerFinished { .. } => EventKind::Fact,
             Event::PatternWorkerSpawned { .. } => EventKind::Fact,
-            Event::CircuitBreakerTripped { .. } => EventKind::Fact,
-            Event::CircuitBreakerReset => EventKind::Control,
             Event::PendingEdit { .. } => EventKind::Intent,
             Event::PermissionAllow { .. } => EventKind::Intent,
             Event::PermissionAlwaysAllow { .. } => EventKind::Intent,
@@ -176,6 +173,7 @@ impl Event {
             Event::SelectModel { .. } => EventKind::Intent,
             Event::SelectProvider { .. } => EventKind::Intent,
             Event::SelectSession { .. } => EventKind::Control,
+            Event::SendNow => EventKind::Control,
             Event::SessionChanged { .. } => EventKind::Fact,
             Event::SessionDeleted { .. } => EventKind::Fact,
             Event::SessionExported { .. } => EventKind::Fact,
@@ -232,10 +230,12 @@ impl Event {
             Event::ThoughtDone { .. } => EventKind::Fact,
             Event::ToggleCommandPalette => EventKind::Intent,
             Event::ToggleExpand => EventKind::Control,
+            Event::OpenBlockViewer => EventKind::Control,
             Event::ToggleMcpServersDialog => EventKind::Intent,
             Event::ToggleModel { .. } => EventKind::Intent,
             Event::ToggleModelSelector => EventKind::Intent,
             Event::TogglePathCompletion => EventKind::Intent,
+            Event::ToggleQueuePane { .. } => EventKind::Control,
             Event::ToggleReadOnly => EventKind::Intent,
             Event::ToggleScopedModelsDialog => EventKind::Intent,
             Event::ToggleSessionTree => EventKind::Intent,
@@ -243,7 +243,6 @@ impl Event {
             Event::ToggleSkillsDialog => EventKind::Intent,
             Event::ToggleTasksPane => EventKind::Control,
             Event::ToggleVimMode => EventKind::Control,
-            Event::ToggleQueuePane => EventKind::Control,
             Event::ToggleWelcome => EventKind::Intent,
             Event::TokenStatsUpdated { .. } => EventKind::Fact,
             Event::ToolConstraintError { .. } => EventKind::Fact,
@@ -273,7 +272,6 @@ impl Event {
     }
 
     /// Return the [`EventCategory`] for this event variant.
-    #[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
     pub fn category(&self) -> EventCategory {
         match self {
             Event::Abort => EventCategory::Control,
@@ -285,6 +283,8 @@ impl Event {
             Event::Backspace => EventCategory::Input,
             Event::BashOutput { .. } => EventCategory::IO,
             Event::Cancel => EventCategory::LoginFlow,
+            Event::CircuitBreakerReset { .. } => EventCategory::Agent,
+            Event::CircuitBreakerTripped { .. } => EventCategory::Agent,
             Event::ClearQueues => EventCategory::Control,
             Event::ClearTransient => EventCategory::System,
             Event::ClipboardRead { .. } => EventCategory::IO,
@@ -383,8 +383,6 @@ impl Event {
             Event::PathCompletionUp => EventCategory::Dialog,
             Event::PatternWorkerFinished { .. } => EventCategory::Agent,
             Event::PatternWorkerSpawned { .. } => EventCategory::Agent,
-            Event::CircuitBreakerTripped { .. } => EventCategory::Agent,
-            Event::CircuitBreakerReset => EventCategory::Control,
             Event::PendingEdit { .. } => EventCategory::Edit,
             Event::PermissionAllow { .. } => EventCategory::Permission,
             Event::PermissionAlwaysAllow { .. } => EventCategory::Permission,
@@ -442,6 +440,7 @@ impl Event {
             Event::SelectModel { .. } => EventCategory::ModelConfig,
             Event::SelectProvider { .. } => EventCategory::LoginFlow,
             Event::SelectSession { .. } => EventCategory::Control,
+            Event::SendNow => EventCategory::Control,
             Event::SessionChanged { .. } => EventCategory::Session,
             Event::SessionDeleted { .. } => EventCategory::Session,
             Event::SessionExported { .. } => EventCategory::Session,
@@ -498,10 +497,12 @@ impl Event {
             Event::ThoughtDone { .. } => EventCategory::Agent,
             Event::ToggleCommandPalette => EventCategory::Dialog,
             Event::ToggleExpand => EventCategory::Control,
+            Event::OpenBlockViewer => EventCategory::Control,
             Event::ToggleMcpServersDialog => EventCategory::Dialog,
             Event::ToggleModel { .. } => EventCategory::LoginFlow,
             Event::ToggleModelSelector => EventCategory::Dialog,
             Event::TogglePathCompletion => EventCategory::Dialog,
+            Event::ToggleQueuePane { .. } => EventCategory::Control,
             Event::ToggleReadOnly => EventCategory::ModelConfig,
             Event::ToggleScopedModelsDialog => EventCategory::ModelConfig,
             Event::ToggleSessionTree => EventCategory::Session,
@@ -509,7 +510,6 @@ impl Event {
             Event::ToggleSkillsDialog => EventCategory::Dialog,
             Event::ToggleTasksPane => EventCategory::Control,
             Event::ToggleVimMode => EventCategory::Control,
-            Event::ToggleQueuePane => EventCategory::Control,
             Event::ToggleWelcome => EventCategory::Dialog,
             Event::TokenStatsUpdated { .. } => EventCategory::Agent,
             Event::ToolConstraintError { .. } => EventCategory::Agent,
@@ -542,7 +542,6 @@ impl Event {
     ///
     /// Returns `None` for Fact variants. Control variants like Quit, Reset, Abort
     /// are also convertible to intent.
-    #[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
     pub fn into_intent(self) -> Option<Event> {
         match self {
             Event::RunCompactCommand { .. } => Some(self.clone()),
@@ -575,13 +574,15 @@ impl Event {
             Event::Reset => Some(self),
             Event::ResumeSession => Some(self),
             Event::SelectSession { .. } => Some(self.clone()),
+            Event::SendNow => Some(self),
             Event::ShareSession => Some(self),
             Event::StarSession { .. } => Some(self.clone()),
             Event::Suspend => Some(self),
             Event::ToggleExpand => Some(self),
+            Event::OpenBlockViewer => Some(self),
+            Event::ToggleQueuePane => Some(self),
             Event::ToggleTasksPane => Some(self),
             Event::ToggleVimMode => Some(self),
-            Event::ToggleQueuePane => Some(self),
             Event::AtFilePicker => Some(self),
             Event::CommandFormBackspace => Some(self),
             Event::CommandFormClose => Some(self),
@@ -725,11 +726,12 @@ impl Event {
 }
 
 /// Returns true if this event is a fact (not an intent or control).
-#[allow(clippy::too_many_lines)] // auto-generated match — cannot split without code gen
 pub fn is_fact_variant(e: &Event) -> bool {
     matches!(
         e,
-        |Event::AssistantMessageReady { .. }| Event::CompactionTriggered { .. }
+        |Event::AssistantMessageReady { .. }| Event::CircuitBreakerReset { .. }
+            | Event::CircuitBreakerTripped { .. }
+            | Event::CompactionTriggered { .. }
             | Event::Done { .. }
             | Event::Error { .. }
             | Event::FollowUpDelivered { .. }
@@ -737,8 +739,6 @@ pub fn is_fact_variant(e: &Event) -> bool {
             | Event::MessageDequeued { .. }
             | Event::PatternWorkerFinished { .. }
             | Event::PatternWorkerSpawned { .. }
-            | Event::CircuitBreakerTripped { .. }
-            | Event::CircuitBreakerReset
             | Event::QueueAborted { .. }
             | Event::QueueFollowUpAdded { .. }
             | Event::QueueSteeringAdded { .. }
@@ -921,14 +921,16 @@ pub const EVENT_NAMES: &[(&str, EventCtor)] = &[
     ("Abort", || Event::Abort),
     ("ClearQueues", || Event::ClearQueues),
     ("FollowUp", || Event::FollowUp),
+    ("SendNow", || Event::SendNow),
     ("ToggleExpand", || Event::ToggleExpand),
+    ("OpenBlockViewer", || Event::OpenBlockViewer),
     ("ToggleTasksPane", || Event::ToggleTasksPane),
+    ("ToggleQueuePane", || Event::ToggleQueuePane),
     ("Dequeue", || Event::Dequeue),
     ("OpenExternalEditor", || Event::OpenExternalEditor),
     ("ShareSession", || Event::ShareSession),
     ("Suspend", || Event::Suspend),
     ("ToggleVimMode", || Event::ToggleVimMode),
-    ("ToggleQueuePane", || Event::ToggleQueuePane),
     ("CopyLastResponse", || Event::CopyLastResponse),
     ("OpenSessionList", || Event::OpenSessionList),
     ("NewSession", || Event::NewSession),
