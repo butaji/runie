@@ -822,6 +822,19 @@ impl UiActor {
     #[allow(clippy::cognitive_complexity)]
     #[allow(clippy::too_many_lines)]
     async fn handle_input_event(&mut self, evt: &Event) {
+        // Grok's scrollback-focused editing flow uses Tab to move focus from
+        // an empty composer into the feed, where Up/Down select posts. Keep
+        // Tab's completion behavior for an empty session or a non-empty
+        // draft; an existing conversation gets the shared Vim feed selector.
+        if matches!(evt, Event::Input('\t'))
+            && self.state.open_dialog().is_none()
+            && !self.state.view().vim_nav_mode
+            && self.state.input().input.is_empty()
+            && !self.state.session().messages.is_empty()
+        {
+            self.apply_event(Event::Escape);
+            return;
+        }
         // Inline editing has its own receiver so the actor cannot mistake an
         // edited historical prompt for a fresh composer submission.
         if self.state.view().input_receiver == runie_core::model::InputReceiver::InlineEdit
