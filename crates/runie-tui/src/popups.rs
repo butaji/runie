@@ -30,17 +30,41 @@ pub fn clear_panel_bg(f: &mut Frame, area: Rect) {
 
 /// Compute the centered popup rect for the command palette.
 pub fn palette_popup_rect(area: Rect) -> Rect {
-    let popup_width = layout_constants::POPUP_WIDTH
-        .min(area.width.saturating_sub(4))
-        .max(layout_constants::POPUP_MIN_WIDTH);
-    let popup_height = layout_constants::POPUP_HEIGHT
-        .min(area.height.saturating_sub(4))
-        .max(layout_constants::POPUP_MIN_HEIGHT);
+    // Degraded terminals must never receive a popup rectangle larger than the
+    // frame. Grok keeps overlays inside the available cell grid during resize
+    // storms; forcing the normal minimum dimensions here used to let the
+    // border/content extend beyond very short or narrow frames.
+    let popup_width = layout_constants::POPUP_WIDTH.min(area.width);
+    let popup_height = layout_constants::POPUP_HEIGHT.min(area.height);
     Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
         y: area.y + (area.height.saturating_sub(popup_height)) / 2,
         width: popup_width,
         height: popup_height,
+    }
+}
+
+#[cfg(test)]
+mod popup_rect_tests {
+    use super::palette_popup_rect;
+    use ratatui::layout::Rect;
+
+    #[test]
+    fn popup_rect_is_contained_in_normal_frame() {
+        let frame = Rect::new(0, 0, 100, 32);
+        let popup = palette_popup_rect(frame);
+        assert!(popup.x + popup.width <= frame.x + frame.width);
+        assert!(popup.y + popup.height <= frame.y + frame.height);
+    }
+
+    #[test]
+    fn popup_rect_never_exceeds_degraded_frame() {
+        let frame = Rect::new(0, 0, 12, 4);
+        let popup = palette_popup_rect(frame);
+        assert_eq!(popup.width, 12);
+        assert_eq!(popup.height, 4);
+        assert!(popup.x + popup.width <= frame.x + frame.width);
+        assert!(popup.y + popup.height <= frame.y + frame.height);
     }
 }
 
