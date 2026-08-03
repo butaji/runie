@@ -51,6 +51,24 @@ impl AppState {
         *self.transient_until_mut() = Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
     }
 
+    /// Upsert a committed parked-plan block by tool-call identity. Revisions
+    /// replace the existing feed message instead of appending duplicates.
+    pub(crate) fn upsert_parked_plan(&mut self, call_id: &str, content: &str) {
+        let id = format!("parked-plan:{call_id}");
+        if let Some(message) = self.session_mut().messages.iter_mut().find(|message| message.id == id) {
+            message.set_text_part(content.to_owned());
+        } else {
+            self.session_mut().messages.push(ChatMessage {
+                role: Role::System,
+                timestamp: crate::update::now(),
+                id,
+                parts: vec![runie_core::message::Part::Text { content: content.to_owned() }],
+                ..Default::default()
+            });
+        }
+        self.messages_changed();
+    }
+
     /// Emit a transient notification in the hints line (not in the feed).
     pub(crate) fn notify(&mut self, content: String, level: TransientLevel) {
         self.set_transient(content, level);

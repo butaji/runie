@@ -182,6 +182,7 @@ impl AppState {
     }
 
     pub(crate) fn append_tool_input_delta(&mut self, id: String, content: String) {
+        let call_id = id.clone();
         let assembled = {
             let agent = self.agent_state_mut();
             let value = agent.tool_input_fragments.entry(id).or_default();
@@ -197,6 +198,7 @@ impl AppState {
                 if let Some(plan) = plan.filter(|value| !value.is_empty()) {
                     self.view_mut().plan_mode = true;
                     self.view_mut().active_plan_content = plan.to_owned();
+                    self.upsert_parked_plan(&call_id, plan);
                     self.view_mut().dirty = true;
                 }
             }

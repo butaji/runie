@@ -133,6 +133,10 @@ mod tests {
         );
         assert!(state.view().plan_mode);
         assert_eq!(state.view().active_plan_content, "body");
+        assert_eq!(
+            state.session().messages.iter().filter(|message| message.id == "parked-plan:call_plan").count(),
+            1
+        );
     }
 
     #[test]
