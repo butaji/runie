@@ -339,22 +339,23 @@ fn script_turn_stream(
 
         // Emit tool calls, each followed by an optional tool result.
         for (i, tool) in turn.tool_calls.iter().enumerate() {
+            let call_id = format!("call_{}", i + 1);
             yield Ok(ProviderEvent::ToolCallStart {
-                id: "call_1".to_string(),
+                id: call_id.clone(),
                 name: tool.name.clone(),
             });
             if !tool.arguments.is_null() {
                 yield Ok(ProviderEvent::ToolCallInputDelta {
-                    id: "call_1".to_string(),
+                    id: call_id.clone(),
                     delta: tool.arguments.to_string(),
                 });
             }
-            yield Ok(ProviderEvent::ToolCallEnd { id: "call_1".to_string() });
+            yield Ok(ProviderEvent::ToolCallEnd { id: call_id.clone() });
 
             // Emit the tool execution start + result if a result was provided.
             if let Some(result) = turn.tool_results.get(i) {
                 yield Ok(ProviderEvent::ToolExecutionStart {
-                    id: "call_1".to_string(),
+                    id: call_id,
                     name: tool.name.clone(),
                 });
                 // Optional per-tool latency so the "Running {tool}…" status
