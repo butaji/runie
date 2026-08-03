@@ -1,5 +1,0 @@
-{
-  "version": "1.0.0",
-  "description": "Black-box test plan for runie CLI and TUI, covering UI parity, replay fixtures, error states, and onboarding.",
-  "tasks": []
-}
