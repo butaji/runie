@@ -33,6 +33,10 @@ pub struct AgentState {
 
     // ── Tool execution (mirrors TurnState) ─────────────────────────────────────
     pub current_tool_name: Option<String>,
+    /// Structured tool-call arguments assembled from streaming input deltas.
+    /// Kept by call id so approval-capable tools can inspect their complete
+    /// arguments before execution.
+    pub tool_input_fragments: std::collections::HashMap<String, String>,
     pub tool_started_at: Option<std::time::Instant>,
     pub intermediate_step_count: usize,
 
@@ -91,6 +95,7 @@ impl From<&TurnState> for AgentState {
             turn_cancelling: false,
             inflight: ts.inflight,
             current_tool_name: ts.current_tool_name.clone(),
+            tool_input_fragments: std::collections::HashMap::new(),
             tool_started_at: ts.tool_started_at,
             intermediate_step_count: ts.intermediate_step_count,
             tokens_in: ts.tokens_in,

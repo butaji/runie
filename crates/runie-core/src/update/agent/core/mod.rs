@@ -156,6 +156,7 @@ impl AppState {
         }
         // Update AgentState for all tool-related fields.
         let agent = self.agent_state_mut();
+        agent.tool_input_fragments.remove(&id);
         agent.current_request_id = Some(id.clone());
         agent.current_tool_name = Some(name.clone());
         agent.thinking_started_at = None;
@@ -178,6 +179,14 @@ impl AppState {
             metrics::record_tool_usage(&name);
         }
         self.messages_changed();
+    }
+
+    pub(crate) fn append_tool_input_delta(&mut self, id: String, content: String) {
+        self.agent_state_mut()
+            .tool_input_fragments
+            .entry(id)
+            .or_default()
+            .push_str(&content);
     }
 
     pub(crate) fn end_tool(&mut self, duration_secs: f64, output: String) {
@@ -206,6 +215,9 @@ impl AppState {
                     last.timestamp = now();
                 }
             }
+        }
+        if let Some(id) = self.agent_state().current_request_id.clone() {
+            self.agent_state_mut().tool_input_fragments.remove(&id);
         }
         self.messages_changed();
     }

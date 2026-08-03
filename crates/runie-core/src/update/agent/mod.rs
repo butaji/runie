@@ -25,6 +25,7 @@ pub fn agent_event(state: &mut AppState, event: crate::Event) {
         E::Thinking { id } => apply_and_order(state, |s| s.set_thinking(id)),
         E::ThoughtDone { id } => apply_and_order(state, |s| s.add_thought(id)),
         E::ToolStart { id, name, .. } => apply_and_order(state, |s| s.start_tool(id, name)),
+        E::ToolInputDelta { id, content } => state.append_tool_input_delta(id, content),
         E::ToolEnd { duration_secs, output, .. } => apply_and_order(state, |s| s.end_tool(duration_secs, output)),
         E::ResponseDelta { .. } => state.handle_llm_event(event),
         E::Response { id, content, .. } => apply_and_order(state, |s| s.append_response(id, content)),
@@ -104,6 +105,32 @@ mod tests {
         agent_event(&mut state, crate::Event::response("2", "hello"));
 
         state.ensure_turn_complete_last();
+    }
+
+    #[test]
+    fn tool_input_deltas_are_assembled_by_call_id() {
+        let mut state = AppState::default();
+        state.apply_config(&crate::config::Config::default());
+        agent_event(
+            &mut state,
+            crate::Event::ToolStart {
+                id: "call_plan".into(),
+                name: "exit_plan_mode".into(),
+                input: serde_json::Value::Null,
+            },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::ToolInputDelta { id: "call_plan".into(), content: "{\"plan\":".into() },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::ToolInputDelta { id: "call_plan".into(), content: "\"body\"}".into() },
+        );
+        assert_eq!(
+            state.agent_state().tool_input_fragments.get("call_plan"),
+            Some(&"{\"plan\":\"body\"}".to_string())
+        );
     }
 
     #[test]
