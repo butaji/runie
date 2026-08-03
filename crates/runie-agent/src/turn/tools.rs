@@ -56,6 +56,25 @@ pub async fn execute_single_tool(
 ) -> ToolOutput {
     emit_tool_start(tool_id, tool_call, &emit);
 
+    // `exit_plan_mode` is a protocol signal emitted by models, not an
+    // executable user tool. Preserve its structured input in the normal
+    // event stream so the core can project the plan into the shared feed and
+    // plan dialog without routing it through the filesystem tool registry.
+    if tool_call.name == "exit_plan_mode" {
+        emit(runie_core::Event::ToolInputDelta {
+            id: tool_id.to_owned(),
+            content: tool_call.args.to_string(),
+        });
+        return ToolOutput {
+            tool_name: tool_call.name.clone(),
+            tool_args: tool_call.args.clone(),
+            content: "Plan submitted for approval".to_owned(),
+            bytes_transferred: None,
+            duration: std::time::Duration::ZERO,
+            status: ToolStatus::Success,
+        };
+    }
+
     if let Some(output) = run_skill_before_hook(skills, tool_call) {
         return output;
     }
