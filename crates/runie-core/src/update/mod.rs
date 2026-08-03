@@ -124,7 +124,17 @@ impl AppState {
             return;
         }
         if let Event::ViewChanged { state } = event {
-            *self.view_mut() = *state;
+            let active_inline_edit = self.view().inline_edit.clone();
+            let active_receiver = self.view().input_receiver;
+            let mut projected = *state;
+            // Render/input actor snapshots can be queued before the feed
+            // selection enters inline edit. Do not let that stale snapshot
+            // erase the active editor or hand the next Submit to ChatInput.
+            if active_inline_edit.is_some() && projected.inline_edit.is_none() {
+                projected.inline_edit = active_inline_edit;
+                projected.input_receiver = active_receiver;
+            }
+            *self.view_mut() = projected;
             return;
         }
         if let Event::ConfigLoaded { config } = event {

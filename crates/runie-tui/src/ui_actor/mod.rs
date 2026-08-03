@@ -856,6 +856,18 @@ impl UiActor {
             self.apply_event(evt.clone());
             return;
         }
+        // Inline editing is a projection over a historical prompt, not a
+        // fresh composer. Apply typed characters synchronously so an
+        // InputActor echo cannot race the editor state before Submit.
+        if self.state.view().input_receiver == runie_core::model::InputReceiver::InlineEdit {
+            if let Event::Input(c) = evt {
+                let mut projected = self.state.input().clone();
+                projected.input.insert(projected.cursor_pos, *c);
+                projected.cursor_pos += c.len_utf8();
+                self.apply_event(Event::InputChanged { state: Box::new(projected) });
+                return;
+            }
+        }
         // SendNow is Grok's cancel-and-send chord: stop the current agent,
         // preserve local queued rows, and submit the composer as a normal next
         // turn without exposing a cancellation marker.

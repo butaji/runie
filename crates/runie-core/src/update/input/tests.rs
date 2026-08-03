@@ -82,6 +82,26 @@ fn inline_edit_input_projection_preserves_seed_and_merges_suffix_echo() {
     assert_eq!(state.view().inline_edit.as_ref().unwrap().edited, "first prompt revised");
 }
 
+#[test]
+fn stale_view_snapshot_does_not_clear_active_inline_edit() {
+    let mut state = AppState::default();
+    state.view_mut().inline_edit = Some(crate::model::InlineEditState {
+        post_index: 0,
+        original: "prompt".into(),
+        edited: "prompt revised".into(),
+        cursor_pos: 15,
+    });
+    state.view_mut().input_receiver = crate::model::InputReceiver::InlineEdit;
+
+    let mut stale = state.view().clone();
+    stale.inline_edit = None;
+    stale.input_receiver = crate::model::InputReceiver::ChatInput;
+    state.update(crate::Event::ViewChanged { state: Box::new(stale) });
+
+    assert!(state.view().inline_edit.is_some());
+    assert_eq!(state.view().input_receiver, crate::model::InputReceiver::InlineEdit);
+}
+
 // ============================================================================
 // Layer 2 — Event Handling: history recall from an EMPTY input (grok parity)
 // ============================================================================
