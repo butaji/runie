@@ -137,6 +137,26 @@ mod tests {
             state.session().messages.iter().filter(|message| message.id == "parked-plan:call_plan").count(),
             1
         );
+        agent_event(
+            &mut state,
+            crate::Event::ToolStart {
+                id: "call_plan_revision".into(),
+                name: "exit_plan_mode".into(),
+                input: serde_json::Value::Null,
+            },
+        );
+        agent_event(
+            &mut state,
+            crate::Event::ToolInputDelta {
+                id: "call_plan_revision".into(),
+                content: "{\"plan\":\"revision\"}".into(),
+            },
+        );
+        assert_eq!(state.view().active_plan_content, "revision");
+        assert_eq!(
+            state.session().messages.iter().filter(|message| message.id.starts_with("parked-plan:")).count(),
+            2
+        );
     }
 
     #[test]

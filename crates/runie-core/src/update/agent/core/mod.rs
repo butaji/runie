@@ -151,7 +151,9 @@ impl AppState {
 
     pub(crate) fn start_tool(&mut self, id: String, name: String) {
         // Idempotent: skip if already running this tool.
-        if self.agent_state().current_tool_name.as_deref() == Some(&name) {
+        if self.agent_state().current_tool_name.as_deref() == Some(&name)
+            && self.agent_state().current_request_id.as_deref() == Some(&id)
+        {
             return;
         }
         // Update AgentState for all tool-related fields.
