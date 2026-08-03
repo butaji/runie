@@ -131,6 +131,8 @@ mod tests {
             state.agent_state().tool_input_fragments.get("call_plan"),
             Some(&"{\"plan\":\"body\"}".to_string())
         );
+        assert!(state.view().plan_mode);
+        assert_eq!(state.view().active_plan_content, "body");
     }
 
     #[test]

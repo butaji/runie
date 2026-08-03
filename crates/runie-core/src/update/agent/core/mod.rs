@@ -182,11 +182,25 @@ impl AppState {
     }
 
     pub(crate) fn append_tool_input_delta(&mut self, id: String, content: String) {
-        self.agent_state_mut()
-            .tool_input_fragments
-            .entry(id)
-            .or_default()
-            .push_str(&content);
+        let assembled = {
+            let agent = self.agent_state_mut();
+            let value = agent.tool_input_fragments.entry(id).or_default();
+            value.push_str(&content);
+            value.clone()
+        };
+        if self.agent_state().current_tool_name.as_deref() == Some("exit_plan_mode") {
+            if let Ok(args) = serde_json::from_str::<serde_json::Value>(&assembled) {
+                let plan = args
+                    .get("plan")
+                    .or_else(|| args.get("content"))
+                    .and_then(serde_json::Value::as_str);
+                if let Some(plan) = plan.filter(|value| !value.is_empty()) {
+                    self.view_mut().plan_mode = true;
+                    self.view_mut().active_plan_content = plan.to_owned();
+                    self.view_mut().dirty = true;
+                }
+            }
+        }
     }
 
     pub(crate) fn end_tool(&mut self, duration_secs: f64, output: String) {
