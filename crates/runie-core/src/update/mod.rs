@@ -130,7 +130,9 @@ impl AppState {
             // Render/input actor snapshots can be queued before the feed
             // selection enters inline edit. Do not let that stale snapshot
             // erase the active editor or hand the next Submit to ChatInput.
-            if active_inline_edit.is_some() && projected.inline_edit.is_none() {
+            if active_inline_edit.is_some()
+                && (projected.inline_edit.is_none() || projected.input_receiver != active_receiver)
+            {
                 projected.inline_edit = active_inline_edit;
                 projected.input_receiver = active_receiver;
             }
