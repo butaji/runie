@@ -89,7 +89,27 @@ impl AppState {
             let range_suffix = self.input().file_picker_range_suffix.clone();
             let chips = self.input().chips.clone();
             let picker_open = picker_backup.is_some();
-            *self.input_mut() = *state;
+            let mut projected = *state;
+            // Inline editing seeds the visible prompt before the asynchronous
+            // InputActor echo arrives. The actor may still publish its stale
+            // empty buffer, or may publish only the newly typed suffix. Keep
+            // that echo from erasing the selected prompt; a full prompt echo
+            // remains authoritative when it already contains the original.
+            if let Some(edit) = self.view().inline_edit.as_ref() {
+                let incoming = projected.input.clone();
+                let current = self.input().input.clone();
+                if incoming.is_empty() && !edit.original.is_empty() {
+                    projected.input = edit.original.clone();
+                    projected.cursor_pos = projected.input.len();
+                } else if current == edit.original
+                    && !incoming.starts_with(&edit.original)
+                    && !incoming.is_empty()
+                {
+                    projected.input = format!("{}{}", edit.original, incoming);
+                    projected.cursor_pos = projected.input.len();
+                }
+            }
+            *self.input_mut() = projected;
             let inline_text = self.input().input.clone();
             let inline_cursor = self.input().cursor_pos;
             if let Some(edit) = self.view_mut().inline_edit.as_mut() {

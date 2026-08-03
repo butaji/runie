@@ -56,6 +56,32 @@ fn inline_edit_resubmit_during_active_turn_does_not_rewrite_history() {
     assert!(state.view().inline_edit.is_none());
 }
 
+#[test]
+fn inline_edit_input_projection_preserves_seed_and_merges_suffix_echo() {
+    let mut state = AppState::default();
+    state.input_mut().input = "first prompt".into();
+    state.input_mut().cursor_pos = "first prompt".len();
+    state.view_mut().inline_edit = Some(crate::model::InlineEditState {
+        post_index: 0,
+        original: "first prompt".into(),
+        edited: "first prompt".into(),
+        cursor_pos: "first prompt".len(),
+    });
+
+    state.update(crate::Event::InputChanged {
+        state: Box::new(crate::model::InputState::default()),
+    });
+    assert_eq!(state.input().input, "first prompt");
+    assert_eq!(state.view().inline_edit.as_ref().unwrap().edited, "first prompt");
+
+    let mut suffix = crate::model::InputState::default();
+    suffix.input = " revised".into();
+    suffix.cursor_pos = suffix.input.len();
+    state.update(crate::Event::InputChanged { state: Box::new(suffix) });
+    assert_eq!(state.input().input, "first prompt revised");
+    assert_eq!(state.view().inline_edit.as_ref().unwrap().edited, "first prompt revised");
+}
+
 // ============================================================================
 // Layer 2 — Event Handling: history recall from an EMPTY input (grok parity)
 // ============================================================================
