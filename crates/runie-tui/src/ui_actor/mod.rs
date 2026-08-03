@@ -875,6 +875,35 @@ impl UiActor {
                 return;
             }
         }
+        // A feed focus transition may clear vim_nav_mode before the queued
+        // Enter reaches UiActor, while selected_post remains authoritative.
+        // Preserve Enter's user-prompt edit action instead of falling through
+        // to a fresh chat submission in that narrow state.
+        if matches!(evt, Event::Submit)
+            && self.state.open_dialog().is_none()
+            && self.state.input().input.is_empty()
+            && self.state.view().selected_post.is_some()
+        {
+            let is_selected_user = self.state.view().selected_post.is_some_and(|index| {
+                let snapshot = self.state.snapshot();
+                snapshot
+                    .posts
+                    .get(index)
+                    .and_then(|post| snapshot.elements.get(post.start))
+                    .is_some_and(|element| matches!(element, runie_core::view::elements::Element::UserMessage { .. }))
+            });
+            if is_selected_user {
+                self.apply_event(evt.clone());
+                if self.state.view().input_receiver == runie_core::model::InputReceiver::InlineEdit {
+                    let text = self.state.input().input.clone();
+                    let _ = self.send_input_msg(runie_core::actors::InputMsg::SetText {
+                        text,
+                        chips: Vec::new(),
+                    }).await;
+                }
+                return;
+            }
+        }
         // SendNow is Grok's cancel-and-send chord: stop the current agent,
         // preserve local queued rows, and submit the composer as a normal next
         // turn without exposing a cancellation marker.

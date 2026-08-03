@@ -312,7 +312,7 @@ impl AppState {
                         // User messages (UserInput): Enter toggles fold/expand (grok parity).
                         // User messages start expanded; entering their index in
                         // expanded_posts marks them as collapsed (3 lines + ` …`).
-                        if post.kind == crate::view::elements::PostKind::UserInput {
+                        if matches!(snap.elements.get(post.start), Some(crate::view::elements::Element::UserMessage { .. })) {
                             if let Some(crate::view::elements::Element::UserMessage { content, .. }) =
                                 snap.elements.get(post.start)
                             {
