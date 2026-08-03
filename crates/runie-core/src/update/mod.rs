@@ -90,6 +90,17 @@ impl AppState {
             let chips = self.input().chips.clone();
             let picker_open = picker_backup.is_some();
             let mut projected = *state;
+            // Once the shared resubmit dialog owns an active inline edit, the
+            // InputActor may still publish the pre-dialog suffix snapshot.
+            // Keep the editor's canonical text authoritative until the dialog
+            // resolves; otherwise a late echo can turn the full edited prompt
+            // back into only its trailing fragment.
+            if self.open_dialog().is_some() {
+                if let Some(edit) = self.view().inline_edit.as_ref() {
+                    projected.input = edit.edited.clone();
+                    projected.cursor_pos = projected.input.len();
+                }
+            }
             // Inline editing seeds the visible prompt before the asynchronous
             // InputActor echo arrives. The actor may still publish its stale
             // empty buffer, or may publish only the newly typed suffix. Keep

@@ -847,10 +847,17 @@ impl UiActor {
             // before the core reducer decides whether this is unchanged or
             // should open the shared resubmit dialog.
             if matches!(evt, Event::Submit) {
-                let effective = self.effective_input_content();
+                let incoming = self.effective_input_content();
                 if let Some(edit) = self.state.view_mut().inline_edit.as_mut() {
+                    let effective = if incoming.is_empty() || incoming.starts_with(&edit.original) {
+                        incoming
+                    } else {
+                        format!("{}{}", edit.original, incoming)
+                    };
                     edit.edited = effective.clone();
                     edit.cursor_pos = effective.len();
+                    self.state.input_mut().input = effective;
+                    self.state.input_mut().cursor_pos = self.state.input().input.len();
                 }
             }
             self.apply_event(evt.clone());
@@ -881,18 +888,42 @@ impl UiActor {
         // to a fresh chat submission in that narrow state.
         if matches!(evt, Event::Submit)
             && self.state.open_dialog().is_none()
-            && self.state.input().input.is_empty()
             && self.state.view().selected_post.is_some()
         {
-            let is_selected_user = self.state.view().selected_post.is_some_and(|index| {
+            let selected_user = self.state.view().selected_post.and_then(|index| {
                 let snapshot = self.state.snapshot();
-                snapshot
-                    .posts
-                    .get(index)
-                    .and_then(|post| snapshot.elements.get(post.start))
-                    .is_some_and(|element| matches!(element, runie_core::view::elements::Element::UserMessage { .. }))
+                snapshot.posts.get(index).and_then(|post| {
+                    snapshot.elements.get(post.start).and_then(|element| match element {
+                        runie_core::view::elements::Element::UserMessage { content, .. } => Some(content.clone()),
+                        _ => None,
+                    })
+                })
             });
-            if is_selected_user {
+            if let Some(original) = selected_user {
+                // A queued ViewChanged/InputChanged snapshot can restore the
+                // composer receiver between inline-edit entry and Submit.
+                // Reclaim the selected user row here so Enter cannot become a
+                // fresh chat turn. Suffix-only input echoes are merged with
+                // the original prompt before the core reducer compares text.
+                if self.state.view().input_receiver != runie_core::model::InputReceiver::InlineEdit {
+                    let incoming = self.effective_input_content();
+                    let edited = if incoming.is_empty() {
+                        original.clone()
+                    } else if incoming.starts_with(&original) {
+                        incoming
+                    } else {
+                        format!("{}{}", original, incoming)
+                    };
+                    self.state.view_mut().inline_edit = Some(runie_core::model::InlineEditState {
+                        post_index: self.state.view().selected_post.expect("selected post exists"),
+                        original,
+                        cursor_pos: edited.len(),
+                        edited: edited.clone(),
+                    });
+                    self.state.view_mut().input_receiver = runie_core::model::InputReceiver::InlineEdit;
+                    self.state.input_mut().input = edited;
+                    self.state.input_mut().cursor_pos = self.state.input().input.len();
+                }
                 self.apply_event(evt.clone());
                 if self.state.view().input_receiver == runie_core::model::InputReceiver::InlineEdit {
                     let text = self.state.input().input.clone();
