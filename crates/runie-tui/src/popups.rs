@@ -66,6 +66,14 @@ mod popup_rect_tests {
         assert!(popup.x + popup.width <= frame.x + frame.width);
         assert!(popup.y + popup.height <= frame.y + frame.height);
     }
+
+    #[test]
+    fn path_popup_area_never_exceeds_degraded_frame() {
+        let frame = Rect::new(0, 0, 12, 4);
+        let popup = super::path_popup_area(frame, 8);
+        assert!(popup.x + popup.width <= frame.x + frame.width);
+        assert!(popup.y + popup.height <= frame.y + frame.height);
+    }
 }
 
 pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
@@ -99,14 +107,11 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
 
 fn path_popup_area(area: Rect, item_count: usize) -> Rect {
     let display_count = item_count.min(layout_constants::PATH_DISPLAY_COUNT as usize) as u16;
-    let max_height = display_count + layout_constants::PATH_POPUP_BORDER;
+    let max_height = (display_count + layout_constants::PATH_POPUP_BORDER).min(area.height);
     Rect {
-        x: area.x + 1,
-        y: area.y + area.height.saturating_sub(4 + max_height),
-        width: area
-            .width
-            .saturating_sub(2)
-            .max(layout_constants::POPUP_MIN_WIDTH),
+        x: area.x + area.width.min(1),
+        y: area.y + area.height.saturating_sub(max_height),
+        width: area.width.saturating_sub(2),
         height: max_height,
     }
 }
