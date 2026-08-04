@@ -1,9 +1,0 @@
-# Context detail toggle
-name: context-detail
-description: Toggle context detail (usage progress bar / token text)
-category: System
-sub: false
-triggers:
-  - /context-detail
-type: handler
-handler: context-detail

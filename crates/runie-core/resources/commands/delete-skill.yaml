@@ -1,9 +1,0 @@
-# Delete skill command
-name: delete-skill
-description: Delete a skill from the user skills directory
-category: System
-sub: false
-triggers:
-  - /delete-skill
-type: handler
-handler: delete-skill

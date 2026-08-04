@@ -1,9 +1,0 @@
-# System commands
-name: copy
-description: Copy last response to clipboard
-category: System
-sub: false
-triggers:
-  - /copy
-type: handler
-handler: copy

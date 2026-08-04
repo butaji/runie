@@ -1,9 +1,0 @@
-# Approve edits command
-name: approve
-description: Apply pending file edits
-category: System
-sub: false
-triggers:
-  - /approve
-type: handler
-handler: approve

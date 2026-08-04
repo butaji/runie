@@ -1,9 +1,0 @@
-# Trust current project
-name: trust
-description: Trust current project
-category: Safety
-sub: false
-triggers:
-  - /trust
-type: handler
-handler: trust

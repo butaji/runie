@@ -1,9 +1,0 @@
-# Reload command
-name: reload
-description: Reload config, keybindings, themes
-category: System
-sub: false
-triggers:
-  - /reload
-type: handler
-handler: reload

@@ -1,7 +1,0 @@
-data: {"id":"0684ff71a65ec09f07ddfc377913e30e","choices":[{"index":0,"delta":{"content":"<think>\nThe user wants me to list project","role":"assistant","reasoning":"The user wants me to list project"}}],"created":1781910641,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
-
-data: {"id":"0684ff71a65ec09f07ddfc377913e30e","choices":[{"index":0,"delta":{"content":" files and then read the README.md file. I've already listed the directory. Now I need to read the README.md file.","role":"assistant","reasoning":" files and then read the README.md file. I've already listed the directory. Now I need to read the README.md file."}}],"created":1781910641,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
-
-data: {"id":"0684ff71a65ec09f07ddfc377913e30e","choices":[{"index":0,"delta":{"content":"\n<tool_call>\n<invoke name=\"read_file\">\n<path>README.md</path>\n</invoke>\n</tool_call>","role":"assistant","tool_calls":[{"index":0,"id":"call_def456","type":"function","function":{"name":"read_file","arguments":"{\"path\": \"README.md\"}"}}]}}],"created":1781910641,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}
-
-data: {"id":"0684ff71a65ec09f07ddfc377913e30e","choices":[{"finish_reason":"stop","index":0,"delta":{"content":"","role":"assistant"}}],"created":1781910641,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}

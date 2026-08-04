@@ -1,9 +1,0 @@
-# Queue inspection snapshot
-name: queue
-description: Show prompts waiting in the queue
-category: Session
-sub: false
-triggers:
-  - /queue
-type: handler
-handler: queue

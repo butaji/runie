@@ -1,8 +1,0 @@
-name: resume
-description: Resume most recent session
-category: Session
-sub: false
-triggers:
-  - /resume
-type: handler
-handler: resume

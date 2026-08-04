@@ -1,9 +1,0 @@
-# Untrust current project
-name: untrust
-description: Untrust current project
-category: Safety
-sub: false
-triggers:
-  - /untrust
-type: handler
-handler: untrust

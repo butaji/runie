@@ -1,8 +1,0 @@
-name: plan
-description: Toggle plan mode — blocks write tools until plan is approved
-category: Session
-sub: true
-triggers:
-  - /plan
-type: handler
-handler: plan

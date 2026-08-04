@@ -1,9 +1,0 @@
-# Scoped models command
-name: scoped-models
-description: Enable/disable models for cycling
-category: Model
-sub: true
-triggers:
-  - /scoped-models
-type: handler
-handler: scoped_models

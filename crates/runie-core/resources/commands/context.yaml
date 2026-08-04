@@ -1,9 +1,0 @@
-# Context snapshot feed command
-name: context
-description: Show context usage in the feed
-category: Session
-sub: false
-triggers:
-  - /context
-type: handler
-handler: context
