@@ -66,6 +66,28 @@ pub async fn run_loop(
     let mut all_new: Vec<AgentMessage> = prompts.clone();
     let mut tool_calls: Vec<ToolCall> = Vec::new();
 
+    // Parity with pi-agent-core: steering messages queued before/while the
+    // prompts were submitted are injected before the first assistant
+    // response (the user may have typed while waiting), within the same
+    // first turn — no extra `TurnStart`.
+    let steering = match deps.steering_mode {
+        QueueMode::OneAtATime => match deps.steering.drain_one().await {
+            Some(m) => vec![m],
+            None => vec![],
+        },
+        QueueMode::All => deps.steering.drain_all().await,
+    };
+    for msg in steering {
+        deps.bus.publish(AgentEvent::MessageStart {
+            message: msg.clone(),
+        });
+        deps.bus.publish(AgentEvent::MessageEnd {
+            message: msg.clone(),
+        });
+        deps.state.push_message(msg.clone()).await;
+        all_new.push(msg);
+    }
+
     loop {
         // Build the wire context and request the provider stream.
         let snap = deps.state.snapshot();
