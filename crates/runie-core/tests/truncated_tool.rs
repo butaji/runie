@@ -3,13 +3,15 @@
 //!
 //! A `MaxTokens` stop means the provider was cut off by its output token
 //! limit, so every tool call in the message may carry truncated arguments.
-//! The loop must synthesize error results instead of running the tools.
+//! The loop must synthesize error results instead of running the tools, then
+//! auto-continue to a follow-up turn (pi agent-loop.ts:216 + 405).
 
 mod common;
 
 use std::sync::Arc;
 
 use futures::stream;
+use parking_lot::Mutex;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
     AgentContext, AgentMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason,
@@ -18,10 +20,11 @@ use runie_core::types::{
 
 use common::{echo_tool, event_kinds, TestLoopBuilder};
 
-/// A single-turn stream that ends with a `MaxTokens` stop after requesting a
-/// tool call.
+/// A multi-turn stream: the first call ends with `MaxTokens` after a tool
+/// call; subsequent calls return a plain `stop` so the auto-continue
+/// terminates.
 struct TruncatingStream {
-    events: Vec<AssistantMessageEvent>,
+    calls: Mutex<usize>,
 }
 
 #[async_trait::async_trait]
@@ -32,33 +35,45 @@ impl StreamFn for TruncatingStream {
         _context: &AgentContext,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
-        Ok(Box::pin(stream::iter(self.events.clone())))
-    }
-}
-
-fn truncated_stream() -> TruncatingStream {
-    TruncatingStream {
-        events: vec![
-            AssistantMessageEvent::Start,
-            AssistantMessageEvent::ToolCallDelta {
-                index: 0,
-                partial: ToolCall {
-                    id: "call-1".into(),
-                    name: "echo".into(),
-                    arguments: serde_json::json!({ "text": "hello" }),
+        let mut n = self.calls.lock();
+        *n += 1;
+        let events = if *n == 1 {
+            vec![
+                AssistantMessageEvent::Start,
+                AssistantMessageEvent::ToolCallDelta {
+                    index: 0,
+                    partial: ToolCall {
+                        id: "call-1".into(),
+                        name: "echo".into(),
+                        arguments: serde_json::json!({ "text": "hello" }),
+                    },
                 },
-            },
-            AssistantMessageEvent::Done {
-                stop_reason: StopReason::MaxTokens,
-                usage: Usage::default(),
-            },
-        ],
+                AssistantMessageEvent::Done {
+                    stop_reason: StopReason::MaxTokens,
+                    usage: Usage::default(),
+                },
+            ]
+        } else {
+            vec![
+                AssistantMessageEvent::Start,
+                AssistantMessageEvent::TextDelta {
+                    delta: "after".into(),
+                },
+                AssistantMessageEvent::Done {
+                    stop_reason: StopReason::Stop,
+                    usage: Usage::default(),
+                },
+            ]
+        };
+        Ok(Box::pin(stream::iter(events)))
     }
 }
 
 #[tokio::test]
 async fn max_tokens_tool_calls_are_failed_not_executed() {
-    let mut builder = TestLoopBuilder::new(Arc::new(truncated_stream()));
+    let mut builder = TestLoopBuilder::new(Arc::new(TruncatingStream {
+        calls: Mutex::new(0),
+    }));
     builder = builder.tool(echo_tool());
     let test = builder.build();
 
@@ -98,6 +113,14 @@ async fn max_tokens_tool_calls_are_failed_not_executed() {
     assert!(
         text.contains("was not executed"),
         "error result should explain the truncation, got: {text:?}"
+    );
+
+    // The loop auto-continued to a follow-up assistant turn (pi: the
+    // truncated batch returns terminate:false -> hasMoreToolCalls true).
+    assert!(
+        outcome.iter().any(|m| matches!(m,
+            AgentMessage::Assistant(a) if a.content.iter().any(|c| matches!(c, runie_core::types::AssistantContent::Text { text } if text == "after")))),
+        "loop should continue after injecting the failed results"
     );
 
     // The tool was surfaced as start/end events with the error flag.

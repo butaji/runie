@@ -37,7 +37,7 @@
     {
       "id": "p05",
       "file": "p05-core-loop-auto-continue.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core loop: auto-continue after tool batches (hasMoreToolCalls / terminate)"
     },
     {

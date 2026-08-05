@@ -52,9 +52,7 @@ impl StreamFn for BlockingStream {
 
 fn user(text: &str, ts: i64) -> AgentMessage {
     AgentMessage::User(UserMessage {
-        content: vec![UserContent::Text {
-            text: text.into(),
-        }],
+        content: vec![UserContent::Text { text: text.into() }],
         timestamp: ts,
     })
 }

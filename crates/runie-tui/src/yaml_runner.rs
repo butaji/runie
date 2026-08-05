@@ -218,6 +218,10 @@ impl From<LineKindName> for LineKind {
 /// StreamFn impl driven by a `Vec<AssistantMessageEvent>`.
 pub struct ScenarioStream {
     pub events: Vec<AssistantMessageEvent>,
+    /// Number of `stream()` calls so far. The first call replays `events`;
+    /// later calls (auto-continue after a tool batch) return a terminating
+    /// `Done{stop}` so the loop does not replay the same script forever.
+    pub calls: Mutex<usize>,
 }
 
 #[async_trait::async_trait]
@@ -229,6 +233,14 @@ impl StreamFn for ScenarioStream {
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
         use futures::stream;
+        let mut n = self.calls.lock();
+        *n += 1;
+        if *n > 1 {
+            return Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+            }])));
+        }
         // `unfold` lets us yield between events so the runtime can poll
         // other tasks (the renderer) between items. Without this the
         // `current_thread` runtime runs the synchronous stream to
@@ -370,6 +382,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
             .iter()
             .map(EventSpec::to_assistant_event)
             .collect(),
+        calls: Mutex::new(0),
     }));
 
     let deps = LoopDeps {
@@ -610,6 +623,7 @@ pub async fn render_visual_buffer(
             .iter()
             .map(EventSpec::to_assistant_event)
             .collect(),
+        calls: Mutex::new(0),
     }));
     let deps = LoopDeps {
         state,

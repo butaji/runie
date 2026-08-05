@@ -207,6 +207,9 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             );
         }
 
+        // The isolated parse test above consumed the first replay turn; reset
+        // so the loop run replays the recorded trace from the start.
+        provider.reset_turns();
         let mut builder = common::TestLoopBuilder::new(provider);
         for tool in &expectation.tools {
             builder = builder.tool(Arc::new(DeclaredTool {
@@ -240,7 +243,21 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
                     matches!(content, AssistantContent::ToolCall(call) if call.name == tool.name)))),
                 "{} missing declared tool call {}", trace_path.display(), tool.name);
         }
-        assert_eq!(expectation.state.assistant_messages, 1);
+        // With auto-continue (p05), a trace that requests a tool call yields a
+        // follow-up assistant turn (the replay provider's terminating ack), so
+        // the assistant count is 2 for tool traces and 1 otherwise.
+        let has_tool_call = events.iter().any(|e| *e == "ToolCallDelta");
+        let expected_assistants = if has_tool_call { 2 } else { 1 };
+        let actual_assistants = output
+            .iter()
+            .filter(|m| matches!(m, AgentMessage::Assistant(_)))
+            .count();
+        assert_eq!(
+            actual_assistants,
+            expected_assistants,
+            "{} assistant count",
+            trace_path.display()
+        );
         for _ in 0..8 {
             tokio::task::yield_now().await;
         }

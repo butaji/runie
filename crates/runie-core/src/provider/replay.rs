@@ -3,6 +3,7 @@
 use std::{fs, path::Path, sync::Arc};
 
 use futures::stream;
+use parking_lot::Mutex;
 
 use crate::types::{
     AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall, Usage,
@@ -18,6 +19,10 @@ use super::{
 /// core only receives its normal `AssistantMessageEvent` stream.
 pub struct ReplayProvider {
     events: Vec<AssistantMessageEvent>,
+    /// Number of `stream()` calls. The first call replays the recorded trace;
+    /// later calls (auto-continue after a tool batch) return a terminating
+    /// `Done{stop}` so the loop does not re-replay the same trace forever.
+    calls: Mutex<usize>,
 }
 
 impl ReplayProvider {
@@ -169,7 +174,17 @@ impl ReplayProvider {
             stop_reason: StopReason::Stop,
             usage: Usage::default(),
         });
-        Ok(Self { events })
+        Ok(Self {
+            events,
+            calls: Mutex::new(0),
+        })
+    }
+}
+
+impl ReplayProvider {
+    /// Reset the turn counter so a fresh run replays the recorded trace again.
+    pub fn reset_turns(&self) {
+        *self.calls.lock() = 0;
     }
 }
 
@@ -181,6 +196,14 @@ impl StreamFn for ReplayProvider {
         _context: &crate::types::AgentContext,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
+        let mut n = self.calls.lock();
+        *n += 1;
+        if *n > 1 {
+            return Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+            }])));
+        }
         Ok(Box::pin(stream::iter(self.events.clone())))
     }
 }

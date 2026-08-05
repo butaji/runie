@@ -4,12 +4,58 @@ mod common;
 
 use std::sync::Arc;
 
-use common::{event_kinds, MockStreamFn, TestLoopBuilder};
+use common::{echo_tool, event_kinds, MockStreamFn, TestLoopBuilder};
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
     AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
-    SimpleStreamOptions, StopReason, Usage, UserContent, UserMessage,
+    SimpleStreamOptions, StopReason, ToolCall, Usage, UserContent, UserMessage,
 };
+
+/// Multi-turn stream: first call requests a tool call (`tool_use`), later
+/// calls return a plain `stop`. Exercises pi's `hasMoreToolCalls` loop
+/// continuation (auto-continue after a tool batch).
+struct SequentialToolStream {
+    calls: parking_lot::Mutex<usize>,
+}
+#[async_trait::async_trait]
+impl StreamFn for SequentialToolStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        let mut n = self.calls.lock();
+        *n += 1;
+        let events = if *n == 1 {
+            vec![
+                AssistantMessageEvent::ToolCallDelta {
+                    index: 0,
+                    partial: ToolCall {
+                        id: "c1".into(),
+                        name: "echo".into(),
+                        arguments: serde_json::json!({}),
+                    },
+                },
+                AssistantMessageEvent::Done {
+                    stop_reason: StopReason::ToolUse,
+                    usage: Usage::default(),
+                },
+            ]
+        } else {
+            vec![
+                AssistantMessageEvent::TextDelta {
+                    delta: "done".into(),
+                },
+                AssistantMessageEvent::Done {
+                    stop_reason: StopReason::Stop,
+                    usage: Usage::default(),
+                },
+            ]
+        };
+        Ok(Box::pin(futures::stream::iter(events)))
+    }
+}
 
 /// StreamFn that finishes with a `Done` carrying nonzero usage, to verify
 /// usage flows into the final assistant message (pi AssistantMessage.usage).
@@ -193,4 +239,42 @@ async fn done_usage_flows_into_final_assistant_message() {
     let final_a = ends.last().expect("assistant message should end");
     assert_eq!(final_a.usage.input, 5);
     assert_eq!(final_a.usage.output, 7);
+}
+
+#[tokio::test]
+async fn tool_use_auto_continues_to_next_turn() {
+    let mut builder = TestLoopBuilder::new(Arc::new(SequentialToolStream {
+        calls: parking_lot::Mutex::new(0),
+    }));
+    builder = builder.tool(echo_tool());
+    let test = builder.build();
+
+    let prompt = vec![AgentMessage::User(UserMessage {
+        content: vec![UserContent::Text { text: "go".into() }],
+        timestamp: 1,
+    })];
+    let outcome = test
+        .actor
+        .prompt(prompt, AgentContext::default())
+        .await
+        .unwrap();
+
+    // user + assistant(tool call) + toolResult + assistant("done") = 4.
+    let assistants = outcome
+        .iter()
+        .filter(|m| matches!(m, AgentMessage::Assistant(_)))
+        .count();
+    assert_eq!(assistants, 2, "two assistant turns expected");
+    assert!(
+        outcome
+            .iter()
+            .any(|m| matches!(m, AgentMessage::ToolResult(_))),
+        "expected a tool result"
+    );
+
+    // Two turns => two TurnStart events (pi emits turn_start per inner
+    // iteration after the first).
+    let kinds = event_kinds(&test.events.lock());
+    let turn_starts = kinds.iter().filter(|k| **k == "TurnStart").count();
+    assert_eq!(turn_starts, 2, "auto-continue should start a second turn");
 }

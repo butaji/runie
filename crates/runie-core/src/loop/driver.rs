@@ -177,6 +177,11 @@ pub async fn run_loop(
         let assistant_for_event = assistant.clone();
         let plan = decide_next_turn(&deps.state.snapshot(), tool_calls.clone(), false, false);
 
+        // pi `hasMoreToolCalls`: true when a tool batch ran without every
+        // result terminating, so the loop streams the next assistant response
+        // that consumes the tool results (agent-loop.ts:216).
+        let mut has_more_tool_calls = false;
+
         match plan {
             TurnPlan::ToolBatch { calls } => {
                 // Parity with pi-agent-core: a `MaxTokens` stop (the provider
@@ -186,6 +191,7 @@ pub async fn run_loop(
                 let ToolExecOutcome {
                     tool_results,
                     events,
+                    all_terminated,
                 } = if matches!(assistant.stop_reason, Some(StopReason::MaxTokens)) {
                     fail_truncated_calls(&calls)
                 } else {
@@ -202,10 +208,11 @@ pub async fn run_loop(
                         crate::tools::ToolOutcome::Completed {
                             tool_results,
                             events,
-                            ..
+                            all_terminated,
                         } => ToolExecOutcome {
                             tool_results,
                             events,
+                            all_terminated,
                         },
                         crate::tools::ToolOutcome::Aborted { reason } => {
                             deps.state.set_error(Some(reason)).await;
@@ -213,6 +220,10 @@ pub async fn run_loop(
                         }
                     }
                 };
+
+                // Guard against repeatedly streaming the same tool calls from a
+                // fixed replay stream: only continue when a batch actually ran.
+                has_more_tool_calls = !tool_results.is_empty() && !all_terminated;
 
                 for event in events {
                     deps.bus.publish(event);
@@ -282,7 +293,7 @@ pub async fn run_loop(
             all_new.push(msg);
         }
 
-        if !any_injected {
+        if !any_injected && !has_more_tool_calls {
             break;
         }
         deps.bus.publish(AgentEvent::TurnStart);
@@ -305,6 +316,8 @@ pub async fn run_loop_continue(context: AgentContext, deps: RunLoopDeps) -> RunL
 struct ToolExecOutcome {
     tool_results: Vec<ToolResultMessage>,
     events: Vec<AgentEvent>,
+    /// True when every result had `terminate: true` (pi `shouldTerminateToolBatch`).
+    all_terminated: bool,
 }
 
 /// Synthesize error results for every tool call in a message that was
@@ -352,6 +365,9 @@ fn fail_truncated_calls(calls: &[ToolCall]) -> ToolExecOutcome {
     ToolExecOutcome {
         tool_results,
         events,
+        // pi failToolCallsFromTruncatedMessage returns terminate:false, so the
+        // loop continues to a follow-up turn (agent-loop.ts:405).
+        all_terminated: false,
     }
 }
 
