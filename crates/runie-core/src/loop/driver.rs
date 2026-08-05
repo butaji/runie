@@ -14,9 +14,9 @@ use crate::state::AgentStateActor;
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
 use crate::types::{
-    AgentContext, AgentEvent, AgentMessage, AgentTool, AssistantContent, AssistantMessage,
-    AssistantMessageEvent, QueueMode, StopReason, ToolCall, ToolExecutionMode, ToolResultMessage,
-    WireMessage,
+    AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantContent,
+    AssistantMessage, AssistantMessageEvent, QueueMode, StopReason, ToolCall, ToolExecutionMode,
+    ToolResultContent, ToolResultMessage, WireMessage,
 };
 
 /// Bag of dependencies the driver needs.
@@ -153,30 +153,38 @@ pub async fn run_loop(
 
         match plan {
             TurnPlan::ToolBatch { calls } => {
-                let outcome = deps
-                    .tool_executor
-                    .execute(
-                        assistant_for_event,
-                        calls,
-                        deps.tool_execution_mode,
-                        deps.hooks.clone(),
-                    )
-                    .await;
+                // Parity with pi-agent-core: a `MaxTokens` stop (the provider
+                // was cut off by the output token limit) means every tool call
+                // in the message may carry truncated arguments. Fail them all
+                // instead of executing potentially borked calls.
                 let ToolExecOutcome {
                     tool_results,
                     events,
-                } = match outcome {
-                    crate::tools::ToolOutcome::Completed {
-                        tool_results,
-                        events,
-                        ..
-                    } => ToolExecOutcome {
-                        tool_results,
-                        events,
-                    },
-                    crate::tools::ToolOutcome::Aborted { reason } => {
-                        deps.state.set_error(Some(reason)).await;
-                        break;
+                } = if matches!(assistant.stop_reason, Some(StopReason::MaxTokens)) {
+                    fail_truncated_calls(&calls)
+                } else {
+                    match deps
+                        .tool_executor
+                        .execute(
+                            assistant_for_event,
+                            calls,
+                            deps.tool_execution_mode,
+                            deps.hooks.clone(),
+                        )
+                        .await
+                    {
+                        crate::tools::ToolOutcome::Completed {
+                            tool_results,
+                            events,
+                            ..
+                        } => ToolExecOutcome {
+                            tool_results,
+                            events,
+                        },
+                        crate::tools::ToolOutcome::Aborted { reason } => {
+                            deps.state.set_error(Some(reason)).await;
+                            break;
+                        }
                     }
                 };
 
@@ -271,6 +279,54 @@ pub async fn run_loop_continue(context: AgentContext, deps: RunLoopDeps) -> RunL
 struct ToolExecOutcome {
     tool_results: Vec<ToolResultMessage>,
     events: Vec<AgentEvent>,
+}
+
+/// Synthesize error results for every tool call in a message that was
+/// truncated by the output token limit. Mirrors pi-agent-core's
+/// `failToolCallsFromTruncatedMessage`: no tool is executed; each call is
+/// reported as an error so the caller can re-issue it with complete
+/// arguments.
+fn fail_truncated_calls(calls: &[ToolCall]) -> ToolExecOutcome {
+    let mut tool_results = Vec::with_capacity(calls.len());
+    let mut events = Vec::with_capacity(calls.len() * 2);
+    for call in calls {
+        events.push(AgentEvent::ToolExecutionStart {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            args: call.arguments.clone(),
+        });
+        let reason = format!(
+            "Tool call \"{}\" was not executed: the response hit the output token limit, so its \
+             arguments may be truncated. Re-issue the tool call with complete arguments.",
+            call.name
+        );
+        let result = AgentToolResult {
+            content: vec![ToolResultContent::Text {
+                text: reason.clone(),
+            }],
+            details: serde_json::Value::Null,
+            usage: None,
+            added_tool_names: vec![],
+            terminate: false,
+        };
+        events.push(AgentEvent::ToolExecutionEnd {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            result: serde_json::to_value(&result).unwrap_or_default(),
+            is_error: true,
+        });
+        tool_results.push(ToolResultMessage {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            content: result.content.clone(),
+            is_error: true,
+            timestamp: 0,
+        });
+    }
+    ToolExecOutcome {
+        tool_results,
+        events,
+    }
 }
 
 fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
