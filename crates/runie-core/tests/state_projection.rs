@@ -66,9 +66,7 @@ async fn streaming_projection_tracks_live_assistant_message() {
             actor
                 .prompt(
                     vec![AgentMessage::User(UserMessage {
-                        content: vec![UserContent::Text {
-                            text: "hi".into(),
-                        }],
+                        content: vec![UserContent::Text { text: "hi".into() }],
                         timestamp: 1,
                     })],
                     AgentContext::default(),
@@ -97,7 +95,10 @@ async fn streaming_projection_tracks_live_assistant_message() {
     let _ = release_tx.send(true);
     run.await.expect("run task").expect("run completes");
     let after = test.state.snapshot();
-    assert!(!after.is_streaming, "is_streaming should clear after the turn");
+    assert!(
+        !after.is_streaming,
+        "is_streaming should clear after the turn"
+    );
     assert!(after.streaming_message.is_none());
 }
 
@@ -127,9 +128,7 @@ impl AgentTool for BlockingTool {
         let mut rx = self.release.clone();
         let _ = rx.wait_for(|v| *v).await;
         Ok(AgentToolResult {
-            content: vec![ToolResultContent::Text {
-                text: "ok".into(),
-            }],
+            content: vec![ToolResultContent::Text { text: "ok".into() }],
             details: serde_json::Value::Null,
             usage: None,
             added_tool_names: vec![],
@@ -183,7 +182,9 @@ async fn pending_tool_calls_projection_tracks_in_flight_call() {
     let mut builder = TestLoopBuilder::new(Arc::new(OneToolStream {
         calls: Mutex::new(0),
     }));
-    builder = builder.tool(Arc::new(BlockingTool { release: release_rx }));
+    builder = builder.tool(Arc::new(BlockingTool {
+        release: release_rx,
+    }));
     let test = builder.build();
 
     let run = {
@@ -192,9 +193,7 @@ async fn pending_tool_calls_projection_tracks_in_flight_call() {
             actor
                 .prompt(
                     vec![AgentMessage::User(UserMessage {
-                        content: vec![UserContent::Text {
-                            text: "go".into(),
-                        }],
+                        content: vec![UserContent::Text { text: "go".into() }],
                         timestamp: 1,
                     })],
                     AgentContext::default(),
@@ -206,12 +205,20 @@ async fn pending_tool_calls_projection_tracks_in_flight_call() {
     let mut saw_pending = false;
     for _ in 0..2000 {
         tokio::task::yield_now().await;
-        if test.state.snapshot().pending_tool_calls.contains(&"tool-1".to_string()) {
+        if test
+            .state
+            .snapshot()
+            .pending_tool_calls
+            .contains(&"tool-1".to_string())
+        {
             saw_pending = true;
             break;
         }
     }
-    assert!(saw_pending, "pending_tool_calls should include tool-1 in flight");
+    assert!(
+        saw_pending,
+        "pending_tool_calls should include tool-1 in flight"
+    );
 
     let _ = release_tx.send(true);
     run.await.expect("run task").expect("run completes");

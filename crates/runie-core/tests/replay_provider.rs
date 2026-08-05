@@ -80,9 +80,15 @@ fn root() -> PathBuf {
 fn event_name(event: &AssistantMessageEvent) -> &'static str {
     match event {
         AssistantMessageEvent::Start => "Start",
+        AssistantMessageEvent::TextStart { .. } => "TextStart",
         AssistantMessageEvent::TextDelta { .. } => "TextDelta",
+        AssistantMessageEvent::TextEnd { .. } => "TextEnd",
+        AssistantMessageEvent::ThinkingStart { .. } => "ThinkingStart",
         AssistantMessageEvent::ThinkingDelta { .. } => "ThinkingDelta",
+        AssistantMessageEvent::ThinkingEnd { .. } => "ThinkingEnd",
+        AssistantMessageEvent::ToolCallStart { .. } => "ToolCallStart",
         AssistantMessageEvent::ToolCallDelta { .. } => "ToolCallDelta",
+        AssistantMessageEvent::ToolCallEnd { .. } => "ToolCallEnd",
         AssistantMessageEvent::Done { .. } => "Done",
         AssistantMessageEvent::Error { .. } => "Error",
     }

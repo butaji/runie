@@ -517,18 +517,43 @@ pub enum AgentEvent {
 }
 
 /// Per-event payload from a streaming assistant message.
+///
+/// Mirrors pi's granular `AssistantMessageEvent` (pi-ai types.ts:501): the
+/// sectional `*_start` / `*_end` markers delimit content blocks, the `*_delta`
+/// events carry the streaming text, and `done`/`error` terminate the message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum AssistantMessageEvent {
     Start,
+    TextStart {
+        index: usize,
+    },
     TextDelta {
         delta: String,
+    },
+    TextEnd {
+        index: usize,
+    },
+    ThinkingStart {
+        index: usize,
     },
     ThinkingDelta {
         delta: String,
     },
+    ThinkingEnd {
+        index: usize,
+    },
+    ToolCallStart {
+        index: usize,
+        partial: ToolCall,
+    },
     ToolCallDelta {
         index: usize,
         partial: ToolCall,
+    },
+    ToolCallEnd {
+        index: usize,
+        tool_call: ToolCall,
     },
     Done {
         stop_reason: StopReason,
@@ -714,6 +739,57 @@ mod tests {
         assert!(ujson.get("reasoning").is_some());
         let uback: Usage = serde_json::from_value(ujson).unwrap();
         assert_eq!(uback, usage);
+    }
+
+    #[test]
+    fn assistant_message_event_subkinds_round_trip() {
+        let events = vec![
+            AssistantMessageEvent::Start,
+            AssistantMessageEvent::TextStart { index: 0 },
+            AssistantMessageEvent::TextDelta { delta: "hi".into() },
+            AssistantMessageEvent::TextEnd { index: 0 },
+            AssistantMessageEvent::ThinkingStart { index: 1 },
+            AssistantMessageEvent::ThinkingDelta {
+                delta: "think".into(),
+            },
+            AssistantMessageEvent::ThinkingEnd { index: 1 },
+            AssistantMessageEvent::ToolCallStart {
+                index: 0,
+                partial: ToolCall {
+                    id: "c".into(),
+                    name: "x".into(),
+                    arguments: serde_json::json!({}),
+                },
+            },
+            AssistantMessageEvent::ToolCallDelta {
+                index: 0,
+                partial: ToolCall {
+                    id: "c".into(),
+                    name: "x".into(),
+                    arguments: serde_json::json!({}),
+                },
+            },
+            AssistantMessageEvent::ToolCallEnd {
+                index: 0,
+                tool_call: ToolCall {
+                    id: "c".into(),
+                    name: "x".into(),
+                    arguments: serde_json::json!({}),
+                },
+            },
+            AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+            },
+            AssistantMessageEvent::Error {
+                error: "boom".into(),
+            },
+        ];
+        for e in events {
+            let json = serde_json::to_value(&e).unwrap();
+            let back: AssistantMessageEvent = serde_json::from_value(json).unwrap();
+            assert_eq!(back, e);
+        }
     }
 
     #[test]

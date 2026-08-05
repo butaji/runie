@@ -31,7 +31,7 @@
     {
       "id": "p04",
       "file": "p04-core-event-subkinds.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core types: granular AssistantMessageEvent sub-kinds (text/thinking start+end, toolcall start+end)"
     },
     {
