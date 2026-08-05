@@ -40,6 +40,9 @@ pub struct RunLoopDeps {
                 + Sync,
         >,
     >,
+    /// Abort signal: when it flips true the loop stops before the next turn
+    /// (pi `Agent.abort()`).
+    pub abort: Option<tokio::sync::watch::Receiver<bool>>,
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -104,6 +107,14 @@ pub async fn run_loop(
     let mut override_ctx: Option<AgentContext> = None;
 
     loop {
+        // Abort check (pi `Agent.abort()`): stop before the next turn.
+        if let Some(abort) = &deps.abort {
+            if *abort.borrow() {
+                deps.state.set_error(Some("aborted".into())).await;
+                break;
+            }
+        }
+
         // Build the wire context and request the provider stream.
         let snap = deps.state.snapshot();
         let model = override_model.clone().unwrap_or_else(|| snap.model.clone());

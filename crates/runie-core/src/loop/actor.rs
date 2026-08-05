@@ -53,6 +53,8 @@ pub struct LoopDeps {
                 + Sync,
         >,
     >,
+    /// Abort signal receiver; `LoopActor::new` injects its own channel.
+    pub abort: Option<tokio::sync::watch::Receiver<bool>>,
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -70,6 +72,7 @@ impl LoopDeps {
             hooks: self.hooks.clone(),
             turn_hooks: self.turn_hooks.clone(),
             transform_context: self.transform_context.clone(),
+            abort: self.abort.clone(),
             tool_execution_mode: self.tool_execution_mode,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,
@@ -88,17 +91,20 @@ struct Inner {
     /// True while a run is in flight; guards concurrent `prompt()` (pi's
     /// "Agent is already processing a prompt" rejection).
     running: Mutex<bool>,
-    aborted: Mutex<bool>,
+    /// Abort channel sender (pi `Agent.abort()`).
+    abort_tx: tokio::sync::watch::Sender<bool>,
 }
 
 impl LoopActor {
-    pub fn new(deps: LoopDeps) -> Self {
+    pub fn new(mut deps: LoopDeps) -> Self {
+        let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
+        deps.abort = Some(abort_rx);
         Self {
             inner: Arc::new(Inner {
                 deps,
                 current: Mutex::new(None),
                 running: Mutex::new(false),
-                aborted: Mutex::new(false),
+                abort_tx,
             }),
         }
     }
@@ -169,9 +175,7 @@ impl LoopActor {
     }
 
     pub fn abort(&self) {
-        if let Ok(mut g) = self.inner.aborted.try_lock() {
-            *g = true;
-        }
+        let _ = self.inner.abort_tx.send(true);
     }
 
     pub async fn wait_for_idle(&self) {

@@ -151,6 +151,7 @@ impl TestLoopBuilder {
             hooks: self.hooks,
             turn_hooks: self.turn_hooks,
             transform_context: self.transform_context,
+            abort: None,
             tool_execution_mode: self.tool_execution,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,

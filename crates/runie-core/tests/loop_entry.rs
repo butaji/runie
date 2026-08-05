@@ -10,10 +10,10 @@ use parking_lot::Mutex;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
     AgentContext, AgentMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason,
-    Usage, UserContent, UserMessage,
+    ToolCall, Usage, UserContent, UserMessage,
 };
 
-use common::{MockStreamFn, TestLoopBuilder};
+use common::{echo_tool, MockStreamFn, TestLoopBuilder};
 
 /// StreamFn that signals `started` on its first poll, yields text, then
 /// blocks until `release` changes, then finishes with `Done{stop}`. Used to
@@ -138,4 +138,99 @@ async fn continue_run_from_user_produces_new_messages_only() {
     // Only the new assistant message is returned (not the pre-existing user).
     assert_eq!(out.len(), 1);
     assert!(matches!(out[0], AgentMessage::Assistant(_)));
+}
+
+/// Stream that keeps requesting tool calls so the loop would auto-continue
+/// forever; turn 2 blocks until released. Used to prove `abort()` stops it.
+struct AbortStream {
+    calls: Mutex<usize>,
+    started: tokio::sync::watch::Sender<bool>,
+    release: Mutex<Option<tokio::sync::watch::Receiver<bool>>>,
+}
+
+#[async_trait::async_trait]
+impl StreamFn for AbortStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        let n = {
+            let mut c = self.calls.lock();
+            *c += 1;
+            *c
+        };
+        let release = self.release.lock().take();
+        let tool_turn = vec![
+            AssistantMessageEvent::ToolCallDelta {
+                index: 0,
+                partial: ToolCall {
+                    id: "c1".into(),
+                    name: "echo".into(),
+                    arguments: serde_json::json!({}),
+                },
+            },
+            AssistantMessageEvent::Done {
+                stop_reason: StopReason::ToolUse,
+                usage: Usage::default(),
+            },
+        ];
+        if n == 1 {
+            let _ = self.started.send(true);
+            return Ok(Box::pin(stream::iter(tool_turn)));
+        }
+        if n == 2 {
+            if let Some(mut rx) = release {
+                let _ = rx.wait_for(|v| *v).await;
+            }
+        }
+        Ok(Box::pin(stream::iter(tool_turn)))
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn abort_stops_a_continuously_tool_using_run() {
+    let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
+    let (release_tx, release_rx) = tokio::sync::watch::channel(false);
+    let stream = Arc::new(AbortStream {
+        calls: Mutex::new(0),
+        started: started_tx,
+        release: Mutex::new(Some(release_rx)),
+    });
+    let mut builder = TestLoopBuilder::new(stream);
+    builder = builder.tool(echo_tool());
+    let test = builder.build();
+
+    let run = {
+        let actor = test.actor.clone();
+        tokio::spawn(async move {
+            actor
+                .prompt(
+                    vec![AgentMessage::User(UserMessage {
+                        content: vec![UserContent::Text { text: "go".into() }],
+                        timestamp: 1,
+                    })],
+                    AgentContext::default(),
+                )
+                .await
+        })
+    };
+    // Wait until turn 1 (tool call) has begun, then abort and release turn 2.
+    while !*started_rx.borrow() {
+        let _ = started_rx.changed().await;
+    }
+    test.actor.abort();
+    let _ = release_tx.send(true);
+
+    let outcome = run.await.expect("run task").expect("run completes");
+    // The state should record the abort.
+    let snap = test.state.snapshot();
+    assert_eq!(
+        snap.error_message.clone(),
+        Some("aborted".to_string()),
+        "abort should set the error message"
+    );
+    // The run still returned (terminated cleanly), not busy.
+    assert!(!outcome.is_empty());
 }

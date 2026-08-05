@@ -73,7 +73,7 @@
     {
       "id": "p11",
       "file": "p11-core-provider-streaming.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core provider: streaming partial reconstruction, error/aborted encoding, abort wiring"
     },
     {

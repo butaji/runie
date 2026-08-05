@@ -112,6 +112,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
         hooks: ToolExecHooks::default(),
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
+        abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: QueueMode::OneAtATime,
         follow_up_mode: QueueMode::OneAtATime,

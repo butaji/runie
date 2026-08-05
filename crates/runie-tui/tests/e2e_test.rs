@@ -109,6 +109,7 @@ fn build_app() -> App {
         hooks: ToolExecHooks::default(),
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
+        abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: runie_core::types::QueueMode::OneAtATime,
         follow_up_mode: runie_core::types::QueueMode::OneAtATime,
