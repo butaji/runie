@@ -55,7 +55,7 @@
     {
       "id": "p08",
       "file": "p08-core-hooks-transform-context.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core hooks: transformContext applied before convert_to_llm"
     },
     {

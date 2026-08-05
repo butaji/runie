@@ -31,6 +31,15 @@ pub struct RunLoopDeps {
     pub bus: EventBus,
     pub hooks: ToolExecHooks,
     pub turn_hooks: TurnHooks,
+    /// pi `transformContext` (agent-loop.ts:289): pre-processes the agent
+    /// messages before `convert_to_llm` each turn.
+    pub transform_context: Option<
+        Arc<
+            dyn Fn(Vec<AgentMessage>) -> futures::future::BoxFuture<'static, Vec<AgentMessage>>
+                + Send
+                + Sync,
+        >,
+    >,
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -104,7 +113,13 @@ pub async fn run_loop(
             tools: snap.tools.clone(),
         };
         let ctx = override_ctx.clone().unwrap_or(base_ctx);
-        let wire: Vec<WireMessage> = default_convert_to_llm(&ctx.messages);
+        // pi transformContext runs before convert_to_llm (agent-loop.ts:289).
+        let effective: Vec<AgentMessage> = if let Some(tf) = &deps.transform_context {
+            tf(ctx.messages.clone()).await
+        } else {
+            ctx.messages.clone()
+        };
+        let wire: Vec<WireMessage> = default_convert_to_llm(&effective);
 
         // Mark streaming.
         deps.state.mark_streaming(true).await;

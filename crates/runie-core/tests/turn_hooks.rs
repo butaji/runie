@@ -146,3 +146,83 @@ async fn should_stop_after_turn_ends_the_agent_early() {
     // Only one provider call happened.
     assert_eq!(stream.models.lock().len(), 1);
 }
+
+/// Stream that records the user texts it receives in the context (the LLM
+/// wire context after transformContext).
+struct RecordingCtxStream {
+    texts: Mutex<Vec<String>>,
+}
+
+#[async_trait::async_trait]
+impl StreamFn for RecordingCtxStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        for m in &context.messages {
+            if let AgentMessage::User(u) = m {
+                for c in &u.content {
+                    if let UserContent::Text { text } = c {
+                        self.texts.lock().push(text.clone());
+                    }
+                }
+            }
+        }
+        Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
+            stop_reason: StopReason::Stop,
+            usage: Usage::default(),
+        }])))
+    }
+}
+
+#[tokio::test]
+async fn transform_context_filters_messages_before_llm() {
+    let stream = Arc::new(RecordingCtxStream {
+        texts: Mutex::new(Vec::new()),
+    });
+    // Drop any user message whose text contains "secret".
+    let transform = |messages: Vec<AgentMessage>| {
+        let filtered: Vec<_> = messages
+            .into_iter()
+            .filter(|m| {
+                !matches!(m, AgentMessage::User(u)
+                    if u.content.iter().any(|c| matches!(c, UserContent::Text { text } if text.contains("secret"))))
+            })
+            .collect();
+        Box::pin(async move { filtered }) as futures::future::BoxFuture<'static, Vec<AgentMessage>>
+    };
+    let mut builder = TestLoopBuilder::new(stream.clone());
+    builder = builder.transform_context(transform);
+    let test = builder.build();
+
+    let prompt = vec![
+        AgentMessage::User(UserMessage {
+            content: vec![UserContent::Text {
+                text: "visible".into(),
+            }],
+            timestamp: 1,
+        }),
+        AgentMessage::User(UserMessage {
+            content: vec![UserContent::Text {
+                text: "secret payload".into(),
+            }],
+            timestamp: 2,
+        }),
+    ];
+    test.actor
+        .prompt(prompt, AgentContext::default())
+        .await
+        .unwrap();
+
+    let texts = stream.texts.lock();
+    assert!(
+        texts.contains(&"visible".to_string()),
+        "visible message should reach the provider"
+    );
+    assert!(
+        !texts.iter().any(|t| t.contains("secret")),
+        "secret message should be filtered out by transformContext"
+    );
+}

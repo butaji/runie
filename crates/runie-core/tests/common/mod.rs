@@ -80,6 +80,13 @@ pub struct TestLoopBuilder {
     pub tools: Vec<Arc<dyn runie_core::types::AgentTool>>,
     pub hooks: ToolExecHooks,
     pub turn_hooks: TurnHooks,
+    pub transform_context: Option<
+        Arc<
+            dyn Fn(Vec<AgentMessage>) -> futures::future::BoxFuture<'static, Vec<AgentMessage>>
+                + Send
+                + Sync,
+        >,
+    >,
     pub tool_execution: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -92,6 +99,7 @@ impl TestLoopBuilder {
             tools: vec![],
             hooks: ToolExecHooks::default(),
             turn_hooks: TurnHooks::default(),
+            transform_context: None,
             tool_execution: ToolExecutionMode::Parallel,
             steering_mode: QueueMode::OneAtATime,
             follow_up_mode: QueueMode::OneAtATime,
@@ -105,6 +113,17 @@ impl TestLoopBuilder {
 
     pub fn turn_hooks(mut self, hooks: TurnHooks) -> Self {
         self.turn_hooks = hooks;
+        self
+    }
+
+    pub fn transform_context(
+        mut self,
+        f: impl Fn(Vec<AgentMessage>) -> futures::future::BoxFuture<'static, Vec<AgentMessage>>
+            + Send
+            + Sync
+            + 'static,
+    ) -> Self {
+        self.transform_context = Some(Arc::new(f));
         self
     }
 
@@ -131,6 +150,7 @@ impl TestLoopBuilder {
             subscribers: runie_core::events::SubscriberRegistry::new(),
             hooks: self.hooks,
             turn_hooks: self.turn_hooks,
+            transform_context: self.transform_context,
             tool_execution_mode: self.tool_execution,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,

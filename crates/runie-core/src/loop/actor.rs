@@ -46,6 +46,13 @@ pub struct LoopDeps {
     pub subscribers: SubscriberRegistry,
     pub hooks: ToolExecHooks,
     pub turn_hooks: TurnHooks,
+    pub transform_context: Option<
+        Arc<
+            dyn Fn(Vec<AgentMessage>) -> futures::future::BoxFuture<'static, Vec<AgentMessage>>
+                + Send
+                + Sync,
+        >,
+    >,
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -62,6 +69,7 @@ impl LoopDeps {
             bus: self.bus.clone(),
             hooks: self.hooks.clone(),
             turn_hooks: self.turn_hooks.clone(),
+            transform_context: self.transform_context.clone(),
             tool_execution_mode: self.tool_execution_mode,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,
