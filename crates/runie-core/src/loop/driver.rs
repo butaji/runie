@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::convert::default_convert_to_llm;
 use crate::events::EventBus;
+use crate::hooks::{ShouldStopAfterTurnContext, TurnHooks};
 use crate::provider::ProviderActor;
 use crate::queues::{FollowUpQueueActor, SteeringQueueActor};
 use crate::r#loop::turn::{decide_next_turn, TurnPlan};
@@ -15,8 +16,8 @@ use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
 use crate::types::{
     AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantContent,
-    AssistantMessage, AssistantMessageEvent, QueueMode, StopReason, ToolCall, ToolExecutionMode,
-    ToolResultContent, ToolResultMessage, WireMessage,
+    AssistantMessage, AssistantMessageEvent, Model, QueueMode, StopReason, ToolCall,
+    ToolExecutionMode, ToolResultContent, ToolResultMessage, WireMessage,
 };
 
 /// Bag of dependencies the driver needs.
@@ -29,6 +30,7 @@ pub struct RunLoopDeps {
     pub provider: ProviderActor,
     pub bus: EventBus,
     pub hooks: ToolExecHooks,
+    pub turn_hooks: TurnHooks,
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -88,15 +90,20 @@ pub async fn run_loop(
         all_new.push(msg);
     }
 
+    // Overrides applied by `prepareNextTurn` (pi `AgentLoopTurnUpdate`).
+    let mut override_model: Option<Model> = None;
+    let mut override_ctx: Option<AgentContext> = None;
+
     loop {
         // Build the wire context and request the provider stream.
         let snap = deps.state.snapshot();
-        let model = snap.model.clone();
-        let ctx = AgentContext {
+        let model = override_model.clone().unwrap_or_else(|| snap.model.clone());
+        let base_ctx = AgentContext {
             system_prompt: snap.system_prompt.clone(),
             messages: snap.messages.clone(),
             tools: snap.tools.clone(),
         };
+        let ctx = override_ctx.clone().unwrap_or(base_ctx);
         let wire: Vec<WireMessage> = default_convert_to_llm(&ctx.messages);
 
         // Mark streaming.
@@ -181,6 +188,7 @@ pub async fn run_loop(
         // result terminating, so the loop streams the next assistant response
         // that consumes the tool results (agent-loop.ts:216).
         let mut has_more_tool_calls = false;
+        let mut turn_tool_results: Vec<ToolResultMessage> = Vec::new();
 
         match plan {
             TurnPlan::ToolBatch { calls } => {
@@ -229,6 +237,7 @@ pub async fn run_loop(
                     deps.bus.publish(event);
                 }
 
+                turn_tool_results = tool_results.clone();
                 for tr in &tool_results {
                     deps.bus.publish(AgentEvent::MessageStart {
                         message: AgentMessage::ToolResult(tr.clone()),
@@ -259,6 +268,38 @@ pub async fn run_loop(
                     message: AgentMessage::Assistant(assistant.clone()),
                     tool_results: vec![],
                 });
+            }
+        }
+
+        // pi turn hooks (agent-loop.ts:232,247): run after turn_end, before the
+        // steering/follow-up poll.
+        let hook_ctx = ShouldStopAfterTurnContext {
+            message: assistant.clone(),
+            tool_results: turn_tool_results.clone(),
+            context: ctx.clone(),
+            new_messages: all_new.clone(),
+        };
+        if let Some(stop) = &deps.turn_hooks.should_stop_after_turn {
+            if stop(hook_ctx.clone()) {
+                deps.bus.publish(AgentEvent::AgentEnd {
+                    messages: all_new.clone(),
+                });
+                return RunLoopOutcome {
+                    new_messages: all_new,
+                };
+            }
+        }
+        if let Some(prepare) = &deps.turn_hooks.prepare_next_turn {
+            if let Some(update) = prepare(hook_ctx) {
+                if let Some(c) = update.context {
+                    override_ctx = Some(c);
+                }
+                if let Some(m) = update.model {
+                    override_model = Some(m);
+                }
+                if let Some(tl) = update.thinking_level {
+                    deps.state.set_thinking_level(tl).await;
+                }
             }
         }
 

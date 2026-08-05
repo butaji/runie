@@ -107,6 +107,7 @@ fn build_app() -> App {
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
         hooks: ToolExecHooks::default(),
+        turn_hooks: runie_core::hooks::TurnHooks::default(),
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: runie_core::types::QueueMode::OneAtATime,
         follow_up_mode: runie_core::types::QueueMode::OneAtATime,

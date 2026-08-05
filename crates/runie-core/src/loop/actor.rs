@@ -6,6 +6,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use crate::events::{EventBus, SubscriberRegistry};
+use crate::hooks::TurnHooks;
 use crate::provider::ProviderActor;
 use crate::queues::{FollowUpQueueActor, SteeringQueueActor};
 use crate::r#loop::driver::{run_loop, RunLoopDeps, RunLoopOutcome};
@@ -44,6 +45,7 @@ pub struct LoopDeps {
     pub bus: EventBus,
     pub subscribers: SubscriberRegistry,
     pub hooks: ToolExecHooks,
+    pub turn_hooks: TurnHooks,
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -59,6 +61,7 @@ impl LoopDeps {
             provider: self.provider.clone(),
             bus: self.bus.clone(),
             hooks: self.hooks.clone(),
+            turn_hooks: self.turn_hooks.clone(),
             tool_execution_mode: self.tool_execution_mode,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,

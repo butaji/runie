@@ -49,7 +49,7 @@
     {
       "id": "p07",
       "file": "p07-core-hooks-next-turn.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core hooks: prepareNextTurn + shouldStopAfterTurn"
     },
     {

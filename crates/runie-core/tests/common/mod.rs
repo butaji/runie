@@ -6,6 +6,7 @@ use futures::stream;
 use parking_lot::Mutex;
 
 use runie_core::events::EventBus;
+use runie_core::hooks::TurnHooks;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
@@ -78,6 +79,7 @@ pub struct TestLoopBuilder {
     pub stream_fn: Arc<dyn StreamFn>,
     pub tools: Vec<Arc<dyn runie_core::types::AgentTool>>,
     pub hooks: ToolExecHooks,
+    pub turn_hooks: TurnHooks,
     pub tool_execution: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
@@ -89,6 +91,7 @@ impl TestLoopBuilder {
             stream_fn,
             tools: vec![],
             hooks: ToolExecHooks::default(),
+            turn_hooks: TurnHooks::default(),
             tool_execution: ToolExecutionMode::Parallel,
             steering_mode: QueueMode::OneAtATime,
             follow_up_mode: QueueMode::OneAtATime,
@@ -97,6 +100,11 @@ impl TestLoopBuilder {
 
     pub fn tool(mut self, t: Arc<dyn runie_core::types::AgentTool>) -> Self {
         self.tools.push(t);
+        self
+    }
+
+    pub fn turn_hooks(mut self, hooks: TurnHooks) -> Self {
+        self.turn_hooks = hooks;
         self
     }
 
@@ -122,6 +130,7 @@ impl TestLoopBuilder {
             bus: bus.clone(),
             subscribers: runie_core::events::SubscriberRegistry::new(),
             hooks: self.hooks,
+            turn_hooks: self.turn_hooks,
             tool_execution_mode: self.tool_execution,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,
