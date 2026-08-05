@@ -61,7 +61,7 @@
     {
       "id": "p09",
       "file": "p09-core-tools-prepare-arguments.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core tools: AgentTool.prepareArguments + validateToolArguments parity"
     },
     {

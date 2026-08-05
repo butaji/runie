@@ -444,6 +444,12 @@ pub trait AgentTool: Send + Sync + 'static {
     fn validate_arguments(&self, _args: &serde_json::Value) -> Result<(), String> {
         Ok(())
     }
+    /// Optional argument preparation (pi `prepareArguments`, agent-loop.ts:586).
+    /// Returns `Some(new_args)` to replace the tool call's arguments, or
+    /// `None` to leave them unchanged.
+    fn prepare_arguments(&self, _args: &serde_json::Value) -> Option<serde_json::Value> {
+        None
+    }
     /// Per-tool execution mode override. Default = None (use global).
     fn execution_mode(&self) -> Option<ToolExecutionMode> {
         None

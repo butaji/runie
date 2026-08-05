@@ -101,17 +101,47 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
 }
 
 pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
-    // Preflight sequentially (validate args + before_tool_call).
+    // Preflight: valid calls (after prepare_arguments + validation) proceed to
+    // concurrent execution; invalid calls produce an immediate error result
+    // (pi prepareToolCall -> createErrorToolResult).
     let mut preflighted: Vec<ToolCall> = Vec::with_capacity(calls.len());
+    let mut outcome = DispatchOutcome::default();
     for call in calls {
-        if !validate_args(&call, &ctx) {
-            continue;
+        match prepare_and_validate(&call, &ctx) {
+            Ok(prepared) => preflighted.push(prepared),
+            Err(msg) => {
+                outcome
+                    .events
+                    .push(crate::types::AgentEvent::ToolExecutionStart {
+                        tool_call_id: call.id.clone(),
+                        tool_name: call.name.clone(),
+                        args: call.arguments.clone(),
+                    });
+                let r = synthetic_error_result(&msg);
+                outcome
+                    .events
+                    .push(crate::types::AgentEvent::ToolExecutionEnd {
+                        tool_call_id: call.id.clone(),
+                        tool_name: call.name.clone(),
+                        result: serde_json::to_value(&r).unwrap_or_default(),
+                        is_error: true,
+                    });
+                outcome.tool_results.push(ToolResultMessage {
+                    tool_call_id: call.id.clone(),
+                    tool_name: call.name.clone(),
+                    content: r.content.clone(),
+                    details: r.details.clone(),
+                    usage: r.usage.clone(),
+                    added_tool_names: r.added_tool_names.clone(),
+                    is_error: true,
+                    timestamp: 0,
+                });
+                outcome.all_terminated = false;
+            }
         }
-        preflighted.push(call);
     }
 
     let total = preflighted.len();
-    let mut outcome = DispatchOutcome::default();
 
     if preflighted.is_empty() {
         return outcome;
@@ -141,7 +171,7 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
                     args: call.arguments.clone(),
                     partial_result: serde_json::json!({"status": "running"}),
                 }];
-                match dispatch_one(&call, &ctx).await {
+                match dispatch_prepared(&call, &ctx).await {
                     Ok(r) => {
                         let end = crate::types::AgentEvent::ToolExecutionEnd {
                             tool_call_id: call.id.clone(),
@@ -203,16 +233,49 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     outcome
 }
 
-fn validate_args(call: &ToolCall, ctx: &ToolExecContext) -> bool {
-    if let Some(tool) = ctx.registry.lookup(&call.name) {
-        if tool.validate_arguments(&call.arguments).is_err() {
-            return false;
+/// Apply `prepareArguments` (pi agent-loop.ts:586) and validate. Returns the
+/// prepared call (args possibly replaced) or a pi-formatted validation error.
+fn prepare_and_validate(call: &ToolCall, ctx: &ToolExecContext) -> Result<ToolCall, String> {
+    let prepared = prepared_call(call, ctx);
+    if let Some(tool) = ctx.registry.lookup(&prepared.name) {
+        if let Err(e) = tool.validate_arguments(&prepared.arguments) {
+            return Err(format!(
+                "Validation failed for tool \"{}\":\n{e}\n\nReceived arguments:\n{}",
+                prepared.name,
+                serde_json::to_string_pretty(&prepared.arguments).unwrap_or_default()
+            ));
         }
     }
-    true
+    Ok(prepared)
+}
+
+/// Apply the tool's `prepareArguments`, replacing the args when changed.
+fn prepared_call(call: &ToolCall, ctx: &ToolExecContext) -> ToolCall {
+    if let Some(tool) = ctx.registry.lookup(&call.name) {
+        if let Some(new_args) = tool.prepare_arguments(&call.arguments) {
+            if new_args != call.arguments {
+                return ToolCall {
+                    arguments: new_args,
+                    ..call.clone()
+                };
+            }
+        }
+    }
+    call.clone()
 }
 
 async fn dispatch_one(call: &ToolCall, ctx: &ToolExecContext) -> Result<AgentToolResult, String> {
+    // Prepare + validate args (pi prepareToolCallArguments + validateToolArguments).
+    let prepared = prepare_and_validate(call, ctx)?;
+    dispatch_prepared(&prepared, ctx).await
+}
+
+/// Execute an already-prepared + validated call (pi prepareToolCall ->
+/// executePreparedToolCall -> finalizeExecutedToolCall).
+async fn dispatch_prepared(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+) -> Result<AgentToolResult, String> {
     let tool = ctx
         .registry
         .lookup(&call.name)
