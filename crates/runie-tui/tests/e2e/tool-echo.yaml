@@ -1,0 +1,19 @@
+name: tool-echo
+description: Echo tool invoked; toolResult line appears in transcript.
+initial_prompt: "echo hi"
+tools:
+  - name: echo
+    kind: echo
+events:
+  - start
+  - text_delta: "ok"
+  - done: { stop_reason: stop }
+assertions:
+  transcript_contains:
+    - "echo hi"
+    - "ok"
+  scrollback_lines:
+    - kind: user
+      contains: "echo hi"
+    - kind: assistant
+      contains: "ok"

@@ -1,0 +1,167 @@
+//! End-to-end test driving the TUI App via TestBackend.
+//!
+//! Reuses the `MockStreamFn` pattern from `runie-core` tests.
+
+use std::sync::Arc;
+
+use parking_lot::Mutex;
+use ratatui::backend::TestBackend;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::Terminal;
+use runie_core::events::EventBus;
+use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
+use runie_core::provider::ProviderActor;
+use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
+use runie_core::r#loop::{LoopActor, LoopDeps};
+use runie_core::state::AgentStateActor;
+use runie_core::tools::executor::ToolExecHooks;
+use runie_core::tools::{ToolExecutorActor, ToolRegistry};
+use runie_core::types::{
+    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessageEvent, Model,
+    SimpleStreamOptions, StopReason, ToolExecutionMode, ToolResultContent, Usage, UserContent,
+    UserMessage,
+};
+use runie_tui::app::App;
+use runie_tui::event_renderer::EventRenderer;
+use runie_tui::layout::chat_layout;
+
+mod common;
+use common::test_model;
+
+struct TwoTurnMock;
+
+#[async_trait::async_trait]
+impl StreamFn for TwoTurnMock {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        use futures::stream;
+        let events = vec![
+            AssistantMessageEvent::Start,
+            AssistantMessageEvent::TextDelta { delta: "Hello".into() },
+            AssistantMessageEvent::TextDelta { delta: " world".into() },
+            AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+            },
+            // After Done, recv returns Err(Closed) and the inner loop exits.
+        ];
+        Ok(Box::pin(stream::iter(events)))
+    }
+}
+
+struct EchoTool;
+#[async_trait::async_trait]
+impl AgentTool for EchoTool {
+    fn name(&self) -> &str { "bash" }
+    fn label(&self) -> &str { "Bash" }
+    fn description(&self) -> &str { "Echoes args" }
+    async fn execute(
+        &self,
+        _id: &str,
+        args: serde_json::Value,
+        _signal: Option<tokio_util::sync::CancellationToken>,
+        _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        Ok(AgentToolResult {
+            content: vec![ToolResultContent::Text {
+                text: args.to_string(),
+            }],
+            details: serde_json::Value::Null,
+            usage: None,
+            added_tool_names: vec![],
+            terminate: false,
+        })
+    }
+}
+
+fn build_app() -> App {
+    let bus = EventBus::new();
+    let state = AgentStateActor::new();
+    let steering = SteeringQueueActor::new();
+    let follow_up = FollowUpQueueActor::new();
+    let mut reg = ToolRegistry::new();
+    reg.register(Arc::new(EchoTool));
+    let tool_executor = ToolExecutorActor::new(Arc::new(reg));
+    let provider = ProviderActor::new(Arc::new(TwoTurnMock));
+    let deps = LoopDeps {
+        state,
+        steering,
+        follow_up,
+        tool_executor,
+        provider,
+        bus: bus.clone(),
+        subscribers: runie_core::events::SubscriberRegistry::new(),
+        hooks: ToolExecHooks::default(),
+        tool_execution_mode: ToolExecutionMode::Parallel,
+        steering_mode: runie_core::types::QueueMode::OneAtATime,
+        follow_up_mode: runie_core::types::QueueMode::OneAtATime,
+    };
+    let actor = LoopActor::new(deps);
+    App::new(actor, bus)
+}
+
+#[tokio::test]
+async fn end_to_end_prompt_renders_transcript() {
+    let mut app = build_app();
+    eprintln!("[e2e] built app");
+
+    // Spawn the renderer.
+    let renderer = EventRenderer::new(app.scrollback.clone(), app.status.clone());
+    let rx = app.bus.subscribe();
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    let handle = tokio::spawn(async move { renderer.run(rx, shutdown_rx).await });
+    eprintln!("[e2e] spawned renderer");
+
+    let prompt = vec![AgentMessage::User(UserMessage {
+        content: vec![UserContent::Text { text: "hi".into() }],
+        timestamp: 1,
+    })];
+    eprintln!("[e2e] before prompt().await");
+    let outcome = app
+        .loop_actor
+        .prompt(prompt, AgentContext::default())
+        .await
+        .unwrap();
+    eprintln!("[e2e] prompt returned: {} messages", outcome.len());
+    assert!(!outcome.is_empty());
+
+    eprintln!("[e2e] before shutdown");
+    let _ = shutdown_tx.send(true);
+    let _ = handle.await;
+    eprintln!("[e2e] after handle.await");
+    drop(app.bus);
+
+    let backend = TestBackend::new(24, 80);
+    eprintln!("[e2e] created backend");
+    let mut terminal = Terminal::new(backend).unwrap();
+    eprintln!("[e2e] created terminal");
+    terminal
+        .draw(|f| {
+            let area = f.area();
+            let layout = chat_layout(area);
+            app.scrollback.lock().render(layout.scrollback, f.buffer_mut());
+        })
+        .unwrap();
+
+    let buf: Buffer = terminal.backend().buffer().clone();
+    let _ = test_model();
+
+    // Pull every symbol into a string so we can assert.
+    let area = buf.area;
+    let mut haystack = String::with_capacity((area.width as usize) * (area.height as usize));
+    for y in 0..area.height {
+        for x in 0..area.width {
+            if let Some(c) = buf.cell((x, y)) {
+                haystack.push_str(c.symbol());
+            }
+        }
+    }
+
+    assert!(haystack.contains("Hello"), "expected 'Hello' in rendered buffer");
+    assert!(haystack.contains("world"), "expected 'world' in rendered buffer");
+}

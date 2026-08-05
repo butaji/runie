@@ -1,0 +1,11 @@
+---
+source: crates/runie-tui/src/event_renderer.rs
+assertion_line: 362
+expression: text
+---
+╭─ Runie  v0.1.0 ─
+│ main runie-tui
+│ Model · runie-core
+│ /help for commands
+╰─
+◆ session_start

@@ -1,0 +1,16 @@
+[package]
+name = "lint-check"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "lint-check"
+path = "src/main.rs"
+
+[dependencies]
+walkdir = { workspace = true }
+parking_lot = { workspace = true }
+
+[lints]
+workspace = true

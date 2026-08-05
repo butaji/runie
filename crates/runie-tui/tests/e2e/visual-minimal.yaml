@@ -1,0 +1,18 @@
+name: visual-minimal
+description: Welcome modal at idle mirrors grok's minimal-mode chrome.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Runie"
+      - "Model · runie-core"
+      - "/help for commands"
+      - "session_start"
+      - "❯"
+      - "ready"
+    screen_excludes:
+      - "user>"
+      - "assistant>"
+      - "panicked"

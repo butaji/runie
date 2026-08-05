@@ -1,0 +1,12 @@
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","input_sensitive":false,"output_sensitive":false,"input_sensitive_type":0,"output_sensitive_type":0,"choices":[{"index":0,"delta":{"role":"assistant","content":"<think>\nThe user is asking about","name":"MiniMax AI","audio_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","input_sensitive":false,"output_sensitive":false,"input_sensitive_type":0,"output_sensitive_type":0,"choices":[{"index":0,"delta":{"role":"assistant","content":" the weather in Paris. I should use the get_weather tool to fetch this information.\n</think>\nI'll check the current weather in Paris for you.","name":"MiniMax AI","audio_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","input_sensitive":false,"output_sensitive":false,"input_sensitive_type":0,"output_sensitive_type":0,"choices":[{"index":0,"finish_reason":"tool_calls","delta":{"role":"assistant","name":"MiniMax AI","audio_content":"","tool_calls":[{"index":0,"id":"call_function_ymp0j0i4rfoh_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\": \"Paris\"}"}}]}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","choices":[],"usage":{"prompt_tokens":410,"completion_tokens":62,"total_tokens":472,"total_characters":0,"prompt_tokens_details":{"cached_tokens":114}}}
+
+
+data: [DONE]
+
+

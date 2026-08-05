@@ -1,0 +1,2 @@
+data: {"id":"chatcmpl-error","object":"chat.completion.chunk","created":0,"model":"deepseek-v4-flash","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+error: {"error":{"message":"Rate limit exceeded. Please try again in 30 seconds.","type":"rate_limit_error","code":"rate_limit","retry_after":30}}

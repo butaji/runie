@@ -1,0 +1,18 @@
+data: {"choices":[{"delta":{"content":"In Berlin","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":2,"prompt_tokens":147,"total_tokens":149}}
+
+data: {"choices":[{"delta":{"content":" today, **Monday, May 20**, the weather is significantly warmer and sun","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":19,"prompt_tokens":147,"total_tokens":166}}
+
+data: {"choices":[{"delta":{"content":"nier than in Paris.\n\n*   **Conditions:** It is a beautiful, mostly sunny day with very few clouds. It","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":44,"prompt_tokens":147,"total_tokens":191}}
+
+data: {"choices":[{"delta":{"content":" is great weather for being outdoors.\n*   **Temperature:** It is quite warm, reaching a high of about **24Â°","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":71,"prompt_tokens":147,"total_tokens":218}}
+
+data: {"choices":[{"delta":{"content":"C (75Â°F)**, with an overnight low of around **12Â°C (54Â°F)**.","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":97,"prompt_tokens":147,"total_tokens":244}}
+
+data: {"choices":[{"delta":{"content":"\n*   **Wind:** Winds are light and gentle.\n\nIt is a very pleasant spring day in Berlin, especially","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":121,"prompt_tokens":147,"total_tokens":268}}
+
+data: {"choices":[{"delta":{"content":" compared to the rainy conditions currently hitting Paris!","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":130,"prompt_tokens":147,"total_tokens":277}}
+
+data: {"choices":[{"delta":{"extra_content":{"google":{"thought_signature":"gemini-fixture-thought-signature"}},"role":"assistant"},"finish_reason":"stop","index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":130,"prompt_tokens":147,"total_tokens":277}}
+
+data: [DONE]
+

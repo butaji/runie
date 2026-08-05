@@ -1,0 +1,12 @@
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","input_sensitive":false,"output_sensitive":false,"input_sensitive_type":0,"output_sensitive_type":0,"choices":[{"index":0,"delta":{"role":"assistant","content":"<think>\nThe user asks a","name":"MiniMax AI","audio_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","input_sensitive":false,"output_sensitive":false,"input_sensitive_type":0,"output_sensitive_type":0,"choices":[{"index":0,"delta":{"role":"assistant","content":" simple multiplication: 9 times 7. I should show my reasoning briefly.\n</think>\n9 Ã 7 = 63\n\n**Reasoning:** Multiplying 9 by 7 means adding 9 to itself 7 times:\n9","name":"MiniMax AI","audio_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","input_sensitive":false,"output_sensitive":false,"input_sensitive_type":0,"output_sensitive_type":0,"choices":[{"index":0,"finish_reason":"stop","delta":{"role":"assistant","content":" + 9 + 9 + 9 + 9 + 9 + 9 = 63","name":"MiniMax AI","audio_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m3","choices":[],"usage":{"prompt_tokens":189,"completion_tokens":73,"total_tokens":262,"total_characters":0,"prompt_tokens_details":{"cached_tokens":114}}}
+
+
+data: [DONE]
+
+

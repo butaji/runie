@@ -1,0 +1,7 @@
+trace: openai/opencode_go_deepseek_v4_flash_tool.sse
+provider: openai-compatible
+model: deepseek-v4-flash
+expected:
+  - Start
+  - ToolCallDelta
+  - Done

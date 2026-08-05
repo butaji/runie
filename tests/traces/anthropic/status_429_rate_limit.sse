@@ -1,0 +1,2 @@
+# HTTP 429
+{"type":"rate_limit","message":"Rate limit exceeded"}

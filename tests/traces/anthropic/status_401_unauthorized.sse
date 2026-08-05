@@ -1,0 +1,2 @@
+# HTTP 401
+{"type":"authentication_error","message":"Unauthorized"}

@@ -1,0 +1,2 @@
+data: {"id":"chatcmpl-error","object":"chat.completion.chunk","created":0,"model":"deepseek-v4-flash","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+error: {"error":{"message":"Model gpt-5-turbo does not exist.","type":"invalid_request_error","code":"model_not_found"}}

@@ -1,0 +1,19 @@
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":0,"delta":{},"finish_reason":"length"}],"usage":{"prompt_tokens":0,"completion_tokens":20,"total_tokens":20,"prompt_tokens_details":{"cached_tokens":36}}}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+

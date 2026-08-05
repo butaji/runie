@@ -1,0 +1,24 @@
+[package]
+name = "runie-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Port of @earendil-works/pi-agent-core in Rust using SSOT actors + events"
+
+[dependencies]
+tokio = { workspace = true }
+tokio-util = "0.7"
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
+serde_yaml = "0.9"
+
+[lints]
+workspace = true

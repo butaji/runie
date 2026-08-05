@@ -1,0 +1,78 @@
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"1","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":".  **An","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"alyze the Request:","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"**\n    *  ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" Question: What is","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" 9 times ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"7?\n    *","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"   Constraint","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":": Show reasoning","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" briefly.\n\n2.","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"  **Calculate:","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"**\n    *  ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" 9 * ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"7 = 63","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":".\n\n3. ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" **Formulate Reason","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"ing:**\n   ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" *   *","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"Method 1 (","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"Repeated","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" addition):* ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"7","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" + 7","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" + 7 +","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" 7 + ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"7 + 7","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" + 7 +","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" 7 +","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" 7 = ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"63.\n    *","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"   *Method ","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"2 (D","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"istributive property","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":"):* 9","tool_calls":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"service_tier":null,"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning_content":" *","tool_calls":null},"logprobs":null,"finish_reason":"length"}],"usage":{"prompt_tokens":25,"total_tokens":145,"completion_tokens":120,"estimated_cost":null,"prompt_tokens_details":null,"reasoning_tokens":0}}
+
+data: {"service_tier":"default","id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"glm-5.2","choices":[],"usage":{"prompt_tokens":25,"total_tokens":145,"completion_tokens":120,"estimated_cost":0.0,"prompt_tokens_details":null,"reasoning_tokens":0}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+

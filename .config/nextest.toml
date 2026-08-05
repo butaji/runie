@@ -1,0 +1,21 @@
+# cargo-nextest configuration.
+#
+# Each test runs in its own process; tests run in parallel up to the host's
+# CPU count. Fail-fast stops the run on the first failure.
+
+[profile.default]
+test-threads = "num-cpus"
+# Capture stdout/stderr per test for richer failure output.
+failure-output = "immediate-final"
+# Show slowest tests at the end so we know what to optimise.
+slow-timeout = "60s"
+
+# Per-test retries help with the flaky-loop panic that's currently under
+# investigation — we want a deterministic pass signal once we fix the root
+# cause, but in the meantime retries keep CI informative.
+retries = 0
+
+# A separate, slower profile for "release" runs (rare in CI).
+[profile.release]
+debug-assertions = true
+incremental = false

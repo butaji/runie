@@ -1,0 +1,4 @@
+data: {"id":"chatcmpl-error","object":"chat.completion.chunk","created":0,"model":"deepseek-v4-flash","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"role":"assistant","content":null,"reasoning_content":""}}],"usage":null}
+data: {"id":"chatcmpl-error","object":"chat.completion.chunk","created":0,"model":"deepseek-v4-flash","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":null,"reasoning_content":"Partial "}}],"usage":null}
+data: {"id":"chatcmpl-error","object":"chat.completion.chunk","created":0,"model":"deepseek-v4-flash","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":null,"reasoning_content":"response "}}],"usage":null}
+error: {"error":{"message":"Server error during streaming.","type":"server_error","code":"server_error"}}

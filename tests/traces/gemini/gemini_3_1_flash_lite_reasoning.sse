@@ -1,0 +1,10 @@
+data: {"choices":[{"delta":{"content":"9 times 7 is **63**.\n\n**Reasoning:**\nYou can","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":17,"prompt_tokens":14,"total_tokens":31}}
+
+data: {"choices":[{"delta":{"content":" think of this as 10 times 7 minus one group of 7:\n* 10 Ã 7 =","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":43,"prompt_tokens":14,"total_tokens":57}}
+
+data: {"choices":[{"delta":{"content":" 70\n* 70 - 7 = 63","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":58,"prompt_tokens":14,"total_tokens":72}}
+
+data: {"choices":[{"delta":{"extra_content":{"google":{"thought_signature":"gemini-fixture-thought-signature"}},"role":"assistant"},"finish_reason":"stop","index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":58,"prompt_tokens":14,"total_tokens":72}}
+
+data: [DONE]
+

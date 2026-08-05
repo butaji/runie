@@ -1,0 +1,35 @@
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":1,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":1,"delta":{"content":"\\(9 \\times 7 = 63\\)."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":1,"delta":{"content":"  \n\n**Reasoning:** Multiplying 9 by 7 means adding 9 to itself seven times (or adding 7 to itself nine times):"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":1,"delta":{"content":"  \n\n\\(9 + 9 + 9 + 9 + 9 + 9 + 9 = 63\\).  \n\nThus, the product is"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":1,"delta":{"content":" **63**."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":137,"total_tokens":137,"prompt_tokens_details":{"cached_tokens":36}}}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"minimax-m2.7","choices":[]}
+
+

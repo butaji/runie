@@ -1,0 +1,21 @@
+{
+  "plan": "Build runie-tui: minimal ratatui/crossterm TUI for runie-core",
+  "objective": "Replicate the user-visible TUI surface of grok-build's pager as simply as possible while subscribing to the runie-core event stream. Single-screen layout: scrollback transcript + prompt input + status bar. No auth, MCP, ACP, sub-agents, voice, plan-approval, worktrees, dashboard, persona picker, themes.",
+  "completionCriterion": "All 10 step files marked done; cargo check/test green on runie-tui; an end-to-end test (TestBackend) drives a MockStreamFn + 2 tools and asserts the rendered Buffer shows user prompt, streaming assistant text, tool execution card, tool result, and final assistant text in that order.",
+  "source": "/Users/admin/.kimi-code/sessions/wd_runie_ac1e92ca16aa/session_310a28a6-996b-4553-b2e6-53520ab5cec0/agents/main/plans/runie-tui-plan.md",
+  "startedAt": "2026-08-04",
+  "startedFrom": "scratch",
+  "completedAt": "2026-08-04",
+  "steps": [
+    { "id": "01", "file": "01-scaffold-crate.md",        "status": "done", "title": "Scaffold runie-tui crate (Cargo.toml, deps, src layout)" },
+    { "id": "02", "file": "02-layout.md",               "status": "done", "title": "Layout: prompt + scrollback + status regions" },
+    { "id": "03", "file": "03-event-renderer.md",       "status": "done", "title": "EventRenderer: bus events -> scrollback transcript" },
+    { "id": "04", "file": "04-scrollback.md",           "status": "done", "title": "Scrollback widget: append, autoscroll, render" },
+    { "id": "05", "file": "05-prompt-widget.md",        "status": "done", "title": "Prompt widget: tui-textarea + Enter submits" },
+    { "id": "06", "file": "06-status-bar.md",           "status": "done", "title": "Status bar: streaming / thinking / ready / error" },
+    { "id": "07", "file": "07-key-handling.md",         "status": "done", "title": "Key handling: Enter, Ctrl+C cancel, Esc clear, Ctrl+D quit" },
+    { "id": "08", "file": "08-app-loop.md",             "status": "done", "title": "App loop: select! over input + bus + loop tasks" },
+    { "id": "09", "file": "09-integration.md",          "status": "done", "title": "Integration: TestBackend end-to-end test" },
+    { "id": "10", "file": "10-bin-and-readme.md",       "status": "done", "title": "Binary entrypoint + README" }
+  ]
+}

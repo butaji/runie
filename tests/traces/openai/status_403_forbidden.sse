@@ -1,0 +1,2 @@
+# HTTP 403
+{"error":{"message":"Forbidden","type":"forbidden_error","code":"forbidden"}}

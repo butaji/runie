@@ -1,0 +1,6 @@
+data: {"choices":[{"delta":{"content":"ok","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":1,"prompt_tokens":9,"total_tokens":10}}
+
+data: {"choices":[{"delta":{"extra_content":{"google":{"thought_signature":"gemini-fixture-thought-signature"}},"role":"assistant"},"finish_reason":"stop","index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":1,"prompt_tokens":9,"total_tokens":10}}
+
+data: [DONE]
+

@@ -1,0 +1,7 @@
+trace: anthropic/opencode_go_minimax_m3_tool.sse
+provider: anthropic-compatible
+model: minimax-m3
+expected:
+  - Start
+  - ToolCallDelta
+  - Done

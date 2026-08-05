@@ -1,0 +1,43 @@
+[package]
+name = "runie-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Minimal ratatui/crossterm TUI for runie-core"
+default-run = "runie"
+
+[[bin]]
+name = "runie"
+path = "src/bin/runie.rs"
+
+[[bin]]
+name = "runie-tui-e2e"
+path = "src/bin/runie_tui_e2e.rs"
+
+[dependencies]
+runie-core = { path = "../runie-core" }
+ratatui = "0.29"
+crossterm = { version = "0.28", features = ["event-stream"] }
+async-trait = { workspace = true }
+opaline = "0.4"
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"
+tokio = { workspace = true, features = ["full"] }
+tokio-util = "0.7"
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = { workspace = true }
+futures = { workspace = true }
+unicode-width = "0.2"
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
+async-trait = { workspace = true }
+tokio-util = "0.7"
+serde_yaml = "0.9"
+insta = { version = "1.41", features = ["yaml"] }
+
+[lints]
+workspace = true

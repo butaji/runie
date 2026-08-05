@@ -1,0 +1,318 @@
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"role":"assistant","content":"","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Thinking"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" Process:\n\n1"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":".  **Ident"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"ify the core question"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":":** The user is"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" asking for the product"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" of 9 and"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7.\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"2.  **"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Perform"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" the calculation:** "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"9 * 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" = 63"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":".\n3."}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"  **Formulate"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" the reasoning:**"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"\n    *  "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" *"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Method 1 ("}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Mem"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"orization/Direct"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"):* It"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"'s a standard multiplication"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" table fact.\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"    *   *"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Method 2 ("}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Decomposition/D"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"istributive property"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"):* 9"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" * 7 ="}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" (10 -"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 1) *"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 = "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"70 - "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"7 = 6"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"3.\n   "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" *   *Method"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 3 (Repeated"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" addition):* "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"7 + 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" + 7 +"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 + "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"7 + 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" + 7 +"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 + "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"7 = 6"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"3.\n   "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" *   *Selection"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":":* Method 2"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" is the most elegant"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" and clearly shows \""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"reason"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"ing\" rather than"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" just stating"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" a memorized fact"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":".\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"4.  **"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Draft the response:**"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"\n    *  "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" State the answer clearly"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":": 63"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":".\n    *"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"   Show the brief"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" reasoning using"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" the distributive property"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":": 9 x"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 can be"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" thought of as ("}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"10 - "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"1) x "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"7. This equals"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 70 -"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7, which"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" is 63"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":".\n5."}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"  **Review against"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" constraints:** \"Show"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" your reasoning briefly.\""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" -> The drafted response"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" is concise"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" and directly addresses the"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" prompt.\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"6.  **"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Final Output Generation:**"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" (See actual output"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":")\n    "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"9 times 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" is **63"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"**.\n\n    **"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Reasoning"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":":**\n    You"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" can break"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 9 down into"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" (10 -"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 1).\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"    So, "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"9 Ã 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" becomes (10"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" - 1)"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" Ã 7."}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"\n    Using the"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" distributive property"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":": (10"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" Ã 7)"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" - (1 Ã"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7) ="}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 70 -"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 = "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"63.\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"    *("}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Self-correction:"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" keep it even simpler"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" and more conversational"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":")*\n"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"    \"9 times"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" is **63"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"**.\n    **"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"Reasoning:** You"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" can think of "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"9 as (1"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"0 - "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"1). Therefore,"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 9 Ã"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 is the"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" same as (1"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"0 Ã 7"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":") - (1"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" Ã 7),"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" which is"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 70 -"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" 7 = "}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":"63.\" ->"}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"","reasoning_content":" Perfect."}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"9 times ","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"7 is **6","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"3**.\n\n**","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"Reasoning:** \n","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"You can think of","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" 9 as (","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"10 - ","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"1). Therefore,","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" 9 Ã ","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"7 is the same","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" as (10","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" Ã 7)","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" - (1 Ã","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" 7).","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" \nThis gives you","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" 70","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" - 7,","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" which equals 6","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":"3.","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[{"index":0,"finish_reason":"stop","logprobs":null,"delta":{"content":"","reasoning_content":""}}],"usage":null}
+
+data: {"id":"chatcmpl-opencode-go-fixture","object":"chat.completion.chunk","created":0,"model":"qwen3.7-max","choices":[],"usage":{"prompt_tokens":23,"completion_tokens":568,"total_tokens":591,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":492}}}
+
+data: {"choices":[],"x-opencode-type":"inference-cost","cost":"0.00431750","normalizedUsage":{"inputTokens":23,"outputTokens":568,"reasoningTokens":492,"cacheReadTokens":0,"cacheWrite5mTokens":0,"cacheWrite1hTokens":0}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+

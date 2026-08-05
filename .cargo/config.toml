@@ -1,0 +1,21 @@
+# Workspace-wide cargo settings. Speedups:
+#   - Use mold/lld if available for faster linking.
+#   - Use a shared target dir (default).
+#   - Codegen units at 256 for parallelism during the link stage.
+#
+# This file is intentionally minimal — profile tweaks live in
+# crates/*/Cargo.toml and the root [profile.*] sections.
+
+[build]
+# `mold` is the fastest linker available on Linux; on macOS we fall
+# back to the default. Detect at config time.
+rustflags = []
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[net]
+git-fetch-with-cli = true

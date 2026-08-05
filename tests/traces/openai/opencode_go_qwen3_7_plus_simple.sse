@@ -1,0 +1,104 @@
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","created":0,"object":"chat.completion.chunk","usage":null,"choices":[{"logprobs":null,"index":0,"delta":{"content":"","role":"assistant","reasoning_content":""},"finish_reason":null}]}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"Thinking"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Process:\n\n1"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":".  **An"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"alyze the Request:**"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" The user is asking"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" for a specific response"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":": \"Reply with"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" only the word '"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"ok'"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":".\"\n2."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"  **Identify"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Constraints:**\n   "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" *   Target output"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":": \"ok\""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"\n    *  "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Constraint 1:"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" \""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"only\" (no"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" extra words, punctuation"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":","},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" or formatting).\n"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"    *  "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Constraint 2:"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Case sensitivity (usually"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" best"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" to match exactly,"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" so lowercase 'ok"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"')."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"\n3. "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" **Formulate Output"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":":** ok\n4"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":". "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" **Final Verification:**"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Does the output contain"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" anything other than '"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"ok"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"'? No. Is"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" it exactly 'ok"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"'? Yes"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":". (Wait,"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" should I include a"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" period? \"only"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" the word '"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"ok'\" implies no"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" punctuation. Just"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" `ok`).\n"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"ok","reasoning_content":""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":""},"index":0,"finish_reason":"stop","logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[],"created":0,"object":"chat.completion.chunk","usage":{"total_tokens":180,"completion_tokens":162,"prompt_tokens":18,"completion_tokens_details":{"reasoning_tokens":156,"text_tokens":162},"prompt_tokens_details":{"cached_tokens":0,"text_tokens":18}}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+

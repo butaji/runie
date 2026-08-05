@@ -1,0 +1,16 @@
+data: {"choices":[{"delta":{"content":"As of today, **Monday, May 20, 2","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":14,"prompt_tokens":8,"total_tokens":22}}
+
+data: {"choices":[{"delta":{"content":"024**, the weather in Paris is quite unsettled.\n\n*   **Conditions:** It is a mix of clouds","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":38,"prompt_tokens":8,"total_tokens":46}}
+
+data: {"choices":[{"delta":{"content":" and scattered showers, with a high chance of rain throughout the day.\n*   **Temperature:** Expect a high of around **1","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":65,"prompt_tokens":8,"total_tokens":73}}
+
+data: {"choices":[{"delta":{"content":"8Â°C (64Â°F)** and a low of **12Â°C (54Â°F)**.\n","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":91,"prompt_tokens":8,"total_tokens":99}}
+
+data: {"choices":[{"delta":{"content":"*   **Wind:** There is a moderate breeze coming from the west.\n\nIf you are heading out, it is definitely","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":116,"prompt_tokens":8,"total_tokens":124}}
+
+data: {"choices":[{"delta":{"content":" a good idea to carry an umbrella or a light waterproof jacket!","role":"assistant"},"index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":129,"prompt_tokens":8,"total_tokens":137}}
+
+data: {"choices":[{"delta":{"extra_content":{"google":{"thought_signature":"gemini-fixture-thought-signature"}},"role":"assistant"},"finish_reason":"stop","index":0}],"created":0,"id":"chatcmpl-gemini-fixture","model":"gemini-3.1-flash-lite","object":"chat.completion.chunk","usage":{"completion_tokens":129,"prompt_tokens":8,"total_tokens":137}}
+
+data: [DONE]
+

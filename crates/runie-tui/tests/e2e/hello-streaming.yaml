@@ -1,0 +1,26 @@
+name: hello-streaming
+description: Single-turn text-only streaming response.
+initial_prompt: "say hi"
+tools: []
+events:
+  - start
+  - text_delta: "Hello"
+  - text_delta: " world"
+  - done: { stop_reason: stop }
+assertions:
+  transcript_contains:
+    - "Hello world"
+    - "say hi"
+  events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
+  scrollback_lines:
+    - kind: user
+      contains: "say hi"
+    - kind: assistant
+      contains: "Hello world"

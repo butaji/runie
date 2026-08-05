@@ -1,0 +1,446 @@
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"The"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" user"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" is"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" asking"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" about"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" the"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" in"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" Berlin"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" similar"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" to"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" their"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" previous"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" question"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" about"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" Paris"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"."},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" I"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" still"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" don't"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" have"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" access"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" to"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" real"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"-time"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" data"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" or"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" tools"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" to"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" check"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" current"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"."},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" I"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" should"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" give"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" the"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" same"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" helpful"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" response"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" suggesting"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" services"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" they"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" can"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" use"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"."},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" I"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" could"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" also"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" offer"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" general"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" climate"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" information"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" about"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" Berlin"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" if"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" they"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" want"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" it"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":".\n\n"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"Since"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" this"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" is"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" a"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" follow"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"-up"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" question"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" I"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" should"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" be"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" concise"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" but"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" still"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" helpful"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"."},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" I'll"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" mention"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" that"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" I"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" still"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" can't"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" provide"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" real"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"-time"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" list"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" the"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" same"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"/sim"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"ilar"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" services"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" and"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" offer"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" general"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" climate"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":" info"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":"."},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"reasoning_content":""},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"I"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" still"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" can't"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" check"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" live"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" but"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" you"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" can"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" find"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" the"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" current"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" conditions"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" in"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" Berlin"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" through"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" the"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" same"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" sources"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":":\n\n"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"-"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" **"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"Weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":".com"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"**\n"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"-"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" **"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"Acc"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"u"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"Weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"**\n"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"-"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" **"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"De"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"utscher"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" W"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"etter"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"d"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"ienst"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" ("},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"D"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"WD"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":")**"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" —"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" Germany"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"'s"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" national"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" service"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"\n"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"-"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" Your"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" phone"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"'s"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" app"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"\n\n"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"If"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" you're"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" curious"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" about"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" Berlin"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"'s"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" climate"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" in"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" general"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" it"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" has"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" a"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" temperate"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" seasonal"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" climate"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":":"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" mild"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" summers"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" ("},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"around"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" "},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"20"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"–"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"25"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"°C"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" /"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" "},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"68"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"–"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"77"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"°F"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"),"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" cold"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" winters"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" with"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" occasional"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" snow"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" and"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" fairly"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" change"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"able"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" weather"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" year"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"-round"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":","},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" so"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" layers"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" are"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" usually"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" a"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" good"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":" idea"},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{"content":"."},"finish_reason":null}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[{"index":0,"delta":{},"finish_reason":"stop","usage":{"prompt_tokens":125,"completion_tokens":221,"total_tokens":346,"completion_tokens_details":{"reasoning_tokens":106}}}],"system_fingerprint":"fp-kimi-code-fixture"}
+
+data: {"id":"chatcmpl-kimi-code-fixture","object":"chat.completion.chunk","created":0,"model":"kimi-for-coding-highspeed","choices":[],"usage":{"prompt_tokens":125,"completion_tokens":221,"total_tokens":346,"completion_tokens_details":{"reasoning_tokens":106}}}
+
+data: [DONE]
+

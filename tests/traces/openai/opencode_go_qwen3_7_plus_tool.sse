@@ -1,0 +1,116 @@
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","created":0,"object":"chat.completion.chunk","usage":null,"choices":[{"logprobs":null,"index":0,"delta":{"content":"","role":"assistant","reasoning_content":""},"finish_reason":null}]}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"Thinking"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Process"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":":\n\n1."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"  **Identify"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" the core entity and"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" question:** The user"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" is asking for the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" weather in \"Paris"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"\"."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"\n2. "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" **Identify the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" available tool:** I"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" have access to the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" `get"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"_weather` function,"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" which takes a `"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"city` parameter ("},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"string).\n3"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":".  **Map"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" the request to the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" tool:**"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" The city is \""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"Paris\"."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"\n4. "},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" **Execute the tool"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":":** Call `get"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"_weather(city=\""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"Paris\")`.\n"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"5.  **"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"Formulate the response"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":":** Present the weather"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" information returned by the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" tool"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" to the user."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"\n\n*Self-C"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"orrection/Edge"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Case Consideration:*"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" Paris"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":", France is the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" most common \""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"Paris\", but the"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" tool just takes a"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" string. I will"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" pass \"Paris\""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" and see what it"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" returns.\n\nLet"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":"'s make"},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"content":"","reasoning_content":" the tool call."},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_c716b088a9d9442f94c642ab","type":"function","function":{"name":"get_weather","arguments":""}}],"content":"","reasoning_content":""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"tool_calls":[{"index":0,"id":"","type":"function","function":{"arguments":"{\"city\": \"Paris"}}],"content":"","reasoning_content":""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"tool_calls":[{"index":0,"id":"","type":"function","function":{"arguments":""}}],"content":"","reasoning_content":""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"tool_calls":[{"index":0,"id":"","type":"function","function":{"arguments":"\""}}],"content":"","reasoning_content":""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{"tool_calls":[{"function":{"arguments":"}"},"index":0,"id":"","type":"function"}],"content":""},"index":0,"finish_reason":null,"logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[{"delta":{},"index":0,"finish_reason":"tool_calls","logprobs":null}],"created":0,"object":"chat.completion.chunk","usage":null}
+
+data: {"model":"qwen3.7-plus","id":"chatcmpl-opencode-go-fixture","choices":[],"created":0,"object":"chat.completion.chunk","usage":{"total_tokens":472,"completion_tokens":197,"prompt_tokens":275,"completion_tokens_details":{"reasoning_tokens":167,"text_tokens":197},"prompt_tokens_details":{"cached_tokens":0,"text_tokens":275}}}
+
+data: [DONE]
+
+data: {"choices":[],"cost":"0"}
+

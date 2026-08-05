@@ -1,0 +1,17 @@
+name: follow-up
+description: A queued follow-up message is appended to the transcript.
+initial_prompt: "first"
+follow_up:
+  - "second"
+events:
+  - start
+  - text_delta: "first-reply"
+  - done: { stop_reason: stop }
+assertions:
+  transcript_contains:
+    - "first"
+    - "first-reply"
+    - "second"
+  events:
+    - agent_start
+    - agent_end
