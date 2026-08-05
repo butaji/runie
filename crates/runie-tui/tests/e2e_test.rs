@@ -42,8 +42,12 @@ impl StreamFn for TwoTurnMock {
         use futures::stream;
         let events = vec![
             AssistantMessageEvent::Start,
-            AssistantMessageEvent::TextDelta { delta: "Hello".into() },
-            AssistantMessageEvent::TextDelta { delta: " world".into() },
+            AssistantMessageEvent::TextDelta {
+                delta: "Hello".into(),
+            },
+            AssistantMessageEvent::TextDelta {
+                delta: " world".into(),
+            },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
@@ -57,9 +61,15 @@ impl StreamFn for TwoTurnMock {
 struct EchoTool;
 #[async_trait::async_trait]
 impl AgentTool for EchoTool {
-    fn name(&self) -> &str { "bash" }
-    fn label(&self) -> &str { "Bash" }
-    fn description(&self) -> &str { "Echoes args" }
+    fn name(&self) -> &str {
+        "bash"
+    }
+    fn label(&self) -> &str {
+        "Bash"
+    }
+    fn description(&self) -> &str {
+        "Echoes args"
+    }
     async fn execute(
         &self,
         _id: &str,
@@ -144,7 +154,9 @@ async fn end_to_end_prompt_renders_transcript() {
         .draw(|f| {
             let area = f.area();
             let layout = chat_layout(area);
-            app.scrollback.lock().render(layout.scrollback, f.buffer_mut());
+            app.scrollback
+                .lock()
+                .render(layout.scrollback, f.buffer_mut());
         })
         .unwrap();
 
@@ -162,6 +174,12 @@ async fn end_to_end_prompt_renders_transcript() {
         }
     }
 
-    assert!(haystack.contains("Hello"), "expected 'Hello' in rendered buffer");
-    assert!(haystack.contains("world"), "expected 'world' in rendered buffer");
+    assert!(
+        haystack.contains("Hello"),
+        "expected 'Hello' in rendered buffer"
+    );
+    assert!(
+        haystack.contains("world"),
+        "expected 'world' in rendered buffer"
+    );
 }

@@ -162,15 +162,27 @@ pub async fn run_loop(
                         deps.hooks.clone(),
                     )
                     .await;
-                let ToolExecOutcome { tool_results, .. } = match outcome {
-                    crate::tools::ToolOutcome::Completed { tool_results, .. } => {
-                        ToolExecOutcome { tool_results }
-                    }
+                let ToolExecOutcome {
+                    tool_results,
+                    events,
+                } = match outcome {
+                    crate::tools::ToolOutcome::Completed {
+                        tool_results,
+                        events,
+                        ..
+                    } => ToolExecOutcome {
+                        tool_results,
+                        events,
+                    },
                     crate::tools::ToolOutcome::Aborted { reason } => {
                         deps.state.set_error(Some(reason)).await;
                         break;
                     }
                 };
+
+                for event in events {
+                    deps.bus.publish(event);
+                }
 
                 for tr in &tool_results {
                     deps.bus.publish(AgentEvent::MessageStart {
@@ -258,6 +270,7 @@ pub async fn run_loop_continue(context: AgentContext, deps: RunLoopDeps) -> RunL
 
 struct ToolExecOutcome {
     tool_results: Vec<ToolResultMessage>,
+    events: Vec<AgentEvent>,
 }
 
 fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {

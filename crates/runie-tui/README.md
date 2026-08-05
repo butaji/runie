@@ -30,6 +30,7 @@ worktrees, dashboard, persona picker, themes — by design.
 | Key       | When              | Effect                          |
 |-----------|-------------------|---------------------------------|
 | Enter     | prompt non-empty  | submit to loop                  |
+| Ctrl+Q    | any               | quit immediately                |
 | Ctrl+C    | streaming         | abort the current run           |
 | Ctrl+C    | idle              | quit                            |
 | Ctrl+D    | any               | quit                            |

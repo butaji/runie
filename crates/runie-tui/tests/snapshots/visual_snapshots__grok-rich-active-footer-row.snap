@@ -1,0 +1,5 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: footer
+---
+  Shift+Tab:mode  │  Esc:cancel  │  Ctrl+.:shortcuts

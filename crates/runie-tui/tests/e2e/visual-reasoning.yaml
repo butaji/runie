@@ -1,0 +1,19 @@
+name: visual-reasoning
+description: Full-mode reasoning transcript and status rendering.
+initial_prompt: "explain"
+events:
+  - start
+  - thinking_delta: "checking the request"
+  - text_delta: "The answer is ready."
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "❯ explain"
+      - "┃ Thought"
+      - "ready."
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

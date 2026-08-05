@@ -1,18 +1,16 @@
 name: visual-minimal
-description: Welcome modal at idle mirrors grok's minimal-mode chrome.
+description: Welcome surface at idle mirrors Grok's full-mode chrome.
 events: []
 assertions:
   visual:
     cols: 80
     rows: 24
     screen_text:
-      - "Runie"
-      - "Model · runie-core"
-      - "/help for commands"
-      - "session_start"
+      - "New worktree"
+      - "Resume session"
+      - "Workflows are here!"
+      - "Ctrl+Enter"
       - "❯"
-      - "ready"
+      - "Enter:send"
     screen_excludes:
-      - "user>"
-      - "assistant>"
       - "panicked"

@@ -49,7 +49,10 @@ impl App {
                     content: vec![runie_core::types::UserContent::Text { text: text.clone() }],
                     timestamp: 0,
                 });
-                let _ = self.loop_actor.prompt(vec![user_msg], runie_core::types::AgentContext::default()).await;
+                let _ = self
+                    .loop_actor
+                    .prompt(vec![user_msg], runie_core::types::AgentContext::default())
+                    .await;
                 self.status.lock().set(Status::Ready);
                 Some(text)
             }
@@ -58,7 +61,12 @@ impl App {
     }
 
     /// Spawn the renderer task. Owns the spawned task via JoinHandle.
-    pub fn spawn_renderer(&self) -> (tokio::task::JoinHandle<()>, tokio::sync::watch::Sender<bool>) {
+    pub fn spawn_renderer(
+        &self,
+    ) -> (
+        tokio::task::JoinHandle<()>,
+        tokio::sync::watch::Sender<bool>,
+    ) {
         let renderer = EventRenderer::new(self.scrollback.clone(), self.status.clone());
         let rx = self.bus.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
@@ -68,11 +76,7 @@ impl App {
     }
 
     /// Lay out the widgets and render them into the given area using `f`.
-    pub fn render<F: FnMut(Rect, &mut Buffer)>(
-        &mut self,
-        area: Rect,
-        mut f: F,
-    ) {
+    pub fn render<F: FnMut(Rect, &mut Buffer)>(&mut self, area: Rect, mut f: F) {
         let layout = chat_layout(area);
         let mut sb = self.scrollback.lock();
         let mut buf = Buffer::empty(area);

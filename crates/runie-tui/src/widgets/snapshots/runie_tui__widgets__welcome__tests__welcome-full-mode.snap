@@ -1,0 +1,19 @@
+---
+source: crates/runie-tui/src/widgets/welcome.rs
+expression: text
+---
+                                                                                
+                                                                                
+                                                                                
+             New worktree                                 ctrl+w                
+             Resume session                               ctrl+s                
+             Changelog                                                          
+             Quit                                         ctrl+q                
+                                                                                
+             Workflows are here!                                                
+             Try them out using /workflows.                                     
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+Tip: Use Ctrl+Enter to interject messages. Or just Enter to queue messages.

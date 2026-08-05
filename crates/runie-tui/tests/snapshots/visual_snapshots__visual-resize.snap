@@ -1,0 +1,15 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: screen
+---
+                                        
+   main ~/Code/GitHub/runie-tests/run  
+     ◆ session_start                    
+     ❯ resize                           
+     ┃ A response that wraps at the na  
+  rrow viewport.                        
+  ╭──────────────────────────────────╮  
+  │ ❯                                │  
+  ╰──────────────── Grok 4.5 (high) ─╯  
+                                        
+  Enter:send  │  Shift+Tab:mode  │  Ct

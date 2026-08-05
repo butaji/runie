@@ -38,6 +38,7 @@ async-trait = { workspace = true }
 tokio-util = "0.7"
 serde_yaml = "0.9"
 insta = { version = "1.41", features = ["yaml"] }
+vt100 = "0.15"
 
 [lints]
 workspace = true

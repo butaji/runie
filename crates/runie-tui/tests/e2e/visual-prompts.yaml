@@ -1,0 +1,31 @@
+name: visual-prompts-idle
+
+events: []
+description: |
+  Visual-parity battery — idle screen (grok's default TUI, no
+  --minimal). Substring checks against the rendered TestBackend
+  screen. Each substring is a *visual pattern* (not a brand word),
+  so scoring is comparable between runie and grok.
+
+  Note: the welcome modal here is the FULL one (multi-menu box),
+  not the smaller minimal-mode modal.
+
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      # ── SHARED VISUAL PATTERNS (scored) ──
+      # Cwd + branch header.
+      - "main"
+      # Boxed welcome modal — at least one top border line.
+      - "─"
+      # Event-log entry (grok uses the same ◆ glyph).
+      # Grok full-mode welcome copy.
+      - "Workflows"
+      - "New worktree"
+      # Bare `❯` prompt cursor.
+      - "❯"
+      - "Gro"
+    screen_excludes:
+      - "Bash mode"

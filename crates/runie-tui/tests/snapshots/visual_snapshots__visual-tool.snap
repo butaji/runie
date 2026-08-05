@@ -1,0 +1,33 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: screen
+---
+                                                                                
+   main ~/Code/GitHub/runie-tests/runie                                        
+                                                                                
+     ◆ session_start                                                            
+     ❯ inspect                                                                  
+                                                                                
+     ◆ echo {"value":"hello"} | update: {"status":"running"} → ✓                
+       ↳ {"value":"hello"}                                                      
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+  ╭──────────────────────────────────────────────────────────────────────────╮  
+  │ ❯                                                                        │  
+  ╰──────────────────────────────────────────────────────── Grok 4.5 (high) ─╯  
+                                                                                
+  Enter:send  │  Shift+Tab:mode  │  Ctrl+x:shortcuts

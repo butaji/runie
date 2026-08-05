@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use parking_lot::Mutex;
+use tokio::sync::Mutex;
 
 use crate::types::AgentEvent;
 
@@ -39,49 +39,34 @@ impl SubscriberRegistry {
         Self::default()
     }
 
-    pub fn register(&self, sub: BoxedSubscriber) -> SubId {
-        let mut g = self.inner.lock();
+    pub async fn register(&self, sub: BoxedSubscriber) -> SubId {
+        let mut g = self.inner.lock().await;
         let id = SubId(g.next_id);
         g.next_id += 1;
         g.subs.push((id, sub));
         id
     }
 
-    pub fn unregister(&self, id: SubId) {
-        let mut g = self.inner.lock();
+    pub async fn unregister(&self, id: SubId) {
+        let mut g = self.inner.lock().await;
         g.subs.retain(|(sid, _)| *sid != id);
     }
 
     /// Dispatch `event` to every subscriber in registration order, awaiting
     /// each before starting the next. This enforces the README barrier.
     pub async fn dispatch(&self, event: &AgentEvent) {
-        // Take a snapshot of mut refs under the lock, then drop the lock
-        // before awaiting so handlers can re-enter the registry.
-        let mut refs: Vec<(SubId, *mut BoxedSubscriber)> = {
-            let g = self.inner.lock();
-            g.subs
-                .iter()
-                .map(|(id, b)| (*id, b as *const _ as *mut _))
-                .collect()
-        };
-
-        for (id, raw) in refs.drain(..) {
-            let sub: &mut BoxedSubscriber = unsafe { &mut *raw };
-            // SAFETY: dispatch is called serially; the registry does not
-            // mutate `subs` between iterations except via explicit
-            // `register`/`unregister`, which are safe because we hold a
-            // raw pointer only for the duration of one handler call.
-            let _ = id;
+        let mut g = self.inner.lock().await;
+        for (_, sub) in &mut g.subs {
             sub.handle(event).await;
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.inner.lock().subs.len()
+    pub async fn len(&self) -> usize {
+        self.inner.lock().await.subs.len()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.inner.lock().subs.is_empty()
+    pub async fn is_empty(&self) -> bool {
+        self.inner.lock().await.subs.is_empty()
     }
 }
 
@@ -110,7 +95,8 @@ mod tests {
             reg.register(Box::new(CountingSub {
                 idx: i,
                 order: order.clone(),
-            }));
+            }))
+            .await;
         }
         reg.dispatch(&AgentEvent::AgentStart).await;
         assert_eq!(order.load(Ordering::SeqCst), 5);

@@ -1,0 +1,16 @@
+name: visual-scroll
+description: Full-mode scrollback tail remains visible after overflow.
+initial_prompt: "scroll"
+events:
+  - start
+  - text_delta: "line one\nline two\nline three\nline four\nline five\nline six\nline seven\nline eight\nline nine\nline ten\nline eleven\nline twelve\nline thirteen"
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 40
+    rows: 12
+    screen_text:
+      - "line three"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

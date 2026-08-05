@@ -43,14 +43,78 @@ impl Default for Status {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct StatusBar {
     state: Status,
+    animation_frame: usize,
+}
+
+/// Grok's one-row foreground activity indicator above the prompt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TurnStatus {
+    frame: usize,
+    phase: TurnStatusPhase,
+    chrome: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnStatusPhase {
+    Starting,
+    Waiting,
+    Thinking,
+    Responding,
+}
+
+impl TurnStatus {
+    const FRAMES: [&'static str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+
+    pub fn new(frame: usize) -> Self {
+        Self {
+            frame,
+            phase: TurnStatusPhase::Starting,
+            chrome: String::new(),
+        }
+    }
+
+    pub fn phase(mut self, phase: TurnStatusPhase) -> Self {
+        self.phase = phase;
+        self
+    }
+
+    pub fn with_chrome(mut self, chrome: impl Into<String>) -> Self {
+        self.chrome = chrome.into();
+        self
+    }
+
+    pub fn text(&self) -> String {
+        let label = match self.phase {
+            TurnStatusPhase::Starting => "Starting session… 0.0s",
+            // The recorded full-mode waiting row includes the right-aligned
+            // elapsed/usage/stop chrome on the same terminal row.
+            TurnStatusPhase::Waiting => "Waiting for response…",
+            TurnStatusPhase::Thinking => "Thinking…",
+            TurnStatusPhase::Responding => "Responding…",
+        };
+        format!(
+            "  {} {label}{}",
+            Self::FRAMES[self.frame % Self::FRAMES.len()],
+            self.chrome
+        )
+    }
+
+    pub fn render(self, area: Rect, buf: &mut Buffer) {
+        Paragraph::new(self.text())
+            .style(Style::default().add_modifier(Modifier::DIM))
+            .render(area, buf);
+    }
 }
 
 impl StatusBar {
     pub fn new() -> Self {
-        Self { state: Status::default() }
+        Self {
+            state: Status::default(),
+            animation_frame: 0,
+        }
     }
 
     pub fn set(&mut self, s: Status) {
@@ -61,20 +125,69 @@ impl StatusBar {
         &self.state
     }
 
+    /// Advance the deterministic spinner used by active full-mode states.
+    /// The caller owns the cadence; tests can select exact frames without
+    /// depending on wall-clock timing.
+    pub fn advance_animation(&mut self) {
+        if matches!(self.state, Status::Thinking | Status::Streaming) {
+            self.animation_frame = self.animation_frame.wrapping_add(1);
+        }
+    }
+
+    pub fn set_animation_frame(&mut self, frame: usize) {
+        self.animation_frame = frame;
+    }
+
+    pub fn animation_frame(&self) -> usize {
+        self.animation_frame
+    }
+
     pub fn render(&self, area: Rect, buf: &mut Buffer) {
-        // grok-build's minimal-mode status row: dim left-side state + bright
-        // right-side badge. We render two spans: state on the left, "runie v0.1.0"
-        // on the right (acts as our model pill).
+        // Grok's full-mode footer is context-sensitive: idle/editing exposes
+        // send/mode/shortcuts, while an active turn exposes mode/cancel.
         use ratatui::text::Span;
-        let width = area.width as usize;
-        let left = format!("{} · ctrl+o transcript", self.state.label());
-        let right = "runie v0.1.0";
-        let pad = width.saturating_sub(left.len() + right.len());
-        let line = Line::from(vec![
-            Span::styled(left, self.state.style()),
-            Span::raw(" ".repeat(pad.max(1))),
-            Span::styled(right, Style::default().fg(Color::Cyan)),
-        ]);
+        let left = match self.state {
+            Status::Ready => "Enter:send │ Shift+Tab:mode │ Ctrl+x:shortcuts".to_string(),
+            Status::Thinking | Status::Streaming => String::new(),
+            _ => self.state.label(),
+        };
+        let mut spans = Vec::new();
+        if matches!(self.state, Status::Ready) {
+            spans.push(Span::styled(
+                "Enter",
+                Style::default().add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(":send  │  "));
+            spans.push(Span::styled(
+                "Shift+Tab",
+                Style::default().add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(":mode  │  "));
+            spans.push(Span::styled(
+                "Ctrl+x",
+                Style::default().add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(":shortcuts"));
+        } else if matches!(self.state, Status::Thinking | Status::Streaming) {
+            spans.push(Span::styled(
+                "Shift+Tab",
+                Style::default().add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(":mode  │  "));
+            spans.push(Span::styled(
+                "Esc",
+                Style::default().add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(":cancel  │  "));
+            spans.push(Span::styled(
+                "Ctrl+.",
+                Style::default().add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(":shortcuts"));
+        } else {
+            spans.push(Span::styled(left, self.state.style()));
+        }
+        let line = Line::from(spans).style(Style::default());
         let p = Paragraph::new(line);
         Widget::render(p, area, buf);
     }
@@ -101,5 +214,141 @@ mod tests {
         let labels: Vec<_> = variants.iter().map(Status::label).collect();
         let unique: std::collections::HashSet<_> = labels.iter().collect();
         assert_eq!(unique.len(), labels.len());
+    }
+
+    #[test]
+    fn full_mode_footer_matches_grok_idle_and_active_hints() {
+        let mut bar = StatusBar::new();
+        let mut buffer = Buffer::empty(Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 1,
+        });
+        bar.render(
+            Rect {
+                x: 0,
+                y: 0,
+                width: 80,
+                height: 1,
+            },
+            &mut buffer,
+        );
+        let idle: String = (0..80)
+            .filter_map(|x| buffer.cell((x, 0)).map(|c| c.symbol().to_string()))
+            .collect();
+        assert!(idle.contains("Enter:send"));
+        assert!(idle.contains("Shift+Tab:mode"));
+        assert!(idle.contains("Ctrl+x:shortcuts"));
+
+        bar.set(Status::Thinking);
+        let mut buffer = Buffer::empty(Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 1,
+        });
+        bar.render(
+            Rect {
+                x: 0,
+                y: 0,
+                width: 80,
+                height: 1,
+            },
+            &mut buffer,
+        );
+        let active: String = (0..80)
+            .filter_map(|x| buffer.cell((x, 0)).map(|c| c.symbol().to_string()))
+            .collect();
+        assert!(active.contains("Shift+Tab:mode"));
+        assert!(active.contains("Esc:cancel"));
+        assert!(active.contains("Ctrl+.:shortcuts"));
+        assert!(!active.contains("Thinking…"));
+    }
+
+    #[test]
+    fn active_footer_is_stable_across_animation_frames() {
+        let mut bar = StatusBar::new();
+        bar.set(Status::Thinking);
+        let mut frames = Vec::new();
+        for frame in 0..3 {
+            bar.set_animation_frame(frame);
+            let mut buffer = Buffer::empty(Rect {
+                x: 0,
+                y: 0,
+                width: 80,
+                height: 1,
+            });
+            bar.render(
+                Rect {
+                    x: 0,
+                    y: 0,
+                    width: 80,
+                    height: 1,
+                },
+                &mut buffer,
+            );
+            frames.push(
+                (0..80)
+                    .filter_map(|x| buffer.cell((x, 0)).map(|c| c.symbol().to_string()))
+                    .collect::<String>(),
+            );
+        }
+        assert_eq!(frames[0], frames[1]);
+        assert_eq!(frames[1], frames[2]);
+        insta::assert_snapshot!(frames.join("\n"));
+    }
+
+    #[test]
+    fn animation_frame_is_deterministic_and_owned_by_status_bar() {
+        let mut bar = StatusBar::new();
+        assert_eq!(bar.animation_frame(), 0);
+        bar.set(Status::Thinking);
+        bar.advance_animation();
+        assert_eq!(bar.animation_frame(), 1);
+        bar.set(Status::Ready);
+        bar.advance_animation();
+        assert_eq!(bar.animation_frame(), 1);
+    }
+
+    #[test]
+    fn active_footer_matches_grok_full_mode_vocabulary_and_spacing() {
+        let mut bar = StatusBar::new();
+        bar.set(Status::Thinking);
+        let mut buffer = Buffer::empty(Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 1,
+        });
+        bar.render(
+            Rect {
+                x: 2,
+                y: 0,
+                width: 76,
+                height: 1,
+            },
+            &mut buffer,
+        );
+        let row: String = (0..80)
+            .map(|x| buffer.cell((x, 0)).expect("footer cell").symbol())
+            .collect();
+        assert!(row.starts_with("  Shift+Tab:mode  │  Esc:cancel  │  Ctrl+.:shortcuts"));
+        assert_eq!(row.chars().count(), 80);
+    }
+
+    #[test]
+    fn turn_status_uses_groks_deterministic_braille_frames() {
+        assert_eq!(TurnStatus::new(0).text(), "  ⠋ Starting session… 0.0s");
+        assert_eq!(TurnStatus::new(8).text(), "  ⠋ Starting session… 0.0s");
+        assert_eq!(TurnStatus::new(3).text(), "  ⠸ Starting session… 0.0s");
+        assert!(TurnStatus::new(0)
+            .phase(TurnStatusPhase::Waiting)
+            .text()
+            .contains("Waiting for response…"));
+        assert!(TurnStatus::new(0)
+            .phase(TurnStatusPhase::Responding)
+            .text()
+            .contains("Responding…"));
     }
 }

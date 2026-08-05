@@ -79,7 +79,11 @@ async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
             FollowUpCommand::Push(msg) => queue.push(msg),
             FollowUpCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics on an empty queue; pop instead.
-                let popped = if queue.is_empty() { None } else { Some(queue.remove(0)) };
+                let popped = if queue.is_empty() {
+                    None
+                } else {
+                    Some(queue.remove(0))
+                };
                 let _ = reply.send(popped).await;
             }
             FollowUpCommand::DrainAll(reply) => {

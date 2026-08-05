@@ -1,0 +1,19 @@
+name: visual-prompts-typed
+
+events: []
+description: |
+  After typing "echo" into the prompt (no submit). Substring check:
+  the `❯` is followed by the typed text.
+
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    steps: ["echo"]
+    screen_text:
+      - "❯ echo"
+      - "Enter:send"
+    screen_excludes:
+      - "0.2.118"
+      - "welcome"
+      - "New session"

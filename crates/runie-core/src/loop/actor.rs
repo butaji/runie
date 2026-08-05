@@ -120,8 +120,8 @@ impl LoopActor {
         }
     }
 
-    pub fn subscribe(&self, sub: Box<dyn crate::events::Subscriber>) -> crate::events::SubId {
-        self.inner.deps.subscribers.register(sub)
+    pub async fn subscribe(&self, sub: Box<dyn crate::events::Subscriber>) -> crate::events::SubId {
+        self.inner.deps.subscribers.register(sub).await
     }
 
     pub fn bus(&self) -> EventBus {

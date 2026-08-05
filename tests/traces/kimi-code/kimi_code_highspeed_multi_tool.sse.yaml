@@ -1,0 +1,21 @@
+trace_id: kimi_code_highspeed_multi_tool
+conversation: kimi_code_highspeed_multi_tool
+turn: 1
+next_trace: kimi-code/kimi_code_highspeed_multi_tool.sse
+outcome: success
+transport:
+  status: 200
+  sse: true
+request:
+  model: recorded-fixture
+provider:
+  expected_events: [Start, ThinkingDelta, ToolCallDelta, Done]
+payload:
+  non_empty_text: true
+core:
+  required_events: [AgentStart, TurnStart, MessageStart, MessageEnd, AgentEnd, ToolExecutionStart, ToolExecutionEnd]
+state:
+  assistant_messages: 1
+tools:
+  - name: get_weather
+    required_events: [ToolExecutionStart, ToolExecutionEnd]

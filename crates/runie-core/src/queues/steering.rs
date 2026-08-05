@@ -82,7 +82,11 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
             SteeringCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics when the queue is empty, so
                 // explicitly pop when there's at least one item.
-                let popped = if queue.is_empty() { None } else { Some(queue.remove(0)) };
+                let popped = if queue.is_empty() {
+                    None
+                } else {
+                    Some(queue.remove(0))
+                };
                 let _ = reply.send(popped).await;
             }
             SteeringCommand::DrainAll(reply) => {

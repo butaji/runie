@@ -14,6 +14,8 @@ pub mod yaml_runner;
 
 pub use app::{App, AppExit};
 pub use event_renderer::EventRenderer;
-pub use key::{Action, map_key};
+pub use key::{map_key, Action};
 pub use layout::{chat_layout, ChatLayout, PROMPT_HEIGHT, STATUS_HEIGHT};
-pub use widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
+pub use widgets::{
+    PromptOutcome, PromptWidget, Scrollback, Status, StatusBar, TurnStatus, TurnStatusPhase,
+};

@@ -72,6 +72,21 @@ These fixtures drive the error/rate-limit black-box tests in
 `tests/cli_replay.rs`, `tests/tui_replay_conversations.rs`, and
 `tests/error_recovery.rs`.
 
+## Core replay expectations
+
+Every `.sse` file has a sibling `.sse.yaml` file containing its executable
+expectations. For example:
+
+```yaml
+outcome: success
+expected_events: [Start, ThinkingDelta, ToolCallDelta, Done]
+```
+
+The `runie-core` replay test discovers these sidecars at runtime, maps each to
+its trace, and runs successful cases through the real core loop. Error/status
+cases declare `outcome: error`. Updating a sidecar changes the assertions
+without changing Rust test code.
+
 ## File layout
 
 - `openai/opencode_go_*.sse` — OpenAI-compatible `/v1/chat/completions`

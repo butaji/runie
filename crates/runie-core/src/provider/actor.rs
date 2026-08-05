@@ -80,10 +80,14 @@ async fn run_provider_worker(
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
                 match stream_fn.stream(&model, &context, options).await {
                     Ok(stream) => {
+                        // Subscribe before starting the pump. Otherwise a
+                        // fast replay stream can publish Start/tool events
+                        // before the caller receives its broadcast receiver.
+                        let receiver = event_tx.subscribe();
                         let tx = event_tx.clone();
                         // OWNER: ProviderActor — wraps the stream in an owned task.
                         tokio::spawn(pump_stream(stream, tx));
-                        let _ = reply.send(event_tx.subscribe());
+                        let _ = reply.send(receiver);
                     }
                     Err(_) => {
                         let _ = reply.send(event_tx.subscribe());

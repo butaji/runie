@@ -1,0 +1,27 @@
+name: visual-prompts-submitted
+description: |
+  After submitting "hi" — assistant streamed a response, transcript
+  rendered. Visual: user-line, assistant-line, status "ready".
+
+initial_prompt: "hi"
+events:
+  - start
+  - text_delta: "Hello"
+  - text_delta: " from runie!"
+  - done: { stop_reason: stop }
+
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      # Transcript lines.
+      - "❯ hi"
+      - "┃ Hello from runie!"
+      # Status.
+      - "Enter:send"
+      # Header still there.
+      - "main"
+      - "◆ session_start"
+    screen_excludes:
+      - "0.2.118"

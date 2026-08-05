@@ -1,0 +1,7 @@
+
+Echo Command Query Title
+> echo:q
+  q
+
+Resume this session with:
+  grok --resume 019fcfa2-49bc-71a1-99c5-8ae612662872

@@ -1,0 +1,21 @@
+
+* ╭─ Runie  v0.1.0 ─
+* │ main runie
+* │ Model · runie-core
+* │ /help for commands
+* ╰─
+* ◆ session_start
+user> echo:q
+assistant> Hello from runie!
+* (run finished, 2 new messages)
+❯ echo[renderer] rx: AgentStart
+                               [renderer] rx: TurnStart
+                                                       [renderer] rx: MessageStart { message: User(UserMessage { content: [Text { text: "echo:q" }], timestamp: 0 }) }                                                             runie v0.1.0
+                                              [renderer] rx: MessageEnd { message: User(UserMessage { content: [Text { text: "echo:q" }], timestamp: 0 }) }
+                                   [renderer] rx: MessageStart { message: Assistant(AssistantMessage { content: [], stop_reason: None, model: "", timestamp: 0 }) }
+                                           [renderer] rx: MessageUpdate { message: Assistant(AssistantMessage { content: [], stop_reason: None, model: "", timestamp: 0 }), event: Start }
+                                                                  [renderer] rx: MessageUpdate { message: Assistant(AssistantMessage { content: [Text { text: "Hello from runie!" }], stop_reason: None, model: "", timestamp: 0 }), event: TextDelta { delta: "Hello from runie!" } }
+                                      [renderer] rx: MessageUpdate { message: Assistant(AssistantMessage { content: [Text { text: "Hello from runie!" }], stop_reason: Some(Stop), model: "", timestamp: 0 }), event: Done { stop_reason: Stop, usage: Usage { input: 0, output: 0, cache_read: 0, cache_write: 0, total_tokens: 0, cost: CostBreakdown { input: 0, output: 0, cache_read: 0, cache_write: 0, total: 0 } } } }
+                                                      [renderer] rx: MessageEnd { message: Assistant(AssistantMessage { content: [Text { text: "Hello from runie!" }], stop_reason: Some(Stop), model: "", timestamp: 0 }) }
+                                                                                                    [renderer] rx: TurnEnd { message: Assistant(AssistantMessage { content: [Text { text: "Hello from runie!" }], stop_reason: Some(Stop), model: "", timestamp: 0 }), tool_results: [] }
+❯                                        [renderer] rx: AgentEnd { messages: [User(UserMessage { content: [Text { text: "echo:q" }], timestamp: 0 }), Assistant(AssistantMessage { content: [Text { text: "Hello from runie!" }], stop_reason: Some(Stop), model: "", timestamp: 0 })] }

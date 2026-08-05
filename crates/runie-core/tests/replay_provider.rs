@@ -1,174 +1,304 @@
-use runie_core::{
-    provider::{ReplayProvider, StreamFn},
-    types::{AgentContext, Model, AssistantMessageEvent},
-};
-use futures::StreamExt;
-use serde::Deserialize;
+//! Runtime-discovered replay tests. Each `.sse` trace owns a sibling `.sse.yaml`.
+
 mod common;
 
-#[derive(Deserialize)]
-struct Flow {
-    trace: String,
-    expected: Vec<String>,
+use futures::StreamExt;
+use runie_core::{
+    provider::{HttpActor, ReplayHttpActor, ReplayProvider, StreamFn},
+    types::{
+        AgentContext, AgentMessage, AssistantContent, AssistantMessageEvent, Model, UserContent,
+        UserMessage,
+    },
+};
+use serde::Deserialize;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
+#[derive(Debug, Deserialize)]
+struct Expectation {
+    trace_id: String,
+    conversation: String,
+    turn: u32,
+    #[serde(default)]
+    next_trace: Option<String>,
+    #[serde(default)]
+    previous_trace: Option<String>,
+    outcome: String,
+    transport: Transport,
+    request: Request,
+    provider: ProviderExpectation,
+    payload: PayloadExpectation,
+    core: CoreExpectation,
+    state: StateExpectation,
+    #[serde(default)]
+    tools: Vec<ToolExpectation>,
+    #[serde(default)]
+    error: Option<ErrorExpectation>,
 }
 
-#[tokio::test]
-async fn replays_historical_openai_trace_without_network() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/traces/openai/opencode_go_deepseek_v4_flash_simple.sse");
-    let provider = ReplayProvider::from_sse(path).unwrap();
-    let mut stream = provider.stream(&Model::default(), &AgentContext::default(), None).await.unwrap();
-    let mut text = String::new();
-    let mut done = false;
-    while let Some(event) = stream.next().await {
-        match event {
-            AssistantMessageEvent::TextDelta { delta }
-            | AssistantMessageEvent::ThinkingDelta { delta } => text.push_str(&delta),
-            AssistantMessageEvent::Done { .. } => done = true,
-            _ => {}
+#[derive(Debug, Deserialize)]
+struct Transport {
+    status: u16,
+    sse: bool,
+}
+#[derive(Debug, Deserialize)]
+struct Request {
+    model: String,
+}
+#[derive(Debug, Deserialize)]
+struct ProviderExpectation {
+    expected_events: Vec<String>,
+}
+#[derive(Debug, Deserialize)]
+struct PayloadExpectation {
+    non_empty_text: bool,
+}
+#[derive(Debug, Deserialize)]
+struct CoreExpectation {
+    required_events: Vec<String>,
+}
+#[derive(Debug, Deserialize)]
+struct StateExpectation {
+    assistant_messages: usize,
+}
+#[derive(Debug, Deserialize)]
+struct ToolExpectation {
+    name: String,
+    required_events: Vec<String>,
+}
+#[derive(Debug, Deserialize)]
+struct ErrorExpectation {
+    kind: String,
+}
+
+fn root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/traces")
+}
+
+fn event_name(event: &AssistantMessageEvent) -> &'static str {
+    match event {
+        AssistantMessageEvent::Start => "Start",
+        AssistantMessageEvent::TextDelta { .. } => "TextDelta",
+        AssistantMessageEvent::ThinkingDelta { .. } => "ThinkingDelta",
+        AssistantMessageEvent::ToolCallDelta { .. } => "ToolCallDelta",
+        AssistantMessageEvent::Done { .. } => "Done",
+        AssistantMessageEvent::Error { .. } => "Error",
+    }
+}
+
+struct DeclaredTool {
+    name: String,
+}
+
+#[async_trait::async_trait]
+impl runie_core::types::AgentTool for DeclaredTool {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn label(&self) -> &str {
+        "trace fixture tool"
+    }
+    fn description(&self) -> &str {
+        "Deterministic tool used by replay contracts."
+    }
+    async fn execute(
+        &self,
+        _id: &str,
+        _args: serde_json::Value,
+        _signal: Option<tokio_util::sync::CancellationToken>,
+        _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<runie_core::types::AgentToolResult, String> {
+        Ok(runie_core::types::AgentToolResult {
+            content: vec![runie_core::types::ToolResultContent::Text {
+                text: "trace tool result".into(),
+            }],
+            ..Default::default()
+        })
+    }
+}
+
+fn sidecars(dir: &Path, result: &mut Vec<PathBuf>) {
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            sidecars(&path, result);
+        } else if path.extension().and_then(|x| x.to_str()) == Some("yaml") {
+            result.push(path);
         }
     }
-    assert!(!text.is_empty());
-    assert!(done);
 }
 
 #[tokio::test]
-async fn replays_anthropic_text_and_openai_tool_trace() {
-    for relative in [
-        "anthropic/opencode_go_minimax_m3_simple.sse",
-        "openai/opencode_go_deepseek_v4_flash_tool.sse",
-    ] {
-        let path = format!("{}/../../tests/traces/{relative}", env!("CARGO_MANIFEST_DIR"));
-        let provider = ReplayProvider::from_sse(path).unwrap();
-        let mut stream = provider.stream(&Model::default(), &AgentContext::default(), None).await.unwrap();
-        let mut saw_done = false;
-        let mut saw_tool = false;
+async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
+    let base = root();
+    let mut yaml_files = Vec::new();
+    sidecars(&base, &mut yaml_files);
+    yaml_files.sort();
+    assert_eq!(
+        yaml_files.len(),
+        181,
+        "every SSE trace must have one sidecar YAML"
+    );
+
+    for yaml_path in yaml_files {
+        let trace_path = PathBuf::from(yaml_path.to_string_lossy().trim_end_matches(".yaml"));
+        let expectation: Expectation =
+            serde_yaml::from_str(&std::fs::read_to_string(&yaml_path).unwrap()).unwrap();
+        if expectation.turn == 1 {
+            if let Some(next) = &expectation.next_trace {
+                assert!(
+                    root().join(next).exists(),
+                    "missing linked next trace {next}"
+                );
+            }
+        }
+        if expectation.turn > 1 {
+            if let Some(previous) = &expectation.previous_trace {
+                assert!(
+                    root().join(previous).exists(),
+                    "missing linked previous trace {previous}"
+                );
+            }
+        }
+        assert_eq!(expectation.transport.status, 200);
+        assert!(expectation.transport.sse);
+        assert!(!expectation.request.model.is_empty());
+        let replay = match ReplayHttpActor::from_sse(&trace_path) {
+            Ok(http) => ReplayProvider::from_http(Arc::new(http)).await,
+            Err(error) => Err(error),
+        };
+        if expectation.outcome == "error" {
+            assert_eq!(
+                expectation.error.as_ref().map(|e| e.kind.as_str()),
+                Some("provider_decode")
+            );
+            assert!(replay.is_err(), "expected error: {}", trace_path.display());
+            continue;
+        }
+
+        let provider = Arc::new(replay.unwrap());
+        let mut stream = provider
+            .stream(&Model::default(), &AgentContext::default(), None)
+            .await
+            .unwrap();
+        let mut events = Vec::new();
+        let mut payload_text = String::new();
         while let Some(event) = stream.next().await {
-            saw_done |= matches!(event, AssistantMessageEvent::Done { .. });
-            saw_tool |= matches!(event, AssistantMessageEvent::ToolCallDelta { .. });
+            match &event {
+                AssistantMessageEvent::TextDelta { delta }
+                | AssistantMessageEvent::ThinkingDelta { delta } => payload_text.push_str(delta),
+                _ => {}
+            }
+            events.push(event_name(&event));
         }
-        assert!(saw_done);
-        if relative.contains("tool") { assert!(saw_tool); }
-    }
-}
+        assert_eq!(
+            !payload_text.is_empty(),
+            expectation.payload.non_empty_text,
+            "{} payload assertion",
+            trace_path.display()
+        );
+        for expected in &expectation.provider.expected_events {
+            assert!(
+                events.contains(&expected.as_str()),
+                "{} missing {expected}",
+                trace_path.display()
+            );
+        }
 
-#[test]
-fn rejects_non_sse_or_incomplete_trace() {
-    let result = ReplayProvider::from_sse("/definitely/not/a/trace.sse");
-    assert!(result.is_err());
-}
-
-#[test]
-fn every_recovered_trace_is_classified_by_the_replay_provider() {
-    fn visit(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() { visit(&path, files); }
-            else if path.extension().and_then(|x| x.to_str()) == Some("sse") { files.push(path); }
+        let mut builder = common::TestLoopBuilder::new(provider);
+        for tool in &expectation.tools {
+            builder = builder.tool(Arc::new(DeclaredTool {
+                name: tool.name.clone(),
+            }));
+        }
+        let test = builder.build();
+        let output = test
+            .actor
+            .prompt(
+                vec![AgentMessage::User(UserMessage {
+                    content: vec![UserContent::Text {
+                        text: "trace replay".into(),
+                    }],
+                    timestamp: 1,
+                })],
+                AgentContext::default(),
+            )
+            .await
+            .unwrap();
+        assert!(
+            output
+                .iter()
+                .any(|message| matches!(message, AgentMessage::Assistant(_))),
+            "no assistant output: {}",
+            trace_path.display()
+        );
+        for tool in &expectation.tools {
+            assert!(output.iter().any(|message| matches!(message,
+                AgentMessage::Assistant(assistant) if assistant.content.iter().any(|content|
+                    matches!(content, AssistantContent::ToolCall(call) if call.name == tool.name)))),
+                "{} missing declared tool call {}", trace_path.display(), tool.name);
+        }
+        assert_eq!(expectation.state.assistant_messages, 1);
+        for _ in 0..8 {
+            tokio::task::yield_now().await;
+        }
+        let core_events = test.events.lock();
+        let core_names: Vec<_> = core_events
+            .iter()
+            .map(|event| match event {
+                runie_core::types::AgentEvent::AgentStart => "AgentStart",
+                runie_core::types::AgentEvent::TurnStart => "TurnStart",
+                runie_core::types::AgentEvent::MessageStart { .. } => "MessageStart",
+                runie_core::types::AgentEvent::MessageEnd { .. } => "MessageEnd",
+                runie_core::types::AgentEvent::MessageUpdate { .. } => "MessageUpdate",
+                runie_core::types::AgentEvent::TurnEnd { .. } => "TurnEnd",
+                runie_core::types::AgentEvent::AgentEnd { .. } => "AgentEnd",
+                runie_core::types::AgentEvent::ToolExecutionStart { .. } => "ToolExecutionStart",
+                runie_core::types::AgentEvent::ToolExecutionUpdate { .. } => "ToolExecutionUpdate",
+                runie_core::types::AgentEvent::ToolExecutionEnd { .. } => "ToolExecutionEnd",
+            })
+            .collect();
+        for expected in &expectation.core.required_events {
+            assert!(
+                core_names.contains(&expected.as_str()),
+                "{} missing core event {expected}",
+                trace_path.display()
+            );
+        }
+        for tool in &expectation.tools {
+            for expected in &tool.required_events {
+                assert!(
+                    core_names.contains(&expected.as_str()),
+                    "{} missing tool event {expected}",
+                    trace_path.display()
+                );
+            }
         }
     }
-
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/traces");
-    let mut files = Vec::new();
-    visit(&root, &mut files);
-    assert!(files.len() >= 180, "recovered trace corpus unexpectedly small: {}", files.len());
-
-    let mut replayable = 0;
-    let mut expected_failures = 0;
-    for path in files {
-        match ReplayProvider::from_sse(&path) {
-            Ok(_) => replayable += 1,
-            Err(_) if path.file_name().unwrap().to_string_lossy().contains("error")
-                || path.to_string_lossy().contains("status_")
-                || path.file_name().unwrap().to_string_lossy().contains("context_length_exceeded")
-                || path.file_name().unwrap().to_string_lossy().contains("invalid_api_key")
-                || path.file_name().unwrap().to_string_lossy().contains("model_not_found") => expected_failures += 1,
-            Err(error) => panic!("unexpected replay failure for {}: {error}", path.display()),
-        }
-    }
-    assert!(replayable >= 150);
-    assert!(expected_failures >= 10);
 }
 
 #[tokio::test]
-async fn yaml_flows_drive_representative_provider_replays() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/traces");
-    for name in ["openai-tool-flow.yaml", "anthropic-tool-flow.yaml"] {
-        let flow: Flow = serde_yaml::from_str(&std::fs::read_to_string(root.join(name)).unwrap()).unwrap();
-        let provider = ReplayProvider::from_sse(root.join(&flow.trace)).unwrap();
-        let mut stream = provider.stream(&Model::default(), &AgentContext::default(), None).await.unwrap();
-        let mut actual = Vec::new();
-        while let Some(event) = stream.next().await {
-            actual.push(match event {
-                AssistantMessageEvent::Start => "Start",
-                AssistantMessageEvent::ToolCallDelta { .. } => "ToolCallDelta",
-                AssistantMessageEvent::Done { .. } => "Done",
-                _ => continue,
-            });
-        }
-        assert_eq!(actual, flow.expected);
-    }
-}
-
-#[tokio::test]
-async fn replay_provider_drives_the_real_core_loop() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/traces/openai/opencode_go_deepseek_v4_flash_simple.sse");
-    let provider = std::sync::Arc::new(ReplayProvider::from_sse(path).unwrap());
+async fn replay_http_actor_feeds_provider_before_core_loop() {
+    let path = root().join("openai/opencode_go_deepseek_v4_flash_simple.sse");
+    let http: Arc<dyn HttpActor> = Arc::new(ReplayHttpActor::from_sse(path).unwrap());
+    let provider = Arc::new(ReplayProvider::from_http(http).await.unwrap());
     let test = common::TestLoopBuilder::new(provider).build();
-    let output = test.actor.prompt(
-        vec![runie_core::types::AgentMessage::User(runie_core::types::UserMessage {
-            content: vec![runie_core::types::UserContent::Text { text: "hello".into() }],
-            timestamp: 1,
-        })],
-        AgentContext::default(),
-    ).await.unwrap();
-    assert!(output.iter().any(|message| matches!(message, runie_core::types::AgentMessage::Assistant(_))));
-}
-
-#[tokio::test]
-async fn every_recovered_trace_executes_through_the_core_loop() {
-    fn visit(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() { visit(&path, files); }
-            else if path.extension().and_then(|x| x.to_str()) == Some("sse") { files.push(path); }
-        }
-    }
-
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/traces");
-    let mut files = Vec::new();
-    visit(&root, &mut files);
-    files.sort();
-    assert_eq!(files.len(), 181, "SSE trace corpus changed; update coverage expectations");
-
-    let mut replayed = 0;
-    let mut rejected = 0;
-    for path in files {
-        let filename = path.file_name().unwrap().to_string_lossy();
-        match ReplayProvider::from_sse(&path) {
-            Ok(provider) => {
-                let test = common::TestLoopBuilder::new(std::sync::Arc::new(provider)).build();
-                let output = test.actor.prompt(
-                    vec![runie_core::types::AgentMessage::User(runie_core::types::UserMessage {
-                        content: vec![runie_core::types::UserContent::Text { text: "trace replay".into() }],
-                        timestamp: 1,
-                    })],
-                    AgentContext::default(),
-                ).await.unwrap();
-                assert!(output.iter().any(|message| matches!(message, runie_core::types::AgentMessage::Assistant(_))),
-                    "successful trace produced no assistant message: {}", path.display());
-                replayed += 1;
-            }
-            Err(error) => {
-                assert!(filename.contains("error")
-                    || filename.contains("status_")
-                    || filename.contains("context_length_exceeded")
-                    || filename.contains("invalid_api_key")
-                    || filename.contains("model_not_found"),
-                    "unexpected replay failure for {}: {error}", path.display());
-                rejected += 1;
-            }
-        }
-    }
-    assert!(replayed >= 150, "too few traces executed: {replayed}");
-    assert!(rejected >= 10, "error corpus not exercised: {rejected}");
+    let output = test
+        .actor
+        .prompt(
+            vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text {
+                    text: "http replay".into(),
+                }],
+                timestamp: 1,
+            })],
+            AgentContext::default(),
+        )
+        .await
+        .unwrap();
+    assert!(output
+        .iter()
+        .any(|message| matches!(message, AgentMessage::Assistant(_))));
 }

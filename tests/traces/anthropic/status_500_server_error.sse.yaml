@@ -1,0 +1,22 @@
+trace_id: status_500_server_error
+conversation: status_500_server_error
+turn: 1
+next_trace: anthropic/status_500_server_error.sse
+outcome: error
+transport:
+  status: 200
+  sse: true
+request:
+  model: recorded-fixture
+provider:
+  expected_events: []
+payload:
+  non_empty_text: false
+core:
+  required_events: []
+state:
+  assistant_messages: 0
+tools:
+  []
+error:
+  kind: provider_decode

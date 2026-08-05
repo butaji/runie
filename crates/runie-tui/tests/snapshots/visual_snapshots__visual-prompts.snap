@@ -1,0 +1,33 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: screen
+---
+                                                                                
+   main ~/Code/GitHub/runie-tests/runie                                        
+                                                                                
+                                                                                
+                                                                                
+               New worktree                                 ctrl+w              
+               Resume session                               ctrl+s              
+               Changelog                                                        
+               Quit                                         ctrl+q              
+                                                                                
+               Workflows are here!                                              
+               Try them out using /workflows.                                   
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+  Tip: Use Ctrl+Enter to interject messages. Or just Enter to queue messages.   
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+  ╭──────────────────────────────────────────────────────────────────────────╮  
+  │ ❯                                                                        │  
+  ╰──────────────────────────────────────────────────────── Grok 4.5 (high) ─╯  
+                                                                                
+  Enter:send  │  Shift+Tab:mode  │  Ctrl+x:shortcuts

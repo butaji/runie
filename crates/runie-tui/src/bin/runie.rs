@@ -8,15 +8,12 @@ use std::io::{self, Stdout};
 use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{
-    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use futures::FutureExt;
-use futures::StreamExt;
 use ratatui::backend::CrosstermBackend;
-use std::panic::AssertUnwindSafe;
 use ratatui::Terminal;
 use runie_core::events::EventBus;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
@@ -27,11 +24,13 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::types::{AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ToolExecutionMode};
+use runie_core::types::{
+    AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ToolExecutionMode,
+};
 
 use runie_tui::app::{App, AppExit};
-use runie_tui::key::{map_key, Action};
-use runie_tui::widgets::PromptOutcome;
+use runie_tui::key::is_quit_command;
+use runie_tui::widgets::{PromptOutcome, WelcomeWidget};
 
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
@@ -47,14 +46,19 @@ impl StreamFn for PlaceholderStream {
         use runie_core::types::{AssistantMessageEvent, StopReason, Usage};
         let events = vec![
             AssistantMessageEvent::Start,
-            AssistantMessageEvent::TextDelta { delta: "Hello from runie!".into() },
-            AssistantMessageEvent::Done { stop_reason: StopReason::Stop, usage: Usage::default() },
+            AssistantMessageEvent::TextDelta {
+                delta: "Hello from runie!".into(),
+            },
+            AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+            },
         ];
         Ok(Box::pin(stream::iter(events)))
     }
 }
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
@@ -64,7 +68,9 @@ async fn main() -> Result<()> {
     let mut terminal = setup_terminal()?;
     let res = run_app(&mut terminal).await;
     restore_terminal(&mut terminal)?;
-    let _ = res; // discard AppExit
+    if let Err(error) = res {
+        eprintln!("runie TUI error: {error:#}");
+    }
     Ok(())
 }
 
@@ -72,7 +78,13 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(io::stdout());
-    Ok(Terminal::new(backend)?)
+    let mut terminal = Terminal::new(backend)?;
+    // Alternate-screen terminals can retain the previous buffer until the
+    // first differential draw. Clear it explicitly so startup is visible
+    // even when the terminal reports an unchanged frame.
+    terminal.clear()?;
+    terminal.hide_cursor()?;
+    Ok(terminal)
 }
 
 fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
@@ -105,15 +117,73 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
     let actor = LoopActor::new(deps);
     let mut app = App::new(actor, bus.clone());
 
+    // Paint a first frame synchronously before entering the event loop. This
+    // guarantees the alternate screen is initialized even when the input
+    // stream has not produced its first readiness notification yet.
+    terminal.draw(|frame| {
+        use ratatui::widgets::Widget;
+        let layout = runie_tui::layout::chat_layout(frame.area());
+        app.status.lock().render(layout.status, frame.buffer_mut());
+        WelcomeWidget.render(layout.scrollback, frame.buffer_mut());
+        Widget::render(app.prompt.clone(), layout.prompt, frame.buffer_mut());
+        let header = ratatui::widgets::Paragraph::new("  Runie");
+        Widget::render(header, layout.header, frame.buffer_mut());
+        frame.set_cursor_position(app.prompt.cursor_position(layout.prompt));
+    })?;
+
     let _renderer_handle = app.spawn_renderer();
 
-    let mut events = EventStream::new();
     let mut tick = tokio::time::interval(Duration::from_millis(50));
 
     loop {
         tokio::select! {
-            biased;
             _ = tick.tick() => {
+                app.status.lock().advance_animation();
+                // Poll the controlling terminal on the render cadence as a
+                // fallback for PTYs whose async reader does not wake.
+                if event::poll(Duration::ZERO).unwrap_or(false) {
+                    if let Ok(Event::Key(key)) = event::read() {
+                        if key.kind == KeyEventKind::Press {
+                            if key.modifiers.contains(KeyModifiers::CONTROL)
+                                && key.code == KeyCode::Char('q')
+                            {
+                                return Ok(AppExit::Quit);
+                            }
+                            if key.modifiers.is_empty() {
+                                match key.code {
+                                    KeyCode::Char(_) => {
+                                        app.prompt.handle_key(key);
+                                        app.show_welcome = false;
+                                    }
+                                    KeyCode::Backspace => {
+                                        app.prompt.handle_key(key);
+                                    }
+                                    KeyCode::Enter => {
+                                        let outcome = app.prompt.handle_key(key);
+                                        if let PromptOutcome::Submitted(text) = outcome {
+                                            app.show_welcome = false;
+                                            if is_quit_command(&text) {
+                                                return Ok(AppExit::Quit);
+                                            }
+                                            let user_msg = AgentMessage::User(runie_core::types::UserMessage {
+                                                content: vec![runie_core::types::UserContent::Text { text }],
+                                                timestamp: 0,
+                                            });
+                                            if let Err(error) = app
+                                                .loop_actor
+                                                .prompt(vec![user_msg], AgentContext::default())
+                                                .await
+                                            {
+                                                eprintln!("prompt error: {error:?}");
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
                 if let Err(e) = terminal.draw(|f| {
                     use ratatui::layout::Rect;
                     use ratatui::widgets::Widget;
@@ -124,72 +194,61 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let buf = f.buffer_mut();
                         let sb = app.status.clone();
+                        let (status, frame) = {
+                            let status_bar = sb.lock();
+                            (status_bar.current().clone(), status_bar.animation_frame())
+                        };
+                        let phase = match status {
+                            runie_tui::widgets::Status::Thinking => Some(runie_tui::widgets::TurnStatusPhase::Thinking),
+                            runie_tui::widgets::Status::Streaming => Some(runie_tui::widgets::TurnStatusPhase::Responding),
+                            _ => None,
+                        };
+                        let active = phase.is_some();
                         sb.lock().render(layout.status, buf);
-                        app.scrollback.lock().render(layout.scrollback, buf);
+                        if app.show_welcome {
+                            WelcomeWidget.render(layout.scrollback, buf);
+                        } else {
+                            app.scrollback.lock().render(layout.scrollback, buf);
+                        }
+                        if active {
+                            runie_tui::widgets::TurnStatus::new(frame).phase(phase.expect("active phase")).render(
+                                ratatui::layout::Rect {
+                                    x: layout.scrollback.x,
+                                    y: layout.prompt.y.saturating_sub(2),
+                                    width: layout.scrollback.width,
+                                    height: 1,
+                                },
+                                buf,
+                            );
+                        }
                         let prompt = app.prompt.clone();
                         Widget::render(prompt, layout.prompt, buf);
                         // Header: cwd + branch (matches grok-build's
                         // `main ~/...` minimal-mode chrome).
                         let cwd = std::env::current_dir()
-                            .ok()
-                            .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
-                            .unwrap_or_else(|| "runie".into());
-                        let branch = std::process::Command::new("git")
-                            .args(["rev-parse", "--abbrev-ref", "HEAD"])
-                            .output()
-                            .ok()
-                            .and_then(|o| if o.status.success() { String::from_utf8(o.stdout).ok() } else { None })
-                            .map(|s| s.trim().to_string())
-                            .filter(|s| !s.is_empty())
-                            .unwrap_or_else(|| "main".into());
-                        let header_text = format!("  {} {}", branch, cwd);
+                            .map(|p| {
+                                let path = p.to_string_lossy();
+                                std::env::var("HOME")
+                                    .ok()
+                                    .filter(|home| path.starts_with(home))
+                                    .map(|home| format!("~{}", &path[home.len()..]))
+                                    .unwrap_or_else(|| path.into_owned())
+                            })
+                            .unwrap_or_else(|_| "runie".into());
+                        let header_text = format!("  {}", cwd);
                         let header_line = ratatui::text::Line::from(header_text)
                             .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray));
                         let p = ratatui::widgets::Paragraph::new(header_line);
                         Widget::render(p, layout.header, buf);
+                        f.set_cursor_position(app.prompt.cursor_position(layout.prompt));
                         let _ = Rect::default();
                     }));
                     if let Err(e) = res {
                         eprintln!("render panic: {:?}", e);
+                        std::panic::resume_unwind(e);
                     }
                 }) {
                     return Ok(AppExit::Error(format!("draw: {e}")));
-                }
-            }
-            maybe = events.next() => {
-                let Some(Ok(ev)) = maybe else { continue };
-                if let Event::Key(key) = ev {
-                    if key.kind != KeyEventKind::Press { continue; }
-                    // Submit path: route via PromptWidget.
-                    if matches!(key.code, KeyCode::Char(_) | KeyCode::Backspace)
-                        || (key.code == KeyCode::Enter && key.modifiers == KeyModifiers::NONE)
-                    {
-                        let outcome = {
-                            let p = &mut app.prompt;
-                            p.handle_key(key)
-                        };
-                        if let PromptOutcome::Submitted(text) = outcome {
-                            let user_msg = AgentMessage::User(runie_core::types::UserMessage {
-                                content: vec![runie_core::types::UserContent::Text { text: text.clone() }],
-                                timestamp: 0,
-                            });
-                            if let Err(e) = app.loop_actor.prompt(vec![user_msg], AgentContext::default()).await {
-                                eprintln!("prompt error: {e:?}");
-                            }
-                        }
-                        continue;
-                    }
-                    // Other actions.
-                    let streaming = app.status.lock().current() != &runie_tui::widgets::Status::Ready;
-                    let prompt_non_empty = !app.prompt.is_empty();
-                    let action = map_key(key, prompt_non_empty, streaming);
-                    match action {
-                        Action::Quit => return Ok(AppExit::Quit),
-                        Action::Abort => app.loop_actor.abort(),
-                        Action::ClearScrollback => app.scrollback.lock().clear(),
-                        Action::ClearPrompt => app.prompt.clear(),
-                        Action::Submit(_) | Action::FocusPrompt | Action::Noop => {}
-                    }
                 }
             }
         }

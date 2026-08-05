@@ -1,0 +1,22 @@
+name: visual-tool
+description: Full-mode tool execution rendering.
+initial_prompt: "inspect"
+tools:
+  - name: echo
+events:
+  - start
+  - tool_call:
+      name: echo
+      args: { value: "hello" }
+  - done: { stop_reason: tool_use }
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "❯ inspect"
+      - "◆ echo"
+      - "✓"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

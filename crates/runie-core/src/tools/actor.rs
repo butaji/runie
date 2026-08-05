@@ -15,6 +15,7 @@ pub enum ToolOutcome {
     Completed {
         tool_results: Vec<ToolResultMessage>,
         all_terminated: bool,
+        events: Vec<crate::types::AgentEvent>,
     },
     /// Tool not found / preflight rejected.
     Aborted { reason: String },
@@ -97,14 +98,10 @@ async fn run_tool_worker(mut rx: mpsc::Receiver<ToolCommand>, registry: Arc<Tool
             }
         }
 
-        let events = Arc::new(parking_lot::Mutex::new(Vec::new()));
-        let tool_results = Arc::new(parking_lot::Mutex::new(Vec::new()));
         let ctx = ToolExecContext {
             assistant_message,
             registry: registry.clone(),
             hooks,
-            events,
-            tool_results,
         };
 
         let outcome: DispatchOutcome = match effective_mode {
@@ -115,6 +112,7 @@ async fn run_tool_worker(mut rx: mpsc::Receiver<ToolCommand>, registry: Arc<Tool
         let _ = reply.send(ToolOutcome::Completed {
             tool_results: outcome.tool_results,
             all_terminated: outcome.all_terminated,
+            events: outcome.events,
         });
     }
 }

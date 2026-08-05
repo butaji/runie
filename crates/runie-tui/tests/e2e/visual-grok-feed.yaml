@@ -1,0 +1,33 @@
+name: visual-grok-feed
+description: |
+  Strict full-mode feed state derived from artifacts/grok-rich.cast.
+  This fixture is rendered through Ratatui TestBackend and compared by
+  symbol at every cell in the transcript rows.
+
+initial_prompt: "Please reply with a short markdown-formatted paragraph about this directory, using a heading, bold text, and a bullet list. Then list the files in this directory."
+tools:
+  - name: list_dir
+    kind: list_dir
+  - name: read
+    kind: read
+events:
+  - start
+  - text_delta: "# runie"
+  - text_delta: "\n\nThis is **Runie** in the repository."
+  - text_delta: "\n\n- crates"
+  - tool_call:
+      name: list_dir
+      args: { path: "." }
+  - tool_call:
+      name: read
+      args: { path: "README.md" }
+  - done: { stop_reason: tool_use }
+
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "◈ Listed 1 dir, Read 1 file"
+    screen_excludes:
+      - "(run finished"

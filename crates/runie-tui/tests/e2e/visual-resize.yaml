@@ -1,0 +1,16 @@
+name: visual-resize
+description: Full-mode narrow terminal layout and wrapping.
+initial_prompt: "resize"
+events:
+  - start
+  - text_delta: "A response that wraps at the narrow viewport."
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 40
+    rows: 12
+    screen_text:
+      - "❯ resi"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

@@ -37,10 +37,6 @@ pub struct ToolExecContext {
     pub assistant_message: AssistantMessage,
     pub registry: Arc<ToolRegistry>,
     pub hooks: ToolExecHooks,
-    /// Sink for events. Each call appends to the supplied Vec.
-    pub events: std::sync::Arc<parking_lot::Mutex<Vec<crate::types::AgentEvent>>>,
-    /// Sink for toolResult messages in source order.
-    pub tool_results: std::sync::Arc<parking_lot::Mutex<Vec<ToolResultMessage>>>,
 }
 
 /// Result of dispatching a batch.
@@ -48,6 +44,7 @@ pub struct ToolExecContext {
 pub struct DispatchOutcome {
     pub tool_results: Vec<ToolResultMessage>,
     pub all_terminated: bool,
+    pub events: Vec<crate::types::AgentEvent>,
 }
 
 pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
@@ -59,7 +56,7 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
             tool_name: call.name.clone(),
             args: call.arguments.clone(),
         };
-        ctx.events.lock().push(start);
+        outcome.events.push(start);
 
         let (result, is_error) = match dispatch_one(&call, &ctx).await {
             Ok(r) => (r, false),
@@ -72,7 +69,7 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
             result: serde_json::to_value(&result).unwrap_or_default(),
             is_error,
         };
-        ctx.events.lock().push(end);
+        outcome.events.push(end);
 
         let tr = ToolResultMessage {
             tool_call_id: call.id.clone(),
@@ -81,7 +78,6 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
             is_error,
             timestamp: 0,
         };
-        ctx.tool_results.lock().push(tr.clone());
         outcome.tool_results.push(tr);
         if !result.terminate {
             outcome.all_terminated = false;
@@ -92,7 +88,7 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
         && outcome.tool_results.iter().all(|_tr| {
             // Re-fetch terminate from the original result via the events sink.
             // Simpler: re-derive from the events we recorded.
-            ctx.events.lock().iter().any(|e| {
+            outcome.events.iter().any(|e| {
                 matches!(e, crate::types::AgentEvent::ToolExecutionEnd { tool_call_id, result, .. }
                     if tool_call_id == &_tr.tool_call_id && result.get("terminate").and_then(|v| v.as_bool()).unwrap_or(false))
             })
@@ -120,8 +116,8 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
 
     // Emit all start events up front (in source order).
     for call in &preflighted {
-        ctx.events
-            .lock()
+        outcome
+            .events
             .push(crate::types::AgentEvent::ToolExecutionStart {
                 tool_call_id: call.id.clone(),
                 tool_name: call.name.clone(),
@@ -132,18 +128,16 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     // Execute concurrently. The completion-order list is built first; we
     // then emit toolResult messages in source order to match the README.
     let ctx_for_exec = ctx.clone();
-    let results: Vec<(String, AgentToolResult, bool)> =
+    let results: Vec<(String, AgentToolResult, bool, Vec<crate::types::AgentEvent>)> =
         futures::future::join_all(preflighted.iter().cloned().map(|call| {
             let ctx = ctx_for_exec.clone();
             async move {
-                ctx.events
-                    .lock()
-                    .push(crate::types::AgentEvent::ToolExecutionUpdate {
-                        tool_call_id: call.id.clone(),
-                        tool_name: call.name.clone(),
-                        args: call.arguments.clone(),
-                        partial_result: serde_json::json!({"status": "running"}),
-                    });
+                let mut events = vec![crate::types::AgentEvent::ToolExecutionUpdate {
+                    tool_call_id: call.id.clone(),
+                    tool_name: call.name.clone(),
+                    args: call.arguments.clone(),
+                    partial_result: serde_json::json!({"status": "running"}),
+                }];
                 match dispatch_one(&call, &ctx).await {
                     Ok(r) => {
                         let end = crate::types::AgentEvent::ToolExecutionEnd {
@@ -152,8 +146,8 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
                             result: serde_json::to_value(&r).unwrap_or_default(),
                             is_error: false,
                         };
-                        ctx.events.lock().push(end);
-                        (call.id, r, false)
+                        events.push(end);
+                        (call.id, r, false, events)
                     }
                     Err(msg) => {
                         let r = synthetic_error_result(&msg);
@@ -163,8 +157,8 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
                             result: serde_json::to_value(&r).unwrap_or_default(),
                             is_error: true,
                         };
-                        ctx.events.lock().push(end);
-                        (call.id, r, true)
+                        events.push(end);
+                        (call.id, r, true, events)
                     }
                 }
             }
@@ -174,8 +168,13 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     let _ = total;
 
     // Emit toolResult messages in source order.
-    let mut by_id: std::collections::HashMap<String, (AgentToolResult, bool)> =
-        results.into_iter().map(|(id, r, e)| (id, (r, e))).collect();
+    let mut by_id: std::collections::HashMap<String, (AgentToolResult, bool)> = results
+        .iter()
+        .map(|(id, r, e, _)| (id.clone(), (r.clone(), *e)))
+        .collect();
+    for (_, _, _, events) in results {
+        outcome.events.extend(events);
+    }
 
     let mut all_terminated = true;
     for call in &preflighted {
@@ -187,7 +186,6 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
                 is_error,
                 timestamp: 0,
             };
-            ctx.tool_results.lock().push(tr.clone());
             outcome.tool_results.push(tr);
             if !r.terminate {
                 all_terminated = false;
@@ -282,8 +280,6 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let registry = Arc::new(ToolRegistry::new());
-            let events = Arc::new(parking_lot::Mutex::new(vec![]));
-            let tool_results = Arc::new(parking_lot::Mutex::new(vec![]));
             let ctx = ToolExecContext {
                 assistant_message: AssistantMessage {
                     content: vec![],
@@ -293,8 +289,6 @@ mod tests {
                 },
                 registry,
                 hooks: ToolExecHooks::default(),
-                events,
-                tool_results,
             };
             let outcome = execute_sequential(vec![], ctx).await;
             assert!(outcome.tool_results.is_empty());

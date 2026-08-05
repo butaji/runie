@@ -1,0 +1,12 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: summary
+---
+welcome: true
+markdown_heading: true
+tool_progress: true
+tool_reading: true
+tool_glyph: true
+spinner: true
+prompt_cursor: true
+markdown_bold: true

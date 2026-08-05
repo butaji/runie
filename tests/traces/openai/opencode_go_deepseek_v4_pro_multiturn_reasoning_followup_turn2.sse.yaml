@@ -1,0 +1,19 @@
+trace_id: opencode_go_deepseek_v4_pro_multiturn_reasoning_followup
+conversation: opencode_go_deepseek_v4_pro_multiturn_reasoning_followup
+turn: 2
+outcome: success
+transport:
+  status: 200
+  sse: true
+request:
+  model: recorded-fixture
+provider:
+  expected_events: [Start, ThinkingDelta, Done]
+payload:
+  non_empty_text: true
+core:
+  required_events: [AgentStart, TurnStart, MessageStart, MessageEnd, AgentEnd]
+state:
+  assistant_messages: 1
+tools:
+  []

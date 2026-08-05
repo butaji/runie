@@ -1,0 +1,16 @@
+name: visual-error
+description: Full-mode provider error rendering.
+initial_prompt: "fail"
+events:
+  - start
+  - error: "provider unavailable"
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "❯ fail"
+      - "error: provider unavailabl"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

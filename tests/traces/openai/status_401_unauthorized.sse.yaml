@@ -1,0 +1,22 @@
+trace_id: status_401_unauthorized
+conversation: status_401_unauthorized
+turn: 1
+next_trace: openai/status_401_unauthorized.sse
+outcome: error
+transport:
+  status: 200
+  sse: true
+request:
+  model: recorded-fixture
+provider:
+  expected_events: []
+payload:
+  non_empty_text: false
+core:
+  required_events: []
+state:
+  assistant_messages: 0
+tools:
+  []
+error:
+  kind: provider_decode

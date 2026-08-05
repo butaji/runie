@@ -1,0 +1,17 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: summary
+---
+welcome_frame: true
+welcome_actions: true
+quit_action: true
+prompt_top_border: true
+prompt_cursor: true
+prompt_bottom_border: true
+model_caption: false
+idle_send_hint: true
+mode_hint: true
+shortcut_hint: true
+active_cancel_hint: true
+thinking_label: true
+reasoning_bar: true

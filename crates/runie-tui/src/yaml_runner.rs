@@ -8,9 +8,11 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::event_renderer::EventRenderer;
+use crate::widgets::{Line, LineKind, Scrollback};
 use parking_lot::Mutex;
+use ratatui::buffer::Buffer;
 use runie_core::events::EventBus;
-use tokio::sync::broadcast;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
@@ -23,9 +25,8 @@ use runie_core::types::{
     Model, SimpleStreamOptions, StopReason, ToolExecutionMode, ToolResultContent, Usage,
     UserContent, UserMessage,
 };
-use crate::event_renderer::EventRenderer;
-use crate::widgets::{Line, LineKind, Scrollback};
 use serde::Deserialize;
+use tokio::sync::broadcast;
 
 #[derive(Debug, Deserialize)]
 pub struct Scenario {
@@ -100,8 +101,12 @@ impl EventSpec {
     fn to_assistant_event(&self) -> AssistantMessageEvent {
         match self {
             Self::Bare(s) if s == "start" => AssistantMessageEvent::Start,
-            Self::TextDelta { text_delta } => AssistantMessageEvent::TextDelta { delta: text_delta.clone() },
-            Self::ThinkingDelta { thinking_delta } => AssistantMessageEvent::ThinkingDelta { delta: thinking_delta.clone() },
+            Self::TextDelta { text_delta } => AssistantMessageEvent::TextDelta {
+                delta: text_delta.clone(),
+            },
+            Self::ThinkingDelta { thinking_delta } => AssistantMessageEvent::ThinkingDelta {
+                delta: thinking_delta.clone(),
+            },
             Self::ToolCall { tool_call } => AssistantMessageEvent::ToolCallDelta {
                 index: 0,
                 partial: runie_core::types::ToolCall {
@@ -114,7 +119,9 @@ impl EventSpec {
                 stop_reason: StopReason::from(&done.stop_reason),
                 usage: Usage::default(),
             },
-            Self::Error { error } => AssistantMessageEvent::Error { error: error.clone() },
+            Self::Error { error } => AssistantMessageEvent::Error {
+                error: error.clone(),
+            },
             Self::Bare(other) => panic!("unknown event kind: {other:?}"),
         }
     }
@@ -122,7 +129,10 @@ impl EventSpec {
 
 fn uuid_like() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let n = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let n = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
     format!("{n}")
 }
 
@@ -164,8 +174,12 @@ pub struct VisualAssertions {
     pub pty: bool,
 }
 
-fn default_visual_cols() -> u16 { 120 }
-fn default_visual_rows() -> u16 { 30 }
+fn default_visual_cols() -> u16 {
+    120
+}
+fn default_visual_rows() -> u16 {
+    30
+}
 
 #[derive(Debug, Deserialize)]
 pub struct LineAssertion {
@@ -180,7 +194,10 @@ pub enum LineKindName {
     Assistant,
     Tool,
     ToolResult,
+    ToolOutput,
     System,
+    Activity,
+    Reasoning,
 }
 
 impl From<LineKindName> for LineKind {
@@ -190,7 +207,10 @@ impl From<LineKindName> for LineKind {
             LineKindName::Assistant => LineKind::Assistant,
             LineKindName::Tool => LineKind::Tool,
             LineKindName::ToolResult => LineKind::ToolResult,
+            LineKindName::ToolOutput => LineKind::ToolOutput,
             LineKindName::System => LineKind::System,
+            LineKindName::Activity => LineKind::Activity,
+            LineKindName::Reasoning => LineKind::Reasoning,
         }
     }
 }
@@ -234,9 +254,15 @@ impl StreamFn for ScenarioStream {
 pub struct EchoTool;
 #[async_trait::async_trait]
 impl AgentTool for EchoTool {
-    fn name(&self) -> &str { "echo" }
-    fn label(&self) -> &str { "Echo" }
-    fn description(&self) -> &str { "Echoes args." }
+    fn name(&self) -> &str {
+        "echo"
+    }
+    fn label(&self) -> &str {
+        "Echo"
+    }
+    fn description(&self) -> &str {
+        "Echoes args."
+    }
     async fn execute(
         &self,
         _id: &str,
@@ -245,7 +271,55 @@ impl AgentTool for EchoTool {
         _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
     ) -> Result<AgentToolResult, String> {
         Ok(AgentToolResult {
-            content: vec![ToolResultContent::Text { text: args.to_string() }],
+            content: vec![ToolResultContent::Text {
+                text: args.to_string(),
+            }],
+            details: serde_json::Value::Null,
+            usage: None,
+            added_tool_names: vec![],
+            terminate: false,
+        })
+    }
+}
+
+/// Deterministic named tool used by strict visual replays. Its output is
+/// fixed so the TestBackend frame never depends on the host filesystem.
+pub struct ReplayTool {
+    name: String,
+    output: String,
+}
+
+impl ReplayTool {
+    fn new(name: &str, output: &str) -> Self {
+        Self {
+            name: name.into(),
+            output: output.into(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl AgentTool for ReplayTool {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn label(&self) -> &str {
+        &self.name
+    }
+    fn description(&self) -> &str {
+        "Deterministic visual replay tool."
+    }
+    async fn execute(
+        &self,
+        _id: &str,
+        _args: serde_json::Value,
+        _signal: Option<tokio_util::sync::CancellationToken>,
+        _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        Ok(AgentToolResult {
+            content: vec![ToolResultContent::Text {
+                text: self.output.clone(),
+            }],
             details: serde_json::Value::Null,
             usage: None,
             added_tool_names: vec![],
@@ -263,7 +337,9 @@ pub struct ScenarioOutcome {
 pub struct ScenarioError(pub String);
 
 impl std::fmt::Display for ScenarioError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str(&self.0) }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
 }
 
 pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, ScenarioError> {
@@ -276,12 +352,24 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     for t in &scenario.tools {
         match t.kind.as_str() {
             "echo" => reg.register(Arc::new(EchoTool)),
+            "list_dir" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "Cargo.toml\nsrc\ncrates",
+            ))),
+            "read" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "# runie\n\nThis is **Runie**.",
+            ))),
             other => return Err(ScenarioError(format!("unknown tool kind: {other}"))),
         }
     }
     let tool_executor = ToolExecutorActor::new(Arc::new(reg));
     let provider = ProviderActor::new(Arc::new(ScenarioStream {
-        events: scenario.events.iter().map(EventSpec::to_assistant_event).collect(),
+        events: scenario
+            .events
+            .iter()
+            .map(EventSpec::to_assistant_event)
+            .collect(),
     }));
 
     let deps = LoopDeps {
@@ -307,6 +395,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     // first event before the loop future completes.
     let mut rec_rx = bus.subscribe();
     let (rec_stop_tx, mut rec_stop_rx) = tokio::sync::oneshot::channel::<()>();
+    // OWNER: YAML replay recorder; joined before the scenario returns.
     let rec_handle = tokio::spawn(async move {
         let mut captured = Vec::new();
         loop {
@@ -327,10 +416,12 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
 
     // Pre-push follow-ups (will drain after first turn).
     for text in &scenario.follow_up {
-        actor.follow_up(AgentMessage::User(UserMessage {
-            content: vec![UserContent::Text { text: text.clone() }],
-            timestamp: 0,
-        })).await;
+        actor
+            .follow_up(AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text { text: text.clone() }],
+                timestamp: 0,
+            }))
+            .await;
     }
 
     // Submit initial prompt (if any).
@@ -356,7 +447,11 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     // was driven via the bus on a `current_thread` runtime.
     let scrollback_arc = Arc::new(Mutex::new(Scrollback::new()));
     let status_arc = Arc::new(Mutex::new(crate::widgets::StatusBar::new()));
-    let mut renderer = EventRenderer::new(scrollback_arc.clone(), status_arc.clone());
+    let mut renderer = EventRenderer::with_welcome(
+        scrollback_arc.clone(),
+        status_arc.clone(),
+        scenario.initial_prompt.is_none(),
+    );
     for ev in &events_from_task {
         renderer.apply_event(ev.clone());
     }
@@ -387,21 +482,28 @@ pub fn assert_scenario(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result
     }
 }
 
-pub async fn assert_scenario_async(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
+pub async fn assert_scenario_async(
+    outcome: &ScenarioOutcome,
+    scenario: &Scenario,
+) -> Result<(), String> {
     use runie_core::types::AgentEvent::*;
     // Build expected kind sequence.
-    let kinds: Vec<&'static str> = outcome.events.iter().map(|e| match e {
-        AgentStart => "agent_start",
-        AgentEnd { .. } => "agent_end",
-        TurnStart => "turn_start",
-        TurnEnd { .. } => "turn_end",
-        MessageStart { .. } => "message_start",
-        MessageUpdate { .. } => "message_update",
-        MessageEnd { .. } => "message_end",
-        ToolExecutionStart { .. } => "tool_execution_start",
-        ToolExecutionUpdate { .. } => "tool_execution_update",
-        ToolExecutionEnd { .. } => "tool_execution_end",
-    }).collect();
+    let kinds: Vec<&'static str> = outcome
+        .events
+        .iter()
+        .map(|e| match e {
+            AgentStart => "agent_start",
+            AgentEnd { .. } => "agent_end",
+            TurnStart => "turn_start",
+            TurnEnd { .. } => "turn_end",
+            MessageStart { .. } => "message_start",
+            MessageUpdate { .. } => "message_update",
+            MessageEnd { .. } => "message_end",
+            ToolExecutionStart { .. } => "tool_execution_start",
+            ToolExecutionUpdate { .. } => "tool_execution_update",
+            ToolExecutionEnd { .. } => "tool_execution_end",
+        })
+        .collect();
 
     for expected in &scenario.assertions.events {
         if !kinds.iter().any(|k| k == &expected.as_str()) {
@@ -414,26 +516,39 @@ pub async fn assert_scenario_async(outcome: &ScenarioOutcome, scenario: &Scenari
             return Err(format!("expected {n} turn_start events, got {count}"));
         }
     }
-    let haystack: String = outcome.scrollback.iter().map(|l| l.text.clone()).collect::<Vec<_>>().join("\n");
+    let haystack: String = outcome
+        .scrollback
+        .iter()
+        .map(|l| l.text.clone())
+        .collect::<Vec<_>>()
+        .join("\n");
     for needle in &scenario.assertions.transcript_contains {
         if !haystack.contains(needle) {
-            return Err(format!("transcript missing {needle:?}; full haystack:\n{haystack}"));
+            return Err(format!(
+                "transcript missing {needle:?}; full haystack:\n{haystack}"
+            ));
         }
     }
     for la in &scenario.assertions.scrollback_lines {
         let kind: LineKind = la.kind.into();
-        let found = outcome.scrollback.iter().any(|l| l.kind == kind && l.text.contains(&la.contains));
+        let found = outcome
+            .scrollback
+            .iter()
+            .any(|l| l.kind == kind && l.text.contains(&la.contains));
         if !found {
-            return Err(format!("expected {kind:?} line containing {:?}; scrollback:\n{haystack}", la.contains));
+            return Err(format!(
+                "expected {kind:?} line containing {:?}; scrollback:\n{haystack}",
+                la.contains
+            ));
         }
     }
     if let Some(vis) = &scenario.assertions.visual {
-        let screen = render_visual(scenario, vis).await.map_err(|e| e.to_string())?;
+        let screen = render_visual(scenario, vis)
+            .await
+            .map_err(|e| e.to_string())?;
         for needle in &vis.screen_text {
             if !screen.contains(needle) {
-                return Err(format!(
-                    "screen missing {needle:?}\nscreen:\n{screen}"
-                ));
+                return Err(format!("screen missing {needle:?}\nscreen:\n{screen}"));
             }
         }
         for needle in &vis.screen_excludes {
@@ -457,14 +572,16 @@ pub async fn assert_scenario_async(outcome: &ScenarioOutcome, scenario: &Scenari
 /// Mirrors grok-build's `harness.screen_contents()` contract: the result is
 /// the full viewport (rows × cols) joined with `\n`, suitable for substring
 /// assertions via the YAML `screen_text` / `screen_excludes` lists.
-async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<String, String> {
+pub async fn render_visual_buffer(
+    scenario: &Scenario,
+    vis: &VisualAssertions,
+) -> Result<Buffer, String> {
     use crate::app::App;
     use crate::layout::chat_layout;
-    use crate::widgets::PromptOutcome;
+    use crate::widgets::{PromptOutcome, WelcomeWidget};
     use ratatui::backend::TestBackend;
-    use ratatui::buffer::Buffer;
-    use ratatui::Terminal;
     use ratatui::widgets::Widget;
+    use ratatui::Terminal;
 
     // Build the same wiring as run_scenario.
     let bus = runie_core::events::EventBus::new();
@@ -475,12 +592,24 @@ async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<St
     for t in &scenario.tools {
         match t.kind.as_str() {
             "echo" => reg.register(Arc::new(EchoTool)),
+            "list_dir" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "Cargo.toml\nsrc\ncrates",
+            ))),
+            "read" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "# runie\n\nThis is **Runie**.",
+            ))),
             other => return Err(format!("unknown tool kind: {other}")),
         }
     }
     let tool_executor = ToolExecutorActor::new(Arc::new(reg));
     let provider = ProviderActor::new(Arc::new(ScenarioStream {
-        events: scenario.events.iter().map(EventSpec::to_assistant_event).collect(),
+        events: scenario
+            .events
+            .iter()
+            .map(EventSpec::to_assistant_event)
+            .collect(),
     }));
     let deps = LoopDeps {
         state,
@@ -507,6 +636,7 @@ async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<St
     let collected_clone = collected.clone();
     let rec_bus = bus.subscribe();
     let (rec_stop_tx, mut rec_stop_rx) = tokio::sync::oneshot::channel::<()>();
+    // OWNER: YAML replay recorder; joined before the scenario returns.
     let rec_handle = tokio::spawn(async move {
         let mut rx = rec_bus;
         loop {
@@ -537,7 +667,7 @@ async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<St
     // If no prompt and no events, the loop never runs and the bus stays
     // empty. Synthesise a minimal AgentStart/AgentEnd pair so the welcome
     // modal is emitted (matches grok's idle screen).
-    if scenario.events.is_empty() && scenario.initial_prompt.is_none() && vis.steps.is_empty() {
+    if scenario.events.is_empty() && scenario.initial_prompt.is_none() {
         use runie_core::types::AgentEvent;
         bus.publish(AgentEvent::AgentStart);
         tokio::task::yield_now().await;
@@ -566,18 +696,28 @@ async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<St
             }
         } else {
             for ch in step.chars() {
-                app.prompt.handle_key(crossterm::event::KeyEvent {
+                let outcome = app.prompt.handle_key(crossterm::event::KeyEvent {
                     code: crossterm::event::KeyCode::Char(ch),
                     modifiers: crossterm::event::KeyModifiers::NONE,
                     kind: crossterm::event::KeyEventKind::Press,
                     state: crossterm::event::KeyEventState::NONE,
                 });
+                if matches!(outcome, PromptOutcome::Edited) {
+                    app.show_welcome = false;
+                }
             }
         }
     }
 
+    // Grok clears the idle welcome surface as soon as editing begins; the
+    // synthetic idle events above must not remain in the typed frame.
+    if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {
+        app.scrollback.lock().clear();
+    }
+
     // If scenario has an initial_prompt and no Enter step, submit it.
     if let Some(text) = &scenario.initial_prompt {
+        app.show_welcome = false;
         if !vis.steps.iter().any(|s| s == "Enter") {
             let user_msg = AgentMessage::User(UserMessage {
                 content: vec![UserContent::Text { text: text.clone() }],
@@ -590,21 +730,48 @@ async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<St
         }
     }
 
-    // Give the renderer a chance to drain.
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // Let the recorder make progress without introducing timing-dependent
+    // sleeps into visual tests.
+    for _ in 0..3 {
+        tokio::task::yield_now().await;
+    }
 
     // Render to a TestBackend.
-    let backend = TestBackend::new(vis.rows, vis.cols);
+    let backend = TestBackend::new(vis.cols, vis.rows);
     let mut terminal = Terminal::new(backend).map_err(|e| e.to_string())?;
     terminal
         .draw(|f| {
             let area = f.area();
             let layout = chat_layout(area);
-            app.scrollback.lock().render(layout.scrollback, f.buffer_mut());
+            if app.show_welcome {
+                WelcomeWidget.render(layout.scrollback, f.buffer_mut());
+            } else {
+                app.scrollback
+                    .lock()
+                    .render(layout.scrollback, f.buffer_mut());
+            }
+            if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {
+                crate::widgets::TurnStatus::new(0).render(
+                    ratatui::layout::Rect {
+                        x: layout.scrollback.x,
+                        y: layout.prompt.y.saturating_sub(2),
+                        width: layout.scrollback.width,
+                        height: 1,
+                    },
+                    f.buffer_mut(),
+                );
+            }
             let prompt = app.prompt.clone();
             Widget::render(prompt, layout.prompt, f.buffer_mut());
             let sb = app.status.clone();
             sb.lock().render(layout.status, f.buffer_mut());
+            Widget::render(
+                ratatui::widgets::Paragraph::new(" main ~/Code/GitHub/runie-tests/runie")
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray)),
+                layout.header,
+                f.buffer_mut(),
+            );
+            f.set_cursor_position(app.prompt.cursor_position(layout.prompt));
         })
         .map_err(|e| e.to_string())?;
 
@@ -618,29 +785,63 @@ async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<St
     // bypasses the runtime-scheduling race that prevented the
     // bus-driven renderer from seeing all events on a `current_thread`
     // runtime.
-    let mut renderer = EventRenderer::new(app.scrollback.clone(), app.status.clone());
+    let mut renderer = EventRenderer::with_welcome(
+        app.scrollback.clone(),
+        app.status.clone(),
+        scenario.initial_prompt.is_none(),
+    );
     let events = collected.lock().clone();
-    for ev in &events {
-        renderer.apply_event(ev.clone());
+    for ev in events.into_iter() {
+        renderer.apply_event(ev);
+    }
+    if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {
+        app.scrollback.lock().clear();
     }
 
     // Render to a TestBackend.
-    let backend = TestBackend::new(vis.rows, vis.cols);
+    let backend = TestBackend::new(vis.cols, vis.rows);
     let mut terminal = Terminal::new(backend).map_err(|e| e.to_string())?;
     terminal
         .draw(|f| {
             let area = f.area();
             let layout = chat_layout(area);
-            app.scrollback.lock().render(layout.scrollback, f.buffer_mut());
+            if app.show_welcome {
+                WelcomeWidget.render(layout.scrollback, f.buffer_mut());
+            } else {
+                app.scrollback
+                    .lock()
+                    .render(layout.scrollback, f.buffer_mut());
+            }
+            if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {
+                crate::widgets::TurnStatus::new(0).render(
+                    ratatui::layout::Rect {
+                        x: layout.scrollback.x,
+                        y: layout.prompt.y.saturating_sub(2),
+                        width: layout.scrollback.width,
+                        height: 1,
+                    },
+                    f.buffer_mut(),
+                );
+            }
             let prompt = app.prompt.clone();
             Widget::render(prompt, layout.prompt, f.buffer_mut());
             let sb = app.status.clone();
             sb.lock().render(layout.status, f.buffer_mut());
+            Widget::render(
+                ratatui::widgets::Paragraph::new(" main ~/Code/GitHub/runie-tests/runie")
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray)),
+                layout.header,
+                f.buffer_mut(),
+            );
+            f.set_cursor_position(app.prompt.cursor_position(layout.prompt));
         })
         .map_err(|e| e.to_string())?;
 
-    // Stringify the buffer.
-    let buf: Buffer = terminal.backend().buffer().clone();
+    Ok(terminal.backend().buffer().clone())
+}
+
+pub async fn render_visual(scenario: &Scenario, vis: &VisualAssertions) -> Result<String, String> {
+    let buf = render_visual_buffer(scenario, vis).await?;
     let mut out = String::with_capacity((buf.area.width as usize + 1) * (buf.area.height as usize));
     for y in 0..buf.area.height {
         for x in 0..buf.area.width {

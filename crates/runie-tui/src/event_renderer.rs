@@ -3,9 +3,9 @@
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use runie_core::types::{
-    AgentEvent, AssistantContent, AssistantMessageEvent, StopReason,
-};
+#[cfg(test)]
+use runie_core::types::AssistantContent;
+use runie_core::types::{AgentEvent, AssistantMessageEvent};
 use tokio::sync::broadcast;
 
 use crate::widgets::{Line, LineKind, Scrollback, Status, StatusBar};
@@ -19,8 +19,13 @@ pub struct EventRenderer {
     tool_buffer: String,
     /// True between MessageStart(assistant) and MessageEnd(assistant).
     in_assistant_stream: bool,
+    in_reasoning: bool,
+    reasoning_buffer: String,
     /// True between ToolExecutionStart and ToolExecutionEnd.
     in_tool_exec: bool,
+    activity_dirs: usize,
+    activity_files: usize,
+    active_tool_count: usize,
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
     emit_welcome: bool,
@@ -42,37 +47,42 @@ impl EventRenderer {
             streaming_buffer: String::new(),
             tool_buffer: String::new(),
             in_assistant_stream: false,
+            in_reasoning: false,
+            reasoning_buffer: String::new(),
             in_tool_exec: false,
+            activity_dirs: 0,
+            activity_files: 0,
+            active_tool_count: 0,
             emit_welcome,
         }
     }
 
     /// Drain bus events until the channel closes. Returns when receiver hits
     /// `RecvStreamLagged` or `Closed`.
-    pub async fn run(mut self, mut rx: broadcast::Receiver<AgentEvent>, mut shutdown: tokio::sync::watch::Receiver<bool>) {
-        eprintln!("[renderer] run start");
+    pub async fn run(
+        mut self,
+        mut rx: broadcast::Receiver<AgentEvent>,
+        mut shutdown: tokio::sync::watch::Receiver<bool>,
+    ) {
         loop {
             tokio::select! {
                 biased;
                 _ = shutdown.changed() => {
-                    if *shutdown.borrow() { eprintln!("[renderer] shutdown"); break; }
+                    if *shutdown.borrow() { break; }
                 }
                 result = rx.recv() => {
                     match result {
                         Ok(event) => {
-                            eprintln!("[renderer] rx: {:?}", event);
                             self.apply_event(event);
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {
-                            let mut sb = self.scrollback.lock();
-                            sb.append(Line::new(LineKind::System, format!("(skipped {n} events)")));
+                            self.scrollback.lock().append(Line::new(LineKind::System, format!("(skipped {n} events)")));
                         }
-                        Err(broadcast::error::RecvError::Closed) => { eprintln!("[renderer] closed"); break; }
+                        Err(broadcast::error::RecvError::Closed) => break,
                     }
                 }
             }
         }
-        eprintln!("[renderer] run end");
     }
 
     pub fn apply_event(&mut self, event: AgentEvent) {
@@ -84,17 +94,27 @@ impl EventRenderer {
                 if self.emit_welcome {
                     self.emit_welcome_modal();
                     self.emit_welcome = false;
+                } else {
+                    // In Grok full mode the welcome surface is replaced by
+                    // the transcript on submission. The first two rows are
+                    // a blank gutter row and the lifecycle event.
+                    let mut sb = self.scrollback.lock();
+                    sb.append(Line::new(LineKind::System, ""));
+                    sb.append(Line::new(LineKind::Tool, "session_start"));
                 }
                 self.status.lock().set(Status::Thinking);
                 self.streaming_buffer.clear();
                 self.tool_buffer.clear();
                 self.in_assistant_stream = false;
+                self.in_reasoning = false;
+                self.reasoning_buffer.clear();
                 self.in_tool_exec = false;
+                self.activity_dirs = 0;
+                self.activity_files = 0;
+                self.active_tool_count = 0;
             }
             AgentEvent::AgentEnd { messages } => {
-                let mut sb = self.scrollback.lock();
-                sb.append(Line::new(LineKind::System, format!("(run finished, {} new messages)", messages.len())));
-                drop(sb);
+                let _ = messages;
                 self.status.lock().set(Status::Ready);
             }
             AgentEvent::TurnStart => {
@@ -105,7 +125,6 @@ impl EventRenderer {
             }
             AgentEvent::MessageStart { message } => {
                 use runie_core::types::AgentMessage;
-                let mut sb = self.scrollback.lock();
                 match &message {
                     AgentMessage::User(u) => {
                         let text = u
@@ -117,13 +136,17 @@ impl EventRenderer {
                             })
                             .collect::<Vec<_>>()
                             .join("");
-                        sb.append(Line::new(LineKind::User, text));
+                        self.scrollback
+                            .lock()
+                            .append(Line::new(LineKind::User, text));
                     }
                     AgentMessage::Assistant(_) => {
                         self.in_assistant_stream = true;
                         self.streaming_buffer.clear();
                         // Placeholder line; text will append via MessageUpdate.
-                        sb.append(Line::new(LineKind::Assistant, String::new()));
+                        self.scrollback
+                            .lock()
+                            .append(Line::new(LineKind::Assistant, String::new()));
                     }
                     AgentMessage::ToolResult(_) => {
                         // Will be appended on MessageEnd.
@@ -131,29 +154,51 @@ impl EventRenderer {
                     AgentMessage::Custom(_) => {}
                 }
             }
-            AgentEvent::MessageUpdate { event: AssistantMessageEvent::TextDelta { delta }, .. } => {
+            AgentEvent::MessageUpdate {
+                event: AssistantMessageEvent::TextDelta { delta },
+                ..
+            } => {
                 if self.in_assistant_stream {
+                    self.status.lock().set(Status::Streaming);
+                    self.in_reasoning = false;
                     self.streaming_buffer.push_str(&delta);
                     // Replace last line with updated buffer.
                     self.replace_last_assistant_line(&self.streaming_buffer.clone());
                 }
             }
-            AgentEvent::MessageUpdate { event: AssistantMessageEvent::ThinkingDelta { delta }, .. } => {
+            AgentEvent::MessageUpdate {
+                event: AssistantMessageEvent::ThinkingDelta { delta },
+                ..
+            } => {
                 if self.in_assistant_stream {
-                    self.streaming_buffer.push_str(&format!("[think]{delta}[/think]"));
-                    self.replace_last_assistant_line(&self.streaming_buffer.clone());
+                    self.status.lock().set(Status::Thinking);
+                    self.in_reasoning = true;
+                    self.reasoning_buffer.push_str(&delta);
+                    self.replace_last_reasoning_line(&self.reasoning_buffer.clone());
                 }
             }
-            AgentEvent::MessageUpdate { event: AssistantMessageEvent::ToolCallDelta { partial, .. }, .. } => {
+            AgentEvent::MessageUpdate {
+                event: AssistantMessageEvent::ToolCallDelta { partial, .. },
+                ..
+            } => {
                 // Tool calls are handled by the loop's tool executor; the
                 // TUI just shows the ToolExecution events.
                 let _ = partial;
             }
-            AgentEvent::MessageUpdate { event: AssistantMessageEvent::Done { .. }, .. } => {
+            AgentEvent::MessageUpdate {
+                event: AssistantMessageEvent::Done { .. },
+                ..
+            } => {
                 self.status.lock().set(Status::Ready);
             }
-            AgentEvent::MessageUpdate { event: AssistantMessageEvent::Error { error }, .. } => {
-                self.status.lock().set(Status::Error(error));
+            AgentEvent::MessageUpdate {
+                event: AssistantMessageEvent::Error { error },
+                ..
+            } => {
+                self.status.lock().set(Status::Error(error.clone()));
+                self.scrollback
+                    .lock()
+                    .append(Line::new(LineKind::System, format!("error: {error}")));
             }
             AgentEvent::MessageUpdate { .. } => {}
             AgentEvent::MessageEnd { message } => {
@@ -161,45 +206,91 @@ impl EventRenderer {
                 match &message {
                     AgentMessage::Assistant(_) => {
                         self.in_assistant_stream = false;
+                        self.in_reasoning = false;
+                        if let Some(reasoning) =
+                            self.scrollback.lock().last_mut_by_kind(LineKind::Reasoning)
+                        {
+                            reasoning.text = "Thought".into();
+                        }
                         // The placeholder line is already in place; ensure its
                         // text matches the final streaming buffer.
                         self.replace_last_assistant_line(&self.streaming_buffer.clone());
                     }
                     AgentMessage::ToolResult(tr) => {
-                        let mut sb = self.scrollback.lock();
-                        let text = tr
-                            .content
-                            .iter()
-                            .map(|c| match c {
-                                runie_core::types::ToolResultContent::Text { text } => text.as_str(),
-                                runie_core::types::ToolResultContent::Image { .. } => "[image]",
-                            })
-                            .collect::<Vec<_>>()
-                            .join("");
-                        let prefix = if tr.is_error { "  ✗ " } else { "  ↳ " };
-                        sb.append(Line::new(LineKind::ToolResult, format!("{prefix}{text}")));
+                        // ToolExecutionEnd already owns the structured tool
+                        // block and renders its terminal output. Grok does
+                        // not append a second serialized ToolResult envelope.
+                        let _ = tr;
                     }
                     _ => {}
                 }
             }
-            AgentEvent::ToolExecutionStart { tool_name, args, .. } => {
+            AgentEvent::ToolExecutionStart {
+                tool_name, args, ..
+            } => {
                 self.in_tool_exec = true;
+                if matches!(tool_name.as_str(), "list_dir" | "list_files") {
+                    self.activity_dirs += 1;
+                } else if matches!(tool_name.as_str(), "read" | "read_file") {
+                    self.activity_files += 1;
+                }
+                self.active_tool_count += 1;
                 self.tool_buffer.clear();
-                self.tool_buffer.push_str(&format!("{tool_name} {}", serde_json::to_string(&args).unwrap_or_default()));
-                let mut sb = self.scrollback.lock();
-                sb.append(Line::new(LineKind::Tool, self.tool_buffer.clone()));
+                self.tool_buffer = tool_header(&tool_name, &args);
+                if self.activity_dirs + self.activity_files > 0 {
+                    let activity = activity_text(self.activity_dirs, self.activity_files, true);
+                    let mut sb = self.scrollback.lock();
+                    if let Some(line) = sb.last_mut_by_kind(LineKind::Activity) {
+                        line.text = activity;
+                    } else {
+                        sb.append(Line::new(LineKind::Activity, activity));
+                    }
+                }
+                self.scrollback
+                    .lock()
+                    .append(Line::new(LineKind::Tool, self.tool_buffer.clone()));
             }
             AgentEvent::ToolExecutionUpdate { partial_result, .. } => {
                 if self.in_tool_exec {
-                    self.tool_buffer.push_str(&format!(" | update: {}", serde_json::to_string(&partial_result).unwrap_or_default()));
+                    self.tool_buffer.push_str(&format!(
+                        " | update: {}",
+                        serde_json::to_string(&partial_result).unwrap_or_default()
+                    ));
                     self.replace_last_tool_line(&self.tool_buffer.clone());
                 }
             }
-            AgentEvent::ToolExecutionEnd { tool_name, result, is_error, .. } => {
+            AgentEvent::ToolExecutionEnd {
+                tool_name,
+                result,
+                is_error,
+                ..
+            } => {
                 self.in_tool_exec = false;
+                self.active_tool_count = self.active_tool_count.saturating_sub(1);
                 let marker = if is_error { "✗" } else { "✓" };
-                self.tool_buffer.push_str(&format!(" → {marker} {}", serde_json::to_string(&result).unwrap_or_default()));
+                let rendered = tool_result_text(&result);
+                self.tool_buffer.push_str(&format!(" → {marker}"));
                 self.replace_last_tool_line(&self.tool_buffer.clone());
+                if self.active_tool_count == 0 && self.activity_dirs + self.activity_files > 0 {
+                    let activity = activity_text(self.activity_dirs, self.activity_files, false);
+                    if let Some(line) = self.scrollback.lock().last_mut_by_kind(LineKind::Activity)
+                    {
+                        line.text = activity;
+                    }
+                }
+                if !is_error {
+                    let output_kind = if matches!(
+                        tool_name.as_str(),
+                        "list_dir" | "list_files" | "read" | "read_file"
+                    ) {
+                        LineKind::ToolOutput
+                    } else {
+                        LineKind::ToolResult
+                    };
+                    for line in rendered.lines().filter(|line| !line.is_empty()) {
+                        self.scrollback.lock().append(Line::new(output_kind, line));
+                    }
+                }
                 let _ = tool_name;
             }
         }
@@ -223,6 +314,15 @@ impl EventRenderer {
         }
     }
 
+    fn replace_last_reasoning_line(&self, text: &str) {
+        let mut sb = self.scrollback.lock();
+        if let Some(last) = sb.last_mut_by_kind(LineKind::Reasoning) {
+            last.text = text.to_string();
+        } else {
+            sb.append(Line::new(LineKind::Reasoning, text.to_string()));
+        }
+    }
+
     /// Emit the welcome-modal lines (matches grok-build's minimal-mode chrome).
     /// Called once on the first `AgentStart` to seed the transcript with the
     /// version/cwd/model block, the event-log entry, and the hint line.
@@ -231,6 +331,69 @@ impl EventRenderer {
             self.scrollback.lock().append(line);
         }
     }
+}
+
+fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
+    match tool_name {
+        "list_dir" | "list_files" => {
+            let path = args
+                .get("path")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or(".");
+            format!("List {path}")
+        }
+        "read" | "read_file" => {
+            let path = args
+                .get("path")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Read {path}")
+        }
+        _ => format!(
+            "{tool_name} {}",
+            serde_json::to_string(args).unwrap_or_default()
+        ),
+    }
+}
+
+fn tool_result_text(result: &serde_json::Value) -> String {
+    result
+        .as_str()
+        .map(str::to_owned)
+        .or_else(|| {
+            result
+                .get("content")
+                .and_then(serde_json::Value::as_array)
+                .and_then(|content| content.iter().find_map(|item| item.get("text")))
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .or_else(|| {
+            result
+                .get("output")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
+}
+
+fn activity_text(dirs: usize, files: usize, running: bool) -> String {
+    let dir_verb = if running { "Listing" } else { "Listed" };
+    let file_verb = if running { "Reading" } else { "Read" };
+    let mut parts = Vec::new();
+    if dirs > 0 {
+        parts.push(format!(
+            "{dir_verb} {dirs} dir{}",
+            if dirs == 1 { "" } else { "s" }
+        ));
+    }
+    if files > 0 {
+        parts.push(format!(
+            "{file_verb} {files} file{}",
+            if files == 1 { "" } else { "s" }
+        ));
+    }
+    format!("◈ {}", parts.join(", "))
 }
 
 /// Pure function: returns the welcome-modal lines (matches grok-build's
@@ -245,7 +408,13 @@ pub fn welcome_modal_lines() -> Vec<Line> {
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()
         .ok()
-        .and_then(|o| if o.status.success() { String::from_utf8(o.stdout).ok() } else { None })
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8(o.stdout).ok()
+            } else {
+                None
+            }
+        })
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "main".into());
@@ -293,7 +462,10 @@ mod tests {
         // instead of clearing (matches grok's minimal-mode chrome where
         // the welcome block persists across runs).
         r.apply_event(AgentEvent::AgentStart);
-        assert!(!sb.lock().is_empty(), "welcome modal should populate scrollback");
+        assert!(
+            !sb.lock().is_empty(),
+            "welcome modal should populate scrollback"
+        );
         assert!(sb.lock().find_first_containing("Runie").is_some());
         assert_eq!(st.lock().current(), &Status::Thinking);
     }
@@ -317,10 +489,38 @@ mod tests {
                 model: "t".into(),
                 timestamp: 0,
             }),
-            event: AssistantMessageEvent::TextDelta { delta: "Hello".into() },
+            event: AssistantMessageEvent::TextDelta {
+                delta: "Hello".into(),
+            },
         });
         let snap = sb.lock().find_first_containing("Hello").is_some();
         assert!(snap);
+    }
+
+    #[test]
+    fn text_delta_enters_streaming_status() {
+        let (mut r, _, st) = new_renderer();
+        r.apply_event(AgentEvent::AgentStart);
+        r.apply_event(AgentEvent::MessageStart {
+            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                content: vec![],
+                stop_reason: None,
+                model: "t".into(),
+                timestamp: 0,
+            }),
+        });
+        r.apply_event(AgentEvent::MessageUpdate {
+            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                content: vec![],
+                stop_reason: None,
+                model: "t".into(),
+                timestamp: 0,
+            }),
+            event: AssistantMessageEvent::TextDelta {
+                delta: "partial".into(),
+            },
+        });
+        assert_eq!(st.lock().current(), &Status::Streaming);
     }
 
     #[test]
@@ -349,7 +549,32 @@ mod tests {
         let lines = sb.lock();
         assert!(lines.find_first_containing("bash").is_some());
         assert!(lines.find_first_containing("✓").is_some());
-        let _ = (StopReason::Stop, Usage::default(), UserContent::Text { text: "x".into() }, UserMessage { content: vec![], timestamp: 0 });
+        let _ = (
+            StopReason::Stop,
+            Usage::default(),
+            UserContent::Text { text: "x".into() },
+            UserMessage {
+                content: vec![],
+                timestamp: 0,
+            },
+        );
+    }
+
+    #[test]
+    fn structured_tools_use_grok_headers_and_preserve_output_rows() {
+        assert_eq!(
+            tool_header("list_dir", &serde_json::json!({"path":"."})),
+            "List ."
+        );
+        assert_eq!(
+            tool_header("read", &serde_json::json!({"path":"README.md"})),
+            "Read README.md"
+        );
+        assert_eq!(tool_result_text(&serde_json::json!("one\ntwo")), "one\ntwo");
+        assert_eq!(
+            tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
+            "one\ntwo"
+        );
     }
 
     /// Pure-function snapshot (adopted from grok-build's `insta` pattern).

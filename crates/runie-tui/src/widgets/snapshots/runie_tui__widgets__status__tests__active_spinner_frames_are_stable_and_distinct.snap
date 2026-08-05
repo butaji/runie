@@ -1,0 +1,7 @@
+---
+source: crates/runie-tui/src/widgets/status.rs
+expression: "frames.join(\"\\n\")"
+---
+⠋ Thinking… · Shift+Tab:mode │ Esc:cancel                                       
+⠙ Thinking… · Shift+Tab:mode │ Esc:cancel                                       
+⠹ Thinking… · Shift+Tab:mode │ Esc:cancel
