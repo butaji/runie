@@ -55,6 +55,11 @@ impl Default for QueueMode {
 }
 
 /// Why an assistant message finished generating.
+///
+/// `Pending` mirrors pi's initial streaming partial (`stopReason: "pending"`,
+/// `pi/packages/agent/src/proxy.ts:124`): it marks an in-progress assistant
+/// message and is replaced by a final reason when the stream ends. It is
+/// never a terminal stop reason.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StopReason {
@@ -63,6 +68,7 @@ pub enum StopReason {
     MaxTokens,
     Error,
     Aborted,
+    Pending,
 }
 
 /// Plain text content block.

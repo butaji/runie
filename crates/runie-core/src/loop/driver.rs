@@ -127,7 +127,9 @@ pub async fn run_loop(
 
         let mut assistant = AssistantMessage {
             content: vec![],
-            stop_reason: None,
+            // The streaming partial starts in `Pending` (pi proxy.ts:124);
+            // `apply_event` replaces it with the final reason on done/error.
+            stop_reason: Some(StopReason::Pending),
             model: model.id.clone(),
             timestamp: 0,
         };

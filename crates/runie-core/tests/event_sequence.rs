@@ -5,7 +5,22 @@ mod common;
 use std::sync::Arc;
 
 use common::{event_kinds, MockStreamFn, TestLoopBuilder};
-use runie_core::types::{AgentContext, AgentMessage, UserContent, UserMessage};
+use runie_core::types::{
+    AgentContext, AgentMessage, AssistantMessage, StopReason, UserContent, UserMessage,
+};
+
+/// Extract the assistant message from a `MessageStart`/`MessageEnd` event.
+fn assistant_of(event: &runie_core::types::AgentEvent) -> Option<&AssistantMessage> {
+    match event {
+        runie_core::types::AgentEvent::MessageStart {
+            message: AgentMessage::Assistant(a),
+        }
+        | runie_core::types::AgentEvent::MessageEnd {
+            message: AgentMessage::Assistant(a),
+        } => Some(a),
+        _ => None,
+    }
+}
 
 #[tokio::test]
 async fn prompt_hello_event_order() {
@@ -100,4 +115,36 @@ async fn steering_pushed_before_submit_is_injected_before_first_assistant() {
         steer_idx < assistant_idx,
         "steering ({steer_idx}) should precede assistant ({assistant_idx})"
     );
+}
+
+#[tokio::test]
+async fn streaming_partial_starts_pending_and_ends_with_final_reason() {
+    let mock = Arc::new(MockStreamFn::hello());
+    let test = TestLoopBuilder::new(mock).build();
+
+    let prompt = vec![AgentMessage::User(UserMessage {
+        content: vec![UserContent::Text { text: "Hi".into() }],
+        timestamp: 1,
+    })];
+    test.actor
+        .prompt(prompt, AgentContext::default())
+        .await
+        .unwrap();
+
+    let events = test.events.lock();
+    // The assistant message_start carries stop_reason Pending (pi proxy.ts:124).
+    let start = events
+        .iter()
+        .find_map(assistant_of)
+        .expect("assistant message should be emitted");
+    assert_eq!(
+        start.stop_reason,
+        Some(StopReason::Pending),
+        "streaming partial should begin Pending"
+    );
+    // The final message_end carries the real stop reason.
+    let ends: Vec<_> = events.iter().filter_map(assistant_of).collect();
+    if let Some(final_a) = ends.last() {
+        assert_eq!(final_a.stop_reason, Some(StopReason::Stop));
+    }
 }
