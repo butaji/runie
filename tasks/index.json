@@ -67,7 +67,7 @@
     {
       "id": "p10",
       "file": "p10-core-tools-dispatch-parity.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core tools: beforeToolCall block, terminate AND semantics, parallel completion-order events"
     },
     {

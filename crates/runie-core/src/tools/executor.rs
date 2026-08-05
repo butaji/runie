@@ -6,6 +6,9 @@
 
 use std::sync::Arc;
 
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
+
 use super::registry::ToolRegistry;
 use crate::types::{
     AgentMessage, AgentTool, AgentToolResult, AssistantContent, AssistantMessage,
@@ -106,6 +109,7 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     // (pi prepareToolCall -> createErrorToolResult).
     let mut preflighted: Vec<ToolCall> = Vec::with_capacity(calls.len());
     let mut outcome = DispatchOutcome::default();
+    let mut had_invalid = false;
     for call in calls {
         match prepare_and_validate(&call, &ctx) {
             Ok(prepared) => preflighted.push(prepared),
@@ -136,7 +140,7 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
                     is_error: true,
                     timestamp: 0,
                 });
-                outcome.all_terminated = false;
+                had_invalid = true;
             }
         }
     }
@@ -144,6 +148,7 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     let total = preflighted.len();
 
     if preflighted.is_empty() {
+        outcome.all_terminated = !had_invalid;
         return outcome;
     }
 
@@ -158,63 +163,61 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
             });
     }
 
-    // Execute concurrently. The completion-order list is built first; we
-    // then emit toolResult messages in source order to match the README.
+    // Execute concurrently. `tool_execution_end` events fire in COMPLETION
+    // order (pi agent-loop.ts:489), while toolResult messages are emitted in
+    // source order below.
     let ctx_for_exec = ctx.clone();
-    let results: Vec<(String, AgentToolResult, bool, Vec<crate::types::AgentEvent>)> =
-        futures::future::join_all(preflighted.iter().cloned().map(|call| {
-            let ctx = ctx_for_exec.clone();
-            async move {
-                let mut events = vec![crate::types::AgentEvent::ToolExecutionUpdate {
-                    tool_call_id: call.id.clone(),
-                    tool_name: call.name.clone(),
-                    args: call.arguments.clone(),
-                    partial_result: serde_json::json!({"status": "running"}),
-                }];
-                match dispatch_prepared(&call, &ctx).await {
-                    Ok(r) => {
-                        let end = crate::types::AgentEvent::ToolExecutionEnd {
-                            tool_call_id: call.id.clone(),
-                            tool_name: call.name.clone(),
-                            result: serde_json::to_value(&r).unwrap_or_default(),
-                            is_error: false,
-                        };
-                        events.push(end);
-                        (call.id, r, false, events)
-                    }
-                    Err(msg) => {
-                        let r = synthetic_error_result(&msg);
-                        let end = crate::types::AgentEvent::ToolExecutionEnd {
-                            tool_call_id: call.id.clone(),
-                            tool_name: call.name.clone(),
-                            result: serde_json::to_value(&r).unwrap_or_default(),
-                            is_error: true,
-                        };
-                        events.push(end);
-                        (call.id, r, true, events)
-                    }
+    let mut running = futures::stream::FuturesUnordered::new();
+    for call in preflighted.iter().cloned() {
+        let ctx = ctx_for_exec.clone();
+        running.push(async move {
+            let mut events = vec![crate::types::AgentEvent::ToolExecutionUpdate {
+                tool_call_id: call.id.clone(),
+                tool_name: call.name.clone(),
+                args: call.arguments.clone(),
+                partial_result: serde_json::json!({"status": "running"}),
+            }];
+            let (result, is_error) = match dispatch_prepared(&call, &ctx).await {
+                Ok(r) => {
+                    events.push(crate::types::AgentEvent::ToolExecutionEnd {
+                        tool_call_id: call.id.clone(),
+                        tool_name: call.name.clone(),
+                        result: serde_json::to_value(&r).unwrap_or_default(),
+                        is_error: false,
+                    });
+                    (r, false)
                 }
-            }
-        }))
-        .await;
+                Err(msg) => {
+                    let r = synthetic_error_result(&msg);
+                    events.push(crate::types::AgentEvent::ToolExecutionEnd {
+                        tool_call_id: call.id.clone(),
+                        tool_name: call.name.clone(),
+                        result: serde_json::to_value(&r).unwrap_or_default(),
+                        is_error: true,
+                    });
+                    (r, true)
+                }
+            };
+            (call.id.clone(), call.name.clone(), result, is_error, events)
+        });
+    }
+    let mut by_id: std::collections::HashMap<String, (String, AgentToolResult, bool)> =
+        std::collections::HashMap::new();
+    while let Some((id, name, result, is_error, events)) = running.next().await {
+        // Completion-order events.
+        outcome.events.extend(events);
+        by_id.insert(id, (name, result, is_error));
+    }
 
     let _ = total;
 
     // Emit toolResult messages in source order.
-    let mut by_id: std::collections::HashMap<String, (AgentToolResult, bool)> = results
-        .iter()
-        .map(|(id, r, e, _)| (id.clone(), (r.clone(), *e)))
-        .collect();
-    for (_, _, _, events) in results {
-        outcome.events.extend(events);
-    }
-
-    let mut all_terminated = true;
+    let mut all_terminated = !by_id.is_empty();
     for call in &preflighted {
-        if let Some((r, is_error)) = by_id.remove(&call.id) {
+        if let Some((name, r, is_error)) = by_id.remove(&call.id) {
             let tr = ToolResultMessage {
                 tool_call_id: call.id.clone(),
-                tool_name: call.name.clone(),
+                tool_name: name,
                 content: r.content.clone(),
                 details: r.details.clone(),
                 usage: r.usage.clone(),
@@ -229,7 +232,9 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
         }
     }
 
-    outcome.all_terminated = all_terminated;
+    // An invalid (preflight-rejected) call means the batch is not fully
+    // terminated.
+    outcome.all_terminated = !had_invalid && all_terminated;
     outcome
 }
 
