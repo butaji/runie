@@ -172,6 +172,9 @@ pub async fn run_loop(
         deps.bus.publish(AgentEvent::MessageStart {
             message: AgentMessage::Assistant(assistant.clone()),
         });
+        deps.state
+            .set_streaming_message(Some(AgentMessage::Assistant(assistant.clone())))
+            .await;
 
         // Drain events.
         while let Ok(event) = receiver.recv().await {
@@ -180,6 +183,9 @@ pub async fn run_loop(
                 message: AgentMessage::Assistant(assistant.clone()),
                 event: event.clone(),
             });
+            deps.state
+                .set_streaming_message(Some(AgentMessage::Assistant(assistant.clone())))
+                .await;
             if matches!(
                 event,
                 AssistantMessageEvent::Done { .. } | AssistantMessageEvent::Error { .. }
@@ -192,6 +198,7 @@ pub async fn run_loop(
             message: AgentMessage::Assistant(assistant.clone()),
         });
         deps.state.mark_streaming(false).await;
+        deps.state.set_streaming_message(None).await;
         deps.state
             .push_message(AgentMessage::Assistant(assistant.clone()))
             .await;
@@ -218,6 +225,12 @@ pub async fn run_loop(
 
         match plan {
             TurnPlan::ToolBatch { calls } => {
+                let call_ids: Vec<String> = calls.iter().map(|c| c.id.clone()).collect();
+                // Mark the batch as pending while it executes so the state
+                // projection reflects in-flight tool calls (pi AgentState).
+                for id in &call_ids {
+                    deps.state.add_pending_tool_call(id.clone()).await;
+                }
                 // Parity with pi-agent-core: a `MaxTokens` stop (the provider
                 // was cut off by the output token limit) means every tool call
                 // in the message may carry truncated arguments. Fail them all
@@ -261,6 +274,10 @@ pub async fn run_loop(
 
                 for event in events {
                     deps.bus.publish(event);
+                }
+                // The batch finished; clear its pending markers.
+                for id in &call_ids {
+                    deps.state.remove_pending_tool_call(id.clone()).await;
                 }
 
                 turn_tool_results = tool_results.clone();

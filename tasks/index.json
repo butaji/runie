@@ -79,7 +79,7 @@
     {
       "id": "p12",
       "file": "p12-core-state-machine.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core state: AgentState computed fields + transition state machine"
     },
     {
