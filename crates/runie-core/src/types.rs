@@ -207,6 +207,12 @@ pub struct Usage {
     pub output: u64,
     pub cache_read: u64,
     pub cache_write: u64,
+    /// 1h cache-write tokens (pi: `cacheWrite1h?`).
+    #[serde(default)]
+    pub cache_write_1h: u64,
+    /// Reasoning tokens (pi: `reasoning?`).
+    #[serde(default)]
+    pub reasoning: u64,
     pub total_tokens: u64,
     #[serde(default)]
     pub cost: CostBreakdown,
@@ -337,6 +343,29 @@ pub enum WireMessage {
     },
 }
 
+/// Modality a model accepts (pi: `input: ("text"|"image")[]`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InputKind {
+    Text,
+    Image,
+}
+
+/// Per-thinking-level token budgets (pi: `thinkingLevelMap?`).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThinkingLevelMap {
+    #[serde(default)]
+    pub minimal: Option<u64>,
+    #[serde(default)]
+    pub low: Option<u64>,
+    #[serde(default)]
+    pub medium: Option<u64>,
+    #[serde(default)]
+    pub high: Option<u64>,
+    #[serde(default)]
+    pub xhigh: Option<u64>,
+}
+
 /// Static model description.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Model {
@@ -349,9 +378,20 @@ pub struct Model {
     #[serde(default)]
     pub reasoning: bool,
     #[serde(default)]
+    pub thinking_level_map: Option<ThinkingLevelMap>,
+    /// Accepted input modalities (pi: `input`).
+    #[serde(default)]
+    pub input: Vec<InputKind>,
+    /// Cost in USD per million tokens (pi: `cost`).
+    #[serde(default)]
+    pub cost: CostBreakdown,
+    #[serde(default)]
     pub context_window: u64,
     #[serde(default)]
     pub max_tokens: u64,
+    /// Extra HTTP headers for provider requests (pi: `headers?`).
+    #[serde(default)]
+    pub headers: std::collections::HashMap<String, String>,
 }
 
 /// Options passed to a `StreamFn::stream` call.
@@ -614,6 +654,60 @@ mod tests {
         let back: ToolResultMessage = serde_json::from_value(json).unwrap();
         assert_eq!(back, m);
         assert_eq!(back.added_tool_names, vec!["lister".to_string()]);
+    }
+
+    #[test]
+    fn model_and_usage_round_trip_new_parity_fields() {
+        let mut cost = CostBreakdown::default();
+        cost.input = 3;
+        cost.output = 15;
+        let mut usage = Usage::default();
+        usage.cache_write_1h = 9;
+        usage.reasoning = 4;
+        let m = Model {
+            id: "m".into(),
+            name: "m".into(),
+            api: "a".into(),
+            provider: "p".into(),
+            base_url: "b".into(),
+            reasoning: true,
+            thinking_level_map: Some(ThinkingLevelMap {
+                high: Some(1_000),
+                ..Default::default()
+            }),
+            input: vec![InputKind::Text, InputKind::Image],
+            cost: cost.clone(),
+            context_window: 128,
+            max_tokens: 64,
+            headers: [("X-Test".to_string(), "1".to_string())]
+                .into_iter()
+                .collect(),
+        };
+        let json = serde_json::to_value(&m).unwrap();
+        for key in [
+            "id",
+            "name",
+            "api",
+            "provider",
+            "base_url",
+            "reasoning",
+            "thinking_level_map",
+            "input",
+            "cost",
+            "context_window",
+            "max_tokens",
+            "headers",
+        ] {
+            assert!(json.get(key).is_some(), "Model missing {key}");
+        }
+        let back: Model = serde_json::from_value(json).unwrap();
+        assert_eq!(back, m);
+
+        let ujson = serde_json::to_value(&usage).unwrap();
+        assert!(ujson.get("cache_write_1h").is_some());
+        assert!(ujson.get("reasoning").is_some());
+        let uback: Usage = serde_json::from_value(ujson).unwrap();
+        assert_eq!(uback, usage);
     }
 
     #[test]

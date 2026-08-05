@@ -161,6 +161,7 @@ pub fn default_model() -> Model {
         reasoning: false,
         context_window: 0,
         max_tokens: 0,
+        ..Default::default()
     }
 }
 

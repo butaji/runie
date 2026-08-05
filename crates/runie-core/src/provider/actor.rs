@@ -160,6 +160,7 @@ mod tests {
                     reasoning: false,
                     context_window: 0,
                     max_tokens: 0,
+                    ..Default::default()
                 },
                 AgentContext::default(),
                 None,

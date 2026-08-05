@@ -25,7 +25,7 @@
     {
       "id": "p03",
       "file": "p03-core-model-usage.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core types: Model + Usage field parity (cost, input types, headers, cache_write_1h, reasoning)"
     },
     {
