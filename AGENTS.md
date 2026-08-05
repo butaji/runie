@@ -2,6 +2,10 @@
 
 Every change needs fast automatic tests (unit + replay). No `sleep()` in tests.
 
+There is **no GitHub CI** for this repository. Do not create or reference one
+(no `.github/workflows`, no GitHub Actions). All verification is local via the
+`justfile` (`just ci`: fmt-check + clippy + lint + test) or `cargo` directly.
+
 ## Architecture Principles
 
 Events-based, single-source-of-truth actors:

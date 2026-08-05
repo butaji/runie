@@ -22,6 +22,16 @@ pub enum LoopError {
     Internal(String),
     #[error("provider: {0}")]
     Provider(String),
+    /// pi: `Agent is already processing a prompt. Use steer() or followUp()
+    /// to queue messages, or wait for completion.` (agent.ts:340).
+    #[error("agent is already processing a prompt")]
+    Busy,
+    /// pi: `Cannot continue: no messages in context` (agent-loop.ts:127).
+    #[error("cannot continue: no messages in context")]
+    EmptyContext,
+    /// pi: `Cannot continue from message role: assistant` (agent-loop.ts:131).
+    #[error("cannot continue from message role: assistant")]
+    LastIsAssistant,
 }
 
 #[derive(Clone)]
@@ -56,6 +66,7 @@ impl LoopDeps {
     }
 }
 
+#[derive(Clone)]
 pub struct LoopActor {
     inner: Arc<Inner>,
 }
@@ -63,6 +74,9 @@ pub struct LoopActor {
 struct Inner {
     deps: LoopDeps,
     current: Mutex<Option<JoinHandle<RunLoopOutcome>>>,
+    /// True while a run is in flight; guards concurrent `prompt()` (pi's
+    /// "Agent is already processing a prompt" rejection).
+    running: Mutex<bool>,
     aborted: Mutex<bool>,
 }
 
@@ -72,6 +86,7 @@ impl LoopActor {
             inner: Arc::new(Inner {
                 deps,
                 current: Mutex::new(None),
+                running: Mutex::new(false),
                 aborted: Mutex::new(false),
             }),
         }
@@ -82,13 +97,41 @@ impl LoopActor {
         prompts: Vec<AgentMessage>,
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
-        let deps = self.inner.deps.as_run_loop_deps();
-        // OWNER: LoopActor — JoinHandle awaited immediately on the next line.
-        let handle = tokio::spawn(async move { run_loop(prompts, context, deps).await });
+        // Busy guard: only one run at a time (pi agent.ts:340).
+        {
+            let mut running = self.inner.running.lock().await;
+            if *running {
+                return Err(LoopError::Busy);
+            }
+            *running = true;
+        }
+        let result = self.run_inner(prompts, context).await;
+        *self.inner.running.lock().await = false;
+        result
+    }
 
-        let outcome = handle
-            .await
-            .map_err(|e| LoopError::Internal(e.to_string()))?;
+    async fn run_inner(
+        &self,
+        prompts: Vec<AgentMessage>,
+        context: AgentContext,
+    ) -> Result<Vec<AgentMessage>, LoopError> {
+        let deps = self.inner.deps.as_run_loop_deps();
+        // OWNER: LoopActor — handle stored in `current` for `wait_for_idle`.
+        let handle = tokio::spawn(async move { run_loop(prompts, context, deps).await });
+        *self.inner.current.lock().await = Some(handle);
+
+        let outcome = {
+            let handle = self
+                .inner
+                .current
+                .lock()
+                .await
+                .take()
+                .expect("run handle stored by prompt");
+            handle
+                .await
+                .map_err(|e| LoopError::Internal(e.to_string()))?
+        };
         Ok(outcome.new_messages)
     }
 
@@ -96,6 +139,13 @@ impl LoopActor {
         &self,
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
+        // pi runAgentLoopContinue validation (agent-loop.ts:127,131).
+        if context.messages.is_empty() {
+            return Err(LoopError::EmptyContext);
+        }
+        if matches!(context.messages.last(), Some(AgentMessage::Assistant(_))) {
+            return Err(LoopError::LastIsAssistant);
+        }
         self.prompt(vec![], context).await
     }
 

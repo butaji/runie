@@ -43,7 +43,7 @@
     {
       "id": "p06",
       "file": "p06-core-loop-entry-validation.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core loop: prompt() busy guard + continue() validation + run_loop_continue return semantics"
     },
     {
