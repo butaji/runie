@@ -9,6 +9,7 @@ use ratatui::widgets::{Paragraph, Widget};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
     Ready,
+    Loading,
     Thinking,
     Streaming,
     Aborted,
@@ -19,6 +20,7 @@ impl Status {
     pub fn label(&self) -> String {
         match self {
             Self::Ready => "ready".into(),
+            Self::Loading => "loading".into(),
             Self::Thinking => "thinking...".into(),
             Self::Streaming => "streaming".into(),
             Self::Aborted => "aborted".into(),
@@ -29,12 +31,34 @@ impl Status {
     pub fn style(&self) -> Style {
         match self {
             Self::Ready => Style::default().fg(Color::Green),
+            Self::Loading => Style::default().fg(Color::DarkGray),
             Self::Thinking => Style::default().fg(Color::Yellow),
             Self::Streaming => Style::default().fg(Color::Blue),
             Self::Aborted => Style::default().fg(Color::DarkGray),
             Self::Error(_) => Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         }
     }
+}
+
+/// Braille spinner frames matching grok's `braille_spinner_frames`
+/// (xai-grok-pager-render/src/glyphs.rs:225) — FANCY set.
+pub fn braille_spinner_frames() -> &'static [&'static str] {
+    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
+}
+
+/// Legacy `| / - \` fallback for braille (glyphs.rs:230).
+pub fn braille_spinner_fallback() -> &'static [&'static str] {
+    &["|", "/", "-", "\\"]
+}
+
+/// Pulsing dot progress frames (glyphs.rs:238: `⋅ : ⸬ ⁙`).
+pub fn dot_spinner_frames() -> &'static [&'static str] {
+    &["⋅", ":", "⸬", "⁙"]
+}
+
+/// Quiet 1-column dot cycle fallback (glyphs.rs: `. : ·`).
+pub fn dot_spinner_fallback() -> &'static [&'static str] {
+    &[".", ":", "·"]
 }
 
 impl Default for Status {
@@ -129,7 +153,10 @@ impl StatusBar {
     /// The caller owns the cadence; tests can select exact frames without
     /// depending on wall-clock timing.
     pub fn advance_animation(&mut self) {
-        if matches!(self.state, Status::Thinking | Status::Streaming) {
+        if matches!(
+            self.state,
+            Status::Loading | Status::Thinking | Status::Streaming
+        ) {
             self.animation_frame = self.animation_frame.wrapping_add(1);
         }
     }
@@ -148,6 +175,7 @@ impl StatusBar {
         use ratatui::text::Span;
         let left = match self.state {
             Status::Ready => "Enter:send │ Shift+Tab:mode │ Ctrl+x:shortcuts".to_string(),
+            Status::Loading => String::new(),
             Status::Thinking | Status::Streaming => String::new(),
             _ => self.state.label(),
         };
@@ -168,6 +196,13 @@ impl StatusBar {
                 Style::default().add_modifier(Modifier::BOLD),
             ));
             spans.push(Span::raw(":shortcuts"));
+        } else if matches!(self.state, Status::Loading) {
+            // Grok's "{spinner} Loading..." foreground row (agent_view/render.rs).
+            let spinner = dot_spinner_frames()[self.animation_frame % dot_spinner_frames().len()];
+            spans.push(Span::styled(
+                format!("{spinner} Loading..."),
+                Style::default().add_modifier(Modifier::DIM),
+            ));
         } else if matches!(self.state, Status::Thinking | Status::Streaming) {
             spans.push(Span::styled(
                 "Shift+Tab",
@@ -206,6 +241,7 @@ mod tests {
     fn label_distinct_per_variant() {
         let variants = [
             Status::Ready,
+            Status::Loading,
             Status::Thinking,
             Status::Streaming,
             Status::Aborted,
@@ -335,6 +371,50 @@ mod tests {
             .collect();
         assert!(row.starts_with("  Shift+Tab:mode  │  Esc:cancel  │  Ctrl+.:shortcuts"));
         assert_eq!(row.chars().count(), 80);
+    }
+
+    #[test]
+    fn spinner_frame_helpers_match_grok_glyphs() {
+        assert_eq!(
+            braille_spinner_frames(),
+            &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
+        );
+        assert_eq!(braille_spinner_fallback(), &["|", "/", "-", "\\"]);
+        assert_eq!(dot_spinner_frames(), &["⋅", ":", "⸬", "⁙"]);
+        assert_eq!(dot_spinner_fallback(), &[".", ":", "·"]);
+    }
+
+    #[test]
+    fn loading_status_renders_grok_loading_row() {
+        let mut bar = StatusBar::new();
+        bar.set(Status::Loading);
+        bar.set_animation_frame(0);
+        let mut buffer = Buffer::empty(Rect {
+            x: 0,
+            y: 0,
+            width: 40,
+            height: 1,
+        });
+        bar.render(
+            Rect {
+                x: 0,
+                y: 0,
+                width: 40,
+                height: 1,
+            },
+            &mut buffer,
+        );
+        let row: String = (0..40)
+            .filter_map(|x| buffer.cell((x, 0)).map(|c| c.symbol().to_string()))
+            .collect();
+        assert!(
+            row.contains("Loading..."),
+            "loading row should show the grok Loading label, got: {row:?}"
+        );
+        assert!(
+            row.starts_with(dot_spinner_frames()[0]),
+            "loading row should start with the dot spinner"
+        );
     }
 
     #[test]

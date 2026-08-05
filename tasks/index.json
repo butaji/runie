@@ -85,7 +85,7 @@
     {
       "id": "p13",
       "file": "p13-tui-status-machine.md",
-      "status": "pending",
+      "status": "done",
       "title": "TUI: status/footer bar state machine (all variants + spinner frames + hints)"
     },
     {
