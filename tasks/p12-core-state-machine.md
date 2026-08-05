@@ -1,0 +1,51 @@
+# p12 — Core state: `AgentState` computed fields + transition state machine
+
+**Parity target:** pi `AgentState` (read-only projection over the actor).
+
+## Pi reference
+
+`~/Code/agents/pi/packages/agent/src/types.ts:327`
+```ts
+AgentState {
+  systemPrompt: string; model: Model; thinkingLevel: ThinkingLevel;
+  tools: AgentTool[]; messages: AgentMessage[];
+  readonly isStreaming: boolean;
+  readonly streamingMessage?: AgentMessage;
+  readonly pendingToolCalls: ReadonlySet<string>;
+  readonly errorMessage?: string;
+}
+```
+- `isStreaming` / `streamingMessage` / `pendingToolCalls` / `errorMessage` are **computed projections** from the mutable core fields, not stored directly.
+- The `Agent` facade maintains them during a run (`agent.ts:434-529`): `isStreaming=true` between `message_start(assistant)` and `message_end(assistant)`; `streamingMessage` = the live partial; `pendingToolCalls` = tool call ids currently executing; `errorMessage` set on failure.
+
+## Current runie state
+
+`~/Code/GitHub/runie-tests/runie/crates/runie-core/src/state/`
+- `AgentStateActor` (actor.rs) + `AgentStateSnapshot` (snapshot.rs). `AgentState` (types.rs:325) has `system_prompt, model, thinking_level, messages, tools`; `mark_streaming`, `set_error`, `push_message` exist (used in driver.rs).
+
+## Adapt to runie
+
+1. Add computed projection methods to the snapshot/state:
+   - `is_streaming(): bool` — true between assistant `message_start` and `message_end`.
+   - `streaming_message(): Option<&AssistantMessage>` — the in-progress assistant message.
+   - `pending_tool_calls(): Vec<String>` — tool call ids in flight (maintained via a set updated at `ToolExecutionStart`/`End`).
+   - `error_message(): Option<&str>`.
+2. These must be **rebuilt from events** (single-source-of-truth principle): the actor records the stream markers and tool ids from the events it observes, and the getters are pure projections over that state.
+3. Ensure the actor's transitions fire on the right events: `mark_streaming(true/false)` (already), set/clear `pending_tool_calls` on tool start/end, set `error_message` on `Error`/abort.
+
+## State machine / variants
+
+`AgentStateActor` phases (projection):
+```
+idle --message_start(assistant)--> streaming(streaming_message=live)
+streaming --message_end(assistant)--> idle
+idle --tool_execution_start--> running_tool(pending_tool_calls += id)
+running_tool --tool_execution_end--> idle (pending_tool_calls -= id)
+any --error/abort--> errored(error_message=Some) --agent_end--> idle
+```
+Variants: `is_streaming ∈ {true,false}`; `pending_tool_calls ⊆ {active tool ids}`; `error_message ∈ {None} ∪ {Some(reason)}`.
+
+## Acceptance
+
+- Unit tests: projection getters reflect event application (stream open/close, tool start/end, error set); rebuild-from-events equivalence (replaying the same events produces the same snapshot).
+- `cargo test -p runie-core` green.
