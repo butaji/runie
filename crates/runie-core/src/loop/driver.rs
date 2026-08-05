@@ -131,7 +131,9 @@ pub async fn run_loop(
             // `apply_event` replaces it with the final reason on done/error.
             stop_reason: Some(StopReason::Pending),
             model: model.id.clone(),
-            timestamp: 0,
+            api: model.api.clone(),
+            provider: model.provider.clone(),
+            ..Default::default()
         };
 
         deps.bus.publish(AgentEvent::MessageStart {
@@ -344,7 +346,7 @@ fn fail_truncated_calls(calls: &[ToolCall]) -> ToolExecOutcome {
             tool_name: call.name.clone(),
             content: result.content.clone(),
             is_error: true,
-            timestamp: 0,
+            ..Default::default()
         });
     }
     ToolExecOutcome {
@@ -366,14 +368,13 @@ fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
         AssistantMessageEvent::ToolCallDelta { partial, .. } => {
             assistant.content.push(AssistantContent::ToolCall(partial));
         }
-        AssistantMessageEvent::Done {
-            stop_reason,
-            usage: _,
-        } => {
+        AssistantMessageEvent::Done { stop_reason, usage } => {
             assistant.stop_reason = Some(stop_reason);
+            assistant.usage = usage;
         }
         AssistantMessageEvent::Error { error } => {
             assistant.stop_reason = Some(StopReason::Error);
+            assistant.error_message = Some(error.clone());
             assistant
                 .content
                 .push(AssistantContent::Text { text: error });
@@ -419,6 +420,7 @@ fn wire_to_agent(wire: &[WireMessage]) -> Vec<AgentMessage> {
                 stop_reason: *stop_reason,
                 model: model.clone(),
                 timestamp: *timestamp,
+                ..Default::default()
             }),
             WireMessage::ToolResult {
                 tool_call_id,
@@ -432,6 +434,7 @@ fn wire_to_agent(wire: &[WireMessage]) -> Vec<AgentMessage> {
                 content: content.clone(),
                 is_error: *is_error,
                 timestamp: *timestamp,
+                ..Default::default()
             }),
         })
         .collect()

@@ -75,6 +75,9 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
             tool_call_id: call.id.clone(),
             tool_name: call.name.clone(),
             content: result.content.clone(),
+            details: result.details.clone(),
+            usage: result.usage.clone(),
+            added_tool_names: result.added_tool_names.clone(),
             is_error,
             timestamp: 0,
         };
@@ -183,6 +186,9 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
                 tool_call_id: call.id.clone(),
                 tool_name: call.name.clone(),
                 content: r.content.clone(),
+                details: r.details.clone(),
+                usage: r.usage.clone(),
+                added_tool_names: r.added_tool_names.clone(),
                 is_error,
                 timestamp: 0,
             };
@@ -286,6 +292,7 @@ mod tests {
                     stop_reason: None,
                     model: "test".into(),
                     timestamp: 0,
+                    ..Default::default()
                 },
                 registry,
                 hooks: ToolExecHooks::default(),

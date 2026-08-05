@@ -5,9 +5,36 @@ mod common;
 use std::sync::Arc;
 
 use common::{event_kinds, MockStreamFn, TestLoopBuilder};
+use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AgentContext, AgentMessage, AssistantMessage, StopReason, UserContent, UserMessage,
+    AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
+    SimpleStreamOptions, StopReason, Usage, UserContent, UserMessage,
 };
+
+/// StreamFn that finishes with a `Done` carrying nonzero usage, to verify
+/// usage flows into the final assistant message (pi AssistantMessage.usage).
+struct UsageStream;
+#[async_trait::async_trait]
+impl StreamFn for UsageStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        let mut usage = Usage::default();
+        usage.input = 5;
+        usage.output = 7;
+        let events = vec![
+            AssistantMessageEvent::TextDelta { delta: "hi".into() },
+            AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage,
+            },
+        ];
+        Ok(Box::pin(futures::stream::iter(events)))
+    }
+}
 
 /// Extract the assistant message from a `MessageStart`/`MessageEnd` event.
 fn assistant_of(event: &runie_core::types::AgentEvent) -> Option<&AssistantMessage> {
@@ -147,4 +174,23 @@ async fn streaming_partial_starts_pending_and_ends_with_final_reason() {
     if let Some(final_a) = ends.last() {
         assert_eq!(final_a.stop_reason, Some(StopReason::Stop));
     }
+}
+
+#[tokio::test]
+async fn done_usage_flows_into_final_assistant_message() {
+    let test = TestLoopBuilder::new(Arc::new(UsageStream)).build();
+    let prompt = vec![AgentMessage::User(UserMessage {
+        content: vec![UserContent::Text { text: "Hi".into() }],
+        timestamp: 1,
+    })];
+    test.actor
+        .prompt(prompt, AgentContext::default())
+        .await
+        .unwrap();
+
+    let events = test.events.lock();
+    let ends: Vec<_> = events.iter().filter_map(assistant_of).collect();
+    let final_a = ends.last().expect("assistant message should end");
+    assert_eq!(final_a.usage.input, 5);
+    assert_eq!(final_a.usage.output, 7);
 }

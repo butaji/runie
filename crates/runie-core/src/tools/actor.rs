@@ -132,6 +132,7 @@ mod tests {
                     stop_reason: None,
                     model: "test".into(),
                     timestamp: 0,
+                    ..Default::default()
                 },
                 vec![],
                 ToolExecutionMode::Parallel,

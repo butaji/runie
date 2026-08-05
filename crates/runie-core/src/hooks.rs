@@ -19,6 +19,7 @@ mod tests {
                 stop_reason: None,
                 model: "test".into(),
                 timestamp: 0,
+                ..Default::default()
             },
             tool_call: crate::types::ToolCall {
                 id: "x".into(),

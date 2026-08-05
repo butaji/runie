@@ -480,6 +480,7 @@ mod tests {
                 stop_reason: None,
                 model: "t".into(),
                 timestamp: 0,
+                ..runie_core::types::AssistantMessage::default()
             }),
         });
         r.apply_event(AgentEvent::MessageUpdate {
@@ -488,6 +489,7 @@ mod tests {
                 stop_reason: None,
                 model: "t".into(),
                 timestamp: 0,
+                ..runie_core::types::AssistantMessage::default()
             }),
             event: AssistantMessageEvent::TextDelta {
                 delta: "Hello".into(),
@@ -507,6 +509,7 @@ mod tests {
                 stop_reason: None,
                 model: "t".into(),
                 timestamp: 0,
+                ..runie_core::types::AssistantMessage::default()
             }),
         });
         r.apply_event(AgentEvent::MessageUpdate {
@@ -515,6 +518,7 @@ mod tests {
                 stop_reason: None,
                 model: "t".into(),
                 timestamp: 0,
+                ..runie_core::types::AssistantMessage::default()
             }),
             event: AssistantMessageEvent::TextDelta {
                 delta: "partial".into(),

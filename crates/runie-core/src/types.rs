@@ -122,7 +122,39 @@ pub struct AssistantMessage {
     pub content: Vec<AssistantContent>,
     pub stop_reason: Option<StopReason>,
     pub model: String,
+    /// Provider id (pi: `api`). Mirrors `AssistantMessage.api` + `.provider`.
+    #[serde(default)]
+    pub api: String,
+    #[serde(default)]
+    pub provider: String,
+    /// Token usage for the finished message (pi: `usage`).
+    #[serde(default)]
+    pub usage: Usage,
+    /// Failure detail when the stream ended in `error`/`aborted`
+    /// (pi: `errorMessage?`).
+    #[serde(default)]
+    pub error_message: Option<String>,
+    /// The raw provider stop reason string before normalization
+    /// (pi: `rawStopReason?`).
+    #[serde(default)]
+    pub raw_stop_reason: Option<String>,
     pub timestamp: i64,
+}
+
+impl Default for AssistantMessage {
+    fn default() -> Self {
+        Self {
+            content: Vec::new(),
+            stop_reason: None,
+            model: String::new(),
+            api: String::new(),
+            provider: String::new(),
+            usage: Usage::default(),
+            error_message: None,
+            raw_stop_reason: None,
+            timestamp: 0,
+        }
+    }
 }
 
 /// Tool result content block.
@@ -140,8 +172,32 @@ pub struct ToolResultMessage {
     pub tool_call_id: String,
     pub tool_name: String,
     pub content: Vec<ToolResultContent>,
+    /// Structured details (pi: `details?`).
+    #[serde(default)]
+    pub details: serde_json::Value,
+    /// Token usage reported by the tool (pi: `usage?`).
+    #[serde(default)]
+    pub usage: Option<Usage>,
+    /// Tool names discovered/added by this tool (pi: `addedToolNames?`).
+    #[serde(default)]
+    pub added_tool_names: Vec<String>,
     pub is_error: bool,
     pub timestamp: i64,
+}
+
+impl Default for ToolResultMessage {
+    fn default() -> Self {
+        Self {
+            tool_call_id: String::new(),
+            tool_name: String::new(),
+            content: Vec::new(),
+            details: serde_json::Value::Null,
+            usage: None,
+            added_tool_names: Vec::new(),
+            is_error: false,
+            timestamp: 0,
+        }
+    }
 }
 
 /// Token usage + cost accounting. Cost is per-million tokens in USD.
@@ -491,6 +547,73 @@ mod tests {
             let back: ThinkingLevel = serde_json::from_str(&json).unwrap();
             assert_eq!(level, back);
         }
+    }
+
+    #[test]
+    fn assistant_message_round_trips_new_parity_fields() {
+        let mut usage = Usage::default();
+        usage.input = 10;
+        usage.output = 20;
+        let m = AssistantMessage {
+            content: vec![AssistantContent::Text { text: "hi".into() }],
+            stop_reason: Some(StopReason::Pending),
+            model: "m".into(),
+            api: "anthropic".into(),
+            provider: "anthropic".into(),
+            usage: usage.clone(),
+            error_message: Some("boom".into()),
+            raw_stop_reason: Some("max_tokens".into()),
+            timestamp: 7,
+        };
+        let json = serde_json::to_value(&m).unwrap();
+        // pi AssistantMessage carries these keys.
+        for key in [
+            "content",
+            "stop_reason",
+            "model",
+            "api",
+            "provider",
+            "usage",
+            "error_message",
+            "raw_stop_reason",
+            "timestamp",
+        ] {
+            assert!(json.get(key).is_some(), "missing {key}");
+        }
+        let back: AssistantMessage = serde_json::from_value(json).unwrap();
+        assert_eq!(back, m);
+        assert_eq!(back.usage.input, 10);
+        assert_eq!(back.usage.output, 20);
+    }
+
+    #[test]
+    fn tool_result_message_round_trips_new_parity_fields() {
+        let m = ToolResultMessage {
+            tool_call_id: "c1".into(),
+            tool_name: "read".into(),
+            content: vec![ToolResultContent::Text { text: "ok".into() }],
+            details: serde_json::json!({ "lines": 3 }),
+            usage: Some(Usage::default()),
+            added_tool_names: vec!["lister".into()],
+            is_error: false,
+            timestamp: 1,
+        };
+        let json = serde_json::to_value(&m).unwrap();
+        for key in [
+            "tool_call_id",
+            "tool_name",
+            "content",
+            "details",
+            "usage",
+            "added_tool_names",
+            "is_error",
+            "timestamp",
+        ] {
+            assert!(json.get(key).is_some(), "missing {key}");
+        }
+        let back: ToolResultMessage = serde_json::from_value(json).unwrap();
+        assert_eq!(back, m);
+        assert_eq!(back.added_tool_names, vec!["lister".to_string()]);
     }
 
     #[test]

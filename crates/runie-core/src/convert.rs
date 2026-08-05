@@ -68,6 +68,7 @@ mod tests {
                 stop_reason: Some(StopReason::Stop),
                 model: "test".into(),
                 timestamp: 2,
+                ..Default::default()
             }),
         ];
         let wire = default_convert_to_llm(&messages);
@@ -88,6 +89,7 @@ mod tests {
             content: vec![ToolResultContent::Text { text: "ok".into() }],
             is_error: false,
             timestamp: 9,
+            ..Default::default()
         };
         let wire = default_convert_to_llm(&[AgentMessage::ToolResult(m.clone())]);
         assert_eq!(wire.len(), 1);
