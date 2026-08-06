@@ -999,6 +999,14 @@ mod tests {
         scrollback.apply(ScrollbackMsg::Clear);
         assert!(scrollback.is_empty());
     }
+
+    #[test]
+    fn vpad_is_entry_metadata_not_line_kind_inference() {
+        let user = Line::new(LineKind::User, "hi").with_vpad(true);
+        let system = Line::new(LineKind::System, "system");
+        assert!(user.has_vpad());
+        assert!(!system.has_vpad());
+    }
     use ratatui::style::Color;
 
     #[test]
