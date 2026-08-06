@@ -364,6 +364,12 @@ selection wraps in transcript order and `e` folds the selected ID. Prompt
 history remains unchanged when the prompt contains text. Full viewport-aware
 selection boxes and non-tool block entries remain open.
 
+Non-tool entry replay coverage (2026-08-06): `visual-activity-mixed.yaml`
+now drives `entry_next`/`entry_previous` through the scrollback actor after
+tool-ID selection and asserts the resulting logical selected-entry index and
+cleared tool ID. This pins the reducer boundary for Grok's mixed transcript
+navigation; pixel-perfect selection-box styling remains open.
+
 YAML selection oracle (2026-08-06): `tool_select: next|previous` replays
 through the same scrollback actor and `selected_tool_id` asserts the resulting
 projection. The mixed activity fixture now pins both forward and reverse

@@ -25,12 +25,17 @@ events:
       mode: collapsed
   - tool_select: next
   - tool_select: previous
+  - tool_select: entry_next
+  - tool_select: entry_next
+  - tool_select: entry_previous
+  - tool_select: entry_next
 assertions:
   state:
     tool_blocks: 2
     tool_modes: [expanded, collapsed]
     tool_kinds: [list_dir, execute]
-    selected_tool_id: call-2
+    selected_tool_id: null
+    selected_entry: 6
     tool_headers: ["List .", "Run cargo test"]
     tool_outputs: [["Cargo.toml", "src", "List . (3 entries)", "Cargo.toml", "src", "crates"], ["Run cargo test → ✓", "cargo test completed"]]
   visual:
