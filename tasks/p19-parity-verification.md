@@ -1339,3 +1339,8 @@ full-screen reference selects the first frame containing both semantic feed
 markers (`Listed 1 dir` and `Read 1 file`), then applies the exact screen
 comparison. The fixture passes, so frame selection is now lifecycle/data
 driven for this feed state rather than tied to recording timing.
+**Waiting-reason YAML state oracle (2026-08-06):**
+`visual-waiting-reasons.yaml` now asserts the complete core event sequence,
+the final actor-owned `waiting: Sleeping…` status, message count, and waiting
+chrome. This closes the previous fixture gap where only event names and the
+initial prompt were checked.

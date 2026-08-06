@@ -9,13 +9,26 @@ events:
   - waiting: tasks_complete
   - waiting: sleep
 assertions:
-  events:
+  exact_events:
     - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_end
+    - turn_end
+    - agent_end
     - waiting
     - waiting
     - waiting
+  state:
+    status: "waiting: Sleeping…"
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 2
   visual:
     cols: 80
     rows: 24
     screen_text:
       - "❯ Wait for background work"
+    waiting_chrome: "Sleeping…"
