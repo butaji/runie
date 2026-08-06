@@ -55,3 +55,10 @@ Variants: `is_streaming ∈ {true,false}`; `pending_tool_calls ⊆ {active tool 
   pending-tool projection tests now await the state actor's synchronization
   contract before asserting terminal state, eliminating scheduler-dependent
   reads while preserving actor-only mutation.
+# Latest parity correction (2026-08-06)
+
+The tool registry is now projected into `AgentStateSnapshot.tools` at the
+actor-owned loop boundary before each prompt or continuation. This matches
+Pi's agent state, where registered tools are part of the context contract
+rather than only an executor-side lookup table. YAML `tool_count` and
+`tool-echo.yaml` cover the event-sequence-to-state path.

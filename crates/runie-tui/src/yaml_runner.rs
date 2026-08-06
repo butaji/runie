@@ -547,6 +547,7 @@ pub struct StateAssertions {
     pub is_streaming: Option<bool>,
     pub pending_tool_calls: Option<usize>,
     pub messages: Option<usize>,
+    pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
     pub tool_blocks: Option<usize>,
@@ -1272,6 +1273,7 @@ pub async fn assert_scenario_async(
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "state assertion diagnostics stay grouped by projection field"
 )]
 fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
@@ -1316,6 +1318,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state messages mismatch: expected {value}, got {}",
                 actual.messages.len()
+            ));
+        }
+    }
+    if let Some(value) = expected.tool_count {
+        if actual.tools.len() != value {
+            return Err(format!(
+                "state tool_count mismatch: expected {value}, got {}",
+                actual.tools.len()
             ));
         }
     }

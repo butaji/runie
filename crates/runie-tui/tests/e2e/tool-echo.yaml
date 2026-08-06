@@ -23,6 +23,7 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 2
+    tool_count: 1
   transcript_contains:
     - "echo hi"
     - "ok"

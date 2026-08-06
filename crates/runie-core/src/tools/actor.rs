@@ -66,6 +66,10 @@ impl ToolExecutorActor {
         self.registry.clone()
     }
 
+    pub fn tools(&self) -> Vec<Arc<dyn crate::types::AgentTool>> {
+        self.registry.tools()
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "actor command mirrors the explicit async tool execution contract"

@@ -146,6 +146,11 @@ impl LoopActor {
         context: AgentContext,
         skip_initial_steering_poll: bool,
     ) -> Result<Vec<AgentMessage>, LoopError> {
+        self.inner
+            .deps
+            .state
+            .set_tools(self.inner.deps.tool_executor.tools())
+            .await;
         let mut deps = self.inner.deps.as_run_loop_deps();
         deps.steering_mode = *self.inner.steering_mode.lock().await;
         deps.follow_up_mode = *self.inner.follow_up_mode.lock().await;

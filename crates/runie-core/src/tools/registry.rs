@@ -45,6 +45,10 @@ impl ToolRegistry {
     pub fn names(&self) -> Vec<String> {
         self.tools.keys().cloned().collect()
     }
+
+    pub fn tools(&self) -> Vec<Arc<dyn AgentTool>> {
+        self.tools.values().cloned().collect()
+    }
 }
 
 #[cfg(test)]
