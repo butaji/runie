@@ -7,6 +7,27 @@ layout and Ratatui rendering details, following the React/HTML/browser split:
 view functions describe elements; the layout adapter resolves geometry; the
 renderer paints terminal cells.
 
+## Layer contract
+
+1. **Model** — actor-owned reducers emit immutable `TuiSnapshot` values. The
+   view layer never reads actor internals or mutates state.
+2. **Declarative view** — pure functions produce `ChatViewProps`,
+   `ViewDocument`, `Element`, ownership metadata, and semantic `PaintIntent`
+   values. This answers *what exists*, without terminal dimensions, Ratatui
+   buffers, cursor coordinates, or ANSI capability knowledge.
+3. **Layout adapter** — pure geometry resolves slots against the viewport and
+   intrinsic component measurements. Resize changes allocation, not semantic
+   component identity.
+4. **Renderer** — the only terminal-facing layer maps projections and paint
+   intents to Ratatui cells, styles, cursor placement, and terminal effects.
+   It is non-blocking and returns input/lifecycle changes as events to the
+   owning actor.
+
+This is Runie's React/HTML/browser-core analogue: `TuiSnapshot` is the data
+model, `ViewDocument` the declarative document, layout the browser layout pass,
+and Ratatui the terminal backend. New parity details must enter through this
+boundary rather than through renderer-only state or direct actor reads.
+
 ## Progress
 
 - Added `crates/runie-tui/src/view.rs` with pure `Element`, `Slot`, and
@@ -54,6 +75,9 @@ renderer paints terminal cells.
   overlay slots, avoiding an additional independent actor read for the same
   declarative tree. Ratatui widget compatibility reads remain isolated to
   terminal-specific painting and cursor geometry.
+
+- Documented the four-layer contract above as the acceptance rule for future
+  parity work: model, declarative view, layout adapter, then renderer.
 - `PromptSnapshot` now owns pure emptiness and intrinsic-height calculations;
   App layout and live key/settled-feed decisions consume those model facts
   instead of asking the compatibility widget.
