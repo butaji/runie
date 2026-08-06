@@ -1,0 +1,22 @@
+name: visual-tool-row-identity
+description: A live tool row settles independently from a compatibility seed sharing its call ID.
+initial_prompt: "inspect"
+tools:
+  - name: echo
+events:
+  - tool_seed:
+      tool_call_id: call-2
+      header: "compatibility seed"
+  - start
+  - tool_call:
+      name: echo
+      args: { value: "hello" }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 1
+  transcript_contains:
+    - "compatibility seed"
+  scrollback_lines:
+    - { kind: tool, contains: "compatibility seed" }
+    - { kind: tool, contains: "echo" }

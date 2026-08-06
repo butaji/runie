@@ -54,6 +54,20 @@ compatibility/YAML seed rows, then settle that exact row on
 `ToolExecutionEnd`. The identity must survive updates, errors, display-mode
 changes, and dense-group projection.
 
+## Reducer-owned identity checkpoint (2026-08-06)
+
+`Scrollback` now records the reducer line index created by each live
+`ToolStart` in `live_tool_headers`. Updates and completion first resolve that
+owned index, validate its semantic header and call ID, and only then fall back
+to the legacy newest-header lookup. This prevents a compatibility/YAML seed
+with the same provider call ID from receiving a live completion. The
+`visual-tool-row-identity.yaml` fixture covers the duplicate-ID sequence and
+asserts both rows through the YAML state/transcript contract.
+
+This is an intermediate seam, not the final opaque row-token design: the
+identity is currently reducer-private and still keyed by provider call ID at
+the message boundary.
+
 ## Evidence
 
 `visual-activity-mixed.yaml` is the regression oracle. It contains multiple

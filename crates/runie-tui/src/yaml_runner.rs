@@ -130,6 +130,9 @@ pub enum EventSpec {
     ToolUpdate {
         tool_update: ToolUpdateSpec,
     },
+    ToolSeed {
+        tool_seed: ToolSeedSpec,
+    },
     Done {
         done: DoneSpec,
     },
@@ -253,6 +256,12 @@ pub struct ToolUpdateSpec {
     pub args: serde_json::Value,
     #[serde(default)]
     pub partial_result: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ToolSeedSpec {
+    pub tool_call_id: String,
+    pub header: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -418,7 +427,7 @@ impl EventSpec {
                 },
                 partial: AssistantMessage::default(),
             }),
-            Self::ToolUpdate { .. } => None,
+            Self::ToolUpdate { .. } | Self::ToolSeed { .. } => None,
             Self::Done { done } => Some(AssistantMessageEvent::Done {
                 stop_reason: StopReason::from(&done.stop_reason),
                 usage: done.usage.clone(),
@@ -1044,6 +1053,10 @@ fn declared_control_events(scenario: &Scenario) -> Vec<AgentEvent> {
         .collect()
 }
 
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the YAML replay keeps seed, event, and navigation reduction in one deterministic pass"
+)]
 async fn replay_scenario_events(
     events: &[AgentEvent],
     emit_welcome: bool,
@@ -1053,6 +1066,9 @@ async fn replay_scenario_events(
     let status_actor = crate::StatusActor::new();
     let mut renderer =
         EventRenderer::with_actors(scrollback_actor.clone(), status_actor.clone(), emit_welcome);
+    for message in declared_tool_seeds(scenario) {
+        scrollback_actor.apply(message).await;
+    }
     for event in events {
         renderer.apply_actor_event(event.clone()).await;
     }
@@ -1076,6 +1092,20 @@ fn declared_tool_folds(scenario: &Scenario) -> Vec<String> {
         .iter()
         .filter_map(|event| match event {
             EventSpec::ToolFold { tool_fold } => Some(tool_fold.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
+    scenario
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EventSpec::ToolSeed { tool_seed } => Some(ScrollbackMsg::Append(
+                Line::new(LineKind::Tool, tool_seed.header.clone())
+                    .for_tool(tool_seed.tool_call_id.clone()),
+            )),
             _ => None,
         })
         .collect()
@@ -2451,6 +2481,9 @@ pub async fn render_visual_buffer(
     }
     let mut events = captured_events.unwrap_or_else(|| collected.lock().clone());
     events.extend(declared_control_events(scenario));
+    for message in declared_tool_seeds(scenario) {
+        app.apply_scrollback(message).await;
+    }
     for ev in events.into_iter() {
         renderer.apply_actor_event(ev).await;
     }
