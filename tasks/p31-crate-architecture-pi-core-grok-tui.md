@@ -52,6 +52,12 @@ in the actor layer because its reducer currently depends on command-palette
 filtering; moving that reducer requires a palette vocabulary model, not a
 terminal widget dependency.
 
+The palette vocabulary is now model-owned too: `PaletteAction` is generated
+by the existing typed-action DSL in `runie-tui-model`, and its filtering,
+selection, and count helpers are shared by the actor reducer and widget.
+`UiState` has consequently moved into the model crate without importing
+terminal code.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

@@ -15,22 +15,12 @@ use crate::status_actor::StatusActor;
 use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps};
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{FeedSnapshot, PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
-pub use runie_tui_model::UiMsg;
+pub use runie_tui_model::{UiMsg, UiState};
 
 #[derive(Debug)]
 pub enum AppExit {
     Quit,
     Error(String),
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct UiState {
-    pub show_welcome: bool,
-    pub shortcuts_open: bool,
-    pub command_palette_open: bool,
-    pub command_palette_query: String,
-    pub command_palette_index: usize,
-    pub last_palette_command: Option<String>,
 }
 
 /// Commands emitted by the UI actor after a pure palette reduction. Consumers
@@ -44,11 +34,8 @@ fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
     if !matches!(message, UiMsg::ActivateCommandPalette) {
         return None;
     }
-    crate::widgets::CommandPaletteWidget::selected_entry(
-        &state.command_palette_query,
-        state.command_palette_index,
-    )
-    .and_then(|entry| palette_action_for(entry).map(UiCommand::ActivatePaletteEntry))
+    PaletteAction::selected_label(&state.command_palette_query, state.command_palette_index)
+        .and_then(|entry| palette_action_for(entry).map(UiCommand::ActivatePaletteEntry))
 }
 
 fn palette_action_for(entry: &str) -> Option<PaletteAction> {
@@ -60,72 +47,6 @@ fn initial_ui_state(show_welcome: bool) -> UiState {
         UiState::with_welcome()
     } else {
         UiState::new()
-    }
-}
-
-impl UiState {
-    pub fn new() -> Self {
-        Self {
-            show_welcome: false,
-            shortcuts_open: false,
-            command_palette_open: false,
-            command_palette_query: String::new(),
-            command_palette_index: 0,
-            last_palette_command: None,
-        }
-    }
-
-    pub fn with_welcome() -> Self {
-        Self {
-            show_welcome: true,
-            shortcuts_open: false,
-            command_palette_open: false,
-            command_palette_query: String::new(),
-            command_palette_index: 0,
-            last_palette_command: None,
-        }
-    }
-
-    pub fn update(mut self, msg: UiMsg) -> Self {
-        match msg {
-            UiMsg::HideWelcome => self.show_welcome = false,
-            UiMsg::ToggleShortcuts => self.shortcuts_open = !self.shortcuts_open,
-            UiMsg::ToggleCommandPalette => {
-                self.command_palette_open = !self.command_palette_open;
-                if !self.command_palette_open {
-                    self.command_palette_query.clear();
-                    self.command_palette_index = 0;
-                }
-            }
-            UiMsg::CommandPaletteChar(ch) => self.command_palette_query.push(ch),
-            UiMsg::CommandPaletteBackspace => {
-                self.command_palette_query.pop();
-            }
-            UiMsg::CommandPaletteMove(delta) => {
-                let count =
-                    crate::widgets::CommandPaletteWidget::entry_count(&self.command_palette_query);
-                if count > 0 {
-                    self.command_palette_index = self
-                        .command_palette_index
-                        .saturating_add_signed(delta)
-                        .min(count - 1);
-                } else {
-                    self.command_palette_index = 0;
-                }
-            }
-            UiMsg::ActivateCommandPalette => {
-                self.last_palette_command = crate::widgets::CommandPaletteWidget::selected_entry(
-                    &self.command_palette_query,
-                    self.command_palette_index,
-                )
-                .map(str::to_owned);
-                self.command_palette_open = false;
-                self.command_palette_query.clear();
-                self.command_palette_index = 0;
-            }
-            UiMsg::Reset => self = Self::new(),
-        }
-        self
     }
 }
 

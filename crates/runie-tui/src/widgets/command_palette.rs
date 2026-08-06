@@ -2,29 +2,9 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 use runie_core::types::ThemeKind;
+use runie_tui_model::PaletteAction;
 
 use crate::appearance;
-
-runie_core::typed_action_registry! {
-    pub enum PaletteAction {
-        NewSession => "New Session",
-        NewSessionInWorktree => "New Session in Worktree",
-        AgentDashboard => "Agent Dashboard",
-        BackToHome => "Back to Home",
-        DeleteThisSession => "Delete This Session",
-        ResumeSession => "Resume Session",
-        ShareSession => "Share Session",
-        RenameSession => "Rename Session",
-        SessionInfo => "Session Info",
-        CompactHistory => "Compact History",
-        ContextUsage => "Context Usage",
-        ViewPlan => "View Plan",
-        Memory => "Memory",
-        SwitchModel => "Switch Model",
-        KeyboardShortcuts => "Keyboard Shortcuts",
-        Quit => "Quit",
-    }
-}
 
 // Mirrors Grok's default palette vocabulary (modal.rs). Execution is wired
 // separately through UiMsg so this view remains a pure projection.
@@ -50,23 +30,15 @@ impl CommandPaletteWidget {
     }
 
     fn filtered(&self) -> Vec<&'static str> {
-        let query = self.query.to_ascii_lowercase();
-        PaletteAction::labels()
-            .iter()
-            .copied()
-            .filter(|entry| query.is_empty() || entry.to_ascii_lowercase().contains(&query))
-            .collect()
+        PaletteAction::filtered_labels(&self.query)
     }
 
     pub fn selected_entry(query: &str, selected: usize) -> Option<&'static str> {
-        Self::new(query, selected)
-            .filtered()
-            .into_iter()
-            .nth(selected)
+        PaletteAction::selected_label(query, selected)
     }
 
     pub fn entry_count(query: &str) -> usize {
-        Self::new(query, 0).filtered().len()
+        PaletteAction::entry_count(query)
     }
 }
 
