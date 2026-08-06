@@ -486,10 +486,10 @@ TUI reducer. This remains an explicit gap. It must be closed by carrying the
 tool lifecycle's running fact through an actor-owned event before adding the
 running-only fold cycle; header-string inference would produce false parity.
 
-Ordinary tool lifecycle wiring (2026-08-06): a first attempt to promote every
-`ScrollbackMsg::ToolStart` to `ToolRunning` exposed a duplicate start projection
-in the compatibility/actor transition path: a completed ordinary tool could
-retain the running glyph. The change was reverted rather than weakening the
-oracle. The remaining work is to remove that duplicate projection or introduce
-an explicit actor-owned running transition before changing ordinary start
-rendering.
+Ordinary tool lifecycle wiring (2026-08-06): attempts to make every ordinary
+start `ToolRunning` and settle all matching IDs exposed the compatibility
+pre-seed contract: YAML replay can intentionally contain a pre-seeded row plus
+an actor-completed row, and those rows must not be merged by ID alone. The
+change was reverted after the oracle caught header corruption. The remaining
+implementation must introduce explicit row ownership/identity before closing
+the ordinary running-state gap.
