@@ -234,5 +234,13 @@ because it would conceal ownership and make YAML event assertions impossible.
   `AgentStart -> Thinking` status projection. This closes the startup gap that
   was previously covered only by the compatibility renderer branch.
 
+- **Full-gate audit (2026-08-05):** `just ci` now passes with the E2E
+  transcript test reading the actor-owned snapshot. The remaining acceptance
+  gap is deliberately explicit: `App` and compatibility `EventRenderer`
+  constructors still retain `Arc<Mutex>` projections for synchronous YAML and
+  focused reducer replay. Removing them requires moving that replay path to an
+  acknowledged actor event sequence first; p23 remains in progress until that
+  adapter is eliminated.
+
   The actor module now also pins this transition directly, independent of
   `EventRenderer` construction.
