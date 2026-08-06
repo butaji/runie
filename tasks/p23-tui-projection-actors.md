@@ -138,6 +138,11 @@ publish immutable `watch` snapshots to the pure view.
   `ScrollbackMsg` batch. The synchronous constructor retains the compatibility
   branch for reducer tests.
 
+- **Message-start duplicate-write removal (2026-08-05):** User and assistant
+  row writes are now actor-only after startup. User timestamps are projected
+  as `ScrollbackMsg::SetPromptTimestamp` alongside the user row, preserving
+  live timestamp parity without consulting the compatibility mutex.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

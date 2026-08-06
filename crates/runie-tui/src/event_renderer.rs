@@ -70,9 +70,15 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
                 })
                 .collect::<Vec<_>>()
                 .join("");
-            vec![ScrollbackMsg::Append(
+            let mut messages = vec![ScrollbackMsg::Append(
                 Line::new(LineKind::User, text).with_vpad(true),
-            )]
+            )];
+            if user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
+                messages.push(ScrollbackMsg::SetPromptTimestamp(Some(
+                    format_clock_timestamp(user.timestamp),
+                )));
+            }
+            messages
         }
         AgentEvent::MessageStart {
             message: runie_core::types::AgentMessage::Assistant(_),
@@ -564,7 +570,7 @@ impl EventRenderer {
         match message {
             AgentMessage::User(user) => {
                 self.activity_group_open = false;
-                if user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
+                if self.scrollback_actor.is_none() && user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
                     self.scrollback
                         .lock()
                         .set_prompt_timestamp(Some(format_clock_timestamp(user.timestamp)));
@@ -578,20 +584,24 @@ impl EventRenderer {
                     })
                     .collect::<Vec<_>>()
                     .join("");
-                self.scrollback
-                    .lock()
-                    .append(Line::new(LineKind::User, text).with_vpad(true));
+                if self.scrollback_actor.is_none() {
+                    self.scrollback
+                        .lock()
+                        .append(Line::new(LineKind::User, text).with_vpad(true));
+                }
             }
             AgentMessage::Assistant(_) => {
                 self.activity_group_open = false;
                 self.in_assistant_stream = true;
                 self.streaming_buffer.clear();
                 self.reasoning_buffer.clear();
-                let mut scrollback = self.scrollback.lock();
-                scrollback.append(Line::new(LineKind::Separator, ""));
-                scrollback.append(Line::new(LineKind::ThinkingStatus, "◆ Thinking…"));
-                scrollback.append(Line::new(LineKind::Separator, ""));
-                scrollback.append(Line::new(LineKind::Assistant, String::new()));
+                if self.scrollback_actor.is_none() {
+                    let mut scrollback = self.scrollback.lock();
+                    scrollback.append(Line::new(LineKind::Separator, ""));
+                    scrollback.append(Line::new(LineKind::ThinkingStatus, "◆ Thinking…"));
+                    scrollback.append(Line::new(LineKind::Separator, ""));
+                    scrollback.append(Line::new(LineKind::Assistant, String::new()));
+                }
             }
             AgentMessage::ToolResult(_) | AgentMessage::Custom(_) => {}
         }
