@@ -21,6 +21,9 @@ called parity.
   cell/style grid after every output event and reports frame counts plus the
   first corresponding-frame divergence, making timing/frame alignment visible
   without weakening the final-screen gate.
+  Consecutive events with an unchanged complete VT grid are coalesced, so the
+  count represents visible terminal-state transitions rather than transport
+  chunks; no cell is discarded from a retained frame.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
 - YAML `reference.exact_attributes`: strict style/color oracle.
 

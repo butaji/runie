@@ -92,6 +92,7 @@ fn replay_frames(path: &Path) -> Result<FrameReplay> {
     let (cols, rows) = dimensions(&header)?;
     let mut parser = vt100::Parser::new(rows, cols, 0);
     let mut frames = Vec::new();
+    let mut previous = None;
     for line in lines {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
@@ -102,7 +103,11 @@ fn replay_frames(path: &Path) -> Result<FrameReplay> {
             break;
         }
         parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
-        frames.push(cells(&parser, rows, cols));
+        let frame = cells(&parser, rows, cols);
+        if previous.as_ref() != Some(&frame) {
+            previous = Some(frame.clone());
+            frames.push(frame);
+        }
     }
     Ok(((cols, rows), frames))
 }
