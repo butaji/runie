@@ -131,6 +131,14 @@ no-sleep test invariant.
 6. Only introduce a macro when it removes repeated ownership/dispatch wiring
    without hiding event payloads; prefer YAML additions for behavior changes.
 
+Pi tool-lifecycle contract audit (2026-08-06): upstream `ToolExecutionStart`,
+`ToolExecutionUpdate`, and `ToolExecutionEnd` extension events carry exactly
+the fields represented by Runie's typed `AgentEvent` variants. A core wire
+regression now serializes update and end events and asserts Pi's camelCase
+keys (`toolCallId`, `toolName`) and absence of snake_case aliases. No missing
+field was invented at the event boundary; the remaining lifecycle work is
+downstream projection and YAML behavior coverage.
+
 ## Documentation audit (2026-08-06)
 
 Updated `README.md`, `crates/runie-core/PORT_NOTES.md`, and

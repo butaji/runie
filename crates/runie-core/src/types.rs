@@ -1393,6 +1393,28 @@ mod tests {
         assert_eq!(json["toolCallId"], "call-1");
         assert!(json.get("tool_call_id").is_none());
 
+        let lifecycle = [
+            AgentEvent::ToolExecutionUpdate {
+                tool_call_id: "call-1".into(),
+                tool_name: "read".into(),
+                args: serde_json::json!({"path": "README.md"}),
+                partial_result: serde_json::json!({"output": "line"}),
+            },
+            AgentEvent::ToolExecutionEnd {
+                tool_call_id: "call-1".into(),
+                tool_name: "read".into(),
+                result: serde_json::json!({"content": [{"type": "text", "text": "done"}]}),
+                is_error: false,
+            },
+        ];
+        for event in lifecycle {
+            let json = serde_json::to_value(event).expect("tool lifecycle serializes");
+            assert_eq!(json["toolCallId"], "call-1");
+            assert_eq!(json["toolName"], "read");
+            assert!(json.get("tool_call_id").is_none());
+            assert!(json.get("tool_name").is_none());
+        }
+
         let message_update = AgentEvent::MessageUpdate {
             message: AgentMessage::Assistant(AssistantMessage::default()),
             event: AssistantMessageEvent::TextDelta {
