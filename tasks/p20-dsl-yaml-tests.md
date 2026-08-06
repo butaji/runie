@@ -116,6 +116,13 @@ tests, and both thin DSL macros have expansion coverage. The rich markdown YAML
 scenario now exercises blockquote gutters, six-level ATX headings, and table
 box-drawing rows through the real TUI event path. Replay fixtures remain
 runtime-discovered and editable without recompiling the runner.
+
+**Canonical feed reducer (2026-08-06):** all existing TUI YAML scenarios now
+enter `Scrollback` through the actor-owned `FeedState` reducer, including
+tool-update/end identity and viewport events. The `visual-tool-update.yaml`
+fixture's ordered lifecycle, header identity, and inactive-row assertions
+therefore validate the production model boundary rather than a widget-local
+compatibility reducer.
 - **State assertion DSL (2026-08-05):** Added `assert_declared_state!` to
   the replay harness. YAML owns projection values while startup-error,
   abort, and success branches reuse one readable macro expansion for

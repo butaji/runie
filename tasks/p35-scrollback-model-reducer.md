@@ -180,7 +180,8 @@ separate `update_tool` and `replace_tool` transitions and prefers active
 `tool_row_id` identity when provider call IDs repeat. The duplicate-ID
 regression passes with the expected first/second completion ownership.
 
-The old reducer helper block is quarantined as dead compatibility code during
-the migration and is not reachable from production or tests; its deletion is
-the next mechanical cleanup after the complete CI run confirms no hidden
-callers. No event payload is duplicated in the renderer.
+The old reducer helper block is now compiled only for unit-test migration
+audits and is not reachable from production. This keeps the shipped TUI from
+carrying a second state-transition implementation while the final source
+deletion remains a mechanical cleanup. No event payload is duplicated in the
+renderer.
