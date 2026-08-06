@@ -17,6 +17,7 @@ const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
 /// Pure mapping for status-owned portions of the core event stream.
 pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
     match event {
+        AgentEvent::AgentStart => vec![StatusMsg::Set(Status::Thinking)],
         AgentEvent::Error { message } => vec![StatusMsg::Set(Status::Error(message.clone()))],
         AgentEvent::TurnStart => vec![StatusMsg::BeginTurn, StatusMsg::Set(Status::Thinking)],
         AgentEvent::Waiting { reason } => {
@@ -1203,6 +1204,10 @@ mod tests {
 
     #[test]
     fn status_event_mapping_is_pure_and_ordered() {
+        assert_eq!(
+            status_messages_for_event(&AgentEvent::AgentStart),
+            vec![StatusMsg::Set(Status::Thinking)]
+        );
         let messages = status_messages_for_event(&AgentEvent::TurnStart);
         assert_eq!(
             messages,

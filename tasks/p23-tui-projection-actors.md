@@ -216,3 +216,7 @@ because it would conceal ownership and make YAML event assertions impossible.
   without feed mutations. Every feed-mutating event family now has an explicit
   actor message; `ReplaceSnapshot` remains confined to the synchronous YAML
   compatibility adapter.
+
+- **AgentStart status parity (2026-08-05):** Added the missing actor-owned
+  `AgentStart -> Thinking` status projection. This closes the startup gap that
+  was previously covered only by the compatibility renderer branch.
