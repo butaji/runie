@@ -165,6 +165,7 @@ pub enum ScrollbackMsg {
         has_reasoning: bool,
         reasoning_expanded: bool,
         summary: String,
+        settled_no_tool_phase: bool,
     },
 }
 
@@ -176,6 +177,7 @@ pub struct Scrollback {
     reasoning_expanded: bool,
     activity_expanded: bool,
     prompt_timestamp: Option<String>,
+    settled_no_tool_phase: bool,
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
     theme: ThemeKind,
     animation_frame: usize,
@@ -190,6 +192,7 @@ impl Scrollback {
             reasoning_expanded: false,
             activity_expanded: false,
             prompt_timestamp: None,
+            settled_no_tool_phase: false,
             tool_modes: HashMap::new(),
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
@@ -294,7 +297,9 @@ impl Scrollback {
                 has_reasoning,
                 reasoning_expanded,
                 summary,
+                settled_no_tool_phase,
             } => {
+                self.settled_no_tool_phase = settled_no_tool_phase;
                 if !has_reasoning || reasoning_expanded {
                     self.remove_kind(LineKind::ThinkingStatus);
                 } else {
@@ -602,6 +607,16 @@ impl Scrollback {
         let mut user_vpad_emitted = false;
         let mut skip_full_user_separator = false;
         for (line_index, line) in self.lines.iter().enumerate() {
+            if width >= 50
+                && self.settled_no_tool_phase
+                && line.kind == LineKind::Separator
+                && self
+                    .lines
+                    .get(line_index + 1)
+                    .is_some_and(|next| next.kind == LineKind::TurnSummary)
+            {
+                continue;
+            }
             if width < 50
                 && matches!(line.kind, LineKind::System | LineKind::Separator)
                 && line.text.is_empty()
@@ -688,7 +703,11 @@ impl Scrollback {
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
                 let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
-                    "     "
+                    if width < 70 {
+                        "   "
+                    } else {
+                        "     "
+                    }
                 } else if width < 70
                     && matches!(
                         line.kind,
@@ -880,6 +899,7 @@ fn styled_code_line(text: &str, theme: ThemeKind) -> RatLine<'static> {
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "semantic feed card styling keeps Grok header variants together"
 )]
 #[cfg(test)]
@@ -889,6 +909,7 @@ fn styled_line(kind: LineKind, text: &str) -> RatLine<'static> {
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "semantic feed card styling keeps Grok header variants together"
 )]
 fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'static> {
@@ -902,6 +923,9 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                 Span::styled(text[body_start..].to_owned(), style),
             ]);
         }
+    }
+    if kind == LineKind::TurnSummary && text.contains("◆ Thought") {
+        return styled_thought_summary(text, style);
     }
     if matches!(kind, LineKind::Tool | LineKind::ToolRunning) {
         let Some(header_start) = text.find("◆ ") else {
@@ -960,6 +984,14 @@ const RUNNING_BULLETS: [&str; 4] = ["⋅ ", ": ", "⸬ ", "⁙ "];
 
 fn running_bullet(frame: usize) -> &'static str {
     RUNNING_BULLETS[frame % RUNNING_BULLETS.len()]
+}
+
+fn styled_thought_summary(text: &str, style: Style) -> RatLine<'static> {
+    let split = text.find("◆ Thought").expect("thought marker") + "◆ Thought".len();
+    RatLine::from(vec![
+        Span::styled(text[..split].to_owned(), style),
+        Span::styled(text[split..].to_owned(), style.add_modifier(Modifier::BOLD)),
+    ])
 }
 
 fn styled_activity_line(text: &str, style: Style) -> RatLine<'static> {

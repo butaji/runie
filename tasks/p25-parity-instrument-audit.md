@@ -187,6 +187,13 @@ the preserved Grok frame. The field is optional for backward-compatible
 replays, with existing fixtures retaining the deterministic fallback. Core,
 YAML, and visual test suites remain green.
 
+**Explicit settled no-tool phase (2026-08-06):** `FinalizeAssistant` now
+records an explicit provider-timed/no-tool settled phase. The scrollback
+projection uses it to remove only the duplicate pre-thought separator; generic
+no-tool inference is avoided, so tool and legacy snapshot states remain
+unchanged. At 62×32 the isolated feed phase aligns with Grok, and the thought
+summary styling now bolds only `Thought`, matching Grok's cell attributes.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

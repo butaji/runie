@@ -433,6 +433,8 @@ impl EventRenderer {
                                     has_reasoning: !self.reasoning_buffer.is_empty(),
                                     reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
                                     summary: thinking_summary(self.thinking_elapsed_ms),
+                                    settled_no_tool_phase: self.thinking_elapsed_ms.is_some()
+                                        && self.tool_rows.is_empty(),
                                 });
                             }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
@@ -547,6 +549,8 @@ impl EventRenderer {
                 has_reasoning: !self.reasoning_buffer.is_empty(),
                 reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
                 summary: thinking_summary(self.thinking_elapsed_ms),
+                settled_no_tool_phase: self.thinking_elapsed_ms.is_some()
+                    && self.tool_rows.is_empty(),
             });
         }
         if let AgentEvent::MessageUpdate {
