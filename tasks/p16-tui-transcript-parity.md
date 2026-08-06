@@ -610,3 +610,7 @@ the ranged case is replayed from `visual-read-range.yaml` without recompiling
 the runner. The same argument-retention rule is applied in both the actor
 projection and compatibility renderer paths; the fixture exercises the live
 actor path and asserts the complete header text.
+
+The same fixture DSL now supports `media: image/png`, producing the existing
+Pi `ToolResultContent::Image` variant. `visual-read-media.yaml` asserts the
+Grok image suffix without adding renderer-owned state.

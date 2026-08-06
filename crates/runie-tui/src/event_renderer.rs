@@ -1534,6 +1534,17 @@ pub(crate) fn completed_tool_header_with_args(
     result: &serde_json::Value,
 ) -> String {
     if matches!(tool_name, "read" | "read_file") {
+        if result
+            .get("content")
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|content| {
+                content.iter().any(|item| {
+                    item.get("type") == Some(&serde_json::Value::String("image".into()))
+                })
+            })
+        {
+            return format!("{pending_header} (image)");
+        }
         let Some(offset) = args.get("offset").and_then(serde_json::Value::as_u64) else {
             return completed_tool_header(pending_header, tool_name, result);
         };

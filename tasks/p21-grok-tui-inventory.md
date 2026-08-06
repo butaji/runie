@@ -627,3 +627,12 @@ result `output`, `details`, and `error`, and `visual-read-range.yaml` asserts
 the ranged header through the real loop and actor renderer. Remaining fixtures
 for typed media and error rows stay pending until their semantic event payload
 is defined.
+
+Media closure (2026-08-06): the existing Pi-compatible
+`ToolResultContent::Image` payload is now emitted by YAML `media` overrides;
+the shared completion projection detects that content and renders Grok's
+`Read path (image)` header. `visual-read-media.yaml` verifies the result
+through the real loop, actor, and visual buffer. Error behavior remains
+covered by `visual-tool-error.yaml`; a distinct typed error payload is still
+not modeled because the core event already carries `is_error` and the error
+text.

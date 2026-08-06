@@ -1,0 +1,26 @@
+name: visual-read-media
+description: YAML replay preserves Pi image content and Grok Read image header semantics.
+initial_prompt: "inspect the screenshot"
+tools:
+  - name: read
+    kind: read
+    output: "Read image file [image/png]"
+    media: image/png
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "screenshot.png" }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 1
+    tool_headers: ["Read screenshot.png (image)"]
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "Read screenshot.png (image)"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

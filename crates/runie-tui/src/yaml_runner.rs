@@ -103,6 +103,8 @@ pub struct ToolSpec {
     pub details: Option<serde_json::Value>,
     #[serde(default)]
     pub error: Option<String>,
+    #[serde(default)]
+    pub media: Option<String>,
 }
 
 fn default_tool_kind() -> String {
@@ -1045,6 +1047,7 @@ pub struct ReplayTool {
     output: String,
     error: bool,
     details: serde_json::Value,
+    media: Option<String>,
 }
 
 impl ReplayTool {
@@ -1054,6 +1057,7 @@ impl ReplayTool {
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
+            media: None,
         }
     }
 
@@ -1063,6 +1067,7 @@ impl ReplayTool {
             output: output.into(),
             error: true,
             details: serde_json::Value::Null,
+            media: None,
         }
     }
 
@@ -1072,15 +1077,23 @@ impl ReplayTool {
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
+            media: None,
         }
     }
 
-    fn configured(name: &str, output: String, details: serde_json::Value, error: bool) -> Self {
+    fn configured(
+        name: &str,
+        output: String,
+        details: serde_json::Value,
+        error: bool,
+        media: Option<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             output,
             error,
             details,
+            media,
         }
     }
 }
@@ -1109,10 +1122,17 @@ impl AgentTool for ReplayTool {
         if let Some(on_update) = on_update {
             on_update(serde_json::json!({"output": self.output}));
         }
+        let mut content = vec![ToolResultContent::Text {
+            text: self.output.clone(),
+        }];
+        if let Some(mime_type) = &self.media {
+            content.push(ToolResultContent::Image {
+                data: "replay-image".into(),
+                mime_type: mime_type.clone(),
+            });
+        }
         Ok(AgentToolResult {
-            content: vec![ToolResultContent::Text {
-                text: self.output.clone(),
-            }],
+            content,
             details: self.details.clone(),
             usage: None,
             added_tool_names: vec![],
@@ -1417,12 +1437,17 @@ fn register_scenario_tool(
     registry: &mut ToolRegistry,
     tool: &ToolSpec,
 ) -> Result<(), ScenarioError> {
-    if tool.output.is_some() || tool.details.is_some() || tool.error.is_some() {
+    if tool.output.is_some()
+        || tool.details.is_some()
+        || tool.error.is_some()
+        || tool.media.is_some()
+    {
         registry.register(Arc::new(ReplayTool::configured(
             &tool.name,
             tool.output.clone().unwrap_or_default(),
             tool.details.clone().unwrap_or(serde_json::Value::Null),
             tool.error.is_some(),
+            tool.media.clone(),
         )));
         return Ok(());
     }
@@ -2372,12 +2397,13 @@ pub async fn render_visual_buffer(
     let follow_up = runie_core::queues::FollowUpQueueActor::new();
     let mut reg = ToolRegistry::new();
     for t in &scenario.tools {
-        if t.output.is_some() || t.details.is_some() || t.error.is_some() {
+        if t.output.is_some() || t.details.is_some() || t.error.is_some() || t.media.is_some() {
             reg.register(Arc::new(ReplayTool::configured(
                 &t.name,
                 t.output.clone().unwrap_or_default(),
                 t.details.clone().unwrap_or(serde_json::Value::Null),
                 t.error.is_some(),
+                t.media.clone(),
             )));
             continue;
         }
