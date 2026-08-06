@@ -36,7 +36,8 @@ assertions:
   visual:
     cols: 80
     rows: 24
+    steps: [Down]
     activity_expanded: false
     screen_text:
       - "◈ Listed 1 dir, Ran 1 command"
-      - "◆ List ."
+      - "› List ."

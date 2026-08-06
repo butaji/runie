@@ -1633,6 +1633,14 @@ pub async fn render_visual_buffer(
 
     // Apply keystrokes.
     for step in &vis.steps {
+        if step == "Up" {
+            app.select_previous_tool().await;
+            continue;
+        }
+        if step == "Down" {
+            app.select_next_tool().await;
+            continue;
+        }
         if step == "e" && scenario.initial_prompt.is_some() {
             activity_expanded = !activity_expanded;
             continue;
@@ -1814,6 +1822,16 @@ pub async fn render_visual_buffer(
     append_declared_events(&mut events, scenario);
     for ev in events.into_iter() {
         renderer.apply_actor_event(ev).await;
+    }
+    // Replay events establish the transcript first; navigation keystrokes are
+    // then applied to the actor snapshot so visual assertions observe the
+    // same ordering as the live application.
+    for step in &vis.steps {
+        match step.as_str() {
+            "Up" => app.select_previous_tool().await,
+            "Down" => app.select_next_tool().await,
+            _ => {}
+        }
     }
     if scenario.capture_while_waiting {
         app.apply_scrollback_batch(vec![
