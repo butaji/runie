@@ -1,0 +1,9 @@
+[package]
+name = "runie-tui-model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure actor-derived view models for the Grok-style Runie TUI"
+
+[lints]
+workspace = true

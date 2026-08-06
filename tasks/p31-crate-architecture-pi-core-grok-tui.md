@@ -2,6 +2,12 @@
 
 Status: in_progress (2026-08-06)
 
+Progress: the first boundary extraction is complete. The renderer-independent
+`ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
+compatibility re-export, so existing widgets and YAML replay remain stable.
+The model has direct reducer tests, while the existing `visual-scroll.yaml`
+continues to verify the integrated actor/rendering behavior.
+
 ## Governing rule
 
 Runie has exactly two product layers:
@@ -94,7 +100,7 @@ Rules:
 
 ## Migration order
 
-1. Extract `runie-tui-model` from `event_renderer.rs`,
+1. Extract the remaining model contracts from `event_renderer.rs`,
    `status_actor.rs`, `scrollback_actor.rs`, and prompt/UI actor modules.
 2. Extract theme tokens and palette resolution from `appearance.rs` and
    `terminal_color.rs` into `runie-tui-theme`.

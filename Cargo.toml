@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/runie-core", "crates/runie-tui", "lint-check"]
+members = ["crates/runie-core", "crates/runie-tui-model", "crates/runie-tui", "lint-check"]
 
 [workspace.package]
 version = "0.1.0"

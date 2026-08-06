@@ -716,6 +716,7 @@ dependencies = [
  "parking_lot",
  "ratatui",
  "runie-core",
+ "runie-tui-model",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -726,6 +727,10 @@ dependencies = [
  "unicode-width 0.2.0",
  "vt100",
 ]
+
+[[package]]
+name = "runie-tui-model"
+version = "0.1.0"
 
 [[package]]
 name = "rustix"

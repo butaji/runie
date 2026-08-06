@@ -9,6 +9,8 @@ use std::fmt;
 
 use runie_core::types::ThemeKind;
 
+pub use runie_tui_model::ScrollState;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LayoutViewport {
     pub width: u16,
@@ -200,62 +202,6 @@ pub enum LayoutNode<'a> {
     Stack(StackLayout<'a>),
     Scroll(ScrollLayout),
     Slot(Slot),
-}
-
-/// Pure actor-owned scroll projection, equivalent to pi's ScrollView state.
-/// Rendering only consumes this value; it never decides whether the feed
-/// follows new content.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ScrollState {
-    pub scroll_top: u16,
-    pub content_height: u16,
-    pub viewport_height: u16,
-    pub following_end: bool,
-}
-
-impl ScrollState {
-    pub const fn new(follow_end: bool) -> Self {
-        Self {
-            scroll_top: 0,
-            content_height: 0,
-            viewport_height: 0,
-            following_end: follow_end,
-        }
-    }
-
-    pub const fn max_scroll_top(self) -> u16 {
-        self.content_height.saturating_sub(self.viewport_height)
-    }
-
-    pub const fn update_layout(mut self, content_height: u16, viewport_height: u16) -> Self {
-        self.content_height = content_height;
-        self.viewport_height = viewport_height;
-        let max = self.max_scroll_top();
-        self.scroll_top = if self.following_end || self.scroll_top > max {
-            max
-        } else {
-            self.scroll_top
-        };
-        if self.following_end && self.content_height <= self.viewport_height {
-            self.scroll_top = 0;
-        }
-        self
-    }
-
-    pub const fn scroll_to(mut self, requested: u16) -> Self {
-        let max = self.max_scroll_top();
-        self.scroll_top = if requested < max { requested } else { max };
-        self.following_end = self.scroll_top == max;
-        self
-    }
-
-    pub const fn append_content(mut self, content_height: u16) -> Self {
-        self.content_height = content_height;
-        if self.following_end {
-            self.scroll_top = self.max_scroll_top();
-        }
-        self
-    }
 }
 
 /// Small, explicit view DSL. It only expands to `Element` constructors; it

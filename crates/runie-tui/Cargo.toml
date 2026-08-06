@@ -16,6 +16,7 @@ path = "src/bin/runie_tui_e2e.rs"
 
 [dependencies]
 runie-core = { path = "../runie-core" }
+runie-tui-model = { path = "../runie-tui-model" }
 ratatui = "0.29"
 crossterm = { version = "0.28", features = ["event-stream"] }
 async-trait = { workspace = true }
