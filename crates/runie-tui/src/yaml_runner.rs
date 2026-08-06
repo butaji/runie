@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::event_renderer::EventRenderer;
-use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
+use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
 use runie_core::events::EventBus;
@@ -907,6 +907,7 @@ impl AgentTool for ReplayTool {
 #[derive(Clone)]
 pub struct ScenarioOutcome {
     pub events: Vec<AgentEvent>,
+    pub feed: FeedSnapshot,
     pub scrollback: Vec<Line>,
     pub tool_blocks: Vec<ToolBlock>,
     pub selected_tool_id: Option<String>,
@@ -936,13 +937,15 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         scenario,
     )
     .await;
+    let feed = scrollback.model_snapshot();
     Ok(ScenarioOutcome {
         events: events_from_task,
-        scrollback: scrollback.lines().to_vec(),
+        scrollback: feed.lines.clone(),
         tool_blocks: scrollback.tool_blocks(),
-        selected_tool_id: scrollback.selected_tool_id().map(str::to_owned),
-        selected_entry: scrollback.selected_entry(),
-        scroll_offset: scrollback.scroll_offset(),
+        selected_tool_id: feed.selected_tool_id.clone(),
+        selected_entry: feed.selected_entry,
+        scroll_offset: feed.scroll_offset,
+        feed,
         state: actor_snapshot.state_snapshot(),
     })
 }
@@ -1260,26 +1263,26 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
     }
     assert_tool_block_expectations(outcome, expected)?;
     if let Some(expected) = &expected.selected_tool_id {
-        if outcome.selected_tool_id.as_deref() != Some(expected.as_str()) {
+        if outcome.feed.selected_tool_id.as_deref() != Some(expected.as_str()) {
             return Err(format!(
                 "state selected_tool_id mismatch: expected {expected:?}, got {:?}",
-                outcome.selected_tool_id
+                outcome.feed.selected_tool_id
             ));
         }
     }
     if let Some(expected) = expected.selected_entry {
-        if outcome.selected_entry != Some(expected) {
+        if outcome.feed.selected_entry != Some(expected) {
             return Err(format!(
                 "state selected_entry mismatch: expected {expected:?}, got {:?}",
-                outcome.selected_entry
+                outcome.feed.selected_entry
             ));
         }
     }
     if let Some(expected) = expected.scroll_offset {
-        if outcome.scroll_offset != expected {
+        if outcome.feed.scroll_offset != expected {
             return Err(format!(
                 "state scroll_offset mismatch: expected {expected}, got {}",
-                outcome.scroll_offset
+                outcome.feed.scroll_offset
             ));
         }
     }

@@ -34,6 +34,11 @@ test proves the new read path is fed by the same reducer.
 model consumers and scenario assertions. `App::scrollback_snapshot()` remains
 explicitly compatibility-only until the renderer migration is complete.
 
+The YAML runner now derives `selected_tool_id`, `selected_entry`, and
+`scroll_offset` assertions from `FeedSnapshot`. Full-screen visual assertions
+still intentionally use the terminal renderer path, so model and pixel
+coverage remain separate.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is
