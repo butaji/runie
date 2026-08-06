@@ -293,6 +293,16 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   `StopReason::Aborted`, checks the actor-owned `aborted` projection, and pins
   the exact terminal event vector. The replay matrix now covers 183 sidecars;
   exhaustive Grok frame comparison remains.
+
+- **Pi core event-surface audit (2026-08-06):** Compared Runie's public
+  `AgentEvent` and `AssistantMessageEvent` variants with pi's
+  `packages/agent/src/types.ts`. The lifecycle/tool/message event families are
+  present, including sectional assistant markers and tool updates; no missing
+  enum variant was justified by this audit. The actionable core gap is the
+  provider-decode oracle: 24 YAML sidecars currently prove only that parsing
+  fails, not a stable pi-compatible error classification/message. Exact
+  decode-error vectors remain open and should be strengthened before claiming
+  exhaustive core parity.
 - **Provider-decode oracle (2026-08-05):** The replay matrix validates every
   `outcome: error` sidecar as a parser/transport failure and requires the YAML
   error contract `kind: provider_decode`; malformed/error traces are not sent
