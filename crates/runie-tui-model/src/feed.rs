@@ -96,6 +96,16 @@ pub enum ToolCardKind {
     Generic,
 }
 
+/// Grok's source default: command execution starts truncated, while other
+/// tool cards start collapsed until an explicit UI intent expands them.
+pub fn default_tool_display_mode(tool_name: &str) -> ToolDisplayMode {
+    if matches!(tool_name, "bash" | "shell" | "exec" | "run") {
+        ToolDisplayMode::Truncated
+    } else {
+        ToolDisplayMode::Collapsed
+    }
+}
+
 impl ToolCardKind {
     #[allow(
         clippy::cognitive_complexity,
@@ -160,6 +170,28 @@ impl ToolCardKind {
         } else {
             Self::Generic
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_tool_display_mode;
+    use runie_core::types::ToolDisplayMode;
+
+    #[test]
+    fn default_tool_modes_match_grok_families() {
+        assert_eq!(
+            default_tool_display_mode("bash"),
+            ToolDisplayMode::Truncated
+        );
+        assert_eq!(
+            default_tool_display_mode("read"),
+            ToolDisplayMode::Collapsed
+        );
+        assert_eq!(
+            default_tool_display_mode("memory_search"),
+            ToolDisplayMode::Collapsed
+        );
     }
 }
 

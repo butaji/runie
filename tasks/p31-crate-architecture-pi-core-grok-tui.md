@@ -40,6 +40,11 @@ Opaline-name mapping. `appearance.rs` resolves those tokens into Ratatui
 styles, so token identity is declarative and renderer-specific color
 conversion remains at the terminal boundary.
 
+Grok's default tool-fold policy is likewise model-owned through
+`default_tool_display_mode`: Bash-like execution starts `Truncated`, while
+ordinary and specialized cards start `Collapsed`. Both live and replay event
+reducers consume this single pure policy.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.

@@ -12,7 +12,9 @@ mod theme;
 mod ui;
 
 pub use events::status_messages_for_event;
-pub use feed::{FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind};
+pub use feed::{
+    default_tool_display_mode, FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind,
+};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use theme::ThemeToken;

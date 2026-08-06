@@ -20,14 +20,6 @@ pub use runie_tui_model::status_messages_for_event;
 const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
 const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
 
-fn default_tool_display_mode(tool_name: &str) -> runie_core::types::ToolDisplayMode {
-    if matches!(tool_name, "bash" | "shell" | "exec" | "run") {
-        runie_core::types::ToolDisplayMode::Truncated
-    } else {
-        runie_core::types::ToolDisplayMode::Collapsed
-    }
-}
-
 #[allow(
     clippy::too_many_lines,
     reason = "the event projection table keeps actor-owned mappings declarative"
@@ -89,7 +81,10 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             ..
         } => vec![
             ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
-            ScrollbackMsg::SetToolMode(tool_call_id.clone(), default_tool_display_mode(tool_name)),
+            ScrollbackMsg::SetToolMode(
+                tool_call_id.clone(),
+                runie_tui_model::default_tool_display_mode(tool_name),
+            ),
         ],
         AgentEvent::BackgroundWorkStarted {
             work_id,
@@ -694,9 +689,10 @@ impl EventRenderer {
             } => {
                 let _ = self.handle_tool_start(tool_call_id.clone(), tool_name.clone(), args);
                 if self.scrollback_actor.is_none() {
-                    self.scrollback
-                        .lock()
-                        .set_tool_mode(tool_call_id, default_tool_display_mode(&tool_name));
+                    self.scrollback.lock().set_tool_mode(
+                        tool_call_id,
+                        runie_tui_model::default_tool_display_mode(&tool_name),
+                    );
                 }
             }
             AgentEvent::ToolExecutionUpdate {

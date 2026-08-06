@@ -157,14 +157,6 @@ async fn run_bus_projection(
     }
 }
 
-fn default_tool_display_mode(tool_name: &str) -> runie_core::types::ToolDisplayMode {
-    if matches!(tool_name, "bash" | "shell" | "exec" | "run") {
-        runie_core::types::ToolDisplayMode::Truncated
-    } else {
-        runie_core::types::ToolDisplayMode::Collapsed
-    }
-}
-
 fn format_elapsed(elapsed_ms: Option<u64>) -> String {
     elapsed_ms
         .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
@@ -192,7 +184,10 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
             ..
         } => vec![
             ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
-            ScrollbackMsg::SetToolMode(tool_call_id, default_tool_display_mode(&tool_name)),
+            ScrollbackMsg::SetToolMode(
+                tool_call_id,
+                runie_tui_model::default_tool_display_mode(&tool_name),
+            ),
         ],
         event @ (AgentEvent::BackgroundWorkStarted { .. }
         | AgentEvent::BackgroundWorkProgress { .. }
