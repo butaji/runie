@@ -87,6 +87,15 @@ pub enum EventSpec {
     ToolCall {
         tool_call: ToolCallSpec,
     },
+    ToolCallStart {
+        tool_call_start: ToolCallSectionSpec,
+    },
+    ToolCallDelta {
+        tool_call_delta: ToolCallSectionSpec,
+    },
+    ToolCallEnd {
+        tool_call_end: ToolCallSectionSpec,
+    },
     ToolUpdate {
         tool_update: ToolUpdateSpec,
     },
@@ -233,6 +242,18 @@ pub struct ToolCallSpec {
     pub args: serde_json::Value,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ToolCallSectionSpec {
+    #[serde(default)]
+    pub index: usize,
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub arguments: serde_json::Value,
+}
+
 #[derive(Debug, Default, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum StopReasonSpec {
@@ -301,6 +322,34 @@ impl EventSpec {
                     arguments: tool_call.args.clone(),
                     thought_signature: None,
                 },
+            }),
+            Self::ToolCallStart { tool_call_start } => Some(AssistantMessageEvent::ToolCallStart {
+                index: tool_call_start.index,
+                partial: runie_core::types::ToolCall {
+                    id: tool_call_start.id.clone(),
+                    name: tool_call_start.name.clone(),
+                    arguments: tool_call_start.arguments.clone(),
+                    thought_signature: None,
+                },
+            }),
+            Self::ToolCallDelta { tool_call_delta } => Some(AssistantMessageEvent::ToolCallDelta {
+                index: tool_call_delta.index,
+                partial: runie_core::types::ToolCall {
+                    id: tool_call_delta.id.clone(),
+                    name: tool_call_delta.name.clone(),
+                    arguments: tool_call_delta.arguments.clone(),
+                    thought_signature: None,
+                },
+            }),
+            Self::ToolCallEnd { tool_call_end } => Some(AssistantMessageEvent::ToolCallEnd {
+                index: tool_call_end.index,
+                tool_call: runie_core::types::ToolCall {
+                    id: tool_call_end.id.clone(),
+                    name: tool_call_end.name.clone(),
+                    arguments: tool_call_end.arguments.clone(),
+                    thought_signature: None,
+                },
+                partial: AssistantMessage::default(),
             }),
             Self::ToolUpdate { .. } => None,
             Self::Done { done } => Some(AssistantMessageEvent::Done {

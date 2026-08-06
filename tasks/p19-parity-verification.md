@@ -1298,3 +1298,9 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
    The fixtures remain symbol-exact but intentionally attribute-pending until
    a fresh full-color Grok capture is recorded; this is an open parity gap, not
    a passing color claim.
+
+- **Tool-call sectional YAML parity (2026-08-06):** Added declarative
+  `tool_call_start`/`tool_call_delta`/`tool_call_end` events with indexed
+  partial payloads and the discovered `visual-tool-call-sections.yaml`
+  fixture. The YAML DSL now covers the full pi assistant tool-call section
+  lifecycle.

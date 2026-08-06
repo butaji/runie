@@ -1,0 +1,33 @@
+name: visual-tool-call-sections
+description: |
+  Pi tool-call start/delta/end assistant-stream markers are replayable from
+  YAML, including the indexed partial tool-call payload.
+initial_prompt: "invoke a tool"
+tools:
+  - name: echo
+    kind: echo
+events:
+  - start
+  - tool_call_start:
+      index: 0
+      id: call-1
+      name: echo
+      arguments: { text: "hello" }
+  - tool_call_delta:
+      index: 0
+      id: call-1
+      name: echo
+      arguments: { text: "hello" }
+  - tool_call_end:
+      index: 0
+      id: call-1
+      name: echo
+      arguments: { text: "hello" }
+  - done: { stop_reason: stop }
+assertions:
+  required_events: [tool_execution_start, tool_execution_end]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "echo"
