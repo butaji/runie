@@ -201,3 +201,11 @@ projection checks. It only expands assertion/diagnostic boilerplate; fixtures
 remain runtime-loaded YAML and reducers, actors, and rendering stay ordinary
 event-driven code. This keeps the DSL concise without hiding state ownership
 or introducing macro-generated mutable state.
+
+## Closed Pi-event assertions (2026-08-06)
+
+Assertions may now declare `pi_events` alongside compatibility `exact_events`.
+The runner converts every emitted event through `PiAgentEvent::try_from` and
+fails if an application/TUI event crosses the Pi fixture boundary. The
+`visual-hey` fixture exercises the complete user/assistant lifecycle without
+requiring Rust recompilation when the YAML sequence changes.

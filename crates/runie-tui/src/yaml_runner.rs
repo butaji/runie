@@ -590,6 +590,11 @@ pub struct Assertions {
     /// event-sequence/state tests declarative and recompilation-free.
     #[serde(default)]
     pub exact_events: Option<Vec<String>>,
+    /// Optional exact assertion over the closed Pi-core event boundary. This
+    /// is intentionally separate from `exact_events`, which includes
+    /// Runie/TUI compatibility events when a scenario declares them.
+    #[serde(default)]
+    pub pi_events: Option<Vec<String>>,
     #[serde(default)]
     pub turn_starts: Option<usize>,
     #[serde(default)]
@@ -1823,6 +1828,23 @@ fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
+    if let Some(expected) = &scenario.assertions.pi_events {
+        let actual = outcome
+            .events
+            .iter()
+            .map(|event| {
+                runie_core::PiAgentEvent::try_from(event.clone())
+                    .map(|event| pi_event_kind(&event))
+                    .map_err(|event| format!("non-Pi event: {}", event_kind(&event)))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let expected = expected.iter().map(String::as_str).collect::<Vec<_>>();
+        if actual != expected {
+            return Err(format!(
+                "exact Pi event sequence mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
+    }
     if let Some(expected) = scenario.assertions.turn_starts {
         let actual = kinds.iter().filter(|kind| **kind == "turn_start").count();
         if actual != expected {
@@ -1860,6 +1882,22 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         WorkflowStarted { .. } => "workflow_started",
         WorkflowProgress { .. } => "workflow_progress",
         WorkflowFinished { .. } => "workflow_finished",
+    }
+}
+
+fn pi_event_kind(event: &runie_core::PiAgentEvent) -> &'static str {
+    use runie_core::PiAgentEvent::*;
+    match event {
+        AgentStart => "agent_start",
+        AgentEnd { .. } => "agent_end",
+        TurnStart => "turn_start",
+        TurnEnd { .. } => "turn_end",
+        MessageStart { .. } => "message_start",
+        MessageUpdate { .. } => "message_update",
+        MessageEnd { .. } => "message_end",
+        ToolExecutionStart { .. } => "tool_execution_start",
+        ToolExecutionUpdate { .. } => "tool_execution_update",
+        ToolExecutionEnd { .. } => "tool_execution_end",
     }
 }
 
