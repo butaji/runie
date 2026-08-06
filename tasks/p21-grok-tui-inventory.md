@@ -640,3 +640,11 @@ text.
 The YAML harness now uses `register_scenario_tool` as the single registration
 source for both normal and visual replay. This keeps declarative fixture
 fields and built-in tool variants consistent across all test entry points.
+
+Unknown-model fallback closure (2026-08-06): The live placeholder provider
+uses Pi's zero-valued unknown `Model.context_window`. The app previously
+delivered that as `Some(0)`, overriding the status actor's Grok-compatible
+`500K` fallback and producing `14K / 0` in captures. The model-to-status event
+boundary now maps zero to `None`; known positive windows still travel through
+`StatusMsg::SetContextWindow` unchanged. Existing actor and YAML context-window
+assertions cover both branches.
