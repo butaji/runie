@@ -389,3 +389,7 @@ snapshot, and renderer clamping consume that same model fact.
 The fourth p35 slice is complete: `selected_tool_id` and `selected_entry` are
 now model-owned navigation facts across tool/entry navigation, dense-group
 reveal, selected rendering, and snapshot rehydration.
+
+The fifth p35 slice is complete: `reasoning_expanded` and
+`activity_expanded` now use model-owned navigation state across fold reducers,
+snapshot rehydration, and terminal rendering.

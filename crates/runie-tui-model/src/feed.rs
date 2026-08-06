@@ -73,6 +73,8 @@ pub struct FeedNavigation {
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
     pub animation_frame: usize,
+    pub reasoning_expanded: bool,
+    pub activity_expanded: bool,
 }
 
 impl Default for FeedNavigation {
@@ -84,6 +86,8 @@ impl Default for FeedNavigation {
             selected_tool_id: None,
             selected_entry: None,
             animation_frame: 0,
+            reasoning_expanded: false,
+            activity_expanded: false,
         }
     }
 }

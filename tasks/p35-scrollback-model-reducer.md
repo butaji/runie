@@ -61,3 +61,9 @@ model-owned field; rendering still performs only terminal-size clamping.
 entry navigation, dense-group reveal, selected-row rendering, snapshot
 rehydration, and compatibility accessors all use the model-owned values. The
 existing selection and dense-group visual/replay tests pass unchanged.
+
+### Slice 5 complete: fold ownership
+
+`reasoning_expanded` and `activity_expanded` now live in `FeedNavigation`.
+Reasoning/activity reducers, fold rendering, snapshot rehydration, and the
+existing expanded/collapsed YAML and visual cases use the model-owned flags.

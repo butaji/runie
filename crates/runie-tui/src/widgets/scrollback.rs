@@ -180,8 +180,6 @@ impl LinePresentationExt for LineKind {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Scrollback {
     lines: Vec<Line>,
-    reasoning_expanded: bool,
-    activity_expanded: bool,
     prompt_timestamp: Option<String>,
     settled_no_tool_phase: bool,
     live_grok_layout: bool,
@@ -208,8 +206,8 @@ impl Scrollback {
         scrollback.lines = snapshot.lines;
         scrollback.navigation.scroll_offset = snapshot.scroll_offset;
         scrollback.navigation.autoscroll = snapshot.autoscroll;
-        scrollback.reasoning_expanded = snapshot.reasoning_expanded;
-        scrollback.activity_expanded = snapshot.activity_expanded;
+        scrollback.navigation.reasoning_expanded = snapshot.reasoning_expanded;
+        scrollback.navigation.activity_expanded = snapshot.activity_expanded;
         scrollback.prompt_timestamp = snapshot.prompt_timestamp;
         scrollback.navigation.follow_latest_user = snapshot.follow_latest_user;
         scrollback.theme = snapshot.theme;
@@ -231,8 +229,6 @@ impl Scrollback {
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
-            reasoning_expanded: false,
-            activity_expanded: false,
             prompt_timestamp: None,
             settled_no_tool_phase: false,
             live_grok_layout: false,
@@ -284,7 +280,7 @@ impl Scrollback {
             ScrollbackMsg::SetReasoningExpanded(expanded) => self.set_reasoning_expanded(expanded),
             ScrollbackMsg::SetActivityExpanded(expanded) => self.set_activity_expanded(expanded),
             ScrollbackMsg::ToggleActivityExpanded => {
-                self.set_activity_expanded(!self.activity_expanded);
+                self.set_activity_expanded(!self.navigation.activity_expanded);
             }
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
             ScrollbackMsg::SetFollowLatestUser(follow) => {
@@ -631,8 +627,8 @@ impl Scrollback {
             tool_names: self.tool_names.clone(),
             autoscroll: self.navigation.autoscroll,
             scroll_offset: self.navigation.scroll_offset,
-            reasoning_expanded: self.reasoning_expanded,
-            activity_expanded: self.activity_expanded,
+            reasoning_expanded: self.navigation.reasoning_expanded,
+            activity_expanded: self.navigation.activity_expanded,
             prompt_timestamp: self.prompt_timestamp.clone(),
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
@@ -701,17 +697,17 @@ impl Scrollback {
     /// Set Grok-compatible reasoning display mode. Collapsed mode renders
     /// only `Thought`; expanded mode renders the captured reasoning body.
     pub fn set_reasoning_expanded(&mut self, expanded: bool) {
-        self.reasoning_expanded = expanded;
+        self.navigation.reasoning_expanded = expanded;
     }
 
     pub fn reasoning_expanded(&self) -> bool {
-        self.reasoning_expanded
+        self.navigation.reasoning_expanded
     }
 
     /// Set Grok-compatible grouped-tool display mode. Collapsed mode keeps
     /// the activity summary and hides member tool/output rows.
     pub fn set_activity_expanded(&mut self, expanded: bool) {
-        self.activity_expanded = expanded;
+        self.navigation.activity_expanded = expanded;
     }
 
     pub fn set_prompt_timestamp(&mut self, timestamp: Option<String>) {
@@ -725,7 +721,7 @@ impl Scrollback {
     }
 
     pub fn activity_expanded(&self) -> bool {
-        self.activity_expanded
+        self.navigation.activity_expanded
     }
 
     /// Background work keeps its running bullet animated after the main turn
@@ -1379,7 +1375,7 @@ impl Scrollback {
                 .tool_call_id
                 .as_ref()
                 .and_then(|id| self.tool_modes.get(id));
-            if self.activity_expanded {
+            if self.navigation.activity_expanded {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
                     if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
                         let hidden = group_size.saturating_sub(GROK_GROUP_MAX_VISIBLE);
@@ -1453,7 +1449,7 @@ impl Scrollback {
                     continue;
                 }
             }
-            if !self.activity_expanded
+            if !self.navigation.activity_expanded
                 && matches!(
                     line.kind,
                     LineKind::Tool
@@ -1475,7 +1471,8 @@ impl Scrollback {
                 .tool_call_id
                 .as_ref()
                 .is_some_and(|id| self.navigation.selected_tool_id.as_ref() == Some(id));
-            let source = if line.kind == LineKind::Reasoning && !self.reasoning_expanded {
+            let source = if line.kind == LineKind::Reasoning && !self.navigation.reasoning_expanded
+            {
                 "Thought".to_owned()
             } else {
                 line.text.clone()
