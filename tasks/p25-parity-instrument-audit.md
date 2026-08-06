@@ -31,6 +31,10 @@ called parity.
 - `cast_compare --frames-after=MARKER`: starts indexed replay independently at
   the first visible frame containing `MARKER`, removing startup-frame skew
   before comparing the same scenario phase.
+- `cast_compare` now rejects mismatched terminal geometries before producing
+  cell or row diagnostics, with a structured `geometry_mismatch` result. This
+  prevents accidentally comparing unrelated captures (or different matrix
+  sizes) from being mistaken for a visual parity report.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
 - YAML `reference.exact_attributes`: strict style/color oracle.
 

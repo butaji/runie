@@ -216,6 +216,22 @@ fn main() -> Result<()> {
             replay_frames(Path::new(&left), phase_marker.as_deref())?;
         let (right_geometry, right_frames) =
             replay_frames(Path::new(&right), phase_marker.as_deref())?;
+        if left_geometry != right_geometry {
+            println!(
+                "{{\"exact\":false,\"error\":\"geometry_mismatch\",\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}}}}",
+                left_geometry.0,
+                left_geometry.1,
+                right_geometry.0,
+                right_geometry.1
+            );
+            bail!(
+                "cast geometries differ: left {}x{}, right {}x{}",
+                left_geometry.0,
+                left_geometry.1,
+                right_geometry.0,
+                right_geometry.1
+            );
+        }
         let compared = left_frames.len().min(right_frames.len());
         let first_difference =
             (0..compared).find(|&frame| left_frames[frame] != right_frames[frame]);
@@ -265,6 +281,22 @@ fn main() -> Result<()> {
         return Ok(());
     }
     let geometry_equal = left_geometry == right_geometry;
+    if !geometry_equal {
+        println!(
+            "{{\"exact\":false,\"error\":\"geometry_mismatch\",\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}}}}",
+            left_geometry.0,
+            left_geometry.1,
+            right_geometry.0,
+            right_geometry.1
+        );
+        bail!(
+            "cast geometries differ: left {}x{}, right {}x{}",
+            left_geometry.0,
+            left_geometry.1,
+            right_geometry.0,
+            right_geometry.1
+        );
+    }
     let compared = left_cells.len().min(right_cells.len());
     let mut glyphs = 0;
     let mut attributes = 0;
