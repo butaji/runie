@@ -630,6 +630,15 @@ artifacts. It wraps the ANSI screen into a one-frame VT replay using the YAML
 frame geometry, so `exact_screen`, `exact_attributes`, and `require_truecolor`
 remain available without recompiling when the captured artifact changes.
 
+Attribute-gate audit (2026-08-06): the comparison implementation already
+checks every selected cell's glyph, width, foreground, background, bold,
+italic, underline, and inverse state. The checked-in Grok feed casts still
+contain stale mixed-theme or terminal-default SGR, so enabling
+`exact_attributes: true` on those fixtures would report capture contamination
+as an implementation mismatch. Symbol/full-screen parity remains strict;
+attribute parity stays gated on fresh same-revision truecolor captures with
+`require_truecolor: true`.
+
 The standalone ANSI comparator also has `--attributes-only`. It reports
 foreground/background/modifier mismatches while ignoring response prose; this
 is diagnostic only and does not alter strict symbol parity. On the latest
