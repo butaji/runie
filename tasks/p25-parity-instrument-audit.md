@@ -420,3 +420,10 @@ no `38;2`/`48;2` RGB sequences, even with `TERM=xterm-256color`,
 full-color attribute-oracle gap to Grok's emitted terminal stream/capture
 environment; Runie's Opaline token emission is independently covered by its
 theme tests.
+Full-cell attribute audit (2026-08-06): a temporary strict enablement of
+`exact_attributes` for the checked-in full-screen feed and waiting references
+was correctly rejected by the full e2e runner: the feed reports 480 differing
+cells, primarily Grok terminal-default blank/background cells versus Runie's
+theme-projected truecolor cells. The focused gutter test does not invoke the
+reference oracle. The flags remain disabled until a clean same-theme capture
+pair is available; this is an open attribute-parity gap, not a pass.
