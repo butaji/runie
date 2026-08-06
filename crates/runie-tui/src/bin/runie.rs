@@ -298,6 +298,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
     app.prompt
         .set_model_caption("Grok 4.5 (high) · always-approve".into())
         .await;
+    let color_level = runie_tui::terminal_color::ColorLevel::from_environment();
 
     // Paint a first frame synchronously before entering the event loop. This
     // guarantees the alternate screen is initialized even when the input
@@ -346,6 +347,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
         }
         let meter = status.header_meter();
         render_header(layout.header, frame.buffer_mut(), &meter, status.theme());
+        runie_tui::terminal_color::quantize_buffer(frame.buffer_mut(), color_level);
         frame.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
     })?;
 
@@ -565,6 +567,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                         }
                         let meter = status.header_meter();
                         render_header(layout.header, buf, &meter, status.theme());
+                        runie_tui::terminal_color::quantize_buffer(buf, color_level);
                         f.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
                         let _ = Rect::default();
                     }));

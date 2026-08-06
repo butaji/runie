@@ -263,3 +263,10 @@ declared `ThemeKind` as its source of truth rather than reconstructing it from
 an Opaline theme display name. TokyoNight, RosePineMoon, OscuraMidnight, and
 Auto no longer silently collapse back to GrokNight when the status view is
 rendered; a unit matrix covers every declared variant.
+
+Terminal capability progress (2026-08-06): added a pure `ColorLevel` model
+(`None`, `Basic`, `Ansi256`, `TrueColor`) with deterministic RGB quantization
+and environment detection matching Grok's `COLORTERM`/`TERM` boundary. The
+live binary quantizes its completed frame before writing to the PTY; test/YAML
+buffers remain truecolor so reference casts stay deterministic. Unit tests
+cover all levels and preservation of indexed/default colors.
