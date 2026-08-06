@@ -291,13 +291,9 @@ impl EventRenderer {
                                     )));
                                 }
                             }
-                            let actor_owned_feed_event = !feed_messages.is_empty();
                             if !feed_messages.is_empty() {
                                 scrollback_actor.apply_batch(feed_messages).await;
                             }
-                            let actor_tool_started = actor_tool_start.is_some();
-                            let actor_tool_updated = actor_tool_update.is_some();
-                            let actor_tool_ended = actor_tool_end.is_some();
                             if let Some(tool_start) = actor_tool_start {
                                 scrollback_actor.apply(tool_start).await;
                             } else if let Some(tool_update) = actor_tool_update {
@@ -306,13 +302,6 @@ impl EventRenderer {
                                 scrollback_actor.apply(tool_end).await;
                             } else {
                                 self.apply_event(event);
-                            }
-                            if !actor_owned_feed_event
-                                && !actor_tool_started
-                                && !actor_tool_updated
-                                && !actor_tool_ended
-                            {
-                                self.publish_scrollback_snapshot(&scrollback_actor).await;
                             }
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {
@@ -328,13 +317,6 @@ impl EventRenderer {
                 }
             }
         }
-    }
-
-    async fn publish_scrollback_snapshot(&self, actor: &ScrollbackActor) {
-        let snapshot = self.scrollback.lock().clone();
-        actor
-            .apply(ScrollbackMsg::ReplaceSnapshot(Box::new(snapshot)))
-            .await;
     }
 
     async fn advance_animation(&self, actor: &StatusActor) {

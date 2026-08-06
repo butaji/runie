@@ -210,3 +210,9 @@ because it would conceal ownership and make YAML event assertions impossible.
   lifecycle counters and buffers needed to construct the typed messages. The
   actor is now the sole production feed-row owner for the complete tool
   lifecycle.
+
+- **Live snapshot-bridge removal (2026-08-05):** The production event loop no
+  longer replaces the actor snapshot from the compatibility mutex for events
+  without feed mutations. Every feed-mutating event family now has an explicit
+  actor message; `ReplaceSnapshot` remains confined to the synchronous YAML
+  compatibility adapter.
