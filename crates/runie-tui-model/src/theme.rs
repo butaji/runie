@@ -45,3 +45,24 @@ impl ThemeToken {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ThemeToken;
+
+    #[test]
+    fn semantic_tokens_have_stable_opaline_names() {
+        let tokens = [
+            (ThemeToken::TextPrimary, "text.primary"),
+            (ThemeToken::TextMuted, "text.muted"),
+            (ThemeToken::AccentPrimary, "accent.primary"),
+            (ThemeToken::BackgroundBase, "bg.base"),
+            (ThemeToken::BackgroundPanel, "bg.panel"),
+            (ThemeToken::BorderPrompt, "border.prompt"),
+            (ThemeToken::BorderSelection, "border.selection"),
+        ];
+        for (token, expected) in tokens {
+            assert_eq!(token.opaline_name(), expected);
+        }
+    }
+}
