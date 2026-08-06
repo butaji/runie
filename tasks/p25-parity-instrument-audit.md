@@ -24,6 +24,10 @@ called parity.
   Consecutive events with an unchanged complete VT grid are coalesced, so the
   count represents visible terminal-state transitions rather than transport
   chunks; no cell is discarded from a retained frame.
+  Indexed mismatches now also report the first differing frame cell and both
+  complete cell attributes. The current 80x24 pair starts with Grok blank at
+  `(0,0)` and Runie already showing the header (`c`, bold) there, confirming
+  that marker-locked phase alignment must precede feed parity comparison.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
 - YAML `reference.exact_attributes`: strict style/color oracle.
 

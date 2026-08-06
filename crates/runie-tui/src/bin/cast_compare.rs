@@ -174,16 +174,35 @@ fn main() -> Result<()> {
         let (right_geometry, right_frames) = replay_frames(Path::new(&right))?;
         let compared = left_frames.len().min(right_frames.len());
         let first_difference = (0..compared)
-            .find_map(|frame| (left_frames[frame] != right_frames[frame]).then_some(frame + 1));
+            .find_map(|frame| (left_frames[frame] != right_frames[frame]).then_some(frame));
+        let first_cell_difference = first_difference.and_then(|frame| {
+            left_frames[frame]
+                .iter()
+                .zip(&right_frames[frame])
+                .position(|(left, right)| left != right)
+                .map(|cell| {
+                    serde_json::json!({
+                        "frame": frame + 1,
+                        "x": cell % left_geometry.0 as usize,
+                        "y": cell / left_geometry.0 as usize,
+                        "left": left_frames[frame][cell],
+                        "right": right_frames[frame][cell],
+                    })
+                })
+        });
         let exact = left_geometry == right_geometry
             && left_frames.len() == right_frames.len()
             && first_difference.is_none();
         println!(
-            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"first_difference\":{},\"exact\":{}}}",
+            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"first_difference\":{},\"first_cell_difference\":{},\"exact\":{}}}",
             left_frames.len(),
             right_frames.len(),
             compared,
-            first_difference.map_or_else(|| "null".into(), |frame| frame.to_string()),
+            first_difference.map_or_else(
+                || "null".into(),
+                |frame| (frame + 1).to_string(),
+            ),
+            serde_json::to_string(&first_cell_difference)?,
             exact
         );
         if exact {
