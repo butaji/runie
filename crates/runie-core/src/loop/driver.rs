@@ -644,7 +644,6 @@ fn is_delta_event(event: &AssistantMessageEvent) -> bool {
         event,
         AssistantMessageEvent::TextDelta { .. }
             | AssistantMessageEvent::ThinkingDelta { .. }
-            | AssistantMessageEvent::ThinkingEnd { .. }
             | AssistantMessageEvent::ToolCallDelta { .. }
     )
 }

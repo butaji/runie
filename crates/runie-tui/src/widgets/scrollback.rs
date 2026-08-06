@@ -987,10 +987,15 @@ fn running_bullet(frame: usize) -> &'static str {
 }
 
 fn styled_thought_summary(text: &str, style: Style) -> RatLine<'static> {
-    let split = text.find("◆ Thought").expect("thought marker") + "◆ Thought".len();
+    let start = text.find("◆ Thought").expect("thought marker");
+    let end = start + "◆ Thought".len();
     RatLine::from(vec![
-        Span::styled(text[..split].to_owned(), style),
-        Span::styled(text[split..].to_owned(), style.add_modifier(Modifier::BOLD)),
+        Span::styled(text[..start].to_owned(), style),
+        Span::styled(
+            text[start..end].to_owned(),
+            style.add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(text[end..].to_owned(), style),
     ])
 }
 

@@ -19,6 +19,10 @@ const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
 const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
 
 /// Pure mapping for status-owned portions of the core event stream.
+#[allow(
+    clippy::too_many_lines,
+    reason = "status event projection keeps terminal usage and error paths declarative"
+)]
 pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
     match event {
         AgentEvent::AgentStart => vec![StatusMsg::Set(Status::Thinking)],
@@ -48,11 +52,18 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
         },
         AgentEvent::MessageEnd {
             message: runie_core::types::AgentMessage::Assistant(assistant),
-        } => assistant
-            .error_message
-            .as_ref()
-            .map(|error| vec![StatusMsg::Set(Status::Error(error.clone()))])
-            .unwrap_or_default(),
+        } => {
+            if let Some(error) = assistant.error_message.as_ref() {
+                vec![StatusMsg::Set(Status::Error(error.clone()))]
+            } else if let Some(stop_reason) = assistant.stop_reason {
+                vec![
+                    StatusMsg::FinishTurn(assistant.usage.clone(), stop_reason),
+                    StatusMsg::Set(Status::Ready),
+                ]
+            } else {
+                Vec::new()
+            }
+        }
         _ => Vec::new(),
     }
 }

@@ -179,20 +179,26 @@ the renderer should consume the resulting projection rather than hardcode a
 duration.
 
 **Thinking elapsed event contract (2026-08-06):** `ThinkingEnd` now carries
-optional `elapsedMs` metadata, the core partial-reconstruction path preserves
-it, and the stream driver publishes the marker as a `MessageUpdate` so the
-actor-owned TUI projection can consume it. The controlled placeholder emits
-`elapsedMs: 200`; a fresh 62×32 cast now renders `Thought for 0.2s`, matching
-the preserved Grok frame. The field is optional for backward-compatible
-replays, with existing fixtures retaining the deterministic fallback. Core,
-YAML, and visual test suites remain green.
+optional `elapsedMs` metadata and the core partial-reconstruction path
+preserves it. Existing replay event sequences remain stable; the current
+production bridge still needs to carry this value into the terminal assistant
+projection. The field is optional for backward-compatible replays, with
+existing fixtures retaining the deterministic fallback.
 
 **Explicit settled no-tool phase (2026-08-06):** `FinalizeAssistant` now
 records an explicit provider-timed/no-tool settled phase. The scrollback
 projection uses it to remove only the duplicate pre-thought separator; generic
 no-tool inference is avoided, so tool and legacy snapshot states remain
-unchanged. At 62×32 the isolated feed phase aligns with Grok, and the thought
-summary styling now bolds only `Thought`, matching Grok's cell attributes.
+unchanged. Replay paths that provide the timing metadata align the isolated
+feed phase with Grok, and the thought summary styling bolds only `Thought`,
+matching Grok's cell attributes. The live provider bridge still needs to carry
+timing into the terminal assistant projection.
+
+**Terminal assistant usage projection (2026-08-06):** Assistant usage and stop
+reason are now consumed from the existing `AgentEvent::MessageEnd` payload by
+the actor-owned status projection. This preserves the exact replay event
+sequence while fixing the controlled `Hey` header from `0 / 500K` to the
+expected `15K / 500K`.
 
 ## Review findings
 
