@@ -278,3 +278,9 @@ The event bus now exposes `publish_pi` and an async `subscribe_pi` facade.
 The facade filters application-only events while retaining the existing
 compatibility receiver, providing an incremental migration path for actors
 without weakening SSOT ownership or event-based delivery.
+
+Core now exposes the same boundary through `EventBus::publish_pi` and
+`subscribe_pi`; the latter asynchronously filters legacy application events.
+This is the first production-facing typed bus path. Existing subscriber
+registries remain compatibility adapters until their callback contract is
+migrated to `PiAgentEvent`.
