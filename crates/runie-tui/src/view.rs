@@ -68,6 +68,119 @@ pub struct StackLayout {
     pub entries: &'static [LayoutEntry],
 }
 
+impl StackLayout {
+    /// Resolve the main-axis allocation without terminal or renderer state.
+    /// Intrinsic sizes are supplied by component projections; basis/grow/
+    /// shrink/min/max are the same declarative inputs used by pi's Stack.
+    pub fn allocate(&self, intrinsic_sizes: &[u16], available_size: Option<u16>) -> Vec<u16> {
+        let mut sizes = self
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| {
+                let basis = match entry.basis {
+                    LayoutSize::Auto => intrinsic_sizes.get(index).copied().unwrap_or(0),
+                    LayoutSize::Fixed(size) => size,
+                };
+                clamp_layout_size(basis, *entry)
+            })
+            .collect::<Vec<_>>();
+        let Some(available_size) = available_size else {
+            return sizes;
+        };
+        let gap_total = self
+            .entries
+            .len()
+            .saturating_sub(1)
+            .saturating_mul(usize::from(self.gap));
+        let content_size = usize::from(available_size).saturating_sub(gap_total);
+        let total = sizes.iter().map(|size| usize::from(*size)).sum::<usize>();
+        if total < content_size {
+            distribute_layout_space(&mut sizes, self.entries, content_size - total, true);
+        } else if total > content_size {
+            distribute_layout_space(&mut sizes, self.entries, total - content_size, false);
+        }
+        sizes
+    }
+}
+
+fn clamp_layout_size(size: u16, entry: LayoutEntry) -> u16 {
+    let min = entry.min_size;
+    let max = entry.max_size.unwrap_or(u16::MAX).max(min);
+    size.max(min).min(max)
+}
+
+fn distribute_layout_space(
+    sizes: &mut [u16],
+    entries: &[LayoutEntry],
+    mut remaining: usize,
+    growing: bool,
+) {
+    while remaining > 0 {
+        let candidates = layout_candidates(sizes, entries, growing);
+        if candidates.is_empty() {
+            return;
+        }
+        let weight = candidates
+            .iter()
+            .map(|(index, entry)| layout_weight(sizes, *index, **entry, growing))
+            .sum::<usize>();
+        let mut distributed = 0;
+        for (index, entry) in candidates {
+            if remaining == 0 {
+                break;
+            }
+            let item_weight = layout_weight(sizes, index, *entry, growing);
+            let proposed = (remaining * item_weight / weight).max(1);
+            let capacity = if growing {
+                usize::from(entry.max_size.unwrap_or(u16::MAX) - sizes[index])
+            } else {
+                usize::from(sizes[index] - entry.min_size)
+            };
+            let delta = proposed.min(remaining).min(capacity);
+            if delta == 0 {
+                continue;
+            }
+            sizes[index] = if growing {
+                sizes[index].saturating_add(delta as u16)
+            } else {
+                sizes[index].saturating_sub(delta as u16)
+            };
+            remaining -= delta;
+            distributed += delta;
+        }
+        if distributed == 0 {
+            return;
+        }
+    }
+}
+
+fn layout_candidates<'a>(
+    sizes: &[u16],
+    entries: &'a [LayoutEntry],
+    growing: bool,
+) -> Vec<(usize, &'a LayoutEntry)> {
+    entries
+        .iter()
+        .enumerate()
+        .filter(|(index, entry)| {
+            if growing {
+                entry.grow > 0 && sizes[*index] < entry.max_size.unwrap_or(u16::MAX)
+            } else {
+                entry.shrink > 0 && sizes[*index] > entry.min_size
+            }
+        })
+        .collect()
+}
+
+fn layout_weight(sizes: &[u16], index: usize, entry: LayoutEntry, growing: bool) -> usize {
+    if growing {
+        usize::from(entry.grow)
+    } else {
+        usize::from(entry.shrink) * usize::from(sizes[index]).max(1)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Overscroll {
     Chain,
@@ -390,7 +503,8 @@ pub fn component(slot: Slot) -> ComponentSpec {
 mod tests {
     use super::{
         chat_view, chat_view_with_props, component, ChatViewProps, ComponentKind, Direction,
-        Element, HeaderViewProps, ScrollState, Slot, StateOwner,
+        Element, HeaderViewProps, LayoutDirection, LayoutEntry, LayoutSize, ScrollState, Slot,
+        StackLayout, StateOwner,
     };
     use runie_core::types::ThemeKind;
 
@@ -480,5 +594,36 @@ mod tests {
         let state = state.update_layout(8, 20);
         assert_eq!(state.scroll_top, 0);
         assert_eq!(state.max_scroll_top(), 0);
+    }
+
+    #[test]
+    fn stack_allocator_resolves_basis_growth_and_shrink_without_renderer_state() {
+        const ENTRIES: [LayoutEntry; 3] = [
+            LayoutEntry {
+                slot: Slot::Header,
+                basis: LayoutSize::Fixed(1),
+                grow: 0,
+                shrink: 0,
+                min_size: 1,
+                max_size: Some(1),
+            },
+            LayoutEntry::grow(Slot::Scrollback, 2),
+            LayoutEntry {
+                slot: Slot::Status,
+                basis: LayoutSize::Fixed(4),
+                grow: 0,
+                shrink: 1,
+                min_size: 1,
+                max_size: Some(4),
+            },
+        ];
+        let stack = StackLayout {
+            direction: LayoutDirection::Vertical,
+            gap: 1,
+            entries: &ENTRIES,
+        };
+        assert_eq!(stack.allocate(&[8, 8, 8], Some(20)), vec![1, 13, 4]);
+        assert_eq!(stack.allocate(&[8, 8, 8], Some(8)), vec![1, 3, 2]);
+        assert_eq!(stack.allocate(&[8, 8, 8], None), vec![1, 8, 4]);
     }
 }

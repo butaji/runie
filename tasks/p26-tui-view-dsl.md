@@ -33,6 +33,10 @@ renderer paints terminal cells.
   contracts plus actor-projection `ScrollState`. The scroll reducer models
   pi's follow-end, clamping, viewport growth, and user-scroll handoff without
   depending on Ratatui or terminal cells; focused tests pin the transitions.
+- Added pure stack allocation with intrinsic sizes, fixed/auto basis, grow,
+  shrink, minimum, maximum, and gap handling. The resolver is covered by a
+  renderer-independent allocation test; integrating it with the live layout
+  adapter remains the next boundary.
 
 ## Next boundaries
 
