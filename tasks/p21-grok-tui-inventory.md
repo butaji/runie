@@ -117,6 +117,12 @@ The event contract now also includes Grok's six named theme variants
 projection. Full palette propagation and terminal color quantization remain
 open.
 
+Welcome theme propagation (2026-08-06): the compact welcome projection now
+accepts the active actor-owned theme instead of hardwiring `GrokNight`, and the
+YAML frame renderer passes that projection through. A direct `GrokDay` cell
+assertion covers the accent token; the regular widget API retains its
+`GrokNight` default for source-compatible unit fixtures.
+
 Feed progress: completed directory/file tool cards now retain Grok's semantic
 card headers and cardinality (`List … (entries)`, `Read … (lines)`) instead of
 the generic `→ ✓` suffix. Generic tools retain their status marker. This is

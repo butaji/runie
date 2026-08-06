@@ -1918,6 +1918,7 @@ fn draw_visual_frame(
 
     let backend = TestBackend::new(vis.cols, vis.rows);
     let mut terminal = Terminal::new(backend).map_err(|e| e.to_string())?;
+    let theme = app.status_snapshot().theme();
     terminal
         .draw(|f| {
             let layout =
@@ -1933,7 +1934,7 @@ fn draw_visual_frame(
                 layout.prompt
             };
             if app.ui.snapshot().show_welcome && event_phase.is_none() {
-                WelcomeWidget.render(layout.scrollback, f.buffer_mut());
+                WelcomeWidget.render_with_theme(layout.scrollback, f.buffer_mut(), theme);
                 if vis.cols >= 100 {
                     WelcomeWidget::render_hero_footer_badge(layout.footer_badge, f.buffer_mut());
                 }

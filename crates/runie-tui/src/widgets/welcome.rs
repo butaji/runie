@@ -31,11 +31,17 @@ pub fn version_badge(variant: VersionBadgeVariant) -> String {
 
 impl Widget for WelcomeWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        self.render_with_theme(area, buf, ThemeKind::GrokNight);
+    }
+}
+
+impl WelcomeWidget {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: ThemeKind) {
         if area.width < 24 || area.height < 8 {
             return;
         }
         if area.height < 16 {
-            self.render_compact(area, buf);
+            self.render_compact(area, buf, theme);
             return;
         }
         if area.width >= 100 && area.height >= 22 {
@@ -44,9 +50,6 @@ impl Widget for WelcomeWidget {
         }
         self.render_full(area, buf);
     }
-}
-
-impl WelcomeWidget {
     pub fn render_hero_footer_badge(area: Rect, buf: &mut Buffer) {
         if area.height == 0 || area.width == 0 {
             return;
@@ -56,7 +59,7 @@ impl WelcomeWidget {
             .render(area, buf);
     }
 
-    fn render_compact(self, area: Rect, buf: &mut Buffer) {
+    fn render_compact(self, area: Rect, buf: &mut Buffer, theme: ThemeKind) {
         let surface = Rect {
             x: area.x
                 + area
@@ -70,7 +73,7 @@ impl WelcomeWidget {
         let lines = vec![
             Line::from(Span::styled(
                 "Runie",
-                appearance::accent_style_for(ThemeKind::GrokNight).add_modifier(Modifier::BOLD),
+                appearance::accent_style_for(theme).add_modifier(Modifier::BOLD),
             )),
             Line::from(version_badge(VersionBadgeVariant::HeroInline)),
             Line::from("Model · runie-core"),
@@ -232,6 +235,28 @@ mod tests {
             .map(|cell| cell.symbol().to_string())
             .collect::<String>();
         assert!(text.contains("Ctrl+D / Ctrl+Q"));
+    }
+
+    #[test]
+    fn compact_welcome_projects_the_selected_theme_accent() {
+        let area = Rect::new(0, 0, 40, 12);
+        let mut buffer = Buffer::empty(area);
+        WelcomeWidget.render_with_theme(area, &mut buffer, ThemeKind::GrokDay);
+        let runie = (0..area.height)
+            .flat_map(|y| (0..area.width).map(move |x| (x, y)))
+            .find_map(|(x, y)| {
+                buffer
+                    .cell((x, y))
+                    .filter(|cell| cell.symbol() == "R")
+                    .map(|cell| cell.fg)
+            })
+            .expect("Runie welcome title");
+        assert_eq!(
+            runie,
+            appearance::accent_style_for(ThemeKind::GrokDay)
+                .fg
+                .expect("day accent color")
+        );
     }
 
     #[test]
