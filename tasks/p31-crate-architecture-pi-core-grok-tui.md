@@ -417,3 +417,9 @@ snapshot rehydration.
 The eleventh p35 slice is complete: tool-name identity is now model-owned
 across tool-start reduction, specialized card classification, header rewrites,
 reset, projection, and snapshot rehydration.
+
+The twelfth p35 slice is complete: live/replay reducer flags for settled
+no-tool phases, live Grok layout selection, and tool-row identity are now
+model-owned in `FeedNavigation`. Snapshot round-trips and the four-size
+live/replay visual matrix validate that both construction paths retain the
+same feed geometry and identity.

@@ -47,6 +47,9 @@ pub struct FeedSnapshot {
     pub tool_blocks: Vec<ToolBlock>,
     /// Tool names are reducer facts used to resolve specialized Grok cards.
     pub tool_names: HashMap<String, String>,
+    pub settled_no_tool_phase: bool,
+    pub live_grok_layout: bool,
+    pub next_tool_row_id: u64,
     pub autoscroll: bool,
     pub scroll_offset: usize,
     pub reasoning_expanded: bool,
@@ -83,6 +86,9 @@ pub struct FeedNavigation {
     pub workflow_headers: HashMap<String, String>,
     pub workflow_phases: HashMap<String, Vec<(String, String)>>,
     pub tool_names: HashMap<String, String>,
+    pub settled_no_tool_phase: bool,
+    pub live_grok_layout: bool,
+    pub next_tool_row_id: u64,
 }
 
 impl Default for FeedNavigation {
@@ -104,6 +110,9 @@ impl Default for FeedNavigation {
             workflow_headers: HashMap::new(),
             workflow_phases: HashMap::new(),
             tool_names: HashMap::new(),
+            settled_no_tool_phase: false,
+            live_grok_layout: false,
+            next_tool_row_id: 0,
         }
     }
 }

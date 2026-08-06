@@ -191,6 +191,9 @@ mod tests {
             center_revealed_entry: false,
             workflow_headers: std::collections::HashMap::new(),
             workflow_phases: std::collections::HashMap::new(),
+            settled_no_tool_phase: false,
+            live_grok_layout: false,
+            next_tool_row_id: 0,
         }
     }
 }

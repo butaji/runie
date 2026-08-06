@@ -180,12 +180,9 @@ impl LinePresentationExt for LineKind {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Scrollback {
     lines: Vec<Line>,
-    settled_no_tool_phase: bool,
-    live_grok_layout: bool,
     /// Monotonic identity for rows created by this reducer adapter. The
     /// identity is persisted on `Line`; no second live-row ownership map is
     /// kept in the renderer.
-    next_tool_row_id: u64,
     navigation: FeedNavigation,
 }
 
@@ -212,21 +209,15 @@ impl Scrollback {
         scrollback.navigation.workflow_headers = snapshot.workflow_headers;
         scrollback.navigation.workflow_phases = snapshot.workflow_phases;
         scrollback.navigation.tool_names = snapshot.tool_names;
-        scrollback.next_tool_row_id = scrollback
-            .lines
-            .iter()
-            .filter_map(|line| line.tool_row_id)
-            .max()
-            .map_or(0, |row_id| row_id.saturating_add(1));
+        scrollback.navigation.settled_no_tool_phase = snapshot.settled_no_tool_phase;
+        scrollback.navigation.live_grok_layout = snapshot.live_grok_layout;
+        scrollback.navigation.next_tool_row_id = snapshot.next_tool_row_id;
         scrollback
     }
 
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
-            settled_no_tool_phase: false,
-            live_grok_layout: false,
-            next_tool_row_id: 0,
             navigation: FeedNavigation::default(),
         }
     }
@@ -460,7 +451,7 @@ impl Scrollback {
                 summary,
                 settled_no_tool_phase,
             } => {
-                self.settled_no_tool_phase = settled_no_tool_phase;
+                self.navigation.settled_no_tool_phase = settled_no_tool_phase;
                 if !has_reasoning || reasoning_expanded {
                     self.remove_kind(LineKind::ThinkingStatus);
                 } else {
@@ -570,8 +561,8 @@ impl Scrollback {
     }
 
     fn append_tool_start(&mut self, tool_call_id: String, header: String, kind: LineKind) {
-        let row_id = self.next_tool_row_id;
-        self.next_tool_row_id = self.next_tool_row_id.wrapping_add(1);
+        let row_id = self.navigation.next_tool_row_id;
+        self.navigation.next_tool_row_id = self.navigation.next_tool_row_id.wrapping_add(1);
         self.append(
             Line::new(kind, header)
                 .for_tool(tool_call_id)
@@ -597,7 +588,7 @@ impl Scrollback {
         self.lines.clear();
         self.navigation.tool_names.clear();
         self.navigation.tool_modes.clear();
-        self.next_tool_row_id = 0;
+        self.navigation.next_tool_row_id = 0;
         self.navigation.workflow_headers.clear();
         self.navigation.workflow_phases.clear();
         self.navigation.revealed_dense_groups.clear();
@@ -643,6 +634,9 @@ impl Scrollback {
             center_revealed_entry: self.navigation.center_revealed_entry,
             workflow_headers: self.navigation.workflow_headers.clone(),
             workflow_phases: self.navigation.workflow_phases.clone(),
+            settled_no_tool_phase: self.navigation.settled_no_tool_phase,
+            live_grok_layout: self.navigation.live_grok_layout,
+            next_tool_row_id: self.navigation.next_tool_row_id,
         }
     }
 
@@ -722,7 +716,7 @@ impl Scrollback {
     /// Select the production live adapter's Grok gutter geometry. Replay
     /// fixtures retain the historical wider compatibility gutter.
     pub fn set_live_grok_layout(&mut self, enabled: bool) {
-        self.live_grok_layout = enabled;
+        self.navigation.live_grok_layout = enabled;
     }
 
     pub fn activity_expanded(&self) -> bool {
@@ -1093,7 +1087,7 @@ impl Scrollback {
                 styled_line_for(*kind, text, self.navigation.theme)
             };
             let mut line = line;
-            if self.live_grok_layout && *kind == LineKind::User {
+            if self.navigation.live_grok_layout && *kind == LineKind::User {
                 for span in &mut line.spans {
                     span.style =
                         span.style
@@ -1105,7 +1099,7 @@ impl Scrollback {
                             );
                 }
             }
-            if self.live_grok_layout && *kind == LineKind::CompletedAssistant {
+            if self.navigation.live_grok_layout && *kind == LineKind::CompletedAssistant {
                 let assistant = appearance::assistant_body_style_for(self.navigation.theme);
                 for span in &mut line.spans {
                     span.style = span.style.fg(assistant.fg.expect("assistant color"));
@@ -1129,7 +1123,7 @@ impl Scrollback {
                 },
                 buf,
             );
-            if self.live_grok_layout
+            if self.navigation.live_grok_layout
                 && matches!(*kind, LineKind::User | LineKind::CompletedAssistant)
             {
                 let timestamp = self
@@ -1342,7 +1336,7 @@ impl Scrollback {
                 rows.push((LineKind::Separator, String::new(), false));
             }
             if width >= 50
-                && self.settled_no_tool_phase
+                && self.navigation.settled_no_tool_phase
                 && line.kind == LineKind::Separator
                 && self
                     .lines
@@ -1497,7 +1491,7 @@ impl Scrollback {
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
                 let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
-                    if width < 70 || self.live_grok_layout {
+                    if width < 70 || self.navigation.live_grok_layout {
                         "   "
                     } else {
                         "     "

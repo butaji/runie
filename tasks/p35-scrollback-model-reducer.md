@@ -108,3 +108,11 @@ Tool-name identity now lives in `FeedNavigation`. Tool-start reduction,
 specialized card classification, header rewrites, reset behavior, projection,
 and snapshot rehydration use the model-owned map; the full tool YAML/visual
 matrix passes.
+
+### Slice 12 complete: live/replay reducer flag ownership
+
+The remaining reducer flags `settled_no_tool_phase`, `live_grok_layout`, and
+`next_tool_row_id` now live in `FeedNavigation`. Live construction and YAML/
+replay snapshot rehydration use the same model-owned facts, preserving
+tool-row identity, settled no-tool rendering, and Grok layout selection across
+all four capture sizes. The full replay and visual matrix passes.
