@@ -111,6 +111,14 @@ can share event construction without sharing delivery policy. Until that
 scope is represented, the two mapper surfaces remain deliberately separate;
 the actor-boundary validator and full replay suite are the safety evidence.
 
+**First scope slice (2026-08-06):** `runie-tui-model::is_actor_feed_event`
+now owns the actor-feed admission policy. The bus projection rejects
+transcript lifecycle events before its narrower mapping runs, and a pure model
+test proves transcript events are excluded while reset/theme events are
+accepted. This is intentionally a classifier first; delivery-specific message
+construction remains in the actor until the remaining scope variants have
+been migrated.
+
 The first p35 slice is complete: animation-frame ownership is part of the
 model-owned `FeedNavigation` value object, with pure advance/reset tests; the
 widget only adapts that fact for terminal rendering.

@@ -5,6 +5,31 @@ use runie_core::types::{AgentEvent, AgentMessage, AssistantMessageEvent};
 
 use crate::{Status, StatusMsg};
 
+/// Events that the live feed actor is allowed to project from the shared bus.
+///
+/// Transcript message events are intentionally excluded: the compatibility
+/// renderer owns their delivery in the current live adapter. Keeping this
+/// policy in the model makes that boundary declarative and prevents a future
+/// mapper from accidentally appending the same user/assistant row twice.
+pub fn is_actor_feed_event(event: &AgentEvent) -> bool {
+    matches!(
+        event,
+        AgentEvent::Reset
+            | AgentEvent::ThemeChanged { .. }
+            | AgentEvent::ToolDisplayModeChanged { .. }
+            | AgentEvent::ToolExecutionStart { .. }
+            | AgentEvent::ToolExecutionUpdate { .. }
+            | AgentEvent::ToolExecutionEnd { .. }
+            | AgentEvent::BackgroundWorkStarted { .. }
+            | AgentEvent::BackgroundWorkProgress { .. }
+            | AgentEvent::BackgroundWorkFinished { .. }
+            | AgentEvent::BackgroundWorkCancelled { .. }
+            | AgentEvent::WorkflowStarted { .. }
+            | AgentEvent::WorkflowProgress { .. }
+            | AgentEvent::WorkflowFinished { .. }
+    )
+}
+
 /// Map status-owned event transitions without reading or mutating actor state.
 #[allow(
     clippy::too_many_lines,
@@ -52,5 +77,23 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
             }
         }
         _ => Vec::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_actor_feed_event;
+    use runie_core::types::AgentEvent;
+
+    #[test]
+    fn actor_feed_scope_excludes_transcript_messages() {
+        assert!(!is_actor_feed_event(&AgentEvent::TurnStart));
+        assert!(!is_actor_feed_event(&AgentEvent::AgentEnd {
+            messages: vec![]
+        }));
+        assert!(is_actor_feed_event(&AgentEvent::Reset));
+        assert!(is_actor_feed_event(&AgentEvent::ThemeChanged {
+            theme: runie_core::types::ThemeKind::GrokNight,
+        }));
     }
 }

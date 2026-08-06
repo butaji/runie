@@ -176,6 +176,9 @@ fn format_error(is_error: bool, error: Option<&str>) -> String {
 }
 
 fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
+    if !runie_tui_model::is_actor_feed_event(&event) {
+        return Vec::new();
+    }
     match event {
         AgentEvent::Reset => vec![ScrollbackMsg::Clear],
         AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(theme)],

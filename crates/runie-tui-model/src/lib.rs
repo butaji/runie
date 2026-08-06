@@ -12,7 +12,7 @@ mod status;
 mod theme;
 mod ui;
 
-pub use events::status_messages_for_event;
+pub use events::{is_actor_feed_event, status_messages_for_event};
 pub use feed::{
     default_tool_display_mode, project_tool_blocks, project_tool_card_rows, FeedNavigation,
     FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardRow,
