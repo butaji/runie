@@ -797,19 +797,9 @@ fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
         AssistantMessageEvent::ThinkingDelta { delta, .. } => {
             push_or_append(assistant, AssistantContent::Thinking { text: delta });
         }
-        AssistantMessageEvent::ToolCallStart { partial, .. } => {
-            upsert_tool_call(assistant, partial);
-        }
-        AssistantMessageEvent::ToolCallDelta { partial, .. } => {
-            for content in partial.content {
-                match content {
-                    AssistantContent::ToolCall(call) => upsert_tool_call(assistant, call),
-                    other => push_or_append(assistant, other),
-                }
-            }
-            assistant.stop_reason = partial.stop_reason;
-            assistant.usage = partial.usage;
-            assistant.thinking_elapsed_ms = partial.thinking_elapsed_ms;
+        AssistantMessageEvent::ToolCallStart { partial, .. }
+        | AssistantMessageEvent::ToolCallDelta { partial, .. } => {
+            merge_assistant_partial(assistant, partial);
         }
         AssistantMessageEvent::ToolCallEnd { tool_call, .. } => {
             upsert_tool_call(assistant, tool_call);
@@ -850,6 +840,18 @@ fn upsert_tool_call(assistant: &mut AssistantMessage, call: ToolCall) {
     } else {
         assistant.content.push(AssistantContent::ToolCall(call));
     }
+}
+
+fn merge_assistant_partial(assistant: &mut AssistantMessage, partial: AssistantMessage) {
+    for content in partial.content {
+        match content {
+            AssistantContent::ToolCall(call) => upsert_tool_call(assistant, call),
+            other => push_or_append(assistant, other),
+        }
+    }
+    assistant.stop_reason = partial.stop_reason;
+    assistant.usage = partial.usage;
+    assistant.thinking_elapsed_ms = partial.thinking_elapsed_ms;
 }
 
 fn push_or_append(assistant: &mut AssistantMessage, content: AssistantContent) {
@@ -953,7 +955,7 @@ mod event_reconstruction_tests {
             &mut assistant,
             AssistantMessageEvent::ToolCallStart {
                 index: 0,
-                partial: partial.clone(),
+                partial: AssistantMessage::with_tool_call(partial.clone()),
             },
         );
         apply_event(

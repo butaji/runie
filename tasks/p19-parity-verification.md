@@ -82,6 +82,12 @@ partials cannot discard sibling calls. The
 `visual-tool-call-sections.yaml` fixture exercises the no-recompile path;
 decoding defaults keep older traces readable.
 
+**Tool-call start partial parity (2026-08-06):** The same source audit showed
+Pi's `toolcall_start.partial` is a complete `AssistantMessage`, not a bare
+`ToolCall`. Runie now uses the typed assistant partial for both start and delta
+events, and the reducer merges their tool-call content through one pure helper
+so multi-call streams retain all siblings.
+
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered

@@ -416,12 +416,12 @@ impl EventSpec {
             }),
             Self::ToolCallStart { tool_call_start } => Some(AssistantMessageEvent::ToolCallStart {
                 index: tool_call_start.index,
-                partial: runie_core::types::ToolCall {
+                partial: AssistantMessage::with_tool_call(runie_core::types::ToolCall {
                     id: tool_call_start.id.clone(),
                     name: tool_call_start.name.clone(),
                     arguments: tool_call_start.arguments.clone(),
                     thought_signature: None,
-                },
+                }),
             }),
             Self::ToolCallDelta { tool_call_delta } => Some(AssistantMessageEvent::ToolCallDelta {
                 index: tool_call_delta.index,

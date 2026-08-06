@@ -895,7 +895,7 @@ pub enum AssistantMessageEvent {
     ToolCallStart {
         #[serde(rename = "contentIndex")]
         index: usize,
-        partial: ToolCall,
+        partial: AssistantMessage,
     },
     #[serde(rename = "toolcall_delta")]
     ToolCallDelta {
@@ -1227,12 +1227,12 @@ mod tests {
             },
             AssistantMessageEvent::ToolCallStart {
                 index: 0,
-                partial: ToolCall {
+                partial: AssistantMessage::with_tool_call(ToolCall {
                     id: "c".into(),
                     name: "x".into(),
                     arguments: serde_json::json!({}),
                     thought_signature: None,
-                },
+                }),
             },
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
