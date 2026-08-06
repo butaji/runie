@@ -26,6 +26,12 @@ behavior fixtures editable without recompiling Rust.
   ownership are established by the same thin DSL used by core actors. Command
   types and worker reducers remain explicit at each call site.
 
+- **Subscriber ownership DSL reuse (2026-08-06):** The core loop's event
+  subscriber bridge now uses `spawn_owned_worker!` instead of manually wrapping
+  its `tokio::spawn` in `TaskOwner`. The loop run handle remains explicit
+  because it carries a result and is synchronously awaited by the busy/idle
+  coordinator.
+
 - Added `spawn_owned_worker!`, a small internal DSL that constructs an
   aborting `TaskOwner` around an actor worker handle. Mailboxes and worker
   loops remain explicit at each call site.

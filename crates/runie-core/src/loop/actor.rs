@@ -13,7 +13,7 @@ use crate::r#loop::driver::{
     run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
 };
 use crate::state::AgentStateActor;
-use crate::task_owner::TaskOwner;
+use crate::task_owner::{spawn_owned_worker, TaskOwner};
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
 use crate::types::{AgentContext, AgentMessage, QueueMode, ToolExecutionMode};
@@ -324,11 +324,11 @@ fn spawn_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> 
     let mut events = bus.subscribe();
     let subscribers = subscribers.clone();
     // OWNER: LoopActor — retained in Inner and aborted with the actor.
-    Arc::new(TaskOwner::new(tokio::spawn(async move {
+    spawn_owned_worker!(async move {
         while let Ok(event) = events.recv().await {
             subscribers.dispatch(&event).await;
         }
-    })))
+    })
 }
 
 #[cfg(test)]
