@@ -403,6 +403,13 @@ Memory Search, Workflow, Todo, Use, and Search Tools in addition to the existing
 file/search/web/background families. The specialized-tools YAML fixture asserts
 the semantic kinds, not only the rendered headers.
 
+Structured-card audit (2026-08-06): Grok's source has dedicated
+`MemorySearchToolCallBlock`, `WebSearchToolCallBlock`, `WebFetchToolCallBlock`,
+and `WorkflowBlock` renderers with family-specific output/result layout. Runie
+currently projects these families semantically but still paints their member
+rows through the generic line renderer. Exact structured-card rendering is the
+next TUI parity item; taxonomy alone is not claimed as visual parity.
+
 Entry navigation foundation (2026-08-06): the scrollback reducer now exposes
 semantic selectable rows (user, assistant/reasoning, and one anchor per tool
 block), with actor-owned `j/k` intents and a selected-entry index projecting
