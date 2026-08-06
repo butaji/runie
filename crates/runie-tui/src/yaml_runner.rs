@@ -93,6 +93,9 @@ pub struct ToolSpec {
     pub name: String,
     #[serde(default = "default_tool_kind")]
     pub kind: String,
+    /// Optional Pi-compatible JSON Schema used by deterministic replay tools.
+    #[serde(default)]
+    pub parameters: Option<serde_json::Value>,
 }
 
 fn default_tool_kind() -> String {
@@ -969,7 +972,15 @@ impl StreamFn for ScenarioStream {
 }
 
 /// Echo tool that returns its args verbatim.
-pub struct EchoTool;
+pub struct EchoTool {
+    parameters: Option<serde_json::Value>,
+}
+
+impl EchoTool {
+    fn new(parameters: Option<serde_json::Value>) -> Self {
+        Self { parameters }
+    }
+}
 #[async_trait::async_trait]
 impl AgentTool for EchoTool {
     fn name(&self) -> &str {
@@ -980,6 +991,9 @@ impl AgentTool for EchoTool {
     }
     fn description(&self) -> &str {
         "Echoes args."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        self.parameters.clone()
     }
     async fn execute(
         &self,
@@ -1351,7 +1365,7 @@ fn register_scenario_tool(
     tool: &ToolSpec,
 ) -> Result<(), ScenarioError> {
     match tool.kind.as_str() {
-        "echo" => registry.register(Arc::new(EchoTool)),
+        "echo" => registry.register(Arc::new(EchoTool::new(tool.parameters.clone()))),
         "list_dir" => registry.register(Arc::new(ReplayTool::new(
             &tool.name,
             "Cargo.toml\nsrc\ncrates",
@@ -2235,7 +2249,7 @@ pub async fn render_visual_buffer(
     let mut reg = ToolRegistry::new();
     for t in &scenario.tools {
         match t.kind.as_str() {
-            "echo" => reg.register(Arc::new(EchoTool)),
+            "echo" => reg.register(Arc::new(EchoTool::new(t.parameters.clone()))),
             "list_dir" => reg.register(Arc::new(ReplayTool::new(
                 &t.name,
                 "Cargo.toml\nsrc\ncrates",

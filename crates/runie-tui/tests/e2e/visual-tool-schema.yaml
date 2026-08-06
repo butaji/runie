@@ -1,0 +1,48 @@
+name: visual-tool-schema
+description: YAML-owned Pi tool schema coercion through the real actor/tool path.
+initial_prompt: "coerce arguments"
+tools:
+  - name: echo
+    kind: echo
+    parameters:
+      type: object
+      properties:
+        count:
+          anyOf:
+            - type: integer
+            - type: string
+        enabled:
+          type: boolean
+      required: [count, enabled]
+events:
+  - start
+  - tool_call:
+      name: echo
+      args: { count: "1", enabled: 0 }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 4
+  transcript_contains:
+    - '"count":1'
+    - '"enabled":false'
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_end
+    - tool_execution_start
+    - tool_execution_end
+    - message_start
+    - message_end
+    - turn_end
+    - turn_start
+    - message_start
+    - message_end
+    - turn_end
+    - agent_end

@@ -15,6 +15,13 @@ behavior fixtures editable without recompiling Rust.
 
 ## Progress
 
+- **YAML-owned tool schemas (2026-08-06):** `ToolSpec.parameters` now accepts
+  a JSON Schema directly in a fixture. The new
+  `visual-tool-schema.yaml` scenario sends string/number values through the
+  real loop and tool actor, then asserts the coerced tool-result transcript
+  and complete lifecycle event vector. Schema behavior can therefore be
+  iterated without recompiling a fixture-specific Rust tool.
+
 - **Fixture-owned terminal usage (2026-08-06):** `Done` event YAML may now
   declare `Usage` fields, which flow through the real assistant terminal event
   into the actor-owned status/footer projection. Shared `Usage` serde defaults
