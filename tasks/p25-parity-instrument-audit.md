@@ -47,6 +47,15 @@ are now classified as a VT replay/frame-selection issue, not evidence that the
 theme-token styling is absent. The raw stream must be reconciled with the
 selected settled frame before changing widget styling.
 
+The ready footer is now rendered only once in the live binary: the ready status
+projection is not painted and then overwritten by the binary footer. The footer
+segments are written directly with Opaline-derived styles, avoiding Ratatui
+style-diff transitions caused by painting the same row twice. A fresh 80x24
+capture reduced footer attribute differences from 25 to 9; glyph, timing, and
+provider-content differences were unchanged. The remaining nine cells are
+isolated to the first bold shortcut label and remain a separate backend-style
+investigation.
+
 The cast comparator no longer caches an arbitrary “last non-empty” frame. It
 now compares the final application screen after replaying all output up to
 alternate-screen exit, while retaining empty/trailing cells and attributes.

@@ -83,7 +83,8 @@ fn render_doctor_hint(area: Rect, buf: &mut Buffer) {
             " for details and fixes.",
             runie_tui::appearance::muted_style(),
         ),
-    ]);
+    ])
+    .style(runie_tui::appearance::base_style());
     ratatui::widgets::Widget::render(
         ratatui::widgets::Paragraph::new(line),
         Rect {
@@ -156,19 +157,23 @@ fn render_live_ready_footer(area: Rect, buf: &mut Buffer) {
         " ".repeat(area.width as usize),
         runie_tui::appearance::base_style(),
     );
-    let line = ratatui::text::Line::from(vec![
-        ratatui::text::Span::styled(
+    let segments = [
+        (
             "Shift+Tab",
             runie_tui::appearance::base_style().add_modifier(ratatui::style::Modifier::BOLD),
         ),
-        ratatui::text::Span::styled(":mode  │  ", runie_tui::appearance::muted_style()),
-        ratatui::text::Span::styled(
+        (":mode  │  ", runie_tui::appearance::muted_style()),
+        (
             "Ctrl+x",
             runie_tui::appearance::base_style().add_modifier(ratatui::style::Modifier::BOLD),
         ),
-        ratatui::text::Span::styled(":shortcuts", runie_tui::appearance::muted_style()),
-    ]);
-    ratatui::widgets::Widget::render(ratatui::widgets::Paragraph::new(line), area, buf);
+        (":shortcuts", runie_tui::appearance::muted_style()),
+    ];
+    let mut x = area.x;
+    for (text, style) in segments {
+        buf.set_string(x, area.y, text, style);
+        x = x.saturating_add(text.len() as u16);
+    }
 }
 
 #[async_trait::async_trait]
@@ -288,9 +293,10 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
             frame_area,
             runie_tui::appearance::background_style_for(ThemeKind::GrokNight),
         );
-        status.render(layout.status, frame.buffer_mut());
         if matches!(status.current(), Status::Ready) {
             render_live_ready_footer(layout.status, frame.buffer_mut());
+        } else {
+            status.render(layout.status, frame.buffer_mut());
         }
         let theme = status.theme();
         let mut scrollback = app.scrollback_snapshot();
@@ -493,9 +499,10 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                         );
                         let status = app.status_snapshot();
                         let turn_status = status.turn_status();
-                        status.render(layout.status, buf);
                         if matches!(status.current(), Status::Ready) {
                             render_live_ready_footer(layout.status, buf);
+                        } else {
+                            status.render(layout.status, buf);
                         }
                         let theme = status.theme();
                         let mut scrollback = app.scrollback_snapshot();
