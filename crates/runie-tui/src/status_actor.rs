@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use runie_core::types::AgentEvent;
-use runie_core::{spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
+use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::event_renderer::status_messages_for_event;
@@ -66,21 +66,16 @@ impl StatusActor {
                 if messages.is_empty() {
                     continue;
                 }
-                let (reply, acknowledged) = oneshot::channel();
-                if tx.send(Command::ApplyBatch(messages, reply)).await.is_err() {
+                if !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply)) {
                     break;
                 }
-                let _ = acknowledged.await;
             }
         }));
         actor
     }
 
     pub async fn apply(&self, message: StatusMsg) {
-        let (reply, acknowledged) = oneshot::channel();
-        if self.tx.send(Command::Apply(message, reply)).await.is_ok() {
-            let _ = acknowledged.await;
-        }
+        let _ = mailbox_ack!(self.tx, |reply| Command::Apply(message, reply));
     }
 
     /// Apply all status-owned transitions represented by one core event.
@@ -90,15 +85,7 @@ impl StatusActor {
         if messages.is_empty() {
             return;
         }
-        let (reply, acknowledged) = oneshot::channel();
-        if self
-            .tx
-            .send(Command::ApplyBatch(messages, reply))
-            .await
-            .is_ok()
-        {
-            let _ = acknowledged.await;
-        }
+        let _ = mailbox_ack!(self.tx, |reply| Command::ApplyBatch(messages, reply));
     }
 
     pub fn snapshot(&self) -> StatusBar {

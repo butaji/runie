@@ -125,3 +125,9 @@ runtime-discovered and editable without recompiling the runner.
   actor activation no longer maintain separate label lists.
 YAML visual steps now support `Up`/`Down` tool selection through the live app
 actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker for an expanded tool.
+
+- **Acknowledged mailbox DSL (2026-08-06):** Added `mailbox_ack!`, a thin
+  macro that keeps the command constructor visible while standardizing the
+  one-shot acknowledgement protocol. Status and scrollback actors use it for
+  live bus projections and replay commands; a macro test proves the caller
+  cannot observe completion before the worker acknowledges reduction.

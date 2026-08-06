@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use runie_core::types::AgentEvent;
-use runie_core::{spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
+use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
 use crate::widgets::{Scrollback, ScrollbackMsg};
 
@@ -56,15 +56,11 @@ impl ScrollbackActor {
             loop {
                 match events.recv().await {
                     Ok(AgentEvent::Reset) => {
-                        let (reply, acknowledged) = oneshot::channel();
-                        if tx
-                            .send(Command::ApplyBatch(vec![ScrollbackMsg::Clear], reply))
-                            .await
-                            .is_err()
-                        {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::ApplyBatch(vec![ScrollbackMsg::Clear], reply)
+                        }) {
                             break;
                         }
-                        let _ = acknowledged.await;
                     }
                     Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
@@ -80,15 +76,7 @@ impl ScrollbackActor {
     }
 
     pub async fn apply_batch(&self, messages: Vec<ScrollbackMsg>) {
-        let (reply, acknowledged) = oneshot::channel();
-        if self
-            .tx
-            .send(Command::ApplyBatch(messages, reply))
-            .await
-            .is_ok()
-        {
-            let _ = acknowledged.await;
-        }
+        let _ = mailbox_ack!(self.tx, |reply| Command::ApplyBatch(messages, reply));
     }
 
     pub fn snapshot(&self) -> Scrollback {

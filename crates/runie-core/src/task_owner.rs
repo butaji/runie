@@ -41,6 +41,24 @@ macro_rules! mailbox_call {
 
 pub use crate::mailbox_call;
 
+/// Sends a command carrying a one-shot acknowledgement and waits until the
+/// actor has reduced it. The command constructor stays at the call site so
+/// the macro does not conceal mailbox semantics.
+#[macro_export]
+macro_rules! mailbox_ack {
+    ($tx:expr, $command:expr) => {{
+        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        if $tx.send(($command)(reply_tx)).await.is_ok() {
+            let _ = reply_rx.await;
+            true
+        } else {
+            false
+        }
+    }};
+}
+
+pub use crate::mailbox_ack;
+
 /// Keeps an actor's worker task attached to the actor's lifetime.
 ///
 /// The handle is shared because public actor handles are cheap clones. The
@@ -81,5 +99,18 @@ mod tests {
         tx.send(7_u8).await.expect("actor mailbox is open");
         drop(tx);
         drop(owner);
+    }
+
+    #[tokio::test]
+    async fn mailbox_ack_waits_for_actor_reduction() {
+        let (tx, mut rx) = mpsc::channel::<tokio::sync::oneshot::Sender<()>>(1);
+        // OWNER: mailbox_ack test; the handle is awaited before the test exits.
+        let worker = tokio::spawn(async move {
+            if let Some(reply) = rx.recv().await {
+                let _ = reply.send(());
+            }
+        });
+        assert!(mailbox_ack!(tx, |reply| reply));
+        worker.await.expect("ack worker completes");
     }
 }
