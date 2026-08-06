@@ -752,6 +752,7 @@ pub enum AgentEvent {
     },
     MessageUpdate {
         message: AgentMessage,
+        #[serde(rename = "assistantMessageEvent")]
         event: AssistantMessageEvent,
     },
     MessageEnd {
@@ -1226,6 +1227,14 @@ mod tests {
         assert_eq!(json["type"], "tool_execution_start");
         assert_eq!(json["toolCallId"], "call-1");
         assert!(json.get("tool_call_id").is_none());
+
+        let message_update = AgentEvent::MessageUpdate {
+            message: AgentMessage::Assistant(AssistantMessage::default()),
+            event: AssistantMessageEvent::TextDelta { delta: "hi".into() },
+        };
+        let update_json = serde_json::to_value(message_update).expect("message update serializes");
+        assert!(update_json.get("event").is_none());
+        assert_eq!(update_json["assistantMessageEvent"]["type"], "text_delta");
 
         let stream = AssistantMessageEvent::ToolCallEnd {
             index: 0,
