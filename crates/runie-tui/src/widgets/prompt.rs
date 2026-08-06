@@ -680,6 +680,18 @@ mod tests {
     }
 
     #[test]
+    fn renderer_adapter_preserves_prompt_projection_fields() {
+        let mut source = PromptWidget::new();
+        source.set_model_caption("adapter-model");
+        source.handle_key(key(KeyCode::Char('x'), KeyModifiers::NONE));
+        source.cycle_mode();
+        source.push_history("previous");
+        let snapshot = source.model_snapshot();
+        let adapted = PromptWidget::from_model_snapshot(snapshot.clone());
+        assert_eq!(adapted.model_snapshot(), snapshot);
+    }
+
+    #[test]
     fn history_chrome_is_visible_while_browsing() {
         let mut p = PromptWidget::new();
         p.push_history("previous");

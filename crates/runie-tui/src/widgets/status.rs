@@ -465,6 +465,17 @@ mod tests {
     }
 
     #[test]
+    fn renderer_adapter_preserves_status_projection_fields() {
+        let mut source = StatusBar::new();
+        source.set_theme(ThemeKind::GrokDay);
+        source.set(Status::Thinking);
+        source.advance_animation();
+        let snapshot = source.model_snapshot();
+        let adapted = StatusBar::from_model_snapshot(snapshot.clone());
+        assert_eq!(adapted.model_snapshot(), snapshot);
+    }
+
+    #[test]
     fn status_preserves_every_declared_theme_variant() {
         let variants = [
             ThemeKind::GrokNight,

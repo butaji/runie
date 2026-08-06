@@ -87,6 +87,9 @@ and `PromptWidget` adapters from that same immutable `TuiSnapshot` in both
 initial and steady-state draw paths. Palette, header, overlay, and cursor
 inputs are likewise taken from the frame snapshot, eliminating mixed-time
 actor reads during one paint pass.
+Focused adapter tests assert that prompt and status renderer rehydration is
+lossless over the complete immutable projection, complementing the feed
+adapter regression.
 
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
