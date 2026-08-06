@@ -7,6 +7,9 @@ events:
       work_id: worker-1
       description: "inspect the repository"
       background: true
+  - tool_mode:
+      tool_call_id: worker-1
+      mode: expanded
   - background_progress:
       work_id: worker-1
       description: "inspect the repository"
@@ -19,6 +22,9 @@ events:
       work_id: worker-2
       description: "run the checks"
       background: true
+  - tool_mode:
+      tool_call_id: worker-2
+      mode: expanded
   - background_end:
       work_id: worker-2
       description: "run the checks"
@@ -29,6 +35,9 @@ events:
       work_id: worker-3
       description: "stop the watcher"
       background: true
+  - tool_mode:
+      tool_call_id: worker-3
+      mode: expanded
   - background_cancel:
       work_id: worker-3
       description: "stop the watcher"

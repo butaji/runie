@@ -392,9 +392,9 @@ lifecycle in YAML.
 Typed default projection (2026-08-06): regular `ToolExecutionStart` events now
 project the source-backed default through the actor reducer (`Collapsed` for
 ordinary tools, `Truncated` for Bash-like execution). Background lifecycle rows
-remain on their existing compatibility path until their event payload carries
-the concrete Grok block variant. Fixtures needing member rows declare
-`tool_mode: expanded`, preserving fast YAML-only iteration.
+now also project the source-backed `Collapsed` default for the subagent block.
+Fixtures needing member rows declare `tool_mode: expanded`, preserving fast
+YAML-only iteration while keeping the default behavior source-correct.
 
 User feed parity (2026-08-06): user rows now use the theme's `bg.panel` token
 across the full terminal width, and subsequent submitted turns pin the newest

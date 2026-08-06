@@ -364,14 +364,21 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
             work_id,
             description,
             background,
-        } => vec![ScrollbackMsg::ToolStart {
-            tool_call_id: work_id,
-            header: format!(
-                "Subagent {}: {description:?}",
-                if background { "started" } else { "running" }
+        } => vec![
+            ScrollbackMsg::SetToolName(work_id.clone(), "subagent".into()),
+            ScrollbackMsg::SetToolMode(
+                work_id.clone(),
+                runie_core::types::ToolDisplayMode::Collapsed,
             ),
-            activity: None,
-        }],
+            ScrollbackMsg::ToolStart {
+                tool_call_id: work_id,
+                header: format!(
+                    "Subagent {}: {description:?}",
+                    if background { "started" } else { "running" }
+                ),
+                activity: None,
+            },
+        ],
         AgentEvent::BackgroundWorkProgress {
             work_id,
             description,
@@ -506,6 +513,10 @@ mod tests {
             .lines()
             .iter()
             .any(|line| line.text.contains("Subagent started")));
+        assert_eq!(
+            actor.snapshot().tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Collapsed
+        );
     }
 
     #[tokio::test]
