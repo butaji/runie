@@ -282,3 +282,9 @@ Transcript block states:
   that enables user vpad only when the available content area has at least
   three rows. Tiny panes now prioritize content over the top/bottom padding,
   with a focused renderer regression.
+
+- **Edit diff card progress (2026-08-06):** Tool output/result rows now
+  classify unified-diff insertions, deletions, and hunk headers through the
+  selected Opaline success/error/accent tokens. `visual-edit-card.yaml`
+  exercises the complete edit lifecycle through the YAML runner, and a
+  theme-sensitive widget regression pins the three semantic row styles.

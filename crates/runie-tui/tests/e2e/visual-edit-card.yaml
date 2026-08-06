@@ -1,0 +1,23 @@
+name: visual-edit-card
+description: |
+  Edit cards preserve Grok's semantic diff rows and theme-driven insert,
+  delete, and hunk styling through event replay.
+initial_prompt: "Update the file"
+tools:
+  - name: edit
+    kind: edit
+events:
+  - start
+  - tool_call:
+      name: edit
+      args: { path: "src/main.rs" }
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Edit src/main.rs"
+      - "@@ -1 +1 @@"
+      - "-old"
+      - "+new"

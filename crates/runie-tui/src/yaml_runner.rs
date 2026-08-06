@@ -700,6 +700,10 @@ fn register_scenario_tool(
             &tool.name,
             "# runie\n\nThis is **Runie**.",
         ))),
+        "edit" => registry.register(Arc::new(ReplayTool::new(
+            &tool.name,
+            "@@ -1 +1 @@\n-old\n+new",
+        ))),
         "bash" => registry.register(Arc::new(ReplayTool::new(
             &tool.name,
             "cargo test completed",
@@ -1196,6 +1200,10 @@ pub async fn render_visual_buffer(
             "read" => reg.register(Arc::new(ReplayTool::new(
                 &t.name,
                 "# runie\n\nThis is **Runie**.",
+            ))),
+            "edit" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "@@ -1 +1 @@\n-old\n+new",
             ))),
             "bash" => reg.register(Arc::new(ReplayTool::new(&t.name, "cargo test completed"))),
             "subagent" => reg.register(Arc::new(ReplayTool::new(&t.name, "subagent completed"))),

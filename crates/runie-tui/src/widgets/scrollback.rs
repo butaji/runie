@@ -842,6 +842,20 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
     if kind == LineKind::Activity {
         return styled_activity_line(text, style);
     }
+    if matches!(kind, LineKind::ToolOutput | LineKind::ToolResult) {
+        let diff_style = if text.starts_with('+') && !text.starts_with("+++") {
+            Some(appearance::success_style_for(theme))
+        } else if text.starts_with('-') && !text.starts_with("---") {
+            Some(appearance::error_style_for(theme))
+        } else if text.starts_with("@@") {
+            Some(appearance::accent_style_for(theme))
+        } else {
+            None
+        };
+        if let Some(diff_style) = diff_style {
+            return RatLine::from(text.to_owned()).style(diff_style);
+        }
+    }
     if kind != LineKind::Assistant {
         return RatLine::from(text.to_owned()).style(style);
     }
@@ -1194,6 +1208,25 @@ mod tests {
         let mut scrollback = Scrollback::new();
         scrollback.set_theme(ThemeKind::GrokDay);
         assert_eq!(scrollback.theme(), ThemeKind::GrokDay);
+    }
+
+    #[test]
+    fn edit_diff_rows_use_semantic_theme_tokens() {
+        let inserted = styled_line_for(LineKind::ToolResult, "+new", ThemeKind::GrokDay);
+        let deleted = styled_line_for(LineKind::ToolResult, "-old", ThemeKind::GrokDay);
+        let hunk = styled_line_for(LineKind::ToolOutput, "@@ -1 +1 @@", ThemeKind::GrokDay);
+        assert_eq!(
+            inserted.style.fg,
+            appearance::success_style_for(ThemeKind::GrokDay).fg
+        );
+        assert_eq!(
+            deleted.style.fg,
+            appearance::error_style_for(ThemeKind::GrokDay).fg
+        );
+        assert_eq!(
+            hunk.style.fg,
+            appearance::accent_style_for(ThemeKind::GrokDay).fg
+        );
     }
 
     #[test]
