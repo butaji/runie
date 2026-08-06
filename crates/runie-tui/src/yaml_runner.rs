@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::event_renderer::EventRenderer;
-use crate::widgets::{Line, LineKind, Scrollback};
+use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
 use runie_core::events::EventBus;
@@ -1459,14 +1459,13 @@ pub async fn render_visual_buffer(
         app.status.clone(),
         scenario.initial_prompt.is_none(),
     );
-    app.scrollback
-        .lock()
-        .set_reasoning_expanded(vis.reasoning_expanded);
-    app.scrollback
-        .lock()
-        .set_activity_expanded(activity_expanded);
+    app.apply_scrollback(ScrollbackMsg::SetReasoningExpanded(vis.reasoning_expanded))
+        .await;
+    app.apply_scrollback(ScrollbackMsg::SetActivityExpanded(activity_expanded))
+        .await;
     if let Some(timestamp) = scenario.prompt_timestamp.clone() {
-        app.scrollback.lock().set_prompt_timestamp(Some(timestamp));
+        app.apply_scrollback(ScrollbackMsg::SetPromptTimestamp(Some(timestamp)))
+            .await;
     }
     let mut events = captured_events.unwrap_or_else(|| collected.lock().clone());
     append_declared_events(&mut events, scenario);
@@ -1474,17 +1473,16 @@ pub async fn render_visual_buffer(
         renderer.apply_event(ev);
     }
     if scenario.capture_while_waiting {
-        app.scrollback
-            .lock()
-            .remove_kind(crate::widgets::LineKind::ThinkingStatus);
-        app.scrollback.lock().normalize_activity_spacing();
-        app.scrollback
-            .lock()
-            .set_prompt_timestamp(Some("9:27 PM".to_owned()));
+        app.apply_scrollback_batch(vec![
+            ScrollbackMsg::RemoveKind(crate::widgets::LineKind::ThinkingStatus),
+            ScrollbackMsg::NormalizeActivitySpacing,
+            ScrollbackMsg::SetPromptTimestamp(Some("9:27 PM".to_owned())),
+        ])
+        .await;
         app.prompt.set_placeholder_visible(false).await;
     }
     if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {
-        app.scrollback.lock().clear();
+        app.apply_scrollback(ScrollbackMsg::Clear).await;
     }
     let event_status = scenario.capture_while_waiting
         || (scenario.initial_prompt.is_none()

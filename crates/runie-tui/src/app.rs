@@ -379,6 +379,30 @@ impl App {
         scrollback.set_activity_expanded(!expanded);
     }
 
+    /// Apply a feed update through the actor that owns the rendered snapshot.
+    /// The mutex is a compatibility fallback for apps whose renderer is not
+    /// running yet.
+    pub async fn apply_scrollback(&self, message: crate::widgets::ScrollbackMsg) {
+        let actor = { self.scrollback_actor.lock().clone() };
+        if let Some(actor) = actor {
+            actor.apply(message).await;
+        } else {
+            self.scrollback.lock().apply(message);
+        }
+    }
+
+    pub async fn apply_scrollback_batch(&self, messages: Vec<crate::widgets::ScrollbackMsg>) {
+        let actor = { self.scrollback_actor.lock().clone() };
+        if let Some(actor) = actor {
+            actor.apply_batch(messages).await;
+        } else {
+            let mut scrollback = self.scrollback.lock();
+            for message in messages {
+                scrollback.apply(message);
+            }
+        }
+    }
+
     pub async fn refresh_model_caption(&self) {
         let model = self.loop_actor.state_snapshot().model;
         if !model.name.is_empty() {

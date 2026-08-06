@@ -115,6 +115,12 @@ publish immutable `watch` snapshots to the pure view.
   mutex. YAML assertions therefore exercise the same actor-owned view used by
   the live app; unit, replay, Clippy, and lint gates remain green.
 
+- **YAML setup cutover (2026-08-05):** Visual setup mutations (reasoning and
+  activity expansion, deterministic timestamps, waiting cleanup, spacing
+  normalization, and reset) now use `App::apply_scrollback*`, so they update
+  the actor snapshot consumed by rendering. The legacy mutex is retained only
+  when an app has no renderer actor yet.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status
