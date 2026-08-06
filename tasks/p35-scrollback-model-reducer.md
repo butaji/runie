@@ -47,3 +47,10 @@ terminal-level oracle.
 explicit-follow, reveal, selection, scroll, snapshot, and render paths all
 use that model-owned value. The YAML `visual-tool-update` follow assertion
 and the full visual matrix verify the adapter round-trip.
+
+### Slice 3 complete: scroll offset ownership
+
+`scroll_offset` now lives in `FeedNavigation` as well. Explicit scroll,
+reveal-to-latest, append-tail following, physical-row clamping, selection
+reveal, snapshot rehydration, and YAML scroll assertions use that single
+model-owned field; rendering still performs only terminal-size clamping.

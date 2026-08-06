@@ -381,3 +381,7 @@ The second p35 slice is complete: `autoscroll` and `follow_latest_user` now
 use the model-owned `FeedNavigation` across append, follow, reveal, selection,
 scrolling, snapshot, and rendering. The YAML follow regression and four-size
 visual suite pass.
+
+The third p35 slice is complete: `scroll_offset` is now also owned by
+`FeedNavigation`; explicit scroll, reveal, append-tail, selection reveal,
+snapshot, and renderer clamping consume that same model fact.

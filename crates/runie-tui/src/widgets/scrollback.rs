@@ -180,7 +180,6 @@ impl LinePresentationExt for LineKind {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Scrollback {
     lines: Vec<Line>,
-    scroll_offset: usize,
     reasoning_expanded: bool,
     activity_expanded: bool,
     prompt_timestamp: Option<String>,
@@ -209,7 +208,7 @@ impl Scrollback {
     pub fn from_model_snapshot(snapshot: FeedSnapshot) -> Self {
         let mut scrollback = Self::new();
         scrollback.lines = snapshot.lines;
-        scrollback.scroll_offset = snapshot.scroll_offset;
+        scrollback.navigation.scroll_offset = snapshot.scroll_offset;
         scrollback.navigation.autoscroll = snapshot.autoscroll;
         scrollback.reasoning_expanded = snapshot.reasoning_expanded;
         scrollback.activity_expanded = snapshot.activity_expanded;
@@ -234,7 +233,6 @@ impl Scrollback {
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
-            scroll_offset: 0,
             reasoning_expanded: false,
             activity_expanded: false,
             prompt_timestamp: None,
@@ -309,7 +307,7 @@ impl Scrollback {
             ScrollbackMsg::RevealLatest => {
                 self.navigation.autoscroll = true;
                 self.navigation.follow_latest_user = false;
-                self.scroll_offset = self.lines.len();
+                self.navigation.scroll_offset = self.lines.len();
             }
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
@@ -595,7 +593,7 @@ impl Scrollback {
         if self.navigation.autoscroll {
             // Hold offset so the tail is in view after the next render
             // (the actual clamp happens in `render` once we know area height).
-            self.scroll_offset = self.lines.len();
+            self.navigation.scroll_offset = self.lines.len();
         }
         index
     }
@@ -609,7 +607,7 @@ impl Scrollback {
         self.workflow_phases.clear();
         self.revealed_dense_groups.clear();
         self.center_revealed_entry = false;
-        self.scroll_offset = 0;
+        self.navigation.scroll_offset = 0;
         self.selected_tool_id = None;
         self.selected_entry = None;
         self.navigation.follow_latest_user = false;
@@ -636,7 +634,7 @@ impl Scrollback {
             tool_blocks: self.tool_blocks(),
             tool_names: self.tool_names.clone(),
             autoscroll: self.navigation.autoscroll,
-            scroll_offset: self.scroll_offset,
+            scroll_offset: self.navigation.scroll_offset,
             reasoning_expanded: self.reasoning_expanded,
             activity_expanded: self.activity_expanded,
             prompt_timestamp: self.prompt_timestamp.clone(),
@@ -805,7 +803,7 @@ impl Scrollback {
     }
 
     pub fn scroll_offset(&self) -> usize {
-        self.scroll_offset
+        self.navigation.scroll_offset
     }
 
     fn selectable_entries(&self) -> Vec<usize> {
@@ -858,11 +856,13 @@ impl Scrollback {
         }
         self.navigation.detach_from_tail();
         if lines.is_negative() {
-            self.scroll_offset = self
+            self.navigation.scroll_offset = self
+                .navigation
                 .scroll_offset
                 .saturating_sub(lines.unsigned_abs() as usize);
         } else {
-            self.scroll_offset = self.scroll_offset.saturating_add(lines as usize);
+            self.navigation.scroll_offset =
+                self.navigation.scroll_offset.saturating_add(lines as usize);
         }
     }
 
@@ -1002,16 +1002,16 @@ impl Scrollback {
         if total > visible {
             let max_offset = total - visible;
             if self.navigation.autoscroll {
-                self.scroll_offset = if area.width < 50 {
+                self.navigation.scroll_offset = if area.width < 50 {
                     max_offset.saturating_sub(compact_scroll_lead)
                 } else {
                     max_offset
                 };
-            } else if self.scroll_offset > max_offset {
-                self.scroll_offset = max_offset;
+            } else if self.navigation.scroll_offset > max_offset {
+                self.navigation.scroll_offset = max_offset;
             }
         } else {
-            self.scroll_offset = 0;
+            self.navigation.scroll_offset = 0;
         }
 
         if let Some(selected_text) = self
@@ -1025,13 +1025,13 @@ impl Scrollback {
                 {
                     if self.center_revealed_entry {
                         let max_offset = total.saturating_sub(visible);
-                        self.scroll_offset =
+                        self.navigation.scroll_offset =
                             selected_row.saturating_sub(visible / 2).min(max_offset);
                         self.center_revealed_entry = false;
-                    } else if selected_row < self.scroll_offset {
-                        self.scroll_offset = selected_row;
-                    } else if selected_row >= self.scroll_offset + visible {
-                        self.scroll_offset = selected_row.saturating_sub(visible - 1);
+                    } else if selected_row < self.navigation.scroll_offset {
+                        self.navigation.scroll_offset = selected_row;
+                    } else if selected_row >= self.navigation.scroll_offset + visible {
+                        self.navigation.scroll_offset = selected_row.saturating_sub(visible - 1);
                     }
                 }
             }
@@ -1062,9 +1062,9 @@ impl Scrollback {
                         anchored
                     }
                 })
-                .unwrap_or(self.scroll_offset)
+                .unwrap_or(self.navigation.scroll_offset)
         } else {
-            self.scroll_offset
+            self.navigation.scroll_offset
         };
         let end = (start + visible).min(total);
         let selected_non_tool_text = self.selected_entry.and_then(|index| {
@@ -3019,9 +3019,9 @@ mod tests {
         scrollback.apply(ScrollbackMsg::ScrollBy(2));
         assert!(!scrollback.navigation.autoscroll);
         assert!(!scrollback.navigation.follow_latest_user);
-        assert_eq!(scrollback.scroll_offset, 10);
+        assert_eq!(scrollback.navigation.scroll_offset, 10);
         scrollback.apply(ScrollbackMsg::ScrollBy(-1));
-        assert_eq!(scrollback.scroll_offset, 9);
+        assert_eq!(scrollback.navigation.scroll_offset, 9);
     }
 
     #[test]
@@ -3035,7 +3035,10 @@ mod tests {
 
         let adapted = Scrollback::from_model_snapshot(source.model_snapshot());
         assert!(adapted.navigation.autoscroll);
-        assert_eq!(adapted.scroll_offset, source.scroll_offset);
+        assert_eq!(
+            adapted.navigation.scroll_offset,
+            source.navigation.scroll_offset
+        );
     }
 
     #[test]
