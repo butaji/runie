@@ -485,3 +485,11 @@ projection currently marks only the explicit background/subagent lifecycle as
 TUI reducer. This remains an explicit gap. It must be closed by carrying the
 tool lifecycle's running fact through an actor-owned event before adding the
 running-only fold cycle; header-string inference would produce false parity.
+
+Ordinary tool lifecycle wiring (2026-08-06): a first attempt to promote every
+`ScrollbackMsg::ToolStart` to `ToolRunning` exposed a duplicate start projection
+in the compatibility/actor transition path: a completed ordinary tool could
+retain the running glyph. The change was reverted rather than weakening the
+oracle. The remaining work is to remove that duplicate projection or introduce
+an explicit actor-owned running transition before changing ordinary start
+rendering.
