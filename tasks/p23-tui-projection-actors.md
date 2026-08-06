@@ -367,3 +367,8 @@ whose payload contains `output` or string `content` now reduce to `ToolOutput`
 rows inside the live scrollback actor. Renderer-side buffering remains for
 non-structured header updates and completion-card formatting; the actor test
 pins multiline output projection.
+
+Tool header-update ownership (2026-08-06): non-structured active-tool update
+payloads now extend per-call header buffers inside `ScrollbackActor`, keyed by
+tool ID. Live renderer update messages are no longer applied a second time;
+completion-card and activity-summary reduction remain the next boundary.

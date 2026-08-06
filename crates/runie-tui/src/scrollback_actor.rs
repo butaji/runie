@@ -1,6 +1,9 @@
 //! Actor-owned transcript projection.
 
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -50,36 +53,9 @@ impl ScrollbackActor {
     /// reset ownership is handled here by the transcript actor itself.
     pub fn new_with_bus(bus: &runie_core::events::EventBus) -> Self {
         let mut actor = Self::new();
-        let mut events = bus.subscribe();
+        let events = bus.subscribe();
         let tx = actor.tx.clone();
-        actor._bus_owner = Some(spawn_owned_worker!(async move {
-            let mut active_tools = HashSet::new();
-            loop {
-                match events.recv().await {
-                    Ok(event) => {
-                        if let AgentEvent::ToolExecutionStart { tool_call_id, .. } = &event {
-                            active_tools.insert(tool_call_id.clone());
-                        }
-                        if let AgentEvent::ToolExecutionEnd { tool_call_id, .. } = &event {
-                            active_tools.remove(tool_call_id);
-                        }
-                        let messages = bus_messages_for_event(event.clone());
-                        let messages = if messages.is_empty() {
-                            structured_update_messages(&active_tools, &event)
-                        } else {
-                            messages
-                        };
-                        if !messages.is_empty()
-                            && !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply))
-                        {
-                            break;
-                        }
-                    }
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
-                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                }
-            }
-        }));
+        actor._bus_owner = Some(spawn_owned_worker!(run_bus_projection(events, tx)));
         actor
     }
 
@@ -97,6 +73,46 @@ impl ScrollbackActor {
 
     pub fn subscribe(&self) -> watch::Receiver<Scrollback> {
         self.snapshot.clone()
+    }
+}
+
+async fn run_bus_projection(
+    mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
+    tx: mpsc::Sender<Command>,
+) {
+    let mut active_tools = HashSet::new();
+    let mut tool_headers = HashMap::new();
+    loop {
+        let event = match events.recv().await {
+            Ok(event) => event,
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+        };
+        if let AgentEvent::ToolExecutionStart {
+            tool_call_id,
+            tool_name,
+            args,
+        } = &event
+        {
+            active_tools.insert(tool_call_id.clone());
+            tool_headers.insert(
+                tool_call_id.clone(),
+                crate::event_renderer::tool_header(tool_name, args),
+            );
+        }
+        if let AgentEvent::ToolExecutionEnd { tool_call_id, .. } = &event {
+            active_tools.remove(tool_call_id);
+            tool_headers.remove(tool_call_id);
+        }
+        let messages = bus_messages_for_event(event.clone());
+        let messages = if messages.is_empty() {
+            tool_update_messages(&active_tools, &mut tool_headers, &event)
+        } else {
+            messages
+        };
+        if !messages.is_empty() && !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply)) {
+            break;
+        }
     }
 }
 
@@ -177,6 +193,46 @@ fn structured_update_messages(
             output,
         }]
     }
+}
+
+fn tool_update_messages(
+    active_tools: &HashSet<String>,
+    tool_headers: &mut HashMap<String, String>,
+    event: &AgentEvent,
+) -> Vec<ScrollbackMsg> {
+    let structured = structured_update_messages(active_tools, event);
+    if !structured.is_empty() {
+        return structured;
+    }
+    let AgentEvent::ToolExecutionUpdate {
+        tool_call_id,
+        partial_result,
+        ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    if !active_tools.contains(tool_call_id)
+        || (partial_result
+            .get("status")
+            .and_then(serde_json::Value::as_str)
+            .is_some()
+            && structured_update_text(partial_result).is_none())
+    {
+        return Vec::new();
+    }
+    let Some(header) = tool_headers.get_mut(tool_call_id) else {
+        return Vec::new();
+    };
+    header.push_str(&format!(
+        " | update: {}",
+        serde_json::to_string(partial_result).unwrap_or_default()
+    ));
+    vec![ScrollbackMsg::ToolUpdate {
+        tool_call_id: tool_call_id.clone(),
+        header: Some(header.clone()),
+        output: Vec::new(),
+    }]
 }
 
 fn structured_update_text(result: &serde_json::Value) -> Option<String> {
@@ -364,6 +420,41 @@ mod tests {
             .lines()
             .iter()
             .any(|line| line.text == "line one"));
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_projects_non_structured_tool_updates() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        actor
+            .apply(ScrollbackMsg::ToolStart {
+                tool_call_id: "tool-2".into(),
+                header: "Bash pwd".into(),
+                activity: None,
+            })
+            .await;
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::ToolExecutionStart {
+            tool_call_id: "tool-2".into(),
+            tool_name: "bash".into(),
+            args: serde_json::json!({"command": "pwd"}),
+        });
+        snapshot.changed().await.expect("tool start projection");
+        bus.publish(AgentEvent::ToolExecutionUpdate {
+            tool_call_id: "tool-2".into(),
+            tool_name: "bash".into(),
+            args: serde_json::json!({"command": "pwd"}),
+            partial_result: serde_json::json!({"step": 2}),
+        });
+        snapshot
+            .changed()
+            .await
+            .expect("tool header update projection");
+        assert!(actor
+            .snapshot()
+            .lines()
+            .iter()
+            .any(|line| line.text.contains("update")));
     }
 
     #[tokio::test]

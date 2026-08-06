@@ -497,14 +497,7 @@ impl EventRenderer {
                             if let Some(tool_start) = actor_tool_start {
                                 scrollback_actor.apply(tool_start).await;
                             } else if let Some(tool_update) = actor_tool_update {
-                                let structured = matches!(
-                                    &event,
-                                    AgentEvent::ToolExecutionUpdate { partial_result, .. }
-                                        if structured_update_text(partial_result).is_some()
-                                );
-                                if !structured {
-                                    scrollback_actor.apply(tool_update).await;
-                                }
+                                let _ = tool_update;
                             } else if let Some(tool_end) = actor_tool_end {
                                 scrollback_actor.apply(tool_end).await;
                             } else {
@@ -1240,7 +1233,7 @@ fn local_clock_parts(timestamp: i64) -> Option<(i64, i64)> {
     clippy::too_many_lines,
     reason = "the pure tool-header DSL keeps Grok's specialized card vocabulary together"
 )]
-fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
+pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
     match tool_name {
         "list_dir" | "list_files" => {
             let path = args
