@@ -222,10 +222,10 @@ fn tool_card_kind(header: &str) -> ToolCardKind {
         ToolCardKind::Edit
     } else if lower.starts_with("list ") {
         ToolCardKind::ListDir
-    } else if lower.starts_with("search ") {
-        ToolCardKind::Search
     } else if lower.starts_with("web search ") {
         ToolCardKind::WebSearch
+    } else if lower.starts_with("search ") {
+        ToolCardKind::Search
     } else if lower.starts_with("fetch ") {
         ToolCardKind::WebFetch
     } else if lower.starts_with("subagent ") {

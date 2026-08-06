@@ -344,3 +344,7 @@ theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
 `search`, web, background, or generic), and mixed/truncated YAML replays pin
 the ordered family vector. This makes the next specialized renderer work an
 explicit event/state contract rather than header-string matching in tests.
+
+Web-card classification correction (2026-08-06): web-search is checked before
+the generic search prefix, matching Grok's distinct `Web Search` card family.
+The web-search and web-fetch YAML scenarios now assert their typed families.

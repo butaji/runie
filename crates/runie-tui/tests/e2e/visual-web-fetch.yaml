@@ -11,6 +11,9 @@ events:
       args: { url: "https://example.com/release" }
   - done: { stop_reason: stop }
 assertions:
+  state:
+    tool_blocks: 1
+    tool_kinds: [web_fetch]
   visual:
     cols: 80
     rows: 24
