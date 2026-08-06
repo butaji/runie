@@ -101,6 +101,14 @@ timestamps, wrapping, and footer style as independently measurable deltas.
 
 ## Review findings
 
+### Phase-marker validation — 2026-08-06
+
+`cast_compare --frames-after=MARKER` now fails explicitly when the requested
+marker is absent from either cast, including the cast path and marker text.
+Previously that case produced an empty zero-frame comparison, which could hide
+an invalid phase selection behind an ordinary mismatch. The full workspace
+gate remains green after this diagnostic hardening.
+
 ### Fresh 62×32 paired capture — 2026-08-05
 
 The installed Grok binary and `just tui` were captured independently with the

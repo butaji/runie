@@ -116,6 +116,14 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
             frames.push(frame);
         }
     }
+    if let Some(marker) = marker {
+        if !started {
+            bail!(
+                "phase marker {marker:?} was not found in {}",
+                path.display()
+            );
+        }
+    }
     Ok(((cols, rows), frames))
 }
 
