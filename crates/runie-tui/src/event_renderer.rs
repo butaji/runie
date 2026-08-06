@@ -131,6 +131,14 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
             vec![ScrollbackMsg::SetToolMode(tool_call_id.clone(), *mode)]
         }
+        AgentEvent::ToolExecutionStart {
+            tool_call_id,
+            tool_name,
+            ..
+        } => vec![ScrollbackMsg::SetToolMode(
+            tool_call_id.clone(),
+            default_tool_display_mode(tool_name),
+        )],
         AgentEvent::BackgroundWorkStarted {
             work_id,
             description,
@@ -1693,6 +1701,17 @@ mod tests {
         });
         assert_eq!(theme, vec![ScrollbackMsg::SetTheme(ThemeKind::GrokDay)]);
         assert!(scrollback_messages_for_event(&AgentEvent::TurnStart).is_empty());
+        assert_eq!(
+            scrollback_messages_for_event(&AgentEvent::ToolExecutionStart {
+                tool_call_id: "bash-1".into(),
+                tool_name: "bash".into(),
+                args: serde_json::json!({"command": "pwd"}),
+            }),
+            vec![ScrollbackMsg::SetToolMode(
+                "bash-1".into(),
+                runie_core::types::ToolDisplayMode::Truncated,
+            )]
+        );
         let user = scrollback_messages_for_event(&AgentEvent::MessageStart {
             message: AgentMessage::User(UserMessage {
                 content: vec![UserContent::Text {

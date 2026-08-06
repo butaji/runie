@@ -377,3 +377,8 @@ explicit event/state contract rather than header-string matching in tests.
 Web-card classification correction (2026-08-06): web-search is checked before
 the generic search prefix, matching Grok's distinct `Web Search` card family.
 The web-search and web-fetch YAML scenarios now assert their typed families.
+
+Replay parity (2026-08-06): deterministic `apply_actor_event` replay now
+projects the same per-tool default display mode as the live bus actor
+(`Truncated` for execute/bash-like tools and `Collapsed` otherwise). Explicit
+YAML `tool_mode` events still override the default through the event reducer.
