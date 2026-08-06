@@ -61,8 +61,10 @@ contract and executable consumer first.
 
 Palette scope correction (2026-08-06): removed the previous unsupported
 session-management, memory, plan, context, and model-switch entries from the
-macro-generated registry. The palette widget, actor filtering, typed
-activation, and YAML replay now share the reduced registry SSOT.
+palette registry. The remaining three-action registry is declarative through
+`typed_action_registry!`; generated filtering/selection helpers are shared by
+the actor model and palette projection, while YAML replay remains the behavior
+oracle.
 
 ## Findings
 
