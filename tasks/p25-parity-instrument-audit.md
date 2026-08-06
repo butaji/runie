@@ -38,6 +38,13 @@ called parity.
    frame and broke the narrow turn-summary gutter unit test. The source remains
    unchanged, and the 111-test unit gate plus YAML replay gate are green again.
 
+7. The full `visual_snapshots` run currently fails six strict fixtures
+   (`submitted`, `reasoning`, `error`, `tool`, `resize`, and `scroll`). Their
+   shared diff is an extra user-entry vertical-padding pair that shifts the
+   prompt/footer rows; the content rows remain present. Generated `.snap.new`
+   files were discarded, and no reference snapshot was weakened or re-recorded.
+   This isolates terminal-height-aware vpad projection as the next fix.
+
 ## Status
 
 In progress. Full-cell dumps, row diagnostics, and phase-locked frame
