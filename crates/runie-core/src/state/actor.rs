@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, oneshot, watch};
 
+use crate::events::EventBus;
 use crate::types::{AgentEvent, AgentMessage, AgentTool, Model, ThinkingLevel};
 
 use super::snapshot::AgentStateSnapshot;
@@ -192,6 +193,14 @@ impl AgentStateActor {
         }
     }
 
+    /// Publish an event and apply the same event to this actor-owned state
+    /// projection before returning. State-changing callers use this boundary
+    /// instead of independently publishing and mutating the projection.
+    pub async fn publish_event(&self, bus: &EventBus, event: AgentEvent) {
+        bus.publish(event.clone());
+        self.apply_event(&event).await;
+    }
+
     async fn apply_message_event(&self, event: &AgentEvent) {
         match event {
             AgentEvent::MessageStart { message } if is_assistant(message) => {
@@ -369,6 +378,28 @@ mod tests {
         assert!(!snapshot.is_streaming);
         assert_eq!(snapshot.error_message.as_deref(), Some("aborted"));
         assert_eq!(snapshot.messages.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn publish_event_keeps_bus_and_projection_on_one_event_boundary() {
+        let actor = AgentStateActor::new();
+        let bus = EventBus::new();
+        let mut events = bus.subscribe();
+        let message = AgentMessage::User(UserMessage {
+            content: vec![UserContent::Text { text: "hey".into() }],
+            timestamp: 1,
+        });
+
+        actor
+            .publish_event(&bus, AgentEvent::MessageEnd { message })
+            .await;
+        actor.sync().await;
+
+        assert!(matches!(
+            events.try_recv(),
+            Ok(AgentEvent::MessageEnd { .. })
+        ));
+        assert_eq!(actor.snapshot().messages.len(), 1);
     }
 
     #[tokio::test]

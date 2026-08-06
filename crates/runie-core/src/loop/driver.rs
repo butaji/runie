@@ -183,8 +183,7 @@ async fn publish_error(deps: &RunLoopDeps, message: &str) {
 }
 
 async fn publish_and_apply(deps: &RunLoopDeps, event: AgentEvent) {
-    deps.bus.publish(event.clone());
-    deps.state.apply_event(&event).await;
+    deps.state.publish_event(&deps.bus, event).await;
 }
 
 async fn initialize_run(
@@ -209,16 +208,21 @@ async fn initialize_run(
 }
 
 async fn publish_input_message(message: &AgentMessage, deps: &RunLoopDeps) {
-    deps.bus.publish(AgentEvent::MessageStart {
-        message: message.clone(),
-    });
-    deps.bus.publish(AgentEvent::MessageEnd {
-        message: message.clone(),
-    });
     deps.state
-        .apply_event(&AgentEvent::MessageEnd {
-            message: message.clone(),
-        })
+        .publish_event(
+            &deps.bus,
+            AgentEvent::MessageStart {
+                message: message.clone(),
+            },
+        )
+        .await;
+    deps.state
+        .publish_event(
+            &deps.bus,
+            AgentEvent::MessageEnd {
+                message: message.clone(),
+            },
+        )
         .await;
 }
 
@@ -408,16 +412,21 @@ async fn publish_tool_outcome(
     }
     for result in &outcome.tool_results {
         let message = AgentMessage::ToolResult(result.clone());
-        deps.bus.publish(AgentEvent::MessageStart {
-            message: message.clone(),
-        });
-        deps.bus.publish(AgentEvent::MessageEnd {
-            message: message.clone(),
-        });
         deps.state
-            .apply_event(&AgentEvent::MessageEnd {
-                message: message.clone(),
-            })
+            .publish_event(
+                &deps.bus,
+                AgentEvent::MessageStart {
+                    message: message.clone(),
+                },
+            )
+            .await;
+        deps.state
+            .publish_event(
+                &deps.bus,
+                AgentEvent::MessageEnd {
+                    message: message.clone(),
+                },
+            )
             .await;
         all_new.push(message);
     }
@@ -505,23 +514,23 @@ async fn stream_assistant(
         provider: model.provider.clone(),
         ..Default::default()
     };
-    deps.bus.publish(AgentEvent::MessageStart {
-        message: assistant_message(&assistant),
-    });
     deps.state
-        .apply_event(&AgentEvent::MessageStart {
-            message: assistant_message(&assistant),
-        })
+        .publish_event(
+            &deps.bus,
+            AgentEvent::MessageStart {
+                message: assistant_message(&assistant),
+            },
+        )
         .await;
 
     drain_assistant_events(&mut receiver, &mut assistant, deps).await;
-    deps.bus.publish(AgentEvent::MessageEnd {
-        message: assistant_message(&assistant),
-    });
     deps.state
-        .apply_event(&AgentEvent::MessageEnd {
-            message: assistant_message(&assistant),
-        })
+        .publish_event(
+            &deps.bus,
+            AgentEvent::MessageEnd {
+                message: assistant_message(&assistant),
+            },
+        )
         .await;
     Some(assistant)
 }

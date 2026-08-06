@@ -271,9 +271,11 @@ impl LoopActor {
 
     /// Clear transcript, projections, and queued messages through their owners.
     pub async fn reset(&self) {
-        let event = crate::types::AgentEvent::Reset;
-        self.inner.deps.bus.publish(event.clone());
-        self.inner.deps.state.apply_event(&event).await;
+        self.inner
+            .deps
+            .state
+            .publish_event(&self.inner.deps.bus, crate::types::AgentEvent::Reset)
+            .await;
         self.clear_all_queues().await;
     }
 

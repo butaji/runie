@@ -396,3 +396,10 @@ Audit checklist per module (pass/fail):
   and loop code publish events or send actor commands, and existing spawn
   owners remain retained. YAML replay now asserts the resulting snapshots,
   providing a behavioral guard for this boundary.
+
+- **State publication boundary (2026-08-06):** Replaced loop-level
+  `bus.publish` plus direct `state.apply_event` pairs with the actor-owned
+  `AgentStateActor::publish_event` boundary. The state actor now owns the
+  coupled publication/projection operation, including prompt, assistant,
+  tool-result, error, and reset events; a regression proves the bus event and
+  actor snapshot are produced from one call without sleeps or polling.
