@@ -488,3 +488,11 @@ hidden prefix. The 12-member YAML oracle covers the threshold path; small
 groups and the existing full visual suite remain green. Explicit
 Selecting a hidden member now reveals the entire dense group through the
 actor-owned selection reducer; exact viewport centering remains open.
+
+Workflow-card contract (2026-08-06): Grok's `WorkflowBlock` requires
+`run_id`, `name`, `objective`, status (`running`/`done`/`failed`/`cancelled`/
+`paused`), elapsed duration, phase title/state trail, current phase, and active
+agent count. Runie's generic tool lifecycle currently exposes only tool name,
+args, result, and error status. The missing workflow lifecycle event payload is
+now explicitly identified; a renderer-only patch would lose source state and
+violate the SSOT/event contract.
