@@ -226,3 +226,13 @@ Pure projection reuse (2026-08-06): the memory-search YAML path no longer
 depends on renderer-local formatting. `memory_display_lines` is a model-owned
 projection consumed by both live and replay event routes, keeping fixture
 changes recompilation-free and eliminating a second formatting contract.
+
+### Actor-owned context metrics (2026-08-06)
+
+The replay DSL now accepts `context_window: N` as a declarative event. It is
+delivered to `StatusActor` as `StatusMsg::SetContextWindow`, rather than being
+written into a renderer or inferred from a snapshot. A state assertion such as
+`context_window: 1000000` validates the resulting actor snapshot, and the
+`visual-context-window` fixture also exercises the screen projection. This
+keeps context-meter parity event-driven and lets metric variants change in
+YAML without recompiling the test harness.

@@ -154,6 +154,9 @@ pub enum EventSpec {
     Theme {
         theme: String,
     },
+    ContextWindow {
+        context_window: u64,
+    },
     ThinkingLevel {
         thinking_level: String,
     },
@@ -461,6 +464,7 @@ impl EventSpec {
             }),
             Self::Waiting { .. } => None,
             Self::Theme { .. } => None,
+            Self::ContextWindow { .. } => None,
             Self::ThinkingLevel { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
@@ -635,6 +639,7 @@ pub struct StateAssertions {
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
+    pub context_window: Option<u64>,
     pub system_prompt_contains: Option<String>,
     pub tool_blocks: Option<usize>,
     pub tool_output_lines: Option<usize>,
@@ -1174,6 +1179,11 @@ async fn replay_scenario_events(
     for event in events {
         renderer.apply_actor_event(event.clone()).await;
     }
+    for window in declared_context_windows(scenario) {
+        status_actor
+            .apply(crate::widgets::StatusMsg::SetContextWindow(Some(window)))
+            .await;
+    }
     for tool_call_id in declared_tool_folds(scenario) {
         scrollback_actor
             .apply(ScrollbackMsg::ToggleToolMode(tool_call_id))
@@ -1186,6 +1196,17 @@ async fn replay_scenario_events(
         scrollback_actor.apply(message).await;
     }
     (scrollback_actor.snapshot(), status_actor.model_snapshot())
+}
+
+fn declared_context_windows(scenario: &Scenario) -> Vec<u64> {
+    scenario
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EventSpec::ContextWindow { context_window } => Some(*context_window),
+            _ => None,
+        })
+        .collect()
 }
 
 fn declared_tool_folds(scenario: &Scenario) -> Vec<String> {
@@ -1466,6 +1487,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         }
     }
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
+    assert_yaml_eq!(
+        expected.context_window.map(Some),
+        outcome.status.context_window,
+        "context_window"
+    );
     assert_yaml_eq!(
         expected.thinking_level,
         actual.thinking_level,

@@ -583,3 +583,8 @@ the active core model's window through `StatusMsg::SetContextWindow`; both the
 model header projection and renderer adapter use it, retaining `500K` only
 when upstream model metadata is unavailable. Unit coverage includes a 1M
 meter, and no renderer reads core state directly.
+
+The YAML replay path now covers the same delivery boundary with a declarative
+`context_window` event and state/screen assertions in
+`visual-context-window.yaml`. This closes the previously missing fixture-level
+evidence for model-dependent Grok metrics.

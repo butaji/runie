@@ -1,0 +1,15 @@
+name: visual-context-window
+description: Context-meter denominator is delivered through the YAML event DSL.
+initial_prompt: "show context"
+events:
+  - start
+  - context_window: 1000000
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    context_window: 1000000
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "show context"
