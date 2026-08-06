@@ -865,6 +865,7 @@ pub enum AssistantMessageEvent {
         message: Option<AssistantMessage>,
     },
     Error {
+        #[serde(rename = "reason")]
         error: String,
         /// Pi's error event carries the terminal assistant message.
         #[serde(default)]
@@ -1261,6 +1262,14 @@ mod tests {
         .expect("done event serializes");
         assert_eq!(done["reason"], "toolUse");
         assert!(done.get("stopReason").is_none());
+
+        let error = serde_json::to_value(AssistantMessageEvent::Error {
+            error: "aborted".into(),
+            message: None,
+        })
+        .expect("error event serializes");
+        assert_eq!(error["reason"], "aborted");
+        assert!(error.get("error").is_none());
 
         let stream = AssistantMessageEvent::ToolCallEnd {
             index: 0,

@@ -1187,3 +1187,7 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
 - **Assistant terminal reason (2026-08-06):** `Done.stop_reason` now emits
   pi's `reason` wire key (for example `toolUse`) rather than `stopReason`,
   with a matching serde assertion.
+
+- **Assistant error reason (2026-08-06):** The internal assistant error text
+  now serializes under pi's terminal `reason` key, while reducer code retains
+  the descriptive `error` field name. Wire coverage pins the `aborted` value.
