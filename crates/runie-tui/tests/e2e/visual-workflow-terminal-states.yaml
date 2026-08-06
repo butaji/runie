@@ -30,14 +30,27 @@ events:
       run_id: wf-cancelled
       status: cancelled
       elapsed_ms: 900
+  - workflow_start:
+      run_id: wf-paused
+      name: review
+      objective: review the release
+  - workflow_progress:
+      run_id: wf-paused
+      phase: approval
+      state: active
+  - workflow_end:
+      run_id: wf-paused
+      status: paused
+      elapsed_ms: 4100
   - done: { stop_reason: stop }
 assertions:
   required_events: [workflow_started, workflow_progress, workflow_finished]
   state:
-    tool_blocks: 2
+    tool_blocks: 3
     tool_headers:
       - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
       - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ●]"
+      - "Workflow review paused at 4.1s: review the release  [approval ●]"
     workflows:
       wf-failed:
         name: verify
@@ -55,6 +68,14 @@ assertions:
         active_agents: 0
         status: cancelled
         elapsed_ms: 900
+      wf-paused:
+        name: review
+        objective: review the release
+        phase: approval
+        state: active
+        active_agents: 0
+        status: paused
+        elapsed_ms: 4100
   visual:
     cols: 100
     rows: 30

@@ -517,3 +517,7 @@ workflow cards, including phase trails and elapsed values, through the real
 Pi-shaped event stream and actor reducer. The parity component index now maps
 the workflow card to its Grok sources and both lifecycle fixtures. Rich
 per-span workflow styling and preamble expansion remain open.
+
+The same fixture now includes Grok's paused terminal state, so all five
+workflow status variants represented by the current Runie event contract are
+covered declaratively: running, done, failed, cancelled, and paused.
