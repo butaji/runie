@@ -26,6 +26,10 @@ events:
       run_id: wf-cancelled
       phase: upload
       state: active
+  - workflow_progress:
+      run_id: wf-cancelled
+      phase: cleanup
+      state: cancelled
   - workflow_end:
       run_id: wf-cancelled
       status: cancelled
@@ -49,7 +53,7 @@ assertions:
     tool_blocks: 3
     tool_headers:
       - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
-      - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ●]"
+      - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ● · cleanup ○]"
       - "Workflow review paused at 4.1s: review the release  [approval ●]"
     workflows:
       wf-failed:
@@ -63,8 +67,8 @@ assertions:
       wf-cancelled:
         name: publish
         objective: publish the release
-        phase: upload
-        state: active
+        phase: cleanup
+        state: cancelled
         active_agents: 0
         status: cancelled
         elapsed_ms: 900
@@ -81,4 +85,4 @@ assertions:
     rows: 30
     screen_text:
       - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
-      - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ●]"
+      - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ● · cleanup ○]"

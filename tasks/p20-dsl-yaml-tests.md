@@ -236,3 +236,6 @@ written into a renderer or inferred from a snapshot. A state assertion such as
 `visual-context-window` fixture also exercises the screen projection. This
 keeps context-meter parity event-driven and lets metric variants change in
 YAML without recompiling the test harness.
+
+The workflow terminal-state fixture also covers a cancelled phase state and
+asserts Grok's fallback `○` glyph alongside the actor-owned workflow snapshot.
