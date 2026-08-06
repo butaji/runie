@@ -100,6 +100,9 @@ struct Inner {
     abort_tx: tokio::sync::watch::Sender<bool>,
     /// Owns the bus-to-registry dispatch task for this actor lifetime.
     _subscriber_bridge: Arc<TaskOwner>,
+    /// Owns the closed Pi bus-to-registry dispatch task for this actor
+    /// lifetime; it never enters the compatibility event dispatcher.
+    _pi_subscriber_bridge: Arc<TaskOwner>,
 }
 
 impl LoopActor {
@@ -109,6 +112,7 @@ impl LoopActor {
         let steering_mode = deps.steering_mode;
         let follow_up_mode = deps.follow_up_mode;
         let subscriber_bridge = spawn_subscriber_bridge(&deps.bus, &deps.subscribers);
+        let pi_subscriber_bridge = spawn_pi_subscriber_bridge(&deps.bus, &deps.subscribers);
         Self {
             inner: Arc::new(Inner {
                 deps,
@@ -118,6 +122,7 @@ impl LoopActor {
                 running: Mutex::new(false),
                 abort_tx,
                 _subscriber_bridge: subscriber_bridge,
+                _pi_subscriber_bridge: pi_subscriber_bridge,
             }),
         }
     }
@@ -370,6 +375,17 @@ fn spawn_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> 
     spawn_owned_worker!(async move {
         while let Ok(event) = events.recv().await {
             subscribers.dispatch(&event).await;
+        }
+    })
+}
+
+fn spawn_pi_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> Arc<TaskOwner> {
+    let mut events = bus.subscribe_pi();
+    let subscribers = subscribers.clone();
+    // OWNER: LoopActor — retained in Inner and aborted with the actor.
+    spawn_owned_worker!(async move {
+        while let Ok(event) = events.recv().await {
+            subscribers.dispatch_pi(&event).await;
         }
     })
 }

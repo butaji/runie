@@ -27,20 +27,6 @@ pub trait PiSubscriber: Send + Sync + 'static {
     async fn handle_pi(&mut self, event: &PiAgentEvent);
 }
 
-struct PiSubscriberAdapter(Box<dyn PiSubscriber>);
-
-#[async_trait::async_trait]
-impl Subscriber for PiSubscriberAdapter {
-    async fn handle(&mut self, event: &AgentEvent) {
-        if let Ok(pi_event) = PiAgentEvent::try_from(event.clone()) {
-            self.0.handle_pi(&pi_event).await;
-        }
-    }
-}
-
-/// Type-erased subscriber handle.
-type BoxedSubscriber = Box<dyn Subscriber>;
-
 #[derive(Default, Clone)]
 pub struct SubscriberRegistry {
     inner: Arc<Mutex<RegistryInner>>,
@@ -49,7 +35,14 @@ pub struct SubscriberRegistry {
 #[derive(Default)]
 struct RegistryInner {
     next_id: usize,
-    subs: Vec<(SubId, BoxedSubscriber)>,
+    subs: Vec<(SubId, SubscriberEntry)>,
+}
+
+/// Keep Pi and compatibility subscribers distinct all the way to dispatch.
+/// The shared entry list still provides one deterministic registration order.
+enum SubscriberEntry {
+    Application(Box<dyn Subscriber>),
+    Pi(Box<dyn PiSubscriber>),
 }
 
 impl SubscriberRegistry {
@@ -57,16 +50,20 @@ impl SubscriberRegistry {
         Self::default()
     }
 
-    pub async fn register(&self, sub: BoxedSubscriber) -> SubId {
+    pub async fn register(&self, sub: Box<dyn Subscriber>) -> SubId {
         let mut g = self.inner.lock().await;
         let id = SubId(g.next_id);
         g.next_id += 1;
-        g.subs.push((id, sub));
+        g.subs.push((id, SubscriberEntry::Application(sub)));
         id
     }
 
     pub async fn register_pi(&self, sub: Box<dyn PiSubscriber>) -> SubId {
-        self.register(Box::new(PiSubscriberAdapter(sub))).await
+        let mut g = self.inner.lock().await;
+        let id = SubId(g.next_id);
+        g.next_id += 1;
+        g.subs.push((id, SubscriberEntry::Pi(sub)));
+        id
     }
 
     pub async fn unregister(&self, id: SubId) {
@@ -79,7 +76,19 @@ impl SubscriberRegistry {
     pub async fn dispatch(&self, event: &AgentEvent) {
         let mut g = self.inner.lock().await;
         for (_, sub) in &mut g.subs {
-            sub.handle(event).await;
+            if let SubscriberEntry::Application(sub) = sub {
+                sub.handle(event).await;
+            }
+        }
+    }
+
+    /// Dispatch only the closed Pi contract, preserving registration order.
+    pub async fn dispatch_pi(&self, event: &PiAgentEvent) {
+        let mut g = self.inner.lock().await;
+        for (_, sub) in &mut g.subs {
+            if let SubscriberEntry::Pi(sub) = sub {
+                sub.handle_pi(event).await;
+            }
         }
     }
 
@@ -144,7 +153,7 @@ mod tests {
             theme: crate::types::ThemeKind::GrokNight,
         })
         .await;
-        reg.dispatch(&AgentEvent::TurnStart).await;
+        reg.dispatch_pi(&PiAgentEvent::TurnStart).await;
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 }

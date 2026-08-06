@@ -20,6 +20,13 @@ when eligible and deliberately retain the compatibility path when they are
 Runie-specific. Core event-sequence and YAML replay tests remain green after
 the migration.
 
+The subscriber registry now keeps `PiSubscriber` entries separate from broad
+application subscribers while retaining one ordered registration list. The
+loop actor owns separate, cancellable bus bridges for compatibility events and
+the filtered Pi stream. Pi subscribers therefore never cross the broad
+`Subscriber::handle` adapter; both paths remain async and registration-order
+settled.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.
