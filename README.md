@@ -8,6 +8,7 @@ single-source-of-truth actors + events.
 | Crate        | Purpose                                                      |
 |--------------|--------------------------------------------------------------|
 | `runie-core` | Agent loop, state, events, tools, queues (the pi-port)       |
+| `runie-tui`  | Actor/MVU TUI, YAML replay, and Grok parity snapshots       |
 | `lint-check` | Build-script-style linter enforcing project rules            |
 
 ## Architecture
@@ -27,6 +28,10 @@ Events-based, single-source-of-truth actors:
 | `ToolExecutorActor`  | tool call dispatch (sequential + parallel)                 |
 | `ProviderActor`      | one in-flight LLM stream                                   |
 | `LoopActor`          | the loop task + subscriber registry                        |
+| `StatusActor`        | status, usage, waiting, and theme snapshot                  |
+| `ScrollbackActor`    | transcript, tool cards, selection, and scroll               |
+| `PromptActor`        | prompt, history, mode, and file-search state                |
+| `UiActor`            | palette/modal state and typed UI actions                    |
 
 ## Event Sequence
 
@@ -57,13 +62,9 @@ cargo run   -p lint-check
 cargo doc   -p runie-core --no-deps
 ```
 
-Tests:
-
-- **Unit tests** (25): live alongside each module, cover state mutation,
-  queue draining, registry lookups, provider forwarding, etc.
-- **Integration tests** (2): `tests/event_sequence.rs` validates the README
-  event sequence for a simple `prompt("Hi")`; `tests/queue_followup.rs`
-  verifies that a queued follow-up message triggers a second turn.
+Tests are layered: core replay/state tests, TUI unit tests, runtime-discovered
+YAML scenarios, and full-screen asciinema/TestBackend comparisons. Run the
+complete local gate with `just ci`.
 
 ## Tasks
 
@@ -93,18 +94,13 @@ What we **didn't** do (and why):
 
 - We **didn't** add `sccache` — not pre-installed on this host.
 - We **didn't** enable LTO or `panic = "abort"` in dev profile — both slow down incremental rebuilds.
-- We **didn't** split `runie-tui` tests into multiple binaries — only 19 unit tests; the binary already builds in seconds.
+- We **didn't** split `runie-tui` tests into multiple binaries; the current
+  workspace gate already exercises unit, replay, YAML, and visual paths.
 
-## Known issues
+## Current parity status
 
-The `end_to_end_prompt_renders_transcript` integration test in
-`crates/runie-tui/tests/e2e_test.rs` hangs when `app.loop_actor.prompt()`
-is awaited against a `MockStreamFn`. The underlying cause is a `runie-core`
-loop that doesn't terminate cleanly (the driver calls `provider.start()` in
-a loop expecting streams to close, but `MockStreamFn`'s `stream::iter`
-plus our `pump_stream` task doesn't reliably signal end-of-stream to the
-broadcast). This blocks ~3 integration tests and the `runie-tui-e2e` binary.
-
-Fix is tracked separately — see `tests/e2e_test.rs` for the test that
-hangs, and `crates/runie-core/src/provider/actor.rs::pump_stream` for the
-suspect.
+The local workspace gate is green. Core parity covers the pi event/state/tool
+loop contract and provider replay; TUI parity covers actor-owned MVU state,
+themes, prompt/scrollback/status/layout states, typed tool cards, workflow
+lifecycle, YAML scenarios, and four-size visual captures. Remaining work is
+tracked in `tasks/p16`, `p19`, `p21`, and the source inventory in `tasks/p30`.

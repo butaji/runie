@@ -21,9 +21,12 @@ Single-screen chat interface:
 └─────────────────────────────────────────┘
 ```
 
-Subscribes to `runie-core`'s `EventBus` and mutates widgets on each
-`AgentEvent`. No auth, MCP, ACP, sub-agents, voice, plan-approval,
-worktrees, dashboard, persona picker, themes — by design.
+Subscribes to `runie-core`'s `EventBus`; actors own prompt, status, UI, and
+scrollback snapshots, while pure views render those snapshots. The current
+scope is runie-core-driven themes, typed waiting/status states, command
+palette, sub-agent/workflow cards, prompt modes, scrolling, and tool-card
+display modes. Auth, MCP, ACP, voice, worktrees, dashboard, and persona
+features remain outside this port.
 
 ## Key bindings
 
@@ -43,9 +46,8 @@ worktrees, dashboard, persona picker, themes — by design.
 cargo run -p runie-tui
 ```
 
-The current binary uses a placeholder `StreamFn` that emits one canned
-response. Wiring a real provider (`runie-provider` adapter) is a
-follow-up task.
+The current binary uses a deterministic local `StreamFn` for development;
+provider adapters remain a separate integration concern.
 
 ## Tests
 

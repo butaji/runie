@@ -1,14 +1,16 @@
 # Runie UI / UX
 
-Runie is a keyboard-driven terminal interface using **Model-View-Update (MVU)** at the UI layer: user actions become intents, actors update the model, and the view renders a pure projection of facts.
+Runie is a keyboard-driven Grok-style terminal interface using
+**Model-View-Update (MVU)** at the UI layer. Its presentation surface follows
+Grok; its behavior is limited to features supplied by pi-agent-core.
 
 ## Interaction model
 
 - **Feed** — scrollable conversation history.
 - **Input** — multi-line editor with history, undo/redo, `@` file references, path completion.
-- **Dialog / Panel stack** — palettes, forms, settings, model selector, onboarding, session tree.
-- **Status bar** — provider/model, thinking level, trust state, mode, and hints.
-- **Vim navigation** — optional nav mode for scrolling, selecting blocks, and copying.
+- **Dialog / Panel stack** — palettes and panels supported by the core feature set.
+- **Status bar** — model, usage, waiting state, mode, and hints.
+- **Navigation** — scrolling, selection, and copying for core transcript blocks.
 
 ## MVU flow
 
@@ -41,12 +43,14 @@ See [AGENTS.md §Testing Strategy](../AGENTS.md#testing-strategy-4-layers) for t
 
 ## Test placement
 
-- Core behavior and event handling: `crates/runie-core/src/tests/`
-- Rendering and TUI integration: `crates/runie-tui/src/tests/`
-- Provider-specific agent flows: `crates/runie-agent/tests/` with captured fixtures and mock tool outputs
+- Core behavior and event handling: `crates/runie-core/src/` unit tests and `tests/traces/`
+- Rendering and TUI integration: `crates/runie-tui/src/` tests and `tests/e2e/*.yaml`
+- Full-screen parity: `parity/` captures and visual replay tests
 
 ## Implementation notes
 
 - Prefer Layer 2 for command behavior and Layer 3 for visual confirmation.
-- Use validation hooks, mock providers, and captured SSE replay fixtures for provider-specific behavior.
-- Never add shell or tmux tests; prefer deterministic Rust tests.
+- Use validation hooks, mock providers, and captured SSE replay fixtures for
+  provider-boundary behavior.
+- Capture tools may use tmux/asciinema, but assertions must be deterministic
+  and compare complete terminal cells.

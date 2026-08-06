@@ -1,17 +1,15 @@
 # Black-Box Testing Guide
 
-Black-box replay tests for Runie live in the parent `runie-tests` repository.
-This file is a pointer; see `runie-tests/docs/black-box-replay-testing.md` for
-the full guide.
+Replay tests are part of this repository and are driven by event fixtures.
+For TUI behavior, use the YAML scenarios under
+`crates/runie-tui/tests/e2e/` and the visual replay harness.
 
 ## Quick reference
 
-From the `runie-tests` repo root:
+From this repository root:
 
 ```bash
-cd runie
-RUNIE_REPLAY_FIXTURES=../fixtures/openai/opencode_go_deepseek_v4_flash_simple.sse \
-  cargo run -p runie-cli -- print "hello"
+just ci
 ```
 
 ## Environment variables
@@ -23,13 +21,11 @@ RUNIE_REPLAY_FIXTURES=../fixtures/openai/opencode_go_deepseek_v4_flash_simple.ss
 
 ## Fixtures and scripts
 
-- Fixtures: `runie-tests/fixtures/{openai,anthropic}/`
-- Recording scripts: `runie-tests/scripts/record_opencode_go.py` and `record_opencode_go_multiturn.py`
-- Black-box tests: `runie-tests/tests/replay_blackbox.rs`
-- Task plans: `runie-tests/tasks/black-box-replay-testing.md` and `black-box-replay-dsl.md`
+- Replay fixtures: `tests/traces/` (`.sse` plus `.sse.yaml`)
+- TUI scenarios: `crates/runie-tui/tests/e2e/*.yaml`
+- Capture and parity tooling: `parity/` and the `justfile`
 
 ## Replay provider
 
-The `ReplayProvider` implementation is in
-`crates/runie-provider/src/replay.rs`. It is selected when
-`RUNIE_REPLAY_FIXTURES` is set.
+Replay providers and state assertions are selected by the fixture runners;
+there is no separate `runie-provider` crate in this workspace.

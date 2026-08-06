@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p30",
+      "file": "p30-pi-core-grok-mapping-inventory.md",
+      "status": "in_progress",
+      "title": "Inventory pi core/AI, map Grok TUI coverage, and maintain scoped parity plan"
+    },
+    {
       "id": "p01",
       "file": "p01-core-types-messages.md",
       "status": "done",

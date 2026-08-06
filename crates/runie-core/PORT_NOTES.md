@@ -22,12 +22,17 @@ Differences from `@earendil-works/pi-agent-core`:
 ## What is NOT ported
 
 - Provider implementations (Anthropic, OpenAI, Bedrock, Google, etc.).
-  Reuse `runie-provider` or write a `StreamFn` adapter.
+  Supply a `StreamFn` adapter at the integration boundary.
 - Harness: compaction, session persistence, skills, prompt templates.
 - `node:sqlite` storage adapter.
 - `streamProxy` browser-side streaming path.
 
-## Status
+## Status (2026-08-06)
 
-Steps 01-13 done. Step 14 in progress. Behavioural coverage focuses on the
-README event-sequence contract; more scenarios are added as the crate matures.
+The core event, state, queue, tool-dispatch, hook, and provider-replay
+contracts are implemented and covered by local tests. `AgentStateActor` also
+owns workflow lifecycle snapshots used by the TUI projection. The remaining
+port boundary is deliberate: pi's provider catalog, OAuth, session/harness,
+skills, compaction, and browser proxy packages are not part of `runie-core`.
+Parity work and any future boundary expansion are tracked in `tasks/p30` and
+the owning p01–p12 tasks.
