@@ -270,9 +270,11 @@ cannot create a second production source of truth.
 - **Event-to-projection boundary (2026-08-05):** added
   `AgentStateActor::apply_event` with focused message and tool event mapping,
   and routed the main input, assistant terminal, and tool-result paths through
-  that boundary. The state actor remains the sole projection mutator; direct
-  streaming/error transitions in the driver remain explicitly open for the
-  next decomposition.
+  that boundary. The state actor remains the sole projection mutator. The
+  earlier note that direct streaming/error transitions remained open is
+  superseded: current driver paths publish `MessageStart`, `MessageUpdate`,
+  `MessageEnd`, or `Error` through `publish_and_apply`, and the focused state
+  projection tests cover those transitions.
 - **Verification (2026-08-05):** `just ci` passes after the event-to-state
   routing change.
 - **Terminal error projection (2026-08-05):** terminal assistant
