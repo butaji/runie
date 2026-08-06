@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p32",
+      "file": "p32-tool-row-ownership.md",
+      "status": "in_progress",
+      "title": "Architecture: actor-owned live tool-row identity across YAML and live adapters"
+    },
+    {
       "id": "p31",
       "file": "p31-crate-architecture-pi-core-grok-tui.md",
       "status": "in_progress",
