@@ -843,12 +843,20 @@ impl Scrollback {
         let start = if self.follow_latest_user {
             physical_rows
                 .iter()
-                .position(|(kind, _, _)| *kind == LineKind::User)
+                .rposition(|(kind, _, _)| *kind == LineKind::User)
                 .map(|position| {
-                    if position > 0 && physical_rows[position - 1].1.is_empty() {
+                    let anchored = if position > 0 && physical_rows[position - 1].1.is_empty() {
                         position - 1
                     } else {
                         position
+                    };
+                    // Keep a newly submitted prompt at the top while the
+                    // response fits. Once incoming content outgrows the
+                    // viewport, follow the tail so new output remains visible.
+                    if total.saturating_sub(anchored) > visible {
+                        total.saturating_sub(visible)
+                    } else {
+                        anchored
                     }
                 })
                 .unwrap_or(self.scroll_offset)
@@ -1801,7 +1809,7 @@ mod tests {
     #[test]
     fn first_user_prompt_alone_follows_to_the_top_of_a_long_feed() {
         let mut scrollback = Scrollback::new();
-        for index in 0..12 {
+        for index in 0..2 {
             scrollback.append(Line::new(LineKind::Assistant, format!("old {index}")));
         }
         scrollback.append(Line::new(LineKind::User, "Hey"));
@@ -1816,6 +1824,61 @@ mod tests {
             })
             .expect("first submitted prompt remains visible");
         assert_eq!(first_row, 0);
+    }
+
+    #[test]
+    fn newest_user_prompt_is_the_follow_anchor() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::User, "first"));
+        scrollback.append(Line::new(LineKind::Assistant, "answer"));
+        scrollback.append(Line::new(LineKind::User, "second"));
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 3));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 40, 3), 24, &mut buffer);
+        let mut visible = String::new();
+        for row in 0..3 {
+            for column in 0..40 {
+                if let Some(cell) = buffer.cell((column, row)) {
+                    visible.push_str(cell.symbol());
+                }
+            }
+        }
+        assert!(
+            visible.contains("second"),
+            "newest prompt missing: {visible:?}"
+        );
+        assert!(
+            !visible.contains("first"),
+            "stale prompt anchored: {visible:?}"
+        );
+    }
+
+    #[test]
+    fn incoming_content_hands_following_from_prompt_to_tail() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::User, "Hey"));
+        for index in 0..6 {
+            scrollback.append(Line::new(LineKind::Assistant, format!("reply {index}")));
+        }
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 3));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 40, 3), 24, &mut buffer);
+        let mut visible = String::new();
+        for row in 0..3 {
+            for column in 0..40 {
+                if let Some(cell) = buffer.cell((column, row)) {
+                    visible.push_str(cell.symbol());
+                }
+            }
+        }
+        assert!(
+            visible.contains("reply 5"),
+            "tail was not followed: {visible:?}"
+        );
+        assert!(
+            !visible.contains("Hey"),
+            "prompt anchor blocked tail: {visible:?}"
+        );
     }
 
     #[test]

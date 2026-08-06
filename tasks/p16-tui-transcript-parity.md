@@ -414,6 +414,12 @@ YAML snapshot harness explicitly disables that live viewport mode after replay
 to keep settled/cast phases deterministic. A standalone first-prompt reducer
 test prevents the live path from regressing to conditional follow behavior.
 
+Scroll handoff correction (2026-08-06): the live viewport now anchors to the
+newest user row rather than the oldest prompt. While the new response still
+fits, the prompt remains at the top; once incoming content exceeds the viewport,
+the reducer hands follow back to the newest tail rows. Reducer tests cover
+multi-turn anchor selection and continued streaming output.
+
 Edit-card diff parity (2026-08-06): added Opaline-backed GrokNight/GrokDay
 insert/delete background tokens (`#063806`/`#420e14` and
 `#daf2dc`/`#f5dade`). Diff rows now paint semantic foreground and full-row
