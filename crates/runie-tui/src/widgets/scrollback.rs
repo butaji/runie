@@ -10,6 +10,7 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 
 use crate::appearance;
 use runie_core::types::ThemeKind;
+pub use runie_tui_model::{Line, LineKind};
 
 // Grok reserves a visible gutter between the first assistant row and its
 // right-aligned clock before wrapping the remaining response text.
@@ -94,31 +95,18 @@ pub fn dense_tool_group_members(tool_ids: &[Option<&str>]) -> Vec<Option<(usize,
     result
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LineKind {
-    User,
-    Assistant,
-    Reasoning,
-    ThinkingStatus,
-    Tool,
-    ToolRunning,
-    ToolError,
-    ToolResult,
-    ToolOutput,
-    SessionStart,
-    System,
-    Separator,
-    TurnSummary,
-    CompletedAssistant,
-    Activity,
+pub trait LinePresentationExt {
+    fn style(self) -> Style;
+    fn style_for(self, theme: ThemeKind) -> Style;
+    fn prefix(self) -> &'static str;
 }
 
-impl LineKind {
-    pub fn style(self) -> Style {
+impl LinePresentationExt for LineKind {
+    fn style(self) -> Style {
         self.style_for(ThemeKind::GrokNight)
     }
 
-    pub fn style_for(self, theme: ThemeKind) -> Style {
+    fn style_for(self, theme: ThemeKind) -> Style {
         match self {
             LineKind::User => appearance::user_style_for(theme),
             // Grok uses a vertical transcript bar for assistant/reasoning
@@ -144,7 +132,7 @@ impl LineKind {
         }
     }
 
-    pub fn prefix(self) -> &'static str {
+    fn prefix(self) -> &'static str {
         match self {
             // Grok reserves a three-column transcript gutter before user
             // content: the cursor is at column 5 in the 80-column frame.
@@ -166,39 +154,6 @@ impl LineKind {
             LineKind::CompletedAssistant => "   ",
             LineKind::Activity => "❙  ",
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Line {
-    pub kind: LineKind,
-    pub text: String,
-    pub tool_call_id: Option<String>,
-    has_vpad: bool,
-}
-
-impl Line {
-    pub fn new(kind: LineKind, text: impl Into<String>) -> Self {
-        Self {
-            kind,
-            text: text.into(),
-            tool_call_id: None,
-            has_vpad: false,
-        }
-    }
-
-    pub fn with_vpad(mut self, has_vpad: bool) -> Self {
-        self.has_vpad = has_vpad;
-        self
-    }
-
-    pub fn has_vpad(&self) -> bool {
-        self.has_vpad
-    }
-
-    pub fn for_tool(mut self, tool_call_id: impl Into<String>) -> Self {
-        self.tool_call_id = Some(tool_call_id.into());
-        self
     }
 }
 

@@ -14,6 +14,11 @@ animation presentation, and Ratatui rendering. `runie-tui` re-exports these
 types for compatibility; the status actor still remains the sole reducer
 owner.
 
+The feed vocabulary is now model-owned as well: `LineKind` and `Line` live in
+`runie-tui-model`; Grok prefixes and theme styles remain renderer extensions.
+The compatibility exports keep the actor and existing YAML scenarios on the
+same event/reducer path.
+
 ## Governing rule
 
 Runie has exactly two product layers:

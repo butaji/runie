@@ -4,8 +4,10 @@
 //! dependency. Actors reduce events into these immutable values; renderers
 //! only consume them.
 
+mod feed;
 mod status;
 
+pub use feed::{Line, LineKind};
 pub use status::{Status, StatusMsg};
 
 /// Pure viewport projection for a feed that may follow its newest content.
