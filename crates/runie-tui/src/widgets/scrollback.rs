@@ -462,6 +462,14 @@ impl Scrollback {
         self.activity_expanded
     }
 
+    /// Background work keeps its running bullet animated after the main turn
+    /// becomes idle.
+    pub fn animation_demand(&self) -> bool {
+        self.lines
+            .iter()
+            .any(|line| line.kind == LineKind::ToolRunning)
+    }
+
     pub fn set_tool_mode(
         &mut self,
         tool_call_id: impl Into<String>,
@@ -1565,5 +1573,13 @@ mod tests {
             second.cell((0, 0)).expect("next running bullet").symbol(),
             ":"
         );
+        assert!(scrollback.animation_demand());
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "worker".into(),
+            header: "Subagent completed: \"inspect\"".into(),
+            activity: None,
+            output: Vec::new(),
+        });
+        assert!(!scrollback.animation_demand());
     }
 }

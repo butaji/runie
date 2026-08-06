@@ -301,3 +301,9 @@ Transcript block states:
   existing status animation cadence. A reducer/render test pins the first two
   Grok glyph phases (`⋅`, `:`); terminal lifecycle rows settle back to the
   static tool kind on completion.
+
+- **Background animation demand (2026-08-06):** Scrollback now reports
+  animation demand while any subagent-running row exists, so the shared
+  actor event loop continues advancing the feed animation after foreground
+  status becomes idle. Completion removes that demand; the reducer test pins
+  both transitions.
