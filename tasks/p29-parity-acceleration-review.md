@@ -110,6 +110,11 @@ targeted, marks that member as the selected entry for the renderer's
 actor-owned visibility handoff, and has a focused reducer/render test. Exact
 centered offset parity remains to be captured.
 
+The YAML dense-group fixture now drives eleven `Down` selections and asserts
+that the previously hidden first member is visible afterward. This closes the
+reveal interaction oracle without recompiling a scenario-specific test; the
+remaining evidence gap is the exact centered offset value.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without

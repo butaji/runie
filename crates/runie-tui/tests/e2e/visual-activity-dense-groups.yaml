@@ -30,7 +30,7 @@ assertions:
     cols: 80
     rows: 50
     activity_expanded: true
+    steps: [Down, Down, Down, Down, Down, Down, Down, Down, Down, Down, Down]
     screen_text:
-      - "╶╶ 1 more"
-      - "Run three"
+      - "Run one"
       - "Run twelve"
