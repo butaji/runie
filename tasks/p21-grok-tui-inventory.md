@@ -524,3 +524,9 @@ events. Compatibility seed rows retain the legacy `ToolStart` path, so their
 presentation cannot be reclassified by provider call ID. `ToolBlock.is_running`
 is asserted during the event-renderer lifecycle test and through the YAML
 `tool_running` projection oracle; completion settles the same opaque row.
+
+Workflow status formatter audit (2026-08-06): compared against Grok's
+`WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
+and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
+and `at 1.2s`, while done/failed retain Grok's `in 1.2s` form; the source
+distinction is no longer lost in a shared prefix helper.

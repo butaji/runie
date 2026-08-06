@@ -18,8 +18,13 @@ const TIMESTAMP_GUTTER_SPACES: usize = 3;
 
 fn format_elapsed(elapsed_ms: Option<u64>) -> String {
     elapsed_ms
-        .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
+        .map(format_duration)
+        .map(|duration| format!(" in {duration}"))
         .unwrap_or_default()
+}
+
+fn format_duration(elapsed_ms: u64) -> String {
+    format!("{:.1}s", elapsed_ms as f64 / 1_000.0)
 }
 
 fn workflow_phase_mark(state: &str) -> char {
@@ -41,8 +46,18 @@ fn workflow_text(
     let (name, objective) = body.split_once(':').unwrap_or((body, ""));
     let verb = match status {
         "active" => format!("{name}: "),
-        "cancelled" => format!("{name} ◌ cancelled after{}: ", format_elapsed(elapsed_ms)),
-        "paused" => format!("{name} paused at{}: ", format_elapsed(elapsed_ms)),
+        "cancelled" => format!(
+            "{name} ◌ cancelled after {}: ",
+            elapsed_ms
+                .map(format_duration)
+                .unwrap_or_else(|| "?".into())
+        ),
+        "paused" => format!(
+            "{name} paused at {}: ",
+            elapsed_ms
+                .map(format_duration)
+                .unwrap_or_else(|| "?".into())
+        ),
         "failed" | "interrupted" => format!("{name} failed{}: ", format_elapsed(elapsed_ms)),
         _ => format!("{name} done{}: ", format_elapsed(elapsed_ms)),
     };
@@ -2943,6 +2958,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the workflow status matrix keeps Grok's source variants together"
+    )]
     fn workflow_card_uses_grok_status_and_phase_glyph_order() {
         assert_eq!(
             workflow_text(
@@ -2966,6 +2985,36 @@ mod tests {
                 2,
             ),
             "Workflow release: ship the release  [tests ●]  (2 agents)"
+        );
+        assert_eq!(
+            workflow_text(
+                "Workflow release: ship the release",
+                &[("tests".into(), "failed".into())],
+                "failed",
+                Some(1_200),
+                0,
+            ),
+            "Workflow release failed in 1.2s: ship the release  [tests ○]"
+        );
+        assert_eq!(
+            workflow_text(
+                "Workflow release: ship the release",
+                &[],
+                "cancelled",
+                Some(1_200),
+                0,
+            ),
+            "Workflow release ◌ cancelled after 1.2s: ship the release"
+        );
+        assert_eq!(
+            workflow_text(
+                "Workflow release: ship the release",
+                &[],
+                "paused",
+                Some(1_200),
+                0,
+            ),
+            "Workflow release paused at 1.2s: ship the release"
         );
     }
 
