@@ -25,6 +25,25 @@ updated.
 
 ## Review findings
 
+### Fresh 62×32 paired capture — 2026-08-05
+
+The installed Grok binary and `just tui` were captured independently with the
+same tmux/asciinema harness and prompt (`Hey`):
+
+- Grok: `/tmp/runie-grok-matrix-62x32.cast`
+- Runie: `/tmp/runie-runie-matrix-62x32.cast`
+- command: `just cast-compare` (full 62×32 cell grid)
+- result: 190 differing cells — 170 glyph differences and 20 attribute-only
+  differences
+
+The row diagnostics identify the remaining live mismatch classes precisely:
+provider-generated answer text and wrapping, reasoning-row placement, dynamic
+usage (`15K` versus `0`), prompt timestamps, and elapsed time. The comparison
+does not support claiming pixel parity for this live run. Deterministic exact
+parity requires the same response/usage/time inputs, or a reference contract
+that explicitly freezes those values; color and blank-cell attributes are now
+being compared rather than silently ignored.
+
 1. Same-run Grok/Runie captures are required for dynamic clock, usage, model
    response, and elapsed fields; stale casts cannot prove pixel parity.
 2. Reference frame selection must be phase-specific. `frame_contains` alone
