@@ -2,6 +2,28 @@
 
 Status: in_progress (2026-08-06)
 
+## Fresh replay audit (2026-08-06)
+
+The source-to-event audit was repeated against the current implementation. The
+YAML runner first records the loop bus, then appends only declarative control
+events; ordinary `tool_call` entries are provider assistant events and do not
+directly append scrollback rows. During replay,
+`scrollback_messages_for_event(ToolExecutionStart)` publishes only the typed
+name and default display mode. The actual row-producing `ToolStart` therefore
+comes from the lifecycle adapter, while compatibility-created rows can still
+share the same tool-call ID. The mixed activity oracle passes unchanged:
+
+```text
+cargo run -p runie-tui --bin runie-tui-e2e -- \
+  crates/runie-tui/tests/e2e/visual-activity-mixed.yaml
+1 passed, 0 failed
+```
+
+This is evidence for event provenance, not completion of row ownership. The
+next implementation must carry an opaque reducer-owned row identity from the
+start intent through update/end messages; matching by `tool_call_id` remains
+unsafe for compatibility-seeded replays.
+
 ## Objective
 
 Give each live `ToolExecutionStart` a reducer-owned row identity distinct from
