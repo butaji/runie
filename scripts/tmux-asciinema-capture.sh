@@ -46,9 +46,12 @@ tmux send-keys -t "$session" Enter
 ready=0
 for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
-    if printf '%s' "$screen" | grep -Fq '❯' \
-        || printf '%s' "$screen" | grep -Fq 'Type your message' \
-        || printf '%s' "$screen" | grep -Fq 'Grok 4.5'; then
+    # The welcome surface also contains `❯` and `Grok 4.5`; those are not an
+    # editable prompt. Require a working prompt footer so captures cannot
+    # type into the welcome screen and still be labeled as a scenario run.
+    if printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
+        || printf '%s' "$screen" | grep -Fq 'Enter:send' \
+        || printf '%s' "$screen" | grep -Fq 'Type your message'; then
         ready=1
         break
     fi

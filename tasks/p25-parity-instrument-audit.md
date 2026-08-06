@@ -399,3 +399,12 @@ attributes while Runie emits the Opaline Grok RGB tokens (`#141414` base and
 the next valid attribute gate must use a freshly captured full-color Grok cast
 from the same scenario and geometry, rather than normalizing or weakening the
 existing color comparison.
+
+### Capture readiness correction — 2026-08-06
+
+The bounded capture script previously treated the welcome surface's decorative
+`❯` and `Grok 4.5` text as proof that an editable prompt was ready. The probe
+now requires the working footer (`Shift+Tab`, `Enter:send`, or the explicit
+`Type your message` prompt), preventing a capture from typing into welcome and
+being mislabeled as a settled scenario. This is an instrument-only change;
+the exact full-color Grok scenario still needs a clean isolated capture.
