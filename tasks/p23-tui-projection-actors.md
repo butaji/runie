@@ -351,3 +351,8 @@ Scrollback configuration ownership (2026-08-06): the same bus-owned actor now
 projects `ThemeChanged` and `ToolDisplayModeChanged` into `ScrollbackMsg`
 commands. Live renderer dispatch no longer owns these transcript settings;
 focused actor tests pin reset and theme transitions.
+
+Tool default ownership (2026-08-06): `ToolExecutionStart` now also projects
+Grok's default collapsed/truncated display mode inside the live scrollback
+actor. The deterministic replay path keeps its explicit mode command, while
+the live renderer no longer writes this configuration directly.

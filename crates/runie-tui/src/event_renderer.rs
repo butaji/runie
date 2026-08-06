@@ -603,19 +603,6 @@ impl EventRenderer {
         }
         if let Some(message) = tool_message {
             scrollback_actor.apply(message).await;
-            if let AgentEvent::ToolExecutionStart {
-                tool_call_id,
-                tool_name,
-                ..
-            } = &event
-            {
-                scrollback_actor
-                    .apply(ScrollbackMsg::SetToolMode(
-                        tool_call_id.clone(),
-                        default_tool_display_mode(tool_name),
-                    ))
-                    .await;
-            }
         } else {
             self.apply_event(event);
         }

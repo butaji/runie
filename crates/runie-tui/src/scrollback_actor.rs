@@ -64,6 +64,14 @@ impl ScrollbackActor {
                             AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
                                 vec![ScrollbackMsg::SetToolMode(tool_call_id, mode)]
                             }
+                            AgentEvent::ToolExecutionStart {
+                                tool_call_id,
+                                tool_name,
+                                ..
+                            } => vec![ScrollbackMsg::SetToolMode(
+                                tool_call_id,
+                                default_tool_display_mode(&tool_name),
+                            )],
                             _ => Vec::new(),
                         };
                         if !messages.is_empty()
@@ -94,6 +102,14 @@ impl ScrollbackActor {
 
     pub fn subscribe(&self) -> watch::Receiver<Scrollback> {
         self.snapshot.clone()
+    }
+}
+
+fn default_tool_display_mode(tool_name: &str) -> runie_core::types::ToolDisplayMode {
+    if matches!(tool_name, "bash" | "shell" | "exec" | "run") {
+        runie_core::types::ToolDisplayMode::Truncated
+    } else {
+        runie_core::types::ToolDisplayMode::Collapsed
     }
 }
 
