@@ -11,7 +11,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::events::EventBus;
 use crate::types::{AgentEvent, AgentMessage, AgentTool, Model, ThinkingLevel};
 
-use super::snapshot::AgentStateSnapshot;
+use super::snapshot::{AgentStateSnapshot, WorkflowSnapshot};
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 /// Maximum number of in-flight commands the actor accepts before backpressure
@@ -202,6 +202,43 @@ impl AgentStateActor {
             AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
                 state.pending_tool_calls.retain(|id| id != &tool_call_id);
             }
+            AgentEvent::WorkflowStarted {
+                run_id,
+                name,
+                objective,
+            } => {
+                state.workflows.insert(
+                    run_id,
+                    WorkflowSnapshot {
+                        name,
+                        objective,
+                        status: "active".into(),
+                        ..WorkflowSnapshot::default()
+                    },
+                );
+            }
+            AgentEvent::WorkflowProgress {
+                run_id,
+                phase,
+                state: phase_state,
+                active_agents,
+            } => {
+                if let Some(workflow) = state.workflows.get_mut(&run_id) {
+                    workflow.phase = Some(phase);
+                    workflow.state = Some(phase_state);
+                    workflow.active_agents = active_agents;
+                }
+            }
+            AgentEvent::WorkflowFinished {
+                run_id,
+                status,
+                elapsed_ms,
+            } => {
+                if let Some(workflow) = state.workflows.get_mut(&run_id) {
+                    workflow.status = status;
+                    workflow.elapsed_ms = elapsed_ms;
+                }
+            }
             AgentEvent::Error { message } => {
                 state.is_streaming = false;
                 state.streaming_message = None;
@@ -221,10 +258,7 @@ impl AgentStateActor {
             | AgentEvent::BackgroundWorkStarted { .. }
             | AgentEvent::BackgroundWorkProgress { .. }
             | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. }
-            | AgentEvent::WorkflowStarted { .. }
-            | AgentEvent::WorkflowProgress { .. }
-            | AgentEvent::WorkflowFinished { .. } => {}
+            | AgentEvent::BackgroundWorkCancelled { .. } => {}
         }
     }
 
@@ -348,6 +382,40 @@ mod tests {
         let snap = actor.snapshot();
         assert_eq!(snap.system_prompt, "");
         assert!(!snap.is_streaming);
+    }
+
+    #[tokio::test]
+    async fn workflow_lifecycle_is_owned_by_core_snapshot() {
+        let actor = AgentStateActor::new();
+        actor
+            .apply_event(&AgentEvent::WorkflowStarted {
+                run_id: "wf-1".into(),
+                name: "release".into(),
+                objective: "ship it".into(),
+            })
+            .await;
+        actor
+            .apply_event(&AgentEvent::WorkflowProgress {
+                run_id: "wf-1".into(),
+                phase: "tests".into(),
+                state: "active".into(),
+                active_agents: 2,
+            })
+            .await;
+        actor
+            .apply_event(&AgentEvent::WorkflowFinished {
+                run_id: "wf-1".into(),
+                status: "done".into(),
+                elapsed_ms: Some(1_200),
+            })
+            .await;
+        actor.sync().await;
+        let workflow = actor.snapshot().workflows.remove("wf-1").unwrap();
+        assert_eq!(workflow.name, "release");
+        assert_eq!(workflow.phase.as_deref(), Some("tests"));
+        assert_eq!(workflow.active_agents, 2);
+        assert_eq!(workflow.status, "done");
+        assert_eq!(workflow.elapsed_ms, Some(1_200));
     }
 
     #[tokio::test]

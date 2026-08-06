@@ -408,3 +408,9 @@ Audit checklist per module (pass/fail):
   asynchronous setter commands. This makes the snapshot complete before the
   publication boundary returns and removes a scheduler-dependent visibility
   window for provider context construction.
+- **Core workflow ownership (2026-08-06):** Workflow lifecycle events are no
+  longer discarded by `AgentStateActor`. Its immutable snapshot now exposes a
+  typed `workflows` map keyed by `run_id`, and the actor reducer owns
+  start/progress/finish transitions. A direct lifecycle test covers the
+  reducer; compatibility mutex paths for the legacy renderer remain an
+  explicit migration target.

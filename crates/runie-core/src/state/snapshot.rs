@@ -1,8 +1,20 @@
 //! Read-only projection of agent state.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::types::{AgentMessage, AgentTool, Model, ThinkingLevel};
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct WorkflowSnapshot {
+    pub name: String,
+    pub objective: String,
+    pub phase: Option<String>,
+    pub state: Option<String>,
+    pub active_agents: u32,
+    pub status: String,
+    pub elapsed_ms: Option<u64>,
+}
 
 /// Immutable view of agent state. Projected by `AgentStateActor`; consumed by
 /// hooks, drivers, and tests.
@@ -17,6 +29,7 @@ pub struct AgentStateSnapshot {
     pub streaming_message: Option<AgentMessage>,
     pub pending_tool_calls: Vec<String>,
     pub error_message: Option<String>,
+    pub workflows: HashMap<String, WorkflowSnapshot>,
 }
 
 impl AgentStateSnapshot {
@@ -35,5 +48,6 @@ mod tests {
         assert!(!s.is_streaming);
         assert!(s.error_message.is_none());
         assert_eq!(s.pending_count(), 0);
+        assert!(s.workflows.is_empty());
     }
 }
