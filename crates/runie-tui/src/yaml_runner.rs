@@ -75,6 +75,9 @@ pub enum EventSpec {
     ToolCall {
         tool_call: ToolCallSpec,
     },
+    ToolUpdate {
+        tool_update: ToolUpdateSpec,
+    },
     Done {
         done: DoneSpec,
     },
@@ -154,6 +157,16 @@ pub struct ToolModeSpec {
     pub mode: runie_core::types::ToolDisplayMode,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ToolUpdateSpec {
+    pub tool_call_id: String,
+    pub tool_name: String,
+    #[serde(default)]
+    pub args: serde_json::Value,
+    #[serde(default)]
+    pub partial_result: serde_json::Value,
+}
+
 fn waiting_name(name: &str) -> WaitingReason {
     match name {
         "subagent" => WaitingReason::Subagent,
@@ -230,6 +243,7 @@ impl EventSpec {
                     thought_signature: None,
                 },
             }),
+            Self::ToolUpdate { .. } => None,
             Self::Done { done } => Some(AssistantMessageEvent::Done {
                 stop_reason: StopReason::from(&done.stop_reason),
                 usage: done.usage.clone(),
@@ -268,6 +282,12 @@ impl EventSpec {
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
                 mode: tool_mode.mode,
+            }),
+            Self::ToolUpdate { tool_update } => Some(AgentEvent::ToolExecutionUpdate {
+                tool_call_id: tool_update.tool_call_id.clone(),
+                tool_name: tool_update.tool_name.clone(),
+                args: tool_update.args.clone(),
+                partial_result: tool_update.partial_result.clone(),
             }),
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,

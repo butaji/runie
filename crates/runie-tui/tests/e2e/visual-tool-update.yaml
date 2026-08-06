@@ -1,0 +1,28 @@
+name: visual-tool-update
+description: |
+  Pi-compatible tool_execution_update is declared in YAML and reduced through
+  the shared event bus after a tool starts.
+initial_prompt: "run a command"
+tools:
+  - name: bash
+    kind: bash
+events:
+  - start
+  - tool_call:
+      name: bash
+      args: { cmd: "cargo test" }
+  - tool_update:
+      tool_call_id: call-1
+      tool_name: bash
+      partial_result: { text: "still running" }
+  - done: { stop_reason: stop }
+assertions:
+  required_events: [tool_execution_start, tool_execution_update, tool_execution_end]
+  state:
+    tool_blocks: 1
+    tool_headers: ["Run cargo test"]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Run cargo test"

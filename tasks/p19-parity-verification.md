@@ -318,6 +318,11 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   parser and misreported as a missing terminal event. The parser now converts
   the frame into `StreamError::Api`, and the `stream_error_mid_response` YAML
   sidecar asserts the provider's `Server error during streaming` payload.
+- **Tool-update YAML parity (2026-08-06):** The TUI YAML DSL now accepts
+  pi-compatible `tool_update` events with call id, tool name, arguments, and
+  partial result payloads. `visual-tool-update.yaml` replays the event through
+  the shared actor/event renderer and requires the complete tool lifecycle
+  family, eliminating a prior compiled-code-only gap for partial tool output.
 - **Serialization oracle audit (2026-08-05):** Re-audited the p01–p04/p09
   wire contracts. Existing core tests round-trip assistant, tool-result, user,
   model, usage/cost, event, tool-hook, image, stop-reason, and thinking-level
