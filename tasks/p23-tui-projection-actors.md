@@ -155,6 +155,14 @@ publish immutable `watch` snapshots to the pure view.
 
 ## Migration sequence
 
+### Progress — 2026-08-05
+
+- Added `EventRenderer::with_actors` and switched production
+  `App::spawn_renderer` to construct the renderer with its actor handles
+  already attached. This removes the public-field mutation step from the live
+  startup path. The compatibility constructors remain only for YAML replay
+  and focused synchronous reducer tests.
+
 1. Make event application async at the renderer boundary and await status
    command acknowledgments.
 2. Replace `Arc<Mutex<StatusBar>>` in `App`, `EventRenderer`, the live binary,

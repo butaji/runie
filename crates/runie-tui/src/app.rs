@@ -446,9 +446,13 @@ impl App {
         *self.status_actor.lock() = Some(status_actor.clone());
         let scrollback_actor = ScrollbackActor::new();
         *self.scrollback_actor.lock() = Some(scrollback_actor.clone());
-        let mut renderer = EventRenderer::new(self.scrollback.clone(), self.status.clone());
-        renderer.status_actor = Some(status_actor);
-        renderer.scrollback_actor = Some(scrollback_actor);
+        let renderer = EventRenderer::with_actors(
+            self.scrollback.clone(),
+            self.status.clone(),
+            scrollback_actor,
+            status_actor,
+            false,
+        );
         let rx = self.bus.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: App — drives the renderer to completion.

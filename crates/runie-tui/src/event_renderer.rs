@@ -178,6 +178,22 @@ impl EventRenderer {
         }
     }
 
+    /// Build the production renderer with its SSOT actors attached at
+    /// construction time. The compatibility constructors remain for the
+    /// synchronous YAML harness and focused reducer tests.
+    pub fn with_actors(
+        scrollback: Arc<Mutex<Scrollback>>,
+        status: Arc<Mutex<StatusBar>>,
+        scrollback_actor: ScrollbackActor,
+        status_actor: StatusActor,
+        emit_welcome: bool,
+    ) -> Self {
+        let mut renderer = Self::with_welcome(scrollback, status, emit_welcome);
+        renderer.scrollback_actor = Some(scrollback_actor);
+        renderer.status_actor = Some(status_actor);
+        renderer
+    }
+
     /// Drain bus events until the channel closes. Returns when receiver hits
     /// `RecvStreamLagged` or `Closed`.
     #[allow(
