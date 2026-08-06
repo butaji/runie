@@ -648,3 +648,12 @@ delivered that as `Some(0)`, overriding the status actor's Grok-compatible
 boundary now maps zero to `None`; known positive windows still travel through
 `StatusMsg::SetContextWindow` unchanged. Existing actor and YAML context-window
 assertions cover both branches.
+
+Settled-thinking rail closure (2026-08-06): Grok's collapsed thinking block
+keeps its purple collapsed accent glyph (`❙`) in the transcript gutter before
+the bold `◆ Thought` summary. Runie's `TurnSummary` projection previously
+used plain spaces, so the glyph was absent in every full-screen `Hey` capture.
+The feed renderer now emits and theme-styles the rail only for thought
+summaries; ordinary `Worked for` rows retain their neutral gutter. The
+event-driven `visual-reasoning.yaml` fixture and live submission renderer test
+assert the marker.

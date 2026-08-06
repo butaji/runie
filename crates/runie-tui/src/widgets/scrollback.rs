@@ -1465,7 +1465,12 @@ impl Scrollback {
             let fence = line.kind == LineKind::Assistant && is_fence(&source);
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
-                let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
+                let prefix = if line.kind == LineKind::TurnSummary
+                    && width >= 50
+                    && line.text.contains("◆ Thought")
+                {
+                    "❙  "
+                } else if line.kind == LineKind::TurnSummary && width >= 50 {
                     if width < 70 || self.navigation.live_grok_layout {
                         "   "
                     } else {
@@ -1748,7 +1753,7 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         }
     }
     if kind == LineKind::TurnSummary && text.contains("◆ Thought") {
-        return styled_thought_summary(text, style);
+        return styled_thought_summary(text, style, theme);
     }
     if matches!(
         kind,
@@ -1818,12 +1823,18 @@ fn running_bullet(frame: usize) -> &'static str {
     RUNNING_BULLETS[frame % RUNNING_BULLETS.len()]
 }
 
-fn styled_thought_summary(text: &str, style: Style) -> RatLine<'static> {
+fn styled_thought_summary(text: &str, style: Style, theme: ThemeKind) -> RatLine<'static> {
     let start = text.find("◆ Thought").expect("thought marker");
     let bold_start = start + "◆ ".len();
     let end = bold_start + "Thought".len();
+    let rail_len = text.strip_prefix('❙').map_or(0, |_| '❙'.len_utf8());
+    let (rail, gutter) = text.split_at(rail_len);
     RatLine::from(vec![
-        Span::styled(text[..bold_start].to_owned(), style),
+        Span::styled(rail.to_owned(), appearance::accent_style_for(theme)),
+        Span::styled(
+            gutter[..bold_start.saturating_sub(rail_len)].to_owned(),
+            style,
+        ),
         Span::styled(
             text[bold_start..end].to_owned(),
             style.add_modifier(Modifier::BOLD),
