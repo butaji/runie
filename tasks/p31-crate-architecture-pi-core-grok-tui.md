@@ -413,3 +413,7 @@ rehydration, and activity rendering.
 The tenth p35 slice is complete: workflow headers and phase trails are now
 model-owned across lifecycle reduction, status-card construction, reset, and
 snapshot rehydration.
+
+The eleventh p35 slice is complete: tool-name identity is now model-owned
+across tool-start reduction, specialized card classification, header rewrites,
+reset, projection, and snapshot rehydration.

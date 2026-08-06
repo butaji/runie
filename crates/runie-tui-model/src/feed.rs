@@ -82,6 +82,7 @@ pub struct FeedNavigation {
     pub center_revealed_entry: bool,
     pub workflow_headers: HashMap<String, String>,
     pub workflow_phases: HashMap<String, Vec<(String, String)>>,
+    pub tool_names: HashMap<String, String>,
 }
 
 impl Default for FeedNavigation {
@@ -102,6 +103,7 @@ impl Default for FeedNavigation {
             center_revealed_entry: false,
             workflow_headers: HashMap::new(),
             workflow_phases: HashMap::new(),
+            tool_names: HashMap::new(),
         }
     }
 }

@@ -182,7 +182,6 @@ pub struct Scrollback {
     lines: Vec<Line>,
     settled_no_tool_phase: bool,
     live_grok_layout: bool,
-    tool_names: HashMap<String, String>,
     /// Monotonic identity for rows created by this reducer adapter. The
     /// identity is persisted on `Line`; no second live-row ownership map is
     /// kept in the renderer.
@@ -212,6 +211,7 @@ impl Scrollback {
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
         scrollback.navigation.workflow_headers = snapshot.workflow_headers;
         scrollback.navigation.workflow_phases = snapshot.workflow_phases;
+        scrollback.navigation.tool_names = snapshot.tool_names;
         scrollback.next_tool_row_id = scrollback
             .lines
             .iter()
@@ -226,7 +226,6 @@ impl Scrollback {
             lines: Vec::new(),
             settled_no_tool_phase: false,
             live_grok_layout: false,
-            tool_names: HashMap::new(),
             next_tool_row_id: 0,
             navigation: FeedNavigation::default(),
         }
@@ -275,7 +274,7 @@ impl Scrollback {
                 self.navigation.follow_latest_user = follow
             }
             ScrollbackMsg::SetToolName(tool_call_id, tool_name) => {
-                self.tool_names.insert(tool_call_id, tool_name);
+                self.navigation.tool_names.insert(tool_call_id, tool_name);
             }
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
@@ -348,6 +347,7 @@ impl Scrollback {
             } => {
                 self.finish_tool_by_id(&tool_call_id, header);
                 if self
+                    .navigation
                     .tool_names
                     .get(&tool_call_id)
                     .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"))
@@ -483,7 +483,7 @@ impl Scrollback {
     pub fn tool_blocks(&self) -> Vec<ToolBlock> {
         runie_tui_model::project_tool_blocks(
             &self.lines,
-            &self.tool_names,
+            &self.navigation.tool_names,
             &self.navigation.tool_modes,
         )
     }
@@ -595,7 +595,7 @@ impl Scrollback {
 
     pub fn clear(&mut self) {
         self.lines.clear();
-        self.tool_names.clear();
+        self.navigation.tool_names.clear();
         self.navigation.tool_modes.clear();
         self.next_tool_row_id = 0;
         self.navigation.workflow_headers.clear();
@@ -627,7 +627,7 @@ impl Scrollback {
         FeedSnapshot {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),
-            tool_names: self.tool_names.clone(),
+            tool_names: self.navigation.tool_names.clone(),
             autoscroll: self.navigation.autoscroll,
             scroll_offset: self.navigation.scroll_offset,
             reasoning_expanded: self.navigation.reasoning_expanded,
@@ -749,6 +749,7 @@ impl Scrollback {
     /// transition; callers only publish the tool id as an intent.
     pub fn toggle_tool_mode(&mut self, tool_call_id: &str) {
         let read_card = self
+            .navigation
             .tool_names
             .get(tool_call_id)
             .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"));
@@ -1310,7 +1311,7 @@ impl Scrollback {
         for line in &self.lines {
             if matches!(line.kind, LineKind::ToolOutput | LineKind::ToolResult) {
                 if let Some(id) = line.tool_call_id.as_ref() {
-                    if self.tool_names.get(id).is_some_and(|name| {
+                    if self.navigation.tool_names.get(id).is_some_and(|name| {
                         matches!(
                             name.as_str(),
                             "read" | "read_file" | "bash" | "shell" | "exec" | "run"
@@ -1430,13 +1431,14 @@ impl Scrollback {
                     continue;
                 };
                 let is_read = self
+                    .navigation
                     .tool_names
                     .get(tool_id)
                     .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"));
-                let is_execute = self
-                    .tool_names
-                    .get(tool_id)
-                    .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"));
+                let is_execute =
+                    self.navigation.tool_names.get(tool_id).is_some_and(|name| {
+                        matches!(name.as_str(), "bash" | "shell" | "exec" | "run")
+                    });
                 if is_read || is_execute {
                     let seen = preview_output_seen.entry(tool_id.clone()).or_default();
                     let total = preview_output_totals

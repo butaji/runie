@@ -101,3 +101,10 @@ Workflow headers and phase trails now live in `FeedNavigation`. Workflow
 lifecycle event reduction, phase/status card construction, reset behavior, and
 snapshot rehydration use model-owned maps; workflow lifecycle and terminal
 state YAML/visual cases pass.
+
+### Slice 11 complete: tool-name identity ownership
+
+Tool-name identity now lives in `FeedNavigation`. Tool-start reduction,
+specialized card classification, header rewrites, reset behavior, projection,
+and snapshot rehydration use the model-owned map; the full tool YAML/visual
+matrix passes.
