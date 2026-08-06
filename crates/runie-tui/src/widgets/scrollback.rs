@@ -520,12 +520,7 @@ impl Scrollback {
 
     pub fn append(&mut self, line: Line) -> usize {
         let index = self.lines.len();
-        if line.kind == LineKind::User
-            && self
-                .lines
-                .iter()
-                .any(|existing| matches!(existing.kind, LineKind::SessionStart | LineKind::User))
-        {
+        if line.kind == LineKind::User {
             self.follow_latest_user = true;
         }
         self.lines.push(line);
@@ -1801,6 +1796,26 @@ mod tests {
             buffer.cell((79, row)).expect("full user row background").bg,
             Color::Rgb(36, 36, 36)
         );
+    }
+
+    #[test]
+    fn first_user_prompt_alone_follows_to_the_top_of_a_long_feed() {
+        let mut scrollback = Scrollback::new();
+        for index in 0..12 {
+            scrollback.append(Line::new(LineKind::Assistant, format!("old {index}")));
+        }
+        scrollback.append(Line::new(LineKind::User, "Hey"));
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 4));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 40, 4), 24, &mut buffer);
+        let first_row = (0..4)
+            .find(|row| {
+                buffer
+                    .cell((5, *row))
+                    .is_some_and(|cell| cell.symbol() == "H")
+            })
+            .expect("first submitted prompt remains visible");
+        assert_eq!(first_row, 0);
     }
 
     #[test]

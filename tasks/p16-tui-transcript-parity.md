@@ -408,10 +408,11 @@ the selection surface. Opaline `bg.panel` tokens now preserve that distinction
 and user-row cell coverage asserts both palettes.
 
 Live follow correction (2026-08-06): user prompts now activate the actor-owned
-follow anchor on the first prompt after `session_start` as well as later turns,
-so a submitted input is pinned at the top while the response streams. The YAML
-snapshot harness explicitly disables that live viewport mode after replay to
-keep settled/cast phases deterministic.
+follow anchor for every submitted prompt, including the first prompt in a fresh
+feed, so a submitted input is pinned at the top while the response streams. The
+YAML snapshot harness explicitly disables that live viewport mode after replay
+to keep settled/cast phases deterministic. A standalone first-prompt reducer
+test prevents the live path from regressing to conditional follow behavior.
 
 Edit-card diff parity (2026-08-06): added Opaline-backed GrokNight/GrokDay
 insert/delete background tokens (`#063806`/`#420e14` and
