@@ -226,6 +226,12 @@ capture/replay runs can set `RUNIE_PARITY_TIMESTAMP` to a Unix timestamp. The
 value enters the user event at the boundary and is never read by reducers or
 views, preserving actor/SSOT purity while making timestamp cells reproducible.
 
+The same boundary now exposes `RUNIE_PARITY_ELAPSED_TICKS`. When set, the
+status actor's reducer owns the frozen 20 Hz duration used by both `Worked for`
+and active status chrome; when unset, animation advances exactly as before.
+This makes both dynamic clock classes controllable without special-casing the
+renderer or weakening full-cell assertions.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

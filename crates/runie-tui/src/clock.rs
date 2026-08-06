@@ -3,6 +3,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const PARITY_TIMESTAMP_ENV: &str = "RUNIE_PARITY_TIMESTAMP";
+const PARITY_ELAPSED_TICKS_ENV: &str = "RUNIE_PARITY_ELAPSED_TICKS";
 const MILLIS_PER_SECOND: u128 = 1_000;
 
 /// Return the event timestamp used by the live prompt path.
@@ -20,13 +21,22 @@ pub fn unix_timestamp_seconds() -> i64 {
         .unwrap_or_default() as i64
 }
 
+/// Optional deterministic 20Hz status duration for parity captures.
+pub fn parity_elapsed_ticks() -> Option<u64> {
+    configured_elapsed_ticks(std::env::var(PARITY_ELAPSED_TICKS_ENV).ok())
+}
+
 fn configured_timestamp(value: Option<String>) -> Option<i64> {
     value.and_then(|value| value.parse::<i64>().ok())
 }
 
+fn configured_elapsed_ticks(value: Option<String>) -> Option<u64> {
+    value.and_then(|value| value.parse::<u64>().ok())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::configured_timestamp;
+    use super::{configured_elapsed_ticks, configured_timestamp};
 
     #[test]
     fn parity_timestamp_accepts_only_complete_unix_values() {
@@ -38,5 +48,12 @@ mod tests {
         );
         assert_eq!(configured_timestamp(Some("not-a-timestamp".into())), None);
         assert_eq!(configured_timestamp(None), None);
+    }
+
+    #[test]
+    fn parity_elapsed_ticks_rejects_invalid_values() {
+        assert_eq!(configured_elapsed_ticks(Some("38".into())), Some(38));
+        assert_eq!(configured_elapsed_ticks(Some("-1".into())), None);
+        assert_eq!(configured_elapsed_ticks(None), None);
     }
 }

@@ -77,6 +77,7 @@ pub struct StatusBar {
     theme: ThemeKind,
     animation_frame: usize,
     elapsed_ticks: u64,
+    elapsed_ticks_override: Option<u64>,
     turn_usage: Option<Usage>,
     turn_stop_reason: Option<StopReason>,
 }
@@ -203,6 +204,7 @@ impl StatusBar {
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
             elapsed_ticks: 0,
+            elapsed_ticks_override: crate::clock::parity_elapsed_ticks(),
             turn_usage: None,
             turn_stop_reason: None,
         }
@@ -234,7 +236,7 @@ impl StatusBar {
         match message {
             StatusMsg::Set(state) => self.state = state,
             StatusMsg::BeginTurn => {
-                self.elapsed_ticks = 0;
+                self.elapsed_ticks = self.elapsed_ticks_override.unwrap_or_default();
                 self.turn_usage = None;
                 self.turn_stop_reason = None;
             }
@@ -249,7 +251,9 @@ impl StatusBar {
                     Status::Loading | Status::Thinking | Status::Streaming | Status::Waiting(_)
                 ) {
                     self.animation_frame = self.animation_frame.wrapping_add(1);
-                    self.elapsed_ticks = self.elapsed_ticks.saturating_add(1);
+                    if self.elapsed_ticks_override.is_none() {
+                        self.elapsed_ticks = self.elapsed_ticks.saturating_add(1);
+                    }
                 }
             }
         }
@@ -258,9 +262,13 @@ impl StatusBar {
     pub fn worked_for_label(&self) -> String {
         format!(
             "Worked for {}.{}s",
-            self.elapsed_ticks / 20,
-            (self.elapsed_ticks / 2) % 10
+            self.displayed_elapsed_ticks() / 20,
+            (self.displayed_elapsed_ticks() / 2) % 10
         )
+    }
+
+    fn displayed_elapsed_ticks(&self) -> u64 {
+        self.elapsed_ticks_override.unwrap_or(self.elapsed_ticks)
     }
 
     /// Event-derived context meter for the live header. Keeping this on the
@@ -286,15 +294,15 @@ impl StatusBar {
         let chrome = match (&self.turn_usage, &self.turn_stop_reason) {
             (Some(usage), Some(reason)) => format!(
                 "  {}.{}s ⇣{} [{}]",
-                self.elapsed_ticks / 20,
-                (self.elapsed_ticks / 2) % 10,
+                self.displayed_elapsed_ticks() / 20,
+                (self.displayed_elapsed_ticks() / 2) % 10,
                 format_token_count(usage.total_tokens),
                 stop_reason_label(*reason)
             ),
             _ => format!(
                 "  {}.{}s ⇣0 [stop]",
-                self.elapsed_ticks / 20,
-                (self.elapsed_ticks / 2) % 10
+                self.displayed_elapsed_ticks() / 20,
+                (self.displayed_elapsed_ticks() / 2) % 10
             ),
         };
         let waiting_label = match &self.state {
