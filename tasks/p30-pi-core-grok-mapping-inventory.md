@@ -31,6 +31,16 @@ authoritative pi core event union is `packages/agent/src/types.ts`; the
 authoritative Grok block/render contracts are under
 `xai-grok-pager/src/scrollback` and `xai-grok-pager-render/src`.
 
+The complete current file listing is maintained in
+`tasks/pi-core-file-inventory.md`. It is generated from both Pi source trees,
+classified by capability family, and must be reviewed alongside this matrix;
+file presence alone is not treated as behavioral parity evidence.
+
+The symmetric source scan is reproducible with
+`scripts/source-inventory.sh`. It emits every Pi agent/AI file and every Grok
+pager/pager-render file in deterministic order, allowing the mapping review to
+detect additions or removals in either upstream tree.
+
 ## Pi capability matrix
 
 | Pi-core family | Representative source | Runie mapping | Status |

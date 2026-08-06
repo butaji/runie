@@ -3,6 +3,12 @@
 Status: active. Audited `/Users/admin/Code/agents/grok-build`, especially
 `crates/codegen/xai-grok-pager` and `xai-grok-pager-render`.
 
+The complete file-level scan is reproducible with
+`scripts/source-inventory.sh` and documented in
+`tasks/grok-tui-file-inventory.md`; the current source counts are 496 pager
+files and 68 renderer files. This inventory remains active until every
+Pi-core-mapped component has a source-backed YAML or cell-level assertion.
+
 **Construction audit (2026-08-05):** Grok composes the agent view from a
 two-column outer horizontal pad, a scrollback `HorizontalLayout` with a
 one-cell accent rail, two-cell left block padding, flexible content, and a
