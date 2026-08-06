@@ -111,3 +111,28 @@ fi
 
 # Emit the raw replay stream beside the timed cast for terminal-parser tools.
 asciinema convert -f raw "$cast" "${cast%.cast}.raw"
+
+# Preserve the provenance required for a trustworthy parity decision beside
+# every cast. Keep credentials and shell environment out of the manifest.
+manifest="${cast%.cast}.meta.json"
+repo_revision=$(git rev-parse HEAD 2>/dev/null || printf 'unknown')
+grok_path=$(command -v grok 2>/dev/null || printf '')
+grok_version=$([[ -n "$grok_path" ]] && "$grok_path" --version 2>/dev/null | head -1 || printf '')
+jq -n \
+  --arg captured_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg repo_revision "$repo_revision" \
+  --arg command "$command_line" \
+  --arg capture_env "$env_assignments" \
+  --arg grok_path "$grok_path" \
+  --arg grok_version "$grok_version" \
+  --arg term "${TERM:-}" \
+  --arg colorterm "${COLORTERM:-}" \
+  --arg cast "$cast" \
+  --arg raw "${cast%.cast}.raw" \
+  --argjson cols "$cols" \
+  --argjson rows "$rows" \
+  '{captured_at:$captured_at, repo_revision:$repo_revision,
+    command:$command, capture_env:$capture_env,
+    grok_path:$grok_path, grok_version:$grok_version,
+    terminal:{cols:$cols, rows:$rows, term:$term, colorterm:$colorterm},
+    artifacts:{cast:$cast, raw:$raw}}' > "$manifest"

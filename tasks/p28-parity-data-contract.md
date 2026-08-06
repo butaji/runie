@@ -23,6 +23,11 @@ Every accepted paired run must retain, beside each cast or YAML replay:
   reason the frame represents the intended lifecycle boundary;
 - raw `.cast`, raw ANSI stream, parsed full cell grid, and comparator output.
 
+The repository capture harness now writes `<cast>.meta.json` automatically with
+the capture command, requested environment, geometry, repository revision,
+Grok path/version, and cast/raw artifact paths. Scenario-specific provider and
+clock fields remain YAML responsibilities.
+
 ## Decision rules
 
 1. Missing any required field means “insufficient evidence,” not “Runie bug.”
