@@ -521,3 +521,8 @@ per-span workflow styling and preamble expansion remain open.
 The same fixture now includes Grok's paused terminal state, so all five
 workflow status variants represented by the current Runie event contract are
 covered declaratively: running, done, failed, cancelled, and paused.
+
+Non-tool selection YAML oracle (2026-08-06): `visual-hey.yaml` now performs
+`tool_select: entry_next` against a tool-free conversation and asserts the
+actor-owned `selected_entry` index. This proves user/assistant semantic rows
+participate in the same event-driven navigation contract as tool rows.

@@ -31,6 +31,7 @@ assertions:
     pending_tool_calls: 0
     messages: 2
     tool_blocks: 0
+    selected_entry: 3
     scroll_offset: 9
   visual:
     cols: 80
