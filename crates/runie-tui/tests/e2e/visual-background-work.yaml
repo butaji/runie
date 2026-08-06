@@ -42,6 +42,7 @@ assertions:
   visual:
     cols: 80
     rows: 24
+    activity_expanded: true
     screen_text:
         - "Subagent completed in 0.9s: \"inspect the repository\""
         - "Subagent failed in 1.2s (provider stopped): \"run the checks\""

@@ -352,6 +352,12 @@ and failed workers clip out of the 24-row fixture. The default remains on the
 compatibility path until grouped lifecycle layout is implemented and validated
 as one event-sequence/YAML scenario.
 
+Background lifecycle fixture clarification (2026-08-06): the three-worker
+visual scenario now declares `activity_expanded: true`, matching the Grok
+expanded-group capture needed to display all completed/failed/cancelled member
+rows in the 24-row frame. The choice is fixture-owned YAML state, not a hidden
+renderer default.
+
 Selection-box geometry (2026-08-06): selected non-tool rows now receive a
 post-render Grok-style box overlay: theme-token `│` side rails plus `┌─┐` and
 `└─┘` corners when the adjacent rows are inside the viewport. Clipped rows
