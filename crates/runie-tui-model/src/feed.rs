@@ -1,5 +1,7 @@
 //! Renderer-independent transcript line vocabulary and reducer intents.
 
+use std::collections::HashMap;
+
 use runie_core::types::{ThemeKind, ToolDisplayMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +29,30 @@ pub struct Line {
     pub text: String,
     pub tool_call_id: Option<String>,
     has_vpad: bool,
+}
+
+/// Immutable feed projection shared across actors, scenario runners, and
+/// renderers. It intentionally contains facts and view controls only; the
+/// mutable reducer and terminal caches remain in `runie-tui`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FeedSnapshot {
+    pub lines: Vec<Line>,
+    pub scroll_offset: usize,
+    pub reasoning_expanded: bool,
+    pub activity_expanded: bool,
+    pub prompt_timestamp: Option<String>,
+    pub follow_latest_user: bool,
+    pub selected_tool_id: Option<String>,
+    pub selected_entry: Option<usize>,
+    pub theme: ThemeKind,
+    pub animation_frame: usize,
+    pub tool_modes: HashMap<String, ToolDisplayMode>,
+}
+
+impl FeedSnapshot {
+    pub fn is_empty(&self) -> bool {
+        self.lines.is_empty()
+    }
 }
 
 impl Line {

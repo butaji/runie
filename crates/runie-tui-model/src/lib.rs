@@ -7,7 +7,7 @@
 mod feed;
 mod status;
 
-pub use feed::{Line, LineKind, ScrollbackMsg};
+pub use feed::{FeedSnapshot, Line, LineKind, ScrollbackMsg};
 pub use status::{Status, StatusMsg};
 
 /// Pure viewport projection for a feed that may follow its newest content.

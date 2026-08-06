@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use runie_core::types::AgentEvent;
 use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
-use crate::widgets::{LineKind, Scrollback, ScrollbackMsg};
+use crate::widgets::{FeedSnapshot, LineKind, Scrollback, ScrollbackMsg};
 
 enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
@@ -69,6 +69,10 @@ impl ScrollbackActor {
 
     pub fn snapshot(&self) -> Scrollback {
         self.snapshot.borrow().clone()
+    }
+
+    pub fn model_snapshot(&self) -> FeedSnapshot {
+        self.snapshot.borrow().model_snapshot()
     }
 
     pub fn subscribe(&self) -> watch::Receiver<Scrollback> {
@@ -486,6 +490,18 @@ mod tests {
             )))
             .await;
         assert_eq!(actor.snapshot().lines()[index].text, "hello");
+    }
+
+    #[tokio::test]
+    async fn actor_publishes_renderer_independent_model_snapshot() {
+        let actor = ScrollbackActor::new();
+        actor
+            .apply(ScrollbackMsg::Append(Line::new(LineKind::User, "hello")))
+            .await;
+        let snapshot = actor.model_snapshot();
+        assert_eq!(snapshot.lines.len(), 1);
+        assert_eq!(snapshot.lines[0].text, "hello");
+        assert!(!snapshot.is_empty());
     }
 
     #[tokio::test]

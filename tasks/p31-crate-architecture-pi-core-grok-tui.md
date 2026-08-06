@@ -24,6 +24,12 @@ model crate's intents, while the widget retains only reducer implementation
 and terminal projection. This is the complete command-vocabulary split; the
 remaining feed extraction is the immutable `Scrollback` snapshot itself.
 
+The actor now exposes `FeedSnapshot`, a renderer-independent immutable
+projection containing transcript lines, viewport controls, selection, theme,
+animation frame, and tool display modes. The legacy `Scrollback` snapshot is
+still retained for compatibility rendering; the actor-level model snapshot
+test proves the new read path is fed by the same reducer.
+
 ## Governing rule
 
 Runie has exactly two product layers:

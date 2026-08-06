@@ -10,7 +10,7 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 
 use crate::appearance;
 use runie_core::types::ThemeKind;
-pub use runie_tui_model::{Line, LineKind, ScrollbackMsg};
+pub use runie_tui_model::{FeedSnapshot, Line, LineKind, ScrollbackMsg};
 
 // Grok reserves a visible gutter between the first assistant row and its
 // right-aligned clock before wrapping the remaining response text.
@@ -650,6 +650,24 @@ impl Scrollback {
     /// Borrow the lines (for tests).
     pub fn lines(&self) -> &[Line] {
         &self.lines
+    }
+
+    /// Export only immutable model facts; Ratatui rendering caches and
+    /// reducer-only bookkeeping never cross the model boundary.
+    pub fn model_snapshot(&self) -> FeedSnapshot {
+        FeedSnapshot {
+            lines: self.lines.clone(),
+            scroll_offset: self.scroll_offset,
+            reasoning_expanded: self.reasoning_expanded,
+            activity_expanded: self.activity_expanded,
+            prompt_timestamp: self.prompt_timestamp.clone(),
+            follow_latest_user: self.follow_latest_user,
+            selected_tool_id: self.selected_tool_id.clone(),
+            selected_entry: self.selected_entry,
+            theme: self.theme,
+            animation_frame: self.animation_frame,
+            tool_modes: self.tool_modes.clone(),
+        }
     }
 
     pub fn remove_kind(&mut self, kind: LineKind) {
