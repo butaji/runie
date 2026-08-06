@@ -1,5 +1,13 @@
 # p19 — Verification: parity harness (pi event-sequence replay + grok cast snapshot diffs)
 
+**Feed attribute-oracle audit (2026-08-06):** Attempting to promote the
+legacy `grok-rich.cast` feed frame to `exact_attributes: true` produced 518
+differences beginning at the session row: the cast contains terminal-default
+foreground/background values, while Runie correctly emits the source-backed
+GrokNight Opaline surface (`fg #6c6c6c`, `bg #141414`). The fixture remains
+symbol-exact; a fresh truecolor Grok capture is required before this oracle
+can be promoted without comparing incompatible terminal capabilities.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the
