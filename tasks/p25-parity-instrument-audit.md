@@ -602,3 +602,15 @@ prompt and the bounded capture was interrupted. No frame from that attempt is
 used as parity evidence. The replay normalization change is independently
 validated by the existing casts and tests; a new authenticated/ready capture
 is still required for the final live zero-diff audit.
+
+## Hey semantic-token pass (2026-08-06)
+
+Using the valid truecolor pair `/tmp/grok-fresh-rgb2-20260806.cast` and
+`/tmp/runie-frozen-rgb12-20260806.cast`, strict comparison reached 129
+different cells, with zero glyph differences. The reduction came from
+tokenized Grok panel backgrounds, prompt-border `#505058`, footer key/body
+roles, the `14K` header meter, and the assistant body `#c8c8c8`. A later
+capture that showed the idle placeholder and doctor hint was rejected as an
+invalid scenario artifact. Live parity remains open: the remaining valid
+differences are concentrated in header path styling, user/assistant timestamp
+roles, activity summary prefixes, and prompt caption styling.

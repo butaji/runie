@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Modifier;
+use runie_core::types::ThemeKind;
 use serde_json::Value;
 
 use runie_tui::widgets::{
@@ -964,7 +965,13 @@ async fn grok_typed_prompt_geometry_matches_runie_cells() {
             .expect("Grok footer label") as u16;
         let cell = runie.cell((x, footer as u16)).expect("Runie footer cell");
         assert_eq!(cell.symbol(), &label[0..1]);
-        assert_eq!(cell.fg, ratatui::style::Color::Reset, "{label} foreground");
+        assert_eq!(
+            cell.fg,
+            runie_tui::appearance::footer_key_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("footer key color"),
+            "{label} foreground"
+        );
         assert!(
             cell.modifier.contains(ratatui::style::Modifier::BOLD),
             "{label} bold"
@@ -976,7 +983,7 @@ async fn grok_typed_prompt_geometry_matches_runie_cells() {
             if ["─", "╭", "╮", "╰", "╯"].contains(&cell.symbol()) {
                 assert_eq!(
                     cell.fg,
-                    runie_tui::appearance::muted_style()
+                    runie_tui::appearance::prompt_border_style_for(ThemeKind::GrokNight)
                         .fg
                         .expect("muted token"),
                     "border foreground at ({x},{y})"
@@ -990,7 +997,9 @@ async fn grok_typed_prompt_geometry_matches_runie_cells() {
             let cell = runie.cell((x as u16, y as u16)).expect("Runie side cell");
             assert_eq!(
                 cell.fg,
-                ratatui::style::Color::Rgb(108, 108, 108),
+                runie_tui::appearance::prompt_border_style_for(ThemeKind::GrokNight)
+                    .fg
+                    .expect("prompt border color"),
                 "side foreground at ({x},{y})"
             );
             assert!(cell.modifier.is_empty(), "side modifiers at ({x},{y})");

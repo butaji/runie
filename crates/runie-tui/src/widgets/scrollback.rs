@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line as RatLine, Span};
 use ratatui::widgets::{Paragraph, Widget, Wrap};
 
@@ -1147,6 +1147,22 @@ impl Scrollback {
                 styled_line_for(*kind, text, self.theme)
             };
             let mut line = line;
+            if self.live_grok_layout && *kind == LineKind::User {
+                for span in &mut line.spans {
+                    span.style =
+                        span.style
+                            .fg(Color::Reset)
+                            .bg(appearance::panel_background_style_for(self.theme)
+                                .bg
+                                .expect("panel background color"));
+                }
+            }
+            if self.live_grok_layout && *kind == LineKind::CompletedAssistant {
+                let assistant = appearance::assistant_body_style_for(self.theme);
+                for span in &mut line.spans {
+                    span.style = span.style.fg(assistant.fg.expect("assistant color"));
+                }
+            }
             let selected_row = text.starts_with("› ")
                 || text.starts_with("⌄ ")
                 || selected_non_tool_text.is_some_and(|value| text.contains(value));
@@ -1165,8 +1181,88 @@ impl Scrollback {
                 },
                 buf,
             );
+            if self.live_grok_layout
+                && matches!(*kind, LineKind::User | LineKind::CompletedAssistant)
+            {
+                let timestamp = self.prompt_timestamp.as_deref().unwrap_or_default();
+                let body_color = if *kind == LineKind::User {
+                    appearance::base_style_for(self.theme)
+                        .fg
+                        .expect("body color")
+                } else {
+                    appearance::assistant_body_style_for(self.theme)
+                        .fg
+                        .expect("assistant color")
+                };
+                let key_color = appearance::footer_key_style_for(self.theme)
+                    .fg
+                    .expect("key color");
+                let muted_color = appearance::muted_style_for(self.theme)
+                    .fg
+                    .expect("muted color");
+                let row_y = area.y + row as u16;
+                let symbols = (area.x..area.x.saturating_add(area.width))
+                    .filter_map(|x| buf.cell((x, row_y)).map(|cell| cell.symbol()))
+                    .collect::<String>();
+                let timestamp_start = (!timestamp.is_empty())
+                    .then(|| symbols.rfind(timestamp))
+                    .flatten();
+                let pointer = (area.x..area.x.saturating_add(area.width)).find(|x| {
+                    buf.cell((*x, row_y))
+                        .is_some_and(|cell| cell.symbol() == "❯")
+                });
+                let body_end = pointer.map(|start| {
+                    (start + 1..area.x.saturating_add(area.width))
+                        .rev()
+                        .find(|x| {
+                            buf.cell((*x, row_y))
+                                .is_some_and(|cell| !cell.symbol().trim().is_empty())
+                        })
+                        .unwrap_or(start)
+                });
+                for x in area.x..area.x.saturating_add(area.width) {
+                    let index = usize::from(x - area.x);
+                    let color = if timestamp_start.is_some_and(|start| index >= start) {
+                        muted_color
+                    } else if *kind == LineKind::User
+                        && pointer.is_some_and(|pointer| x == pointer || x == pointer + 1)
+                    {
+                        key_color
+                    } else if *kind == LineKind::CompletedAssistant && index < 3 {
+                        Color::Reset
+                    } else if body_end.is_some_and(|end| x <= end) {
+                        body_color
+                    } else {
+                        Color::Reset
+                    };
+                    if let Some(cell) = buf.cell_mut((x, row_y)) {
+                        cell.set_style(cell.style().fg(color));
+                    }
+                }
+            }
             if *kind == LineKind::User {
-                let user_style = appearance::user_style_for(self.theme);
+                let user_style = appearance::panel_background_style_for(self.theme);
+                for column in area.x..area.x.saturating_add(area.width) {
+                    if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
+                        cell.set_style(cell.style().patch(user_style));
+                    }
+                }
+            }
+            // The submitted-prompt lead row is part of Grok's panel surface,
+            // even though it is represented as a renderer-only separator.
+            // Keep the logical feed unchanged and project the panel token to
+            // the adjacent separator row.
+            let absolute_row = start + row;
+            let panel_separator = *kind == LineKind::Separator
+                && text.is_empty()
+                && (physical_rows
+                    .get(absolute_row.saturating_sub(1))
+                    .is_some_and(|(neighbor, _, _)| *neighbor == LineKind::User)
+                    || physical_rows
+                        .get(absolute_row + 1)
+                        .is_some_and(|(neighbor, _, _)| *neighbor == LineKind::User));
+            if panel_separator {
+                let user_style = appearance::panel_background_style_for(self.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
                         cell.set_style(cell.style().patch(user_style));
@@ -1518,7 +1614,7 @@ impl Scrollback {
                         // right edge than the generic wrapped-message
                         // padding; keeping the offset in the projection
                         // avoids letting the final `M` wrap onto a new row.
-                        const ASSISTANT_TIMESTAMP_EDGE_OFFSET: usize = 1;
+                        const ASSISTANT_TIMESTAMP_EDGE_OFFSET: usize = 2;
                         let padding = width
                             .saturating_sub(text.chars().count() + timestamp_width)
                             .saturating_sub(ASSISTANT_TIMESTAMP_EDGE_OFFSET);

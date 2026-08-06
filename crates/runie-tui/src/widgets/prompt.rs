@@ -399,7 +399,7 @@ impl Widget for PromptWidget {
         let border = if self.mode == InputMode::Plan {
             appearance::warning_style_for(self.theme)
         } else {
-            appearance::muted_style_for(self.theme)
+            appearance::prompt_border_style_for(self.theme)
         };
         draw_prompt_border(area, buf, border);
         let bottom = area.y + area.height.saturating_sub(1);
@@ -411,6 +411,13 @@ impl Widget for PromptWidget {
             width: area.width.saturating_sub(2),
             height: area.height.saturating_sub(2).max(1),
         };
+        for y in input_area.y..input_area.y.saturating_add(input_area.height) {
+            for x in input_area.x..input_area.x.saturating_add(input_area.width) {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_style(appearance::base_style_for(self.theme));
+                }
+            }
+        }
         Widget::render(Paragraph::new(self.input_lines()), input_area, buf);
     }
 }

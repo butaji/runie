@@ -360,7 +360,7 @@ impl StatusBar {
                 self.state.style_for(self.theme()),
             )],
         };
-        Line::from(spans).style(Style::default())
+        Line::from(spans).style(appearance::muted_style_for(self.theme))
     }
 }
 
@@ -427,11 +427,7 @@ fn active_footer_spans(theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
 }
 
 fn footer_key_style(theme: ThemeKind) -> Style {
-    if theme == ThemeKind::GrokNight {
-        Style::default()
-    } else {
-        appearance::base_style_for(theme)
-    }
+    appearance::footer_key_style_for(theme)
 }
 
 fn footer_muted_style(theme: ThemeKind) -> Style {

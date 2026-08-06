@@ -26,6 +26,10 @@ green = "#9ece6a"
 red = "#f7768e"
 selection = "#1c1c1c"
 panel = "#242424"
+prompt_border = "#505058"
+footer_key = "#c8c8c8"
+assistant_body = "#c8c8c8"
+header_path = "#585858"
 diff_delete = "#420e14"
 diff_insert = "#063806"
 selection_border = "#3c3c41"
@@ -41,6 +45,10 @@ error = "red"
 warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "panel"
+"border.prompt" = "prompt_border"
+"text.footer_key" = "footer_key"
+"text.assistant" = "assistant_body"
+"text.header_path" = "header_path"
 "bg.diff_delete" = "diff_delete"
 "bg.diff_insert" = "diff_insert"
 "bg.selection" = "selection"
@@ -68,6 +76,10 @@ green = "#378e23"
 red = "#cd3048"
 selection = "#e4e4e4"
 panel = "#dedede"
+prompt_border = "#b9b9be"
+footer_key = "#262626"
+assistant_body = "#262626"
+header_path = "#767676"
 diff_delete = "#f5dade"
 diff_insert = "#daf2dc"
 selection_border = "#b9b9be"
@@ -83,6 +95,10 @@ error = "red"
 warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "panel"
+"border.prompt" = "prompt_border"
+"text.footer_key" = "footer_key"
+"text.assistant" = "assistant_body"
+"text.header_path" = "header_path"
 "bg.diff_delete" = "diff_delete"
 "bg.diff_insert" = "diff_insert"
 "bg.selection" = "selection"
@@ -140,6 +156,10 @@ pub fn user_style_for(theme: ThemeKind) -> Style {
     style_for_intent(theme, PaintIntent::Panel)
 }
 
+pub fn panel_background_style_for(theme: ThemeKind) -> Style {
+    Style::default().bg(token_color(theme, "bg.panel"))
+}
+
 pub fn diff_insert_style_for(theme: ThemeKind) -> Style {
     success_style_for(theme).bg(token_color(theme, "bg.diff_insert"))
 }
@@ -180,6 +200,22 @@ pub fn selected_style_for(theme: ThemeKind) -> Style {
 
 pub fn selected_border_style_for(theme: ThemeKind) -> Style {
     Style::default().fg(token_color(theme, "border.selection"))
+}
+
+pub fn prompt_border_style_for(theme: ThemeKind) -> Style {
+    base_style_for(theme).fg(token_color(theme, "border.prompt"))
+}
+
+pub fn footer_key_style_for(theme: ThemeKind) -> Style {
+    base_style_for(theme).fg(token_color(theme, "text.footer_key"))
+}
+
+pub fn assistant_body_style_for(theme: ThemeKind) -> Style {
+    base_style_for(theme).fg(token_color(theme, "text.assistant"))
+}
+
+pub fn header_path_style_for(theme: ThemeKind) -> Style {
+    base_style_for(theme).fg(token_color(theme, "text.header_path"))
 }
 
 pub fn base_style() -> Style {

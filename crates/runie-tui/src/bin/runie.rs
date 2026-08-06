@@ -89,7 +89,7 @@ fn render_doctor_hint(area: Rect, buf: &mut Buffer, theme: runie_core::types::Th
         ),
         ratatui::text::Span::styled(
             " for details and fixes.",
-            runie_tui::appearance::muted_style_for(theme),
+            runie_tui::appearance::header_path_style_for(theme),
         ),
     ])
     .style(runie_tui::appearance::base_style_for(theme));
@@ -150,7 +150,7 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
         ),
         ratatui::text::Span::styled(
             format!(" {}", repository_label()),
-            runie_tui::appearance::base_style_for(theme),
+            runie_tui::appearance::header_path_style_for(theme),
         ),
     ]));
     ratatui::widgets::Widget::render(left, area, buf);
@@ -164,20 +164,12 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
 }
 
 fn render_live_ready_footer(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
-    use ratatui::style::{Modifier, Style};
+    use ratatui::style::Modifier;
     use ratatui::text::{Line, Span};
     use ratatui::widgets::{Paragraph, Widget};
 
-    let key_style = if theme == runie_core::types::ThemeKind::GrokNight {
-        Style::default()
-    } else {
-        runie_tui::appearance::base_style_for(theme)
-    };
-    let muted_style = if theme == runie_core::types::ThemeKind::GrokNight {
-        Style::default()
-    } else {
-        runie_tui::appearance::muted_style_for(theme)
-    };
+    let key_style = runie_tui::appearance::footer_key_style_for(theme);
+    let muted_style = runie_tui::appearance::muted_style_for(theme);
 
     let segments = [
         ("Shift+Tab", key_style.add_modifier(Modifier::BOLD)),
