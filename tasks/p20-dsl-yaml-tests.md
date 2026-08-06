@@ -124,4 +124,4 @@ runtime-discovered and editable without recompiling the runner.
   consumed directly by the pure command-palette widget; display filtering and
   actor activation no longer maintain separate label lists.
 YAML visual steps now support `Up`/`Down` tool selection through the live app
-actor; `visual-activity-mixed.yaml` asserts the resulting visible `›` marker.
+actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker for an expanded tool.

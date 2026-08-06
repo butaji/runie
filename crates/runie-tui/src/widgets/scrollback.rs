@@ -746,7 +746,7 @@ impl Scrollback {
                 styled_line_for(*kind, text, self.theme)
             };
             let mut line = line;
-            if text.starts_with("› ") {
+            if text.starts_with("› ") || text.starts_with("⌄ ") {
                 let selected_style = appearance::selected_style_for(self.theme);
                 for span in &mut line.spans {
                     span.style = span.style.patch(selected_style);
@@ -761,7 +761,7 @@ impl Scrollback {
                 },
                 buf,
             );
-            if text.starts_with("› ") {
+            if text.starts_with("› ") || text.starts_with("⌄ ") {
                 let selected_style = appearance::selected_style_for(self.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
@@ -907,7 +907,10 @@ impl Scrollback {
                         LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
                     )
                 {
-                    "› "
+                    match tool_mode {
+                        Some(runie_core::types::ToolDisplayMode::Collapsed) => "› ",
+                        _ => "⌄ ",
+                    }
                 } else if line.kind == LineKind::ToolRunning {
                     running_bullet(self.animation_frame)
                 } else {
@@ -1134,6 +1137,7 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             .find("◆ ")
             .map(|start| (start, "◆ ".len()))
             .or_else(|| text.find("› ").map(|start| (start, "› ".len())))
+            .or_else(|| text.find("⌄ ").map(|start| (start, "⌄ ".len())))
             .unwrap_or((usize::MAX, 0));
         if header_start == usize::MAX {
             return RatLine::from(text.to_owned()).style(style);
@@ -1963,7 +1967,7 @@ mod tests {
             .find_map(|(column, row)| {
                 buffer
                     .cell((column, row))
-                    .filter(|cell| cell.symbol() == "›")
+                    .filter(|cell| cell.symbol() == "⌄")
                     .map(|cell| cell.bg)
             })
             .expect("selected fold indicator");
@@ -1983,7 +1987,7 @@ mod tests {
                 (0..40).any(|column| {
                     buffer
                         .cell((column, *row))
-                        .is_some_and(|cell| cell.symbol() == "›")
+                        .is_some_and(|cell| cell.symbol() == "⌄")
                 })
             })
             .expect("selected row")
