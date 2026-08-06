@@ -256,3 +256,14 @@ Rules:
   projection and one YAML/replay test.
 - Grok-only features are explicitly excluded rather than silently stubbed.
 - `just ci` remains the required local gate throughout migration.
+
+## Boundary audit (2026-08-06)
+
+The current `runie-core::AgentEvent` still contains Pi-independent variants
+(`ThemeChanged`, `ToolDisplayModeChanged`, background-work, workflow, waiting,
+reset, and UI error events) alongside the Pi lifecycle contract. They are
+actor-reduced and tested, but this is not yet a strict “Pi Core only” boundary.
+The migration must introduce a typed TUI/application event envelope (or an
+explicit adapter) so Pi-compatible core events remain closed and Grok/TUI
+projection events cannot become core feature surface. This is an architectural
+gap, not a reason to weaken current replay coverage.
