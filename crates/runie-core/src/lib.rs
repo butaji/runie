@@ -28,6 +28,7 @@ pub mod types;
 
 pub mod events;
 pub mod r#loop;
+pub mod pi_event;
 pub mod provider;
 pub mod queues;
 pub mod state;
@@ -37,6 +38,7 @@ pub mod hooks;
 
 pub mod task_owner;
 
+pub use pi_event::PiAgentEvent;
 pub use types::{
     AfterToolCallContext, AfterToolCallResult, AgentContext, AgentEvent, AgentMessage,
     AgentMessageExt, AgentState, AgentTool, AgentToolResult, AssistantMessage,

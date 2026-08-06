@@ -267,3 +267,9 @@ The migration must introduce a typed TUI/application event envelope (or an
 explicit adapter) so Pi-compatible core events remain closed and Grok/TUI
 projection events cannot become core feature surface. This is an architectural
 gap, not a reason to weaken current replay coverage.
+
+The first migration increment is now present as `runie_core::PiAgentEvent`.
+It mirrors Pi's closed lifecycle/tool event set, converts back to the existing
+bus representation, and rejects application-only variants at the boundary.
+The runtime bus still uses `AgentEvent` for compatibility; migrating actors
+and providers to the closed type is the next step.
