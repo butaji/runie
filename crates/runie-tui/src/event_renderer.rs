@@ -136,12 +136,14 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             work_id,
             description,
             is_error,
+            elapsed_ms,
         } => {
             let mut messages = vec![ScrollbackMsg::ToolEnd {
                 tool_call_id: work_id.clone(),
                 header: format!(
-                    "Subagent {}: {description:?}",
-                    if *is_error { "failed" } else { "completed" }
+                    "Subagent {}{}: {description:?}",
+                    if *is_error { "failed" } else { "completed" },
+                    format_elapsed(*elapsed_ms)
                 ),
                 activity: None,
                 output: Vec::new(),
@@ -151,8 +153,30 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             }
             messages
         }
+        AgentEvent::BackgroundWorkCancelled {
+            work_id,
+            description,
+            elapsed_ms,
+        } => vec![
+            ScrollbackMsg::ToolEnd {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent cancelled{}: {description:?}",
+                    format_elapsed(*elapsed_ms)
+                ),
+                activity: None,
+                output: Vec::new(),
+            },
+            ScrollbackMsg::MarkToolError(work_id.clone()),
+        ],
         _ => Vec::new(),
     }
+}
+
+fn format_elapsed(elapsed_ms: Option<u64>) -> String {
+    elapsed_ms
+        .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
+        .unwrap_or_default()
 }
 
 #[derive(Clone)]
@@ -613,7 +637,8 @@ impl EventRenderer {
             }
             AgentEvent::BackgroundWorkStarted { .. }
             | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. } => {}
+            | AgentEvent::BackgroundWorkFinished { .. }
+            | AgentEvent::BackgroundWorkCancelled { .. } => {}
         }
     }
 

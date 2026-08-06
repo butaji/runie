@@ -95,6 +95,9 @@ pub enum EventSpec {
     BackgroundEnd {
         background_end: BackgroundEndSpec,
     },
+    BackgroundCancel {
+        background_cancel: BackgroundCancelSpec,
+    },
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -118,6 +121,16 @@ pub struct BackgroundEndSpec {
     pub description: String,
     #[serde(default)]
     pub is_error: bool,
+    #[serde(default)]
+    pub elapsed_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BackgroundCancelSpec {
+    pub work_id: String,
+    pub description: String,
+    #[serde(default)]
+    pub elapsed_ms: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -202,7 +215,8 @@ impl EventSpec {
             Self::ToolMode { .. } => None,
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
-            | Self::BackgroundEnd { .. } => None,
+            | Self::BackgroundEnd { .. }
+            | Self::BackgroundCancel { .. } => None,
             Self::Bare(other) => panic!("unknown event kind: {other:?}"),
         }
     }
@@ -235,7 +249,15 @@ impl EventSpec {
                 work_id: background_end.work_id.clone(),
                 description: background_end.description.clone(),
                 is_error: background_end.is_error,
+                elapsed_ms: background_end.elapsed_ms,
             }),
+            Self::BackgroundCancel { background_cancel } => {
+                Some(AgentEvent::BackgroundWorkCancelled {
+                    work_id: background_cancel.work_id.clone(),
+                    description: background_cancel.description.clone(),
+                    elapsed_ms: background_cancel.elapsed_ms,
+                })
+            }
             _ => None,
         }
     }
@@ -942,6 +964,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         BackgroundWorkStarted { .. } => "background_work_started",
         BackgroundWorkProgress { .. } => "background_work_progress",
         BackgroundWorkFinished { .. } => "background_work_finished",
+        BackgroundWorkCancelled { .. } => "background_work_cancelled",
     }
 }
 

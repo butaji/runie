@@ -788,6 +788,14 @@ pub enum AgentEvent {
         work_id: String,
         description: String,
         is_error: bool,
+        #[serde(default)]
+        elapsed_ms: Option<u64>,
+    },
+    BackgroundWorkCancelled {
+        work_id: String,
+        description: String,
+        #[serde(default)]
+        elapsed_ms: Option<u64>,
     },
 }
 
@@ -1250,6 +1258,7 @@ mod tests {
                 work_id: "worker-1".into(),
                 description: "inspect".into(),
                 is_error: true,
+                elapsed_ms: Some(900),
             },
         ];
         for event in events {

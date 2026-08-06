@@ -306,3 +306,9 @@ preserved from `AgentEvent::Waiting` through the status actor into
 `TurnStatus`; model, subagent, task-output, tasks-complete, and sleep labels
 are no longer rendered as one generic response wait. YAML replays all typed
 events in `visual-waiting-reasons.yaml`.
+
+Background lifecycle parity (2026-08-06): typed events now model Grok's
+terminal `cancelled` state and deterministic elapsed durations. YAML replay
+accepts optional `elapsed_ms` on terminal events plus `background_cancel`, and
+the visual fixture asserts completed, failed, and cancelled labels including
+duration text and error styling.

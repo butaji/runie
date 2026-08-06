@@ -309,3 +309,7 @@ because it would conceal ownership and make YAML event assertions impossible.
   only for focused unit-test adapters. Production `EventRenderer` projection
   storage contains actor-backed slots only; the synchronous compatibility
   reducer remains available under test without widening the live architecture.
+
+- **Background lifecycle expansion (2026-08-06):** Cancellation and elapsed
+  terminal states are carried as typed events and projected through the
+  actor-owned feed, with YAML replay coverage.

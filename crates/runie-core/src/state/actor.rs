@@ -187,7 +187,8 @@ impl AgentStateActor {
             | AgentEvent::ToolExecutionUpdate { .. }
             | AgentEvent::BackgroundWorkStarted { .. }
             | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. } => {}
+            | AgentEvent::BackgroundWorkFinished { .. }
+            | AgentEvent::BackgroundWorkCancelled { .. } => {}
         }
     }
 
