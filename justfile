@@ -91,6 +91,6 @@ clippy:
 lint:
     cargo run -p lint-check
 
-# Full sweep: fmt-check + clippy + lint + test.
-ci: fmt-check clippy lint test
+# Full sweep: fmt-check + clippy + lint + test + parity manifest.
+ci: fmt-check clippy lint test parity-check
     @echo "all green"

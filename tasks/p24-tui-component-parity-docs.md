@@ -31,3 +31,6 @@ Manifest contract validation (2026-08-06): added `just parity-check` and
 `scripts/validate-parity-index.py`. It validates all 14 component IDs, page
 files, Grok source paths (including the sibling renderer crate), and YAML
 fixtures. This prevents the source-backed inventory from silently drifting.
+
+The validator is now part of `just ci`, so the standard local gate covers the
+component inventory alongside formatting, linting, replay, and visual tests.
