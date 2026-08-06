@@ -326,6 +326,11 @@ theme-projected selection surface (`bg.selection`) to every header span. The
 GrokNight/GrokDay RGB tokens are asserted directly; no widget-level colors were
 introduced.
 
+Selected-row surface (2026-08-06): the theme token is now painted across the
+entire selected terminal row, including trailing empty cells, while preserving
+glyph foreground and modifiers. The focused test asserts both the indicator
+and the full-width background.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running

@@ -760,6 +760,14 @@ impl Scrollback {
                 },
                 buf,
             );
+            if text.starts_with("› ") {
+                let selected_style = appearance::selected_style_for(self.theme);
+                for column in area.x..area.x.saturating_add(area.width) {
+                    if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
+                        cell.set_style(cell.style().patch(selected_style));
+                    }
+                }
+            }
         }
     }
 
@@ -1945,6 +1953,25 @@ mod tests {
             })
             .expect("selected fold indicator");
         assert_eq!(selected_cell, ratatui::style::Color::Rgb(28, 28, 28));
+        assert_eq!(
+            buffer
+                .cell((39, selected_cell_row(&buffer)))
+                .expect("row")
+                .bg,
+            ratatui::style::Color::Rgb(28, 28, 28)
+        );
+    }
+
+    fn selected_cell_row(buffer: &Buffer) -> u16 {
+        (0..3)
+            .find(|row| {
+                (0..40).any(|column| {
+                    buffer
+                        .cell((column, *row))
+                        .is_some_and(|cell| cell.symbol() == "›")
+                })
+            })
+            .expect("selected row")
     }
 
     #[test]
