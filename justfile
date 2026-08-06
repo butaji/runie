@@ -67,6 +67,10 @@ cast-dump LEFT RIGHT:
 capture-matrix DIR COMMAND QUIT_KEY:
     scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}}
 
+# Compare Grok and Runie casts at every supported geometry.
+compare-matrix GROK_DIR RUNIE_DIR:
+    scripts/compare-matrix.sh {{GROK_DIR}} {{RUNIE_DIR}}
+
 # Format the code.
 fmt:
     cargo fmt --all

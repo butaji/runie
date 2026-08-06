@@ -11,10 +11,17 @@ called parity.
 - `scripts/tmux-asciinema-capture.sh`: private tmux PTY, fixed geometry,
   bounded prompt/completion probes, `.cast` plus raw replay stream.
 - `scripts/capture-matrix.sh`: 62×32, 80×24, 100×30, and 120×36 matrix.
+- `scripts/compare-matrix.sh`: paired Grok/Runie matrix gate over all four
+  geometries; each pair must pass the full-cell `cast_compare` check.
 - `cast_compare --dump`: VT replay with glyph, fg, bg, bold, italic,
   underline, inverse, geometry, and full-cell JSON.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
 - YAML `reference.exact_attributes`: strict style/color oracle.
+
+The paired matrix is an evidence tool, not a fixture substitute. Reference
+casts must come from the same scenario and capture run; dynamic usage, timing,
+and model output differences must be investigated before snapshots are
+updated.
 
 ## Review findings
 
