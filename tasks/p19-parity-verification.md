@@ -1344,3 +1344,8 @@ driven for this feed state rather than tied to recording timing.
 the final actor-owned `waiting: Sleeping…` status, message count, and waiting
 chrome. This closes the previous fixture gap where only event names and the
 initial prompt were checked.
+**Background lifecycle state oracle (2026-08-06):**
+`visual-background-work.yaml` now verifies the final ready status, non-streaming
+state, two core messages, and all three actor-owned background tool blocks in
+addition to its lifecycle events and full-screen completion/error/cancellation
+text.

@@ -48,6 +48,11 @@ assertions:
     - background_work_started
     - background_work_progress
     - background_work_finished
+  state:
+    status: ready
+    is_streaming: false
+    messages: 2
+    tool_blocks: 3
   visual:
     cols: 80
     rows: 24
