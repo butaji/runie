@@ -40,6 +40,13 @@ moving the deterministic user prompt one row too early. The change was
 reverted; the cast-backed oracle remains authoritative until frame selection
 and live capture phase are reconciled.
 
+ANSI stream audit (2026-08-05) then confirmed Runie emits `SGR 1` around both
+ready-footer shortcut labels. The comparator still reports those cells as
+non-bold in its selected frame, so the 20 attribute-only footer differences
+are now classified as a VT replay/frame-selection issue, not evidence that the
+theme-token styling is absent. The raw stream must be reconciled with the
+selected settled frame before changing widget styling.
+
 ## Review findings
 
 ### Fresh 62×32 paired capture — 2026-08-05
