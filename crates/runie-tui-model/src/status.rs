@@ -69,7 +69,8 @@ fn format_token_count(tokens: u64) -> String {
     if tokens >= 100_000 {
         format!("{}K", tokens / 1_000)
     } else if tokens >= 1_000 {
-        format!("{:.1}K", tokens as f64 / 1_000.0)
+        let rendered = format!("{:.1}", tokens as f64 / 1_000.0);
+        format!("{}K", rendered.trim_end_matches(".0"))
     } else {
         tokens.to_string()
     }
