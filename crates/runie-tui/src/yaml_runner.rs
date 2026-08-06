@@ -41,6 +41,8 @@ pub struct Scenario {
     pub follow_up_mode: Option<runie_core::types::QueueMode>,
     #[serde(default)]
     pub tools: Vec<ToolSpec>,
+    #[serde(default)]
+    pub context: ContextSpec,
     pub events: Vec<EventSpec>,
     /// Capture the frame after tool execution while the next model request is
     /// still pending. This models Grok's stable waiting/feed boundary.
@@ -50,6 +52,34 @@ pub struct Scenario {
     pub prompt_timestamp: Option<String>,
     #[serde(default)]
     pub assertions: Assertions,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct ContextSpec {
+    #[serde(default)]
+    pub system_prompt: String,
+    #[serde(default)]
+    pub messages: Vec<String>,
+}
+
+impl Scenario {
+    fn agent_context(&self) -> AgentContext {
+        AgentContext {
+            system_prompt: self.context.system_prompt.clone(),
+            messages: self
+                .context
+                .messages
+                .iter()
+                .map(|text| {
+                    AgentMessage::User(UserMessage {
+                        content: vec![UserContent::Text { text: text.clone() }],
+                        timestamp: 0,
+                    })
+                })
+                .collect(),
+            tools: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -550,6 +580,7 @@ pub struct StateAssertions {
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
+    pub system_prompt_contains: Option<String>,
     pub tool_blocks: Option<usize>,
     pub tool_output_lines: Option<usize>,
     pub tool_modes: Option<Vec<runie_core::types::ToolDisplayMode>>,
@@ -1145,7 +1176,7 @@ async fn submit_scenario(actor: LoopActor, scenario: &Scenario) {
             })]
         })
         .unwrap_or_default();
-    if let Err(error) = actor.prompt(prompts, AgentContext::default()).await {
+    if let Err(error) = actor.prompt(prompts, scenario.agent_context()).await {
         eprintln!("[yaml_runner] prompt error: {error:?}");
     }
 }
@@ -1343,6 +1374,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         let error = actual.error_message.as_deref().unwrap_or_default();
         if !error.contains(needle) {
             return Err(format!("state error missing {needle:?}: {error:?}"));
+        }
+    }
+    if let Some(needle) = &expected.system_prompt_contains {
+        if !actual.system_prompt.contains(needle) {
+            return Err(format!(
+                "state system prompt missing {needle:?}: {:?}",
+                actual.system_prompt
+            ));
         }
     }
     assert_tool_block_expectations(outcome, expected)?;
@@ -2277,7 +2316,7 @@ pub async fn render_visual_buffer(
                 });
                 let _ = app
                     .loop_actor
-                    .prompt(vec![user_msg], AgentContext::default())
+                    .prompt(vec![user_msg], scenario.agent_context())
                     .await;
             } else if matches!(outcome, PromptOutcome::Edited) {
                 app.hide_welcome().await;
@@ -2344,14 +2383,15 @@ pub async fn render_visual_buffer(
             });
             if scenario.capture_while_waiting {
                 let actor = app.loop_actor.clone();
+                let context = scenario.agent_context();
                 // OWNER: YAML visual runner; joined after the pending frame is captured.
                 active_run = Some(tokio::spawn(async move {
-                    actor.prompt(vec![user_msg], AgentContext::default()).await
+                    actor.prompt(vec![user_msg], context).await
                 }));
             } else {
                 let _ = app
                     .loop_actor
-                    .prompt(vec![user_msg], AgentContext::default())
+                    .prompt(vec![user_msg], scenario.agent_context())
                     .await;
             }
         }

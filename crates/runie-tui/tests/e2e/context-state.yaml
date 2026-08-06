@@ -1,0 +1,16 @@
+name: context-state
+description: YAML context is projected into the actor-owned Pi state.
+initial_prompt: "continue"
+context:
+  system_prompt: "You are a precise assistant."
+  messages:
+    - "prior context"
+events:
+  - start
+  - text_delta: "continued"
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    system_prompt_contains: "precise assistant"
+    messages: 3
+    is_streaming: false

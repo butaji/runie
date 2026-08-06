@@ -155,6 +155,11 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   selection index. `visual-command-palette.yaml` verifies Grok's first-Escape
   behavior: filtering is cleared while the modal remains open.
 
+- **Context projection DSL (2026-08-06):** Scenarios can now declare
+  `context.system_prompt` and prior text messages. The runner passes this
+  through every prompt path, and `context-state.yaml` asserts the resulting
+  actor-owned system prompt/message projection without recompilation.
+
 The recurring actor ownership, event-kind classification, and TUI view-tree
 patterns are already covered by thin local macros (`spawn_actor_worker!`,
 `mailbox_*`, `agent_event_kind!`, `assistant_event_kind!`, and `view!`). A
