@@ -30,6 +30,10 @@ animation frame, and tool display modes. The legacy `Scrollback` snapshot is
 still retained for compatibility rendering; the actor-level model snapshot
 test proves the new read path is fed by the same reducer.
 
+`App::feed_model_snapshot()` is now the application-level read seam for new
+model consumers and scenario assertions. `App::scrollback_snapshot()` remains
+explicitly compatibility-only until the renderer migration is complete.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

@@ -14,7 +14,7 @@ use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
 use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps};
 pub use crate::widgets::PaletteAction;
-use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
+use crate::widgets::{FeedSnapshot, PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
 
 #[derive(Debug)]
 pub enum AppExit {
@@ -558,6 +558,13 @@ impl App {
 
     pub fn scrollback_snapshot(&self) -> Scrollback {
         self.scrollback_actor.snapshot()
+    }
+
+    /// Read the renderer-independent feed model. New projections and
+    /// scenario assertions should prefer this API over the compatibility
+    /// widget snapshot.
+    pub fn feed_model_snapshot(&self) -> FeedSnapshot {
+        self.scrollback_actor.model_snapshot()
     }
 
     /// Build the immutable declarative view description from actor snapshots.
