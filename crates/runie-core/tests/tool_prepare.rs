@@ -44,7 +44,11 @@ fn tool_call_stream(name: &str) -> impl StreamFn {
                         partial: AssistantMessage::with_tool_call(ToolCall {
                             id: "c1".into(),
                             name: self.name.clone(),
-                            arguments: serde_json::json!({ "raw": 1 }),
+                            arguments: if self.name == "schema_rec" {
+                                serde_json::json!({ "count": "1", "enabled": 0 })
+                            } else {
+                                serde_json::json!({ "raw": 1 })
+                            },
                             thought_signature: None,
                         }),
                     },
@@ -135,6 +139,72 @@ async fn prepare_arguments_replaces_args_before_execution() {
         "tool should receive the prepared args"
     );
     assert_eq!(received[0]["orig"]["raw"], 1);
+}
+
+struct SchemaRecordingTool {
+    received: Arc<Mutex<Vec<serde_json::Value>>>,
+}
+
+#[async_trait::async_trait]
+impl AgentTool for SchemaRecordingTool {
+    fn name(&self) -> &str {
+        "schema_rec"
+    }
+    fn label(&self) -> &str {
+        "Schema recorder"
+    }
+    fn description(&self) -> &str {
+        "Records coerced schema arguments."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({
+            "type": "object",
+            "properties": {
+                "count": {"type": "integer"},
+                "enabled": {"type": "boolean"}
+            },
+            "required": ["count", "enabled"]
+        }))
+    }
+    async fn execute(
+        &self,
+        _id: &str,
+        args: serde_json::Value,
+        _signal: Option<tokio_util::sync::CancellationToken>,
+        _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        self.received.lock().push(args);
+        Ok(AgentToolResult::default())
+    }
+}
+
+#[tokio::test]
+async fn json_schema_arguments_are_coerced_before_execution() {
+    let received = Arc::new(Mutex::new(Vec::new()));
+    let tool = Arc::new(SchemaRecordingTool {
+        received: received.clone(),
+    });
+    let mut builder = TestLoopBuilder::new(Arc::new(tool_call_stream("schema_rec")));
+    builder = builder.tool(tool);
+    let test = builder.build();
+
+    let out = test
+        .actor
+        .prompt(
+            vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text { text: "go".into() }],
+                timestamp: 1,
+            })],
+            AgentContext::default(),
+        )
+        .await
+        .unwrap();
+    assert!(out
+        .iter()
+        .any(|message| matches!(message, AgentMessage::ToolResult(result) if !result.is_error)));
+    let received = received.lock();
+    assert_eq!(received[0]["count"], serde_json::json!(1));
+    assert_eq!(received[0]["enabled"], serde_json::json!(false));
 }
 
 /// Tool whose validation always fails.

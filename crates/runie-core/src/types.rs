@@ -655,6 +655,12 @@ pub trait AgentTool: Send + Sync + 'static {
     fn name(&self) -> &str;
     fn label(&self) -> &str;
     fn description(&self) -> &str;
+    /// Optional JSON Schema equivalent of Pi's TypeBox `parameters` field.
+    /// The executor applies Pi-compatible scalar/object coercions before the
+    /// custom validator and tool execution.
+    fn parameters(&self) -> Option<serde_json::Value> {
+        None
+    }
     /// Optional schema validation hook (returns Ok if valid).
     fn validate_arguments(&self, _args: &serde_json::Value) -> Result<(), String> {
         Ok(())

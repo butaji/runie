@@ -253,8 +253,19 @@ fn prepare_and_validate(call: &ToolCall, ctx: &ToolExecContext) -> Result<ToolCa
     if ctx.registry.lookup(&call.name).is_none() {
         return Err(format!("Tool {} not found", call.name));
     }
-    let prepared = prepared_call(call, ctx);
+    let mut prepared = prepared_call(call, ctx);
     if let Some(tool) = ctx.registry.lookup(&prepared.name) {
+        if let Some(schema) = tool.parameters() {
+            let received_arguments = prepared.arguments.clone();
+            prepared.arguments = coerce_json_schema(&schema, prepared.arguments).map_err(|e| {
+                format!(
+                    "Validation failed for tool \"{}\":\n  - {}\n\nReceived arguments:\n{}",
+                    prepared.name,
+                    e,
+                    serde_json::to_string_pretty(&received_arguments).unwrap_or_default()
+                )
+            })?;
+        }
         if let Err(e) = tool.validate_arguments(&prepared.arguments) {
             return Err(format!(
                 "Validation failed for tool \"{}\":\n{e}\n\nReceived arguments:\n{}",
@@ -264,6 +275,119 @@ fn prepare_and_validate(call: &ToolCall, ctx: &ToolExecContext) -> Result<ToolCa
         }
     }
     Ok(prepared)
+}
+
+fn coerce_json_schema(
+    schema: &serde_json::Value,
+    value: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let Some(kind) = schema.get("type").and_then(serde_json::Value::as_str) else {
+        return Ok(value);
+    };
+    match kind {
+        "object" => coerce_object(schema, value),
+        "array" => {
+            let serde_json::Value::Array(items) = value else {
+                return Err("root: expected array".into());
+            };
+            let item_schema = schema.get("items").unwrap_or(&serde_json::Value::Null);
+            items
+                .into_iter()
+                .enumerate()
+                .map(|(index, item)| {
+                    coerce_json_schema(item_schema, item)
+                        .map_err(|error| format!("{index}.{error}"))
+                })
+                .collect::<Result<Vec<_>, _>>()
+                .map(serde_json::Value::Array)
+        }
+        "string" | "number" | "integer" | "boolean" | "null" => coerce_scalar(kind, value),
+        _ => Ok(value),
+    }
+}
+
+fn coerce_scalar(kind: &str, value: serde_json::Value) -> Result<serde_json::Value, String> {
+    match kind {
+        "string" => Ok(serde_json::Value::String(match value {
+            serde_json::Value::String(text) => text,
+            serde_json::Value::Null => "null".into(),
+            other => other.to_string(),
+        })),
+        "number" | "integer" => coerce_number(kind, value),
+        "boolean" => coerce_boolean(value),
+        "null"
+            if matches!(
+                value,
+                serde_json::Value::Null | serde_json::Value::Bool(false)
+            ) || value.as_i64() == Some(0)
+                || value.as_str() == Some("") =>
+        {
+            Ok(serde_json::Value::Null)
+        }
+        "null" => Err("root: expected null".into()),
+        _ => Ok(value),
+    }
+}
+
+fn coerce_object(
+    schema: &serde_json::Value,
+    value: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let serde_json::Value::Object(mut object) = value else {
+        return Err("root: expected object".into());
+    };
+    let properties = schema
+        .get("properties")
+        .and_then(serde_json::Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    for (name, property_schema) in properties {
+        if let Some(property) = object.remove(&name) {
+            object.insert(name, coerce_json_schema(&property_schema, property)?);
+        }
+    }
+    if let Some(required) = schema.get("required").and_then(serde_json::Value::as_array) {
+        for name in required.iter().filter_map(serde_json::Value::as_str) {
+            if !object.contains_key(name) {
+                return Err(format!("{name}: is required"));
+            }
+        }
+    }
+    Ok(serde_json::Value::Object(object))
+}
+
+fn coerce_number(kind: &str, value: serde_json::Value) -> Result<serde_json::Value, String> {
+    let number = match value {
+        serde_json::Value::Number(number) => number,
+        serde_json::Value::Bool(value) => serde_json::Number::from(if value { 1 } else { 0 }),
+        serde_json::Value::Null => serde_json::Number::from(0),
+        serde_json::Value::String(value) if kind == "integer" => value
+            .parse::<i64>()
+            .map(serde_json::Number::from)
+            .map_err(|_| "root: expected integer".to_string())?,
+        serde_json::Value::String(value) => value
+            .parse::<f64>()
+            .ok()
+            .and_then(serde_json::Number::from_f64)
+            .ok_or_else(|| format!("root: expected {kind}"))?,
+        _ => return Err(format!("root: expected {kind}")),
+    };
+    if kind == "integer" && number.as_i64().is_none() {
+        return Err("root: expected integer".into());
+    }
+    Ok(serde_json::Value::Number(number))
+}
+
+fn coerce_boolean(value: serde_json::Value) -> Result<serde_json::Value, String> {
+    let value = match value {
+        serde_json::Value::Bool(value) => value,
+        serde_json::Value::Null => false,
+        serde_json::Value::Number(value) => value != serde_json::Number::from(0),
+        serde_json::Value::String(value) if value.eq_ignore_ascii_case("true") => true,
+        serde_json::Value::String(value) if value.eq_ignore_ascii_case("false") => false,
+        _ => return Err("root: expected boolean".into()),
+    };
+    Ok(serde_json::Value::Bool(value))
 }
 
 /// Apply the tool's `prepareArguments`, replacing the args when changed.
