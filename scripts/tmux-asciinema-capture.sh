@@ -118,6 +118,8 @@ manifest="${cast%.cast}.meta.json"
 repo_revision=$(git rev-parse HEAD 2>/dev/null || printf 'unknown')
 grok_path=$(command -v grok 2>/dev/null || printf '')
 grok_version=$([[ -n "$grok_path" ]] && "$grok_path" --version 2>/dev/null | head -1 || printf '')
+tmux_version=$(tmux -V 2>/dev/null || printf '')
+asciinema_version=$(asciinema --version 2>/dev/null || printf '')
 jq -n \
   --arg captured_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --arg repo_revision "$repo_revision" \
@@ -125,6 +127,8 @@ jq -n \
   --arg capture_env "$env_assignments" \
   --arg grok_path "$grok_path" \
   --arg grok_version "$grok_version" \
+  --arg tmux_version "$tmux_version" \
+  --arg asciinema_version "$asciinema_version" \
   --arg term "${TERM:-}" \
   --arg colorterm "${COLORTERM:-}" \
   --arg cast "$cast" \
@@ -134,5 +138,6 @@ jq -n \
   '{captured_at:$captured_at, repo_revision:$repo_revision,
     command:$command, capture_env:$capture_env,
     grok_path:$grok_path, grok_version:$grok_version,
+    capture_tools:{tmux:$tmux_version, asciinema:$asciinema_version},
     terminal:{cols:$cols, rows:$rows, term:$term, colorterm:$colorterm},
     artifacts:{cast:$cast, raw:$raw}}' > "$manifest"

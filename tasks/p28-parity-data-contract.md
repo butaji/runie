@@ -25,8 +25,8 @@ Every accepted paired run must retain, beside each cast or YAML replay:
 
 The repository capture harness now writes `<cast>.meta.json` automatically with
 the capture command, requested environment, geometry, repository revision,
-Grok path/version, and cast/raw artifact paths. Scenario-specific provider and
-clock fields remain YAML responsibilities.
+Grok path/version, tmux/asciinema versions, and cast/raw artifact paths.
+Scenario-specific provider and clock fields remain YAML responsibilities.
 
 ## Decision rules
 
