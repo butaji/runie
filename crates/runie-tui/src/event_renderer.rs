@@ -1897,6 +1897,10 @@ mod tests {
             tool_name: "bash".into(),
             args: serde_json::json!({"cmd": "ls"}),
         });
+        assert_eq!(
+            sb.lock().tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Truncated
+        );
         r.apply_event(AgentEvent::ToolExecutionEnd {
             tool_call_id: "1".into(),
             tool_name: "bash".into(),
