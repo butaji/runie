@@ -588,3 +588,10 @@ The YAML replay path now covers the same delivery boundary with a declarative
 `context_window` event and state/screen assertions in
 `visual-context-window.yaml`. This closes the previously missing fixture-level
 evidence for model-dependent Grok metrics.
+
+Workflow phase-glyph correction (2026-08-06): source inspection of
+`scrollback/blocks/workflow.rs` confirms that only `done` and `active` receive
+special glyphs (`✓` and `●`); cancelled, failed, and unknown phase states all
+fall back to `○`. The renderer-neutral workflow projection now follows that
+rule, with a model regression covering a cancelled phase. The terminal status
+itself still uses Grok's separate `◌ cancelled` label.

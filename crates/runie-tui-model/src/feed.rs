@@ -513,6 +513,20 @@ mod tests {
         });
         assert_eq!(state.snapshot().tool_blocks[0].output, ["first", "second"]);
     }
+
+    #[test]
+    fn workflow_phase_glyphs_match_grok_fallback_for_terminal_states() {
+        assert_eq!(
+            super::workflow_text_model(
+                "Workflow release: ship it",
+                &[("upload".into(), "cancelled".into())],
+                "cancelled",
+                Some(900),
+                0,
+            ),
+            "Workflow release ◌ cancelled after 0.9s: ship it  [upload ○]"
+        );
+    }
 }
 
 fn workflow_text_model(
@@ -546,8 +560,6 @@ fn workflow_text_model(
             let mark = match phase_state.as_str() {
                 "active" | "running" => '●',
                 "done" | "completed" => '✓',
-                "failed" => '○',
-                "cancelled" => '◌',
                 _ => '○',
             };
             format!("{title} {mark}")
