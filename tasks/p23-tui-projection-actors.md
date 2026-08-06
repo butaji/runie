@@ -255,3 +255,10 @@ because it would conceal ownership and make YAML event assertions impossible.
   `run_scenario` replay helper to the same actor event seam and removed the
   final snapshot replacement adapter. YAML state and visual assertions now
   share event-derived actor projections.
+
+- **Direct App actor ownership (2026-08-05):** `App` now creates and owns
+  direct `StatusActor` and `ScrollbackActor` handles at construction. Renderer
+  startup, YAML replay, E2E replay, snapshots, and app commands all reuse
+  those handles without `Option`/mutex availability branching. Legacy
+  `Arc<Mutex<Scrollback/StatusBar>>` fields remain only for compatibility
+  widget constructors and focused synchronous renderer tests.

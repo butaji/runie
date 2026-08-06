@@ -30,7 +30,6 @@ use runie_tui::app::App;
 use runie_tui::event_renderer::EventRenderer;
 use runie_tui::layout::chat_layout;
 use runie_tui::yaml_runner::{assert_scenario_async, load_scenario, run_scenario};
-use runie_tui::{ScrollbackActor, StatusActor};
 
 mod common;
 use common::test_model;
@@ -137,15 +136,11 @@ async fn end_to_end_prompt_renders_transcript() {
     eprintln!("[e2e] built app");
 
     // Spawn the renderer.
-    let status_actor = StatusActor::new();
-    *app.status_actor.lock() = Some(status_actor.clone());
-    let scrollback_actor = ScrollbackActor::new();
-    *app.scrollback_actor.lock() = Some(scrollback_actor.clone());
     let renderer = EventRenderer::with_actors(
         app.scrollback.clone(),
         app.status.clone(),
-        scrollback_actor,
-        status_actor,
+        app.scrollback_actor.clone(),
+        app.status_actor.clone(),
         false,
     );
     let rx = app.bus.subscribe();

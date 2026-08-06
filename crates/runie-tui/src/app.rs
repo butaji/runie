@@ -309,8 +309,8 @@ pub struct App {
     pub scrollback: Arc<Mutex<Scrollback>>,
     pub prompt: PromptActor,
     pub status: Arc<Mutex<StatusBar>>,
-    pub status_actor: Arc<Mutex<Option<StatusActor>>>,
-    pub scrollback_actor: Arc<Mutex<Option<ScrollbackActor>>>,
+    pub status_actor: StatusActor,
+    pub scrollback_actor: ScrollbackActor,
     pub loop_actor: LoopActor,
     pub bus: EventBus,
     pub ui: UiActor,
@@ -323,8 +323,8 @@ impl App {
             scrollback: Arc::new(Mutex::new(Scrollback::new())),
             prompt: PromptActor::new(&bus),
             status: Arc::new(Mutex::new(StatusBar::new())),
-            status_actor: Arc::new(Mutex::new(None)),
-            scrollback_actor: Arc::new(Mutex::new(None)),
+            status_actor: StatusActor::new(),
+            scrollback_actor: ScrollbackActor::new(),
             loop_actor,
             bus,
             ui,
@@ -337,8 +337,8 @@ impl App {
             scrollback: Arc::new(Mutex::new(Scrollback::new())),
             prompt: PromptActor::new(&bus),
             status: Arc::new(Mutex::new(StatusBar::new())),
-            status_actor: Arc::new(Mutex::new(None)),
-            scrollback_actor: Arc::new(Mutex::new(None)),
+            status_actor: StatusActor::new(),
+            scrollback_actor: ScrollbackActor::new(),
             loop_actor,
             bus,
             ui,
@@ -367,40 +367,20 @@ impl App {
     }
 
     pub async fn toggle_activity_fold(&self) {
-        let actor = { self.scrollback_actor.lock().clone() };
-        if let Some(actor) = actor {
-            actor
-                .apply(crate::widgets::ScrollbackMsg::ToggleActivityExpanded)
-                .await;
-            return;
-        }
-        let mut scrollback = self.scrollback.lock();
-        let expanded = scrollback.activity_expanded();
-        scrollback.set_activity_expanded(!expanded);
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::ToggleActivityExpanded)
+            .await;
     }
 
     /// Apply a feed update through the actor that owns the rendered snapshot.
     /// The mutex is a compatibility fallback for apps whose renderer is not
     /// running yet.
     pub async fn apply_scrollback(&self, message: crate::widgets::ScrollbackMsg) {
-        let actor = { self.scrollback_actor.lock().clone() };
-        if let Some(actor) = actor {
-            actor.apply(message).await;
-        } else {
-            self.scrollback.lock().apply(message);
-        }
+        self.scrollback_actor.apply(message).await;
     }
 
     pub async fn apply_scrollback_batch(&self, messages: Vec<crate::widgets::ScrollbackMsg>) {
-        let actor = { self.scrollback_actor.lock().clone() };
-        if let Some(actor) = actor {
-            actor.apply_batch(messages).await;
-        } else {
-            let mut scrollback = self.scrollback.lock();
-            for message in messages {
-                scrollback.apply(message);
-            }
-        }
+        self.scrollback_actor.apply_batch(messages).await;
     }
 
     pub async fn refresh_model_caption(&self) {
@@ -442,15 +422,11 @@ impl App {
         tokio::task::JoinHandle<()>,
         tokio::sync::watch::Sender<bool>,
     ) {
-        let status_actor = StatusActor::new();
-        *self.status_actor.lock() = Some(status_actor.clone());
-        let scrollback_actor = ScrollbackActor::new();
-        *self.scrollback_actor.lock() = Some(scrollback_actor.clone());
         let renderer = EventRenderer::with_actors(
             self.scrollback.clone(),
             self.status.clone(),
-            scrollback_actor,
-            status_actor,
+            self.scrollback_actor.clone(),
+            self.status_actor.clone(),
             false,
         );
         let rx = self.bus.subscribe();
@@ -461,19 +437,11 @@ impl App {
     }
 
     pub fn status_snapshot(&self) -> StatusBar {
-        self.status_actor
-            .lock()
-            .as_ref()
-            .map(StatusActor::snapshot)
-            .unwrap_or_else(|| self.status.lock().clone())
+        self.status_actor.snapshot()
     }
 
     pub fn scrollback_snapshot(&self) -> Scrollback {
-        self.scrollback_actor
-            .lock()
-            .as_ref()
-            .map(ScrollbackActor::snapshot)
-            .unwrap_or_else(|| self.scrollback.lock().clone())
+        self.scrollback_actor.snapshot()
     }
 
     /// Lay out the widgets and render them into the given area using `f`.

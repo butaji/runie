@@ -1461,15 +1461,11 @@ pub async fn render_visual_buffer(
     // bypasses the runtime-scheduling race that prevented the
     // bus-driven renderer from seeing all events on a `current_thread`
     // runtime.
-    let status_actor = crate::StatusActor::new();
-    *app.status_actor.lock() = Some(status_actor.clone());
-    let scrollback_actor = crate::ScrollbackActor::new();
-    *app.scrollback_actor.lock() = Some(scrollback_actor.clone());
     let mut renderer = EventRenderer::with_actors(
         app.scrollback.clone(),
         app.status.clone(),
-        scrollback_actor,
-        status_actor,
+        app.scrollback_actor.clone(),
+        app.status_actor.clone(),
         scenario.initial_prompt.is_none(),
     );
     app.apply_scrollback(ScrollbackMsg::SetReasoningExpanded(vis.reasoning_expanded))
