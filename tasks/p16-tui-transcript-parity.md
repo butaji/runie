@@ -474,4 +474,5 @@ members in the actor-owned scrollback projection, preserves non-tool breaks,
 keeps the newest ten members, and emits a semantic `╶╶ N more` row for the
 hidden prefix. The 12-member YAML oracle covers the threshold path; small
 groups and the existing full visual suite remain green. Explicit
-reveal/navigation of the hidden members is still open.
+Selecting a hidden member now reveals the entire dense group through the
+actor-owned selection reducer; exact viewport centering remains open.

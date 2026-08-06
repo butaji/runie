@@ -221,6 +221,7 @@ pub struct Scrollback {
     prompt_timestamp: Option<String>,
     settled_no_tool_phase: bool,
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
+    revealed_dense_groups: HashSet<String>,
     tool_names: HashMap<String, String>,
     theme: ThemeKind,
     animation_frame: usize,
@@ -310,6 +311,7 @@ impl Scrollback {
             prompt_timestamp: None,
             settled_no_tool_phase: false,
             tool_modes: HashMap::new(),
+            revealed_dense_groups: HashSet::new(),
             tool_names: HashMap::new(),
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
@@ -572,6 +574,7 @@ impl Scrollback {
         self.lines.clear();
         self.tool_names.clear();
         self.tool_modes.clear();
+        self.revealed_dense_groups.clear();
         self.scroll_offset = 0;
         self.selected_tool_id = None;
         self.selected_entry = None;
@@ -799,6 +802,25 @@ impl Scrollback {
             _ => 0,
         };
         self.selected_tool_id = Some(ids[next].clone());
+        self.reveal_dense_group(&ids[next]);
+    }
+
+    /// Selecting any member is Grok's reveal operation: the dense group is
+    /// keyed by its first member and all hidden members become renderable.
+    fn reveal_dense_group(&mut self, tool_id: &str) {
+        let groups = self.dense_tool_groups();
+        let Some((member_index, group_size)) = groups.get(tool_id) else {
+            return;
+        };
+        if *group_size > GROK_GROUP_MAX_VISIBLE
+            && *member_index < group_size - GROK_GROUP_MAX_VISIBLE
+        {
+            if let Some(anchor) = groups.iter().find_map(|(id, (index, size))| {
+                (*size == *group_size && *index == 0).then_some(id.clone())
+            }) {
+                self.revealed_dense_groups.insert(anchor);
+            }
+        }
     }
 
     /// Find the index of the first line whose `text` contains the needle.
@@ -1132,7 +1154,11 @@ impl Scrollback {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
                     if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
                         let hidden = group_size.saturating_sub(GROK_GROUP_MAX_VISIBLE);
-                        if hidden > 0 && *member_index < hidden {
+                        let group_revealed = dense_groups
+                            .iter()
+                            .find(|(_, (index, size))| *index == 0 && *size == *group_size)
+                            .is_some_and(|(anchor, _)| self.revealed_dense_groups.contains(anchor));
+                        if !group_revealed && hidden > 0 && *member_index < hidden {
                             if emitted_dense_headers.insert(tool_id.to_owned()) {
                                 rows.push((
                                     LineKind::Activity,
@@ -2660,5 +2686,38 @@ mod tests {
     #[test]
     fn grok_group_budget_is_named_and_source_defaulted() {
         assert_eq!(GROK_GROUP_MAX_VISIBLE, 10);
+    }
+
+    #[test]
+    fn selecting_hidden_dense_member_reveals_the_whole_group() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.append(Line::new(LineKind::Activity, "❙  ◈ Ran 12 commands"));
+        for index in 1..=12 {
+            scrollback.append(
+                Line::new(LineKind::Tool, format!("Run command-{index}"))
+                    .for_tool(format!("call-{index}")),
+            );
+        }
+        let mut before = Buffer::empty(Rect::new(0, 0, 40, 30));
+        scrollback.render(Rect::new(0, 0, 40, 30), &mut before);
+        let row_text = |buffer: &Buffer| {
+            (0..30)
+                .map(|row| {
+                    (0..40)
+                        .filter_map(|column| buffer.cell((column, row)))
+                        .map(|cell| cell.symbol())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        let _ = row_text(&before);
+        for _ in 0..11 {
+            scrollback.apply(ScrollbackMsg::SelectNextTool);
+        }
+        let mut after = Buffer::empty(Rect::new(0, 0, 40, 30));
+        scrollback.render(Rect::new(0, 0, 40, 30), &mut after);
+        assert!(row_text(&after).contains("Run command-1"));
     }
 }

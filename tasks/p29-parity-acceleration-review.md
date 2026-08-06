@@ -104,7 +104,10 @@ output with its member, keeps the newest ten, and emits `╶╶ N more`. The
 12-member single-group oracle now checks that source-backed shape; existing
 mixed-activity coverage remains the boundary oracle. Full workspace tests pass.
 The next missing datum is Grok's exact reveal interaction and whether the
-hidden count is navigable as one header or individual members.
+hidden count is navigable as one header or individual members. Runie's current
+selection path now reveals the containing group when a hidden member is
+targeted, with a focused reducer/render test; exact centering and viewport
+offset parity remain to be captured.
 
 ## Success metric
 
