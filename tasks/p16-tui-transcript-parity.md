@@ -244,3 +244,8 @@ Transcript block states:
   now explicitly requires the in-feed `┃  ◆ Thinking…` row in addition to
   the grouped activity header, so the thinking gutter cannot regress while
   lifecycle rows remain source-backed.
+
+- **Vpad source audit (2026-08-05):** Grok's `UserMessageBlock` enables two
+  vertical padding rows only for non-compact prompts; system, session-event,
+  tool, and activity blocks disable vpad. The next renderer change must model
+  this per-entry metadata instead of filtering generic empty system rows.

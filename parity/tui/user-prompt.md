@@ -22,3 +22,11 @@ the scrollback projection appends a `User` line. Views never mutate core state.
 ## Acceptance
 
 Use `visual-typed.yaml`, `visual-multiline.yaml`, and the settled `Hey` cast.
+
+## Source-backed vpad rule
+
+Grok's user block uses two vertical padding rows only when the prompt is
+non-compact. System, session-event, tool, and activity blocks explicitly
+disable vpad. Runie must model this as entry metadata rather than filtering
+generic empty `System` rows, because those rows can belong to different
+neighboring blocks.
