@@ -5,9 +5,9 @@ expression: screen
                                         
    main ~/Code/GitHub/runie-tests/run  
      ❯ resize                           
-  ┃  A response that wraps at the narr  
-  ow viewport.                          
-       Worked for 0.0s                  
+                                        
+                                        
+  ┃A response that wraps at the narrow  
   ╭──────────────────────────────────╮  
   │ ❯ Type your message...           │  
   ╰──────────────── Grok 4.5 (high) ─╯  

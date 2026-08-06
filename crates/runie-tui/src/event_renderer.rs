@@ -511,6 +511,7 @@ impl EventRenderer {
         }
     }
 
+    #[allow(clippy::too_many_lines, clippy::question_mark)]
     fn handle_tool_update(
         &mut self,
         tool_call_id: String,
@@ -564,6 +565,7 @@ impl EventRenderer {
         clippy::too_many_lines,
         reason = "tool completion reduction keeps card and activity ownership together"
     )]
+    #[allow(clippy::cognitive_complexity)]
     fn handle_tool_end(
         &mut self,
         tool_call_id: String,
@@ -721,6 +723,7 @@ impl EventRenderer {
         }
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn handle_message_end(&mut self, message: runie_core::types::AgentMessage) {
         if let runie_core::types::AgentMessage::Assistant(assistant) = message {
             self.in_assistant_stream = false;
@@ -768,6 +771,7 @@ impl EventRenderer {
         clippy::too_many_lines,
         reason = "message lifecycle keeps compatibility feed and actor status transition aligned"
     )]
+    #[allow(clippy::cognitive_complexity)]
     fn handle_message_update(&mut self, event: AssistantMessageEvent) {
         match event {
             AssistantMessageEvent::TextDelta { delta } if self.in_assistant_stream => {

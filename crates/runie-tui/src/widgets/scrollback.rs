@@ -470,6 +470,7 @@ impl Scrollback {
     /// Render using the full terminal height for Grok's responsive mode.
     /// `0` preserves the unmeasured compatibility behavior used by isolated
     /// widget tests; application callers should pass the outer frame height.
+    #[allow(clippy::too_many_lines)]
     pub fn render_with_terminal_height(
         &mut self,
         area: Rect,

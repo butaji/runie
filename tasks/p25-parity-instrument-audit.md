@@ -44,6 +44,11 @@ parity requires the same response/usage/time inputs, or a reference contract
 that explicitly freezes those values; color and blank-cell attributes are now
 being compared rather than silently ignored.
 
+The six legacy source-backed Insta snapshots were refreshed after this audit.
+Their diffs were the intentional vpad/blank-row projection already covered by
+the strict Grok YAML and full-cell checks; no reference cast or attribute
+assertion was weakened.
+
 1. Same-run Grok/Runie captures are required for dynamic clock, usage, model
    response, and elapsed fields; stale casts cannot prove pixel parity.
 2. Reference frame selection must be phase-specific. `frame_contains` alone

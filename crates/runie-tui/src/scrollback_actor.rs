@@ -104,6 +104,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn actor_reduces_parallel_tool_rows_by_tool_id() {
         let actor = ScrollbackActor::new();
         actor

@@ -575,10 +575,9 @@ async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Ve
         renderer.apply_event(event.clone());
     }
     let actor = crate::ScrollbackActor::new();
+    let snapshot = scrollback.lock().clone();
     actor
-        .apply(ScrollbackMsg::ReplaceSnapshot(Box::new(
-            scrollback.lock().clone(),
-        )))
+        .apply(ScrollbackMsg::ReplaceSnapshot(Box::new(snapshot)))
         .await;
     actor.snapshot().snapshot_lines()
 }

@@ -1,6 +1,5 @@
 ---
 source: crates/runie-tui/tests/visual_snapshots.rs
-assertion_line: 1064
 expression: screen
 ---
                                                                                 
@@ -10,13 +9,13 @@ expression: screen
                                                                                 
                                                                                 
      ❯ explain                                                                  
+                                                                                
        ◆ Thought for 0.9s                                                       
+                                                                                
   ┃  The answer is ready.                                                       
+                                                                                
+                                                                                
        Worked for 0.0s                                                          
-                                                                                
-                                                                                
-                                                                                
-                                                                                
                                                                                 
                                                                                 
                                                                                 

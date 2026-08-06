@@ -10,15 +10,15 @@ expression: screen
                                                                                 
      ❯ inspect                                                                  
                                                                                 
+                                                                                
   ◆ echo {"value":"hello"} | update: {"status":"running"} → ✓                   
     ↳ {"value":"hello"}                                                         
                                                                                 
+                                                                                
+                                                                                
+                                                                                
+                                                                                
        Worked for 0.0s                                                          
-                                                                                
-                                                                                
-                                                                                
-                                                                                
-                                                                                
                                                                                 
                                                                                 
                                                                                 
