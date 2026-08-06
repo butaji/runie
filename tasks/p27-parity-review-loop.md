@@ -65,6 +65,10 @@ unverified full-screen frame or core event family remains open.
   post-exit blank frame while Runie retained the settled frame, so the next
   instrument step is marker-locked final-frame selection (`Worked for` plus
   the settled footer), not another color change.
+- Comparator improvement (2026-08-06): `cast_compare --frames-after=` now
+  accepts `&&`-joined markers and requires all of them to be visible before
+  indexing frames. A regression test covers the combined marker path, making
+  settled-frame selection data-driven rather than timing-based.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.

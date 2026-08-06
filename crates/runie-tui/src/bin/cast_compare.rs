@@ -104,6 +104,7 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
                 .and_then(|(text, occurrence)| occurrence.parse::<usize>().ok().map(|n| (text, n)))
         })
         .unwrap_or((marker.unwrap_or_default(), 1));
+    let marker_texts = marker_text.split("&&").collect::<Vec<_>>();
     let mut seen_markers = 0;
     let mut marker_visible = false;
     let mut started = marker.is_none();
@@ -118,7 +119,9 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
         }
         parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
         if !started {
-            let contains_marker = parser.screen().contents().contains(marker_text);
+            let contains_marker = marker_texts
+                .iter()
+                .all(|text| parser.screen().contents().contains(text));
             if contains_marker && !marker_visible {
                 seen_markers += 1;
                 started = seen_markers >= marker_occurrence;
@@ -361,6 +364,14 @@ mod tests {
         let path = cast("runie-full.cast");
         let (_, frames) =
             replay_frames(&path, Some("session_start#2")).expect("recorded second session marker");
+        assert!(!frames.is_empty());
+    }
+
+    #[test]
+    fn phase_marker_can_require_multiple_visible_markers() {
+        let path = cast("grok-rich.cast");
+        let (_, frames) = replay_frames(&path, Some("Listed 1 dir&&Read 1 file"))
+            .expect("combined markers must select a settled frame");
         assert!(!frames.is_empty());
     }
 
