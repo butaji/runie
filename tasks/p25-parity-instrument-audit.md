@@ -45,6 +45,12 @@ called parity.
    files were discarded, and no reference snapshot was weakened or re-recorded.
    This isolates terminal-height-aware vpad projection as the next fix.
 
+8. The declarative `visual-hey.yaml` scenario is now replayed through the
+   Runie renderer at `62x32`, `80x24`, `100x30`, and `120x36`. Each matrix
+   case verifies dimensions and the rendered user cursor, ensuring the
+   terminal-height path is exercised across the same capture sizes used by
+   `scripts/capture-matrix.sh`.
+
 ## Status
 
 In progress. Full-cell dumps, row diagnostics, and phase-locked frame

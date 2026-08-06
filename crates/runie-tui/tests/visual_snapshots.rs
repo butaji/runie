@@ -18,6 +18,30 @@ use runie_tui::widgets::{
 };
 use runie_tui::yaml_runner::{load_scenario, render_visual, render_visual_buffer};
 
+#[tokio::test]
+async fn hey_yaml_replays_across_capture_matrix_sizes() {
+    let scenario = load_scenario(&fixture("visual-hey.yaml")).expect("Hey fixture");
+    let sizes = [(62, 32), (80, 24), (100, 30), (120, 36)];
+    for (cols, rows) in sizes {
+        let mut visual = scenario
+            .assertions
+            .visual
+            .clone()
+            .expect("Hey visual assertions");
+        visual.cols = cols;
+        visual.rows = rows;
+        let buffer = render_visual_buffer(&scenario, &visual)
+            .await
+            .unwrap_or_else(|error| panic!("{cols}x{rows}: {error}"));
+        assert_eq!(buffer.area().width, cols);
+        assert_eq!(buffer.area().height, rows);
+        assert!(
+            buffer.content().iter().any(|cell| cell.symbol() == "❯"),
+            "{cols}x{rows}: missing user prompt cursor"
+        );
+    }
+}
+
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/e2e")
