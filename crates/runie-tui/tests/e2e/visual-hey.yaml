@@ -14,6 +14,20 @@ events:
         output: 8
         total_tokens: 15
 assertions:
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 2
   visual:
     cols: 80
     rows: 30

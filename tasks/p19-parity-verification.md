@@ -153,6 +153,13 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
 
 ## Progress
 
+- **Declarative exact TUI event vector (2026-08-06):** The YAML runner now
+  supports `assertions.exact_events`, comparing the complete ordered
+  `AgentEvent` kind vector rather than only checking membership. The canonical
+  `visual-hey.yaml` scenario uses it together with terminal state assertions
+  (`is_streaming=false`, no pending tools, two messages), so event ordering and
+  resulting state are validated without recompilation.
+
 - **Verified (2026-08-05):** `cargo test --workspace` passes, including 32
   core unit tests, replay/integration suites, 57 TUI unit tests, E2E, and all
   22 visual snapshot/reference checks. The seven prompt snapshots were

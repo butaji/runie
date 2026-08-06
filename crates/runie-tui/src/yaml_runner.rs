@@ -297,6 +297,10 @@ pub struct Assertions {
     pub transcript_contains: Vec<String>,
     #[serde(default)]
     pub events: Vec<String>,
+    /// When present, require the complete event vector in order. This keeps
+    /// event-sequence/state tests declarative and recompilation-free.
+    #[serde(default)]
+    pub exact_events: Option<Vec<String>>,
     #[serde(default)]
     pub turn_starts: Option<usize>,
     #[serde(default)]
@@ -946,6 +950,14 @@ fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
     for expected in &scenario.assertions.events {
         if !kinds.contains(&expected.as_str()) {
             return Err(format!("expected event kind {expected:?} not in {kinds:?}"));
+        }
+    }
+    if let Some(expected) = &scenario.assertions.exact_events {
+        if kinds != expected.iter().map(String::as_str).collect::<Vec<_>>() {
+            return Err(format!(
+                "exact event sequence mismatch: expected {:?}, got {:?}",
+                expected, kinds
+            ));
         }
     }
     if let Some(expected) = scenario.assertions.turn_starts {
