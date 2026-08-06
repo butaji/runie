@@ -18,7 +18,7 @@ pub use feed::{
     FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardRow,
     ToolCardRowKind,
 };
-pub use memory::{parse_memory_results, MemoryResult};
+pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use theme::ThemeToken;

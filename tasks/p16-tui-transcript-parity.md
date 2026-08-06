@@ -578,3 +578,8 @@ structured-tool, and web-search YAML scenarios now assert ordered
 `ToolCardRowKind` sequences in addition to headers and output text. This keeps
 the renderer-neutral card contract executable across grouped, specialized,
 and replay-deduplicated feed paths before any per-card styling is changed.
+
+Memory projection SSOT (2026-08-06): the Grok memory markdown parser and its
+`Result N · score · source · location` transcript-row projection now live
+together in `runie-tui-model`. Live tool completion and structured-update
+paths call the same pure function; terminal styling remains a renderer concern.

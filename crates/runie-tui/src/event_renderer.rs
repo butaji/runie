@@ -973,33 +973,7 @@ impl EventRenderer {
             let raw_output = tool_result_text(&result);
             let rendered_lines: Vec<String> =
                 if matches!(tool_name.as_str(), "memory_search" | "memory-search") {
-                    let results = runie_tui_model::parse_memory_results(&raw_output);
-                    if results.is_empty() {
-                        raw_output.lines().map(str::to_owned).collect()
-                    } else {
-                        results
-                            .iter()
-                            .enumerate()
-                            .flat_map(|(index, result)| {
-                                let location = if result.start_line == 0 && result.end_line == 0 {
-                                    result.path.clone()
-                                } else {
-                                    format!(
-                                        "{}:{}-{}",
-                                        result.path, result.start_line, result.end_line
-                                    )
-                                };
-                                std::iter::once(format!(
-                                    "Result {} · {:.2} · {} · {}",
-                                    index + 1,
-                                    result.score,
-                                    result.source,
-                                    location
-                                ))
-                                .chain(result.snippet.lines().map(|line| format!("  {line}")))
-                            })
-                            .collect()
-                    }
+                    runie_tui_model::memory_display_lines(&raw_output)
                 } else {
                     raw_output.lines().map(str::to_owned).collect()
                 };
@@ -1563,33 +1537,7 @@ pub(crate) fn tool_result_text(result: &serde_json::Value) -> String {
 }
 
 fn structured_memory_lines(output: &str) -> Vec<String> {
-    let results = runie_tui_model::parse_memory_results(output);
-    if results.is_empty() {
-        return output
-            .lines()
-            .filter(|line| !line.is_empty())
-            .map(str::to_owned)
-            .collect();
-    }
-    results
-        .iter()
-        .enumerate()
-        .flat_map(|(index, result)| {
-            let location = if result.start_line == 0 && result.end_line == 0 {
-                result.path.clone()
-            } else {
-                format!("{}:{}-{}", result.path, result.start_line, result.end_line)
-            };
-            std::iter::once(format!(
-                "Result {} · {:.2} · {} · {}",
-                index + 1,
-                result.score,
-                result.source,
-                location
-            ))
-            .chain(result.snippet.lines().map(|line| format!("  {line}")))
-        })
-        .collect()
+    runie_tui_model::memory_display_lines(output)
 }
 
 fn web_search_site_count(output: &str) -> usize {

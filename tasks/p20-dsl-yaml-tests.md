@@ -221,3 +221,8 @@ Pi-compatible event-vector evidence without requiring Rust recompilation.
 `visual-tool-schema` extends that evidence through a complete tool-use,
 continuation-turn, and terminal `agent_end` sequence while retaining its
 state and transcript assertions.
+
+Pure projection reuse (2026-08-06): the memory-search YAML path no longer
+depends on renderer-local formatting. `memory_display_lines` is a model-owned
+projection consumed by both live and replay event routes, keeping fixture
+changes recompilation-free and eliminating a second formatting contract.

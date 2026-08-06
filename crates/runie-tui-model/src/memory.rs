@@ -18,6 +18,41 @@ pub fn parse_memory_results(output: &str) -> Vec<MemoryResult> {
         .collect()
 }
 
+/// Project the Grok memory protocol into renderer-neutral transcript rows.
+///
+/// Keeping this formatting beside the parser makes live event projection and
+/// YAML replay consume one semantic contract; terminal styling remains in the
+/// renderer.
+pub fn memory_display_lines(output: &str) -> Vec<String> {
+    let results = parse_memory_results(output);
+    if results.is_empty() {
+        return output
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(str::to_owned)
+            .collect();
+    }
+    results
+        .iter()
+        .enumerate()
+        .flat_map(|(index, result)| {
+            let location = if result.start_line == 0 && result.end_line == 0 {
+                result.path.clone()
+            } else {
+                format!("{}:{}-{}", result.path, result.start_line, result.end_line)
+            };
+            std::iter::once(format!(
+                "Result {} · {:.2} · {} · {}",
+                index + 1,
+                result.score,
+                result.source,
+                location
+            ))
+            .chain(result.snippet.lines().map(|line| format!("  {line}")))
+        })
+        .collect()
+}
+
 #[allow(
     clippy::too_many_lines,
     reason = "the Grok markdown protocol parser keeps one result grammar together"
@@ -76,7 +111,7 @@ fn parse_section(section: &str) -> Option<MemoryResult> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_memory_results;
+    use super::{memory_display_lines, parse_memory_results};
 
     #[test]
     fn parses_grok_memory_result_protocol() {
@@ -92,5 +127,16 @@ mod tests {
     #[test]
     fn ignores_no_result_message() {
         assert!(parse_memory_results("No memory results found").is_empty());
+    }
+
+    #[test]
+    fn projects_structured_results_into_shared_transcript_rows() {
+        let rows = memory_display_lines(
+            "### Result 1 (score: 0.72, source: global)\n**File:** memory.md (lines 1-2)\n```\nalpha\n```",
+        );
+        assert_eq!(
+            rows,
+            ["Result 1 · 0.72 · global · memory.md:1-2", "  alpha"]
+        );
     }
 }
