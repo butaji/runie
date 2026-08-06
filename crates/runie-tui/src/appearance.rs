@@ -8,6 +8,7 @@ use crate::view::PaintIntent;
 use opaline::{load_from_str, Theme};
 use ratatui::style::{Color, Modifier, Style};
 use runie_core::types::ThemeKind;
+use runie_tui_model::ThemeToken;
 
 const GROK_NIGHT: &str = r##"
 [meta]
@@ -130,11 +131,11 @@ pub fn base_style_for(theme: ThemeKind) -> Style {
 pub fn style_for_intent(theme: ThemeKind, intent: PaintIntent) -> Style {
     match intent {
         PaintIntent::Base => Style::default()
-            .fg(token_color(theme, "text.primary"))
-            .bg(token_color(theme, "bg.base")),
+            .fg(token_color(theme, ThemeToken::TextPrimary))
+            .bg(token_color(theme, ThemeToken::BackgroundBase)),
         PaintIntent::Panel => Style::default()
-            .fg(token_color(theme, "text.primary"))
-            .bg(token_color(theme, "bg.panel")),
+            .fg(token_color(theme, ThemeToken::TextPrimary))
+            .bg(token_color(theme, ThemeToken::BackgroundPanel)),
         PaintIntent::Muted => muted_style_for(theme),
         PaintIntent::Accent => accent_style_for(theme),
         PaintIntent::SecondaryAccent => secondary_style_for(theme),
@@ -149,7 +150,7 @@ pub fn style_for_intent(theme: ThemeKind, intent: PaintIntent) -> Style {
 }
 
 pub fn background_style_for(theme: ThemeKind) -> Style {
-    Style::default().bg(token_color(theme, "bg.base"))
+    Style::default().bg(token_color(theme, ThemeToken::BackgroundBase))
 }
 
 pub fn user_style_for(theme: ThemeKind) -> Style {
@@ -157,65 +158,65 @@ pub fn user_style_for(theme: ThemeKind) -> Style {
 }
 
 pub fn panel_background_style_for(theme: ThemeKind) -> Style {
-    Style::default().bg(token_color(theme, "bg.panel"))
+    Style::default().bg(token_color(theme, ThemeToken::BackgroundPanel))
 }
 
 pub fn diff_insert_style_for(theme: ThemeKind) -> Style {
-    success_style_for(theme).bg(token_color(theme, "bg.diff_insert"))
+    success_style_for(theme).bg(token_color(theme, ThemeToken::BackgroundDiffInsert))
 }
 
 pub fn diff_delete_style_for(theme: ThemeKind) -> Style {
-    error_style_for(theme).bg(token_color(theme, "bg.diff_delete"))
+    error_style_for(theme).bg(token_color(theme, ThemeToken::BackgroundDiffDelete))
 }
 
 pub fn muted_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "text.muted"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::TextMuted))
 }
 
 pub fn accent_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "accent.primary"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::AccentPrimary))
 }
 
 pub fn success_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "success"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::Success))
 }
 
 pub fn error_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme)
-        .fg(token_color(theme, "error"))
+        .fg(token_color(theme, ThemeToken::Error))
         .add_modifier(Modifier::BOLD)
 }
 
 pub fn secondary_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "accent.secondary"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::AccentSecondary))
 }
 
 pub fn warning_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "warning"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::Warning))
 }
 
 pub fn selected_style_for(theme: ThemeKind) -> Style {
-    Style::default().bg(token_color(theme, "bg.selection"))
+    Style::default().bg(token_color(theme, ThemeToken::BackgroundSelection))
 }
 
 pub fn selected_border_style_for(theme: ThemeKind) -> Style {
-    Style::default().fg(token_color(theme, "border.selection"))
+    Style::default().fg(token_color(theme, ThemeToken::BorderSelection))
 }
 
 pub fn prompt_border_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "border.prompt"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::BorderPrompt))
 }
 
 pub fn footer_key_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "text.footer_key"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::TextFooterKey))
 }
 
 pub fn assistant_body_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "text.assistant"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::TextAssistant))
 }
 
 pub fn header_path_style_for(theme: ThemeKind) -> Style {
-    base_style_for(theme).fg(token_color(theme, "text.header_path"))
+    base_style_for(theme).fg(token_color(theme, ThemeToken::TextHeaderPath))
 }
 
 pub fn base_style() -> Style {
@@ -246,11 +247,11 @@ pub fn warning_style() -> Style {
     warning_style_for(ThemeKind::GrokNight)
 }
 
-fn token_color(theme: ThemeKind, token: &str) -> Color {
+fn token_color(theme: ThemeKind, token: ThemeToken) -> Color {
     if theme == ThemeKind::TerminalNative {
         return Color::Reset;
     }
-    let color = load(theme).color(token);
+    let color = load(theme).color(token.opaline_name());
     Color::Rgb(color.r, color.g, color.b)
 }
 

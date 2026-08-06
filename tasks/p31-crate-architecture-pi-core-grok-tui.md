@@ -35,6 +35,11 @@ The pure status event projection now lives in `runie-tui-model`; the legacy
 and unit callers therefore exercise the model-layer projection without moving
 terminal rendering concerns into the model crate.
 
+Semantic theme names are now a model-owned `ThemeToken` enum with one
+Opaline-name mapping. `appearance.rs` resolves those tokens into Ratatui
+styles, so token identity is declarative and renderer-specific color
+conversion remains at the terminal boundary.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.
