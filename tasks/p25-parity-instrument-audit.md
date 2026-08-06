@@ -427,3 +427,10 @@ cells, primarily Grok terminal-default blank/background cells versus Runie's
 theme-projected truecolor cells. The focused gutter test does not invoke the
 reference oracle. The flags remain disabled until a clean same-theme capture
 pair is available; this is an open attribute-parity gap, not a pass.
+
+Fresh capture validation (2026-08-06): a new 80x24 `grok Hey` recording made
+through `just tmux-cast` emitted only default/bold/dim SGR sequences (`0`,
+`1`, `2`, `22`) and no truecolor or background-color SGR. This confirms the
+attribute mismatch is reproducible in the current capture environment, so
+strict cell-attribute comparison remains disabled until Runie and Grok are
+captured under the same terminal color mode.
