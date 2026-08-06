@@ -83,6 +83,13 @@ publish immutable `watch` snapshots to the pure view.
   production path against accidentally reintroducing legacy projection access
   while keeping the event-to-snapshot contract explicit.
 
+- **Production actor boundary audit (2026-08-06):** Rechecked every remaining
+  `Arc<Mutex<Scrollback/StatusBar>>` constructor and lock path. They are
+  compiled only under `cfg(test)` as synchronous compatibility adapters;
+  production `Projection<T>` contains only the actor variant, and
+  `App::spawn_renderer` constructs `EventRenderer::with_actors`. No production
+  TUI projection has a mutex-backed source of truth.
+
 ## Latest progress
 
 - The production `e` activity-fold action now publishes
@@ -198,6 +205,12 @@ publish immutable `watch` snapshots to the pure view.
 - Every projection command is event-derived and acknowledged before a test
   asserts its resulting state.
 - Existing visual, replay, and four-geometry cast checks remain green.
+
+## Completion status
+
+Complete for the production architecture boundary. Test-only compatibility
+constructors remain intentionally available for pure reducer/unit replay; they
+are not part of the shipped actor graph or production state ownership.
 
 ### Scrollback mutation inventory
 

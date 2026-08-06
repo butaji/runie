@@ -139,7 +139,7 @@
     {
       "id": "p23",
       "file": "p23-tui-projection-actors.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Architecture: migrate TUI status and scrollback projections to actor-owned watch snapshots"
     },
     {
