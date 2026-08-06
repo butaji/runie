@@ -370,6 +370,14 @@ tool-ID selection and asserts the resulting logical selected-entry index and
 cleared tool ID. This pins the reducer boundary for Grok's mixed transcript
 navigation; pixel-perfect selection-box styling remains open.
 
+Selection-surface source audit (2026-08-06): Grok's selected row uses the
+semantic `bg_visual` elevated surface across the row and `selection_border` at
+the edges. Runie already resolves those same theme tokens in its pure
+selection projection. The remaining parity item is interaction scope: Grok's
+mouse/text-selection box (including split-group behavior and optional copy/
+view controls) is distinct from Runie's keyboard entry cursor and should not
+be claimed as closed by the existing token test.
+
 YAML selection oracle (2026-08-06): `tool_select: next|previous` replays
 through the same scrollback actor and `selected_tool_id` asserts the resulting
 projection. The mixed activity fixture now pins both forward and reverse
