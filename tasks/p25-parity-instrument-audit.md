@@ -614,3 +614,13 @@ capture that showed the idle placeholder and doctor hint was rejected as an
 invalid scenario artifact. Live parity remains open: the remaining valid
 differences are concentrated in header path styling, user/assistant timestamp
 roles, activity summary prefixes, and prompt caption styling.
+
+## Settled tmux frame artifact (2026-08-06)
+
+The capture script now writes `<cast>.settled.ansi` immediately after the
+bounded `Worked for` plus ready-footer probe and before sending the quit key.
+This is the authoritative settled-screen artifact for whole-screen ANSI
+comparisons; the asciinema cast remains the animation/replay artifact. The
+artifact is also recorded in the adjacent metadata manifest. A smoke capture
+produced all 24 rows and the expected Hey feed, removing the teardown race
+from the capture workflow.

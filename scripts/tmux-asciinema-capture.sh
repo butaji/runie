@@ -108,6 +108,11 @@ if (( ! settled )); then
     echo "timed out waiting for completed turn in ${cols}x${rows}: ${cast}" >&2
     exit 1
 fi
+# Preserve the exact settled application frame before the quit key restores
+# the shell. The asciinema stream remains useful for animation replay, but its
+# final frame is not a reliable settled-state oracle after teardown.
+settled_dump="${cast%.cast}.settled.ansi"
+tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" > "$settled_dump"
 tmux send-keys -t "$session" "$quit_key"
 
 # The caller controls interaction through the session name while recording.
@@ -147,6 +152,7 @@ jq -n \
   --arg colorterm "$capture_colorterm" \
   --arg cast "$cast" \
   --arg raw "${cast%.cast}.raw" \
+  --arg settled_dump "$settled_dump" \
   --arg probe "$prompt" \
   --arg quit_key "$quit_key" \
   --argjson cols "$cols" \
@@ -157,4 +163,4 @@ jq -n \
     grok_path:$grok_path, grok_version:$grok_version,
     capture_tools:{tmux:$tmux_version, asciinema:$asciinema_version},
     terminal:{cols:$cols, rows:$rows, term:$term, colorterm:$colorterm},
-    artifacts:{cast:$cast, raw:$raw}}' > "$manifest"
+    artifacts:{cast:$cast, raw:$raw, settled_ansi:$settled_dump}}' > "$manifest"
