@@ -5,6 +5,19 @@ events:
   - start
   - error: "provider unavailable"
 assertions:
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_end
+    - turn_end
+    - agent_end
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    error_contains: "provider unavailable"
   visual:
     cols: 80
     rows: 30

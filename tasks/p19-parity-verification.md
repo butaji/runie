@@ -14,6 +14,11 @@ pi's default `one-at-a-time`. `follow-up.yaml` exercises `follow_up_mode: all`
 with two queued messages and asserts they are drained in one continuation
 turn. This keeps queue semantics in the no-recompile replay layer.
 
+**Provider failure state oracle (2026-08-06):** `visual-error.yaml` now pins
+the complete terminal event order and the actor-owned `error_message` state in
+addition to the rendered error row. This keeps pi's error lifecycle covered
+as event sequence → projection → TUI output.
+
 **Capture capability contract (2026-08-06):** `tmux-asciinema-capture.sh` now
 records with `TERM=xterm-256color COLORTERM=truecolor` by default, while still
 allowing validated caller overrides. YAML dump references also support
