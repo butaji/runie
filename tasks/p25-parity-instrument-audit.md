@@ -41,6 +41,10 @@ called parity.
   a declarative marker, matching `cast_compare --frames-after` without putting
   frame timing logic in Rust fixtures.
 
+The `visual-status-working.yaml` fixture now exercises this selector by
+choosing the first `Thinking…` frame after Grok's `Starting session…` phase;
+the fixture passes without a compiled frame index.
+
 The paired matrix is an evidence tool, not a fixture substitute. Reference
 casts must come from the same scenario and capture run; dynamic usage, timing,
 and model output differences must be investigated before snapshots are

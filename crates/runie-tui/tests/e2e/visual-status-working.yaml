@@ -17,6 +17,7 @@ assertions:
     rows: 24
     reference:
       cast: grok-rich.cast
+      frame_after: ["Starting session…"]
       frame_contains: ["Thinking…"]
       rows:
         - contains: "Thinking…"
