@@ -58,6 +58,14 @@ impl StatusSnapshot {
         )
     }
 
+    pub fn worked_for_label(&self) -> String {
+        format!(
+            "Worked for {}.{}s",
+            self.elapsed_ticks / 20,
+            (self.elapsed_ticks / 2) % 10
+        )
+    }
+
     /// Reduce one status intent into the actor-owned immutable projection.
     /// `elapsed_seed` is supplied by the runtime only for deterministic parity
     /// captures; the model remains independent of clocks and terminal I/O.
@@ -143,5 +151,14 @@ mod tests {
         assert!(state.animation_demand());
         state.state = Status::Ready;
         assert!(!state.animation_demand());
+    }
+
+    #[test]
+    fn worked_for_label_uses_actor_elapsed_ticks() {
+        let state = StatusSnapshot {
+            elapsed_ticks: 57,
+            ..StatusSnapshot::default()
+        };
+        assert_eq!(state.worked_for_label(), "Worked for 2.8s");
     }
 }

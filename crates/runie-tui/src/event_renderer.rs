@@ -480,7 +480,7 @@ impl EventRenderer {
                             }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
                                 feed_messages.push(ScrollbackMsg::AppendTurnSummary(
-                                    status_actor.snapshot().worked_for_label(),
+                                    status_actor.model_snapshot().worked_for_label(),
                                 ));
                             }
                             if let AgentEvent::MessageUpdate {
@@ -618,7 +618,7 @@ impl EventRenderer {
         if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
             messages.push(ScrollbackMsg::Append(Line::new(LineKind::Separator, "")));
             messages.push(ScrollbackMsg::AppendTurnSummary(
-                status_actor.snapshot().worked_for_label(),
+                status_actor.model_snapshot().worked_for_label(),
             ));
         }
         if !messages.is_empty() {
@@ -753,7 +753,7 @@ impl EventRenderer {
             let worked_for = self
                 .status_actor
                 .as_ref()
-                .map(|actor| actor.snapshot().worked_for_label())
+                .map(|actor| actor.model_snapshot().worked_for_label())
                 .unwrap_or_else(|| self.status.lock().worked_for_label());
             let mut scrollback = self.scrollback.lock();
             scrollback.append(Line::new(LineKind::Separator, ""));

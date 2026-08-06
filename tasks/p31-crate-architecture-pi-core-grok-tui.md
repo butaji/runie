@@ -57,6 +57,9 @@ Animation scheduling now reads `StatusSnapshot::animation_demand()` directly
 from the actor projection rather than rehydrating `StatusBar` for the
 predicate.
 
+`worked_for_label()` is also projected directly from `StatusSnapshot`, so
+event-driven turn summaries no longer rehydrate the widget for elapsed text.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.
