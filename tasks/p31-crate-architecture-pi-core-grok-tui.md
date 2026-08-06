@@ -146,6 +146,11 @@ boundary.
 `StatusBar` adapter. No actor watch channel now publishes the mutable TUI
 widget types used only for terminal rendering.
 
+`PromptActor` now publishes `PromptSnapshot` through its watch channel as
+well. Its legacy `snapshot()` method reconstructs a `PromptWidget` only for
+compatibility rendering; prompt state, cursor geometry, history, and theme
+remain actor-owned model facts.
+
 ## Target workspace
 
 ```text

@@ -133,13 +133,13 @@ enum PromptMsg {
 #[derive(Clone)]
 pub struct PromptActor {
     tx: mpsc::Sender<PromptMsg>,
-    snapshot: watch::Receiver<PromptWidget>,
+    snapshot: watch::Receiver<PromptSnapshot>,
     _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }
 
 impl PromptActor {
     pub fn new(bus: &EventBus) -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new());
+        let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new().model_snapshot());
         let events = bus.subscribe();
         let (tx, owner) =
             runie_core::spawn_actor_worker!(32, |rx: mpsc::Receiver<PromptMsg>| async move {
@@ -202,18 +202,18 @@ impl PromptActor {
     }
 
     pub fn snapshot(&self) -> PromptWidget {
-        self.snapshot.borrow().clone()
+        PromptWidget::from_model_snapshot(self.snapshot.borrow().clone())
     }
 
     pub fn model_snapshot(&self) -> PromptSnapshot {
-        self.snapshot.borrow().model_snapshot()
+        self.snapshot.borrow().clone()
     }
 }
 
 async fn run_prompt_actor(
     mut rx: mpsc::Receiver<PromptMsg>,
     mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
-    snapshot_tx: watch::Sender<PromptWidget>,
+    snapshot_tx: watch::Sender<PromptSnapshot>,
 ) {
     let mut prompt = PromptWidget::new();
     loop {
@@ -221,17 +221,17 @@ async fn run_prompt_actor(
             message = rx.recv() => {
                 let Some(message) = message else { break };
                 handle_prompt_message(&mut prompt, message);
-                let _ = snapshot_tx.send(prompt.clone());
+                let _ = snapshot_tx.send(prompt.model_snapshot());
             }
             event = events.recv() => {
                 match event {
                     Ok(AgentEvent::Reset) => {
                         prompt = PromptWidget::new();
-                        let _ = snapshot_tx.send(prompt.clone());
+                        let _ = snapshot_tx.send(prompt.model_snapshot());
                     }
                     Ok(AgentEvent::ThemeChanged { theme }) => {
                         prompt.set_theme(theme);
-                        let _ = snapshot_tx.send(prompt.clone());
+                        let _ = snapshot_tx.send(prompt.model_snapshot());
                     }
                     _ => {}
                 }
