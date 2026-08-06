@@ -115,7 +115,6 @@ impl UiActor {
     }
 
     pub fn new_with_welcome(bus: &EventBus, show_welcome: bool) -> Self {
-        let (tx, mut rx) = mpsc::channel::<(UiMsg, tokio::sync::oneshot::Sender<()>)>(32);
         let initial = if show_welcome {
             UiState::with_welcome()
         } else {
@@ -123,7 +122,10 @@ impl UiActor {
         };
         let (snapshot_tx, snapshot) = watch::channel(initial.clone());
         let mut events = bus.subscribe();
-        let owner = runie_core::spawn_owned_worker!(async move {
+        let (tx, owner) = runie_core::spawn_actor_worker!(32, |mut rx: mpsc::Receiver<(
+            UiMsg,
+            tokio::sync::oneshot::Sender<()>
+        )>| async move {
             let mut state = initial;
             loop {
                 tokio::select! {
@@ -179,10 +181,12 @@ pub struct PromptActor {
 
 impl PromptActor {
     pub fn new(bus: &EventBus) -> Self {
-        let (tx, rx) = mpsc::channel(32);
         let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new());
         let events = bus.subscribe();
-        let owner = runie_core::spawn_owned_worker!(run_prompt_actor(rx, events, snapshot_tx,));
+        let (tx, owner) =
+            runie_core::spawn_actor_worker!(32, |rx: mpsc::Receiver<PromptMsg>| async move {
+                run_prompt_actor(rx, events, snapshot_tx).await;
+            });
         Self {
             tx,
             snapshot,

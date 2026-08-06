@@ -21,6 +21,11 @@ behavior fixtures editable without recompiling Rust.
   `JoinHandle`/`Drop` owner wrapper was removed. The actor ownership macro tests
   and full workspace gate verify the migration.
 
+- **TUI mailbox DSL reuse (2026-08-06):** Both actors now also use
+  `spawn_actor_worker!` for channel construction, so mailbox capacity and task
+  ownership are established by the same thin DSL used by core actors. Command
+  types and worker reducers remain explicit at each call site.
+
 - Added `spawn_owned_worker!`, a small internal DSL that constructs an
   aborting `TaskOwner` around an actor worker handle. Mailboxes and worker
   loops remain explicit at each call site.
