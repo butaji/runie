@@ -638,25 +638,7 @@ mod tests {
 
     #[test]
     fn palette_registry_maps_every_visible_entry_to_a_typed_action() {
-        let labels = [
-            "New Session",
-            "New Session in Worktree",
-            "Agent Dashboard",
-            "Back to Home",
-            "Delete This Session",
-            "Resume Session",
-            "Share Session",
-            "Rename Session",
-            "Session Info",
-            "Compact History",
-            "Context Usage",
-            "View Plan",
-            "Memory",
-            "Switch Model",
-            "Keyboard Shortcuts",
-            "Quit",
-        ];
-        assert!(labels
+        assert!(super::PaletteAction::labels()
             .iter()
             .all(|label| super::palette_action_for(label).is_some()));
         assert!(super::palette_action_for("unknown command").is_none());

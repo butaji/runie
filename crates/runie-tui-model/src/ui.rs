@@ -3,19 +3,6 @@
 runie_core::typed_action_registry! {
     pub enum PaletteAction {
         NewSession => "New Session",
-        NewSessionInWorktree => "New Session in Worktree",
-        AgentDashboard => "Agent Dashboard",
-        BackToHome => "Back to Home",
-        DeleteThisSession => "Delete This Session",
-        ResumeSession => "Resume Session",
-        ShareSession => "Share Session",
-        RenameSession => "Rename Session",
-        SessionInfo => "Session Info",
-        CompactHistory => "Compact History",
-        ContextUsage => "Context Usage",
-        ViewPlan => "View Plan",
-        Memory => "Memory",
-        SwitchModel => "Switch Model",
         KeyboardShortcuts => "Keyboard Shortcuts",
         Quit => "Quit",
     }

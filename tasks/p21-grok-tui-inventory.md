@@ -53,11 +53,16 @@ by the UI actor, and the binary/YAML paths publish the existing
 other Grok commands remain unimplemented until their corresponding core/TUI
 event contracts are added.
 
-The pure palette registry now mirrors the first 15 stable Grok labels
-(`New Session`, worktree/session actions, context actions, model switch, and
-shortcuts), with filtering exercised by YAML. Action dispatch remains an
-explicit follow-up because it must publish core/UI events rather than mutate
-loop or session state from the modal.
+The palette registry is intentionally limited to the three actions currently
+implemented by Runie's Pi-core-backed executable: `New Session`, `Keyboard
+Shortcuts`, and `Quit`. Unsupported Grok actions are not advertised as dead
+commands. Adding another entry requires its corresponding core/UI event
+contract and executable consumer first.
+
+Palette scope correction (2026-08-06): removed the previous unsupported
+session-management, memory, plan, context, and model-switch entries from the
+macro-generated registry. The palette widget, actor filtering, typed
+activation, and YAML replay now share the reduced registry SSOT.
 
 ## Findings
 
