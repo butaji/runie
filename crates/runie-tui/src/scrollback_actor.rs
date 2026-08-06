@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use runie_core::types::AgentEvent;
 use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
-use crate::widgets::{Scrollback, ScrollbackMsg};
+use crate::widgets::{LineKind, Scrollback, ScrollbackMsg};
 
 enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
@@ -76,12 +76,24 @@ impl ScrollbackActor {
     }
 }
 
+#[allow(
+    clippy::cognitive_complexity,
+    clippy::too_many_lines,
+    reason = "the bus projection keeps event ordering and actor ownership in one loop"
+)]
 async fn run_bus_projection(
     mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
     tx: mpsc::Sender<Command>,
 ) {
     let mut active_tools = HashSet::new();
     let mut tool_headers = HashMap::new();
+    let mut tool_names = HashMap::new();
+    let mut activity_dirs = 0;
+    let mut activity_files = 0;
+    let mut activity_commands = 0;
+    let mut activity_subagents = 0;
+    let mut activity_failures = 0;
+    let mut active_tool_count = 0;
     loop {
         let event = match events.recv().await {
             Ok(event) => event,
@@ -99,12 +111,37 @@ async fn run_bus_projection(
                 tool_call_id.clone(),
                 crate::event_renderer::tool_header(tool_name, args),
             );
+            tool_names.insert(tool_call_id.clone(), tool_name.clone());
+            if matches!(tool_name.as_str(), "list_dir" | "list_files") {
+                activity_dirs += 1;
+            } else if matches!(tool_name.as_str(), "read" | "read_file") {
+                activity_files += 1;
+            } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
+                activity_commands += 1;
+            } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
+                activity_subagents += 1;
+            }
+            active_tool_count += 1;
         }
-        if let AgentEvent::ToolExecutionEnd { tool_call_id, .. } = &event {
-            active_tools.remove(tool_call_id);
-            tool_headers.remove(tool_call_id);
-        }
-        let messages = bus_messages_for_event(event.clone());
+        let completion = ordinary_tool_end_messages(
+            &mut active_tools,
+            &mut tool_headers,
+            &mut tool_names,
+            &mut active_tool_count,
+            &mut activity_failures,
+            (
+                activity_dirs,
+                activity_files,
+                activity_commands,
+                activity_subagents,
+            ),
+            &event,
+        );
+        let messages = if !completion.is_empty() {
+            completion
+        } else {
+            bus_messages_for_event(event.clone())
+        };
         let messages = if messages.is_empty() {
             tool_update_messages(&active_tools, &mut tool_headers, &event)
         } else {
@@ -233,6 +270,80 @@ fn tool_update_messages(
         header: Some(header.clone()),
         output: Vec::new(),
     }]
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the pure completion fold keeps card, output, and activity variants atomic"
+)]
+fn ordinary_tool_end_messages(
+    active_tools: &mut HashSet<String>,
+    tool_headers: &mut HashMap<String, String>,
+    tool_names: &mut HashMap<String, String>,
+    active_tool_count: &mut usize,
+    activity_failures: &mut usize,
+    (dirs, files, commands, subagents): (usize, usize, usize, usize),
+    event: &AgentEvent,
+) -> Vec<ScrollbackMsg> {
+    let AgentEvent::ToolExecutionEnd {
+        tool_call_id,
+        tool_name,
+        result,
+        is_error,
+        ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    if !active_tools.remove(tool_call_id) {
+        return Vec::new();
+    }
+    *active_tool_count = active_tool_count.saturating_sub(1);
+    let pending = tool_headers.remove(tool_call_id).unwrap_or_default();
+    let name = tool_names
+        .remove(tool_call_id)
+        .unwrap_or_else(|| tool_name.clone());
+    let header = if *is_error {
+        *activity_failures += 1;
+        format!("{pending} ✗")
+    } else {
+        crate::event_renderer::completed_tool_header(&pending, &name, result)
+    };
+    let activity = if *active_tool_count == 0 && dirs + files + commands + subagents > 0 {
+        Some(crate::event_renderer::activity_text(
+            dirs,
+            files,
+            commands,
+            subagents,
+            *activity_failures,
+            false,
+        ))
+    } else {
+        None
+    };
+    let output_kind = if matches!(
+        name.as_str(),
+        "list_dir" | "list_files" | "read" | "read_file" | "web_fetch" | "web-fetch" | "fetch"
+    ) {
+        LineKind::ToolOutput
+    } else {
+        LineKind::ToolResult
+    };
+    let output = crate::event_renderer::tool_result_text(result)
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| (output_kind, line.to_owned()))
+        .collect();
+    let mut messages = vec![ScrollbackMsg::ToolEnd {
+        tool_call_id: tool_call_id.clone(),
+        header,
+        activity,
+        output,
+    }];
+    if *is_error {
+        messages.push(ScrollbackMsg::MarkToolError(tool_call_id.clone()));
+    }
+    messages
 }
 
 fn structured_update_text(result: &serde_json::Value) -> Option<String> {
@@ -455,6 +566,43 @@ mod tests {
             .lines()
             .iter()
             .any(|line| line.text.contains("update")));
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_reduces_tool_completion_and_activity() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        actor
+            .apply(ScrollbackMsg::ToolStart {
+                tool_call_id: "tool-3".into(),
+                header: "Read README.md".into(),
+                activity: None,
+            })
+            .await;
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::ToolExecutionStart {
+            tool_call_id: "tool-3".into(),
+            tool_name: "read".into(),
+            args: serde_json::json!({"path": "README.md"}),
+        });
+        snapshot.changed().await.expect("tool start projection");
+        bus.publish(AgentEvent::ToolExecutionEnd {
+            tool_call_id: "tool-3".into(),
+            tool_name: "read".into(),
+            result: serde_json::json!({"output": "one\ntwo"}),
+            is_error: false,
+        });
+        snapshot
+            .changed()
+            .await
+            .expect("tool completion projection");
+        let snapshot = actor.snapshot();
+        let lines = snapshot.lines();
+        assert!(lines
+            .iter()
+            .any(|line| line.text == "Read README.md (2 lines)"));
+        assert!(lines.iter().any(|line| line.text == "one"));
+        assert!(lines.iter().any(|line| line.text == "◈ Read 1 file"));
     }
 
     #[tokio::test]

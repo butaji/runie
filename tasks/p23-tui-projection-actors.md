@@ -92,6 +92,13 @@ publish immutable `watch` snapshots to the pure view.
 
 ## Latest progress
 
+- **Tool completion reduction (2026-08-06):** `ScrollbackActor` now owns the
+  ordinary tool-end fold: it tracks pending headers, tool names, active calls,
+  activity categories, and failures, then emits the completed card, output
+  rows, and final activity label as one acknowledged batch. The live renderer
+  no longer applies the same completion a second time. An actor regression
+  covers the completed read card, output, and activity summary.
+
 - The production `e` activity-fold action now publishes
   `ScrollbackMsg::ToggleActivityExpanded` to `ScrollbackActor` and awaits its
   acknowledgement instead of mutating the legacy mutex projection after

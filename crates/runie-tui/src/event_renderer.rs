@@ -1380,7 +1380,7 @@ fn make_relative_path(path: &str) -> String {
     clippy::cognitive_complexity,
     reason = "the pure completion-header DSL keeps Grok's cardinality variants together"
 )]
-fn completed_tool_header(
+pub(crate) fn completed_tool_header(
     pending_header: &str,
     tool_name: &str,
     result: &serde_json::Value,
@@ -1482,7 +1482,7 @@ fn completed_tool_header(
     }
 }
 
-fn tool_result_text(result: &serde_json::Value) -> String {
+pub(crate) fn tool_result_text(result: &serde_json::Value) -> String {
     result
         .as_str()
         .map(str::to_owned)
@@ -1561,7 +1561,7 @@ fn agent_start_messages(emit_welcome: bool) -> Vec<ScrollbackMsg> {
     clippy::cognitive_complexity,
     reason = "activity vocabulary remains one pure Grok label projection"
 )]
-fn activity_text(
+pub(crate) fn activity_text(
     dirs: usize,
     files: usize,
     commands: usize,
