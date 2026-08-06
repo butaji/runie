@@ -215,3 +215,6 @@ macro-generated wire contract.
 The same closed-boundary assertion now also covers the text-only
 `hello-streaming` and `tool-echo` fixtures, giving the basic replay corpus
 Pi-compatible event-vector evidence without requiring Rust recompilation.
+`visual-tool-schema` extends that evidence through a complete tool-use,
+continuation-turn, and terminal `agent_end` sequence while retaining its
+state and transcript assertions.
