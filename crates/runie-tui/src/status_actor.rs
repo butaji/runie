@@ -18,14 +18,14 @@ enum Command {
 #[derive(Clone)]
 pub struct StatusActor {
     tx: mpsc::Sender<Command>,
-    snapshot: watch::Receiver<StatusBar>,
+    snapshot: watch::Receiver<StatusSnapshot>,
     _owner: Arc<TaskOwner>,
     _bus_owner: Option<Arc<TaskOwner>>,
 }
 
 impl StatusActor {
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(StatusBar::new());
+        let (snapshot_tx, snapshot) = watch::channel(StatusBar::new().model_snapshot());
         let (tx, owner) = spawn_actor_worker!(16, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = StatusBar::new();
             while let Some(command) = rx.recv().await {
@@ -36,7 +36,7 @@ impl StatusActor {
                 for message in messages {
                     state.apply(message);
                 }
-                let _ = snapshot_tx.send(state.clone());
+                let _ = snapshot_tx.send(state.model_snapshot());
                 let _ = reply.send(());
             }
         });
@@ -89,14 +89,14 @@ impl StatusActor {
     }
 
     pub fn snapshot(&self) -> StatusBar {
-        self.snapshot.borrow().clone()
+        StatusBar::from_model_snapshot(self.snapshot.borrow().clone())
     }
 
     pub fn model_snapshot(&self) -> StatusSnapshot {
-        self.snapshot.borrow().model_snapshot()
+        self.snapshot.borrow().clone()
     }
 
-    pub fn subscribe(&self) -> watch::Receiver<StatusBar> {
+    pub fn subscribe(&self) -> watch::Receiver<StatusSnapshot> {
         self.snapshot.clone()
     }
 }

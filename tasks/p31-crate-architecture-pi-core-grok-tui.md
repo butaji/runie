@@ -141,6 +141,11 @@ without publishing mutable-widget state as an actor projection. The actor's
 reducer remains the sole state owner and the model channel is the SSOT read
 boundary.
 
+`StatusActor` follows the same boundary: its watch channel publishes
+`StatusSnapshot`, while legacy `snapshot()` callers receive a local
+`StatusBar` adapter. No actor watch channel now publishes the mutable TUI
+widget types used only for terminal rendering.
+
 ## Target workspace
 
 ```text
