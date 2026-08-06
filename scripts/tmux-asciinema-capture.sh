@@ -23,7 +23,10 @@ trap cleanup EXIT INT TERM
 tmux new-session -d -s "$session" -x "$cols" -y "$rows" \
   "bash -c 'read -r launch; eval \"\$launch\"'"
 tmux resize-window -t "$session" -x "$cols" -y "$rows"
-record_command="$command_line"
+# Make color capability part of every captured artifact. Callers may override
+# either value through the validated assignment list, but a capture must not
+# silently inherit a terminal-default palette from the host shell.
+record_command="TERM=xterm-256color COLORTERM=truecolor"
 if [[ -n "$env_assignments" ]]; then
     validated_assignments=""
     for assignment in $env_assignments; do
@@ -33,8 +36,9 @@ if [[ -n "$env_assignments" ]]; then
         fi
         validated_assignments+="${assignment} "
     done
-    record_command="${validated_assignments}${record_command}"
+    record_command+=" ${validated_assignments}"
 fi
+record_command+="$command_line"
 escaped_command=${record_command//\'/\'\\\'\'}
 quoted_command="'${escaped_command}'"
 tmux send-keys -t "$session" -l \

@@ -8,6 +8,14 @@ GrokNight Opaline surface (`fg #6c6c6c`, `bg #141414`). The fixture remains
 symbol-exact; a fresh truecolor Grok capture is required before this oracle
 can be promoted without comparing incompatible terminal capabilities.
 
+**Capture capability contract (2026-08-06):** `tmux-asciinema-capture.sh` now
+records with `TERM=xterm-256color COLORTERM=truecolor` by default, while still
+allowing validated caller overrides. YAML dump references also support
+`require_truecolor: true`; when combined with `exact_attributes`, the runner
+fails before comparison if the selected frame contains no RGB cells. This
+turns missing capture capability into an explicit test failure instead of a
+silent downgrade to symbol-only evidence.
+
 **Fresh isolated capture (2026-08-06):** Captured Grok and Runie independently
 at 80×24 through `just tmux-cast` with the same `Hey` probe and truecolor
 environment hints. The indexed phase comparator reports Grok 3 visible frames

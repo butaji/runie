@@ -398,6 +398,11 @@ pub struct DumpReference {
     /// Compare symbols, colors, and text attributes for every selected cell.
     #[serde(default)]
     pub exact_attributes: bool,
+    /// Require the selected cast frame to contain truecolor cells. This keeps
+    /// a terminal-default recording from being mistaken for a full-color
+    /// parity oracle.
+    #[serde(default)]
+    pub require_truecolor: bool,
     /// Optional zero-based output-frame index. When present, this takes
     /// precedence over marker matching and makes dynamic casts phase-locked.
     #[serde(default)]
@@ -1317,6 +1322,15 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
     })?;
     if reference.exact_attributes {
         let expected = selected_cells.as_ref().expect("selected frame cells");
+        if reference.require_truecolor
+            && !expected
+                .iter()
+                .any(|cell| cell.fg.starts_with("rgb:") || cell.bg.starts_with("rgb:"))
+        {
+            return Err(
+                "reference frame has no RGB cells; capture with COLORTERM=truecolor".to_owned(),
+            );
+        }
         let expected_width = cols;
         let expected_height = rows;
         if buffer.area.width != expected_width || buffer.area.height != expected_height {
