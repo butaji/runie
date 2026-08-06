@@ -12,6 +12,15 @@ includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered
 `visual-tool-error.yaml` fixture.
 
+- **Core loop audit (2026-08-06):** Re-read pi's `runLoop` control flow beside
+  `runie-core/src/loop/driver.rs`. The audited ordering matches for initial
+  steering, assistant error/abort termination, truncated tool-call failure,
+  tool-batch continuation, `turn_end`, `prepareNextTurn`,
+  `shouldStopAfterTurn`, steering re-poll, follow-up polling, and final
+  `agent_end`. No additional core behavior change was justified by this
+  comparison; the remaining verification gap is exhaustive cast/frame proof,
+  not an untracked loop branch.
+
 - **Cast audit (2026-08-05):** A tmux/asciinema `grok` inspection confirmed
   that the remaining TUI oracle gap includes dynamic turn-status telemetry
   (elapsed/tokens/stop reason) and queue/footer variants. The current tests
