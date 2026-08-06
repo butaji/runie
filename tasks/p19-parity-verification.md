@@ -1332,3 +1332,10 @@ those differences are not promoted into the deterministic Pi-core oracle.
   partial payloads and the discovered `visual-tool-call-sections.yaml`
   fixture. The YAML DSL now covers the full pi assistant tool-call section
   lifecycle.
+## Marker-locked feed oracle (2026-08-06)
+
+`visual-grok-feed.yaml` no longer pins a stale numeric frame index. Its
+full-screen reference selects the first frame containing both semantic feed
+markers (`Listed 1 dir` and `Read 1 file`), then applies the exact screen
+comparison. The fixture passes, so frame selection is now lifecycle/data
+driven for this feed state rather than tied to recording timing.

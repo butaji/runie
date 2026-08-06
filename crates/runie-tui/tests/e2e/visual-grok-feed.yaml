@@ -32,7 +32,6 @@ assertions:
     waiting_chrome: " 0.0s                            6.0s ⇣20.7k [stop]"
     reference:
       cast: grok-rich.cast
-      frame_index: 81
       frame_contains: ["Listed 1 dir", "Read 1 file"]
       exact_screen: true
       # The legacy reference still contains 73 mixed-theme style cells after
