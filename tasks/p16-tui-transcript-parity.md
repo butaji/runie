@@ -401,3 +401,8 @@ across the full terminal width, and subsequent submitted turns pin the newest
 user entry at the top of the transcript viewport while streaming. The first
 session capture remains at Grok's initial-session scroll position; reducer and
 full YAML/asciinema visual gates pass.
+
+Source color correction (2026-08-06): Grok's user prompt block uses the
+theme's light panel colors (`#242424` Night and `#dedede` Day), distinct from
+the selection surface. Opaline `bg.panel` tokens now preserve that distinction
+and user-row cell coverage asserts both palettes.

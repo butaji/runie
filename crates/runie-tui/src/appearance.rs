@@ -24,6 +24,7 @@ yellow = "#e0af68"
 green = "#9ece6a"
 red = "#f7768e"
 selection = "#1c1c1c"
+panel = "#242424"
 selection_border = "#3c3c41"
 
 [tokens]
@@ -36,7 +37,7 @@ success = "green"
 error = "red"
 warning = "yellow"
 "bg.base" = "bg"
-"bg.panel" = "selection"
+"bg.panel" = "panel"
 "bg.selection" = "selection"
 "border.selection" = "selection_border"
 
@@ -61,6 +62,7 @@ yellow = "#a27612"
 green = "#378e23"
 red = "#cd3048"
 selection = "#e4e4e4"
+panel = "#dedede"
 selection_border = "#b9b9be"
 
 [tokens]
@@ -73,7 +75,7 @@ success = "green"
 error = "red"
 warning = "yellow"
 "bg.base" = "bg"
-"bg.panel" = "selection"
+"bg.panel" = "panel"
 "bg.selection" = "selection"
 "border.selection" = "selection_border"
 
@@ -220,6 +222,14 @@ mod tests {
         assert_eq!(
             selected_style_for(ThemeKind::GrokDay).bg,
             Some(Color::Rgb(228, 228, 228))
+        );
+        assert_eq!(
+            user_style_for(ThemeKind::GrokNight).bg,
+            Some(Color::Rgb(36, 36, 36))
+        );
+        assert_eq!(
+            user_style_for(ThemeKind::GrokDay).bg,
+            Some(Color::Rgb(222, 222, 222))
         );
     }
 }
