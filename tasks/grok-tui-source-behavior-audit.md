@@ -235,3 +235,14 @@ projects the common ranged text header from the result metadata; a pure test
 covers `41-42 of 100`. Exact empty/media/error parity remains an event-contract
 gap: preserve those typed fields in events and reduce them into the
 renderer-neutral card model before adding the remaining visual fixtures.
+
+Command-palette scope audit (2026-08-06): Grok's palette is a large modal
+registry containing session, context, model, extension, and slash-command
+entries, with section headers and nested modal routes. The Pi-relevant Runie
+subset is the actor-owned palette lifecycle: Ctrl-P open, query filtering,
+bounded selection movement, Escape clearing a non-empty query before closing,
+and activation. `visual-command-palette.yaml` and
+`visual-command-palette-activate.yaml` exercise those transitions through the
+YAML visual runner; `typed_action_registry!` owns the compact command list.
+Grok-only commands and nested modal routes remain excluded because they are
+outside the Pi-core feature boundary, not silently counted as parity gaps.
