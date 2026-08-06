@@ -16,6 +16,9 @@ events:
       tool_call_id: call-1
       mode: truncated
 assertions:
+  state:
+    tool_blocks: 1
+    tool_modes: [truncated]
   visual:
     cols: 80
     rows: 24
