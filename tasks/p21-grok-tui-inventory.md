@@ -202,6 +202,12 @@ and display mode. This verifies the actor projection's payload, while keeping
 rendered truncation separate from retained state; specialized renderers and
 selection/navigation remain open.
 
+Specialized-card audit (2026-08-06): Pi-core `ToolExecutionStart.args` are
+already consumed once by `tool_header` and retained through the actor-owned
+line/tool-block projection. No second argument store was introduced. The next
+valid parity slice is Grok's fold/member navigation and card-specific layout,
+not duplicate tool metadata.
+
 Command-palette projection progress (2026-08-06): aligned the modal heading
 with Grok's `Commands` vocabulary and bounded keyboard selection to the
 currently filtered entry set. The state remains UI-actor-owned and the visual
