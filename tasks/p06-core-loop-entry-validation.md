@@ -9,11 +9,14 @@
 - `runAgentLoopContinue` — `agent-loop.ts:120`: throws `"Cannot continue: no messages in context"` if `context.messages.length === 0` (line 127); throws `"Cannot continue from message role: assistant"` if last message `role === "assistant"` (line 131). `newMessages = []` (does **not** include pre-existing context), emits `agent_start`+`turn_start`, then continues.
 - `PendingMessageQueue.drain` — `agent.ts:139`: `"all"` drains everything; `"one-at-a-time"` returns only the oldest.
 
-## Current runie state
+## Current runie state (verified 2026-08-06)
 
 `~/Code/GitHub/runie-tests/runie/crates/runie-core/src/loop/driver.rs`
-- `run_loop_continue` (driver.rs:266) calls `run_loop(vec![], ...)` with **no validation** and **no busy guard**.
-- `LoopActor::prompt` (loop/actor.rs) — no busy guard; concurrent prompts are allowed.
+- `LoopActor::prompt` owns an actor-local running guard and rejects concurrent
+  prompts with Pi's exact busy error.
+- `LoopActor::continue_run` validates empty contexts and assistant-ending
+  contexts, drains queued steering/follow-up messages according to queue mode,
+  and returns only newly produced messages.
 
 ## Adapt to runie
 
@@ -23,6 +26,15 @@
 - last message is `Assistant` with empty steering/follow-up queues → error `"Cannot continue from message role: assistant"`; queued steering/follow-up messages are drained according to queue mode and run.
 3. Ensure `run_loop_continue` returns only **new** messages (starts empty, not with prompts).
 4. Add `LoopActor::steer` / `follow_up` / `clear_queues` / `has_queued` mirrors of `Agent.steer/followUp/clearAllQueues/hasQueuedMessages` (agent.ts:276-302).
+
+## Closed parity notes
+
+- **Exact public errors (2026-08-06):** `Busy`, `EmptyContext`, and
+  `LastIsAssistant` now display Pi's exact capitalization and wording while
+  retaining typed Rust variants for event-driven tests.
+- **Validation and ownership (2026-08-06):** The actor owns the running guard;
+  continuation validation happens before the driver starts, and queue drains
+  remain queue-actor operations rather than direct state mutation.
 
 ## State machine / variants
 

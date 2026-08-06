@@ -28,13 +28,13 @@ pub enum LoopError {
     Provider(String),
     /// pi: `Agent is already processing a prompt. Use steer() or followUp()
     /// to queue messages, or wait for completion.` (agent.ts:340).
-    #[error("agent is already processing a prompt")]
+    #[error("Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion.")]
     Busy,
     /// pi: `Cannot continue: no messages in context` (agent-loop.ts:127).
-    #[error("cannot continue: no messages in context")]
+    #[error("Cannot continue: no messages in context")]
     EmptyContext,
     /// pi: `Cannot continue from message role: assistant` (agent-loop.ts:131).
-    #[error("cannot continue from message role: assistant")]
+    #[error("Cannot continue from message role: assistant")]
     LastIsAssistant,
 }
 

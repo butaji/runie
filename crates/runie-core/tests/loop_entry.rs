@@ -109,8 +109,12 @@ async fn concurrent_prompt_rejected_as_busy() {
         .prompt(vec![user("second", 2)], AgentContext::default())
         .await;
     assert!(
-        matches!(second, Err(runie_core::r#loop::LoopError::Busy)),
+        matches!(&second, Err(runie_core::r#loop::LoopError::Busy)),
         "expected Busy, got {second:?}"
+    );
+    assert_eq!(
+        second.unwrap_err().to_string(),
+        "Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion."
     );
 
     // Release the first run; it completes normally.
@@ -175,9 +179,10 @@ async fn continue_run_rejects_empty_context() {
         .await
         .unwrap_err();
     assert!(
-        matches!(err, runie_core::r#loop::LoopError::EmptyContext),
+        matches!(&err, runie_core::r#loop::LoopError::EmptyContext),
         "expected EmptyContext, got {err:?}"
     );
+    assert_eq!(err.to_string(), "Cannot continue: no messages in context");
 }
 
 #[tokio::test]
@@ -196,8 +201,12 @@ async fn continue_run_rejects_last_assistant() {
     let test = TestLoopBuilder::new(Arc::new(MockStreamFn::hello())).build();
     let err = test.actor.continue_run(ctx).await.unwrap_err();
     assert!(
-        matches!(err, runie_core::r#loop::LoopError::LastIsAssistant),
+        matches!(&err, runie_core::r#loop::LoopError::LastIsAssistant),
         "expected LastIsAssistant, got {err:?}"
+    );
+    assert_eq!(
+        err.to_string(),
+        "Cannot continue from message role: assistant"
     );
 }
 
