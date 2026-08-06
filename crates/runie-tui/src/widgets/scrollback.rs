@@ -147,7 +147,11 @@ impl LinePresentationExt for LineKind {
             LineKind::SessionStart => appearance::muted_style_for(theme),
             LineKind::System => appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
             LineKind::Separator => appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
-            LineKind::TurnSummary => appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+            // Grok's settled thought/work markers use the muted token at full
+            // intensity.  The collapsed thinking rail is dimmed by its own
+            // accent projection; applying DIM to the whole row incorrectly
+            // darkens the marker text as well.
+            LineKind::TurnSummary => appearance::muted_style_for(theme),
             LineKind::CompletedAssistant => appearance::base_style_for(theme),
             LineKind::Activity => appearance::accent_style_for(theme),
         }

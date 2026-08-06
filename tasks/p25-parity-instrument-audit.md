@@ -652,3 +652,23 @@ though no PTY process was spawned. It now fails the YAML assertion explicitly
 until the standalone `portable-pty` harness is integrated. This prevents a
 green replay result from being mistaken for terminal-process parity; tmux /
 asciinema captures remain the authoritative PTY instrument in the interim.
+
+## Fresh settled Hey comparison (2026-08-06)
+
+Private tmux/asciinema captures were produced at 80x24 with
+`TERM=xterm-256color`, `COLORTERM=truecolor`, the installed Grok
+`0.2.118 (1e1687c1cf6)`, and the current Runie revision. The settled ANSI
+frames compare the complete screen, including blank cells and cell
+attributes. Before the semantic styling fix, the pair had 352 style-only
+differences and zero glyph differences. Grok's source-backed collapsed
+thinking renderer blends the purple thinking accent against the background;
+it does not apply DIM to the whole `Thought`/`Worked for` text row. Runie now
+projects `TurnSummary` through the muted theme token without the row-wide DIM
+modifier, leaving dimming to the collapsed accent projection.
+
+The post-fix capture measured 324 differing cells, of which 319 were
+style-only and 5 were glyph differences. The remaining differences are
+localized to dynamic/header/footer and prompt styling; the authoritative
+artifacts are `/tmp/runie-parity-live/grok-80x24.settled.ansi` and
+`/tmp/runie-parity-live/runie-80x24-after.settled.ansi`. This is evidence for
+the next token-mapping pass, not a zero-diff claim.
