@@ -84,7 +84,7 @@ pub fn dot_spinner_fallback() -> &'static [&'static str] {
 #[derive(Debug, Clone, Default)]
 pub struct StatusBar {
     state: Status,
-    theme: opaline::Theme,
+    theme: ThemeKind,
     animation_frame: usize,
     elapsed_ticks: u64,
     turn_usage: Option<Usage>,
@@ -203,7 +203,7 @@ impl StatusBar {
     pub fn new() -> Self {
         Self {
             state: Status::default(),
-            theme: appearance::load(ThemeKind::GrokNight),
+            theme: ThemeKind::GrokNight,
             animation_frame: 0,
             elapsed_ticks: 0,
             turn_usage: None,
@@ -245,7 +245,7 @@ impl StatusBar {
                 self.turn_usage = Some(usage);
                 self.turn_stop_reason = Some(stop_reason);
             }
-            StatusMsg::SetTheme(theme) => self.theme = appearance::load(theme),
+            StatusMsg::SetTheme(theme) => self.theme = theme,
             StatusMsg::AdvanceAnimation => {
                 if matches!(
                     self.state,
@@ -313,10 +313,7 @@ impl StatusBar {
     }
 
     pub fn theme(&self) -> ThemeKind {
-        match self.theme.meta.name.as_str() {
-            "GrokDay" => ThemeKind::GrokDay,
-            _ => ThemeKind::GrokNight,
-        }
+        self.theme
     }
 
     /// Advance the deterministic spinner used by active full-mode states.
@@ -458,6 +455,23 @@ mod tests {
         assert_eq!(bar.theme(), ThemeKind::GrokNight);
         bar.set_theme(ThemeKind::GrokDay);
         assert_eq!(bar.theme(), ThemeKind::GrokDay);
+    }
+
+    #[test]
+    fn status_preserves_every_declared_theme_variant() {
+        let variants = [
+            ThemeKind::GrokNight,
+            ThemeKind::GrokDay,
+            ThemeKind::TokyoNight,
+            ThemeKind::RosePineMoon,
+            ThemeKind::OscuraMidnight,
+            ThemeKind::Auto,
+        ];
+        for theme in variants {
+            let mut bar = StatusBar::new();
+            bar.set_theme(theme);
+            assert_eq!(bar.theme(), theme);
+        }
     }
 
     #[test]

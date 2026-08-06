@@ -257,3 +257,9 @@ read-only snapshot.
 lifetime, acknowledged `StatusMsg` application, and a snapshot regression
 test. Existing rendering still uses the compatibility path; migrating
 `EventRenderer` and the live/YAML renderers to this handle is the next step.
+
+Theme variant preservation (2026-08-06): the status actor now stores the
+declared `ThemeKind` as its source of truth rather than reconstructing it from
+an Opaline theme display name. TokyoNight, RosePineMoon, OscuraMidnight, and
+Auto no longer silently collapse back to GrokNight when the status view is
+rendered; a unit matrix covers every declared variant.
