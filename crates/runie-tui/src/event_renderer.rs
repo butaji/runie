@@ -497,7 +497,14 @@ impl EventRenderer {
                             if let Some(tool_start) = actor_tool_start {
                                 scrollback_actor.apply(tool_start).await;
                             } else if let Some(tool_update) = actor_tool_update {
-                                scrollback_actor.apply(tool_update).await;
+                                let structured = matches!(
+                                    &event,
+                                    AgentEvent::ToolExecutionUpdate { partial_result, .. }
+                                        if structured_update_text(partial_result).is_some()
+                                );
+                                if !structured {
+                                    scrollback_actor.apply(tool_update).await;
+                                }
                             } else if let Some(tool_end) = actor_tool_end {
                                 scrollback_actor.apply(tool_end).await;
                             } else {

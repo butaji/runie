@@ -1,6 +1,6 @@
 //! Actor-owned transcript projection.
 
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -53,10 +53,22 @@ impl ScrollbackActor {
         let mut events = bus.subscribe();
         let tx = actor.tx.clone();
         actor._bus_owner = Some(spawn_owned_worker!(async move {
+            let mut active_tools = HashSet::new();
             loop {
                 match events.recv().await {
                     Ok(event) => {
-                        let messages = bus_messages_for_event(event);
+                        if let AgentEvent::ToolExecutionStart { tool_call_id, .. } = &event {
+                            active_tools.insert(tool_call_id.clone());
+                        }
+                        if let AgentEvent::ToolExecutionEnd { tool_call_id, .. } = &event {
+                            active_tools.remove(tool_call_id);
+                        }
+                        let messages = bus_messages_for_event(event.clone());
+                        let messages = if messages.is_empty() {
+                            structured_update_messages(&active_tools, &event)
+                        } else {
+                            messages
+                        };
                         if !messages.is_empty()
                             && !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply))
                         {
@@ -131,6 +143,48 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::BackgroundWorkCancelled { .. }) => background_messages_for_event(event),
         _ => Vec::new(),
     }
+}
+
+fn structured_update_messages(
+    active_tools: &HashSet<String>,
+    event: &AgentEvent,
+) -> Vec<ScrollbackMsg> {
+    let AgentEvent::ToolExecutionUpdate {
+        tool_call_id,
+        partial_result,
+        ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    if !active_tools.contains(tool_call_id) {
+        return Vec::new();
+    }
+    let Some(output) = structured_update_text(partial_result) else {
+        return Vec::new();
+    };
+    let output = output
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    if output.is_empty() {
+        Vec::new()
+    } else {
+        vec![ScrollbackMsg::ToolUpdate {
+            tool_call_id: tool_call_id.clone(),
+            header: None,
+            output,
+        }]
+    }
+}
+
+fn structured_update_text(result: &serde_json::Value) -> Option<String> {
+    result
+        .get("output")
+        .and_then(serde_json::Value::as_str)
+        .or_else(|| result.get("content").and_then(serde_json::Value::as_str))
+        .map(str::to_owned)
 }
 
 #[allow(
@@ -285,6 +339,31 @@ mod tests {
             .lines()
             .iter()
             .any(|line| line.text.contains("Subagent started")));
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_projects_structured_tool_updates() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::ToolExecutionStart {
+            tool_call_id: "tool-1".into(),
+            tool_name: "read".into(),
+            args: serde_json::json!({"path": "README.md"}),
+        });
+        snapshot.changed().await.expect("tool start projection");
+        bus.publish(AgentEvent::ToolExecutionUpdate {
+            tool_call_id: "tool-1".into(),
+            tool_name: "read".into(),
+            args: serde_json::json!({"path": "README.md"}),
+            partial_result: serde_json::json!({"output": "line one\nline two"}),
+        });
+        snapshot.changed().await.expect("tool update projection");
+        assert!(actor
+            .snapshot()
+            .lines()
+            .iter()
+            .any(|line| line.text == "line one"));
     }
 
     #[tokio::test]

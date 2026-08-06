@@ -361,3 +361,9 @@ Background lifecycle ownership (2026-08-06): background start/progress/
 finish/cancel events now reduce to tool-card messages inside the live
 `ScrollbackActor`. The renderer skips that pure event family in live mode;
 the YAML replay reducer remains unchanged and independently testable.
+
+Structured tool-output ownership (2026-08-06): active ordinary-tool updates
+whose payload contains `output` or string `content` now reduce to `ToolOutput`
+rows inside the live scrollback actor. Renderer-side buffering remains for
+non-structured header updates and completion-card formatting; the actor test
+pins multiline output projection.
