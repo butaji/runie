@@ -57,6 +57,11 @@ runner while individual tool rows continue to render `✗`.
   scenario. The full YAML fixture gate now passes; the lead is expressed as
   named layout tokens rather than a render magic number.
 
+- **Responsive completion gutter (2026-08-05):** Full-mode `TurnSummary`
+  rows now use Grok's five-column gutter while compact rows retain the narrow
+  three-column gutter. The recorded completion-row cell oracle and YAML replay
+  both pass with this width-specific token.
+
 - **Verification boundary (2026-08-05):** The YAML replay gate remains green
   on the committed compact-autoscroll implementation. The separate
   `visual_snapshots` suite still exposes pre-existing full-mode spacing and

@@ -514,11 +514,14 @@ impl Scrollback {
             let fence = line.kind == LineKind::Assistant && is_fence(source);
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
-                let prefix = if width < 70
+                let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
+                    "     "
+                } else if width < 70
                     && matches!(
                         line.kind,
                         LineKind::Assistant | LineKind::Reasoning | LineKind::ThinkingStatus
-                    ) {
+                    )
+                {
                     "┃"
                 } else {
                     line.kind.prefix()
