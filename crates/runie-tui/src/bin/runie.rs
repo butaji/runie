@@ -187,7 +187,9 @@ fn render_live_ready_footer(area: Rect, buf: &mut Buffer, theme: runie_core::typ
     let mut x = area.x;
     for (text, style) in segments {
         buf.set_string(x, area.y, text, style);
-        x = x.saturating_add(text.len() as u16);
+        // Ratatui coordinates are terminal cells, not UTF-8 bytes. In
+        // particular, Grok's `│` separator is three bytes but one cell.
+        x = x.saturating_add(text.chars().count() as u16);
     }
 }
 
@@ -603,9 +605,10 @@ fn _key_marker(_k: KeyEvent) {}
 
 #[cfg(test)]
 mod tests {
-    use super::{current_branch, render_header, repository_label};
+    use super::{current_branch, render_header, render_live_ready_footer, repository_label};
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
+    use ratatui::style::Modifier;
 
     #[test]
     fn header_uses_cached_repository_branch() {
@@ -623,5 +626,19 @@ mod tests {
             .collect::<String>();
         assert!(row.contains(current_branch()));
         assert!(row.contains(&repository_label()));
+    }
+
+    #[test]
+    fn live_footer_advances_by_terminal_cells_for_unicode_separators() {
+        let area = Rect::new(0, 0, 40, 1);
+        let mut buffer = Buffer::empty(area);
+        render_live_ready_footer(area, &mut buffer, runie_core::types::ThemeKind::GrokNight);
+
+        // "Shift+Tab" is nine cells and ":mode  │  " is ten cells, so the
+        // second shortcut starts at cell nineteen, not at the UTF-8 byte
+        // offset produced by `str::len()`.
+        let shortcut = buffer.cell((19, 0)).expect("second shortcut");
+        assert_eq!(shortcut.symbol(), "C");
+        assert!(shortcut.modifier.contains(Modifier::BOLD));
     }
 }

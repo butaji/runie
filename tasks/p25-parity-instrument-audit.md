@@ -101,6 +101,14 @@ remain dominated by response text, reasoning placement, timestamps, usage,
 and elapsed time. This is a real non-parity result, not an attribute-checking
 gap; no fixture was weakened.
 
+**Footer cell-width correction (2026-08-06):** The live binary's ready footer
+advanced its write cursor with UTF-8 byte length, so the three-byte `│`
+separator shifted subsequent segments by two terminal cells. The cursor now
+advances by character cell count, and a binary regression asserts `Ctrl+x`
+starts at the expected cell with bold styling. Full CI and all visual checks
+remain green; a fresh same-run cast is still required to remeasure the old
+saved-cast delta.
+
 The live binary's deterministic placeholder provider now uses the recorded
 Grok `Hey` answer text and a `15K` total-token `Done` usage payload. These
 values flow through the normal provider/core event path; the renderer does not
