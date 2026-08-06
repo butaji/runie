@@ -689,7 +689,11 @@ impl Scrollback {
     /// Render using the full terminal height for Grok's responsive mode.
     /// `0` preserves the unmeasured compatibility behavior used by isolated
     /// widget tests; application callers should pass the outer frame height.
-    #[allow(clippy::too_many_lines)]
+    #[allow(
+        clippy::too_many_lines,
+        clippy::cognitive_complexity,
+        reason = "render keeps responsive layout, selection styling, and cell projection together"
+    )]
     pub fn render_with_terminal_height(
         &mut self,
         area: Rect,
@@ -740,6 +744,13 @@ impl Scrollback {
             } else {
                 styled_line_for(*kind, text, self.theme)
             };
+            let mut line = line;
+            if text.starts_with("› ") {
+                let selected_style = appearance::selected_style_for(self.theme);
+                for span in &mut line.spans {
+                    span.style = span.style.patch(selected_style);
+                }
+            }
             Paragraph::new(line).wrap(Wrap { trim: false }).render(
                 Rect {
                     x: area.x,
@@ -1924,16 +1935,16 @@ mod tests {
         scrollback.apply(ScrollbackMsg::SelectNextTool);
         let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 3));
         scrollback.render(Rect::new(0, 0, 40, 3), &mut buffer);
-        assert!(
-            (0..40).any(|column| buffer
-                .cell((column, 0))
-                .is_some_and(|cell| cell.symbol() == "›"))
-                || (0..40).any(|column| {
-                    buffer
-                        .cell((column, 1))
-                        .is_some_and(|cell| cell.symbol() == "›")
-                })
-        );
+        let selected_cell = (0..3)
+            .flat_map(|row| (0..40).map(move |column| (column, row)))
+            .find_map(|(column, row)| {
+                buffer
+                    .cell((column, row))
+                    .filter(|cell| cell.symbol() == "›")
+                    .map(|cell| cell.bg)
+            })
+            .expect("selected fold indicator");
+        assert_eq!(selected_cell, ratatui::style::Color::Rgb(28, 28, 28));
     }
 
     #[test]

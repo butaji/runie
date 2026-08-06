@@ -23,6 +23,7 @@ blue = "#7aa2f7"
 yellow = "#e0af68"
 green = "#9ece6a"
 red = "#f7768e"
+selection = "#1c1c1c"
 
 [tokens]
 "text.primary" = "fg"
@@ -35,6 +36,7 @@ error = "red"
 warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "bg"
+"bg.selection" = "selection"
 
 [styles]
 keyword = { fg = "accent.primary", bold = true }
@@ -56,6 +58,7 @@ blue = "#2f64d2"
 yellow = "#a27612"
 green = "#378e23"
 red = "#cd3048"
+selection = "#e4e4e4"
 
 [tokens]
 "text.primary" = "fg"
@@ -68,6 +71,7 @@ error = "red"
 warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "bg"
+"bg.selection" = "selection"
 
 [styles]
 keyword = { fg = "accent.primary", bold = true }
@@ -120,6 +124,10 @@ pub fn secondary_style_for(theme: ThemeKind) -> Style {
 
 pub fn warning_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme).fg(token_color(theme, "warning"))
+}
+
+pub fn selected_style_for(theme: ThemeKind) -> Style {
+    Style::default().bg(token_color(theme, "bg.selection"))
 }
 
 pub fn base_style() -> Style {
@@ -190,6 +198,14 @@ mod tests {
         assert_eq!(
             accent_style_for(ThemeKind::GrokDay).fg,
             Some(Color::Rgb(125, 75, 198))
+        );
+        assert_eq!(
+            selected_style_for(ThemeKind::GrokNight).bg,
+            Some(Color::Rgb(28, 28, 28))
+        );
+        assert_eq!(
+            selected_style_for(ThemeKind::GrokDay).bg,
+            Some(Color::Rgb(228, 228, 228))
         );
     }
 }

@@ -321,6 +321,11 @@ Grok `›` fold indicator from actor-owned selection state, with a focused cell
 regression covering the pure scrollback renderer. Full selection boxes and
 non-tool entry selection remain open.
 
+Selected-row palette (2026-08-06): the `›` header now applies Grok's
+theme-projected selection surface (`bg.selection`) to every header span. The
+GrokNight/GrokDay RGB tokens are asserted directly; no widget-level colors were
+introduced.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running
