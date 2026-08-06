@@ -376,6 +376,12 @@ expanded-group capture needed to display all completed/failed/cancelled member
 rows in the 24-row frame. The choice is fixture-owned YAML state, not a hidden
 renderer default.
 
+Lifecycle clipping re-audit (2026-08-06): the documented three-worker frame
+now passes the discovered YAML visual suite with all completed, failed, and
+cancelled rows asserted. The fixture-specific clipping gap is closed; the
+remaining open item is generalized grouped-block height/reflow across larger
+member sets and alternate viewport sizes.
+
 Selection-box geometry (2026-08-06): selected non-tool rows now receive a
 post-render Grok-style box overlay: theme-token `│` side rails plus `┌─┐` and
 `└─┘` corners when the adjacent rows are inside the viewport. Clipped rows
