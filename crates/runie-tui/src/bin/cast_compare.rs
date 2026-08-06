@@ -70,7 +70,6 @@ fn replay(path: &Path) -> Result<Replay> {
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
     let (cols, rows) = dimensions(&header)?;
     let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut last_non_empty: Option<(Vec<Cell>, Vec<String>)> = None;
     for line in lines {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
@@ -88,31 +87,6 @@ fn replay(path: &Path) -> Result<Replay> {
             break;
         }
         parser.process(strip_private_modes(&output).as_bytes());
-        let screen = parser.screen();
-        if !screen.contents().trim().is_empty() {
-            let cells = (0..rows)
-                .flat_map(|row| {
-                    (0..cols).map(move |col| {
-                        let cell = screen.cell(row, col).expect("parser cell");
-                        Cell {
-                            symbol: if cell.contents().is_empty() {
-                                " ".into()
-                            } else {
-                                cell.contents()
-                            },
-                            fg: color_key(cell.fgcolor()),
-                            bg: color_key(cell.bgcolor()),
-                            bold: cell.bold(),
-                            italic: cell.italic(),
-                            underline: cell.underline(),
-                            inverse: cell.inverse(),
-                        }
-                    })
-                })
-                .collect();
-            let contents = screen.contents().lines().map(str::to_owned).collect();
-            last_non_empty = Some((cells, contents));
-        }
     }
     let screen = parser.screen();
     let current_cells = (0..rows)
@@ -136,8 +110,7 @@ fn replay(path: &Path) -> Result<Replay> {
         })
         .collect();
     let current_contents = screen.contents().lines().map(str::to_owned).collect();
-    let (cells, contents) = last_non_empty.unwrap_or((current_cells, current_contents));
-    Ok(((cols, rows), cells, contents))
+    Ok(((cols, rows), current_cells, current_contents))
 }
 
 #[allow(

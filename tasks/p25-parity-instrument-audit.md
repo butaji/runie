@@ -47,6 +47,11 @@ are now classified as a VT replay/frame-selection issue, not evidence that the
 theme-token styling is absent. The raw stream must be reconciled with the
 selected settled frame before changing widget styling.
 
+The cast comparator no longer caches an arbitrary “last non-empty” frame. It
+now compares the final application screen after replaying all output up to
+alternate-screen exit, while retaining empty/trailing cells and attributes.
+This removes a source of false style diagnostics without weakening exactness.
+
 ## Review findings
 
 ### Fresh 62×32 paired capture — 2026-08-05
