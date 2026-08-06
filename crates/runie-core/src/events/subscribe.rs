@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::types::AgentEvent;
+use crate::{pi_event::PiAgentEvent, types::AgentEvent};
 
 /// Opaque subscriber id returned by `SubscriberRegistry::register`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -18,6 +18,24 @@ pub struct SubId(pub usize);
 #[async_trait::async_trait]
 pub trait Subscriber: Send + Sync + 'static {
     async fn handle(&mut self, event: &AgentEvent);
+}
+
+/// Pi-closed subscriber contract. Application-only events are filtered by
+/// the registry adapter before this callback is invoked.
+#[async_trait::async_trait]
+pub trait PiSubscriber: Send + Sync + 'static {
+    async fn handle_pi(&mut self, event: &PiAgentEvent);
+}
+
+struct PiSubscriberAdapter(Box<dyn PiSubscriber>);
+
+#[async_trait::async_trait]
+impl Subscriber for PiSubscriberAdapter {
+    async fn handle(&mut self, event: &AgentEvent) {
+        if let Ok(pi_event) = PiAgentEvent::try_from(event.clone()) {
+            self.0.handle_pi(&pi_event).await;
+        }
+    }
 }
 
 /// Type-erased subscriber handle.
@@ -45,6 +63,10 @@ impl SubscriberRegistry {
         g.next_id += 1;
         g.subs.push((id, sub));
         id
+    }
+
+    pub async fn register_pi(&self, sub: Box<dyn PiSubscriber>) -> SubId {
+        self.register(Box::new(PiSubscriberAdapter(sub))).await
     }
 
     pub async fn unregister(&self, id: SubId) {
@@ -79,6 +101,16 @@ mod tests {
         idx: usize,
         order: Arc<AtomicUsize>,
     }
+
+    struct PiCountingSub(Arc<AtomicUsize>);
+
+    #[async_trait::async_trait]
+    impl PiSubscriber for PiCountingSub {
+        async fn handle_pi(&mut self, event: &PiAgentEvent) {
+            assert!(matches!(event, PiAgentEvent::TurnStart));
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+    }
     #[async_trait::async_trait]
     impl Subscriber for CountingSub {
         async fn handle(&mut self, _event: &AgentEvent) {
@@ -100,5 +132,19 @@ mod tests {
         }
         reg.dispatch(&AgentEvent::AgentStart).await;
         assert_eq!(order.load(Ordering::SeqCst), 5);
+    }
+
+    #[tokio::test]
+    async fn pi_subscribers_ignore_application_events() {
+        let reg = SubscriberRegistry::new();
+        let calls = Arc::new(AtomicUsize::new(0));
+        reg.register_pi(Box::new(PiCountingSub(calls.clone())))
+            .await;
+        reg.dispatch(&AgentEvent::ThemeChanged {
+            theme: crate::types::ThemeKind::GrokNight,
+        })
+        .await;
+        reg.dispatch(&AgentEvent::TurnStart).await;
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 }

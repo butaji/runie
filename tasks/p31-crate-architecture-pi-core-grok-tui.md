@@ -284,3 +284,7 @@ Core now exposes the same boundary through `EventBus::publish_pi` and
 This is the first production-facing typed bus path. Existing subscriber
 registries remain compatibility adapters until their callback contract is
 migrated to `PiAgentEvent`.
+
+`SubscriberRegistry::register_pi` now provides that adapter path for async
+Pi-only consumers. Its regression sequence proves application events are
+ignored while Pi lifecycle events preserve ordered delivery.
