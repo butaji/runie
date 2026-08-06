@@ -570,16 +570,19 @@ fn append_declared_events(events: &mut Vec<AgentEvent>, scenario: &Scenario) {
 async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Vec<Line> {
     let scrollback = Arc::new(Mutex::new(Scrollback::new()));
     let status = Arc::new(Mutex::new(crate::widgets::StatusBar::new()));
-    let mut renderer = EventRenderer::with_welcome(scrollback.clone(), status, emit_welcome);
+    let scrollback_actor = crate::ScrollbackActor::new();
+    let status_actor = crate::StatusActor::new();
+    let mut renderer = EventRenderer::with_actors(
+        scrollback,
+        status,
+        scrollback_actor.clone(),
+        status_actor,
+        emit_welcome,
+    );
     for event in events {
-        renderer.apply_event(event.clone());
+        renderer.apply_actor_event(event.clone()).await;
     }
-    let actor = crate::ScrollbackActor::new();
-    let snapshot = scrollback.lock().clone();
-    actor
-        .apply(ScrollbackMsg::ReplaceSnapshot(Box::new(snapshot)))
-        .await;
-    actor.snapshot().snapshot_lines()
+    scrollback_actor.snapshot().snapshot_lines()
 }
 
 async fn record_and_run_scenario(

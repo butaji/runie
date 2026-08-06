@@ -225,10 +225,9 @@ because it would conceal ownership and make YAML event assertions impossible.
   lifecycle.
 
 - **Live snapshot-bridge removal (2026-08-05):** The production event loop no
-  longer replaces the actor snapshot from the compatibility mutex for events
-  without feed mutations. Every feed-mutating event family now has an explicit
-  actor message; `ReplaceSnapshot` remains confined to the synchronous YAML
-  compatibility adapter.
+  longer replaces the actor snapshot from compatibility state, and the YAML
+  replay helper now uses acknowledged actor events directly. The transitional
+  `ReplaceSnapshot` reducer message was removed entirely.
 
 - **AgentStart status parity (2026-08-05):** Added the missing actor-owned
   `AgentStart -> Thinking` status projection. This closes the startup gap that
@@ -251,3 +250,8 @@ because it would conceal ownership and make YAML event assertions impossible.
   The first comparison caught and fixed a missing separator before the
   completion row; all 28 visual tests and YAML discovery now pass without
   snapshot weakening.
+
+- **Actor-backed YAML state replay (2026-08-05):** Migrated the non-visual
+  `run_scenario` replay helper to the same actor event seam and removed the
+  final snapshot replacement adapter. YAML state and visual assertions now
+  share event-derived actor projections.

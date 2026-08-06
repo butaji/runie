@@ -154,9 +154,6 @@ pub enum ScrollbackMsg {
         reasoning_expanded: bool,
         summary: String,
     },
-    /// Transitional bridge used while event reduction is moved fully into
-    /// the actor. It still publishes one immutable state atomically.
-    ReplaceSnapshot(Box<Scrollback>),
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -285,7 +282,6 @@ impl Scrollback {
                     self.remove_kind(LineKind::Reasoning);
                 }
             }
-            ScrollbackMsg::ReplaceSnapshot(snapshot) => *self = *snapshot,
         }
         None
     }
