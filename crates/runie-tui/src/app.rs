@@ -12,8 +12,9 @@ use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
 use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
+use crate::view::{chat_view_with_props, ChatViewProps, Element};
 pub use crate::widgets::PaletteAction;
-use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, StatusBar};
+use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
 
 #[derive(Debug)]
 pub enum AppExit {
@@ -519,6 +520,21 @@ impl App {
 
     pub fn scrollback_snapshot(&self) -> Scrollback {
         self.scrollback_actor.snapshot()
+    }
+
+    /// Build the immutable declarative view description from actor snapshots.
+    /// Renderers consume this projection; they do not inspect ownership state
+    /// through ad-hoc mutable fields.
+    pub fn view_tree(&self) -> Element {
+        let ui = self.ui.snapshot();
+        let status = self.status_snapshot();
+        let scrollback = self.scrollback_snapshot();
+        chat_view_with_props(ChatViewProps {
+            welcome_visible: ui.show_welcome,
+            shortcuts_visible: ui.shortcuts_open,
+            command_palette_visible: ui.command_palette_open,
+            doctor_hint_visible: matches!(status.current(), Status::Ready) && scrollback.is_empty(),
+        })
     }
 
     /// Lay out the widgets and render them into the given area using `f`.

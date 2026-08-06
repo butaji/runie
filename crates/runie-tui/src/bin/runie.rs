@@ -323,6 +323,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
         use ratatui::widgets::Widget;
         let frame_area = frame.area();
         let layout = runie_tui::layout::chat_layout(frame_area);
+        let view = app.view_tree();
         let status = app.status_snapshot();
         frame.buffer_mut().set_style(
             frame_area,
@@ -344,14 +345,23 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
             frame_area.height,
             frame.buffer_mut(),
         );
-        if matches!(status.current(), Status::Ready) && app.scrollback_snapshot().is_empty() {
+        if view
+            .slots()
+            .any(|slot| slot == runie_tui::view::Slot::DoctorHint)
+        {
             render_doctor_hint(layout.prompt, frame.buffer_mut(), status.theme());
         }
         Widget::render(app.prompt.snapshot(), layout.prompt, frame.buffer_mut());
-        if app.ui.snapshot().shortcuts_open {
+        if view
+            .slots()
+            .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
+        {
             render_shortcuts(frame.area(), frame.buffer_mut(), status.theme());
         }
-        if app.ui.snapshot().command_palette_open {
+        if view
+            .slots()
+            .any(|slot| slot == runie_tui::view::Slot::CommandPaletteOverlay)
+        {
             let palette = app.ui.snapshot();
             render_command_palette(
                 frame.area(),
@@ -547,6 +557,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let frame_area = f.area();
                         let buf = f.buffer_mut();
+                        let view = app.view_tree();
                         let status = app.status_snapshot();
                         buf.set_style(
                             frame_area,
@@ -569,9 +580,9 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                             frame_area.height,
                             buf,
                         );
-                if matches!(status.current(), Status::Ready) && app.scrollback_snapshot().is_empty() {
+                if view.slots().any(|slot| slot == runie_tui::view::Slot::DoctorHint) {
                     render_doctor_hint(layout.prompt, buf, status.theme());
-                }
+                    }
                         if let Some(turn_status) = turn_status {
                             turn_status.render(
                                 ratatui::layout::Rect {
@@ -585,10 +596,16 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                         }
                         let prompt = app.prompt.snapshot();
                         Widget::render(prompt, layout.prompt, buf);
-                        if app.ui.snapshot().shortcuts_open {
+                        if view
+                            .slots()
+                            .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
+                        {
                             render_shortcuts(frame_area, buf, status.theme());
                         }
-                        if app.ui.snapshot().command_palette_open {
+                        if view
+                            .slots()
+                            .any(|slot| slot == runie_tui::view::Slot::CommandPaletteOverlay)
+                        {
                             let palette = app.ui.snapshot();
                             render_command_palette(
                                 frame_area,

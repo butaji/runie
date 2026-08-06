@@ -24,6 +24,9 @@ renderer paints terminal cells.
   function of view props rather than a fixed terminal layout list.
 - Added the thin `view!` macro for vertical/horizontal composition and slots;
   it expands directly to `Element` constructors and has expansion-level tests.
+- Connected the live `App` path through `view_tree()`: actor snapshots now
+  produce one immutable `ChatViewProps` projection, and the terminal binary
+  uses its overlay slots for doctor, shortcuts, and command-palette decisions.
 
 ## Next boundaries
 
