@@ -1243,17 +1243,18 @@ impl Scrollback {
         let mut rows = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
-        let mut read_output_totals: HashMap<String, usize> = HashMap::new();
-        let mut read_output_seen: HashMap<String, usize> = HashMap::new();
+        let mut preview_output_totals: HashMap<String, usize> = HashMap::new();
+        let mut preview_output_seen: HashMap<String, usize> = HashMap::new();
         for line in &self.lines {
             if matches!(line.kind, LineKind::ToolOutput | LineKind::ToolResult) {
                 if let Some(id) = line.tool_call_id.as_ref() {
-                    if self
-                        .tool_names
-                        .get(id)
-                        .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"))
-                    {
-                        *read_output_totals.entry(id.clone()).or_default() += 1;
+                    if self.tool_names.get(id).is_some_and(|name| {
+                        matches!(
+                            name.as_str(),
+                            "read" | "read_file" | "bash" | "shell" | "exec" | "run"
+                        )
+                    }) {
+                        *preview_output_totals.entry(id.clone()).or_default() += 1;
                     }
                 }
             }
@@ -1350,24 +1351,33 @@ impl Scrollback {
                 let Some(tool_id) = line.tool_call_id.as_ref() else {
                     continue;
                 };
-                if self
+                let is_read = self
                     .tool_names
                     .get(tool_id)
-                    .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"))
-                {
-                    let seen = read_output_seen.entry(tool_id.clone()).or_default();
-                    let total = read_output_totals.get(tool_id).copied().unwrap_or_default();
+                    .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"));
+                let is_execute = self
+                    .tool_names
+                    .get(tool_id)
+                    .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"));
+                if is_read || is_execute {
+                    let seen = preview_output_seen.entry(tool_id.clone()).or_default();
+                    let total = preview_output_totals
+                        .get(tool_id)
+                        .copied()
+                        .unwrap_or_default();
                     let position = *seen;
                     *seen += 1;
-                    const READ_PREVIEW_LINES: usize = 5;
-                    const READ_PREVIEW_TAIL_LINES: usize = 3;
-                    if total > READ_PREVIEW_LINES + READ_PREVIEW_TAIL_LINES {
-                        if position == READ_PREVIEW_LINES {
-                            rows.push((LineKind::ToolOutput, "…".into(), false));
+                    let (first_lines, last_lines) = if is_read { (5, 3) } else { (2, 3) };
+                    if total > first_lines + last_lines {
+                        if position == first_lines {
+                            let text = if is_execute {
+                                format!("… +{} lines", total - first_lines - last_lines)
+                            } else {
+                                "…".to_owned()
+                            };
+                            rows.push((LineKind::ToolOutput, text, false));
                         }
-                        if position >= READ_PREVIEW_LINES
-                            && position < total.saturating_sub(READ_PREVIEW_TAIL_LINES)
-                        {
+                        if position >= first_lines && position < total.saturating_sub(last_lines) {
                             continue;
                         }
                     }
@@ -2812,6 +2822,38 @@ mod tests {
         assert!(rows.iter().any(|row| row.contains("line 10")));
         assert!(!rows.iter().any(|row| row.contains("line 6")));
         assert!(!rows.iter().any(|row| row.contains("line 7")));
+    }
+
+    #[test]
+    fn execute_truncated_preview_keeps_groks_first_two_counted_ellipsis_and_last_three() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName("exec-1".into(), "bash".into()));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "exec-1".into(),
+            header: "Run cargo test".into(),
+            activity: None,
+        });
+        for index in 1..=8 {
+            scrollback.append(
+                Line::new(LineKind::ToolOutput, format!("output {index}")).for_tool("exec-1"),
+            );
+        }
+        scrollback.apply(ScrollbackMsg::SetToolMode(
+            "exec-1".into(),
+            runie_core::types::ToolDisplayMode::Truncated,
+        ));
+
+        let rows = scrollback
+            .physical_rows(80, false, 30)
+            .into_iter()
+            .map(|(_, text, _)| text)
+            .collect::<Vec<_>>();
+        assert!(rows.iter().any(|row| row.contains("output 1")));
+        assert!(rows.iter().any(|row| row.contains("output 2")));
+        assert!(rows.iter().any(|row| row == "… +3 lines"));
+        assert!(rows.iter().any(|row| row.contains("output 6")));
+        assert!(rows.iter().any(|row| row.contains("output 8")));
+        assert!(!rows.iter().any(|row| row.contains("output 3")));
     }
 
     #[test]

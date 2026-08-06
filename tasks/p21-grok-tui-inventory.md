@@ -537,6 +537,11 @@ between them in `Truncated` mode. Runie's typed read projection now preserves
 that same preview shape; other tool families retain their separate truncation
 rules. A pure renderer test pins the event-owned rows without timing or
 renderer-side state.
+
+Execute-card truncation parity (2026-08-06): Grok's default execute preview
+keeps the first two and last three output lines and renders the hidden count as
+`… +N lines`. Runie now applies that contract to typed shell execute cards;
+the pure renderer test covers the resulting preview and omitted middle.
 ### Fold transition closure: running generic tools
 
 Grok's `OtherToolCallBlock::next_fold_mode` is state-dependent. While the
