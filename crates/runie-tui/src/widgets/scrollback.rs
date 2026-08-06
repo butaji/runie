@@ -208,6 +208,7 @@ impl Scrollback {
     pub fn from_model_snapshot(snapshot: FeedSnapshot) -> Self {
         let mut scrollback = Self::new();
         scrollback.lines = snapshot.lines;
+        scrollback.autoscroll = snapshot.autoscroll;
         scrollback.scroll_offset = snapshot.scroll_offset;
         scrollback.reasoning_expanded = snapshot.reasoning_expanded;
         scrollback.activity_expanded = snapshot.activity_expanded;
@@ -303,6 +304,11 @@ impl Scrollback {
             ScrollbackMsg::SelectNextEntry => self.select_entry(1),
             ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
             ScrollbackMsg::ScrollBy(lines) => self.scroll_by(lines),
+            ScrollbackMsg::RevealLatest => {
+                self.autoscroll = true;
+                self.follow_latest_user = false;
+                self.scroll_offset = self.lines.len();
+            }
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
                 if let Some(line) = self.line_mut(index) {
@@ -681,6 +687,7 @@ impl Scrollback {
         FeedSnapshot {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),
+            autoscroll: self.autoscroll,
             scroll_offset: self.scroll_offset,
             reasoning_expanded: self.reasoning_expanded,
             activity_expanded: self.activity_expanded,
@@ -2949,6 +2956,20 @@ mod tests {
         assert_eq!(scrollback.scroll_offset, 10);
         scrollback.apply(ScrollbackMsg::ScrollBy(-1));
         assert_eq!(scrollback.scroll_offset, 9);
+    }
+
+    #[test]
+    fn actor_snapshot_preserves_explicit_latest_reveal_for_rendering() {
+        let mut source = Scrollback::new();
+        for index in 0..16 {
+            source.append(Line::new(LineKind::Assistant, format!("row {index}")));
+        }
+        source.apply(ScrollbackMsg::ScrollBy(-3));
+        source.apply(ScrollbackMsg::RevealLatest);
+
+        let adapted = Scrollback::from_model_snapshot(source.model_snapshot());
+        assert!(adapted.autoscroll);
+        assert_eq!(adapted.scroll_offset, source.scroll_offset);
     }
 
     #[test]

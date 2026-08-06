@@ -177,3 +177,11 @@ real start/update/end sequence. A separate attempted assertion using an
 update placed before tool activation was rejected by the replay result: that
 sequence is provider-side, not a post-start tool execution update. The next
 fixture must place any additional update after an explicit active boundary.
+
+**Explicit latest reveal (2026-08-06):** Grok's follow/goto-bottom behavior is
+now represented by the renderer-neutral `ScrollbackMsg::RevealLatest`. The
+immutable `FeedSnapshot` carries `autoscroll` across the actor-to-view
+boundary, fixing the prior case where the reducer reached the tail but the
+widget adapter silently reset follow state. `visual-scroll-reveal.yaml`
+asserts the event-driven transition and the adapter has a focused snapshot
+regression. No scheduler wait or sleep is involved.

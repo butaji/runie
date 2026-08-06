@@ -166,6 +166,9 @@ pub enum EventSpec {
     Scroll {
         scroll: i32,
     },
+    RevealLatest {
+        reveal_latest: bool,
+    },
     FollowLatest {
         follow_latest: bool,
     },
@@ -460,6 +463,7 @@ impl EventSpec {
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
             Self::Scroll { .. } => None,
+            Self::RevealLatest { .. } => None,
             Self::FollowLatest { .. } => None,
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
@@ -643,6 +647,7 @@ pub struct StateAssertions {
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
+    pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
     pub thinking_level: Option<ThinkingLevel>,
     pub reasoning_expanded: Option<bool>,
@@ -1218,6 +1223,9 @@ fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         .iter()
         .filter_map(|event| match event {
             EventSpec::Scroll { scroll } => Some(ScrollbackMsg::ScrollBy(*scroll)),
+            EventSpec::RevealLatest { reveal_latest } if *reveal_latest => {
+                Some(ScrollbackMsg::RevealLatest)
+            }
             EventSpec::FollowLatest { follow_latest } => {
                 Some(ScrollbackMsg::SetFollowLatestUser(*follow_latest))
             }
@@ -1491,6 +1499,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state scroll_offset mismatch: expected {expected}, got {}",
                 outcome.feed.scroll_offset
+            ));
+        }
+    }
+    if let Some(expected) = expected.autoscroll {
+        if outcome.feed.autoscroll != expected {
+            return Err(format!(
+                "state autoscroll mismatch: expected {expected}, got {}",
+                outcome.feed.autoscroll
             ));
         }
     }

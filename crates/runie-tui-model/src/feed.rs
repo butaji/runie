@@ -45,6 +45,7 @@ pub struct Line {
 pub struct FeedSnapshot {
     pub lines: Vec<Line>,
     pub tool_blocks: Vec<ToolBlock>,
+    pub autoscroll: bool,
     pub scroll_offset: usize,
     pub reasoning_expanded: bool,
     pub activity_expanded: bool,
@@ -235,6 +236,9 @@ pub enum ScrollbackMsg {
     SelectNextEntry,
     SelectPreviousEntry,
     ScrollBy(i32),
+    /// Re-enable follow mode and reveal the newest transcript content.
+    /// This models Grok's explicit follow/goto-bottom transition.
+    RevealLatest,
     MarkToolError(String),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),

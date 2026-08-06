@@ -168,6 +168,7 @@ mod tests {
         FeedSnapshot {
             lines: Vec::new(),
             tool_blocks: Vec::new(),
+            autoscroll: true,
             scroll_offset: 0,
             reasoning_expanded: false,
             activity_expanded: false,
