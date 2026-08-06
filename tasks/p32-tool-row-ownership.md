@@ -83,6 +83,10 @@ settle the older active row. A unit scenario covers two live starts,
 update/end of the newest row, then end of the older row. The provider ID is
 therefore only a lookup key, never the row identity.
 
+The YAML oracle now also declares `tool_header_row_active`, so replay checks
+both retained opaque identities and lifecycle eligibility without compiling a
+new test when the event sequence changes.
+
 ## Evidence
 
 `visual-activity-mixed.yaml` is the regression oracle. It contains multiple

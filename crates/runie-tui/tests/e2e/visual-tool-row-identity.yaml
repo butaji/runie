@@ -16,6 +16,7 @@ assertions:
   state:
     tool_blocks: 1
     tool_header_row_ids: [null, 0]
+    tool_header_row_active: [false, false]
   transcript_contains:
     - "compatibility seed"
   scrollback_lines:

@@ -609,6 +609,9 @@ pub struct StateAssertions {
     /// denotes a compatibility-seeded row; numeric values are opaque live
     /// reducer tokens.
     pub tool_header_row_ids: Option<Vec<Option<u64>>>,
+    /// Ordered lifecycle eligibility for the same semantic header rows. This
+    /// distinguishes a retained opaque identity from an active event target.
+    pub tool_header_row_active: Option<Vec<bool>>,
     /// Ordered output rows for each projected tool block.
     pub tool_outputs: Option<Vec<Vec<String>>>,
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
@@ -1664,6 +1667,21 @@ fn assert_tool_block_expectations(
             .map(|line| line.tool_row_id)
             .collect::<Vec<_>>();
         assert_vec_equal(value, &actual, "tool_header_row_ids")?;
+    }
+    if let Some(value) = &expected.tool_header_row_active {
+        let actual = outcome
+            .feed
+            .lines
+            .iter()
+            .filter(|line| {
+                matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+            })
+            .map(|line| line.is_tool_row_active())
+            .collect::<Vec<_>>();
+        assert_vec_equal(value, &actual, "tool_header_row_active")?;
     }
     if let Some(value) = &expected.tool_outputs {
         assert_vec_equal(
