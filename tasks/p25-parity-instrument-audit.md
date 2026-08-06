@@ -129,6 +129,14 @@ timestamp is live rather than matching the reference. This confirms the
 instrument catches real scenario differences and does not establish pixel
 parity from a stale cast pair.
 
+The raw recapture also confirms the footer diagnostic is serialization-level:
+the live stream contains `SGR 1`, followed by a reset before the label text,
+while the in-memory buffer regression still marks the cells bold. A focused
+theme-token projection experiment and a full `Paragraph` span render produced
+the same ANSI sequence and the same 15 attribute-only cells, so that change
+was discarded. The remaining footer issue belongs in the terminal-diff
+serialization/capture instrument, not in a hardcoded color or token change.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
