@@ -371,8 +371,13 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                 status.theme(),
             );
         }
-        let meter = status.header_meter();
-        render_header(layout.header, frame.buffer_mut(), &meter, status.theme());
+        let header = app.header_view_props();
+        render_header(
+            layout.header,
+            frame.buffer_mut(),
+            &header.meter,
+            header.theme,
+        );
         runie_tui::terminal_color::quantize_buffer(frame.buffer_mut(), color_level);
         frame.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
     })?;
@@ -615,8 +620,8 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                 status.theme(),
                             );
                         }
-                        let meter = status.header_meter();
-                        render_header(layout.header, buf, &meter, status.theme());
+                        let header = app.header_view_props();
+                        render_header(layout.header, buf, &header.meter, header.theme);
                         runie_tui::terminal_color::quantize_buffer(buf, color_level);
                         f.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
                         let _ = Rect::default();

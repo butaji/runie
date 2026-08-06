@@ -27,6 +27,8 @@ renderer paints terminal cells.
 - Connected the live `App` path through `view_tree()`: actor snapshots now
   produce one immutable `ChatViewProps` projection, and the terminal binary
   uses its overlay slots for doctor, shortcuts, and command-palette decisions.
+- Added `HeaderViewProps` and routed live header meter/theme acquisition
+  through the same App projection boundary.
 
 ## Next boundaries
 

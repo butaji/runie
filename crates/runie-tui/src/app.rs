@@ -12,7 +12,7 @@ use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
 use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
-use crate::view::{chat_view_with_props, ChatViewProps, Element};
+use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps};
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
 
@@ -535,6 +535,14 @@ impl App {
             command_palette_visible: ui.command_palette_open,
             doctor_hint_visible: matches!(status.current(), Status::Ready) && scrollback.is_empty(),
         })
+    }
+
+    pub fn header_view_props(&self) -> HeaderViewProps {
+        let status = self.status_snapshot();
+        HeaderViewProps {
+            meter: status.header_meter(),
+            theme: status.theme(),
+        }
     }
 
     /// Lay out the widgets and render them into the given area using `f`.

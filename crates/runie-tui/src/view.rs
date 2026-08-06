@@ -7,6 +7,8 @@
 
 use std::fmt;
 
+use runie_core::types::ThemeKind;
+
 /// Small, explicit view DSL. It only expands to `Element` constructors; it
 /// owns no state and performs no rendering.
 #[macro_export]
@@ -92,6 +94,12 @@ pub struct ChatViewProps {
     pub shortcuts_visible: bool,
     pub command_palette_visible: bool,
     pub doctor_hint_visible: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HeaderViewProps {
+    pub meter: String,
+    pub theme: ThemeKind,
 }
 
 pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
@@ -246,8 +254,9 @@ pub fn component(slot: Slot) -> ComponentSpec {
 mod tests {
     use super::{
         chat_view, chat_view_with_props, component, ChatViewProps, ComponentKind, Direction,
-        Element, Slot, StateOwner,
+        Element, HeaderViewProps, Slot, StateOwner,
     };
+    use runie_core::types::ThemeKind;
 
     #[test]
     fn chat_view_is_a_stable_declarative_region_tree() {
@@ -299,5 +308,15 @@ mod tests {
             tree.slots().collect::<Vec<_>>(),
             vec![Slot::Header, Slot::Prompt]
         );
+    }
+
+    #[test]
+    fn header_props_are_renderer_neutral() {
+        let props = HeaderViewProps {
+            meter: "15K / 500K".into(),
+            theme: ThemeKind::GrokNight,
+        };
+        assert_eq!(props.meter, "15K / 500K");
+        assert_eq!(props.theme, ThemeKind::GrokNight);
     }
 }
