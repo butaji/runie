@@ -40,6 +40,7 @@ pub enum StateCommand {
     AddPendingToolCall(String, Option<oneshot::Sender<()>>),
     RemovePendingToolCall(String, Option<oneshot::Sender<()>>),
     SetError(Option<String>, Option<oneshot::Sender<()>>),
+    ApplyEvent(Box<AgentEvent>, oneshot::Sender<()>),
     Reset,
 }
 
@@ -83,18 +84,6 @@ impl AgentStateActor {
 
     pub async fn push_message(&self, m: AgentMessage) {
         let _ = self.tx.send(StateCommand::PushMessage(m, None)).await;
-    }
-
-    async fn push_message_wait(&self, m: AgentMessage) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::PushMessage(m, Some(ack_tx)))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
     }
 
     pub async fn replace_messages(&self, msgs: Vec<AgentMessage>) {
@@ -165,31 +154,14 @@ impl AgentStateActor {
     /// This is the single event-to-state boundary used by the loop driver;
     /// callers do not mutate projection fields directly.
     pub async fn apply_event(&self, event: &AgentEvent) {
-        match event {
-            AgentEvent::MessageStart { .. }
-            | AgentEvent::MessageUpdate { .. }
-            | AgentEvent::MessageEnd { .. } => self.apply_message_event(event).await,
-            AgentEvent::ToolExecutionStart { .. } | AgentEvent::ToolExecutionEnd { .. } => {
-                self.apply_tool_event(event).await
-            }
-            AgentEvent::Error { message } => {
-                self.set_streaming_state(false, None).await;
-                self.set_error(Some(message.clone())).await;
-            }
-            AgentEvent::ThinkingLevelChanged { level } => self.set_thinking_level(*level).await,
-            AgentEvent::Reset => self.reset().await,
-            AgentEvent::AgentStart
-            | AgentEvent::AgentEnd { .. }
-            | AgentEvent::TurnStart
-            | AgentEvent::Waiting { .. }
-            | AgentEvent::ThemeChanged { .. }
-            | AgentEvent::ToolDisplayModeChanged { .. }
-            | AgentEvent::TurnEnd { .. }
-            | AgentEvent::ToolExecutionUpdate { .. }
-            | AgentEvent::BackgroundWorkStarted { .. }
-            | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. } => {}
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::ApplyEvent(Box::new(event.clone()), ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
         }
     }
 
@@ -201,34 +173,55 @@ impl AgentStateActor {
         self.apply_event(&event).await;
     }
 
-    async fn apply_message_event(&self, event: &AgentEvent) {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the event reducer keeps every state transition explicit"
+    )]
+    fn apply_event_to_state(state: &mut AgentStateSnapshot, event: AgentEvent) {
         match event {
-            AgentEvent::MessageStart { message } if is_assistant(message) => {
-                self.set_streaming_state(true, Some(message.clone())).await;
+            AgentEvent::MessageStart { message } if is_assistant(&message) => {
+                state.is_streaming = true;
+                state.streaming_message = Some(message);
             }
             AgentEvent::MessageUpdate { message, .. } => {
-                self.set_streaming_message(Some(message.clone())).await;
+                state.streaming_message = Some(message);
             }
             AgentEvent::MessageEnd { message } => {
-                self.push_message_wait(message.clone()).await;
+                state.messages.push(message.clone());
                 if let AgentMessage::Assistant(assistant) = message {
-                    self.set_streaming_state(false, None).await;
-                    self.set_error(assistant.error_message.clone()).await;
+                    state.is_streaming = false;
+                    state.streaming_message = None;
+                    state.error_message = assistant.error_message.clone();
                 }
             }
-            _ => {}
-        }
-    }
-
-    async fn apply_tool_event(&self, event: &AgentEvent) {
-        match event {
             AgentEvent::ToolExecutionStart { tool_call_id, .. } => {
-                self.add_pending_tool_call(tool_call_id.clone()).await;
+                if !state.pending_tool_calls.contains(&tool_call_id) {
+                    state.pending_tool_calls.push(tool_call_id);
+                }
             }
             AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
-                self.remove_pending_tool_call(tool_call_id.clone()).await;
+                state.pending_tool_calls.retain(|id| id != &tool_call_id);
             }
-            _ => {}
+            AgentEvent::Error { message } => {
+                state.is_streaming = false;
+                state.streaming_message = None;
+                state.error_message = Some(message);
+            }
+            AgentEvent::ThinkingLevelChanged { level } => state.thinking_level = level,
+            AgentEvent::Reset => *state = AgentStateSnapshot::default(),
+            AgentEvent::MessageStart { .. }
+            | AgentEvent::AgentStart
+            | AgentEvent::AgentEnd { .. }
+            | AgentEvent::TurnStart
+            | AgentEvent::Waiting { .. }
+            | AgentEvent::ThemeChanged { .. }
+            | AgentEvent::ToolDisplayModeChanged { .. }
+            | AgentEvent::TurnEnd { .. }
+            | AgentEvent::ToolExecutionUpdate { .. }
+            | AgentEvent::BackgroundWorkStarted { .. }
+            | AgentEvent::BackgroundWorkProgress { .. }
+            | AgentEvent::BackgroundWorkFinished { .. }
+            | AgentEvent::BackgroundWorkCancelled { .. } => {}
         }
     }
 
@@ -264,6 +257,10 @@ async fn run_worker(
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the actor command reducer keeps mailbox ownership explicit"
+)]
 fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
     match cmd {
         StateCommand::SetSystemPrompt(s) => state.system_prompt = s,
@@ -297,6 +294,10 @@ fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
             if let Some(ack) = ack {
                 let _ = ack.send(());
             }
+        }
+        StateCommand::ApplyEvent(event, ack) => {
+            AgentStateActor::apply_event_to_state(state, *event);
+            let _ = ack.send(());
         }
         StateCommand::Reset => {
             *state = AgentStateSnapshot::default();

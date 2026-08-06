@@ -403,3 +403,8 @@ Audit checklist per module (pass/fail):
   coupled publication/projection operation, including prompt, assistant,
   tool-result, error, and reset events; a regression proves the bus event and
   actor snapshot are produced from one call without sleeps or polling.
+- **Atomic event reduction (2026-08-06):** State event projection now uses a
+  single acknowledged `ApplyEvent` mailbox command rather than several
+  asynchronous setter commands. This makes the snapshot complete before the
+  publication boundary returns and removes a scheduler-dependent visibility
+  window for provider context construction.
