@@ -22,6 +22,13 @@ no reason now produces Pi's exact `Tool execution was blocked` text instead
 of Runie's former `blocked` shorthand. The real loop integration test covers
 the default while custom reasons remain passed through unchanged.
 
+**Pre-tool abort parity (2026-08-06):** Pi exposes the run abort signal to
+`beforeToolCall` and checks it after the hook, returning the exact
+`Operation aborted` error before executing the tool. Runie now seeds each
+call's cancellation token from an already-aborted actor watch and performs the
+same post-hook check. The focused executor regression verifies that the hook
+observes the cancelled signal and the tool is never reached.
+
 The current executor still emits a synthetic `tool_execution_update` with
 `{"status":"running"}` before dispatch. Pi emits updates only from a tool's
 `onUpdate` callback. Removing this compatibility event requires regenerating

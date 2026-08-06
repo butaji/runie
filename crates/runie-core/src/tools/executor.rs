@@ -301,6 +301,9 @@ async fn dispatch_prepared(
         .lookup(&call.name)
         .ok_or_else(|| format!("tool not found: {}", call.name))?;
     let signal = tokio_util::sync::CancellationToken::new();
+    if run_abort_requested(ctx) {
+        signal.cancel();
+    }
 
     if let Some(ref hook) = ctx.hooks.before_tool_call {
         let decision = hook(BeforeToolCallContext {
@@ -311,6 +314,10 @@ async fn dispatch_prepared(
             signal: signal.clone(),
         })
         .await;
+        if signal.is_cancelled() || run_abort_requested(ctx) {
+            signal.cancel();
+            return Err("Operation aborted".into());
+        }
         if decision.block {
             return Err(decision
                 .reason
@@ -324,6 +331,12 @@ async fn dispatch_prepared(
     };
 
     Ok(apply_after_tool_hook(call, ctx, result, signal, is_error).await)
+}
+
+fn run_abort_requested(ctx: &ToolExecContext) -> bool {
+    ctx.abort
+        .as_ref()
+        .is_some_and(|receiver| *receiver.borrow())
 }
 
 async fn execute_tool(
@@ -450,6 +463,34 @@ mod tests {
         started: tokio::sync::watch::Sender<bool>,
     }
 
+    struct AbortAwareTool {
+        executed: Arc<AtomicBool>,
+    }
+
+    #[async_trait::async_trait]
+    impl AgentTool for AbortAwareTool {
+        fn name(&self) -> &str {
+            "abort_aware"
+        }
+        fn label(&self) -> &str {
+            "Abort-aware tool"
+        }
+        fn description(&self) -> &str {
+            "Records whether execution was reached."
+        }
+
+        async fn execute(
+            &self,
+            _tool_call_id: &str,
+            _args: serde_json::Value,
+            _signal: Option<tokio_util::sync::CancellationToken>,
+            _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+        ) -> Result<AgentToolResult, String> {
+            self.executed.store(true, Ordering::Release);
+            Ok(AgentToolResult::default())
+        }
+    }
+
     #[async_trait::async_trait]
     impl AgentTool for CancellationProbe {
         fn name(&self) -> &str {
@@ -515,6 +556,44 @@ mod tests {
         assert!(tool_update_is_live(&settled));
         settled.store(true, Ordering::Release);
         assert!(!tool_update_is_live(&settled));
+    }
+
+    #[tokio::test]
+    async fn already_aborted_call_matches_pi_before_tool_boundary() {
+        let executed = Arc::new(AtomicBool::new(false));
+        let mut registry = ToolRegistry::new();
+        registry.register(Arc::new(AbortAwareTool {
+            executed: executed.clone(),
+        }));
+        let (_abort_tx, abort_rx) = tokio::sync::watch::channel(true);
+        let hook_saw_aborted = Arc::new(AtomicBool::new(false));
+        let hook_saw_aborted_clone = hook_saw_aborted.clone();
+        let ctx = ToolExecContext {
+            assistant_message: AssistantMessage::default(),
+            context: crate::types::AgentContext::default(),
+            abort: Some(abort_rx),
+            registry: Arc::new(registry),
+            hooks: ToolExecHooks {
+                before_tool_call: Some(Arc::new(move |input| {
+                    hook_saw_aborted_clone.store(input.signal.is_cancelled(), Ordering::Release);
+                    Box::pin(async { BeforeToolCallResult::default() })
+                })),
+                ..ToolExecHooks::default()
+            },
+            bus: None,
+            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+        };
+        let call = ToolCall {
+            id: "abort-1".into(),
+            name: "abort_aware".into(),
+            arguments: serde_json::json!({}),
+            thought_signature: None,
+        };
+
+        let error = dispatch_one(&call, &ctx).await.expect_err("aborted call");
+        assert_eq!(error, "Operation aborted");
+        assert!(hook_saw_aborted.load(Ordering::Acquire));
+        assert!(!executed.load(Ordering::Acquire));
     }
 
     #[tokio::test]
