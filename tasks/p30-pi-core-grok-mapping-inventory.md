@@ -67,6 +67,11 @@ The symmetric source scan is reproducible with
 `scripts/source-inventory.sh`. It emits every Pi agent/AI file and every Grok
 pager/pager-render file in deterministic order, allowing the mapping review to
 detect additions or removals in either upstream tree.
+The expected current counts are machine-readable in
+`tasks/source-inventory-contract.json`; `just source-inventory-check` validates
+the contract locally and is part of `just ci`. A deliberate upstream change
+must refresh the scan, classify the delta in `tasks/pi-core-file-inventory.md`,
+and update that contract in the same change.
 
 ## Pi capability matrix
 
