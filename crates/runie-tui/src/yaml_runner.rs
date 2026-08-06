@@ -323,6 +323,7 @@ pub struct StateAssertions {
     pub error_contains: Option<String>,
     pub tool_blocks: Option<usize>,
     pub tool_output_lines: Option<usize>,
+    pub tool_modes: Option<Vec<runie_core::types::ToolDisplayMode>>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -949,6 +950,18 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if actual != expected {
             return Err(format!(
                 "state tool_output_lines mismatch: expected {expected}, got {actual}"
+            ));
+        }
+    }
+    if let Some(expected) = &expected.tool_modes {
+        let actual = outcome
+            .tool_blocks
+            .iter()
+            .map(|block| block.mode)
+            .collect::<Vec<_>>();
+        if &actual != expected {
+            return Err(format!(
+                "state tool_modes mismatch: expected {expected:?}, got {actual:?}"
             ));
         }
     }

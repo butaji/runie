@@ -26,6 +26,7 @@ events:
 assertions:
   state:
     tool_blocks: 2
+    tool_modes: [expanded, collapsed]
   visual:
     cols: 80
     rows: 24

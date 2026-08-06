@@ -32,6 +32,7 @@ behavior fixtures editable without recompiling Rust.
   fixtures exercise block/member counts without compiled fixture-specific code.
   Grouped activity fixtures also assert the preserved two-member block count
   while their visual assertions verify collapsed/selected visibility.
+  `tool_modes` additionally pins ordered expanded/collapsed mode events.
 
 - **TUI actor ownership reuse (2026-08-06):** `UiActor` and `PromptActor`
   now use the shared `runie-core` owned-worker DSL. Their worker lifetimes
