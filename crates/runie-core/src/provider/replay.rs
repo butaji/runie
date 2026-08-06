@@ -100,6 +100,7 @@ fn finish_replay_events(
             .unwrap_or(serde_json::Value::Object(Default::default()));
         events.push(AssistantMessageEvent::ToolCallDelta {
             index: 0,
+            delta: arguments.clone(),
             partial: ToolCall {
                 id,
                 name,

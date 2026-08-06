@@ -49,6 +49,7 @@ impl StreamFn for TruncatingStream {
                 },
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
+                    delta: "{}".into(),
                     partial: ToolCall {
                         id: "call-1".into(),
                         name: "echo".into(),

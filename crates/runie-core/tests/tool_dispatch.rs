@@ -107,6 +107,7 @@ impl StreamFn for TwoToolStream {
             vec![
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
+                    delta: "{}".into(),
                     partial: ToolCall {
                         id: "f".into(),
                         name: "fast_tool".into(),
@@ -116,6 +117,7 @@ impl StreamFn for TwoToolStream {
                 },
                 AssistantMessageEvent::ToolCallDelta {
                     index: 1,
+                    delta: "{}".into(),
                     partial: ToolCall {
                         id: "s".into(),
                         name: "slow_tool".into(),

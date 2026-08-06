@@ -889,6 +889,9 @@ pub enum AssistantMessageEvent {
     ToolCallDelta {
         #[serde(rename = "contentIndex")]
         index: usize,
+        /// Raw argument/name delta emitted by pi-ai before partial reduction.
+        #[serde(default)]
+        delta: String,
         partial: ToolCall,
     },
     #[serde(rename = "toolcall_end")]
@@ -1221,6 +1224,7 @@ mod tests {
             },
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
+                delta: "{\"path\":\"a.rs\"}".into(),
                 partial: ToolCall {
                     id: "c".into(),
                     name: "x".into(),
@@ -1250,6 +1254,11 @@ mod tests {
         ];
         for e in events {
             let json = serde_json::to_value(&e).unwrap();
+            if matches!(&e, AssistantMessageEvent::ToolCallDelta { .. }) {
+                assert_eq!(json["type"], "toolcall_delta");
+                assert_eq!(json["contentIndex"], 0);
+                assert_eq!(json["delta"], "{\"path\":\"a.rs\"}");
+            }
             let back: AssistantMessageEvent = serde_json::from_value(json).unwrap();
             assert_eq!(back, e);
         }

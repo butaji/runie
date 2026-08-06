@@ -17,6 +17,7 @@ events:
       index: 0
       id: call-1
       name: echo
+      delta: '{"text":"hello"}'
       arguments: { text: "hello" }
   - tool_call_end:
       index: 0

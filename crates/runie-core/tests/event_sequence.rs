@@ -38,6 +38,7 @@ impl StreamFn for SequentialToolStream {
             vec![
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
+                    delta: "{}".into(),
                     partial: ToolCall {
                         id: "c1".into(),
                         name: "echo".into(),

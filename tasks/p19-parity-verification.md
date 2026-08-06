@@ -73,6 +73,13 @@ boundaries, `turn_end`, continuation turns, and final `agent_end` ordering
 match. The remaining p19 gap is cast-wide, full-attribute frame proof rather
 than an unverified lifecycle branch.
 
+**Tool-call delta wire parity (2026-08-06):** Pi's
+`AssistantMessageEvent.toolcall_delta` carries both the raw `delta` string and
+the reconstructed `partial` tool call. Runie now preserves and serializes that
+field, with replay providers and the YAML runner populating it. The
+`visual-tool-call-sections.yaml` fixture exercises the no-recompile path;
+decoding defaults keep older traces readable.
+
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered

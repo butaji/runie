@@ -43,6 +43,7 @@ impl StreamFn for RecordingStream {
             vec![
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
+                    delta: "{}".into(),
                     partial: ToolCall {
                         id: "c1".into(),
                         name: "echo".into(),

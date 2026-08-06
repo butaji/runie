@@ -169,6 +169,7 @@ impl StreamFn for OneToolStream {
             vec![
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
+                    delta: "{}".into(),
                     partial: ToolCall {
                         id: "tool-1".into(),
                         name: "block_tool".into(),

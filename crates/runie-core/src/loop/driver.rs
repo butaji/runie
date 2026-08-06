@@ -918,6 +918,7 @@ mod event_reconstruction_tests {
         assert_eq!(partial, assistant);
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn tool_call_markers_reconstruct_one_content_block() {
         let mut assistant = AssistantMessage::default();
@@ -938,6 +939,7 @@ mod event_reconstruction_tests {
             &mut assistant,
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
+                delta: "{\"path\":\"a.rs\"}".into(),
                 partial: ToolCall {
                     arguments: serde_json::json!({"path": "a.rs"}),
                     ..partial.clone()

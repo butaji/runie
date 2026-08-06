@@ -39,6 +39,7 @@ fn tool_call_stream(name: &str) -> impl StreamFn {
                 vec![
                     AssistantMessageEvent::ToolCallDelta {
                         index: 0,
+                        delta: "{}".into(),
                         partial: ToolCall {
                             id: "c1".into(),
                             name: self.name.clone(),

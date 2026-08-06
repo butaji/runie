@@ -340,6 +340,8 @@ pub struct ToolCallSectionSpec {
     pub name: String,
     #[serde(default)]
     pub arguments: serde_json::Value,
+    #[serde(default)]
+    pub delta: String,
 }
 
 #[derive(Debug, Default, Deserialize, Clone)]
@@ -404,6 +406,7 @@ impl EventSpec {
             }),
             Self::ToolCall { tool_call } => Some(AssistantMessageEvent::ToolCallDelta {
                 index,
+                delta: serde_json::to_string(&tool_call.args).unwrap_or_default(),
                 partial: runie_core::types::ToolCall {
                     id: format!("call-{index}"),
                     name: tool_call.name.clone(),
@@ -422,6 +425,7 @@ impl EventSpec {
             }),
             Self::ToolCallDelta { tool_call_delta } => Some(AssistantMessageEvent::ToolCallDelta {
                 index: tool_call_delta.index,
+                delta: tool_call_delta.delta.clone(),
                 partial: runie_core::types::ToolCall {
                     id: tool_call_delta.id.clone(),
                     name: tool_call_delta.name.clone(),

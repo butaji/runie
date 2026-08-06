@@ -264,6 +264,7 @@ impl StreamFn for AbortStream {
         let tool_turn = vec![
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
+                delta: "{}".into(),
                 partial: ToolCall {
                     id: "c1".into(),
                     name: "echo".into(),
