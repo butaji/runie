@@ -178,6 +178,8 @@ mod tests {
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
             tool_modes: std::collections::HashMap::new(),
+            revealed_dense_groups: std::collections::HashSet::new(),
+            center_revealed_entry: false,
         }
     }
 }

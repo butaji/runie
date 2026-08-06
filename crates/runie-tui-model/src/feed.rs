@@ -1,6 +1,6 @@
 //! Renderer-independent transcript line vocabulary and reducer intents.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use runie_core::types::{ThemeKind, ToolDisplayMode};
 
@@ -55,6 +55,10 @@ pub struct FeedSnapshot {
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
+    /// Dense Grok activity groups explicitly revealed by entry selection.
+    pub revealed_dense_groups: HashSet<String>,
+    /// Whether selection has revealed the centered entry in a dense group.
+    pub center_revealed_entry: bool,
 }
 
 /// Read-only typed projection of one Grok tool block.

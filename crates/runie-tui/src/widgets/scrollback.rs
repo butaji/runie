@@ -218,6 +218,8 @@ impl Scrollback {
         scrollback.selected_tool_id = snapshot.selected_tool_id;
         scrollback.selected_entry = snapshot.selected_entry;
         scrollback.tool_modes = snapshot.tool_modes;
+        scrollback.revealed_dense_groups = snapshot.revealed_dense_groups;
+        scrollback.center_revealed_entry = snapshot.center_revealed_entry;
         scrollback.next_tool_row_id = scrollback
             .lines
             .iter()
@@ -689,6 +691,8 @@ impl Scrollback {
             theme: self.theme,
             animation_frame: self.animation_frame,
             tool_modes: self.tool_modes.clone(),
+            revealed_dense_groups: self.revealed_dense_groups.clone(),
+            center_revealed_entry: self.center_revealed_entry,
         }
     }
 

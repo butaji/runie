@@ -19,14 +19,14 @@ enum Command {
 #[derive(Clone)]
 pub struct ScrollbackActor {
     tx: mpsc::Sender<Command>,
-    snapshot: watch::Receiver<Scrollback>,
+    snapshot: watch::Receiver<FeedSnapshot>,
     _owner: Arc<TaskOwner>,
     _bus_owner: Option<Arc<TaskOwner>>,
 }
 
 impl ScrollbackActor {
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(Scrollback::new());
+        let (snapshot_tx, snapshot) = watch::channel(Scrollback::new().model_snapshot());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = Scrollback::new();
             while let Some(command) = rx.recv().await {
@@ -36,7 +36,7 @@ impl ScrollbackActor {
                 for message in messages {
                     state.apply(message);
                 }
-                let _ = snapshot_tx.send(state.clone());
+                let _ = snapshot_tx.send(state.model_snapshot());
                 let _ = reply.send(());
             }
         });
@@ -68,14 +68,14 @@ impl ScrollbackActor {
     }
 
     pub fn snapshot(&self) -> Scrollback {
-        self.snapshot.borrow().clone()
+        Scrollback::from_model_snapshot(self.snapshot.borrow().clone())
     }
 
     pub fn model_snapshot(&self) -> FeedSnapshot {
-        self.snapshot.borrow().model_snapshot()
+        self.snapshot.borrow().clone()
     }
 
-    pub fn subscribe(&self) -> watch::Receiver<Scrollback> {
+    pub fn subscribe(&self) -> watch::Receiver<FeedSnapshot> {
         self.snapshot.clone()
     }
 }

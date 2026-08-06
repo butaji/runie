@@ -134,6 +134,13 @@ renderer-local `Scrollback` adapter only at the terminal boundary. It no
 longer reads the actor's compatibility widget snapshot as a source of truth;
 the adapter round-trip is covered by a focused reducer test.
 
+The `ScrollbackActor` watch channel now publishes `FeedSnapshot` directly.
+Legacy `snapshot()` callers receive a renderer-local `Scrollback` adapter
+reconstructed from that immutable model, keeping compatibility APIs available
+without publishing mutable-widget state as an actor projection. The actor's
+reducer remains the sole state owner and the model channel is the SSOT read
+boundary.
+
 ## Target workspace
 
 ```text
