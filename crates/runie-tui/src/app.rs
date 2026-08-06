@@ -730,4 +730,39 @@ mod tests {
         }
         panic!("PromptActor did not project the theme event");
     }
+
+    #[tokio::test]
+    async fn prompt_actor_projects_terminal_native_theme_into_reset_colors() {
+        let bus = EventBus::new();
+        let actor = PromptActor::new(&bus);
+        bus.publish(AgentEvent::ThemeChanged {
+            theme: runie_core::types::ThemeKind::TerminalNative,
+        });
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+            let mut buffer = ratatui::buffer::Buffer::empty(ratatui::layout::Rect {
+                x: 0,
+                y: 0,
+                width: 30,
+                height: 3,
+            });
+            ratatui::widgets::Widget::render(
+                actor.snapshot(),
+                ratatui::layout::Rect {
+                    x: 0,
+                    y: 0,
+                    width: 30,
+                    height: 3,
+                },
+                &mut buffer,
+            );
+            if buffer
+                .cell((2, 1))
+                .is_some_and(|cell| cell.fg == ratatui::style::Color::Reset)
+            {
+                return;
+            }
+        }
+        panic!("PromptActor did not project terminal-native theme");
+    }
 }
