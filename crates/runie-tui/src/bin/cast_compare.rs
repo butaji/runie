@@ -196,7 +196,7 @@ fn main() -> Result<()> {
     }
     let mut args = args.into_iter();
     let left = args.next().context(if dump {
-        "usage: cast_compare [--dump|--frames] LEFT.cast RIGHT.cast"
+        "usage: cast_compare [--dump|--frames|--frames-after=MARKER[#N]] LEFT.cast RIGHT.cast"
     } else {
         "usage: cast_compare LEFT.cast RIGHT.cast"
     })?;
@@ -204,7 +204,9 @@ fn main() -> Result<()> {
         .next()
         .context("usage: cast_compare LEFT.cast RIGHT.cast")?;
     if args.next().is_some() {
-        bail!("usage: cast_compare [--dump|--frames] LEFT.cast RIGHT.cast");
+        bail!(
+            "usage: cast_compare [--dump|--frames|--frames-after=MARKER[#N]] LEFT.cast RIGHT.cast"
+        );
     }
     if frames {
         let (left_geometry, left_frames) =
