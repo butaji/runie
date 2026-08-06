@@ -707,6 +707,11 @@ fn register_scenario_tool(
         "subagent" => {
             registry.register(Arc::new(ReplayTool::new(&tool.name, "subagent completed")))
         }
+        "memory_search" => registry.register(Arc::new(ReplayTool::new(
+            &tool.name,
+            "memory hit one\nmemory hit two",
+        ))),
+        "workflow" => registry.register(Arc::new(ReplayTool::new(&tool.name, "workflow done"))),
         "error" => registry.register(Arc::new(ReplayTool::failing(&tool.name, "tool failed"))),
         "structured_update" => registry.register(Arc::new(ReplayTool::structured(
             &tool.name,
@@ -1194,6 +1199,11 @@ pub async fn render_visual_buffer(
             ))),
             "bash" => reg.register(Arc::new(ReplayTool::new(&t.name, "cargo test completed"))),
             "subagent" => reg.register(Arc::new(ReplayTool::new(&t.name, "subagent completed"))),
+            "memory_search" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "memory hit one\nmemory hit two",
+            ))),
+            "workflow" => reg.register(Arc::new(ReplayTool::new(&t.name, "workflow done"))),
             "error" => reg.register(Arc::new(ReplayTool::failing(&t.name, "tool failed"))),
             "structured_update" => {
                 reg.register(Arc::new(ReplayTool::structured(&t.name, "first\nsecond")))

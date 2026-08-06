@@ -226,6 +226,14 @@ projections. The active-screen helper layer no longer silently falls back to
 GrokNight after a theme change. `just ci` passes with 119 TUI unit tests and
 the complete replay/visual suite.
 
+Specialized tool-card progress (2026-08-06): memory search and workflow calls
+now use Grok-specific semantic headers and completion vocabulary, and the YAML
+runner can exercise both without recompilation. Transport-only running status
+updates are treated as card state rather than transcript text, preventing
+`{"status":"running"}` from leaking into the feed. The new
+`visual-specialized-tools.yaml` fixture and the full-mode tool snapshot cover
+the corrected event sequence and rendered output.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

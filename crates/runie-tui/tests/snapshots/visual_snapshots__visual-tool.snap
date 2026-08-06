@@ -11,7 +11,7 @@ expression: screen
      ❯ inspect                                                                  
                                                                                 
                                                                                 
-  ◆ echo {"value":"hello"} | update: {"status":"running"} → ✓                   
+  ◆ echo {"value":"hello"} → ✓                                                  
     ↳ {"value":"hello"}                                                         
                                                                                 
                                                                                 

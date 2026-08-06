@@ -1,0 +1,26 @@
+name: visual-specialized-tools
+description: |
+  Specialized Grok tool cards keep their semantic headers and completion
+  vocabulary instead of falling back to the generic tool label.
+initial_prompt: "Search memory, then run the release workflow."
+tools:
+  - name: memory_search
+    kind: memory_search
+  - name: workflow
+    kind: workflow
+events:
+  - start
+  - tool_call:
+      name: memory_search
+      args: { query: "actors" }
+  - tool_call:
+      name: workflow
+      args: { name: "release" }
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Memory Search actors (2 results)"
+      - "Workflow completed: release"

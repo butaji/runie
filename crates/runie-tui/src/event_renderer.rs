@@ -653,6 +653,17 @@ impl EventRenderer {
         tool_call_id: String,
         partial_result: serde_json::Value,
     ) -> Option<ScrollbackMsg> {
+        // Grok treats transport-only lifecycle updates (for example
+        // `{status: "running"}`) as block state, not transcript text. Do not
+        // leak those envelopes into a specialized card header.
+        if partial_result
+            .get("status")
+            .and_then(serde_json::Value::as_str)
+            .is_some()
+            && structured_update_text(&partial_result).is_none()
+        {
+            return None;
+        }
         if self.in_tool_exec {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = output
@@ -1098,6 +1109,38 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Search Tools {query}")
         }
+        "memory_search" | "memory-search" => {
+            let query = args
+                .get("query")
+                .or_else(|| args.get("q"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Memory Search {query}")
+        }
+        "todo" | "todo_write" | "todo-write" => {
+            let title = args
+                .get("title")
+                .or_else(|| args.get("task"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("Update todos");
+            format!("Todo {title}")
+        }
+        "workflow" | "run_workflow" | "run-workflow" => {
+            let name = args
+                .get("name")
+                .or_else(|| args.get("workflow"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Workflow {name}")
+        }
+        "use" | "use_tool" | "use-tool" => {
+            let name = args
+                .get("tool")
+                .or_else(|| args.get("name"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Use {name}")
+        }
         "subagent" | "agent" | "task" => {
             let description = args
                 .get("description")
@@ -1127,6 +1170,7 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
 /// stable text used by collapsed and expanded block modes.
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "the pure completion-header DSL keeps Grok's cardinality variants together"
 )]
 fn completed_tool_header(
@@ -1180,6 +1224,38 @@ fn completed_tool_header(
                 if results == 1 { "" } else { "s" }
             )
         }
+        "memory_search" | "memory-search" => {
+            let matches = output
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .count();
+            format!(
+                "{pending_header} ({matches} result{})",
+                if matches == 1 { "" } else { "s" }
+            )
+        }
+        "todo" | "todo_write" | "todo-write" => {
+            let items = output
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .count();
+            if items == 0 {
+                pending_header.to_owned()
+            } else {
+                format!(
+                    "{pending_header} ({items} item{})",
+                    if items == 1 { "" } else { "s" }
+                )
+            }
+        }
+        "workflow" | "run_workflow" | "run-workflow" => pending_header
+            .strip_prefix("Workflow ")
+            .map(|name| format!("Workflow completed: {name}"))
+            .unwrap_or_else(|| pending_header.to_owned()),
+        "use" | "use_tool" | "use-tool" => pending_header
+            .strip_prefix("Use ")
+            .map(|name| format!("Used {name}"))
+            .unwrap_or_else(|| pending_header.to_owned()),
         "subagent" | "agent" | "task" => pending_header
             .strip_prefix("Subagent started: ")
             .map(|description| format!("Subagent completed: {description}"))
@@ -1632,6 +1708,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn structured_tools_use_grok_headers_and_preserve_output_rows() {
         assert_eq!(
             tool_header("list_dir", &serde_json::json!({"path":"."})),
@@ -1662,6 +1739,18 @@ mod tests {
                 &serde_json::json!({"url":"https://example.com"})
             ),
             "Fetch https://example.com"
+        );
+        assert_eq!(
+            tool_header("memory_search", &serde_json::json!({"query":"actors"})),
+            "Memory Search actors"
+        );
+        assert_eq!(
+            tool_header("workflow", &serde_json::json!({"name":"release"})),
+            "Workflow release"
+        );
+        assert_eq!(
+            tool_header("use", &serde_json::json!({"tool":"browser"})),
+            "Use browser"
         );
         assert_eq!(tool_result_text(&serde_json::json!("one\ntwo")), "one\ntwo");
         assert_eq!(
@@ -1700,6 +1789,18 @@ mod tests {
         assert_eq!(
             completed_tool_header("Edit src/main.rs", "edit", &serde_json::json!("hunk")),
             "Edit src/main.rs (1 edit)"
+        );
+        assert_eq!(
+            completed_tool_header(
+                "Memory Search actors",
+                "memory_search",
+                &serde_json::json!("one\ntwo"),
+            ),
+            "Memory Search actors (2 results)"
+        );
+        assert_eq!(
+            completed_tool_header("Workflow release", "workflow", &serde_json::json!("done")),
+            "Workflow completed: release"
         );
     }
 
