@@ -173,13 +173,9 @@ pub struct Scrollback {
     revealed_dense_groups: HashSet<String>,
     center_revealed_entry: bool,
     tool_names: HashMap<String, String>,
-    /// Provider IDs are lookup keys only; mutations target the opaque row
-    /// token stored on the corresponding line.
-    /// Provider IDs are not guaranteed to be unique in compatibility
-    /// replays. Keep every live opaque row token in start order; the newest
-    /// token is the target for updates and completion, while older live rows
-    /// remain independently addressable.
-    live_tool_rows: HashMap<String, Vec<u64>>,
+    /// Monotonic identity for rows created by this reducer adapter. The
+    /// identity is persisted on `Line`; no second live-row ownership map is
+    /// kept in the renderer.
     next_tool_row_id: u64,
     theme: ThemeKind,
     animation_frame: usize,
@@ -207,17 +203,12 @@ impl Scrollback {
         scrollback.selected_tool_id = snapshot.selected_tool_id;
         scrollback.selected_entry = snapshot.selected_entry;
         scrollback.tool_modes = snapshot.tool_modes;
-        for line in &scrollback.lines {
-            if let (Some(call_id), Some(row_id)) = (line.tool_call_id.as_ref(), line.tool_row_id) {
-                scrollback
-                    .live_tool_rows
-                    .entry(call_id.clone())
-                    .or_default()
-                    .push(row_id);
-                scrollback.next_tool_row_id =
-                    scrollback.next_tool_row_id.max(row_id.saturating_add(1));
-            }
-        }
+        scrollback.next_tool_row_id = scrollback
+            .lines
+            .iter()
+            .filter_map(|line| line.tool_row_id)
+            .max()
+            .map_or(0, |row_id| row_id.saturating_add(1));
         scrollback
     }
 
@@ -234,7 +225,6 @@ impl Scrollback {
             revealed_dense_groups: HashSet::new(),
             center_revealed_entry: false,
             tool_names: HashMap::new(),
-            live_tool_rows: HashMap::new(),
             next_tool_row_id: 0,
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
@@ -332,10 +322,6 @@ impl Scrollback {
                         .for_tool(tool_call_id.clone())
                         .for_tool_row(row_id),
                 );
-                self.live_tool_rows
-                    .entry(tool_call_id)
-                    .or_default()
-                    .push(row_id);
             }
             ScrollbackMsg::ToolUpdate {
                 tool_call_id,
@@ -356,7 +342,6 @@ impl Scrollback {
                 output,
             } => {
                 self.finish_tool_by_id(&tool_call_id, header);
-                self.remove_live_tool_row(&tool_call_id);
                 if self
                     .tool_names
                     .get(&tool_call_id)
@@ -560,6 +545,7 @@ impl Scrollback {
             if line.kind == LineKind::ToolRunning {
                 line.kind = LineKind::Tool;
             }
+            line.settle_tool_row();
             return;
         }
         if let Some(line) = self.lines.iter_mut().rev().find(|line| {
@@ -577,9 +563,9 @@ impl Scrollback {
     }
 
     fn live_header_mut(&mut self, tool_call_id: &str) -> Option<&mut Line> {
-        let row_id = *self.live_tool_rows.get(tool_call_id)?.last()?;
-        self.lines.iter_mut().find(|line| {
-            line.tool_row_id == Some(row_id)
+        self.lines.iter_mut().rev().find(|line| {
+            line.tool_row_id.is_some()
+                && line.is_tool_row_active()
                 && line.tool_call_id.as_deref() == Some(tool_call_id)
                 && matches!(
                     line.kind,
@@ -588,17 +574,14 @@ impl Scrollback {
         })
     }
 
-    fn remove_live_tool_row(&mut self, tool_call_id: &str) {
-        let Some(rows) = self.live_tool_rows.get_mut(tool_call_id) else {
-            return;
-        };
-        rows.pop();
-        if rows.is_empty() {
-            self.live_tool_rows.remove(tool_call_id);
-        }
-    }
-
     fn mark_tool_error(&mut self, tool_call_id: &str) {
+        if let Some(line) = self.live_header_mut(tool_call_id) {
+            line.kind = LineKind::ToolError;
+            return;
+        }
+        // A completion message may be followed by an error marker. Resolve
+        // the newest semantic row in that case; token-bearing rows still win
+        // over compatibility rows because they occur later in the transcript.
         if let Some(line) = self.lines.iter_mut().rev().find(|line| {
             line.tool_call_id.as_deref() == Some(tool_call_id)
                 && matches!(
@@ -639,7 +622,6 @@ impl Scrollback {
         self.lines.clear();
         self.tool_names.clear();
         self.tool_modes.clear();
-        self.live_tool_rows.clear();
         self.next_tool_row_id = 0;
         self.workflow_headers.clear();
         self.workflow_phases.clear();

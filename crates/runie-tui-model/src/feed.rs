@@ -31,6 +31,10 @@ pub struct Line {
     /// Opaque reducer identity for a live tool header. Compatibility-seeded
     /// rows intentionally leave this unset.
     pub tool_row_id: Option<u64>,
+    /// True while this reducer-owned row may receive lifecycle mutations.
+    /// Completed rows retain their identity for replay/debug assertions but
+    /// are no longer eligible targets for a later duplicate call ID.
+    tool_row_active: bool,
     has_vpad: bool,
 }
 
@@ -167,6 +171,7 @@ impl Line {
             text: text.into(),
             tool_call_id: None,
             tool_row_id: None,
+            tool_row_active: false,
             has_vpad: false,
         }
     }
@@ -187,7 +192,16 @@ impl Line {
 
     pub fn for_tool_row(mut self, row_id: u64) -> Self {
         self.tool_row_id = Some(row_id);
+        self.tool_row_active = true;
         self
+    }
+
+    pub fn is_tool_row_active(&self) -> bool {
+        self.tool_row_active
+    }
+
+    pub fn settle_tool_row(&mut self) {
+        self.tool_row_active = false;
     }
 }
 

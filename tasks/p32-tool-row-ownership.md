@@ -75,10 +75,11 @@ the reducer mutation itself validates the token-bearing semantic header.
 ## Duplicate live-ID hardening (2026-08-06)
 
 Compatibility/provider replays can present the same external call ID in more
-than one live start. `Scrollback` now stores an ordered vector of opaque row
-tokens per call ID instead of overwriting one token. Updates and completion
-target the newest token and pop only that token, allowing an older live row to
-settle independently afterward. A unit scenario covers two live starts,
+than one live start. The reducer now resolves the newest active opaque token
+directly from actor-owned `Line` projections; the renderer keeps no parallel
+per-call ownership map. Completed rows retain their token for replay/debug
+assertions but are marked inactive, allowing a later duplicate end event to
+settle the older active row. A unit scenario covers two live starts,
 update/end of the newest row, then end of the older row. The provider ID is
 therefore only a lookup key, never the row identity.
 
