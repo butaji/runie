@@ -6,6 +6,8 @@ right_dir=${2:?usage: compare-matrix.sh GROK_DIR RUNIE_DIR}
 
 command -v cargo >/dev/null || { echo "cargo is required" >&2; exit 1; }
 
+failed=0
+
 for size in 62x32 80x24 100x30 120x36; do
     left="${left_dir}/${size}.cast"
     right="${right_dir}/${size}.cast"
@@ -14,5 +16,9 @@ for size in 62x32 80x24 100x30 120x36; do
         exit 1
     fi
     echo "== ${size} =="
-    cargo run -q -p runie-tui --bin cast_compare -- "$left" "$right"
+    if ! cargo run -q -p runie-tui --bin cast_compare -- "$left" "$right"; then
+        failed=1
+    fi
 done
+
+exit "$failed"

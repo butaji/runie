@@ -12,7 +12,9 @@ called parity.
   bounded prompt/completion probes, `.cast` plus raw replay stream.
 - `scripts/capture-matrix.sh`: 62×32, 80×24, 100×30, and 120×36 matrix.
 - `scripts/compare-matrix.sh`: paired Grok/Runie matrix gate over all four
-  geometries; each pair must pass the full-cell `cast_compare` check.
+  geometries; each pair must pass the full-cell `cast_compare` check. It now
+  reports every geometry before returning failure, so one mismatch cannot hide
+  evidence from the remaining viewport sizes.
 - `cast_compare --dump`: VT replay with glyph, fg, bg, bold, italic,
   underline, inverse, geometry, and full-cell JSON.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
@@ -22,6 +24,14 @@ The paired matrix is an evidence tool, not a fixture substitute. Reference
 casts must come from the same scenario and capture run; dynamic usage, timing,
 and model output differences must be investigated before snapshots are
 updated.
+
+Fresh matrix capture audit (2026-08-05) produced valid paired casts at 62×32
+and 80×24. The full-cell results were 182 and 226 differing cells
+respectively; both are dominated by provider response/wrapping, telemetry,
+and timestamp placement. The Grok PTY capture did not produce valid 100×30 or
+120×36 files in this run, so the verifier reports those pairs as missing rather
+than treating them as passing. This preserves the required four-geometry
+evidence boundary.
 
 ## Review findings
 
