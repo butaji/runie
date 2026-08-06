@@ -1,5 +1,13 @@
 # p10 — Core tools: beforeToolCall block, terminate AND semantics, parallel completion-order events
 
+## Pending Pi event-vector migration (2026-08-06)
+
+The current executor still emits a synthetic `tool_execution_update` with
+`{"status":"running"}` before dispatch. Pi emits updates only from a tool's
+`onUpdate` callback. Removing this compatibility event requires regenerating
+the 61 declarative trace sidecars that currently include it; keep this
+explicitly tracked rather than silently weakening exact event assertions.
+
 **Latest parity note (2026-08-05):** `afterToolCall` overrides now propagate
 `content`, `details`, `usage`, `terminate`, and `isError` into both
 `tool_execution_end` and the resulting `toolResult` message.
