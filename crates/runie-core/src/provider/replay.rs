@@ -57,6 +57,12 @@ impl ReplayProvider {
         let mut finished = false;
         let mut tool_calls = std::collections::BTreeMap::<usize, (String, String, String)>::new();
         for line in input.lines() {
+            if let Some(raw_error) = line.strip_prefix("error:").map(str::trim_start) {
+                if let Ok(value) = serde_json::from_str::<serde_json::Value>(raw_error) {
+                    return Err(StreamError::Api(value.to_string()));
+                }
+                return Err(StreamError::Api(raw_error.to_owned()));
+            }
             let Some(raw) = line.strip_prefix("data:").map(str::trim_start) else {
                 continue;
             };

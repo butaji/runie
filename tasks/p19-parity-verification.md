@@ -313,6 +313,11 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   classification substring in YAML, proving the harness preserves a stable
   parser diagnostic rather than only a failure boolean. The remaining decode
   sidecars still need representative API-error/message vectors.
+- **Mid-stream provider error parity (2026-08-06):** Source/replay audit found
+  that pi-style SSE `error:` frames were previously ignored by Runie's replay
+  parser and misreported as a missing terminal event. The parser now converts
+  the frame into `StreamError::Api`, and the `stream_error_mid_response` YAML
+  sidecar asserts the provider's `Server error during streaming` payload.
 - **Serialization oracle audit (2026-08-05):** Re-audited the p01–p04/p09
   wire contracts. Existing core tests round-trip assistant, tool-result, user,
   model, usage/cost, event, tool-hook, image, stop-reason, and thinking-level
