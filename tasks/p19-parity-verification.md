@@ -18,7 +18,10 @@ fully accumulated partial assistant message at each live provider boundary
 is now performed by the loop reducer before `MessageUpdate` publication. A
 focused reducer test proves the provider placeholder is replaced by the
 actor-owned accumulated assistant state; provider transport events themselves
-remain immutable inputs.
+remain immutable inputs. The pi `start.partial` and `toolcall_end.partial`
+fields are also now part of the typed event model and exact wire assertions;
+the reducer replaces both provider placeholders with its actor-owned partial
+assistant state before any downstream publication.
 
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,

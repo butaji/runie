@@ -814,7 +814,9 @@ pub enum AgentEvent {
     rename_all_fields = "camelCase"
 )]
 pub enum AssistantMessageEvent {
-    Start,
+    Start {
+        partial: AssistantMessage,
+    },
     TextStart {
         #[serde(rename = "contentIndex")]
         index: usize,
@@ -866,6 +868,7 @@ pub enum AssistantMessageEvent {
         #[serde(rename = "contentIndex")]
         index: usize,
         tool_call: ToolCall,
+        partial: AssistantMessage,
     },
     Done {
         #[serde(rename = "reason")]
@@ -1134,7 +1137,9 @@ mod tests {
     #[test]
     fn assistant_message_event_subkinds_round_trip() {
         let events = vec![
-            AssistantMessageEvent::Start,
+            AssistantMessageEvent::Start {
+                partial: AssistantMessage::default(),
+            },
             AssistantMessageEvent::TextStart {
                 index: 0,
                 partial: AssistantMessage::default(),
@@ -1189,6 +1194,7 @@ mod tests {
                     arguments: serde_json::json!({}),
                     thought_signature: None,
                 },
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
@@ -1293,6 +1299,13 @@ mod tests {
         assert_eq!(stream_start["contentIndex"], 2);
         assert!(stream_start.get("index").is_none());
 
+        let assistant_start = serde_json::to_value(AssistantMessageEvent::Start {
+            partial: AssistantMessage::default(),
+        })
+        .expect("assistant start serializes");
+        assert_eq!(assistant_start["type"], "start");
+        assert!(assistant_start["partial"].is_object());
+
         let text_delta = serde_json::to_value(AssistantMessageEvent::TextDelta {
             index: 2,
             delta: "hi".into(),
@@ -1357,12 +1370,14 @@ mod tests {
                 arguments: serde_json::json!({}),
                 thought_signature: Some("sig".into()),
             },
+            partial: AssistantMessage::default(),
         };
         let stream_json = serde_json::to_value(&stream).expect("stream event serializes");
         assert_eq!(stream_json["type"], "toolcall_end");
         assert!(stream_json.get("tool_call").is_none());
         assert!(stream_json.get("toolCall").is_some());
         assert_eq!(stream_json["toolCall"]["thoughtSignature"], "sig");
+        assert!(stream_json["partial"].is_object());
     }
 
     #[test]

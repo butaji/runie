@@ -202,7 +202,9 @@ impl StreamFn for PlaceholderStream {
         use futures::stream;
         use runie_core::types::{AssistantMessage, AssistantMessageEvent, StopReason, Usage};
         let events = vec![
-            AssistantMessageEvent::Start,
+            AssistantMessageEvent::Start {
+                partial: AssistantMessage::default(),
+            },
             AssistantMessageEvent::ThinkingDelta {
                 index: 1,
                 delta: "briefly considering the request".into(),

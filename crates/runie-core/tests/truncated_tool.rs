@@ -44,7 +44,9 @@ impl StreamFn for TruncatingStream {
         *n += 1;
         let events = if *n == 1 {
             vec![
-                AssistantMessageEvent::Start,
+                AssistantMessageEvent::Start {
+                    partial: AssistantMessage::default(),
+                },
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
                     partial: ToolCall {
@@ -62,7 +64,9 @@ impl StreamFn for TruncatingStream {
             ]
         } else {
             vec![
-                AssistantMessageEvent::Start,
+                AssistantMessageEvent::Start {
+                    partial: AssistantMessage::default(),
+                },
                 AssistantMessageEvent::TextDelta {
                     index: 0,
                     delta: "after".into(),

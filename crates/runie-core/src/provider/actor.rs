@@ -147,7 +147,9 @@ mod tests {
             _options: Option<SimpleStreamOptions>,
         ) -> Result<AssistantMessageEventStream, StreamError> {
             let events = vec![
-                AssistantMessageEvent::Start,
+                AssistantMessageEvent::Start {
+                    partial: crate::types::AssistantMessage::default(),
+                },
                 AssistantMessageEvent::TextDelta {
                     index: 0,
                     delta: "hi".into(),

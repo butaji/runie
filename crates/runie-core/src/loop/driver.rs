@@ -584,6 +584,10 @@ async fn process_stream_event(
     )
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "keeps the exhaustive pi assistant event enrichment table together"
+)]
 fn enrich_assistant_partial(
     event: AssistantMessageEvent,
     assistant: &AssistantMessage,
@@ -620,6 +624,13 @@ fn enrich_assistant_partial(
                 partial,
             }
         }
+        AssistantMessageEvent::ToolCallEnd {
+            index, tool_call, ..
+        } => AssistantMessageEvent::ToolCallEnd {
+            index,
+            tool_call,
+            partial,
+        },
         other => other,
     }
 }
@@ -715,7 +726,7 @@ fn truncated_result(call: &ToolCall) -> AgentToolResult {
 fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
     use crate::types::AssistantContent;
     match event {
-        AssistantMessageEvent::Start => {}
+        AssistantMessageEvent::Start { .. } => {}
         // Sectional markers delimit content blocks; the deltas carry content.
         AssistantMessageEvent::TextStart { .. } | AssistantMessageEvent::TextEnd { .. } => {}
         AssistantMessageEvent::TextDelta { delta, .. } => {
@@ -892,6 +903,7 @@ mod event_reconstruction_tests {
                     arguments: serde_json::json!({"path": "a.rs"}),
                     ..partial
                 },
+                partial: AssistantMessage::default(),
             },
         );
         assert_eq!(assistant.content.len(), 1);

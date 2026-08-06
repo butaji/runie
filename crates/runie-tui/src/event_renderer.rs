@@ -1082,7 +1082,7 @@ impl EventRenderer {
             AssistantMessageEvent::ToolCallDelta { .. }
             | AssistantMessageEvent::ToolCallStart { .. }
             | AssistantMessageEvent::ToolCallEnd { .. }
-            | AssistantMessageEvent::Start
+            | AssistantMessageEvent::Start { .. }
             | AssistantMessageEvent::TextStart { .. }
             | AssistantMessageEvent::TextEnd { .. }
             | AssistantMessageEvent::ThinkingStart { .. }

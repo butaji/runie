@@ -36,7 +36,7 @@ macro_rules! agent_event_kind {
 macro_rules! assistant_event_kind {
     ($event:expr) => {{
         match $event {
-            $crate::types::AssistantMessageEvent::Start => "Start",
+            $crate::types::AssistantMessageEvent::Start { .. } => "Start",
             $crate::types::AssistantMessageEvent::TextStart { .. } => "TextStart",
             $crate::types::AssistantMessageEvent::TextDelta { .. } => "TextDelta",
             $crate::types::AssistantMessageEvent::TextEnd { .. } => "TextEnd",
@@ -102,7 +102,9 @@ mod tests {
     #[test]
     fn assistant_event_kind_macro_covers_event_families() {
         assert_eq!(
-            crate::assistant_event_kind!(AssistantMessageEvent::Start),
+            crate::assistant_event_kind!(AssistantMessageEvent::Start {
+                partial: crate::types::AssistantMessage::default()
+            }),
             "Start"
         );
         assert_eq!(

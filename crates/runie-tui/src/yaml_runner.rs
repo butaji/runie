@@ -185,9 +185,15 @@ impl From<&StopReasonSpec> for StopReason {
 }
 
 impl EventSpec {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "keeps the declarative assistant event mapping together"
+    )]
     fn to_assistant_event(&self, index: usize) -> Option<AssistantMessageEvent> {
         match self {
-            Self::Bare(s) if s == "start" => Some(AssistantMessageEvent::Start),
+            Self::Bare(s) if s == "start" => Some(AssistantMessageEvent::Start {
+                partial: AssistantMessage::default(),
+            }),
             Self::TextDelta { text_delta } => Some(AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: text_delta.clone(),

@@ -51,7 +51,9 @@ impl ReplayProvider {
     }
 
     fn from_sse_body(input: &str) -> Result<Self, StreamError> {
-        let mut events = vec![AssistantMessageEvent::Start];
+        let mut events = vec![AssistantMessageEvent::Start {
+            partial: AssistantMessage::default(),
+        }];
         let mut finished = false;
         let mut tool_calls = std::collections::BTreeMap::<usize, (String, String, String)>::new();
         for line in input.lines() {

@@ -40,7 +40,9 @@ impl MockStreamFn {
 
     pub fn hello() -> Self {
         Self::new(vec![
-            AssistantMessageEvent::Start,
+            AssistantMessageEvent::Start {
+                partial: AssistantMessage::default(),
+            },
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "Hello".into(),
