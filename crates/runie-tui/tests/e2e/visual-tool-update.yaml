@@ -22,6 +22,8 @@ assertions:
   state:
     tool_blocks: 1
     tool_headers: ["Run cargo test → ✓"]
+    tool_header_row_ids: [0]
+    tool_header_row_active: [false]
     follow_latest_user: true
   visual:
     cols: 80

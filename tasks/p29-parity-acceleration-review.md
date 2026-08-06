@@ -170,3 +170,10 @@ was not pre-seeded by a compatibility fixture. The next parity change must add
 that event-driven row identity and a YAML trace before tightening screen-cell
 assertions. No full-parity claim is made from the current component or saved
 cast checks.
+
+The existing `visual-tool-update.yaml` now asserts the settled live reducer
+row identity (`tool_header_row_ids`) and inactive lifecycle state after the
+real start/update/end sequence. A separate attempted assertion using an
+update placed before tool activation was rejected by the replay result: that
+sequence is provider-side, not a post-start tool execution update. The next
+fixture must place any additional update after an explicit active boundary.
