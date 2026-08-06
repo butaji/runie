@@ -177,11 +177,27 @@ impl EventRenderer {
         status: Arc<Mutex<StatusBar>>,
         emit_welcome: bool,
     ) -> Self {
+        Self::with_projections(
+            Projection::Legacy(scrollback),
+            Projection::Legacy(status),
+            None,
+            None,
+            emit_welcome,
+        )
+    }
+
+    fn with_projections(
+        scrollback: Projection<Scrollback>,
+        status: Projection<StatusBar>,
+        scrollback_actor: Option<ScrollbackActor>,
+        status_actor: Option<StatusActor>,
+        emit_welcome: bool,
+    ) -> Self {
         Self {
-            scrollback: Projection::Legacy(scrollback),
-            scrollback_actor: None,
-            status: Projection::Legacy(status),
-            status_actor: None,
+            scrollback,
+            scrollback_actor,
+            status,
+            status_actor,
             streaming_buffer: String::new(),
             tool_rows: HashMap::new(),
             tool_buffers: HashMap::new(),
@@ -209,16 +225,13 @@ impl EventRenderer {
         status_actor: StatusActor,
         emit_welcome: bool,
     ) -> Self {
-        let mut renderer = Self::with_welcome(
-            Arc::new(Mutex::new(Scrollback::new())),
-            Arc::new(Mutex::new(StatusBar::new())),
+        Self::with_projections(
+            Projection::Actor,
+            Projection::Actor,
+            Some(scrollback_actor),
+            Some(status_actor),
             emit_welcome,
-        );
-        renderer.scrollback = Projection::Actor;
-        renderer.status = Projection::Actor;
-        renderer.scrollback_actor = Some(scrollback_actor);
-        renderer.status_actor = Some(status_actor);
-        renderer
+        )
     }
 
     /// Drain bus events until the channel closes. Returns when receiver hits
