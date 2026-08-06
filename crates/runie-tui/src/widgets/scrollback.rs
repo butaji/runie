@@ -667,6 +667,11 @@ impl Scrollback {
                         | LineKind::ToolError
                 )
                 && line.text != "session_start"
+                && !line
+                    .tool_call_id
+                    .as_ref()
+                    .and_then(|id| self.tool_modes.get(id))
+                    .is_some_and(|mode| *mode == runie_core::types::ToolDisplayMode::Expanded)
             {
                 continue;
             }
@@ -1581,5 +1586,18 @@ mod tests {
             output: Vec::new(),
         });
         assert!(!scrollback.animation_demand());
+    }
+
+    #[test]
+    fn expanded_tool_member_remains_visible_inside_collapsed_activity() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::Activity, "❙  ◈ Read 1 file"));
+        scrollback.append(Line::new(LineKind::Tool, "Read README.md").for_tool("read-1"));
+        scrollback.set_tool_mode("read-1", runie_core::types::ToolDisplayMode::Expanded);
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 2));
+        scrollback.render(Rect::new(0, 0, 40, 2), &mut buffer);
+        assert_eq!(buffer.cell((0, 1)).expect("tool bullet").symbol(), "◆");
+        assert_eq!(buffer.cell((2, 1)).expect("tool label").symbol(), "R");
     }
 }

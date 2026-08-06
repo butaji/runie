@@ -27,6 +27,7 @@ assertions:
   visual:
     cols: 80
     rows: 24
+    activity_expanded: false
     screen_text:
       - "◈ Listed 1 dir, Ran 1 command"
       - "◆ List ."

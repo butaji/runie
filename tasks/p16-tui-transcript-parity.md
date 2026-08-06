@@ -309,7 +309,8 @@ Transcript block states:
   both transitions.
 
 The remaining p16 implementation gap is the full Grok block model: typed
-foldable tool entries, interactive member-card expansion, and strict
+foldable tool entries and strict
 cast-wide frame reconciliation. These remain intentionally open; current
-YAML fixtures cover the implemented collapsed/expanded activity projection
-and lifecycle rows.
+YAML fixtures now cover Grok's member-card rule that an individually expanded
+tool remains visible while the surrounding activity group is collapsed. The
+full typed block/navigation model and cast-wide reconciliation remain open.
