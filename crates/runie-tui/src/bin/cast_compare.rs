@@ -157,7 +157,7 @@ fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
 fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
     let has_alternate_screen = content.contains("\u{1b}[?1049h");
-    let mut lines = content.lines();
+    let mut lines = content.lines().peekable();
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
     let (cols, rows) = dimensions(&header)?;
     let mut parser = vt100::Parser::new(rows, cols, 0);
@@ -175,15 +175,20 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let mut marker_visible = false;
     let mut started = marker.is_none();
     let mut entered_alternate_screen = false;
-    for line in lines {
+    while let Some(line) = lines.next() {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
             continue;
         }
         let output = event[2].as_str().context("output payload")?;
-        if output.contains("\u{1b}[?1049l") {
+        if output.contains("\u{1b}[2J") && lines.peek().is_some_and(|next| next.contains("?1049l"))
+        {
             break;
         }
+        let exited_alternate_screen = output.contains("\u{1b}[?1049l");
+        let output = output
+            .split_once("\u{1b}[?1049l")
+            .map_or(output, |(before_exit, _)| before_exit);
         if output.contains("\u{1b}[?1049h") {
             entered_alternate_screen = true;
         } else if has_alternate_screen && !entered_alternate_screen {
@@ -208,6 +213,9 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
             previous = Some(frame.clone());
             frames.push(frame);
         }
+        if exited_alternate_screen {
+            break;
+        }
     }
     if let Some(marker) = marker {
         if !started {
@@ -227,12 +235,12 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
 fn replay(path: &Path) -> Result<Replay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
     let has_alternate_screen = content.contains("\u{1b}[?1049h");
-    let mut lines = content.lines();
+    let mut lines = content.lines().peekable();
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
     let (cols, rows) = dimensions(&header)?;
     let mut parser = vt100::Parser::new(rows, cols, 0);
     let mut entered_alternate_screen = false;
-    for line in lines {
+    while let Some(line) = lines.next() {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
             continue;
@@ -243,17 +251,27 @@ fn replay(path: &Path) -> Result<Replay> {
             // Normalize alternate-screen entry so casts recorded through
             // nested tmux/asciinema PTYs share one comparable virtual screen.
             .replace("\u{1b}[?1049h", "");
-        // The shell frame after an alternate-screen exit is not part of the
-        // TUI scenario. Keep the last application frame for parity checks.
-        if output.contains("\u{1b}[?1049l") {
+        if output.contains("\u{1b}[2J") && lines.peek().is_some_and(|next| next.contains("?1049l"))
+        {
             break;
         }
+        // The shell frame after an alternate-screen exit is not part of the
+        // TUI scenario. Preserve any application bytes emitted in the same
+        // PTY event before ending replay at the exit sequence.
+        let exited_alternate_screen = output.contains("\u{1b}[?1049l");
+        let output = match output.split_once("\u{1b}[?1049l") {
+            Some((before_exit, _)) => before_exit.to_owned(),
+            None => output,
+        };
         if output.contains("\u{1b}[?1049h") {
             entered_alternate_screen = true;
         } else if has_alternate_screen && !entered_alternate_screen {
             continue;
         }
         parser.process(strip_private_modes(&output).as_bytes());
+        if exited_alternate_screen {
+            break;
+        }
     }
     let screen = parser.screen();
     let current_cells = cells(&parser, rows, cols);

@@ -29,11 +29,18 @@ called parity.
   `bash -n` plus a fresh Grok capture guards this path.
 - **Fresh capture recheck (2026-08-06):** After the delimiter fix, isolated
   62×32 Grok and Runie `Hey` casts both completed with manifests and matching
-  probe/terminal metadata. The strict final-screen comparison reports 316
-  glyph-only differences; the phase-locked `Worked for` comparison reports
-  six Grok visible frames versus one Runie frame. This is valid evidence of a
-  remaining phase/frame mismatch, not a capture-launch failure, and remains
-  open for semantic alignment.
+  probe/terminal metadata. After replay preserves the pre-exit application
+  frame, the strict final-screen comparison reports 176 glyph-only
+  differences. The remaining rows expose real scenario differences: live Grok
+  response text/timing, usage formatting, and a one-row thought/response
+  placement shift. This is valid product evidence, not a capture-launch
+  failure, and remains open for semantic alignment.
+- **Same-event alternate-screen correction (2026-08-06):** Raw replay showed
+  Grok writes its settled feed and `ESC[?1049l` in one PTY output event.
+  `cast_compare` previously applied Grok's terminal clear before processing the
+  exit sequence, erasing the application frame. Replay now recognizes the
+  clear→alternate-exit boundary and stops before the shell clear, preserving
+  the actual final application frame.
 - `cast_compare --frames`: opt-in indexed frame replay. It retains the full
   cell/style grid after every output event and reports frame counts plus the
   first corresponding-frame divergence, making timing/frame alignment visible
