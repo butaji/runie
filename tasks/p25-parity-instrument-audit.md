@@ -263,6 +263,15 @@ four-size capture, so only the 62×32 pair is accepted as a strict Grok match;
 the other three Runie casts remain artifacts awaiting paired Grok captures.
 The YAML `visual-hey` matrix continues to exercise all four geometries.
 
+**Grok matrix capture boundary (2026-08-06):** The private capture script now
+uses a 60-second readiness/settled window, shell-quotes the complete command as
+one asciinema argument, and bounds post-quit shutdown before killing only its
+own tmux session. Grok captures at all four geometries now complete with the
+correct `C-d` quit chord. Comparing them to the deterministic Runie casts is
+not an exact content oracle because live Grok returns different answer text,
+usage, timestamps, and elapsed duration; the matrix is retained as a full-cell
+diagnostic rather than a false pass.
+
 **Prompt timestamp edge alignment (2026-08-06):** The user-feed timestamp
 projection no longer reserves a fixed eight-cell gutter after the prompt. It
 right-aligns the timestamp against the feed width, matching Grok's edge-based

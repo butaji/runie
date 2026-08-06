@@ -9,6 +9,7 @@ prompt=${5:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_
 quit_key=${6:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY [ENV_ASSIGNMENTS]}
 env_assignments=${7:-}
 session="runie-cast-$$"
+probe_iterations=600
 
 command -v tmux >/dev/null || { echo "tmux is required" >&2; exit 1; }
 command -v asciinema >/dev/null || { echo "asciinema is required" >&2; exit 1; }
@@ -34,7 +35,8 @@ if [[ -n "$env_assignments" ]]; then
     done
     record_command="${validated_assignments}${record_command}"
 fi
-printf -v quoted_command '%q' "$record_command"
+escaped_command=${record_command//\'/\'\\\'\'}
+quoted_command="'${escaped_command}'"
 tmux send-keys -t "$session" -l \
   "asciinema rec --capture-input --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command ${quoted_command} '$cast'"
 tmux send-keys -t "$session" Enter
@@ -42,10 +44,11 @@ tmux send-keys -t "$session" Enter
 # Wait for the actual prompt, not merely alternate-screen initialization.
 # Grok may spend several seconds rendering its welcome surface first.
 ready=0
-for _ in $(seq 1 200); do
+for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
     if printf '%s' "$screen" | grep -Fq '❯' \
-        || printf '%s' "$screen" | grep -Fq 'Type your message'; then
+        || printf '%s' "$screen" | grep -Fq 'Type your message' \
+        || printf '%s' "$screen" | grep -Fq 'Grok 4.5'; then
         ready=1
         break
     fi
@@ -62,7 +65,7 @@ tmux send-keys -t "$session" Enter
 # cast does not stop on the first feed update while the status actor is still
 # rendering its active phase. This is a bounded external-process probe.
 settled=0
-for _ in $(seq 1 200); do
+for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
     if printf '%s' "$screen" | grep -Fq 'Worked for' \
         && printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
@@ -80,7 +83,16 @@ tmux send-keys -t "$session" "$quit_key"
 
 # The caller controls interaction through the session name while recording.
 # A command that exits naturally (or receives its quit key) closes asciinema.
-while tmux has-session -t "$session" 2>/dev/null; do sleep 0.1; done
+shutdown_iterations=100
+for _ in $(seq 1 "$shutdown_iterations"); do
+    if ! tmux has-session -t "$session" 2>/dev/null; then
+        break
+    fi
+    sleep 0.1
+done
+if tmux has-session -t "$session" 2>/dev/null; then
+    tmux kill-session -t "$session"
+fi
 
 # Emit the raw replay stream beside the timed cast for terminal-parser tools.
 asciinema convert -f raw "$cast" "${cast%.cast}.raw"
