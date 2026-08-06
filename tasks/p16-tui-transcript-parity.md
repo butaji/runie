@@ -522,6 +522,13 @@ The same fixture now includes Grok's paused terminal state, so all five
 workflow status variants represented by the current Runie event contract are
 covered declaratively: running, done, failed, cancelled, and paused.
 
+Web-search structured-card audit (2026-08-06): `visual-web-search.yaml` now
+asserts the semantic `Web Search … (N sites)` header and deduplicated
+`Sources:` output through actor-projected tool headers/rows. Comparison with
+Grok's `WebSearchToolCallBlock` confirms this family is covered for the
+summary/source contract. Memory-search result parsing (score, source, file
+range, and snippet panel) remains the next specialized-card gap.
+
 Non-tool selection YAML oracle (2026-08-06): `visual-hey.yaml` now performs
 `tool_select: entry_next` against a tool-free conversation and asserts the
 actor-owned `selected_entry` index. This proves user/assistant semantic rows
