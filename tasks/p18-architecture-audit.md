@@ -422,3 +422,9 @@ cannot create a second production source of truth.
   start/progress/finish transitions. A direct lifecycle test covers the
   reducer; compatibility mutex paths for the legacy renderer remain an
   explicit migration target.
+# Latest actor-boundary correction (2026-08-06)
+
+The tool-batch completion `turn_end` path was the last live driver publication
+that bypassed `AgentStateActor`. It now uses the shared `publish_and_apply`
+boundary, keeping tool results, turn errors, and continuation decisions in the
+same ordered event stream consumed by the actor projection.

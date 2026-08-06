@@ -91,7 +91,7 @@ async fn streaming_projection_tracks_live_assistant_message() {
     }
     let mut mid = test.state.snapshot();
     for _ in 0..500 {
-        if mid.is_streaming {
+        if mid.is_streaming && matches!(mid.streaming_message, Some(AgentMessage::Assistant(_))) {
             break;
         }
         tokio::task::yield_now().await;

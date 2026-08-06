@@ -455,10 +455,14 @@ async fn publish_tool_outcome(
         all_new.push(message);
     }
     let more = !outcome.tool_results.is_empty() && !outcome.all_terminated;
-    deps.bus.publish(AgentEvent::TurnEnd {
-        message: AgentMessage::Assistant(assistant),
-        tool_results: outcome.tool_results.clone(),
-    });
+    publish_and_apply(
+        deps,
+        AgentEvent::TurnEnd {
+            message: AgentMessage::Assistant(assistant),
+            tool_results: outcome.tool_results.clone(),
+        },
+    )
+    .await;
     Some((outcome.tool_results, more))
 }
 
