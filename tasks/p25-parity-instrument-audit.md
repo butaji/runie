@@ -137,6 +137,17 @@ the same ANSI sequence and the same 15 attribute-only cells, so that change
 was discarded. The remaining footer issue belongs in the terminal-diff
 serialization/capture instrument, not in a hardcoded color or token change.
 
+**Assistant gutter correction (2026-08-06):** The same fresh `Hey` cast exposed
+that the completed-assistant timestamp branch split at the raw width boundary,
+so a long first line could place the clock in the middle of a word. The
+projection now reserves Grok's timestamp gutter, wraps at a word boundary, and
+continues the remainder as normal feed text. The placeholder stream was also
+corrected to the exact recorded Grok answer. The strict 62×32 probe changed
+from 246 to 223 differing cells; the response text now matches, while the
+remaining differences are feed vertical phase, live clock/elapsed values,
+header usage, and footer ANSI attributes. A unit test locks the no-midword
+timestamp invariant.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

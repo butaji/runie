@@ -11,6 +11,10 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 use crate::appearance;
 use runie_core::types::ThemeKind;
 
+// Grok reserves a visible gutter between the first assistant row and its
+// right-aligned clock before wrapping the remaining response text.
+const TIMESTAMP_GUTTER_SPACES: usize = 3;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineKind {
     User,
@@ -707,20 +711,40 @@ impl Scrollback {
                 if line.kind == LineKind::CompletedAssistant && index == 0 {
                     if let Some(timestamp) = self.prompt_timestamp.as_deref() {
                         let timestamp_width = timestamp.chars().count();
-                        let target = width.saturating_sub(timestamp_width);
+                        let target =
+                            width.saturating_sub(timestamp_width + TIMESTAMP_GUTTER_SPACES);
                         if text.chars().count() > target {
                             let chars: Vec<_> = text.chars().collect();
-                            let head: String = chars[..target].iter().collect();
-                            let rest: String = chars[target..].iter().collect();
+                            let mut split = target.min(chars.len());
+                            while split > 0 && split < chars.len() && !chars[split].is_whitespace()
+                            {
+                                split -= 1;
+                            }
+                            let head: String = chars[..split].iter().collect();
+                            let rest: String = chars[split..].iter().collect();
                             rows.push((
                                 LineKind::CompletedAssistant,
-                                format!("{head}{timestamp}"),
+                                format!(
+                                    "{head}{:>reserved$}",
+                                    timestamp,
+                                    reserved = timestamp_width + TIMESTAMP_GUTTER_SPACES
+                                ),
                                 false,
                             ));
-                            append_wrapped(&mut rows, line.kind, rest, code_block && !fence, width);
+                            append_wrapped(
+                                &mut rows,
+                                line.kind,
+                                rest.trim_start().to_owned(),
+                                code_block && !fence,
+                                width,
+                            );
                             continue;
                         }
-                        text.push_str(&" ".repeat(target - text.chars().count()));
+                        text.push_str(
+                            &" ".repeat(
+                                width.saturating_sub(text.chars().count() + timestamp_width),
+                            ),
+                        );
                         text.push_str(timestamp);
                     }
                 }
@@ -1223,6 +1247,27 @@ mod tests {
                 .symbol(),
             "┃"
         );
+    }
+
+    #[test]
+    fn completed_assistant_timestamp_wraps_at_a_word_boundary() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(
+            LineKind::CompletedAssistant,
+            "Hey — what are you working on? I can help with code, tests, debugging, or anything else in this repo.",
+        ));
+        scrollback.set_prompt_timestamp(Some("2:11 AM".to_owned()));
+
+        let rows = scrollback.physical_rows(58, false, 32);
+        let first = rows
+            .iter()
+            .find(|(_, text, _)| text.contains("2:11 AM"))
+            .expect("timestamp row")
+            .1
+            .clone();
+        assert!(first.ends_with("2:11 AM"));
+        assert!(!first.contains("help 2:11"));
+        assert!(rows.iter().any(|(_, text, _)| text.contains("with code")));
     }
     use ratatui::style::Color;
 
