@@ -818,30 +818,36 @@ pub enum AssistantMessageEvent {
     TextStart {
         #[serde(rename = "contentIndex")]
         index: usize,
+        partial: AssistantMessage,
     },
     TextDelta {
         #[serde(rename = "contentIndex")]
         index: usize,
         delta: String,
+        partial: AssistantMessage,
     },
     TextEnd {
         #[serde(rename = "contentIndex")]
         index: usize,
         content: String,
+        partial: AssistantMessage,
     },
     ThinkingStart {
         #[serde(rename = "contentIndex")]
         index: usize,
+        partial: AssistantMessage,
     },
     ThinkingDelta {
         #[serde(rename = "contentIndex")]
         index: usize,
         delta: String,
+        partial: AssistantMessage,
     },
     ThinkingEnd {
         #[serde(rename = "contentIndex")]
         index: usize,
         content: String,
+        partial: AssistantMessage,
     },
     #[serde(rename = "toolcall_start")]
     ToolCallStart {
@@ -1129,23 +1135,33 @@ mod tests {
     fn assistant_message_event_subkinds_round_trip() {
         let events = vec![
             AssistantMessageEvent::Start,
-            AssistantMessageEvent::TextStart { index: 0 },
+            AssistantMessageEvent::TextStart {
+                index: 0,
+                partial: AssistantMessage::default(),
+            },
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "hi".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::TextEnd {
                 index: 0,
                 content: "hi".into(),
+                partial: AssistantMessage::default(),
             },
-            AssistantMessageEvent::ThinkingStart { index: 1 },
+            AssistantMessageEvent::ThinkingStart {
+                index: 1,
+                partial: AssistantMessage::default(),
+            },
             AssistantMessageEvent::ThinkingDelta {
                 index: 1,
                 delta: "think".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::ThinkingEnd {
                 index: 1,
                 content: "think".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::ToolCallStart {
                 index: 0,
@@ -1262,47 +1278,59 @@ mod tests {
             event: AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "hi".into(),
+                partial: AssistantMessage::default(),
             },
         };
         let update_json = serde_json::to_value(message_update).expect("message update serializes");
         assert!(update_json.get("event").is_none());
         assert_eq!(update_json["assistantMessageEvent"]["type"], "text_delta");
 
-        let stream_start = serde_json::to_value(AssistantMessageEvent::TextStart { index: 2 })
-            .expect("text start serializes");
+        let stream_start = serde_json::to_value(AssistantMessageEvent::TextStart {
+            index: 2,
+            partial: AssistantMessage::default(),
+        })
+        .expect("text start serializes");
         assert_eq!(stream_start["contentIndex"], 2);
         assert!(stream_start.get("index").is_none());
 
         let text_delta = serde_json::to_value(AssistantMessageEvent::TextDelta {
             index: 2,
             delta: "hi".into(),
+            partial: AssistantMessage::default(),
         })
         .expect("text delta serializes");
         assert_eq!(text_delta["contentIndex"], 2);
         assert_eq!(text_delta["delta"], "hi");
+        assert!(text_delta["partial"].is_object());
 
         let text_end = serde_json::to_value(AssistantMessageEvent::TextEnd {
             index: 2,
             content: "hello".into(),
+            partial: AssistantMessage::default(),
         })
         .expect("text end serializes");
         assert_eq!(text_end["contentIndex"], 2);
         assert_eq!(text_end["content"], "hello");
+        assert!(text_end["partial"].is_object());
 
         let thinking_delta = serde_json::to_value(AssistantMessageEvent::ThinkingDelta {
             index: 3,
             delta: "considering".into(),
+            partial: AssistantMessage::default(),
         })
         .expect("thinking delta serializes");
         assert_eq!(thinking_delta["contentIndex"], 3);
+        assert!(thinking_delta["partial"].is_object());
 
         let thinking_end = serde_json::to_value(AssistantMessageEvent::ThinkingEnd {
             index: 3,
             content: "considering".into(),
+            partial: AssistantMessage::default(),
         })
         .expect("thinking end serializes");
         assert_eq!(thinking_end["contentIndex"], 3);
         assert_eq!(thinking_end["content"], "considering");
+        assert!(thinking_end["partial"].is_object());
 
         let done = serde_json::to_value(AssistantMessageEvent::Done {
             stop_reason: StopReason::ToolUse,

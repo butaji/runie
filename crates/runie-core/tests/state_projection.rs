@@ -15,8 +15,9 @@ use futures::StreamExt;
 use parking_lot::Mutex;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessageEvent, Model,
-    SimpleStreamOptions, StopReason, ToolCall, ToolResultContent, Usage, UserContent, UserMessage,
+    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
+    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall, ToolResultContent,
+    Usage, UserContent, UserMessage,
 };
 
 use common::TestLoopBuilder;
@@ -43,6 +44,7 @@ impl StreamFn for PauseStream {
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "hi".into(),
+                partial: AssistantMessage::default(),
             }
         });
         let tail = futures::stream::once(async move {

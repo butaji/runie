@@ -21,9 +21,9 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
-    AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantMessageEvent,
-    Model, SimpleStreamOptions, StopReason, ToolExecutionMode, ToolResultContent, Usage,
-    UserContent, UserMessage, WaitingReason,
+    AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
+    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolExecutionMode,
+    ToolResultContent, Usage, UserContent, UserMessage, WaitingReason,
 };
 use serde::Deserialize;
 use tokio::sync::broadcast;
@@ -191,10 +191,12 @@ impl EventSpec {
             Self::TextDelta { text_delta } => Some(AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: text_delta.clone(),
+                partial: AssistantMessage::default(),
             }),
             Self::ThinkingDelta { thinking_delta } => Some(AssistantMessageEvent::ThinkingDelta {
                 index: 1,
                 delta: thinking_delta.clone(),
+                partial: AssistantMessage::default(),
             }),
             Self::ToolCall { tool_call } => Some(AssistantMessageEvent::ToolCallDelta {
                 index,

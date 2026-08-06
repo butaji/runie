@@ -9,8 +9,8 @@ use futures::StreamExt;
 use parking_lot::Mutex;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AgentContext, AgentMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason,
-    ToolCall, Usage, UserContent, UserMessage,
+    AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
+    SimpleStreamOptions, StopReason, ToolCall, Usage, UserContent, UserMessage,
 };
 
 use common::{echo_tool, MockStreamFn, TestLoopBuilder};
@@ -59,6 +59,7 @@ impl StreamFn for BlockingStream {
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "x".into(),
+                partial: AssistantMessage::default(),
             }
         });
         let tail = futures::stream::once(async move {

@@ -6,7 +6,8 @@ use futures::stream;
 use parking_lot::Mutex;
 
 use crate::types::{
-    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall, Usage,
+    AssistantMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall,
+    Usage,
 };
 
 use super::{
@@ -123,11 +124,13 @@ fn append_text_events(value: &serde_json::Value, events: &mut Vec<AssistantMessa
                 AssistantMessageEvent::ThinkingDelta {
                     index: 1,
                     delta: text.into(),
+                    partial: AssistantMessage::default(),
                 }
             } else {
                 AssistantMessageEvent::TextDelta {
                     index: 0,
                     delta: text.into(),
+                    partial: AssistantMessage::default(),
                 }
             });
         }

@@ -200,16 +200,18 @@ impl StreamFn for PlaceholderStream {
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
         use futures::stream;
-        use runie_core::types::{AssistantMessageEvent, StopReason, Usage};
+        use runie_core::types::{AssistantMessage, AssistantMessageEvent, StopReason, Usage};
         let events = vec![
             AssistantMessageEvent::Start,
             AssistantMessageEvent::ThinkingDelta {
                 index: 1,
                 delta: "briefly considering the request".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "Hey — what are you working on? I can help with the runie codebase, the parity audit work in progress, or anything else you need.".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,

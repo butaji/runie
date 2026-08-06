@@ -1650,6 +1650,7 @@ mod tests {
             event: AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "world".into(),
+                partial: runie_core::types::AssistantMessage::default(),
             },
             message: AgentMessage::Assistant(Default::default()),
         });
@@ -1731,6 +1732,7 @@ mod tests {
             event: AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "Hello".into(),
+                partial: runie_core::types::AssistantMessage::default(),
             },
         });
         let snap = sb.lock().find_first_containing("Hello").is_some();
@@ -1761,6 +1763,7 @@ mod tests {
             event: AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "partial".into(),
+                partial: runie_core::types::AssistantMessage::default(),
             },
         });
         assert_eq!(st.lock().current(), &Status::Streaming);

@@ -22,9 +22,9 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
-    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessageEvent, Model,
-    SimpleStreamOptions, StopReason, ToolExecutionMode, ToolResultContent, Usage, UserContent,
-    UserMessage,
+    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
+    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolExecutionMode,
+    ToolResultContent, Usage, UserContent, UserMessage,
 };
 use runie_tui::app::App;
 use runie_tui::event_renderer::EventRenderer;
@@ -52,10 +52,12 @@ impl StreamFn for TwoTurnMock {
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "Hello".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: " world".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,

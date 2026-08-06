@@ -56,6 +56,7 @@ impl StreamFn for SequentialToolStream {
                 AssistantMessageEvent::TextDelta {
                     index: 0,
                     delta: "done".into(),
+                    partial: AssistantMessage::default(),
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,
@@ -88,6 +89,7 @@ impl StreamFn for UsageStream {
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "hi".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,

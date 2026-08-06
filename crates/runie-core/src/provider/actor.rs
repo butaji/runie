@@ -132,7 +132,8 @@ mod tests {
     use super::*;
     use crate::provider::stream_fn::StreamError;
     use crate::types::{
-        AgentContext, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, Usage,
+        AgentContext, AssistantMessage, AssistantMessageEvent, Model, SimpleStreamOptions,
+        StopReason, Usage,
     };
     use futures::stream;
 
@@ -150,6 +151,7 @@ mod tests {
                 AssistantMessageEvent::TextDelta {
                     index: 0,
                     delta: "hi".into(),
+                    partial: AssistantMessage::default(),
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,

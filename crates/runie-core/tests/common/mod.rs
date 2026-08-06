@@ -24,8 +24,8 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
 use runie_core::types::{
-    AgentContext, AgentEvent, AgentMessage, AssistantMessageEvent, Model, QueueMode, StopReason,
-    ToolExecutionMode, Usage,
+    AgentContext, AgentEvent, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
+    QueueMode, StopReason, ToolExecutionMode, Usage,
 };
 
 /// `StreamFn` impl that replays a fixed sequence of `AssistantMessageEvent`s.
@@ -44,10 +44,12 @@ impl MockStreamFn {
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "Hello".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: " world".into(),
+                partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,

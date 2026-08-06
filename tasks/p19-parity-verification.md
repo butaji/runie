@@ -12,7 +12,10 @@ now carry pi-compatible `contentIndex` fields, and their end events carry the
 matching `contentIndex` plus `content`. Producers in the core replay provider,
 live TUI sample stream, YAML runner, and test traces all populate the fields;
 serialization tests assert the exact camel-cased keys. Pi's `partial` payloads
-on every granular stream event remain an explicit follow-up gap.
+are now present and tested on every text and thinking variant. Synthetic
+replay/YAML sources currently use an explicit default payload; deriving the
+fully accumulated partial assistant message at each live provider boundary
+remains an explicit semantic follow-up.
 
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,

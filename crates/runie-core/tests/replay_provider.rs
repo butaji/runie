@@ -14,8 +14,8 @@ use runie_core::{
     provider::stream_fn::StreamError,
     provider::{HttpActor, ReplayHttpActor, ReplayProvider, StreamFn},
     types::{
-        AgentContext, AgentMessage, AssistantContent, AssistantMessageEvent, Model,
-        SimpleStreamOptions, StopReason, Usage, UserContent, UserMessage,
+        AgentContext, AgentMessage, AssistantContent, AssistantMessage, AssistantMessageEvent,
+        Model, SimpleStreamOptions, StopReason, Usage, UserContent, UserMessage,
     },
 };
 
@@ -57,6 +57,7 @@ impl StreamFn for AbortStream {
                     AssistantMessageEvent::TextDelta {
                         index: 0,
                         delta: "partial".into(),
+                        partial: AssistantMessage::default(),
                     },
                     (1, release),
                 ));

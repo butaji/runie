@@ -14,8 +14,8 @@ use parking_lot::Mutex;
 use runie_core::hooks::{ShouldStopAfterTurnContext, TurnHooks, TurnUpdate};
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AgentContext, AgentMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason,
-    ToolCall, Usage, UserContent, UserMessage, WireMessage,
+    AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
+    SimpleStreamOptions, StopReason, ToolCall, Usage, UserContent, UserMessage, WireMessage,
 };
 
 use common::{echo_tool, TestLoopBuilder};
@@ -61,6 +61,7 @@ impl StreamFn for RecordingStream {
                 AssistantMessageEvent::TextDelta {
                     index: 0,
                     delta: "hi".into(),
+                    partial: AssistantMessage::default(),
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,

@@ -108,7 +108,8 @@ mod tests {
         assert_eq!(
             crate::assistant_event_kind!(AssistantMessageEvent::TextDelta {
                 index: 0,
-                delta: "x".into()
+                delta: "x".into(),
+                partial: crate::types::AssistantMessage::default()
             }),
             "TextDelta"
         );
