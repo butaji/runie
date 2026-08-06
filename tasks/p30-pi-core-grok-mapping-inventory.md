@@ -15,10 +15,12 @@ The distinction is now explicit in Rust as `None` versus `Some(empty)`, with
 no-recompile YAML runner.
 
 Re-ran `scripts/source-inventory.sh` against the authoritative checkouts. The
-counts remain exact: Pi agent 37 files, Pi AI 169 files, Grok pager 496 files,
-and Grok pager-render 68 files. The inventory is therefore current; green
-local tests do not close the documented full-color cast, specialized-card
-completion-output, or actor-owned row-identity gaps.
+current counts are Pi agent 48 files, Pi AI 174 files, Grok pager 496 files,
+and Grok pager-render 68 files. The earlier 37/169 Pi counts were stale
+upstream-inventory evidence; the deterministic script is authoritative. The
+new Pi files must be classified before any scope decision. Green local tests
+do not close the documented full-color cast, specialized-card completion-
+output, or actor-owned row-identity gaps.
 
 **Live projection follow-up (2026-08-06):** The production renderer now has an
 explicit `with_live_actors` projection variant for Grok's live assistant-start
