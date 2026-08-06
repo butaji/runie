@@ -85,7 +85,7 @@ fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
         .collect()
 }
 
-fn replay_frames(path: &Path) -> Result<FrameReplay> {
+fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
     let mut lines = content.lines();
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
@@ -93,6 +93,7 @@ fn replay_frames(path: &Path) -> Result<FrameReplay> {
     let mut parser = vt100::Parser::new(rows, cols, 0);
     let mut frames = Vec::new();
     let mut previous = None;
+    let mut started = marker.is_none();
     for line in lines {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
@@ -103,6 +104,12 @@ fn replay_frames(path: &Path) -> Result<FrameReplay> {
             break;
         }
         parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
+        if !started {
+            started = parser.screen().contents().contains(marker.expect("marker"));
+            if !started {
+                continue;
+            }
+        }
         let frame = cells(&parser, rows, cols);
         if previous.as_ref() != Some(&frame) {
             previous = Some(frame.clone());
@@ -152,7 +159,11 @@ fn replay(path: &Path) -> Result<Replay> {
 )]
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
-    let frames = args.first().is_some_and(|arg| arg == "--frames");
+    let phase_marker = args
+        .first()
+        .and_then(|arg| arg.strip_prefix("--frames-after="))
+        .map(str::to_owned);
+    let frames = phase_marker.is_some() || args.first().is_some_and(|arg| arg == "--frames");
     let dump = args.first().is_some_and(|arg| arg == "--dump");
     if frames || dump {
         args.remove(0);
@@ -170,8 +181,10 @@ fn main() -> Result<()> {
         bail!("usage: cast_compare [--dump|--frames] LEFT.cast RIGHT.cast");
     }
     if frames {
-        let (left_geometry, left_frames) = replay_frames(Path::new(&left))?;
-        let (right_geometry, right_frames) = replay_frames(Path::new(&right))?;
+        let (left_geometry, left_frames) =
+            replay_frames(Path::new(&left), phase_marker.as_deref())?;
+        let (right_geometry, right_frames) =
+            replay_frames(Path::new(&right), phase_marker.as_deref())?;
         let compared = left_frames.len().min(right_frames.len());
         let first_difference = (0..compared)
             .find_map(|frame| (left_frames[frame] != right_frames[frame]).then_some(frame));
