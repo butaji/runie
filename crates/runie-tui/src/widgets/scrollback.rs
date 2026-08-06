@@ -118,6 +118,7 @@ pub enum ScrollbackMsg {
     SetToolMode(String, runie_core::types::ToolDisplayMode),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
+    AppendToLastByKind(LineKind, String),
     /// Transitional bridge used while event reduction is moved fully into
     /// the actor. It still publishes one immutable state atomically.
     ReplaceSnapshot(Box<Scrollback>),
@@ -189,6 +190,13 @@ impl Scrollback {
             ScrollbackMsg::ReplaceLastByKind(kind, text) => {
                 if let Some(line) = self.last_mut_by_kind(kind) {
                     line.text = text;
+                }
+            }
+            ScrollbackMsg::AppendToLastByKind(kind, text) => {
+                if let Some(line) = self.last_mut_by_kind(kind) {
+                    line.text.push_str(&text);
+                } else {
+                    self.append(Line::new(kind, text));
                 }
             }
             ScrollbackMsg::ReplaceSnapshot(snapshot) => *self = *snapshot,

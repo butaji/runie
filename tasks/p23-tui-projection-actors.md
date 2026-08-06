@@ -94,6 +94,11 @@ publish immutable `watch` snapshots to the pure view.
   to `ScrollbackActor` before compatibility rendering. Both actor-owned startup
   variants are covered by the existing unit/YAML gates.
 
+- **Assistant delta projection migration (2026-08-05):** Text and reasoning
+  deltas now map to the explicit `AppendToLastByKind` reducer message. The
+  actor owns creation of the first reasoning row and accumulation of all later
+  chunks, with mapping/reducer tests and YAML replay coverage kept green.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

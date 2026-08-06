@@ -76,6 +76,20 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             ScrollbackMsg::Append(Line::new(LineKind::System, "")),
             ScrollbackMsg::Append(Line::new(LineKind::Assistant, "")),
         ],
+        AgentEvent::MessageUpdate {
+            event: AssistantMessageEvent::TextDelta { delta },
+            ..
+        } => vec![ScrollbackMsg::AppendToLastByKind(
+            LineKind::Assistant,
+            delta.clone(),
+        )],
+        AgentEvent::MessageUpdate {
+            event: AssistantMessageEvent::ThinkingDelta { delta },
+            ..
+        } => vec![ScrollbackMsg::AppendToLastByKind(
+            LineKind::Reasoning,
+            delta.clone(),
+        )],
         AgentEvent::Reset => vec![ScrollbackMsg::Clear],
         AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(*theme)],
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
@@ -1052,6 +1066,19 @@ mod tests {
             })
             .len(),
             4
+        );
+        let delta = scrollback_messages_for_event(&AgentEvent::MessageUpdate {
+            event: AssistantMessageEvent::TextDelta {
+                delta: "world".into(),
+            },
+            message: AgentMessage::Assistant(Default::default()),
+        });
+        assert_eq!(
+            delta,
+            vec![ScrollbackMsg::AppendToLastByKind(
+                LineKind::Assistant,
+                "world".into()
+            )]
         );
     }
 
