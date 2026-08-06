@@ -164,3 +164,23 @@ viewport offset; rendering no longer mutates actor-owned `FeedNavigation`
 viewport changes are delivered as `ScrollbackMsg` events, while terminal size
 and paint are pure render inputs. A regression test snapshots the model before
 and after rendering and requires byte-for-byte state equality.
+
+### Slice 15: canonical model reduction (2026-08-06)
+
+The public `Scrollback::apply` compatibility adapter now constructs the
+renderer-neutral `FeedState`, reduces the incoming `ScrollbackMsg`, and only
+rehydrates the terminal adapter fields. YAML replay, live actor tests, and
+widget compatibility tests therefore exercise the same event reducer; the
+widget no longer owns a second active transition implementation.
+
+This migration exposed and fixed a real Pi/Grok lifecycle edge case: a
+provider update may rewrite a live tool header without settling it, while a
+tool end settles the newest actor-owned opaque row. `FeedState` now has
+separate `update_tool` and `replace_tool` transitions and prefers active
+`tool_row_id` identity when provider call IDs repeat. The duplicate-ID
+regression passes with the expected first/second completion ownership.
+
+The old reducer helper block is quarantined as dead compatibility code during
+the migration and is not reachable from production or tests; its deletion is
+the next mechanical cleanup after the complete CI run confirms no hidden
+callers. No event payload is duplicated in the renderer.

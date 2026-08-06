@@ -874,7 +874,7 @@ impl FeedState {
                 output,
             } => {
                 if let Some(header) = header {
-                    self.replace_tool(&tool_call_id, header);
+                    self.update_tool(&tool_call_id, header);
                 }
                 for text in output {
                     self.append(Line::new(LineKind::ToolOutput, text).for_tool(&tool_call_id));
@@ -1059,6 +1059,17 @@ impl FeedState {
     }
 
     fn replace_tool(&mut self, id: &str, text: String) {
+        // Provider call IDs are not guaranteed to be unique across replayed
+        // or concurrent lifecycle fragments. Prefer the newest actor-owned
+        // live row, exactly as the event stream's row identity requires;
+        // falling back to a settled row is only for compatibility-seeded
+        // transcripts that have no opaque row identity.
+        if let Some(line) = self.live_header_mut(id) {
+            line.text = text;
+            line.kind = LineKind::Tool;
+            line.settle_tool_row();
+            return;
+        }
         if let Some(line) = self.lines.iter_mut().rev().find(|line| {
             line.tool_call_id.as_deref() == Some(id)
                 && matches!(
@@ -1070,6 +1081,34 @@ impl FeedState {
             line.kind = LineKind::Tool;
             line.settle_tool_row();
         }
+    }
+
+    fn update_tool(&mut self, id: &str, text: String) {
+        if let Some(line) = self.live_header_mut(id) {
+            line.text = text;
+            return;
+        }
+        if let Some(line) = self.lines.iter_mut().rev().find(|line| {
+            line.tool_call_id.as_deref() == Some(id)
+                && matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+        }) {
+            line.text = text;
+        }
+    }
+
+    fn live_header_mut(&mut self, id: &str) -> Option<&mut Line> {
+        self.lines.iter_mut().rev().find(|line| {
+            line.tool_row_id.is_some()
+                && line.is_tool_row_active()
+                && line.tool_call_id.as_deref() == Some(id)
+                && matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+        })
     }
 
     fn tool_output_suffix_matches(&self, id: &str, output: &[(LineKind, String)]) -> bool {

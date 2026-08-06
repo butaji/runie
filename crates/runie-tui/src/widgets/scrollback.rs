@@ -19,6 +19,7 @@ pub use runie_tui_model::{
 // right-aligned clock before wrapping the remaining response text.
 const TIMESTAMP_GUTTER_SPACES: usize = 3;
 
+#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn format_elapsed(elapsed_ms: Option<u64>) -> String {
     elapsed_ms
         .map(format_duration)
@@ -26,10 +27,12 @@ fn format_elapsed(elapsed_ms: Option<u64>) -> String {
         .unwrap_or_default()
 }
 
+#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn format_duration(elapsed_ms: u64) -> String {
     format!("{:.1}s", elapsed_ms as f64 / 1_000.0)
 }
 
+#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn workflow_phase_mark(state: &str) -> char {
     match state {
         "done" => '✓',
@@ -38,6 +41,7 @@ fn workflow_phase_mark(state: &str) -> char {
     }
 }
 
+#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn workflow_text(
     header: &str,
     phases: &[(String, String)],
@@ -69,8 +73,6 @@ fn workflow_text(
         .map(|(title, phase_state)| format!("{title} {}", workflow_phase_mark(phase_state)))
         .collect::<Vec<_>>()
         .join(" · ");
-    // Grok's WorkflowBlock renders objectives as one transcript row, even
-    // when the source objective contains line breaks.
     let objective = objective.split_whitespace().collect::<Vec<_>>().join(" ");
     let mut result = format!("Workflow {verb}{objective}");
     if !trail.is_empty() {
@@ -191,6 +193,10 @@ pub struct Scrollback {
     navigation: FeedNavigation,
 }
 
+#[allow(
+    dead_code,
+    reason = "legacy reducer helpers remain quarantined while all public transitions use FeedState"
+)]
 impl Scrollback {
     /// Build the terminal compatibility adapter from the actor-owned,
     /// renderer-independent projection. This is the only direction allowed
@@ -246,12 +252,32 @@ impl Scrollback {
 
     /// Apply one explicit transcript transition. Actor implementations and
     /// compatibility callers share this reducer boundary.
+    /// Compatibility entry point that reduces every transcript transition
+    /// through the actor-owned renderer-neutral model. Terminal rendering is
+    /// intentionally absent from this path.
+    pub fn apply(&mut self, message: ScrollbackMsg) -> Option<usize> {
+        let appended_at = match &message {
+            ScrollbackMsg::Append(_) | ScrollbackMsg::AppendTurnSummary(_) => {
+                Some(self.lines.len())
+            }
+            _ => None,
+        };
+        let mut model = FeedState {
+            lines: self.lines.clone(),
+            navigation: self.navigation.clone(),
+        };
+        model.reduce(message);
+        self.lines = model.lines;
+        self.navigation = model.navigation;
+        appended_at
+    }
+
     #[allow(
         clippy::too_many_lines,
         clippy::cognitive_complexity,
         reason = "the reducer keeps all explicit transcript messages in one readable match"
     )]
-    pub fn apply(&mut self, message: ScrollbackMsg) -> Option<usize> {
+    fn apply_legacy(&mut self, message: ScrollbackMsg) -> Option<usize> {
         match message {
             ScrollbackMsg::Append(line) => return Some(self.append(line)),
             ScrollbackMsg::AppendTurnSummary(text) => {
