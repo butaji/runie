@@ -136,3 +136,7 @@ The declarative composition test now seeds its feed from `FeedState` directly,
 and production actor call sites remain free of `Scrollback::new()` and widget
 reduction. Direct `Scrollback::apply` calls are retained only by legacy widget
 unit tests until the renderer adapter migration is complete.
+
+An executable `feed-actor-boundary-check` now guards this seam in `just ci`:
+the actor must contain `FeedState` reduction and may not construct or reduce
+the Ratatui `Scrollback` widget.

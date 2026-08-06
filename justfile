@@ -49,6 +49,10 @@ source-inventory-check:
 pi-event-contract-check:
     python3 scripts/validate-pi-event-contract.py
 
+# Guard that actor state remains renderer-independent.
+feed-actor-boundary-check:
+    python3 scripts/validate-feed-actor-boundary.py
+
 # Run YAML e2e scenarios from crates/runie-tui/tests/e2e/*.yaml.
 # Add or edit YAML files freely — no rebuild required.
 e2e:
@@ -104,5 +108,5 @@ lint:
     cargo run -p lint-check
 
 # Full sweep: fmt-check + clippy + lint + test + parity manifest.
-ci: fmt-check clippy lint test parity-check source-inventory-check pi-event-contract-check
+ci: fmt-check clippy lint test parity-check source-inventory-check pi-event-contract-check feed-actor-boundary-check
     @echo "all green"
