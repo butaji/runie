@@ -181,6 +181,21 @@ impl StatusBar {
         }
     }
 
+    /// Renderer-local adapter from the actor-owned immutable projection.
+    /// Rendering may use the widget implementation, but it must not read a
+    /// second mutable/actor source while painting the same frame.
+    pub fn from_model_snapshot(snapshot: StatusSnapshot) -> Self {
+        Self {
+            state: snapshot.state,
+            theme: snapshot.theme,
+            animation_frame: snapshot.animation_frame,
+            elapsed_ticks: snapshot.elapsed_ticks,
+            elapsed_ticks_override: None,
+            turn_usage: snapshot.turn_usage,
+            turn_stop_reason: snapshot.turn_stop_reason,
+        }
+    }
+
     pub fn set(&mut self, s: Status) {
         self.apply(StatusMsg::Set(s));
     }

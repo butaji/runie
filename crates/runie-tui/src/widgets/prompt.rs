@@ -56,6 +56,27 @@ impl PromptWidget {
         }
     }
 
+    /// Rehydrate the terminal widget from one actor-owned prompt projection.
+    /// The adapter is renderer-local; the projection remains the sole source
+    /// of prompt facts for the frame being painted.
+    pub fn from_model_snapshot(snapshot: PromptSnapshot) -> Self {
+        Self {
+            buffer: snapshot.text,
+            focused: snapshot.focused,
+            history: snapshot.history,
+            history_index: snapshot.history_index,
+            history_search: snapshot.history_search,
+            mode: snapshot.mode,
+            model_caption: snapshot.model_caption,
+            show_placeholder: snapshot.show_placeholder,
+            file_candidates: snapshot.file_candidates,
+            file_candidate_index: snapshot.file_candidate_index,
+            selected_file: snapshot.selected_file,
+            viewer_lines: snapshot.viewer_lines,
+            theme: snapshot.theme,
+        }
+    }
+
     pub fn history(&self) -> &[String] {
         &self.history
     }

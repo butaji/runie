@@ -33,7 +33,7 @@ use runie_core::types::{
 
 use runie_tui::app::{App, AppExit, PaletteAction, UiCommand};
 use runie_tui::key::{is_quit_command, map_key, Action};
-use runie_tui::widgets::{PromptOutcome, Status};
+use runie_tui::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
 
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
@@ -331,8 +331,8 @@ async fn run_app(
         let frame_area = frame.area();
         let layout = runie_tui::layout::chat_layout(frame_area);
         let model = app.model_snapshot();
-        let view = App::view_tree_from_model(&model);
-        let status = app.status_snapshot();
+        let view = App::view_document_from_model(&model).root;
+        let status = StatusBar::from_model_snapshot(model.status.clone());
         frame.buffer_mut().set_style(
             frame_area,
             runie_tui::appearance::background_style_for(status.theme()),
@@ -343,7 +343,7 @@ async fn run_app(
             status.render(layout.status, frame.buffer_mut());
         }
         let theme = status.theme();
-        let mut scrollback = app.scrollback_snapshot();
+        let mut scrollback = Scrollback::from_model_snapshot(model.feed.clone());
         scrollback.set_theme(theme);
         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
         scrollback.normalize_live_completed_assistants();
@@ -359,7 +359,11 @@ async fn run_app(
         {
             render_doctor_hint(layout.prompt, frame.buffer_mut(), status.theme());
         }
-        Widget::render(app.prompt.snapshot(), layout.prompt, frame.buffer_mut());
+        Widget::render(
+            PromptWidget::from_model_snapshot(model.prompt.clone()),
+            layout.prompt,
+            frame.buffer_mut(),
+        );
         if view
             .slots()
             .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
@@ -370,16 +374,18 @@ async fn run_app(
             .slots()
             .any(|slot| slot == runie_tui::view::Slot::CommandPaletteOverlay)
         {
-            let palette = app.ui.snapshot();
             render_command_palette(
                 frame.area(),
                 frame.buffer_mut(),
-                &palette.command_palette_query,
-                palette.command_palette_index,
+                &model.ui.command_palette_query,
+                model.ui.command_palette_index,
                 status.theme(),
             );
         }
-        let header = app.header_view_props();
+        let header = runie_tui::view::HeaderViewProps {
+            meter: status.header_meter(),
+            theme: status.theme(),
+        };
         render_header(
             layout.header,
             frame.buffer_mut(),
@@ -387,7 +393,9 @@ async fn run_app(
             header.theme,
         );
         runie_tui::terminal_color::quantize_buffer(frame.buffer_mut(), color_level);
-        frame.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
+        frame.set_cursor_position(
+            PromptWidget::from_model_snapshot(model.prompt).cursor_position(layout.prompt),
+        );
     })?;
 
     let (renderer_handle, renderer_shutdown) = app.spawn_renderer();
@@ -583,8 +591,8 @@ async fn run_app(
                         let frame_area = f.area();
                         let buf = f.buffer_mut();
                         let model = app.model_snapshot();
-                        let view = App::view_tree_from_model(&model);
-                        let status = app.status_snapshot();
+                        let view = App::view_document_from_model(&model).root;
+                        let status = StatusBar::from_model_snapshot(model.status.clone());
                         buf.set_style(
                             frame_area,
                             runie_tui::appearance::background_style_for(status.theme()),
@@ -596,7 +604,7 @@ async fn run_app(
                             status.render(layout.status, buf);
                         }
                         let theme = status.theme();
-                        let mut scrollback = app.scrollback_snapshot();
+                        let mut scrollback = Scrollback::from_model_snapshot(model.feed.clone());
                         scrollback.set_theme(theme);
                         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
                         scrollback.normalize_live_completed_assistants();
@@ -620,7 +628,7 @@ async fn run_app(
                                 buf,
                             );
                         }
-                        let prompt = app.prompt.snapshot();
+                        let prompt = PromptWidget::from_model_snapshot(model.prompt.clone());
                         Widget::render(prompt, layout.prompt, buf);
                         if view
                             .slots()
@@ -632,19 +640,24 @@ async fn run_app(
                             .slots()
                             .any(|slot| slot == runie_tui::view::Slot::CommandPaletteOverlay)
                         {
-                            let palette = app.ui.snapshot();
                             render_command_palette(
                                 frame_area,
                                 buf,
-                                &palette.command_palette_query,
-                                palette.command_palette_index,
+                                &model.ui.command_palette_query,
+                                model.ui.command_palette_index,
                                 status.theme(),
                             );
                         }
-                        let header = app.header_view_props();
+                        let header = runie_tui::view::HeaderViewProps {
+                            meter: status.header_meter(),
+                            theme: status.theme(),
+                        };
                         render_header(layout.header, buf, &header.meter, header.theme);
                         runie_tui::terminal_color::quantize_buffer(buf, color_level);
-                        f.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
+                        f.set_cursor_position(
+                            PromptWidget::from_model_snapshot(model.prompt)
+                                .cursor_position(layout.prompt),
+                        );
                         let _ = Rect::default();
                     }));
                     if let Err(e) = res {

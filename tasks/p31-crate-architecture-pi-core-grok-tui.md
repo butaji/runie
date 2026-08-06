@@ -82,6 +82,12 @@ feed, prompt, and status projections for one MVU view pass. `App::model_snapshot
 builds it from actor snapshots, and `App::view_tree` consumes that aggregate
 instead of independently reading compatibility widget state.
 
+The `runie` binary now rehydrates terminal-local `StatusBar`, `Scrollback`,
+and `PromptWidget` adapters from that same immutable `TuiSnapshot` in both
+initial and steady-state draw paths. Palette, header, overlay, and cursor
+inputs are likewise taken from the frame snapshot, eliminating mixed-time
+actor reads during one paint pass.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is
