@@ -328,6 +328,7 @@ pub struct StateAssertions {
     pub tool_headers: Option<Vec<String>>,
     /// Ordered output rows for each projected tool block.
     pub tool_outputs: Option<Vec<Vec<String>>>,
+    pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -937,63 +938,98 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!("state error missing {needle:?}: {error:?}"));
         }
     }
-    if let Some(expected) = expected.tool_blocks {
-        if actual_tool_blocks(outcome) != expected {
-            return Err(format!(
-                "state tool_blocks mismatch: expected {expected}, got {}",
-                actual_tool_blocks(outcome)
-            ));
-        }
+    assert_tool_block_expectations(outcome, expected)?;
+    Ok(())
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the declarative tool-card fields are kept together for fixture diagnostics"
+)]
+fn assert_tool_block_expectations(
+    outcome: &ScenarioOutcome,
+    expected: &StateAssertions,
+) -> Result<(), String> {
+    if let Some(value) = expected.tool_blocks {
+        assert_equal(value, actual_tool_blocks(outcome), "tool_blocks")?;
     }
-    if let Some(expected) = expected.tool_output_lines {
+    if let Some(value) = expected.tool_output_lines {
         let actual = outcome
             .tool_blocks
             .iter()
             .map(|block| block.output.len())
             .sum::<usize>();
-        if actual != expected {
-            return Err(format!(
-                "state tool_output_lines mismatch: expected {expected}, got {actual}"
-            ));
-        }
+        assert_equal(value, actual, "tool_output_lines")?;
     }
-    if let Some(expected) = &expected.tool_modes {
-        let actual = outcome
-            .tool_blocks
-            .iter()
-            .map(|block| block.mode)
-            .collect::<Vec<_>>();
-        if &actual != expected {
-            return Err(format!(
-                "state tool_modes mismatch: expected {expected:?}, got {actual:?}"
-            ));
-        }
+    if let Some(value) = &expected.tool_modes {
+        assert_vec_equal(
+            value,
+            &outcome
+                .tool_blocks
+                .iter()
+                .map(|block| block.mode)
+                .collect::<Vec<_>>(),
+            "tool_modes",
+        )?;
     }
-    if let Some(expected) = &expected.tool_headers {
-        let actual = outcome
-            .tool_blocks
-            .iter()
-            .map(|block| block.header.clone())
-            .collect::<Vec<_>>();
-        if &actual != expected {
-            return Err(format!(
-                "state tool_headers mismatch: expected {expected:?}, got {actual:?}"
-            ));
-        }
+    if let Some(value) = &expected.tool_headers {
+        assert_vec_equal(
+            value,
+            &outcome
+                .tool_blocks
+                .iter()
+                .map(|block| block.header.clone())
+                .collect::<Vec<_>>(),
+            "tool_headers",
+        )?;
     }
-    if let Some(expected) = &expected.tool_outputs {
-        let actual = outcome
-            .tool_blocks
-            .iter()
-            .map(|block| block.output.clone())
-            .collect::<Vec<_>>();
-        if &actual != expected {
-            return Err(format!(
-                "state tool_outputs mismatch: expected {expected:?}, got {actual:?}"
-            ));
-        }
+    if let Some(value) = &expected.tool_outputs {
+        assert_vec_equal(
+            value,
+            &outcome
+                .tool_blocks
+                .iter()
+                .map(|block| block.output.clone())
+                .collect::<Vec<_>>(),
+            "tool_outputs",
+        )?;
+    }
+    if let Some(value) = &expected.tool_kinds {
+        assert_vec_equal(
+            value,
+            &outcome
+                .tool_blocks
+                .iter()
+                .map(|block| block.kind)
+                .collect::<Vec<_>>(),
+            "tool_kinds",
+        )?;
     }
     Ok(())
+}
+
+fn assert_equal(expected: usize, actual: usize, field: &str) -> Result<(), String> {
+    if expected == actual {
+        Ok(())
+    } else {
+        Err(format!(
+            "state {field} mismatch: expected {expected}, got {actual}"
+        ))
+    }
+}
+
+fn assert_vec_equal<T: std::fmt::Debug + PartialEq>(
+    expected: &[T],
+    actual: &[T],
+    field: &str,
+) -> Result<(), String> {
+    if expected == actual {
+        Ok(())
+    } else {
+        Err(format!(
+            "state {field} mismatch: expected {expected:?}, got {actual:?}"
+        ))
+    }
 }
 
 fn actual_tool_blocks(outcome: &ScenarioOutcome) -> usize {

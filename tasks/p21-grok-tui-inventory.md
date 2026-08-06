@@ -338,3 +338,9 @@ duplicate presentation state was introduced in the reducer.
 Failure-detail parity (2026-08-06): failed background events preserve an
 optional provider error and render Grok's `(error)` suffix; the YAML fixture
 asserts the exact terminal row.
+
+Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
+theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
+`search`, web, background, or generic), and mixed/truncated YAML replays pin
+the ordered family vector. This makes the next specialized renderer work an
+explicit event/state contract rather than header-string matching in tests.

@@ -27,6 +27,7 @@ assertions:
   state:
     tool_blocks: 2
     tool_modes: [expanded, collapsed]
+    tool_kinds: [list_dir, execute]
     tool_headers: ["List .", "Run cargo test"]
     tool_outputs: [["Cargo.toml", "src", "List . (3 entries)", "Cargo.toml", "src", "crates"], ["Run cargo test → ✓", "cargo test completed"]]
   visual:

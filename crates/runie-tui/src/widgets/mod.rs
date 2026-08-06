@@ -8,7 +8,7 @@ pub mod welcome;
 
 pub use command_palette::{CommandPaletteWidget, PaletteAction};
 pub use prompt::{InputMode, PromptOutcome, PromptWidget};
-pub use scrollback::{Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
+pub use scrollback::{Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock, ToolCardKind};
 pub use status::{
     braille_spinner_frames, Status, StatusBar, StatusMsg, TurnStatus, TurnStatusPhase,
 };

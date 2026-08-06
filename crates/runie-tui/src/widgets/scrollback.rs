@@ -189,10 +189,50 @@ pub struct Scrollback {
 pub struct ToolBlock {
     pub tool_call_id: String,
     pub header: String,
+    pub kind: ToolCardKind,
     pub output: Vec<String>,
     pub mode: runie_core::types::ToolDisplayMode,
     pub is_running: bool,
     pub is_error: bool,
+}
+
+/// Grok's specialized tool-card families as a read-only presentation
+/// projection. Lifecycle ownership remains with core/event actors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCardKind {
+    Execute,
+    Read,
+    Edit,
+    ListDir,
+    Search,
+    WebSearch,
+    WebFetch,
+    Background,
+    Generic,
+}
+
+fn tool_card_kind(header: &str) -> ToolCardKind {
+    let lower = header.trim_start().to_ascii_lowercase();
+    if lower.starts_with("run ") || lower.starts_with("execute ") {
+        ToolCardKind::Execute
+    } else if lower.starts_with("read ") {
+        ToolCardKind::Read
+    } else if lower.starts_with("edit ") || lower.starts_with("write ") {
+        ToolCardKind::Edit
+    } else if lower.starts_with("list ") {
+        ToolCardKind::ListDir
+    } else if lower.starts_with("search ") {
+        ToolCardKind::Search
+    } else if lower.starts_with("web search ") {
+        ToolCardKind::WebSearch
+    } else if lower.starts_with("fetch ") {
+        ToolCardKind::WebFetch
+    } else if lower.starts_with("subagent ") {
+        ToolCardKind::Background
+    } else {
+        ToolCardKind::Generic
+    }
 }
 
 impl Scrollback {
@@ -353,6 +393,7 @@ impl Scrollback {
                     blocks.push(ToolBlock {
                         tool_call_id: id.to_owned(),
                         header: line.text.clone(),
+                        kind: tool_card_kind(&line.text),
                         output: Vec::new(),
                         mode: self
                             .tool_modes
@@ -369,6 +410,7 @@ impl Scrollback {
             match line.kind {
                 LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
                     block.header = line.text.clone();
+                    block.kind = tool_card_kind(&line.text);
                     block.is_running = line.kind == LineKind::ToolRunning;
                     block.is_error = line.kind == LineKind::ToolError;
                 }
