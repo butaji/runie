@@ -30,6 +30,12 @@ Audit checklist per module (pass/fail):
 
 ## Acceptance
 
+**EventRenderer boundary audit (2026-08-06):** `EventRenderer::with_actors`
+is the production constructor and attaches `ScrollbackActor` and `StatusActor`
+as the only projection owners. The `Arc<Mutex<…>>` compatibility constructors
+and `Projection::Legacy` variants are compiled only under `cfg(test)`; they
+cannot create a second production source of truth.
+
 - `cargo run -p lint-check` clean.
 - `cargo clippy --workspace --all-targets` clean (fix pre-existing warnings this sweep touches).
 - `cargo fmt --all -- --check` clean.
