@@ -57,10 +57,18 @@ renderer paints terminal cells.
 - `PromptSnapshot` now owns pure emptiness and intrinsic-height calculations;
   App layout and live key/settled-feed decisions consume those model facts
   instead of asking the compatibility widget.
+- `ViewDocument` is now preserved through the `App` projection boundary:
+  `view_document_from_model()` retains both the element composition and the
+  component/state-owner registry, while `view_tree()` remains a compatibility
+  accessor for callers that only need the root. The live `App::render()` pass
+  also takes one aggregate `TuiSnapshot` before deriving layout and feed
+  rendering inputs, preventing an inconsistent frame from mixed actor reads.
 
 ## Next boundaries
 
-1. Represent component props from actor snapshots as immutable view models.
+1. Represent component props from actor snapshots as immutable view models;
+   the aggregate document boundary is in place, but widget-specific props are
+   still being migrated.
 2. Add stack measurement/reflow from `LayoutEntry` basis/grow/shrink values.
 3. Add a terminal-independent cell/style intent layer.
 4. Adapt scrollback, prompt, status, and overlays one component at a time;

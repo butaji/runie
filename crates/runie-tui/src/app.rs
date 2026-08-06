@@ -12,7 +12,7 @@ use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
 use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
-use crate::view::{chat_document, ChatViewProps, Element, HeaderViewProps};
+use crate::view::{chat_document, ChatViewProps, Element, HeaderViewProps, ViewDocument};
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
@@ -500,10 +500,22 @@ impl App {
     /// Renderers consume this projection; they do not inspect ownership state
     /// through ad-hoc mutable fields.
     pub fn view_tree(&self) -> Element {
-        Self::view_tree_from_model(&self.model_snapshot())
+        self.view_document().root
+    }
+
+    /// Build the complete renderer-neutral document for one frame. The
+    /// document retains both composition (`root`) and component ownership
+    /// metadata; callers that only need the legacy element tree can use
+    /// `view_tree`.
+    pub fn view_document(&self) -> ViewDocument {
+        Self::view_document_from_model(&self.model_snapshot())
     }
 
     pub fn view_tree_from_model(model: &TuiSnapshot) -> Element {
+        Self::view_document_from_model(model).root
+    }
+
+    pub fn view_document_from_model(model: &TuiSnapshot) -> ViewDocument {
         chat_document(ChatViewProps {
             welcome_visible: model.ui.show_welcome,
             shortcuts_visible: model.ui.shortcuts_open,
@@ -511,7 +523,6 @@ impl App {
             doctor_hint_visible: matches!(model.status.state, Status::Ready)
                 && model.feed.is_empty(),
         })
-        .root
     }
 
     pub fn header_view_props(&self) -> HeaderViewProps {
@@ -524,9 +535,9 @@ impl App {
 
     /// Lay out the widgets and render them into the given area using `f`.
     pub fn render<F: FnMut(Rect, &mut Buffer)>(&self, area: Rect, mut f: F) {
-        let layout =
-            chat_layout_with_prompt_height(area, self.prompt.model_snapshot().render_height());
-        let mut sb = Scrollback::from_model_snapshot(self.feed_model_snapshot());
+        let model = self.model_snapshot();
+        let layout = chat_layout_with_prompt_height(area, model.prompt.render_height());
+        let mut sb = Scrollback::from_model_snapshot(model.feed);
         let mut buf = Buffer::empty(area);
         sb.render_with_terminal_height(layout.scrollback, area.height, &mut buf);
         f(layout.prompt, &mut buf);
@@ -562,6 +573,26 @@ mod tests {
         assert!(!hidden.show_welcome);
         assert!(hidden.shortcuts_open);
         assert_eq!(hidden.update(UiMsg::Reset), UiState::new());
+    }
+
+    #[test]
+    fn view_document_preserves_declarative_composition_and_ownership() {
+        let model = super::TuiSnapshot {
+            ui: UiState::new(),
+            feed: super::Scrollback::new().model_snapshot(),
+            prompt: super::PromptWidget::new().model_snapshot(),
+            status: super::StatusBar::new().model_snapshot(),
+        };
+        let document = super::App::view_document_from_model(&model);
+        assert_eq!(document.root.slots().count(), 6);
+        assert_eq!(
+            document.components.len(),
+            crate::view::CHAT_COMPONENTS.len()
+        );
+        assert_eq!(
+            crate::view::component(crate::view::Slot::Scrollback).owner,
+            crate::view::StateOwner::ScrollbackActor
+        );
     }
 
     #[tokio::test]
