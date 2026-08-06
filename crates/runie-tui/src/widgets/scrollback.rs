@@ -783,6 +783,15 @@ impl Scrollback {
 
         let start = self.scroll_offset;
         let end = (start + visible).min(total);
+        let selected_non_tool_text = self.selected_entry.and_then(|index| {
+            self.lines.get(index).and_then(|line| {
+                if line.tool_call_id.is_none() {
+                    Some(line.text.as_str())
+                } else {
+                    None
+                }
+            })
+        });
 
         if start >= end {
             // Nothing to render. Avoid passing an empty slice to ratatui's
@@ -797,7 +806,10 @@ impl Scrollback {
                 styled_line_for(*kind, text, self.theme)
             };
             let mut line = line;
-            if text.starts_with("› ") || text.starts_with("⌄ ") {
+            let selected_row = text.starts_with("› ")
+                || text.starts_with("⌄ ")
+                || selected_non_tool_text.is_some_and(|value| text.contains(value));
+            if selected_row {
                 let selected_style = appearance::selected_style_for(self.theme);
                 for span in &mut line.spans {
                     span.style = span.style.patch(selected_style);
@@ -812,7 +824,7 @@ impl Scrollback {
                 },
                 buf,
             );
-            if text.starts_with("› ") || text.starts_with("⌄ ") {
+            if selected_row {
                 let selected_style = appearance::selected_style_for(self.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
@@ -2007,6 +2019,19 @@ mod tests {
         assert_eq!(scrollback.selected_tool_id(), Some("call-1"));
         scrollback.apply(ScrollbackMsg::SelectPreviousEntry);
         assert_eq!(scrollback.selected_entry(), Some(0));
+    }
+
+    #[test]
+    fn selected_non_tool_entry_paints_the_theme_selection_surface() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::Append(Line::new(LineKind::User, "Hey")));
+        scrollback.apply(ScrollbackMsg::SelectNextEntry);
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 2));
+        scrollback.render(Rect::new(0, 0, 40, 2), &mut buffer);
+        assert_eq!(
+            buffer.cell((39, 0)).expect("selected row").bg,
+            ratatui::style::Color::Rgb(28, 28, 28)
+        );
     }
 
     #[test]
