@@ -1,6 +1,7 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+use runie_core::types::ThemeKind;
 
 use crate::appearance;
 
@@ -29,6 +30,7 @@ const ENTRIES: [&str; 16] = [
 pub struct CommandPaletteWidget {
     pub query: String,
     pub selected: usize,
+    theme: ThemeKind,
 }
 
 impl CommandPaletteWidget {
@@ -36,7 +38,13 @@ impl CommandPaletteWidget {
         Self {
             query: query.into(),
             selected,
+            theme: ThemeKind::GrokNight,
         }
+    }
+
+    pub fn with_theme(mut self, theme: ThemeKind) -> Self {
+        self.theme = theme;
+        self
     }
 
     fn filtered(&self) -> Vec<&'static str> {
@@ -76,14 +84,14 @@ impl Widget for CommandPaletteWidget {
             text.push_str(&format!("\n{marker}{entry}"));
         }
         Paragraph::new(text)
-            .style(appearance::base_style())
+            .style(appearance::base_style_for(self.theme))
             .wrap(Wrap { trim: false })
             .block(
                 Block::default()
                     .title(" Command Palette ")
-                    .title_style(appearance::accent_style())
+                    .title_style(appearance::accent_style_for(self.theme))
                     .borders(Borders::ALL)
-                    .border_style(appearance::accent_style()),
+                    .border_style(appearance::accent_style_for(self.theme)),
             )
             .render(panel, buf);
     }

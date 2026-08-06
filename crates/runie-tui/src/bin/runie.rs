@@ -64,9 +64,15 @@ fn render_shortcuts(area: Rect, buf: &mut Buffer) {
     );
 }
 
-fn render_command_palette(area: Rect, buf: &mut Buffer, query: &str, selected: usize) {
+fn render_command_palette(
+    area: Rect,
+    buf: &mut Buffer,
+    query: &str,
+    selected: usize,
+    theme: runie_core::types::ThemeKind,
+) {
     ratatui::widgets::Widget::render(
-        runie_tui::widgets::CommandPaletteWidget::new(query, selected),
+        runie_tui::widgets::CommandPaletteWidget::new(query, selected).with_theme(theme),
         area,
         buf,
     );
@@ -326,6 +332,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                 frame.buffer_mut(),
                 &palette.command_palette_query,
                 palette.command_palette_index,
+                status.theme(),
             );
         }
         let meter = status.header_meter();
@@ -544,6 +551,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                 buf,
                                 &palette.command_palette_query,
                                 palette.command_palette_index,
+                                status.theme(),
                             );
                         }
                         let meter = status.header_meter();

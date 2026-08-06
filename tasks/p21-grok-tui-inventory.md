@@ -214,6 +214,11 @@ Prompt actor event regression (2026-08-06): an async actor test now publishes
 at the cursor cell. This verifies the event-to-view path, not only the pure
 widget reducer.
 
+Command-palette theme propagation (2026-08-06): the palette now accepts an
+explicit theme token projection, and both live draw paths pass the
+actor-owned status theme. The default constructor remains GrokNight for YAML
+compatibility; production overlays no longer bypass theme changes.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining
