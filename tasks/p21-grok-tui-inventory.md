@@ -476,3 +476,12 @@ Read fold audit (2026-08-06): Grok's Read block uses a three-state cycle
 Runie now selects that cycle from the actor-owned typed tool name, and the
 default-mode YAML scenario exercises the read fold after the completed event
 sequence.
+
+Generic running-card audit (2026-08-06): Grok's `OtherToolCallBlock` has a
+running-only cycle (`Collapsed -> Truncated -> Expanded -> Truncated`) and a
+different settled cycle (`Collapsed <-> Expanded`). Runie's Pi-core event
+projection currently marks only the explicit background/subagent lifecycle as
+`ToolRunning`; arbitrary tool execution has no typed running-state event in the
+TUI reducer. This remains an explicit gap. It must be closed by carrying the
+tool lifecycle's running fact through an actor-owned event before adding the
+running-only fold cycle; header-string inference would produce false parity.
