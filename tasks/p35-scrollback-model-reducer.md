@@ -74,3 +74,10 @@ The reducer-owned tool mode map now lives in `FeedNavigation`. Default mode
 selection, explicit mode changes, fold cycling, typed-card projection,
 snapshot rehydration, and specialized tool rendering all consume that one
 model fact; the complete specialized-tool YAML and visual suite passes.
+
+### Slice 7 complete: theme identity ownership
+
+`ThemeKind` now lives in `FeedNavigation` as a model fact. Theme events,
+snapshot rehydration, feed projections, and all day/night/terminal-native
+rendering paths use that fact; only semantic-token-to-terminal-style
+resolution remains in the renderer.

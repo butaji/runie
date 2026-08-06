@@ -190,7 +190,6 @@ pub struct Scrollback {
     /// identity is persisted on `Line`; no second live-row ownership map is
     /// kept in the renderer.
     next_tool_row_id: u64,
-    theme: ThemeKind,
     navigation: FeedNavigation,
     workflow_headers: HashMap<String, String>,
     workflow_phases: HashMap<String, Vec<(String, String)>>,
@@ -209,7 +208,7 @@ impl Scrollback {
         scrollback.navigation.activity_expanded = snapshot.activity_expanded;
         scrollback.prompt_timestamp = snapshot.prompt_timestamp;
         scrollback.navigation.follow_latest_user = snapshot.follow_latest_user;
-        scrollback.theme = snapshot.theme;
+        scrollback.navigation.theme = snapshot.theme;
         scrollback.navigation.animation_frame = snapshot.animation_frame;
         scrollback.navigation.selected_tool_id = snapshot.selected_tool_id;
         scrollback.navigation.selected_entry = snapshot.selected_entry;
@@ -235,7 +234,6 @@ impl Scrollback {
             center_revealed_entry: false,
             tool_names: HashMap::new(),
             next_tool_row_id: 0,
-            theme: ThemeKind::GrokNight,
             navigation: FeedNavigation::default(),
             workflow_headers: HashMap::new(),
             workflow_phases: HashMap::new(),
@@ -243,7 +241,7 @@ impl Scrollback {
     }
 
     pub fn set_theme(&mut self, theme: ThemeKind) {
-        self.theme = theme;
+        self.navigation.theme = theme;
     }
 
     /// Apply one explicit transcript transition. Actor implementations and
@@ -475,7 +473,7 @@ impl Scrollback {
     }
 
     pub fn theme(&self) -> ThemeKind {
-        self.theme
+        self.navigation.theme
     }
 
     /// Compatibility adapter for the model-owned typed tool projection.
@@ -635,7 +633,7 @@ impl Scrollback {
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
             selected_entry: self.navigation.selected_entry,
-            theme: self.theme,
+            theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),
             revealed_dense_groups: self.revealed_dense_groups.clone(),
@@ -1084,9 +1082,9 @@ impl Scrollback {
         let mut selected_non_tool_row = None;
         for (row, (kind, text, code_row)) in physical_rows[start..end].iter().enumerate() {
             let line = if *code_row {
-                styled_code_line(text, self.theme)
+                styled_code_line(text, self.navigation.theme)
             } else {
-                styled_line_for(*kind, text, self.theme)
+                styled_line_for(*kind, text, self.navigation.theme)
             };
             let mut line = line;
             if self.live_grok_layout && *kind == LineKind::User {
@@ -1094,13 +1092,15 @@ impl Scrollback {
                     span.style =
                         span.style
                             .fg(Color::Reset)
-                            .bg(appearance::panel_background_style_for(self.theme)
-                                .bg
-                                .expect("panel background color"));
+                            .bg(
+                                appearance::panel_background_style_for(self.navigation.theme)
+                                    .bg
+                                    .expect("panel background color"),
+                            );
                 }
             }
             if self.live_grok_layout && *kind == LineKind::CompletedAssistant {
-                let assistant = appearance::assistant_body_style_for(self.theme);
+                let assistant = appearance::assistant_body_style_for(self.navigation.theme);
                 for span in &mut line.spans {
                     span.style = span.style.fg(assistant.fg.expect("assistant color"));
                 }
@@ -1109,7 +1109,7 @@ impl Scrollback {
                 || text.starts_with("⌄ ")
                 || selected_non_tool_text.is_some_and(|value| text.contains(value));
             if selected_row {
-                let selected_style = appearance::selected_style_for(self.theme);
+                let selected_style = appearance::selected_style_for(self.navigation.theme);
                 for span in &mut line.spans {
                     span.style = span.style.patch(selected_style);
                 }
@@ -1128,18 +1128,18 @@ impl Scrollback {
             {
                 let timestamp = self.prompt_timestamp.as_deref().unwrap_or_default();
                 let body_color = if *kind == LineKind::User {
-                    appearance::base_style_for(self.theme)
+                    appearance::base_style_for(self.navigation.theme)
                         .fg
                         .expect("body color")
                 } else {
-                    appearance::assistant_body_style_for(self.theme)
+                    appearance::assistant_body_style_for(self.navigation.theme)
                         .fg
                         .expect("assistant color")
                 };
-                let key_color = appearance::footer_key_style_for(self.theme)
+                let key_color = appearance::footer_key_style_for(self.navigation.theme)
                     .fg
                     .expect("key color");
-                let muted_color = appearance::muted_style_for(self.theme)
+                let muted_color = appearance::muted_style_for(self.navigation.theme)
                     .fg
                     .expect("muted color");
                 let row_y = area.y + row as u16;
@@ -1183,7 +1183,7 @@ impl Scrollback {
                 }
             }
             if *kind == LineKind::User {
-                let user_style = appearance::panel_background_style_for(self.theme);
+                let user_style = appearance::panel_background_style_for(self.navigation.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
                         cell.set_style(cell.style().patch(user_style));
@@ -1204,7 +1204,7 @@ impl Scrollback {
                         .get(absolute_row + 1)
                         .is_some_and(|(neighbor, _, _)| *neighbor == LineKind::User));
             if panel_separator {
-                let user_style = appearance::panel_background_style_for(self.theme);
+                let user_style = appearance::panel_background_style_for(self.navigation.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
                         cell.set_style(cell.style().patch(user_style));
@@ -1215,9 +1215,9 @@ impl Scrollback {
                 && (text.starts_with('+') || text.starts_with('-'))
             {
                 let diff_style = if text.starts_with('+') {
-                    appearance::diff_insert_style_for(self.theme)
+                    appearance::diff_insert_style_for(self.navigation.theme)
                 } else {
-                    appearance::diff_delete_style_for(self.theme)
+                    appearance::diff_delete_style_for(self.navigation.theme)
                 };
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
@@ -1226,7 +1226,7 @@ impl Scrollback {
                 }
             }
             if selected_row {
-                let selected_style = appearance::selected_style_for(self.theme);
+                let selected_style = appearance::selected_style_for(self.navigation.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
                     if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
                         cell.set_style(cell.style().patch(selected_style));
@@ -1238,7 +1238,7 @@ impl Scrollback {
             }
         }
         if let Some(inner_y) = selected_non_tool_row {
-            let border_style = appearance::selected_border_style_for(self.theme);
+            let border_style = appearance::selected_border_style_for(self.navigation.theme);
             let left = area.x;
             let right = area.x + area.width.saturating_sub(1);
             if let Some(cell) = buf.cell_mut((left, inner_y)) {

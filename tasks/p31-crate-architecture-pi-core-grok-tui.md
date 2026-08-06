@@ -397,3 +397,7 @@ snapshot rehydration, and terminal rendering.
 The sixth p35 slice is complete: the reducer-owned tool display-mode map now
 uses model-owned `FeedNavigation` across defaults, explicit changes, fold
 cycling, typed-card projection, snapshot rehydration, and rendering.
+
+The seventh p35 slice is complete: `ThemeKind` is now model-owned while
+Opaline/Ratatui style resolution remains renderer-only, preserving the
+day/night and terminal-native theme paths.
