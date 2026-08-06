@@ -262,3 +262,8 @@ Transcript block states:
   that metadata instead of assuming every user-shaped row has vpad, preserving
   current replay output while enabling the source-aligned per-entry layout
   implementation.
+- **Compact-threshold audit (2026-08-05):** Grok derives compact mode from
+  the full terminal height (`AUTO_COMPACT_MAX_ROWS = 20`), not the scrollback
+  sub-rectangle. Passing only the scrollback rect into the pure renderer is
+  therefore insufficient; the next layout API must carry terminal geometry
+  explicitly before changing the responsive prefix rule.
