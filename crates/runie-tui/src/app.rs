@@ -528,8 +528,12 @@ impl App {
                 welcome_visible: model.ui.show_welcome,
                 shortcuts_visible: model.ui.shortcuts_open,
                 command_palette_visible: model.ui.command_palette_open,
+                // The settled small-screen hint is ambient: after the first
+                // completed turn it remains below the feed, matching Grok's
+                // one-shot tip promotion. Terminal-size gating belongs to
+                // the renderer because this projection is size-independent.
                 doctor_hint_visible: matches!(model.status.state, Status::Ready)
-                    && model.feed.is_empty(),
+                    && !model.feed.is_empty(),
             },
             header: HeaderViewProps {
                 meter: model.status.header_meter(),
@@ -601,7 +605,7 @@ mod tests {
             status: super::StatusBar::new().model_snapshot(),
         };
         let document = super::App::view_document_from_model(&model);
-        assert_eq!(document.root.slots().count(), 6);
+        assert_eq!(document.root.slots().count(), 5);
         assert_eq!(
             document.components.len(),
             crate::view::CHAT_COMPONENTS.len()

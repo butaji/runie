@@ -79,18 +79,18 @@ fn render_command_palette(
     );
 }
 
-fn render_doctor_hint(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
+fn render_compact_hint(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
     let line = ratatui::text::Line::from(vec![
-        ratatui::text::Span::styled("Run ", runie_tui::appearance::muted_style_for(theme)),
         ratatui::text::Span::styled(
-            "/doctor",
+            "Tight on space? Try ",
+            runie_tui::appearance::muted_style_for(theme),
+        ),
+        ratatui::text::Span::styled(
+            "/compact-mode",
             runie_tui::appearance::base_style_for(theme)
                 .add_modifier(ratatui::style::Modifier::BOLD),
         ),
-        ratatui::text::Span::styled(
-            " for details and fixes.",
-            runie_tui::appearance::header_path_style_for(theme),
-        ),
+        ratatui::text::Span::styled("", runie_tui::appearance::header_path_style_for(theme)),
     ])
     .style(runie_tui::appearance::base_style_for(theme));
     ratatui::widgets::Widget::render(
@@ -355,8 +355,9 @@ async fn run_app(
         if view
             .slots()
             .any(|slot| slot == runie_tui::view::Slot::DoctorHint)
+            && runie_tui::layout::grok_small_screen_tip_visible(frame_area.height)
         {
-            render_doctor_hint(layout.prompt, frame.buffer_mut(), status.theme());
+            render_compact_hint(layout.prompt, frame.buffer_mut(), status.theme());
         }
         Widget::render(
             PromptWidget::from_model_snapshot(document.props.prompt.clone()),
@@ -613,9 +614,11 @@ async fn run_app(
                             frame_area.height,
                             buf,
                         );
-                if view.slots().any(|slot| slot == runie_tui::view::Slot::DoctorHint) {
-                    render_doctor_hint(layout.prompt, buf, status.theme());
-                    }
+                if view.slots().any(|slot| slot == runie_tui::view::Slot::DoctorHint)
+                    && runie_tui::layout::grok_small_screen_tip_visible(frame_area.height)
+                {
+                    render_compact_hint(layout.prompt, buf, status.theme());
+                }
                         if let Some(turn_status) = turn_status {
                             turn_status.render(
                                 ratatui::layout::Rect {

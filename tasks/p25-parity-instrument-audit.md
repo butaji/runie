@@ -1,5 +1,16 @@
 # p25 — Parity instrument audit
 
+## Small-screen ambient hint correction (2026-08-06)
+
+Grok's source-backed `contextual_hints.small_screen` behavior is a one-shot
+ambient tip shown after the first stable agent draw in the pre-compact band
+(21–30 rows): `Tight on space? Try /compact-mode`. It is not the empty-session
+`/doctor` hint. Runie now projects the hint only for a settled non-empty feed
+and uses the pure layout predicate `grok_small_screen_tip_visible`, with
+semantic theme tokens for dim text and the bold command token. This fixes the
+missing row in the 80×24 `Hey` settled-frame comparison without enabling it at
+31+ rows or in auto-compact mode.
+
 ## Review role
 
 This task is the independent review pass for parity work: every implementation

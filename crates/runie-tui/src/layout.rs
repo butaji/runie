@@ -22,11 +22,19 @@ pub const COMPACT_SCROLL_OVERFLOW_LEAD_ROWS: usize = 8;
 pub const COMPACT_SCROLL_OVERFLOW_THRESHOLD: usize = 8;
 pub const GROK_SHORT_TERMINAL_ROWS: u16 = 16;
 pub const GROK_AUTO_COMPACT_MAX_ROWS: u16 = 20;
+pub const GROK_SMALL_SCREEN_TIP_MAX_ROWS: u16 = 30;
 
 /// Grok derives compact mode from full terminal height; an unmeasured height
 /// must not force compact mode.
 pub const fn grok_effective_compact(user_compact: bool, terminal_rows: u16) -> bool {
     user_compact || (terminal_rows > 0 && terminal_rows <= GROK_AUTO_COMPACT_MAX_ROWS)
+}
+
+/// Grok keeps the compact-mode tip in the small-screen band immediately
+/// above auto-compact. The predicate is pure so event/replay renderers can
+/// make the same decision as the live terminal renderer.
+pub const fn grok_small_screen_tip_visible(terminal_rows: u16) -> bool {
+    terminal_rows > GROK_AUTO_COMPACT_MAX_ROWS && terminal_rows <= GROK_SMALL_SCREEN_TIP_MAX_ROWS
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -163,6 +171,20 @@ mod tests {
             GROK_AUTO_COMPACT_MAX_ROWS + 1
         ));
         assert!(grok_effective_compact(true, 80));
+    }
+
+    #[test]
+    fn grok_small_screen_tip_uses_the_pre_compact_band() {
+        assert!(!grok_small_screen_tip_visible(GROK_AUTO_COMPACT_MAX_ROWS));
+        assert!(grok_small_screen_tip_visible(
+            GROK_AUTO_COMPACT_MAX_ROWS + 1
+        ));
+        assert!(grok_small_screen_tip_visible(
+            GROK_SMALL_SCREEN_TIP_MAX_ROWS
+        ));
+        assert!(!grok_small_screen_tip_visible(
+            GROK_SMALL_SCREEN_TIP_MAX_ROWS + 1
+        ));
     }
 
     #[test]
