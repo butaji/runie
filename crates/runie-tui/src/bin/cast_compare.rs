@@ -18,6 +18,7 @@ struct Cell {
 }
 
 type Replay = ((u16, u16), Vec<Cell>, Vec<String>);
+type FrameReplay = ((u16, u16), Vec<Vec<Cell>>);
 
 fn strip_private_modes(output: &str) -> String {
     let bytes = output.as_bytes();
@@ -60,6 +61,52 @@ fn dimensions(header: &Value) -> Result<(u16, u16)> {
     ))
 }
 
+fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
+    let screen = parser.screen();
+    (0..rows)
+        .flat_map(|row| {
+            (0..cols).map(move |col| {
+                let cell = screen.cell(row, col).expect("parser cell");
+                Cell {
+                    symbol: if cell.contents().is_empty() {
+                        " ".into()
+                    } else {
+                        cell.contents()
+                    },
+                    fg: color_key(cell.fgcolor()),
+                    bg: color_key(cell.bgcolor()),
+                    bold: cell.bold(),
+                    italic: cell.italic(),
+                    underline: cell.underline(),
+                    inverse: cell.inverse(),
+                }
+            })
+        })
+        .collect()
+}
+
+fn replay_frames(path: &Path) -> Result<FrameReplay> {
+    let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
+    let mut lines = content.lines();
+    let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
+    let (cols, rows) = dimensions(&header)?;
+    let mut parser = vt100::Parser::new(rows, cols, 0);
+    let mut frames = Vec::new();
+    for line in lines {
+        let event: Value = serde_json::from_str(line)?;
+        if event[1].as_str() != Some("o") {
+            continue;
+        }
+        let output = event[2].as_str().context("output payload")?;
+        if output.contains("\u{1b}[?1049l") {
+            break;
+        }
+        parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
+        frames.push(cells(&parser, rows, cols));
+    }
+    Ok(((cols, rows), frames))
+}
+
 #[allow(
     clippy::too_many_lines,
     reason = "cast replay keeps terminal normalization and cell extraction together"
@@ -89,26 +136,7 @@ fn replay(path: &Path) -> Result<Replay> {
         parser.process(strip_private_modes(&output).as_bytes());
     }
     let screen = parser.screen();
-    let current_cells = (0..rows)
-        .flat_map(|row| {
-            (0..cols).map(move |col| {
-                let cell = screen.cell(row, col).expect("parser cell");
-                Cell {
-                    symbol: if cell.contents().is_empty() {
-                        " ".into()
-                    } else {
-                        cell.contents()
-                    },
-                    fg: color_key(cell.fgcolor()),
-                    bg: color_key(cell.bgcolor()),
-                    bold: cell.bold(),
-                    italic: cell.italic(),
-                    underline: cell.underline(),
-                    inverse: cell.inverse(),
-                }
-            })
-        })
-        .collect();
+    let current_cells = cells(&parser, rows, cols);
     let current_contents = screen.contents().lines().map(str::to_owned).collect();
     Ok(((cols, rows), current_cells, current_contents))
 }
@@ -119,13 +147,14 @@ fn replay(path: &Path) -> Result<Replay> {
 )]
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
+    let frames = args.first().is_some_and(|arg| arg == "--frames");
     let dump = args.first().is_some_and(|arg| arg == "--dump");
-    if dump {
+    if frames || dump {
         args.remove(0);
     }
     let mut args = args.into_iter();
     let left = args.next().context(if dump {
-        "usage: cast_compare --dump LEFT.cast RIGHT.cast"
+        "usage: cast_compare [--dump|--frames] LEFT.cast RIGHT.cast"
     } else {
         "usage: cast_compare LEFT.cast RIGHT.cast"
     })?;
@@ -133,10 +162,29 @@ fn main() -> Result<()> {
         .next()
         .context("usage: cast_compare LEFT.cast RIGHT.cast")?;
     if args.next().is_some() {
-        bail!(
-            "usage: cast_compare{} LEFT.cast RIGHT.cast",
-            if dump { " --dump" } else { "" }
+        bail!("usage: cast_compare [--dump|--frames] LEFT.cast RIGHT.cast");
+    }
+    if frames {
+        let (left_geometry, left_frames) = replay_frames(Path::new(&left))?;
+        let (right_geometry, right_frames) = replay_frames(Path::new(&right))?;
+        let compared = left_frames.len().min(right_frames.len());
+        let first_difference = (0..compared)
+            .find_map(|frame| (left_frames[frame] != right_frames[frame]).then_some(frame + 1));
+        let exact = left_geometry == right_geometry
+            && left_frames.len() == right_frames.len()
+            && first_difference.is_none();
+        println!(
+            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"first_difference\":{},\"exact\":{}}}",
+            left_frames.len(),
+            right_frames.len(),
+            compared,
+            first_difference.map_or_else(|| "null".into(), |frame| frame.to_string()),
+            exact
         );
+        if exact {
+            return Ok(());
+        }
+        bail!("indexed cast frames differ");
     }
     let (left_geometry, left_cells, left_lines) = replay(Path::new(&left))?;
     let (right_geometry, right_cells, right_lines) = replay(Path::new(&right))?;

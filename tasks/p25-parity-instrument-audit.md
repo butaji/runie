@@ -17,6 +17,10 @@ called parity.
   evidence from the remaining viewport sizes.
 - `cast_compare --dump`: VT replay with glyph, fg, bg, bold, italic,
   underline, inverse, geometry, and full-cell JSON.
+- `cast_compare --frames`: opt-in indexed frame replay. It retains the full
+  cell/style grid after every output event and reports frame counts plus the
+  first corresponding-frame divergence, making timing/frame alignment visible
+  without weakening the final-screen gate.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
 - YAML `reference.exact_attributes`: strict style/color oracle.
 
@@ -60,6 +64,12 @@ The cast comparator no longer caches an arbitrary “last non-empty” frame. It
 now compares the final application screen after replaying all output up to
 alternate-screen exit, while retaining empty/trailing cells and attributes.
 This removes a source of false style diagnostics without weakening exactness.
+
+The indexed frame comparator was exercised against the existing 80x24 pair:
+Grok produced 67 output frames and Runie 15, with the first corresponding
+full-cell divergence at frame 2. This confirms that a future exact frame oracle
+must align semantic application phases or capture timing before asserting
+one-to-one frame identity.
 
 ## Review findings
 
