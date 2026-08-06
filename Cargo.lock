@@ -733,6 +733,7 @@ name = "runie-tui-model"
 version = "0.1.0"
 dependencies = [
  "runie-core",
+ "serde",
 ]
 
 [[package]]

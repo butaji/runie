@@ -1302,6 +1302,7 @@ fn assert_tool_block_expectations(
     }
     if let Some(value) = expected.tool_output_lines {
         let actual = outcome
+            .feed
             .tool_blocks
             .iter()
             .map(|block| block.output.len())
@@ -1312,6 +1313,7 @@ fn assert_tool_block_expectations(
         assert_vec_equal(
             value,
             &outcome
+                .feed
                 .tool_blocks
                 .iter()
                 .map(|block| block.mode)
@@ -1323,6 +1325,7 @@ fn assert_tool_block_expectations(
         assert_vec_equal(
             value,
             &outcome
+                .feed
                 .tool_blocks
                 .iter()
                 .map(|block| block.header.clone())
@@ -1334,6 +1337,7 @@ fn assert_tool_block_expectations(
         assert_vec_equal(
             value,
             &outcome
+                .feed
                 .tool_blocks
                 .iter()
                 .map(|block| block.output.clone())
@@ -1345,6 +1349,7 @@ fn assert_tool_block_expectations(
         assert_vec_equal(
             value,
             &outcome
+                .feed
                 .tool_blocks
                 .iter()
                 .map(|block| block.kind)
@@ -1380,7 +1385,7 @@ fn assert_vec_equal<T: std::fmt::Debug + PartialEq>(
 }
 
 fn actual_tool_blocks(outcome: &ScenarioOutcome) -> usize {
-    outcome.tool_blocks.len()
+    outcome.feed.tool_blocks.len()
 }
 
 fn message_text(message: &runie_core::types::AgentMessage) -> String {

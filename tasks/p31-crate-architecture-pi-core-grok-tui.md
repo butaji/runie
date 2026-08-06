@@ -43,6 +43,10 @@ Typed `ToolBlock` and `ToolCardKind` projections are now model-owned, and
 `FeedSnapshot` carries the ordered tool-card projection. YAML tool assertions
 therefore consume the same immutable model data as future renderers.
 
+The remaining `ScenarioOutcome.tool_blocks` field is compatibility-only; all
+tool-count, mode, header, output, and kind assertions read
+`ScenarioOutcome.feed.tool_blocks`.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is
