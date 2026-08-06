@@ -19,6 +19,11 @@ The feed vocabulary is now model-owned as well: `LineKind` and `Line` live in
 The compatibility exports keep the actor and existing YAML scenarios on the
 same event/reducer path.
 
+`ScrollbackMsg` is now model-owned too. The scrollback actor accepts the
+model crate's intents, while the widget retains only reducer implementation
+and terminal projection. This is the complete command-vocabulary split; the
+remaining feed extraction is the immutable `Scrollback` snapshot itself.
+
 ## Governing rule
 
 Runie has exactly two product layers:
