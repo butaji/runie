@@ -1,5 +1,13 @@
 # p19 — Verification: parity harness (pi event-sequence replay + grok cast snapshot diffs)
 
+**Current evidence correction (2026-08-06):** The provider-decode family is
+closed: all 24 decode-error sidecars are counted, classified as
+`provider_decode`, and the canonical malformed trace asserts the stable
+`trace has no terminal event` diagnostic. Earlier notes in this append-only
+log that describe this family as open are historical and superseded. The
+remaining verification gap is exhaustive full-screen Grok comparison,
+including terminal attributes and dynamic telemetry.
+
 **Feed attribute-oracle audit (2026-08-06):** Attempting to promote the
 legacy `grok-rich.cast` feed frame to `exact_attributes: true` produced 518
 differences beginning at the session row: the cast contains terminal-default
