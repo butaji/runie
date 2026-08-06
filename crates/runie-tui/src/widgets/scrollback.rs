@@ -315,13 +315,15 @@ impl Scrollback {
                 } else {
                     LineKind::Tool
                 };
-                let row_id = self.next_tool_row_id;
-                self.next_tool_row_id = self.next_tool_row_id.wrapping_add(1);
-                self.append(
-                    Line::new(kind, header)
-                        .for_tool(tool_call_id.clone())
-                        .for_tool_row(row_id),
-                );
+                self.append_tool_start(tool_call_id, header, kind);
+            }
+            ScrollbackMsg::ToolStartRunning {
+                tool_call_id,
+                header,
+                activity,
+            } => {
+                self.replace_or_append_activity(activity);
+                self.append_tool_start(tool_call_id, header, LineKind::ToolRunning);
             }
             ScrollbackMsg::ToolUpdate {
                 tool_call_id,
@@ -602,6 +604,16 @@ impl Scrollback {
         } else {
             self.append(Line::new(LineKind::Activity, activity));
         }
+    }
+
+    fn append_tool_start(&mut self, tool_call_id: String, header: String, kind: LineKind) {
+        let row_id = self.next_tool_row_id;
+        self.next_tool_row_id = self.next_tool_row_id.wrapping_add(1);
+        self.append(
+            Line::new(kind, header)
+                .for_tool(tool_call_id)
+                .for_tool_row(row_id),
+        );
     }
 
     pub fn append(&mut self, line: Line) -> usize {

@@ -517,3 +517,10 @@ Reducer checkpoint (2026-08-06): Runie's scrollback reducer now targets the
 semantic tool header when settling a card, preserving all output rows. The
 mixed, truncated, and update fixtures assert this event-to-state contract;
 duplicate-ID compatibility seed ownership remains a separate open item.
+
+Ordinary running-state closure (2026-08-06): `ToolStartRunning` is now an
+explicit actor-owned reducer message emitted by ordinary Pi tool lifecycle
+events. Compatibility seed rows retain the legacy `ToolStart` path, so their
+presentation cannot be reclassified by provider call ID. `ToolBlock.is_running`
+is asserted during the event-renderer lifecycle test and through the YAML
+`tool_running` projection oracle; completion settles the same opaque row.

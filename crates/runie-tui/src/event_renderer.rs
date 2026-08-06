@@ -855,15 +855,14 @@ impl EventRenderer {
             }
         }
         if self.scrollback_actor.is_none() {
-            let row = self
-                .scrollback
-                .lock()
-                .append(Line::new(LineKind::Tool, tool_buffer.clone()).for_tool(&tool_call_id));
+            let row = self.scrollback.lock().append(
+                Line::new(LineKind::ToolRunning, tool_buffer.clone()).for_tool(&tool_call_id),
+            );
             self.tool_rows.insert(tool_call_id.clone(), row);
         }
         self.tool_buffers
             .insert(tool_call_id.clone(), tool_buffer.clone());
-        ScrollbackMsg::ToolStart {
+        ScrollbackMsg::ToolStartRunning {
             tool_call_id,
             header: tool_buffer,
             activity,
@@ -956,6 +955,7 @@ impl EventRenderer {
         };
         if self.scrollback_actor.is_none() {
             if let Some(row) = self.tool_rows.remove(&tool_call_id) {
+                self.settle_tool_line(row);
                 self.replace_tool_line(row, &tool_buffer);
             }
         }
@@ -1217,6 +1217,14 @@ impl EventRenderer {
             line.text = text.to_string();
         } else {
             sb.append(Line::new(LineKind::Tool, text.to_string()));
+        }
+    }
+
+    fn settle_tool_line(&self, row: usize) {
+        let mut sb = self.scrollback.lock();
+        if let Some(line) = sb.line_mut(row) {
+            line.kind = LineKind::Tool;
+            line.settle_tool_row();
         }
     }
 
@@ -1954,6 +1962,7 @@ mod tests {
             sb.lock().tool_blocks()[0].mode,
             runie_core::types::ToolDisplayMode::Truncated
         );
+        assert!(sb.lock().tool_blocks()[0].is_running);
         r.apply_event(AgentEvent::ToolExecutionEnd {
             tool_call_id: "1".into(),
             tool_name: "bash".into(),
@@ -1963,6 +1972,7 @@ mod tests {
         let lines = sb.lock();
         assert!(lines.find_first_containing("Run ls").is_some());
         assert!(lines.find_first_containing("✓").is_some());
+        assert!(!lines.tool_blocks()[0].is_running);
         let _ = (
             StopReason::Stop,
             Usage::default(),

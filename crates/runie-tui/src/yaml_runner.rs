@@ -620,6 +620,8 @@ pub struct StateAssertions {
     pub tool_blocks: Option<usize>,
     pub tool_output_lines: Option<usize>,
     pub tool_modes: Option<Vec<runie_core::types::ToolDisplayMode>>,
+    /// Ordered running-state projection for typed tool cards.
+    pub tool_running: Option<Vec<bool>>,
     /// Ordered semantic headers for the projected Grok tool blocks.
     pub tool_headers: Option<Vec<String>>,
     /// Ordered reducer identities for semantic tool-header lines. `null`
@@ -1633,6 +1635,18 @@ fn assert_tool_block_expectations(
                 .map(|block| block.mode)
                 .collect::<Vec<_>>(),
             "tool_modes",
+        )?;
+    }
+    if let Some(value) = &expected.tool_running {
+        assert_vec_equal(
+            value,
+            &outcome
+                .feed
+                .tool_blocks
+                .iter()
+                .map(|block| block.is_running)
+                .collect::<Vec<_>>(),
+            "tool_running",
         )?;
     }
     if let Some(value) = &expected.tool_headers {

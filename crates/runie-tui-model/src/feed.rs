@@ -240,6 +240,13 @@ pub enum ScrollbackMsg {
         header: String,
         activity: Option<String>,
     },
+    /// Explicit provider lifecycle start for an ordinary running tool.
+    /// Compatibility seed rows continue to use `ToolStart`.
+    ToolStartRunning {
+        tool_call_id: String,
+        header: String,
+        activity: Option<String>,
+    },
     ToolUpdate {
         tool_call_id: String,
         header: Option<String>,
