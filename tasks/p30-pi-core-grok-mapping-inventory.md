@@ -4,6 +4,12 @@ Status: active (2026-08-06)
 
 ## Fresh source audit (2026-08-06)
 
+**Context-tool precedence correction (2026-08-06):** `LoopActor` now keeps
+non-empty caller-supplied `AgentContext.tools` in the actor snapshot and only
+falls back to the registered executor tools when the context omits tools.
+This matches Pi's optional `AgentContext.tools` contract and prevents the
+registry from silently replacing a per-run tool set.
+
 Re-ran `scripts/source-inventory.sh` against the authoritative checkouts. The
 counts remain exact: Pi agent 37 files, Pi AI 169 files, Grok pager 496 files,
 and Grok pager-render 68 files. The inventory is therefore current; green
