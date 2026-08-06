@@ -47,6 +47,11 @@ The remaining `ScenarioOutcome.tool_blocks` field is compatibility-only; all
 tool-count, mode, header, output, and kind assertions read
 `ScenarioOutcome.feed.tool_blocks`.
 
+`UiMsg` is now model-owned and re-exported by `runie-tui`. `UiState` remains
+in the actor layer because its reducer currently depends on command-palette
+filtering; moving that reducer requires a palette vocabulary model, not a
+terminal widget dependency.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

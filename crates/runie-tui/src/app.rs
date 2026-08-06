@@ -15,6 +15,7 @@ use crate::status_actor::StatusActor;
 use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps};
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{FeedSnapshot, PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
+pub use runie_tui_model::UiMsg;
 
 #[derive(Debug)]
 pub enum AppExit {
@@ -30,18 +31,6 @@ pub struct UiState {
     pub command_palette_query: String,
     pub command_palette_index: usize,
     pub last_palette_command: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UiMsg {
-    HideWelcome,
-    ToggleShortcuts,
-    ToggleCommandPalette,
-    CommandPaletteChar(char),
-    CommandPaletteBackspace,
-    CommandPaletteMove(isize),
-    ActivateCommandPalette,
-    Reset,
 }
 
 /// Commands emitted by the UI actor after a pure palette reduction. Consumers
