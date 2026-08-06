@@ -139,3 +139,14 @@ single actor-owned live-row identity (or an explicit compatibility-row marker)
 that proves `ToolExecutionStart -> ToolRunning -> ToolExecutionEnd` without
 merging fixture-seeded rows. Until that condition is met, the current green
 YAML suite is the authoritative regression baseline.
+## Tool-update settle datum (2026-08-06)
+
+Repeated replay of `visual-tool-update.yaml` shows the semantic
+`ToolExecutionStart → Update → End` projection can be present while the
+80×24 screen alternates between the settled tool row and a viewport that has
+already advanced past it. The fixture's existing event and semantic-header
+assertions remain authoritative; adding output-row or screen-text assertions
+without a deterministic settle/viewport boundary would encode a flaky
+capture. The missing datum is the exact Grok post-tool reveal/follow phase,
+which must be represented as an explicit YAML event before tightening this
+oracle.
