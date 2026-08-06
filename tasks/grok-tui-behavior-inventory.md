@@ -99,6 +99,12 @@ Sources: `views/picker.rs`, `views/modal.rs`, `views/modal_window.rs`,
 - Settings, permissions, plan approval, file viewer, question, and session
   pickers reuse modal primitives but are separate state machines.
 
+The command-palette configuration uses an input-focused picker and
+`esc_clears_query: true`: the first Escape clears the query and resets
+selection while retaining the modal; the next Escape closes it. Runie now
+models this as `UiMsg::CommandPaletteEscape` in the UI actor rather than a
+terminal-loop special case.
+
 Pi mapping: only actions backed by Pi-core features are Runie requirements
 (model/effort, queue/steering, plan if promoted, transcript navigation, and
 core tool/display controls). Grok account/session/dashboard commands remain

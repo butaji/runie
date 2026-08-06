@@ -54,6 +54,7 @@ pub enum UiMsg {
     CommandPaletteChar(char),
     CommandPaletteBackspace,
     CommandPaletteMove(isize),
+    CommandPaletteEscape,
     ActivateCommandPalette,
     Reset,
 }
@@ -81,6 +82,18 @@ impl UiState {
     }
 
     pub fn update(mut self, msg: UiMsg) -> Self {
+        if matches!(
+            msg,
+            UiMsg::CommandPaletteChar(_)
+                | UiMsg::CommandPaletteBackspace
+                | UiMsg::CommandPaletteMove(_)
+                | UiMsg::CommandPaletteEscape
+                | UiMsg::ActivateCommandPalette
+        ) {
+            return self
+                .update_palette(msg)
+                .expect("palette message is handled by the palette reducer");
+        }
         match msg {
             UiMsg::HideWelcome => self.show_welcome = false,
             UiMsg::ToggleShortcuts => self.shortcuts_open = !self.shortcuts_open,
@@ -91,20 +104,39 @@ impl UiState {
                     self.command_palette_index = 0;
                 }
             }
+            UiMsg::CommandPaletteChar(_)
+            | UiMsg::CommandPaletteBackspace
+            | UiMsg::CommandPaletteMove(_)
+            | UiMsg::CommandPaletteEscape
+            | UiMsg::ActivateCommandPalette => unreachable!("palette messages handled above"),
+            UiMsg::Reset => self = Self::new(),
+        }
+        self
+    }
+
+    fn update_palette(mut self, msg: UiMsg) -> Option<Self> {
+        match msg {
             UiMsg::CommandPaletteChar(ch) => self.command_palette_query.push(ch),
             UiMsg::CommandPaletteBackspace => {
                 self.command_palette_query.pop();
             }
             UiMsg::CommandPaletteMove(delta) => {
                 let count = PaletteAction::entry_count(&self.command_palette_query);
-                if count > 0 {
-                    self.command_palette_index = self
-                        .command_palette_index
-                        .saturating_add_signed(delta)
-                        .min(count - 1);
+                self.command_palette_index = if count == 0 {
+                    0
                 } else {
-                    self.command_palette_index = 0;
+                    self.command_palette_index
+                        .saturating_add_signed(delta)
+                        .min(count - 1)
+                };
+            }
+            UiMsg::CommandPaletteEscape => {
+                if self.command_palette_query.is_empty() {
+                    self.command_palette_open = false;
+                } else {
+                    self.command_palette_query.clear();
                 }
+                self.command_palette_index = 0;
             }
             UiMsg::ActivateCommandPalette => {
                 self.last_palette_command = PaletteAction::selected_label(
@@ -116,8 +148,8 @@ impl UiState {
                 self.command_palette_query.clear();
                 self.command_palette_index = 0;
             }
-            UiMsg::Reset => self = Self::new(),
+            _ => return None,
         }
-        self
+        Some(self)
     }
 }

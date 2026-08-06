@@ -406,7 +406,10 @@ async fn run_app(
                             if app.ui.snapshot().command_palette_open
                                 && key.code == KeyCode::Esc
                             {
-                                app.toggle_command_palette().await;
+                                app.command_palette_key(
+                                    runie_tui::app::UiMsg::CommandPaletteEscape,
+                                )
+                                .await;
                                 continue;
                             }
                             if app.ui.snapshot().command_palette_open {

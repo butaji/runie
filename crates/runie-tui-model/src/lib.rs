@@ -80,7 +80,8 @@ impl ScrollState {
 #[cfg(test)]
 mod tests {
     use super::{
-        FeedSnapshot, PromptSnapshot, ScrollState, Status, StatusSnapshot, TuiSnapshot, UiState,
+        FeedSnapshot, PromptSnapshot, ScrollState, Status, StatusSnapshot, TuiSnapshot, UiMsg,
+        UiState,
     };
     use runie_core::types::ThemeKind;
 
@@ -135,6 +136,19 @@ mod tests {
         assert!(!snapshot.ui.show_welcome);
         assert!(snapshot.feed.is_empty());
         assert_eq!(snapshot.status.state, Status::Ready);
+    }
+
+    #[test]
+    fn command_palette_escape_clears_query_before_closing() {
+        let state = UiState::new()
+            .update(UiMsg::ToggleCommandPalette)
+            .update(UiMsg::CommandPaletteChar('n'))
+            .update(UiMsg::CommandPaletteEscape);
+        assert!(state.command_palette_open);
+        assert!(state.command_palette_query.is_empty());
+
+        let state = state.update(UiMsg::CommandPaletteEscape);
+        assert!(!state.command_palette_open);
     }
 
     fn empty_feed() -> FeedSnapshot {
