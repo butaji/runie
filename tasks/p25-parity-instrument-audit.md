@@ -25,13 +25,13 @@ casts must come from the same scenario and capture run; dynamic usage, timing,
 and model output differences must be investigated before snapshots are
 updated.
 
-Fresh matrix capture audit (2026-08-05) produced valid paired casts at 62×32
-and 80×24. The full-cell results were 182 and 226 differing cells
-respectively; both are dominated by provider response/wrapping, telemetry,
-and timestamp placement. The Grok PTY capture did not produce valid 100×30 or
-120×36 files in this run, so the verifier reports those pairs as missing rather
-than treating them as passing. This preserves the required four-geometry
-evidence boundary.
+Fresh matrix capture audit (2026-08-05) produced valid paired casts at all
+four geometries. Full-cell differences were: 62×32 — 182 cells; 80×24 — 226;
+100×30 — 191; 120×36 — 194. Each report includes glyph and attribute counts;
+the dominant deltas remain provider response/wrapping, reasoning placement,
+usage/timestamps, and completion timing. The matrix now proves that these
+differences persist across width and height rather than being a single-
+viewport artifact.
 
 ## Review findings
 
