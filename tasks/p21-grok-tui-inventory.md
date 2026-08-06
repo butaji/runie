@@ -219,6 +219,13 @@ explicit theme token projection, and both live draw paths pass the
 actor-owned status theme. The default constructor remains GrokNight for YAML
 compatibility; production overlays no longer bypass theme changes.
 
+Live overlay theme propagation (2026-08-06): the header meter, doctor hint,
+shortcut bar, and ready footer now receive the actor-owned theme explicitly
+and resolve all foreground/background/muted styles through Opaline token
+projections. The active-screen helper layer no longer silently falls back to
+GrokNight after a theme change. `just ci` passes with 119 TUI unit tests and
+the complete replay/visual suite.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

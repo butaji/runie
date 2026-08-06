@@ -38,7 +38,7 @@ use runie_tui::widgets::{PromptOutcome, Status};
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
 
-fn render_shortcuts(area: Rect, buf: &mut Buffer) {
+fn render_shortcuts(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
     let width = 38.min(area.width.saturating_sub(2));
     let height = 8.min(area.height.saturating_sub(2));
     if width < 10 || height < 3 {
@@ -56,6 +56,7 @@ fn render_shortcuts(area: Rect, buf: &mut Buffer) {
         )
         .block(
             ratatui::widgets::Block::default()
+                .style(runie_tui::appearance::base_style_for(theme))
                 .title(" Shortcuts ")
                 .borders(ratatui::widgets::Borders::ALL),
         ),
@@ -78,19 +79,20 @@ fn render_command_palette(
     );
 }
 
-fn render_doctor_hint(area: Rect, buf: &mut Buffer) {
+fn render_doctor_hint(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
     let line = ratatui::text::Line::from(vec![
-        ratatui::text::Span::styled("Run ", runie_tui::appearance::muted_style()),
+        ratatui::text::Span::styled("Run ", runie_tui::appearance::muted_style_for(theme)),
         ratatui::text::Span::styled(
             "/doctor",
-            runie_tui::appearance::base_style().add_modifier(ratatui::style::Modifier::BOLD),
+            runie_tui::appearance::base_style_for(theme)
+                .add_modifier(ratatui::style::Modifier::BOLD),
         ),
         ratatui::text::Span::styled(
             " for details and fixes.",
-            runie_tui::appearance::muted_style(),
+            runie_tui::appearance::muted_style_for(theme),
         ),
     ])
-    .style(runie_tui::appearance::base_style());
+    .style(runie_tui::appearance::base_style_for(theme));
     ratatui::widgets::Widget::render(
         ratatui::widgets::Paragraph::new(line),
         Rect {
@@ -134,7 +136,7 @@ fn repository_label() -> String {
     path.display().to_string()
 }
 
-fn render_header(area: Rect, buf: &mut Buffer, meter: &str) {
+fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::types::ThemeKind) {
     if area.width == 0 || area.height == 0 {
         return;
     }
@@ -144,36 +146,43 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str) {
     let left = ratatui::widgets::Paragraph::new(ratatui::text::Line::from(vec![
         ratatui::text::Span::styled(
             format!(" {}", current_branch()),
-            runie_tui::appearance::muted_style(),
+            runie_tui::appearance::muted_style_for(theme),
         ),
         ratatui::text::Span::styled(
             format!(" {}", repository_label()),
-            runie_tui::appearance::base_style(),
+            runie_tui::appearance::base_style_for(theme),
         ),
     ]));
     ratatui::widgets::Widget::render(left, area, buf);
     let x = area.right().saturating_sub(meter.len() as u16);
-    buf.set_string(x, area.y, meter, runie_tui::appearance::muted_style());
+    buf.set_string(
+        x,
+        area.y,
+        meter,
+        runie_tui::appearance::muted_style_for(theme),
+    );
 }
 
-fn render_live_ready_footer(area: Rect, buf: &mut Buffer) {
+fn render_live_ready_footer(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
     buf.set_string(
         area.x,
         area.y,
         " ".repeat(area.width as usize),
-        runie_tui::appearance::base_style(),
+        runie_tui::appearance::base_style_for(theme),
     );
     let segments = [
         (
             "Shift+Tab",
-            runie_tui::appearance::base_style().add_modifier(ratatui::style::Modifier::BOLD),
+            runie_tui::appearance::base_style_for(theme)
+                .add_modifier(ratatui::style::Modifier::BOLD),
         ),
-        (":mode  │  ", runie_tui::appearance::muted_style()),
+        (":mode  │  ", runie_tui::appearance::muted_style_for(theme)),
         (
             "Ctrl+x",
-            runie_tui::appearance::base_style().add_modifier(ratatui::style::Modifier::BOLD),
+            runie_tui::appearance::base_style_for(theme)
+                .add_modifier(ratatui::style::Modifier::BOLD),
         ),
-        (":shortcuts", runie_tui::appearance::muted_style()),
+        (":shortcuts", runie_tui::appearance::muted_style_for(theme)),
     ];
     let mut x = area.x;
     for (text, style) in segments {
@@ -303,7 +312,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
             runie_tui::appearance::background_style_for(status.theme()),
         );
         if matches!(status.current(), Status::Ready) {
-            render_live_ready_footer(layout.status, frame.buffer_mut());
+            render_live_ready_footer(layout.status, frame.buffer_mut(), status.theme());
         } else {
             status.render(layout.status, frame.buffer_mut());
         }
@@ -319,11 +328,11 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
             frame.buffer_mut(),
         );
         if matches!(status.current(), Status::Ready) && app.scrollback_snapshot().is_empty() {
-            render_doctor_hint(layout.prompt, frame.buffer_mut());
+            render_doctor_hint(layout.prompt, frame.buffer_mut(), status.theme());
         }
         Widget::render(app.prompt.snapshot(), layout.prompt, frame.buffer_mut());
         if app.ui.snapshot().shortcuts_open {
-            render_shortcuts(frame.area(), frame.buffer_mut());
+            render_shortcuts(frame.area(), frame.buffer_mut(), status.theme());
         }
         if app.ui.snapshot().command_palette_open {
             let palette = app.ui.snapshot();
@@ -336,7 +345,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
             );
         }
         let meter = status.header_meter();
-        render_header(layout.header, frame.buffer_mut(), &meter);
+        render_header(layout.header, frame.buffer_mut(), &meter, status.theme());
         frame.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
     })?;
 
@@ -510,7 +519,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                         );
                         let turn_status = status.turn_status();
                         if matches!(status.current(), Status::Ready) {
-                            render_live_ready_footer(layout.status, buf);
+                            render_live_ready_footer(layout.status, buf, status.theme());
                         } else {
                             status.render(layout.status, buf);
                         }
@@ -526,7 +535,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                             buf,
                         );
                 if matches!(status.current(), Status::Ready) && app.scrollback_snapshot().is_empty() {
-                    render_doctor_hint(layout.prompt, buf);
+                    render_doctor_hint(layout.prompt, buf, status.theme());
                 }
                         if let Some(turn_status) = turn_status {
                             turn_status.render(
@@ -542,7 +551,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                         let prompt = app.prompt.snapshot();
                         Widget::render(prompt, layout.prompt, buf);
                         if app.ui.snapshot().shortcuts_open {
-                            render_shortcuts(frame_area, buf);
+                            render_shortcuts(frame_area, buf, status.theme());
                         }
                         if app.ui.snapshot().command_palette_open {
                             let palette = app.ui.snapshot();
@@ -555,7 +564,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                             );
                         }
                         let meter = status.header_meter();
-                        render_header(layout.header, buf, &meter);
+                        render_header(layout.header, buf, &meter, status.theme());
                         f.set_cursor_position(app.prompt.snapshot().cursor_position(layout.prompt));
                         let _ = Rect::default();
                     }));
@@ -591,7 +600,12 @@ mod tests {
     fn header_uses_cached_repository_branch() {
         let area = Rect::new(0, 0, 80, 1);
         let mut buffer = Buffer::empty(area);
-        render_header(area, &mut buffer, "0 / 500K");
+        render_header(
+            area,
+            &mut buffer,
+            "0 / 500K",
+            runie_core::types::ThemeKind::GrokNight,
+        );
         let row = (0..area.width)
             .filter_map(|x| buffer.cell((x, 0)))
             .map(|cell| cell.symbol())
