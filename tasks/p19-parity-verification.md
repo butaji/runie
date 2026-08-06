@@ -1172,3 +1172,9 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   header cells are the expected fixture usage difference (Grok 18K versus the
   placeholder stream's zero usage). Feed row placement, prompt timestamp and
   wrapping, reasoning duration, and doctor/footer geometry remain open.
+
+- **Message-update wire key (2026-08-06):** Compared Runie's `AgentEvent`
+  serde output with pi's `agent-loop.ts`: `message_update` now emits the
+  pi-compatible `assistantMessageEvent` field instead of the internal Rust
+  field name `event`. The wire-shape test asserts both the key and nested
+  event tag; replay coverage remains green.
