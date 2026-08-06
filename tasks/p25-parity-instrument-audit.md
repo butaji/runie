@@ -700,3 +700,10 @@ default. The live Grok layout projection now resets that gutter foreground
 while retaining the theme-token panel background. A focused renderer test
 asserts the cell contract; dynamic response text, timestamps, elapsed values,
 and context-meter data remain separate non-static mismatches.
+
+Model-caption token pass (2026-08-06): The same settled footer comparison
+isolated Grok's model caption as a distinct gray role (`#808080` in GrokNight),
+separate from the prompt border (`#505058`). Runie now exposes that role as
+the Opaline `text.model` token and renders the caption through the semantic
+theme adapter. The prompt widget no longer receives or owns a raw caption
+color; day/night theme resolution remains centralized.

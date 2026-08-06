@@ -404,7 +404,7 @@ impl Widget for PromptWidget {
         draw_prompt_border(area, buf, border);
         let bottom = area.y + area.height.saturating_sub(1);
         let right = area.x + area.width.saturating_sub(1);
-        self.draw_caption(area, bottom, right, border, buf);
+        self.draw_caption(area, bottom, right, buf);
         let input_area = Rect {
             x: area.x + 1,
             y: area.y + 1,
@@ -423,7 +423,7 @@ impl Widget for PromptWidget {
 }
 
 impl PromptWidget {
-    fn draw_caption(&self, area: Rect, bottom: u16, right: u16, border: Style, buf: &mut Buffer) {
+    fn draw_caption(&self, area: Rect, bottom: u16, right: u16, buf: &mut Buffer) {
         let mode_caption = match self.mode {
             InputMode::Normal => self.model_caption.clone(),
             InputMode::Alternate => format!("alternate · {}", self.model_caption),
@@ -443,7 +443,12 @@ impl PromptWidget {
         let caption_width = UnicodeWidthStr::width(caption.as_str()) as u16 + 2;
         if caption_width + 2 < area.width {
             let caption_x = right.saturating_sub(caption_width + 1);
-            buf.set_string(caption_x, bottom, format!(" {caption} "), border);
+            buf.set_string(
+                caption_x,
+                bottom,
+                format!(" {caption} "),
+                appearance::model_caption_style_for(self.theme),
+            );
         }
     }
 
