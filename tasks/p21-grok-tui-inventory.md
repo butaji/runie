@@ -678,3 +678,9 @@ separate red body row. Runie previously appended `✗` to the header in both
 the live and bus-owned reducers. Both event paths now preserve header identity
 and retain the semantic `ToolError` output row; `visual-tool-error.yaml`
 asserts the source-backed shape without compiled fixture code.
+
+Pi error-vector closure (2026-08-06): `visual-tool-error.yaml` now also
+asserts the complete Pi lifecycle vector through tool execution, tool-result
+message boundaries, continuation turn, and `agent_end`. This keeps the
+Grok-style error-card oracle coupled to core event parity rather than only
+checking the final screen.
