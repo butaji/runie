@@ -340,6 +340,11 @@ also paints Grok's theme-projected `border.selection` rail at both row edges.
 The GrokNight and GrokDay border colors live in Opaline themes; the widget does
 not contain raw selection RGB values.
 
+Reveal-on-navigation (2026-08-06): `j/k` selection now disables follow mode
+and minimally adjusts the actor-owned scroll offset so the selected semantic
+row is inside the viewport. A small-viewport renderer regression pins the
+selected-row reveal behavior.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running

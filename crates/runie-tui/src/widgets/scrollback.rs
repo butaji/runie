@@ -674,6 +674,7 @@ impl Scrollback {
         };
         self.selected_entry = Some(entries[next]);
         self.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
+        self.autoscroll = false;
     }
 
     fn select_tool(&mut self, direction: i8) {
@@ -781,6 +782,23 @@ impl Scrollback {
             self.scroll_offset = 0;
         }
 
+        if let Some(selected_text) = self
+            .selected_entry
+            .and_then(|index| self.lines.get(index).map(|line| line.text.as_str()))
+        {
+            if !selected_text.is_empty() {
+                if let Some(selected_row) = physical_rows
+                    .iter()
+                    .position(|(_, text, _)| text.contains(selected_text))
+                {
+                    if selected_row < self.scroll_offset {
+                        self.scroll_offset = selected_row;
+                    } else if selected_row >= self.scroll_offset + visible {
+                        self.scroll_offset = selected_row.saturating_sub(visible - 1);
+                    }
+                }
+            }
+        }
         let start = self.scroll_offset;
         let end = (start + visible).min(total);
         let selected_non_tool_text = self.selected_entry.and_then(|index| {
@@ -2045,6 +2063,31 @@ mod tests {
             ratatui::style::Color::Rgb(28, 28, 28)
         );
         assert_eq!(buffer.cell((0, 0)).expect("selection border").symbol(), "│");
+    }
+
+    #[test]
+    fn entry_navigation_reveals_selected_row_in_small_viewport() {
+        let mut scrollback = Scrollback::new();
+        for text in ["one", "two", "three", "four", "five"] {
+            scrollback.apply(ScrollbackMsg::Append(Line::new(LineKind::User, text)));
+        }
+        for _ in 0..4 {
+            scrollback.apply(ScrollbackMsg::SelectNextEntry);
+        }
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 20, 2));
+        scrollback.render(Rect::new(0, 0, 20, 2), &mut buffer);
+        let mut visible = String::new();
+        for row in 0..2 {
+            for column in 0..20 {
+                if let Some(cell) = buffer.cell((column, row)) {
+                    visible.push_str(cell.symbol());
+                }
+            }
+        }
+        assert!(
+            visible.contains("five"),
+            "selected row not revealed: {visible:?}"
+        );
     }
 
     #[test]
