@@ -15,6 +15,7 @@ events:
 assertions:
   state:
     tool_blocks: 1
+    tool_header_row_ids: [null, 0]
   transcript_contains:
     - "compatibility seed"
   scrollback_lines:

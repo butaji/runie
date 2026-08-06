@@ -595,6 +595,10 @@ pub struct StateAssertions {
     pub tool_modes: Option<Vec<runie_core::types::ToolDisplayMode>>,
     /// Ordered semantic headers for the projected Grok tool blocks.
     pub tool_headers: Option<Vec<String>>,
+    /// Ordered reducer identities for semantic tool-header lines. `null`
+    /// denotes a compatibility-seeded row; numeric values are opaque live
+    /// reducer tokens.
+    pub tool_header_row_ids: Option<Vec<Option<u64>>>,
     /// Ordered output rows for each projected tool block.
     pub tool_outputs: Option<Vec<Vec<String>>>,
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
@@ -1607,6 +1611,21 @@ fn assert_tool_block_expectations(
                 .collect::<Vec<_>>(),
             "tool_headers",
         )?;
+    }
+    if let Some(value) = &expected.tool_header_row_ids {
+        let actual = outcome
+            .feed
+            .lines
+            .iter()
+            .filter(|line| {
+                matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+            })
+            .map(|line| line.tool_row_id)
+            .collect::<Vec<_>>();
+        assert_vec_equal(value, &actual, "tool_header_row_ids")?;
     }
     if let Some(value) = &expected.tool_outputs {
         assert_vec_equal(

@@ -63,6 +63,9 @@ to the legacy newest-header lookup. This prevents a compatibility/YAML seed
 with the same provider call ID from receiving a live completion. The
 `visual-tool-row-identity.yaml` fixture covers the duplicate-ID sequence and
 asserts both rows through the YAML state/transcript contract.
+The same fixture now asserts the ordered header-token projection directly as
+`tool_header_row_ids: [null, 0]`, making compatibility-versus-live ownership
+visible in the no-recompile YAML layer.
 
 The opaque token is now stored on the renderer-independent `Line` and
 projected through `ToolBlock`; compatibility rows have no token. Provider call
