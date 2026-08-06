@@ -806,6 +806,23 @@ pub enum AgentEvent {
         #[serde(default)]
         elapsed_ms: Option<u64>,
     },
+    WorkflowStarted {
+        run_id: String,
+        name: String,
+        objective: String,
+    },
+    WorkflowProgress {
+        run_id: String,
+        phase: String,
+        state: String,
+        active_agents: u32,
+    },
+    WorkflowFinished {
+        run_id: String,
+        status: String,
+        #[serde(default)]
+        elapsed_ms: Option<u64>,
+    },
 }
 
 /// Per-event payload from a streaming assistant message.

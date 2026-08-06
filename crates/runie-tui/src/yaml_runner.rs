@@ -135,6 +135,15 @@ pub enum EventSpec {
     BackgroundCancel {
         background_cancel: BackgroundCancelSpec,
     },
+    WorkflowStart {
+        workflow_start: WorkflowStartSpec,
+    },
+    WorkflowProgress {
+        workflow_progress: WorkflowProgressSpec,
+    },
+    WorkflowEnd {
+        workflow_end: WorkflowEndSpec,
+    },
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -168,6 +177,30 @@ pub struct BackgroundEndSpec {
 pub struct BackgroundCancelSpec {
     pub work_id: String,
     pub description: String,
+    #[serde(default)]
+    pub elapsed_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct WorkflowStartSpec {
+    pub run_id: String,
+    pub name: String,
+    pub objective: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct WorkflowProgressSpec {
+    pub run_id: String,
+    pub phase: String,
+    pub state: String,
+    #[serde(default)]
+    pub active_agents: u32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct WorkflowEndSpec {
+    pub run_id: String,
+    pub status: String,
     #[serde(default)]
     pub elapsed_ms: Option<u64>,
 }
@@ -370,7 +403,10 @@ impl EventSpec {
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
             | Self::BackgroundEnd { .. }
-            | Self::BackgroundCancel { .. } => None,
+            | Self::BackgroundCancel { .. }
+            | Self::WorkflowStart { .. }
+            | Self::WorkflowProgress { .. }
+            | Self::WorkflowEnd { .. } => None,
             Self::Bare(other) => panic!("unknown event kind: {other:?}"),
         }
     }
@@ -426,6 +462,22 @@ impl EventSpec {
                     elapsed_ms: background_cancel.elapsed_ms,
                 })
             }
+            Self::WorkflowStart { workflow_start } => Some(AgentEvent::WorkflowStarted {
+                run_id: workflow_start.run_id.clone(),
+                name: workflow_start.name.clone(),
+                objective: workflow_start.objective.clone(),
+            }),
+            Self::WorkflowProgress { workflow_progress } => Some(AgentEvent::WorkflowProgress {
+                run_id: workflow_progress.run_id.clone(),
+                phase: workflow_progress.phase.clone(),
+                state: workflow_progress.state.clone(),
+                active_agents: workflow_progress.active_agents,
+            }),
+            Self::WorkflowEnd { workflow_end } => Some(AgentEvent::WorkflowFinished {
+                run_id: workflow_end.run_id.clone(),
+                status: workflow_end.status.clone(),
+                elapsed_ms: workflow_end.elapsed_ms,
+            }),
             _ => None,
         }
     }
@@ -1391,6 +1443,9 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         BackgroundWorkProgress { .. } => "background_work_progress",
         BackgroundWorkFinished { .. } => "background_work_finished",
         BackgroundWorkCancelled { .. } => "background_work_cancelled",
+        WorkflowStarted { .. } => "workflow_started",
+        WorkflowProgress { .. } => "workflow_progress",
+        WorkflowFinished { .. } => "workflow_finished",
     }
 }
 

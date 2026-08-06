@@ -28,6 +28,9 @@ macro_rules! agent_event_kind {
             $crate::types::AgentEvent::BackgroundWorkProgress { .. } => "BackgroundWorkProgress",
             $crate::types::AgentEvent::BackgroundWorkFinished { .. } => "BackgroundWorkFinished",
             $crate::types::AgentEvent::BackgroundWorkCancelled { .. } => "BackgroundWorkCancelled",
+            $crate::types::AgentEvent::WorkflowStarted { .. } => "WorkflowStarted",
+            $crate::types::AgentEvent::WorkflowProgress { .. } => "WorkflowProgress",
+            $crate::types::AgentEvent::WorkflowFinished { .. } => "WorkflowFinished",
         }
     }};
 }

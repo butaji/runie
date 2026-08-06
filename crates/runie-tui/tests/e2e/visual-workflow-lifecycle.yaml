@@ -1,0 +1,23 @@
+name: visual-workflow-lifecycle
+description: |
+  Workflow lifecycle metadata is actor-owned core state and can be replayed
+  from YAML without renderer-local mutation.
+initial_prompt: "start workflow"
+events:
+  - start
+  - workflow_start:
+      run_id: wf-1
+      name: release
+      objective: ship the release
+  - workflow_progress:
+      run_id: wf-1
+      phase: tests
+      state: active
+      active_agents: 2
+  - workflow_end:
+      run_id: wf-1
+      status: done
+      elapsed_ms: 1200
+  - done: { stop_reason: stop }
+assertions:
+  required_events: [workflow_started, workflow_progress, workflow_finished]

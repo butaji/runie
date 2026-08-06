@@ -496,3 +496,9 @@ agent count. Runie's generic tool lifecycle currently exposes only tool name,
 args, result, and error status. The missing workflow lifecycle event payload is
 now explicitly identified; a renderer-only patch would lose source state and
 violate the SSOT/event contract.
+
+Workflow event foundation (2026-08-06): Runie core now defines
+`WorkflowStarted`/`WorkflowProgress`/`WorkflowFinished` events carrying that
+metadata, and the YAML DSL plus `visual-workflow-lifecycle.yaml` replays the
+full lifecycle. TUI projection remains the next step; core ownership is now
+explicit and no renderer-local workflow state is required.

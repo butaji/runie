@@ -707,7 +707,10 @@ impl EventRenderer {
             AgentEvent::BackgroundWorkStarted { .. }
             | AgentEvent::BackgroundWorkProgress { .. }
             | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. } => {}
+            | AgentEvent::BackgroundWorkCancelled { .. }
+            | AgentEvent::WorkflowStarted { .. }
+            | AgentEvent::WorkflowProgress { .. }
+            | AgentEvent::WorkflowFinished { .. } => {}
         }
     }
 
