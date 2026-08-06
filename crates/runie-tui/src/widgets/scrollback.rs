@@ -893,12 +893,7 @@ impl Scrollback {
         clippy::cognitive_complexity,
         reason = "render keeps responsive layout, selection styling, and cell projection together"
     )]
-    pub fn render_with_terminal_height(
-        &mut self,
-        area: Rect,
-        terminal_rows: u16,
-        buf: &mut Buffer,
-    ) {
+    pub fn render_with_terminal_height(&self, area: Rect, terminal_rows: u16, buf: &mut Buffer) {
         // Wrap-aware: each Line is one logical row that may wrap to multiple
         // physical rows. We approximate by giving each line 1 "slot" plus
         // overflow based on text length and area width.
@@ -925,6 +920,10 @@ impl Scrollback {
         }
         let total = physical_rows.len();
         let visible = area.height as usize;
+        // Rendering is a pure projection of actor-owned state.  Responsive
+        // clamping and selection centering are local viewport decisions and
+        // must not mutate the feed actor's scroll/fold facts.
+        let mut effective_scroll_offset = self.navigation.scroll_offset;
         let compact_scroll_lead =
             if total > visible + crate::layout::COMPACT_SCROLL_OVERFLOW_THRESHOLD {
                 crate::layout::COMPACT_SCROLL_OVERFLOW_LEAD_ROWS
@@ -935,16 +934,16 @@ impl Scrollback {
         if total > visible {
             let max_offset = total - visible;
             if self.navigation.autoscroll {
-                self.navigation.scroll_offset = if area.width < 50 {
+                effective_scroll_offset = if area.width < 50 {
                     max_offset.saturating_sub(compact_scroll_lead)
                 } else {
                     max_offset
                 };
-            } else if self.navigation.scroll_offset > max_offset {
-                self.navigation.scroll_offset = max_offset;
+            } else if effective_scroll_offset > max_offset {
+                effective_scroll_offset = max_offset;
             }
         } else {
-            self.navigation.scroll_offset = 0;
+            effective_scroll_offset = 0;
         }
 
         if let Some(selected_text) = self
@@ -959,13 +958,12 @@ impl Scrollback {
                 {
                     if self.navigation.center_revealed_entry {
                         let max_offset = total.saturating_sub(visible);
-                        self.navigation.scroll_offset =
+                        effective_scroll_offset =
                             selected_row.saturating_sub(visible / 2).min(max_offset);
-                        self.navigation.center_revealed_entry = false;
-                    } else if selected_row < self.navigation.scroll_offset {
-                        self.navigation.scroll_offset = selected_row;
-                    } else if selected_row >= self.navigation.scroll_offset + visible {
-                        self.navigation.scroll_offset = selected_row.saturating_sub(visible - 1);
+                    } else if selected_row < effective_scroll_offset {
+                        effective_scroll_offset = selected_row;
+                    } else if selected_row >= effective_scroll_offset + visible {
+                        effective_scroll_offset = selected_row.saturating_sub(visible - 1);
                     }
                 }
             }
@@ -996,9 +994,9 @@ impl Scrollback {
                         anchored
                     }
                 })
-                .unwrap_or(self.navigation.scroll_offset)
+                .unwrap_or(effective_scroll_offset)
         } else {
-            self.navigation.scroll_offset
+            effective_scroll_offset
         };
         let end = (start + visible).min(total);
         let selected_non_tool_text = self.navigation.selected_entry.and_then(|index| {
@@ -2955,6 +2953,19 @@ mod tests {
             visible.contains("five"),
             "selected row not revealed: {visible:?}"
         );
+    }
+
+    #[test]
+    fn rendering_does_not_mutate_actor_owned_viewport_state() {
+        let mut scrollback = Scrollback::new();
+        for index in 0..8 {
+            scrollback.append(Line::new(LineKind::Assistant, format!("row {index}")));
+        }
+        scrollback.apply(ScrollbackMsg::SelectNextEntry);
+        let before = scrollback.model_snapshot();
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 20, 2));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 20, 2), 24, &mut buffer);
+        assert_eq!(scrollback.model_snapshot(), before);
     }
 
     #[test]

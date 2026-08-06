@@ -2878,7 +2878,7 @@ fn draw_visual_frame(
                     WelcomeWidget::render_hero_footer_badge(layout.footer_badge, f.buffer_mut());
                 }
             } else {
-                let mut scrollback = app.scrollback_snapshot();
+                let scrollback = app.scrollback_snapshot();
                 scrollback.render_with_terminal_height(layout.scrollback, vis.rows, f.buffer_mut());
             }
             if show_turn_status {

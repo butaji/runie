@@ -154,3 +154,13 @@ its terminal-facing fields from the model transition, so those message
 families no longer have parallel widget implementations. Renderer-specific
 transcript mutations remain compatibility-only until the remaining row
 reducer extraction is complete.
+
+### Slice 14: pure viewport rendering (2026-08-06)
+
+`Scrollback::render_with_terminal_height` now takes `&self`. Responsive tail
+clamping and selected-entry centering are computed in a local effective
+viewport offset; rendering no longer mutates actor-owned `FeedNavigation`
+(`scroll_offset` or `center_revealed_entry`). This restores the MVU boundary:
+viewport changes are delivered as `ScrollbackMsg` events, while terminal size
+and paint are pure render inputs. A regression test snapshots the model before
+and after rendering and requires byte-for-byte state equality.
