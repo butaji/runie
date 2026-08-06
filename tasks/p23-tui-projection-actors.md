@@ -132,6 +132,12 @@ publish immutable `watch` snapshots to the pure view.
   YAML assertions observe the same actor-owned projection surface as the live
   view.
 
+- **Agent-start duplicate-write removal (2026-08-05):** The live renderer no
+  longer appends startup/welcome rows to the compatibility scrollback after
+  the actor has been attached; those rows come exclusively from the ordered
+  `ScrollbackMsg` batch. The synchronous constructor retains the compatibility
+  branch for reducer tests.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

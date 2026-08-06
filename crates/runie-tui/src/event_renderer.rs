@@ -523,17 +523,21 @@ impl EventRenderer {
     }
 
     fn handle_agent_start(&mut self) {
-        if self.emit_welcome {
-            self.emit_welcome_modal();
-            self.emit_welcome = false;
+        if self.scrollback_actor.is_none() {
+            if self.emit_welcome {
+                self.emit_welcome_modal();
+                self.emit_welcome = false;
+            } else {
+                let mut scrollback = self.scrollback.lock();
+                scrollback.append(Line::new(LineKind::Separator, ""));
+                scrollback.append(Line::new(
+                    LineKind::SessionStart,
+                    "◆ session_start  [hooks: 1]",
+                ));
+                scrollback.append(Line::new(LineKind::Separator, ""));
+            }
         } else {
-            let mut scrollback = self.scrollback.lock();
-            scrollback.append(Line::new(LineKind::Separator, ""));
-            scrollback.append(Line::new(
-                LineKind::SessionStart,
-                "◆ session_start  [hooks: 1]",
-            ));
-            scrollback.append(Line::new(LineKind::Separator, ""));
+            self.emit_welcome = false;
         }
         if self.status_actor.is_none() {
             self.status.lock().set(Status::Thinking);
