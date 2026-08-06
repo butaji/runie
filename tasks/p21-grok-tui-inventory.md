@@ -464,3 +464,9 @@ the cycle is `Truncated -> Collapsed`; Runie had incorrectly promoted it to
 `visual-activity-truncated.yaml` asserts the resulting state and screen.
 This keeps the behavior within Pi-core tool events while matching Grok's
 visible fold semantics.
+
+Execute completion audit (2026-08-06): Grok's `ExecuteToolCallBlock` uses a
+truncated preview while interactive bash runs, then promotes it to `Expanded`
+when the tool finishes so the complete result is visible. Runie now applies
+that transition in the scrollback actor when the typed tool name is a shell
+execute variant; the default-mode YAML replay asserts the settled mode.

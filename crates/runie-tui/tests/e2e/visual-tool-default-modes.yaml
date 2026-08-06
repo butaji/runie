@@ -20,7 +20,7 @@ events:
 assertions:
   state:
     tool_blocks: 2
-    tool_modes: [truncated, collapsed]
+    tool_modes: [expanded, collapsed]
     tool_kinds: [execute, read]
   visual:
     cols: 80

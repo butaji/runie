@@ -303,6 +303,20 @@ impl Scrollback {
                 output,
             } => {
                 self.finish_tool_by_id(&tool_call_id, header);
+                if self
+                    .tool_names
+                    .get(&tool_call_id)
+                    .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"))
+                    && self.tool_modes.get(&tool_call_id)
+                        == Some(&runie_core::types::ToolDisplayMode::Truncated)
+                {
+                    // Grok's interactive execute cards stream in a truncated
+                    // preview, then reveal the complete result at completion.
+                    self.set_tool_mode(
+                        tool_call_id.clone(),
+                        runie_core::types::ToolDisplayMode::Expanded,
+                    );
+                }
                 for (kind, text) in output {
                     self.append(Line::new(kind, text).for_tool(&tool_call_id));
                 }
