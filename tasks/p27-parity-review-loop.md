@@ -40,6 +40,14 @@ unverified full-screen frame or core event family remains open.
   emitted only default/SGR-1/SGR-2 styling, with no RGB SGR sequences. This
   confirms the missing color oracle is a Grok capture/configuration issue, not
   a comparator omission; the raw artifacts are in `/tmp/` for inspection.
+- Source resolution (2026-08-06): Grok's renderer engages
+  `theme::cache::terminal_native_locked()` in minimal/scrollback-native mode.
+  `Theme::current()` then returns the terminal-default palette and quantizes
+  to the detected terminal level. Runie currently always emits explicit
+  Opaline RGB styles. The next implementation seam is an actor-owned terminal
+  capability/theme mode that selects the same native palette when paritying
+  Grok minimal mode; forcing RGB in the capture would test a different Grok
+  mode, not the one currently being compared.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.
