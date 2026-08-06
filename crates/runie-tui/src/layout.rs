@@ -19,6 +19,14 @@ pub const SCROLLBACK_BLOCK_PAD_RIGHT: u16 = 1;
 pub const COMPACT_SCROLL_LEAD_ROWS: usize = 2;
 pub const COMPACT_SCROLL_OVERFLOW_LEAD_ROWS: usize = 8;
 pub const COMPACT_SCROLL_OVERFLOW_THRESHOLD: usize = 8;
+pub const GROK_SHORT_TERMINAL_ROWS: u16 = 16;
+pub const GROK_AUTO_COMPACT_MAX_ROWS: u16 = 20;
+
+/// Grok derives compact mode from full terminal height; an unmeasured height
+/// must not force compact mode.
+pub const fn grok_effective_compact(user_compact: bool, terminal_rows: u16) -> bool {
+    user_compact || (terminal_rows > 0 && terminal_rows <= GROK_AUTO_COMPACT_MAX_ROWS)
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChatLayout {
@@ -95,6 +103,18 @@ pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLay
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn grok_compact_mode_uses_full_terminal_height() {
+        assert!(!grok_effective_compact(false, 0));
+        assert!(grok_effective_compact(false, GROK_SHORT_TERMINAL_ROWS));
+        assert!(grok_effective_compact(false, GROK_AUTO_COMPACT_MAX_ROWS));
+        assert!(!grok_effective_compact(
+            false,
+            GROK_AUTO_COMPACT_MAX_ROWS + 1
+        ));
+        assert!(grok_effective_compact(true, 80));
+    }
 
     #[test]
     fn splits_24x80_into_three_regions() {
