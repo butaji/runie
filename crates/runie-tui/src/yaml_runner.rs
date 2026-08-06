@@ -561,6 +561,9 @@ pub struct StateAssertions {
     pub selected_entry: Option<usize>,
     pub scroll_offset: Option<usize>,
     pub thinking_level: Option<ThinkingLevel>,
+    pub reasoning_expanded: Option<bool>,
+    pub activity_expanded: Option<bool>,
+    pub follow_latest_user: Option<bool>,
     /// Exact actor-owned workflow projections keyed by their stable run id.
     /// YAML owns the expected state; the runner only performs generic field
     /// comparison so workflow fixtures stay recompilation-free.
@@ -1350,7 +1353,39 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
+    assert_feed_state_expectations(outcome, expected)?;
     assert_workflow_expectations(outcome, expected)?;
+    Ok(())
+}
+
+fn assert_feed_state_expectations(
+    outcome: &ScenarioOutcome,
+    expected: &StateAssertions,
+) -> Result<(), String> {
+    if let Some(expected) = expected.reasoning_expanded {
+        if outcome.feed.reasoning_expanded != expected {
+            return Err(format!(
+                "state reasoning_expanded mismatch: expected {expected}, got {}",
+                outcome.feed.reasoning_expanded
+            ));
+        }
+    }
+    if let Some(expected) = expected.activity_expanded {
+        if outcome.feed.activity_expanded != expected {
+            return Err(format!(
+                "state activity_expanded mismatch: expected {expected}, got {}",
+                outcome.feed.activity_expanded
+            ));
+        }
+    }
+    if let Some(expected) = expected.follow_latest_user {
+        if outcome.feed.follow_latest_user != expected {
+            return Err(format!(
+                "state follow_latest_user mismatch: expected {expected}, got {}",
+                outcome.feed.follow_latest_user
+            ));
+        }
+    }
     Ok(())
 }
 

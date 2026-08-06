@@ -19,6 +19,7 @@ events:
 assertions:
   state:
     tool_blocks: 2
+    activity_expanded: false
   visual:
     cols: 80
     rows: 24

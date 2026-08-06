@@ -145,6 +145,11 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   one parser for all serialized levels. `visual-status-working.yaml` exercises
   the event-to-actor-state path without recompilation.
 
+- **Feed projection state oracle (2026-08-06):** YAML `state` now also covers
+  actor-owned feed flags for reasoning fold, activity fold, and live
+  follow-latest behavior. Existing collapsed-activity and reasoning fixtures
+  pin these reducer states alongside their rendered output.
+
 The recurring actor ownership, event-kind classification, and TUI view-tree
 patterns are already covered by thin local macros (`spawn_actor_worker!`,
 `mailbox_*`, `agent_event_kind!`, `assistant_event_kind!`, and `view!`). A

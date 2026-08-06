@@ -10,6 +10,7 @@ assertions:
   state:
     is_streaming: false
     pending_tool_calls: 0
+    reasoning_expanded: false
   visual:
     cols: 80
     rows: 30
