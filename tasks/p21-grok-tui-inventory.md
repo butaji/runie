@@ -203,6 +203,12 @@ snapshot. A `ThemeChanged` event therefore updates the background as well as
 feed, status, and prompt token consumers; the previous hardcoded GrokNight
 background was a real palette propagation gap. The complete local gate passes.
 
+Prompt theme projection (2026-08-06): `PromptWidget` now stores the active
+theme as actor-owned view state and consumes `ThemeChanged` through
+`PromptActor`. Prompt borders, cursor, placeholder, and body styles resolve
+the same Opaline tokens as the rest of the screen; a day-theme render test
+guards against regression.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

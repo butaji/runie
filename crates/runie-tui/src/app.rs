@@ -256,9 +256,16 @@ async fn run_prompt_actor(
                 let _ = snapshot_tx.send(prompt.clone());
             }
             event = events.recv() => {
-                if matches!(event, Ok(AgentEvent::Reset)) {
-                    prompt = PromptWidget::new();
-                    let _ = snapshot_tx.send(prompt.clone());
+                match event {
+                    Ok(AgentEvent::Reset) => {
+                        prompt = PromptWidget::new();
+                        let _ = snapshot_tx.send(prompt.clone());
+                    }
+                    Ok(AgentEvent::ThemeChanged { theme }) => {
+                        prompt.set_theme(theme);
+                        let _ = snapshot_tx.send(prompt.clone());
+                    }
+                    _ => {}
                 }
             }
         }

@@ -12,6 +12,7 @@ use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
+use runie_core::types::ThemeKind;
 use unicode_width::UnicodeWidthStr;
 
 use crate::appearance;
@@ -51,6 +52,7 @@ pub struct PromptWidget {
     file_candidate_index: usize,
     selected_file: Option<String>,
     viewer_lines: Vec<String>,
+    theme: ThemeKind,
 }
 
 impl PromptWidget {
@@ -68,6 +70,7 @@ impl PromptWidget {
             file_candidate_index: 0,
             selected_file: None,
             viewer_lines: Vec::new(),
+            theme: ThemeKind::GrokNight,
         }
     }
 
@@ -172,6 +175,10 @@ impl PromptWidget {
 
     pub fn set_placeholder_visible(&mut self, visible: bool) {
         self.show_placeholder = visible;
+    }
+
+    pub fn set_theme(&mut self, theme: ThemeKind) {
+        self.theme = theme;
     }
 
     pub fn history_search_active(&self) -> bool {
@@ -369,9 +376,9 @@ impl Widget for PromptWidget {
             return;
         }
         let border = if self.mode == InputMode::Plan {
-            appearance::warning_style()
+            appearance::warning_style_for(self.theme)
         } else {
-            appearance::muted_style()
+            appearance::muted_style_for(self.theme)
         };
         draw_prompt_border(area, buf, border);
         let bottom = area.y + area.height.saturating_sub(1);
@@ -416,8 +423,11 @@ impl PromptWidget {
         let glyph = " ❯ ";
         if self.buffer.is_empty() && self.show_placeholder {
             return vec![Line::from(vec![
-                ratatui::text::Span::styled(glyph, appearance::base_style()),
-                ratatui::text::Span::styled("Type your message...", appearance::muted_style()),
+                ratatui::text::Span::styled(glyph, appearance::base_style_for(self.theme)),
+                ratatui::text::Span::styled(
+                    "Type your message...",
+                    appearance::muted_style_for(self.theme),
+                ),
             ])];
         }
         let mut lines: Vec<Line<'static>> = self
@@ -431,8 +441,11 @@ impl PromptWidget {
                     "   ".to_owned()
                 };
                 Line::from(vec![
-                    ratatui::text::Span::styled(prefix, appearance::base_style()),
-                    ratatui::text::Span::styled(text.to_owned(), appearance::base_style()),
+                    ratatui::text::Span::styled(prefix, appearance::base_style_for(self.theme)),
+                    ratatui::text::Span::styled(
+                        text.to_owned(),
+                        appearance::base_style_for(self.theme),
+                    ),
                 ])
             })
             .collect();
@@ -777,6 +790,31 @@ mod tests {
             .map(|x| buffer.cell((x, 1)).expect("prompt cell").symbol())
             .collect::<String>();
         assert!(row.contains('T'), "placeholder row: {row:?}");
+    }
+
+    #[test]
+    fn prompt_theme_projects_day_tokens() {
+        let mut prompt = PromptWidget::new();
+        prompt.set_theme(ThemeKind::GrokDay);
+        let mut buffer = Buffer::empty(Rect {
+            x: 0,
+            y: 0,
+            width: 30,
+            height: 3,
+        });
+        prompt.render(
+            Rect {
+                x: 0,
+                y: 0,
+                width: 30,
+                height: 3,
+            },
+            &mut buffer,
+        );
+        assert_eq!(
+            buffer.cell((2, 1)).expect("cursor cell").fg,
+            Color::Rgb(38, 38, 38)
+        );
     }
 
     #[test]
