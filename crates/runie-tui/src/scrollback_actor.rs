@@ -56,24 +56,7 @@ impl ScrollbackActor {
             loop {
                 match events.recv().await {
                     Ok(event) => {
-                        let messages = match event {
-                            AgentEvent::Reset => vec![ScrollbackMsg::Clear],
-                            AgentEvent::ThemeChanged { theme } => {
-                                vec![ScrollbackMsg::SetTheme(theme)]
-                            }
-                            AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
-                                vec![ScrollbackMsg::SetToolMode(tool_call_id, mode)]
-                            }
-                            AgentEvent::ToolExecutionStart {
-                                tool_call_id,
-                                tool_name,
-                                ..
-                            } => vec![ScrollbackMsg::SetToolMode(
-                                tool_call_id,
-                                default_tool_display_mode(&tool_name),
-                            )],
-                            _ => Vec::new(),
-                        };
+                        let messages = bus_messages_for_event(event);
                         if !messages.is_empty()
                             && !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply))
                         {
@@ -110,6 +93,113 @@ fn default_tool_display_mode(tool_name: &str) -> runie_core::types::ToolDisplayM
         runie_core::types::ToolDisplayMode::Truncated
     } else {
         runie_core::types::ToolDisplayMode::Collapsed
+    }
+}
+
+fn format_elapsed(elapsed_ms: Option<u64>) -> String {
+    elapsed_ms
+        .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
+        .unwrap_or_default()
+}
+
+fn format_error(is_error: bool, error: Option<&str>) -> String {
+    if is_error {
+        error.map(|value| format!(" ({value})")).unwrap_or_default()
+    } else {
+        String::new()
+    }
+}
+
+fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
+    match event {
+        AgentEvent::Reset => vec![ScrollbackMsg::Clear],
+        AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(theme)],
+        AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
+            vec![ScrollbackMsg::SetToolMode(tool_call_id, mode)]
+        }
+        AgentEvent::ToolExecutionStart {
+            tool_call_id,
+            tool_name,
+            ..
+        } => vec![ScrollbackMsg::SetToolMode(
+            tool_call_id,
+            default_tool_display_mode(&tool_name),
+        )],
+        event @ (AgentEvent::BackgroundWorkStarted { .. }
+        | AgentEvent::BackgroundWorkProgress { .. }
+        | AgentEvent::BackgroundWorkFinished { .. }
+        | AgentEvent::BackgroundWorkCancelled { .. }) => background_messages_for_event(event),
+        _ => Vec::new(),
+    }
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "background lifecycle formatting keeps Grok card variants explicit"
+)]
+fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
+    match event {
+        AgentEvent::BackgroundWorkStarted {
+            work_id,
+            description,
+            background,
+        } => vec![ScrollbackMsg::ToolStart {
+            tool_call_id: work_id,
+            header: format!(
+                "Subagent {}: {description:?}",
+                if background { "started" } else { "running" }
+            ),
+            activity: None,
+        }],
+        AgentEvent::BackgroundWorkProgress {
+            work_id,
+            description,
+            activity,
+        } => vec![ScrollbackMsg::ToolUpdate {
+            tool_call_id: work_id,
+            header: Some(format!("Subagent running: {description:?} — {activity}")),
+            output: Vec::new(),
+        }],
+        AgentEvent::BackgroundWorkFinished {
+            work_id,
+            description,
+            is_error,
+            elapsed_ms,
+            error,
+        } => {
+            let mut messages = vec![ScrollbackMsg::ToolEnd {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent {}{}{}: {description:?}",
+                    if is_error { "failed" } else { "completed" },
+                    format_elapsed(elapsed_ms),
+                    format_error(is_error, error.as_deref())
+                ),
+                activity: None,
+                output: Vec::new(),
+            }];
+            if is_error {
+                messages.push(ScrollbackMsg::MarkToolError(work_id));
+            }
+            messages
+        }
+        AgentEvent::BackgroundWorkCancelled {
+            work_id,
+            description,
+            elapsed_ms,
+        } => vec![
+            ScrollbackMsg::ToolEnd {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent cancelled{}: {description:?}",
+                    format_elapsed(elapsed_ms)
+                ),
+                activity: None,
+                output: Vec::new(),
+            },
+            ScrollbackMsg::MarkToolError(work_id),
+        ],
+        _ => Vec::new(),
     }
 }
 
@@ -174,6 +264,27 @@ mod tests {
             actor.snapshot().theme(),
             runie_core::types::ThemeKind::GrokDay
         );
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_projects_background_lifecycle() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::BackgroundWorkStarted {
+            work_id: "worker-1".into(),
+            description: "inspect files".into(),
+            background: true,
+        });
+        snapshot
+            .changed()
+            .await
+            .expect("background start projection");
+        assert!(actor
+            .snapshot()
+            .lines()
+            .iter()
+            .any(|line| line.text.contains("Subagent started")));
     }
 
     #[tokio::test]

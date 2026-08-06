@@ -356,3 +356,8 @@ Tool default ownership (2026-08-06): `ToolExecutionStart` now also projects
 Grok's default collapsed/truncated display mode inside the live scrollback
 actor. The deterministic replay path keeps its explicit mode command, while
 the live renderer no longer writes this configuration directly.
+
+Background lifecycle ownership (2026-08-06): background start/progress/
+finish/cancel events now reduce to tool-card messages inside the live
+`ScrollbackActor`. The renderer skips that pure event family in live mode;
+the YAML replay reducer remains unchanged and independently testable.

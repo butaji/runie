@@ -439,7 +439,17 @@ impl EventRenderer {
                                 )),
                                 _ => None,
                             };
-                            let mut feed_messages = scrollback_messages_for_event(&event);
+                            let mut feed_messages = if matches!(
+                                event,
+                                AgentEvent::BackgroundWorkStarted { .. }
+                                    | AgentEvent::BackgroundWorkProgress { .. }
+                                    | AgentEvent::BackgroundWorkFinished { .. }
+                                    | AgentEvent::BackgroundWorkCancelled { .. }
+                            ) {
+                                Vec::new()
+                            } else {
+                                scrollback_messages_for_event(&event)
+                            };
                             if matches!(event, AgentEvent::AgentStart) {
                                 feed_messages.extend(agent_start_messages(self.emit_welcome));
                             }
