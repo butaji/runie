@@ -1,0 +1,27 @@
+name: visual-background-work
+description: Background-work lifecycle is carried as typed events and projected into the actor-owned feed.
+initial_prompt: "Inspect this repository in the background"
+events:
+  - start
+  - background_start:
+      work_id: worker-1
+      description: "inspect the repository"
+      background: true
+  - background_progress:
+      work_id: worker-1
+      description: "inspect the repository"
+      activity: "Reading files"
+  - background_end:
+      work_id: worker-1
+      description: "inspect the repository"
+  - done: { stop_reason: stop }
+assertions:
+  events:
+    - background_work_started
+    - background_work_progress
+    - background_work_finished
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Subagent completed: \"inspect the repository\""

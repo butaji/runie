@@ -24,6 +24,9 @@ macro_rules! agent_event_kind {
             $crate::types::AgentEvent::ToolExecutionStart { .. } => "ToolExecutionStart",
             $crate::types::AgentEvent::ToolExecutionUpdate { .. } => "ToolExecutionUpdate",
             $crate::types::AgentEvent::ToolExecutionEnd { .. } => "ToolExecutionEnd",
+            $crate::types::AgentEvent::BackgroundWorkStarted { .. } => "BackgroundWorkStarted",
+            $crate::types::AgentEvent::BackgroundWorkProgress { .. } => "BackgroundWorkProgress",
+            $crate::types::AgentEvent::BackgroundWorkFinished { .. } => "BackgroundWorkFinished",
         }
     }};
 }

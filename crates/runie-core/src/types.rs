@@ -774,6 +774,21 @@ pub enum AgentEvent {
         result: serde_json::Value,
         is_error: bool,
     },
+    BackgroundWorkStarted {
+        work_id: String,
+        description: String,
+        background: bool,
+    },
+    BackgroundWorkProgress {
+        work_id: String,
+        description: String,
+        activity: String,
+    },
+    BackgroundWorkFinished {
+        work_id: String,
+        description: String,
+        is_error: bool,
+    },
 }
 
 /// Per-event payload from a streaming assistant message.

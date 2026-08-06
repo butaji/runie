@@ -111,6 +111,40 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
             vec![ScrollbackMsg::SetToolMode(tool_call_id.clone(), *mode)]
         }
+        AgentEvent::BackgroundWorkStarted {
+            work_id,
+            description,
+            background,
+        } => vec![ScrollbackMsg::ToolStart {
+            tool_call_id: work_id.clone(),
+            header: format!(
+                "Subagent {}: {description:?}",
+                if *background { "started" } else { "running" }
+            ),
+            activity: None,
+        }],
+        AgentEvent::BackgroundWorkProgress {
+            work_id,
+            description,
+            activity,
+        } => vec![ScrollbackMsg::ToolUpdate {
+            tool_call_id: work_id.clone(),
+            header: Some(format!("Subagent running: {description:?} — {activity}")),
+            output: Vec::new(),
+        }],
+        AgentEvent::BackgroundWorkFinished {
+            work_id,
+            description,
+            is_error,
+        } => vec![ScrollbackMsg::ToolEnd {
+            tool_call_id: work_id.clone(),
+            header: format!(
+                "Subagent {}: {description:?}",
+                if *is_error { "failed" } else { "completed" }
+            ),
+            activity: None,
+            output: Vec::new(),
+        }],
         _ => Vec::new(),
     }
 }
@@ -571,6 +605,9 @@ impl EventRenderer {
             } => {
                 let _ = self.handle_tool_end(tool_call_id, tool_name, result, is_error);
             }
+            AgentEvent::BackgroundWorkStarted { .. }
+            | AgentEvent::BackgroundWorkProgress { .. }
+            | AgentEvent::BackgroundWorkFinished { .. } => {}
         }
     }
 

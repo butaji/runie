@@ -62,14 +62,62 @@ fn default_tool_kind() -> String {
 #[serde(untagged)]
 pub enum EventSpec {
     Bare(String),
-    TextDelta { text_delta: String },
-    ThinkingDelta { thinking_delta: String },
-    ToolCall { tool_call: ToolCallSpec },
-    Done { done: DoneSpec },
-    Error { error: String },
-    Waiting { waiting: String },
-    Theme { theme: String },
-    ToolMode { tool_mode: ToolModeSpec },
+    TextDelta {
+        text_delta: String,
+    },
+    ThinkingDelta {
+        thinking_delta: String,
+    },
+    ToolCall {
+        tool_call: ToolCallSpec,
+    },
+    Done {
+        done: DoneSpec,
+    },
+    Error {
+        error: String,
+    },
+    Waiting {
+        waiting: String,
+    },
+    Theme {
+        theme: String,
+    },
+    ToolMode {
+        tool_mode: ToolModeSpec,
+    },
+    BackgroundStart {
+        background_start: BackgroundStartSpec,
+    },
+    BackgroundProgress {
+        background_progress: BackgroundProgressSpec,
+    },
+    BackgroundEnd {
+        background_end: BackgroundEndSpec,
+    },
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BackgroundStartSpec {
+    pub work_id: String,
+    pub description: String,
+    #[serde(default)]
+    pub background: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BackgroundProgressSpec {
+    pub work_id: String,
+    pub description: String,
+    pub activity: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BackgroundEndSpec {
+    pub work_id: String,
+    pub description: String,
+    #[serde(default)]
+    pub is_error: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -152,6 +200,9 @@ impl EventSpec {
             Self::Waiting { .. } => None,
             Self::Theme { .. } => None,
             Self::ToolMode { .. } => None,
+            Self::BackgroundStart { .. }
+            | Self::BackgroundProgress { .. }
+            | Self::BackgroundEnd { .. } => None,
             Self::Bare(other) => panic!("unknown event kind: {other:?}"),
         }
     }
@@ -167,6 +218,23 @@ impl EventSpec {
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
                 mode: tool_mode.mode,
+            }),
+            Self::BackgroundStart { background_start } => Some(AgentEvent::BackgroundWorkStarted {
+                work_id: background_start.work_id.clone(),
+                description: background_start.description.clone(),
+                background: background_start.background,
+            }),
+            Self::BackgroundProgress {
+                background_progress,
+            } => Some(AgentEvent::BackgroundWorkProgress {
+                work_id: background_progress.work_id.clone(),
+                description: background_progress.description.clone(),
+                activity: background_progress.activity.clone(),
+            }),
+            Self::BackgroundEnd { background_end } => Some(AgentEvent::BackgroundWorkFinished {
+                work_id: background_end.work_id.clone(),
+                description: background_end.description.clone(),
+                is_error: background_end.is_error,
             }),
             _ => None,
         }
@@ -869,6 +937,9 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ToolExecutionStart { .. } => "tool_execution_start",
         ToolExecutionUpdate { .. } => "tool_execution_update",
         ToolExecutionEnd { .. } => "tool_execution_end",
+        BackgroundWorkStarted { .. } => "background_work_started",
+        BackgroundWorkProgress { .. } => "background_work_progress",
+        BackgroundWorkFinished { .. } => "background_work_finished",
     }
 }
 

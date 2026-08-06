@@ -184,7 +184,10 @@ impl AgentStateActor {
             | AgentEvent::ThemeChanged { .. }
             | AgentEvent::ToolDisplayModeChanged { .. }
             | AgentEvent::TurnEnd { .. }
-            | AgentEvent::ToolExecutionUpdate { .. } => {}
+            | AgentEvent::ToolExecutionUpdate { .. }
+            | AgentEvent::BackgroundWorkStarted { .. }
+            | AgentEvent::BackgroundWorkProgress { .. }
+            | AgentEvent::BackgroundWorkFinished { .. } => {}
         }
     }
 

@@ -194,6 +194,11 @@ Grok's distinct-site vocabulary (`site`/`sites`) and deduplicates citation
 domains before rendering the header. YAML replay covers repeated `docs.rs`
 citations and a second domain.
 
+Background-work event progress (2026-08-06): added typed core lifecycle events
+for background work start/progress/finish. The scrollback projection maps them
+to actor-owned semantic Subagent rows, and YAML replays the running and
+completed states without inferring lifecycle from a generic tool name.
+
 Source audit: Grok's `UserMessageBlock` is the only standard conversation block
 that enables prompt vpad; system, session-event, thinking, background, and all
 specialized tool blocks explicitly disable it. The renderer also suppresses
