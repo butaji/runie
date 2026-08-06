@@ -815,6 +815,10 @@ impl Scrollback {
         if *group_size > GROK_GROUP_MAX_VISIBLE
             && *member_index < group_size - GROK_GROUP_MAX_VISIBLE
         {
+            self.selected_entry = self
+                .lines
+                .iter()
+                .position(|line| line.tool_call_id.as_deref() == Some(tool_id));
             if let Some(anchor) = groups.iter().find_map(|(id, (index, size))| {
                 (*size == *group_size && *index == 0).then_some(id.clone())
             }) {

@@ -106,8 +106,9 @@ mixed-activity coverage remains the boundary oracle. Full workspace tests pass.
 The next missing datum is Grok's exact reveal interaction and whether the
 hidden count is navigable as one header or individual members. Runie's current
 selection path now reveals the containing group when a hidden member is
-targeted, with a focused reducer/render test; exact centering and viewport
-offset parity remain to be captured.
+targeted, marks that member as the selected entry for the renderer's
+actor-owned visibility handoff, and has a focused reducer/render test. Exact
+centered offset parity remains to be captured.
 
 ## Success metric
 
