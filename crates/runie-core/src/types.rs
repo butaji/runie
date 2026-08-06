@@ -218,6 +218,9 @@ pub struct AssistantMessage {
     /// Token usage for the finished message (pi: `usage`).
     #[serde(default)]
     pub usage: Usage,
+    /// Server-derived thinking duration carried into the terminal message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking_elapsed_ms: Option<u64>,
     /// Failure detail when the stream ended in `error`/`aborted`
     /// (pi: `errorMessage?`).
     #[serde(default)]
@@ -978,6 +981,7 @@ mod tests {
                 details: None,
             }],
             usage: usage.clone(),
+            thinking_elapsed_ms: None,
             error_message: Some("boom".into()),
             raw_stop_reason: Some("max_tokens".into()),
             timestamp: 7,

@@ -200,6 +200,15 @@ the actor-owned status projection. This preserves the exact replay event
 sequence while fixing the controlled `Hey` header from `0 / 500K` to the
 expected `15K / 500K`.
 
+**Final assistant timing bridge (2026-08-06):** The optional thinking duration
+is now copied into the actor-owned final `AssistantMessage` while applying the
+stream, then consumed from `MessageEnd` by the TUI renderer. This preserves
+the exact bus sequence while allowing the live `Hey` scenario to render the
+provider's `0.2s` thought duration and settled row phase. The strict 62×32
+probe reached 41 differing cells before the final two-cell marker-style
+correction; remaining deltas are live clocks, worked elapsed time, and footer
+ANSI attributes.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

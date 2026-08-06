@@ -689,6 +689,12 @@ impl EventRenderer {
         {
             self.thinking_elapsed_ms = *elapsed_ms;
         }
+        if let AgentEvent::MessageEnd {
+            message: runie_core::types::AgentMessage::Assistant(assistant),
+        } = event
+        {
+            self.thinking_elapsed_ms = assistant.thinking_elapsed_ms;
+        }
         if matches!(event, AgentEvent::AgentStart | AgentEvent::Reset) {
             self.thinking_elapsed_ms = None;
         }
