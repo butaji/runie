@@ -1,5 +1,13 @@
 # p23 — TUI projection actors
 
+## Current state correction (2026-08-06)
+
+The historical migration notes below mention a lazy actor-owned renderer. The
+current implementation is stricter: `EventRenderer::run` and
+`apply_actor_event` require actor handles supplied by `with_actors`; they never
+create fallback projections. `Arc<Mutex<Scrollback/StatusBar>>` constructors
+are compiled only for focused tests, and production renders actor snapshots.
+
 ## Objective
 
 Remove shared mutable `StatusBar` and `Scrollback` state from the TUI. Each
