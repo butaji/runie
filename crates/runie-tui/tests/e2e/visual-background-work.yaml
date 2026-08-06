@@ -24,6 +24,7 @@ events:
       description: "run the checks"
       is_error: true
       elapsed_ms: 1200
+      error: "provider stopped"
   - background_start:
       work_id: worker-3
       description: "stop the watcher"
@@ -43,7 +44,7 @@ assertions:
     rows: 24
     screen_text:
         - "Subagent completed in 0.9s: \"inspect the repository\""
-        - "Subagent failed in 1.2s: \"run the checks\""
+        - "Subagent failed in 1.2s (provider stopped): \"run the checks\""
         - "Subagent cancelled in 1.5s: \"stop the watcher\""
   scrollback_lines:
     - kind: tool_error

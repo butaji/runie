@@ -790,6 +790,8 @@ pub enum AgentEvent {
         is_error: bool,
         #[serde(default)]
         elapsed_ms: Option<u64>,
+        #[serde(default)]
+        error: Option<String>,
     },
     BackgroundWorkCancelled {
         work_id: String,
@@ -1259,6 +1261,7 @@ mod tests {
                 description: "inspect".into(),
                 is_error: true,
                 elapsed_ms: Some(900),
+                error: Some("provider stopped".into()),
             },
         ];
         for event in events {

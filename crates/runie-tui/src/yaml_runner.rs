@@ -123,6 +123,8 @@ pub struct BackgroundEndSpec {
     pub is_error: bool,
     #[serde(default)]
     pub elapsed_ms: Option<u64>,
+    #[serde(default)]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -250,6 +252,7 @@ impl EventSpec {
                 description: background_end.description.clone(),
                 is_error: background_end.is_error,
                 elapsed_ms: background_end.elapsed_ms,
+                error: background_end.error.clone(),
             }),
             Self::BackgroundCancel { background_cancel } => {
                 Some(AgentEvent::BackgroundWorkCancelled {

@@ -137,13 +137,15 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             description,
             is_error,
             elapsed_ms,
+            error,
         } => {
             let mut messages = vec![ScrollbackMsg::ToolEnd {
                 tool_call_id: work_id.clone(),
                 header: format!(
-                    "Subagent {}{}: {description:?}",
+                    "Subagent {}{}{}: {description:?}",
                     if *is_error { "failed" } else { "completed" },
-                    format_elapsed(*elapsed_ms)
+                    format_elapsed(*elapsed_ms),
+                    format_error(*is_error, error.as_deref())
                 ),
                 activity: None,
                 output: Vec::new(),
@@ -177,6 +179,14 @@ fn format_elapsed(elapsed_ms: Option<u64>) -> String {
     elapsed_ms
         .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
         .unwrap_or_default()
+}
+
+fn format_error(is_error: bool, error: Option<&str>) -> String {
+    if is_error {
+        error.map(|value| format!(" ({value})")).unwrap_or_default()
+    } else {
+        String::new()
+    }
 }
 
 #[derive(Clone)]

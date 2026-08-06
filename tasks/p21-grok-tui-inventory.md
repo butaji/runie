@@ -312,3 +312,7 @@ terminal `cancelled` state and deterministic elapsed durations. YAML replay
 accepts optional `elapsed_ms` on terminal events plus `background_cancel`, and
 the visual fixture asserts completed, failed, and cancelled labels including
 duration text and error styling.
+
+Failure-detail parity (2026-08-06): failed background events preserve an
+optional provider error and render Grok's `(error)` suffix; the YAML fixture
+asserts the exact terminal row.
