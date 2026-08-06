@@ -344,6 +344,8 @@ which cycles a selected tool block between Grok-compatible expanded and
 collapsed states while preserving truncated output as retained state. The
 transition is pure reducer state owned by `ScrollbackActor`; selected-entry
 navigation and the live key-to-selection wiring remain open.
+The `tool_fold` YAML instruction now drives this reducer transition in replay,
+and the truncated activity fixture pins the resulting expanded mode.
 
 Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
 theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,

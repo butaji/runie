@@ -86,6 +86,9 @@ pub enum EventSpec {
     ToolMode {
         tool_mode: ToolModeSpec,
     },
+    ToolFold {
+        tool_fold: String,
+    },
     BackgroundStart {
         background_start: BackgroundStartSpec,
     },
@@ -229,6 +232,7 @@ impl EventSpec {
             Self::Waiting { .. } => None,
             Self::Theme { .. } => None,
             Self::ToolMode { .. } => None,
+            Self::ToolFold { .. } => None,
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
             | Self::BackgroundEnd { .. }
@@ -249,6 +253,7 @@ impl EventSpec {
                 tool_call_id: tool_mode.tool_call_id.clone(),
                 mode: tool_mode.mode,
             }),
+            Self::ToolFold { .. } => None,
             Self::BackgroundStart { background_start } => Some(AgentEvent::BackgroundWorkStarted {
                 work_id: background_start.work_id.clone(),
                 description: background_start.description.clone(),
@@ -676,8 +681,12 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
     append_declared_events(&mut events_from_task, scenario);
 
-    let scrollback =
-        replay_scenario_events(&events_from_task, scenario.initial_prompt.is_none()).await;
+    let scrollback = replay_scenario_events(
+        &events_from_task,
+        scenario.initial_prompt.is_none(),
+        scenario,
+    )
+    .await;
     Ok(ScenarioOutcome {
         events: events_from_task,
         scrollback: scrollback.lines().to_vec(),
@@ -690,7 +699,11 @@ fn append_declared_events(events: &mut Vec<AgentEvent>, scenario: &Scenario) {
     events.extend(scenario.events.iter().filter_map(EventSpec::waiting_event));
 }
 
-async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Scrollback {
+async fn replay_scenario_events(
+    events: &[AgentEvent],
+    emit_welcome: bool,
+    scenario: &Scenario,
+) -> Scrollback {
     let scrollback_actor = crate::ScrollbackActor::new();
     let status_actor = crate::StatusActor::new();
     let mut renderer =
@@ -698,7 +711,23 @@ async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Sc
     for event in events {
         renderer.apply_actor_event(event.clone()).await;
     }
+    for tool_call_id in declared_tool_folds(scenario) {
+        scrollback_actor
+            .apply(ScrollbackMsg::ToggleToolMode(tool_call_id))
+            .await;
+    }
     scrollback_actor.snapshot()
+}
+
+fn declared_tool_folds(scenario: &Scenario) -> Vec<String> {
+    scenario
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EventSpec::ToolFold { tool_fold } => Some(tool_fold.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 async fn record_and_run_scenario(

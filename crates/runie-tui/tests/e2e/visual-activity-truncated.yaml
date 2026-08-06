@@ -15,10 +15,11 @@ events:
   - tool_mode:
       tool_call_id: call-1
       mode: truncated
+  - tool_fold: call-1
 assertions:
   state:
     tool_blocks: 1
-    tool_modes: [truncated]
+    tool_modes: [expanded]
     tool_kinds: [read]
     tool_headers: ["Read README.md"]
     tool_outputs: [["# runie", "Read README.md (3 lines)", "# runie", "This is **Runie**."]]
