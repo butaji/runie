@@ -345,6 +345,13 @@ and minimally adjusts the actor-owned scroll offset so the selected semantic
 row is inside the viewport. A small-viewport renderer regression pins the
 selected-row reveal behavior.
 
+Background lifecycle default audit (2026-08-06): Grok's lifecycle block has a
+collapsed default, but applying that token alone exposes a deeper missing
+piece in Runie's grouped lifecycle height/viewport projection: later completed
+and failed workers clip out of the 24-row fixture. The default remains on the
+compatibility path until grouped lifecycle layout is implemented and validated
+as one event-sequence/YAML scenario.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running
