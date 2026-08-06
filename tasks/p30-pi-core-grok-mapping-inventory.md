@@ -2,6 +2,14 @@
 
 Status: active (2026-08-06)
 
+## Fresh source audit (2026-08-06)
+
+Re-ran `scripts/source-inventory.sh` against the authoritative checkouts. The
+counts remain exact: Pi agent 37 files, Pi AI 169 files, Grok pager 496 files,
+and Grok pager-render 68 files. The inventory is therefore current; green
+local tests do not close the documented full-color cast, specialized-card
+completion-output, or actor-owned row-identity gaps.
+
 ## Governing scope
 
 **Runie = pi-agent-core behavior + Grok TUI, limited to pi-core features.**
