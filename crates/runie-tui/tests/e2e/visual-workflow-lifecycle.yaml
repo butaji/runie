@@ -24,6 +24,15 @@ assertions:
   state:
     tool_blocks: 1
     tool_headers: ["Workflow release done in 1.2s: ship the release  [tests ●]"]
+    workflows:
+      wf-1:
+        name: release
+        objective: ship the release
+        phase: tests
+        state: active
+        active_agents: 2
+        status: done
+        elapsed_ms: 1200
   visual:
     cols: 80
     rows: 24

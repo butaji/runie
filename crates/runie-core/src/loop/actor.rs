@@ -16,7 +16,7 @@ use crate::state::AgentStateActor;
 use crate::task_owner::{spawn_owned_worker, TaskOwner};
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
-use crate::types::{AgentContext, AgentMessage, QueueMode, ToolExecutionMode};
+use crate::types::{AgentContext, AgentEvent, AgentMessage, QueueMode, ToolExecutionMode};
 
 #[derive(Debug, thiserror::Error)]
 pub enum LoopError {
@@ -277,6 +277,15 @@ impl LoopActor {
             .publish_event(&self.inner.deps.bus, crate::types::AgentEvent::Reset)
             .await;
         self.clear_all_queues().await;
+    }
+
+    /// Apply an externally replayed event through the core state owner.
+    ///
+    /// This is intentionally an event boundary rather than a state mutator;
+    /// YAML replay and adapters can feed control events into the same reducer
+    /// without reaching into another actor's fields.
+    pub async fn apply_event(&self, event: &AgentEvent) {
+        self.inner.deps.state.apply_event(event).await;
     }
 
     /// Controls how steering messages are drained on subsequent turns.

@@ -5,6 +5,7 @@
 //! The runner applies the fixture's assertions against the recorded events
 //! and the rendered scrollback.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -540,6 +541,21 @@ pub struct StateAssertions {
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
     pub scroll_offset: Option<usize>,
+    /// Exact actor-owned workflow projections keyed by their stable run id.
+    /// YAML owns the expected state; the runner only performs generic field
+    /// comparison so workflow fixtures stay recompilation-free.
+    pub workflows: Option<BTreeMap<String, WorkflowStateAssertion>>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct WorkflowStateAssertion {
+    pub name: Option<String>,
+    pub objective: Option<String>,
+    pub phase: Option<String>,
+    pub state: Option<String>,
+    pub active_agents: Option<u32>,
+    pub status: Option<String>,
+    pub elapsed_ms: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -932,7 +948,11 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
 
     let actor_snapshot = actor.clone();
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
-    append_declared_events(&mut events_from_task, scenario);
+    let declared_events = declared_control_events(scenario);
+    events_from_task.extend(declared_events.iter().cloned());
+    for event in &declared_events {
+        actor_snapshot.apply_event(event).await;
+    }
 
     let (scrollback, status) = replay_scenario_events(
         &events_from_task,
@@ -954,8 +974,12 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     })
 }
 
-fn append_declared_events(events: &mut Vec<AgentEvent>, scenario: &Scenario) {
-    events.extend(scenario.events.iter().filter_map(EventSpec::waiting_event));
+fn declared_control_events(scenario: &Scenario) -> Vec<AgentEvent> {
+    scenario
+        .events
+        .iter()
+        .filter_map(EventSpec::waiting_event)
+        .collect()
 }
 
 async fn replay_scenario_events(
@@ -1295,6 +1319,96 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state scroll_offset mismatch: expected {expected}, got {}",
                 outcome.feed.scroll_offset
+            ));
+        }
+    }
+    assert_workflow_expectations(outcome, expected)?;
+    Ok(())
+}
+
+fn assert_workflow_expectations(
+    outcome: &ScenarioOutcome,
+    expected: &StateAssertions,
+) -> Result<(), String> {
+    let Some(expected) = &expected.workflows else {
+        return Ok(());
+    };
+    if outcome.state.workflows.len() != expected.len() {
+        return Err(format!(
+            "state workflows mismatch: expected keys {:?}, got {:?}",
+            expected.keys().collect::<Vec<_>>(),
+            outcome.state.workflows.keys().collect::<Vec<_>>()
+        ));
+    }
+    for (run_id, assertion) in expected {
+        let Some(actual) = outcome.state.workflows.get(run_id) else {
+            return Err(format!("state workflow missing run_id {run_id:?}"));
+        };
+        assert_workflow_fields(run_id, assertion, actual)?;
+    }
+    Ok(())
+}
+
+fn assert_workflow_fields(
+    run_id: &str,
+    assertion: &WorkflowStateAssertion,
+    actual: &runie_core::state::WorkflowSnapshot,
+) -> Result<(), String> {
+    assert_optional_eq(&assertion.name, &actual.name, "workflow name", run_id)?;
+    assert_optional_eq(
+        &assertion.objective,
+        &actual.objective,
+        "workflow objective",
+        run_id,
+    )?;
+    assert_optional_option_eq(&assertion.phase, &actual.phase, "workflow phase", run_id)?;
+    assert_optional_option_eq(&assertion.state, &actual.state, "workflow state", run_id)?;
+    if let Some(expected) = assertion.active_agents {
+        if actual.active_agents != expected {
+            return Err(format!(
+                "state workflow {run_id:?} active_agents mismatch: expected {expected}, got {}",
+                actual.active_agents
+            ));
+        }
+    }
+    assert_optional_eq(&assertion.status, &actual.status, "workflow status", run_id)?;
+    if let Some(expected) = assertion.elapsed_ms {
+        if actual.elapsed_ms != Some(expected) {
+            return Err(format!(
+                "state workflow {run_id:?} elapsed_ms mismatch: expected {expected:?}, got {:?}",
+                actual.elapsed_ms
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn assert_optional_eq<T: PartialEq + std::fmt::Debug>(
+    expected: &Option<T>,
+    actual: &T,
+    field: &str,
+    run_id: &str,
+) -> Result<(), String> {
+    if let Some(expected) = expected {
+        if expected != actual {
+            return Err(format!(
+                "state workflow {run_id:?} {field} mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn assert_optional_option_eq<T: PartialEq + std::fmt::Debug>(
+    expected: &Option<T>,
+    actual: &Option<T>,
+    field: &str,
+    run_id: &str,
+) -> Result<(), String> {
+    if let Some(expected) = expected {
+        if actual.as_ref() != Some(expected) {
+            return Err(format!(
+                "state workflow {run_id:?} {field} mismatch: expected {expected:?}, got {actual:?}"
             ));
         }
     }
@@ -2185,7 +2299,7 @@ pub async fn render_visual_buffer(
             .await;
     }
     let mut events = captured_events.unwrap_or_else(|| collected.lock().clone());
-    append_declared_events(&mut events, scenario);
+    events.extend(declared_control_events(scenario));
     for ev in events.into_iter() {
         renderer.apply_actor_event(ev).await;
     }

@@ -133,6 +133,13 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   cannot observe completion before the worker acknowledges reduction.
 ## Macro/DSL audit (2026-08-06)
 
+- **Actor workflow state oracle (2026-08-06):** YAML `state.workflows` now
+  compares the complete actor-owned workflow projection (identity, objective,
+  phase/state, active-agent count, terminal status, and elapsed time) by stable
+  run id. `visual-workflow-lifecycle.yaml` exercises the contract through the
+  real event sequence, closing a previously visual-only workflow check without
+  adding fixture-specific Rust code.
+
 The recurring actor ownership, event-kind classification, and TUI view-tree
 patterns are already covered by thin local macros (`spawn_actor_worker!`,
 `mailbox_*`, `agent_event_kind!`, `assistant_event_kind!`, and `view!`). A
