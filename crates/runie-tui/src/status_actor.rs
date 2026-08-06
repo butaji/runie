@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use runie_core::types::AgentEvent;
-use runie_core::{spawn_actor_worker, task_owner::TaskOwner};
+use runie_core::{spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::event_renderer::status_messages_for_event;
@@ -20,6 +20,7 @@ pub struct StatusActor {
     tx: mpsc::Sender<Command>,
     snapshot: watch::Receiver<StatusBar>,
     _owner: Arc<TaskOwner>,
+    _bus_owner: Option<Arc<TaskOwner>>,
 }
 
 impl StatusActor {
@@ -43,7 +44,36 @@ impl StatusActor {
             tx,
             snapshot,
             _owner: owner,
+            _bus_owner: None,
         }
+    }
+
+    /// Construct a live status projection that owns its event-bus subscription.
+    /// The renderer remains a pure event consumer and no longer mutates this
+    /// actor as a side effect of drawing the feed.
+    pub fn new_with_bus(bus: &runie_core::events::EventBus) -> Self {
+        let mut actor = Self::new();
+        let mut events = bus.subscribe();
+        let tx = actor.tx.clone();
+        actor._bus_owner = Some(spawn_owned_worker!(async move {
+            loop {
+                let event = match events.recv().await {
+                    Ok(event) => event,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                };
+                let messages = status_messages_for_event(&event);
+                if messages.is_empty() {
+                    continue;
+                }
+                let (reply, acknowledged) = oneshot::channel();
+                if tx.send(Command::ApplyBatch(messages, reply)).await.is_err() {
+                    break;
+                }
+                let _ = acknowledged.await;
+            }
+        }));
+        actor
     }
 
     pub async fn apply(&self, message: StatusMsg) {
@@ -114,6 +144,16 @@ mod tests {
     async fn actor_projects_agent_start_as_thinking() {
         let actor = StatusActor::new();
         actor.apply_event(&AgentEvent::AgentStart).await;
+        assert_eq!(actor.snapshot().current(), &Status::Thinking);
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_reduces_status_events_without_renderer_dispatch() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = StatusActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::AgentStart);
+        snapshot.changed().await.expect("status bus projection");
         assert_eq!(actor.snapshot().current(), &Status::Thinking);
     }
 }

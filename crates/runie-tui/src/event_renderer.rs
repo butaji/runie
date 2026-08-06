@@ -402,7 +402,6 @@ impl EventRenderer {
                     match result {
                         Ok(event) => {
                             self.record_thinking_elapsed(&event);
-                            status_actor.apply_event(&event).await;
                             let actor_tool_start = match &event {
                                 AgentEvent::ToolExecutionStart {
                                     tool_call_id,

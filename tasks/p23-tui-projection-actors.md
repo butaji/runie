@@ -334,3 +334,9 @@ because it would conceal ownership and make YAML event assertions impossible.
 Selection reset invariant (2026-08-06): `Scrollback::Clear` now clears the
 actor-owned selected tool ID atomically with transcript rows, preventing a
 post-Reset fold intent from targeting a stale block.
+
+Status bus ownership (2026-08-06): the live `StatusActor` can now own a
+subscription to the shared core event bus. `App` uses this constructor, so
+the live renderer no longer mutates status projection while consuming feed
+events; the deterministic YAML replay adapter retains its explicit
+acknowledged reducer path for phase-locked scenarios.
