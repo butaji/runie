@@ -131,3 +131,12 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   one-shot acknowledgement protocol. Status and scrollback actors use it for
   live bus projections and replay commands; a macro test proves the caller
   cannot observe completion before the worker acknowledges reduction.
+## Macro/DSL audit (2026-08-06)
+
+The recurring actor ownership, event-kind classification, and TUI view-tree
+patterns are already covered by thin local macros (`spawn_actor_worker!`,
+`mailbox_*`, `agent_event_kind!`, `assistant_event_kind!`, and `view!`). A
+further macro would hide payload semantics rather than reduce meaningful
+boilerplate, so no new macro was introduced in this audit. The YAML DSL was
+extended instead where it had a real pi parity gap: sectional text, thinking,
+tool-call, and tool-update events are now data-driven and fixture-tested.
