@@ -188,6 +188,13 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
 
 ## Progress
 
+**Hey state contract (2026-08-06):** The canonical four-size `visual-hey`
+fixture now asserts the terminal `ready` status, zero pending/tool blocks,
+two core messages, and the actor-owned tail-follow scroll offset (`9`) in addition to the
+exact Pi event vector and screen/layout assertions. This keeps the central
+scenario pinned across event sequence, state projection, and full-screen
+geometry dimensions.
+
 - **Declarative exact TUI event vector (2026-08-06):** The YAML runner now
   supports `assertions.exact_events`, comparing the complete ordered
   `AgentEvent` kind vector rather than only checking membership. The canonical
