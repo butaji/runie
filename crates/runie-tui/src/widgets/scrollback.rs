@@ -678,9 +678,14 @@ impl Scrollback {
             .copied()
             .unwrap_or(runie_core::types::ToolDisplayMode::Expanded)
         {
-            runie_core::types::ToolDisplayMode::Collapsed
-            | runie_core::types::ToolDisplayMode::Truncated => {
+            runie_core::types::ToolDisplayMode::Collapsed => {
                 runie_core::types::ToolDisplayMode::Expanded
+            }
+            // Grok treats Truncated as an intermediate preview, and folding
+            // that preview returns to the title-only state. It must not jump
+            // to the full output view.
+            runie_core::types::ToolDisplayMode::Truncated => {
+                runie_core::types::ToolDisplayMode::Collapsed
             }
             runie_core::types::ToolDisplayMode::Expanded => {
                 runie_core::types::ToolDisplayMode::Collapsed

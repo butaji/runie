@@ -19,7 +19,7 @@ events:
 assertions:
   state:
     tool_blocks: 1
-    tool_modes: [expanded]
+    tool_modes: [collapsed]
     tool_kinds: [read]
     tool_headers: ["Read README.md"]
     tool_outputs: [["# runie", "Read README.md (3 lines)", "# runie", "This is **Runie**."]]
@@ -29,4 +29,3 @@ assertions:
     activity_expanded: false
     screen_text:
       - "Read README.md"
-      - "# runie"

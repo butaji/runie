@@ -456,3 +456,11 @@ terminal height (`<= 20` rows), not merely from a boolean setting. The source
 behavior is recorded here for the pending full layout migration; the current
 fix is limited to the feed's absolute prompt lead so unrelated 12-row
 transcript geometry remains stable.
+
+Fold-cycle audit (2026-08-06): Grok's `Entry::toggle_fold` delegates the
+transition to each block family. For the shared intermediate preview state,
+the cycle is `Truncated -> Collapsed`; Runie had incorrectly promoted it to
+`Expanded`. The actor reducer now returns to title-only mode, and
+`visual-activity-truncated.yaml` asserts the resulting state and screen.
+This keeps the behavior within Pi-core tool events while matching Grok's
+visible fold semantics.
