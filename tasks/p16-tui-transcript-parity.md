@@ -510,3 +510,10 @@ Workflow objective wrapping (2026-08-06): The pure workflow formatter now
 flattens newline-containing objectives to one transcript row, matching Grok's
 `WorkflowBlock` output contract. A focused renderer regression covers CR/LF
 input; richer structured workflow styling remains open.
+
+Workflow terminal-state YAML matrix (2026-08-06): Added
+`visual-workflow-terminal-states.yaml` to exercise failed and cancelled
+workflow cards, including phase trails and elapsed values, through the real
+Pi-shaped event stream and actor reducer. The parity component index now maps
+the workflow card to its Grok sources and both lifecycle fixtures. Rich
+per-span workflow styling and preamble expansion remain open.

@@ -1,0 +1,63 @@
+name: visual-workflow-terminal-states
+description: >-
+  Workflow terminal statuses are replayed from Pi-shaped events into the
+  actor-owned Grok workflow card without renderer-local state.
+initial_prompt: "run workflow states"
+events:
+  - start
+  - workflow_start:
+      run_id: wf-failed
+      name: verify
+      objective: validate the release
+  - workflow_progress:
+      run_id: wf-failed
+      phase: checks
+      state: failed
+      active_agents: 1
+  - workflow_end:
+      run_id: wf-failed
+      status: failed
+      elapsed_ms: 2300
+  - workflow_start:
+      run_id: wf-cancelled
+      name: publish
+      objective: publish the release
+  - workflow_progress:
+      run_id: wf-cancelled
+      phase: upload
+      state: active
+  - workflow_end:
+      run_id: wf-cancelled
+      status: cancelled
+      elapsed_ms: 900
+  - done: { stop_reason: stop }
+assertions:
+  required_events: [workflow_started, workflow_progress, workflow_finished]
+  state:
+    tool_blocks: 2
+    tool_headers:
+      - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
+      - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ●]"
+    workflows:
+      wf-failed:
+        name: verify
+        objective: validate the release
+        phase: checks
+        state: failed
+        active_agents: 1
+        status: failed
+        elapsed_ms: 2300
+      wf-cancelled:
+        name: publish
+        objective: publish the release
+        phase: upload
+        state: active
+        active_agents: 0
+        status: cancelled
+        elapsed_ms: 900
+  visual:
+    cols: 100
+    rows: 30
+    screen_text:
+      - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
+      - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ●]"

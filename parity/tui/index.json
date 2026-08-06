@@ -11,6 +11,7 @@
     {"id":"assistant-message","doc":"assistant-message.md","sources":["scrollback/blocks/markdown_content.rs","scrollback/render.rs"],"fixtures":["visual-markdown-rich.yaml"]},
     {"id":"activity-group","doc":"activity-group.md","sources":["scrollback/render.rs","scrollback/scrollback_pane.rs"],"fixtures":["visual-activity-mixed.yaml","visual-activity-collapsed.yaml"]},
     {"id":"tool-card","doc":"tool-card.md","sources":["scrollback/blocks/tool"],"fixtures":["visual-tool-structured.yaml","visual-tool-error.yaml"]},
+    {"id":"workflow-card","doc":"workflow-card.md","sources":["scrollback/blocks/workflow.rs","app/acp_handler/workflow_ingest.rs"],"fixtures":["visual-workflow-lifecycle.yaml","visual-workflow-terminal-states.yaml"]},
     {"id":"prompt-composer","doc":"prompt-composer.md","sources":["views/prompt_widget","app/agent_view/prompt.rs"],"fixtures":["visual-prompts.yaml","visual-file-search.yaml"]},
     {"id":"status-footer","doc":"status-footer.md","sources":["views/agent_status.rs","views/turn_status.rs"],"fixtures":["visual-status-working.yaml","visual-grok-waiting.yaml"]},
     {"id":"theme-tokens","doc":"theme-tokens.md","sources":["../../xai-grok-pager-render/src/theme","../../xai-grok-pager-render/src/glyphs.rs"],"fixtures":["visual-theme-day.yaml"]},
