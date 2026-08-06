@@ -758,6 +758,10 @@ pub struct LayoutMatrixCase {
 #[derive(Debug, Deserialize, Clone)]
 pub struct DumpReference {
     pub cast: String,
+    /// Read a settled ANSI screen dump instead of an asciicast-v2 stream.
+    /// The terminal geometry comes from the rendered YAML frame.
+    #[serde(default)]
+    pub format: Option<String>,
     #[serde(default)]
     pub frame_contains: Vec<String>,
     /// Select the first frame after a marker phase has appeared. This is the
@@ -1967,8 +1971,18 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../artifacts")
         .join(&reference.cast);
-    let dump = std::fs::read_to_string(&path)
+    let raw_dump = std::fs::read_to_string(&path)
         .map_err(|error| format!("read dump {}: {error}", path.display()))?;
+    let dump = if reference.format.as_deref() == Some("ansi") {
+        let output = serde_json::to_string(&raw_dump)
+            .map_err(|error| format!("encode ANSI dump {}: {error}", path.display()))?;
+        format!(
+            "{{\"version\":2,\"term\":{{\"cols\":{},\"rows\":{}}}}}\n[0.0,\"o\",{}]",
+            buffer.area.width, buffer.area.height, output
+        )
+    } else {
+        raw_dump
+    };
     let mut lines = dump.lines();
     let header: serde_json::Value = serde_json::from_str(
         lines

@@ -624,3 +624,8 @@ comparisons; the asciinema cast remains the animation/replay artifact. The
 artifact is also recorded in the adjacent metadata manifest. A smoke capture
 produced all 24 rows and the expected Hey feed, removing the teardown race
 from the capture workflow.
+
+The YAML dump oracle now accepts `reference.format: ansi` for these settled
+artifacts. It wraps the ANSI screen into a one-frame VT replay using the YAML
+frame geometry, so `exact_screen`, `exact_attributes`, and `require_truecolor`
+remain available without recompiling when the captured artifact changes.
