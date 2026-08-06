@@ -255,6 +255,14 @@ against the Grok `Hey` reference: all 1,984 cells equal, with zero glyph or
 attribute differences. Individual timestamp and elapsed variables remain
 available for focused probes.
 
+**Atomic Runie matrix capture (2026-08-06):** The same deterministic clock was
+captured through the matrix harness at `62x32`, `80x24`, `100x30`, and
+`120x36`, with complete casts and raw streams emitted for each geometry. The
+installed Grok binary did not reach the bounded prompt boundary for a fresh
+four-size capture, so only the 62×32 pair is accepted as a strict Grok match;
+the other three Runie casts remain artifacts awaiting paired Grok captures.
+The YAML `visual-hey` matrix continues to exercise all four geometries.
+
 **Prompt timestamp edge alignment (2026-08-06):** The user-feed timestamp
 projection no longer reserves a fixed eight-cell gutter after the prompt. It
 right-aligns the timestamp against the feed width, matching Grok's edge-based

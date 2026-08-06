@@ -64,8 +64,8 @@ cast-dump LEFT RIGHT:
     cargo run -q -p runie-tui --bin cast_compare -- --dump {{LEFT}} {{RIGHT}}
 
 # Capture one application over the four parity reference geometries.
-capture-matrix DIR COMMAND QUIT_KEY:
-    scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}}
+capture-matrix DIR COMMAND QUIT_KEY ENV="":
+    scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}} {{ENV}}
 
 # Compare Grok and Runie casts at every supported geometry.
 compare-matrix GROK_DIR RUNIE_DIR:
