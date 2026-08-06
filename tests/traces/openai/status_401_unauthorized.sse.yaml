@@ -22,3 +22,4 @@ tools:
   []
 error:
   kind: provider_decode
+  message_contains: "no terminal event"

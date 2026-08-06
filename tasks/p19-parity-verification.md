@@ -308,6 +308,11 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   error contract `kind: provider_decode`; malformed/error traces are not sent
   through the success loop path. This closes the provider-decode fixture
   family. Exhaustive frame-by-frame Grok comparison remains.
+- **Provider-decode diagnostic strengthening (2026-08-06):** The canonical
+  OpenAI 401 body now asserts the exact `invalid: trace has no terminal event`
+  classification substring in YAML, proving the harness preserves a stable
+  parser diagnostic rather than only a failure boolean. The remaining decode
+  sidecars still need representative API-error/message vectors.
 - **Serialization oracle audit (2026-08-05):** Re-audited the p01–p04/p09
   wire contracts. Existing core tests round-trip assistant, tool-result, user,
   model, usage/cost, event, tool-hook, image, stop-reason, and thinking-level
