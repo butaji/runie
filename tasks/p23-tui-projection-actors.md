@@ -220,3 +220,6 @@ because it would conceal ownership and make YAML event assertions impossible.
 - **AgentStart status parity (2026-08-05):** Added the missing actor-owned
   `AgentStart -> Thinking` status projection. This closes the startup gap that
   was previously covered only by the compatibility renderer branch.
+
+  The actor module now also pins this transition directly, independent of
+  `EventRenderer` construction.

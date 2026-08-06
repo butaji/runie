@@ -118,4 +118,11 @@ mod tests {
         updates.borrow_and_update();
         assert!(!updates.has_changed().expect("actor is alive"));
     }
+
+    #[tokio::test]
+    async fn actor_projects_agent_start_as_thinking() {
+        let actor = StatusActor::new();
+        actor.apply_event(&AgentEvent::AgentStart).await;
+        assert_eq!(actor.snapshot().current(), &Status::Thinking);
+    }
 }
