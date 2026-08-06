@@ -167,3 +167,10 @@ further macro would hide payload semantics rather than reduce meaningful
 boilerplate, so no new macro was introduced in this audit. The YAML DSL was
 extended instead where it had a real pi parity gap: sectional text, thinking,
 tool-call, and tool-update events are now data-driven and fixture-tested.
+## Explicit viewport reducer events (2026-08-06)
+
+The YAML DSL now supports `follow_latest: true|false`, mapped directly to the
+actor-owned `ScrollbackMsg::SetFollowLatestUser` reducer input. Visual replay
+applies this event after transcript reduction, so tool-update fixtures can
+declare their viewport phase without sleeps or scheduler yields. The
+`visual-tool-update` scenario uses it and asserts `follow_latest_user: true`.

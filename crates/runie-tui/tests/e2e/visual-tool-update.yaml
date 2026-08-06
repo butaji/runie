@@ -16,11 +16,13 @@ events:
       tool_name: bash
       partial_result: { text: "still running" }
   - done: { stop_reason: stop }
+  - follow_latest: true
 assertions:
   required_events: [tool_execution_start, tool_execution_update, tool_execution_end]
   state:
     tool_blocks: 1
     tool_headers: ["Run cargo test → ✓"]
+    follow_latest_user: true
   visual:
     cols: 80
     rows: 24

@@ -166,6 +166,9 @@ pub enum EventSpec {
     Scroll {
         scroll: i32,
     },
+    FollowLatest {
+        follow_latest: bool,
+    },
     BackgroundStart {
         background_start: BackgroundStartSpec,
     },
@@ -450,6 +453,7 @@ impl EventSpec {
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
             Self::Scroll { .. } => None,
+            Self::FollowLatest { .. } => None,
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
             | Self::BackgroundEnd { .. }
@@ -1174,6 +1178,9 @@ fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         .iter()
         .filter_map(|event| match event {
             EventSpec::Scroll { scroll } => Some(ScrollbackMsg::ScrollBy(*scroll)),
+            EventSpec::FollowLatest { follow_latest } => {
+                Some(ScrollbackMsg::SetFollowLatestUser(*follow_latest))
+            }
             _ => None,
         })
         .collect()
@@ -2553,6 +2560,12 @@ pub async fn render_visual_buffer(
     // remain visible while the real app follows newly submitted prompts.
     app.apply_scrollback(ScrollbackMsg::SetFollowLatestUser(false))
         .await;
+    // YAML viewport controls are explicit reducer events, not timing
+    // assumptions. Apply them after transcript replay so a fixture can name
+    // the exact follow/reveal phase it wants to inspect.
+    for message in declared_scrolls(scenario) {
+        app.apply_scrollback(message).await;
+    }
     // Replay events establish the transcript first; navigation keystrokes are
     // then applied to the actor snapshot so visual assertions observe the
     // same ordering as the live application.
