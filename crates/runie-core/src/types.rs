@@ -300,10 +300,10 @@ pub struct ToolResultMessage {
     pub tool_name: String,
     pub content: Vec<ToolResultContent>,
     /// Structured details (pi: `details?`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "serde_json::Value::is_null")]
     pub details: serde_json::Value,
     /// Token usage reported by the tool (pi: `usage?`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage: Option<Usage>,
     /// Tool names discovered/added by this tool (pi: `addedToolNames?`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1140,6 +1140,19 @@ mod tests {
         let back: ToolResultMessage = serde_json::from_value(json).unwrap();
         assert_eq!(back, m);
         assert_eq!(back.added_tool_names, vec!["lister".to_string()]);
+    }
+
+    #[test]
+    fn tool_result_message_omits_absent_optional_pi_fields() {
+        let json = serde_json::to_value(ToolResultMessage::default()).unwrap();
+        assert!(json.get("details").is_none());
+        assert!(json.get("usage").is_none());
+        assert!(json.get("addedToolNames").is_none());
+
+        let back: ToolResultMessage = serde_json::from_value(json).unwrap();
+        assert_eq!(back.details, serde_json::Value::Null);
+        assert_eq!(back.usage, None);
+        assert!(back.added_tool_names.is_empty());
     }
 
     #[test]

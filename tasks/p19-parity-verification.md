@@ -1384,3 +1384,8 @@ projection, four core messages produced by the delegated lifecycle, and one
 tool block in addition to its complete-screen semantic card text. The card
 kind remains intentionally renderer vocabulary because Grok's subagent card
 is not a distinct Pi core tool-card enum.
+**Tool-result optional fields (2026-08-06):** Pi declares `details`, `usage`,
+and `addedToolNames` optional on `ToolResultMessage`. Runie now omits null
+`details` and absent `usage`/empty `addedToolNames` during serialization,
+while retaining default-compatible deserialization for internal projections.
+Focused wire tests cover both populated and absent-field cases.
