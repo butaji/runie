@@ -1822,6 +1822,10 @@ pub async fn render_visual_buffer(
     // bypasses the runtime-scheduling race that prevented the
     // bus-driven renderer from seeing all events on a `current_thread`
     // runtime.
+    // The live capture already projected the events once. Reuse the same
+    // actor instances only after clearing them so the deterministic replay
+    // remains a single event-to-state reduction rather than a second append.
+    app.apply_scrollback(ScrollbackMsg::Clear).await;
     let mut renderer = EventRenderer::with_actors(
         app.scrollback_actor.clone(),
         app.status_actor.clone(),

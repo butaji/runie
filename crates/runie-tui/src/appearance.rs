@@ -36,7 +36,7 @@ success = "green"
 error = "red"
 warning = "yellow"
 "bg.base" = "bg"
-"bg.panel" = "bg"
+"bg.panel" = "selection"
 "bg.selection" = "selection"
 "border.selection" = "selection_border"
 
@@ -73,7 +73,7 @@ success = "green"
 error = "red"
 warning = "yellow"
 "bg.base" = "bg"
-"bg.panel" = "bg"
+"bg.panel" = "selection"
 "bg.selection" = "selection"
 "border.selection" = "selection_border"
 
@@ -102,6 +102,12 @@ pub fn base_style_for(theme: ThemeKind) -> Style {
 
 pub fn background_style_for(theme: ThemeKind) -> Style {
     Style::default().bg(token_color(theme, "bg.base"))
+}
+
+pub fn user_style_for(theme: ThemeKind) -> Style {
+    Style::default()
+        .fg(token_color(theme, "text.primary"))
+        .bg(token_color(theme, "bg.panel"))
 }
 
 pub fn muted_style_for(theme: ThemeKind) -> Style {

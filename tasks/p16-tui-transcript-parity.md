@@ -395,3 +395,9 @@ ordinary tools, `Truncated` for Bash-like execution). Background lifecycle rows
 remain on their existing compatibility path until their event payload carries
 the concrete Grok block variant. Fixtures needing member rows declare
 `tool_mode: expanded`, preserving fast YAML-only iteration.
+
+User feed parity (2026-08-06): user rows now use the theme's `bg.panel` token
+across the full terminal width, and subsequent submitted turns pin the newest
+user entry at the top of the transcript viewport while streaming. The first
+session capture remains at Grok's initial-session scroll position; reducer and
+full YAML/asciinema visual gates pass.

@@ -41,7 +41,7 @@ impl LineKind {
 
     pub fn style_for(self, theme: ThemeKind) -> Style {
         match self {
-            LineKind::User => appearance::base_style_for(theme),
+            LineKind::User => appearance::user_style_for(theme),
             // Grok uses a vertical transcript bar for assistant/reasoning
             // blocks; body text stays primary rather than green.
             LineKind::Assistant => appearance::base_style_for(theme),
@@ -188,6 +188,7 @@ pub struct Scrollback {
     animation_frame: usize,
     selected_tool_id: Option<String>,
     selected_entry: Option<usize>,
+    follow_latest_user: bool,
 }
 
 /// Read-only typed projection of one Grok tool block. It is rebuilt from the
@@ -257,6 +258,7 @@ impl Scrollback {
             animation_frame: 0,
             selected_tool_id: None,
             selected_entry: None,
+            follow_latest_user: false,
         }
     }
 
@@ -354,10 +356,10 @@ impl Scrollback {
                 output,
             } => {
                 self.finish_tool_by_id(&tool_call_id, header);
-                self.replace_or_append_activity(activity);
                 for (kind, text) in output {
                     self.append(Line::new(kind, text).for_tool(&tool_call_id));
                 }
+                self.replace_or_append_activity(activity);
             }
             ScrollbackMsg::FinalizeAssistant {
                 has_reasoning,
@@ -486,6 +488,14 @@ impl Scrollback {
 
     pub fn append(&mut self, line: Line) -> usize {
         let index = self.lines.len();
+        if line.kind == LineKind::User
+            && self
+                .lines
+                .iter()
+                .any(|existing| existing.kind == LineKind::User)
+        {
+            self.follow_latest_user = true;
+        }
         self.lines.push(line);
         if self.autoscroll {
             // Hold offset so the tail is in view after the next render
@@ -500,6 +510,7 @@ impl Scrollback {
         self.scroll_offset = 0;
         self.selected_tool_id = None;
         self.selected_entry = None;
+        self.follow_latest_user = false;
     }
 
     pub fn len(&self) -> usize {
@@ -675,6 +686,7 @@ impl Scrollback {
         self.selected_entry = Some(entries[next]);
         self.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
         self.autoscroll = false;
+        self.follow_latest_user = false;
     }
 
     fn select_tool(&mut self, direction: i8) {
@@ -799,7 +811,21 @@ impl Scrollback {
                 }
             }
         }
-        let start = self.scroll_offset;
+        let start = if self.follow_latest_user {
+            physical_rows
+                .iter()
+                .position(|(kind, _, _)| *kind == LineKind::User)
+                .map(|position| {
+                    if position > 0 && physical_rows[position - 1].1.is_empty() {
+                        position - 1
+                    } else {
+                        position
+                    }
+                })
+                .unwrap_or(self.scroll_offset)
+        } else {
+            self.scroll_offset
+        };
         let end = (start + visible).min(total);
         let selected_non_tool_text = self.selected_entry.and_then(|index| {
             self.lines.get(index).and_then(|line| {
@@ -843,6 +869,14 @@ impl Scrollback {
                 },
                 buf,
             );
+            if *kind == LineKind::User {
+                let user_style = appearance::user_style_for(self.theme);
+                for column in area.x..area.x.saturating_add(area.width) {
+                    if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
+                        cell.set_style(cell.style().patch(user_style));
+                    }
+                }
+            }
             if selected_row {
                 let selected_style = appearance::selected_style_for(self.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
