@@ -285,6 +285,9 @@ This is the first production-facing typed bus path. Existing subscriber
 registries remain compatibility adapters until their callback contract is
 migrated to `PiAgentEvent`.
 
+`LoopActor::subscribe_pi` now exposes the typed path at the actor boundary,
+keeping subscription ownership and async delivery inside the actor runtime.
+
 `SubscriberRegistry::register_pi` now provides that adapter path for async
 Pi-only consumers. Its regression sequence proves application events are
 ignored while Pi lifecycle events preserve ordered delivery.

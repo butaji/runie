@@ -344,6 +344,15 @@ impl LoopActor {
         self.inner.deps.subscribers.register(sub).await
     }
 
+    /// Register a Pi-core-only subscriber. Application/TUI events are
+    /// filtered by the registry adapter before delivery.
+    pub async fn subscribe_pi(
+        &self,
+        sub: Box<dyn crate::events::PiSubscriber>,
+    ) -> crate::events::SubId {
+        self.inner.deps.subscribers.register_pi(sub).await
+    }
+
     pub fn bus(&self) -> EventBus {
         self.inner.deps.bus.clone()
     }
