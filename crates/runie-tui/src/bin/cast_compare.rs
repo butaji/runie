@@ -316,3 +316,32 @@ fn main() -> Result<()> {
         bail!("casts differ")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::replay_frames;
+    use std::path::{Path, PathBuf};
+
+    fn cast(name: &str) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("artifacts")
+            .join(name)
+    }
+
+    #[test]
+    fn phase_marker_selects_visible_frames() {
+        let path = cast("grok-rich.cast");
+        let (_, frames) = replay_frames(&path, Some("❯")).expect("recorded prompt marker");
+        assert!(!frames.is_empty());
+    }
+
+    #[test]
+    fn missing_phase_marker_is_an_error() {
+        let path = cast("grok-rich.cast");
+        let error = replay_frames(&path, Some("__missing_phase_marker__"))
+            .expect_err("missing markers must not produce an empty comparison");
+        assert!(error.to_string().contains("phase marker"));
+        assert!(error.to_string().contains("grok-rich.cast"));
+    }
+}

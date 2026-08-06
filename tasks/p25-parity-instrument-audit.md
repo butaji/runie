@@ -109,6 +109,11 @@ Previously that case produced an empty zero-frame comparison, which could hide
 an invalid phase selection behind an ordinary mismatch. The full workspace
 gate remains green after this diagnostic hardening.
 
+The comparator now has direct binary tests for both successful marker
+selection and missing-marker failure, using the checked-in Grok cast. This
+keeps the phase-selection contract executable rather than relying only on
+manual CLI probing.
+
 ### Fresh 62×32 paired capture — 2026-08-05
 
 The installed Grok binary and `just tui` were captured independently with the
