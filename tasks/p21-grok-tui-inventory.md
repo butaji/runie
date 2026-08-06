@@ -566,3 +566,13 @@ content, preserving first-seen unique domains and adding `(+N more)` after
 the first three. Runie's event projection now emits the same semantic row for
 web-search results; the YAML visual replay asserts it alongside the raw URL
 content, while styling remains owned by the TUI theme layer.
+
+### Context-meter boundary audit (2026-08-06)
+
+Grok's `context_bar.rs` resolves the denominator from the active
+model/context state, while Runie's `StatusSnapshot::header_meter()` still
+uses a `500K` fallback. The Pi `AgentEvent` union does not carry model
+metadata, so closing this gap requires an explicit actor-owned model/context
+projection event (or a core snapshot bridge), not a renderer read or a
+fabricated YAML value. The missing data is recorded as a prerequisite for
+exact metric parity.
