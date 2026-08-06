@@ -23,6 +23,13 @@ fields are also now part of the typed event model and exact wire assertions;
 the reducer replaces both provider placeholders with its actor-owned partial
 assistant state before any downstream publication.
 
+**Message lifecycle audit (2026-08-06):** Re-read pi's `runAgentLoop` and
+`runLoop` beside `runie-core/src/loop/driver.rs`. Prompt and steering
+`message_start`/`message_end`, assistant boundaries, tool-result message
+boundaries, `turn_end`, continuation turns, and final `agent_end` ordering
+match. The remaining p19 gap is cast-wide, full-attribute frame proof rather
+than an unverified lifecycle branch.
+
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered
