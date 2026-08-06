@@ -288,3 +288,9 @@ Transcript block states:
   selected Opaline success/error/accent tokens. `visual-edit-card.yaml`
   exercises the complete edit lifecycle through the YAML runner, and a
   theme-sensitive widget regression pins the three semantic row styles.
+
+- **Workspace-relative tool paths (2026-08-06):** Absolute provider paths in
+  list/read/edit/search headers now use Grok's current-workspace-relative
+  projection, including `.` for the workspace root. The pure formatter has
+  regression coverage for in-workspace and external paths; existing YAML
+  fixtures continue to exercise the same event-driven headers.

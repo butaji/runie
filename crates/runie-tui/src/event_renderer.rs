@@ -1054,14 +1054,14 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .get("path")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or(".");
-            format!("List {path}")
+            format!("List {}", make_relative_path(path))
         }
         "read" | "read_file" => {
             let path = args
                 .get("path")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
-            format!("Read {path}")
+            format!("Read {}", make_relative_path(path))
         }
         "edit" | "write" | "write_file" | "search_replace" => {
             let path = args
@@ -1069,7 +1069,7 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .or_else(|| args.get("file_path"))
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
-            format!("Edit {path}")
+            format!("Edit {}", make_relative_path(path))
         }
         "search" | "grep" | "find" => {
             let pattern = args
@@ -1082,7 +1082,9 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .or_else(|| args.get("cwd"))
                 .and_then(serde_json::Value::as_str);
             match path {
-                Some(path) if !path.is_empty() => format!("Search {pattern:?} in {path}"),
+                Some(path) if !path.is_empty() => {
+                    format!("Search {pattern:?} in {}", make_relative_path(path))
+                }
                 _ => format!("Search {pattern:?}"),
             }
         }
@@ -1162,6 +1164,25 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
             "{tool_name} {}",
             serde_json::to_string(args).unwrap_or_default()
         ),
+    }
+}
+
+/// Grok displays tool paths relative to the active workspace whenever the
+/// provider sends an absolute path. Keep this pure at the renderer boundary
+/// so replay fixtures remain independent of the host's username.
+fn make_relative_path(path: &str) -> String {
+    let Ok(cwd) = std::env::current_dir() else {
+        return path.to_owned();
+    };
+    let cwd = cwd.to_string_lossy();
+    let Some(relative) = path.strip_prefix(cwd.as_ref()) else {
+        return path.to_owned();
+    };
+    let relative = relative.strip_prefix('/').unwrap_or(relative);
+    if relative.is_empty() {
+        ".".to_owned()
+    } else {
+        relative.to_owned()
     }
 }
 
@@ -1757,6 +1778,18 @@ mod tests {
             tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
             "one\ntwo"
         );
+    }
+
+    #[test]
+    fn absolute_tool_paths_are_workspace_relative() {
+        let cwd = std::env::current_dir().expect("workspace cwd");
+        let absolute = cwd.join("src/main.rs").to_string_lossy().into_owned();
+        assert_eq!(
+            tool_header("read", &serde_json::json!({"path": absolute})),
+            "Read src/main.rs"
+        );
+        assert_eq!(make_relative_path(cwd.to_string_lossy().as_ref()), ".");
+        assert_eq!(make_relative_path("/tmp/other/file"), "/tmp/other/file");
     }
 
     #[test]
