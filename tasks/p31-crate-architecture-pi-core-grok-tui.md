@@ -88,6 +88,12 @@ animation frame, and tool display modes. The legacy `Scrollback` snapshot is
 still retained for compatibility rendering; the actor-level model snapshot
 test proves the new read path is fed by the same reducer.
 
+The remaining reducer extraction is tracked explicitly in `tasks/p35-*`:
+`ScrollbackActor` still reduces through the widget adapter, even though it
+publishes only `FeedSnapshot`. This is an architecture gap, not a parity
+claim; completion requires model-owned `FeedState` transitions and YAML
+coverage for every command family.
+
 `App::feed_model_snapshot()` is now the application-level read seam for new
 model consumers and scenario assertions. `App::scrollback_snapshot()` remains
 explicitly compatibility-only until the renderer migration is complete.

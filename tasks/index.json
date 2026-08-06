@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p35",
+      "file": "p35-scrollback-model-reducer.md",
+      "status": "planned",
+      "title": "Architecture: extract the Scrollback reducer into the pure TUI model"
+    },
+    {
       "id": "p34",
       "file": "grok-tui-source-behavior-audit.md",
       "status": "in_progress",
