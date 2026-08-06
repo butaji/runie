@@ -254,7 +254,10 @@ async fn supplied_context_reaches_first_provider_request() {
         texts: Mutex::new(Vec::new()),
     });
     let test = TestLoopBuilder::new(stream.clone()).build();
-    let mut context = AgentContext::default();
+    let mut context = AgentContext {
+        system_prompt: "system context".into(),
+        ..AgentContext::default()
+    };
     context.messages.push(AgentMessage::User(UserMessage {
         content: vec![UserContent::Text {
             text: "prior context".into(),
@@ -309,6 +312,12 @@ async fn convert_to_llm_replaces_wire_messages_after_transform() {
         .prompt(user(), AgentContext::default())
         .await
         .unwrap();
+
+    let snapshot = test.actor.state_snapshot();
+    assert_eq!(snapshot.system_prompt, "system context");
+    assert!(snapshot.messages.iter().any(|message| {
+        matches!(message, AgentMessage::User(user) if user.content.iter().any(|content| matches!(content, UserContent::Text { text } if text == "prior context")))
+    }));
 
     assert_eq!(&*stream.texts.lock(), &["converted".to_string()]);
 }

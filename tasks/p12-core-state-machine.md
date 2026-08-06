@@ -62,3 +62,8 @@ actor-owned loop boundary before each prompt or continuation. This matches
 Pi's agent state, where registered tools are part of the context contract
 rather than only an executor-side lookup table. YAML `tool_count` and
 `tool-echo.yaml` cover the event-sequence-to-state path.
+
+Caller-supplied non-empty `AgentContext` now also enters the state actor before
+the loop starts: system prompt and prior messages are projected through actor
+commands, while an empty context preserves the existing run state. A turn-hook
+regression verifies the provider context and actor snapshot agree.

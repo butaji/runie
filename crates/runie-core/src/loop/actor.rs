@@ -146,11 +146,7 @@ impl LoopActor {
         context: AgentContext,
         skip_initial_steering_poll: bool,
     ) -> Result<Vec<AgentMessage>, LoopError> {
-        self.inner
-            .deps
-            .state
-            .set_tools(self.inner.deps.tool_executor.tools())
-            .await;
+        self.sync_context_to_state(&context).await;
         let mut deps = self.inner.deps.as_run_loop_deps();
         deps.steering_mode = *self.inner.steering_mode.lock().await;
         deps.follow_up_mode = *self.inner.follow_up_mode.lock().await;
@@ -173,6 +169,28 @@ impl LoopActor {
                 .map_err(|e| LoopError::Internal(e.to_string()))?
         };
         Ok(outcome.new_messages)
+    }
+
+    async fn sync_context_to_state(&self, context: &AgentContext) {
+        if !context.system_prompt.is_empty() {
+            self.inner
+                .deps
+                .state
+                .set_system_prompt(context.system_prompt.clone())
+                .await;
+        }
+        if !context.messages.is_empty() {
+            self.inner
+                .deps
+                .state
+                .replace_messages(context.messages.clone())
+                .await;
+        }
+        self.inner
+            .deps
+            .state
+            .set_tools(self.inner.deps.tool_executor.tools())
+            .await;
     }
 
     pub async fn continue_run(
