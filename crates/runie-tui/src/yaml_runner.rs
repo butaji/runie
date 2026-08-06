@@ -1462,8 +1462,9 @@ pub async fn render_visual_buffer(
             app.activate_command_palette().await;
             if matches!(
                 ui_commands.recv().await,
-                Ok(crate::app::UiCommand::ActivatePaletteEntry(command))
-                    if command == "New Session"
+                Ok(crate::app::UiCommand::ActivatePaletteEntry(
+                    crate::app::PaletteAction::NewSession,
+                ))
             ) {
                 app.bus.publish(runie_core::types::AgentEvent::Reset);
             }

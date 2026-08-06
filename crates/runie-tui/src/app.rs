@@ -48,7 +48,27 @@ pub enum UiMsg {
 /// execute these commands through their own actor/event boundary.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiCommand {
-    ActivatePaletteEntry(String),
+    ActivatePaletteEntry(PaletteAction),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PaletteAction {
+    NewSession,
+    NewSessionInWorktree,
+    AgentDashboard,
+    BackToHome,
+    DeleteThisSession,
+    ResumeSession,
+    ShareSession,
+    RenameSession,
+    SessionInfo,
+    CompactHistory,
+    ContextUsage,
+    ViewPlan,
+    Memory,
+    SwitchModel,
+    KeyboardShortcuts,
+    Quit,
 }
 
 fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
@@ -59,7 +79,29 @@ fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
         &state.command_palette_query,
         state.command_palette_index,
     )
-    .map(|entry| UiCommand::ActivatePaletteEntry(entry.to_owned()))
+    .and_then(|entry| palette_action_for(entry).map(UiCommand::ActivatePaletteEntry))
+}
+
+fn palette_action_for(entry: &str) -> Option<PaletteAction> {
+    Some(match entry {
+        "New Session" => PaletteAction::NewSession,
+        "New Session in Worktree" => PaletteAction::NewSessionInWorktree,
+        "Agent Dashboard" => PaletteAction::AgentDashboard,
+        "Back to Home" => PaletteAction::BackToHome,
+        "Delete This Session" => PaletteAction::DeleteThisSession,
+        "Resume Session" => PaletteAction::ResumeSession,
+        "Share Session" => PaletteAction::ShareSession,
+        "Rename Session" => PaletteAction::RenameSession,
+        "Session Info" => PaletteAction::SessionInfo,
+        "Compact History" => PaletteAction::CompactHistory,
+        "Context Usage" => PaletteAction::ContextUsage,
+        "View Plan" => PaletteAction::ViewPlan,
+        "Memory" => PaletteAction::Memory,
+        "Switch Model" => PaletteAction::SwitchModel,
+        "Keyboard Shortcuts" => PaletteAction::KeyboardShortcuts,
+        "Quit" => PaletteAction::Quit,
+        _ => return None,
+    })
 }
 
 fn initial_ui_state(show_welcome: bool) -> UiState {
@@ -543,7 +585,7 @@ mod tests {
         actor.send(UiMsg::ActivateCommandPalette).await;
         assert_eq!(
             commands.recv().await.unwrap(),
-            super::UiCommand::ActivatePaletteEntry("New Session".into())
+            super::UiCommand::ActivatePaletteEntry(super::PaletteAction::NewSession)
         );
     }
 

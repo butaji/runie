@@ -33,6 +33,11 @@ actor-owned, with a pure `CommandPaletteWidget` shared by the live binary and
 YAML visual runner. `visual-command-palette.yaml` covers the filtered modal;
 full Grok command registry/action execution remains open.
 
+Typed palette actions (2026-08-06): UI activation now emits a typed
+`PaletteAction` through the actor command bus. The live binary and YAML replay
+match `NewSession`, `KeyboardShortcuts`, and `Quit` variants directly; the
+visible labels remain a pure palette projection.
+
 `New Session` now follows the event boundary: palette activation is reduced
 by the UI actor, and the binary/YAML paths publish the existing
 `AgentEvent::Reset`. `visual-command-palette-activate.yaml` covers that action;

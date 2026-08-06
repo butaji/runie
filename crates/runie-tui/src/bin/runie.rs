@@ -31,7 +31,7 @@ use runie_core::types::{
     AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ToolExecutionMode,
 };
 
-use runie_tui::app::{App, AppExit, UiCommand};
+use runie_tui::app::{App, AppExit, PaletteAction, UiCommand};
 use runie_tui::key::{is_quit_command, map_key, Action};
 use runie_tui::widgets::{PromptOutcome, Status};
 
@@ -400,16 +400,13 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                     KeyCode::Enter => {
                                         app.activate_command_palette().await;
                                         match ui_commands.recv().await {
-                                            Ok(UiCommand::ActivatePaletteEntry(command))
-                                                if command == "New Session" => {
+                                            Ok(UiCommand::ActivatePaletteEntry(PaletteAction::NewSession)) => {
                                                 app.bus.publish(runie_core::types::AgentEvent::Reset);
                                             }
-                                            Ok(UiCommand::ActivatePaletteEntry(command))
-                                                if command == "Keyboard Shortcuts" => {
+                                            Ok(UiCommand::ActivatePaletteEntry(PaletteAction::KeyboardShortcuts)) => {
                                                 app.toggle_shortcuts().await;
                                             }
-                                            Ok(UiCommand::ActivatePaletteEntry(command))
-                                                if command == "Quit" => {
+                                            Ok(UiCommand::ActivatePaletteEntry(PaletteAction::Quit)) => {
                                                 let _ = renderer_shutdown.send(true);
                                                 let _ = renderer_handle.await;
                                                 return Ok(AppExit::Quit);
