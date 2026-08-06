@@ -11,6 +11,10 @@ events:
       args: { value: "rows" }
   - done: { stop_reason: tool_use }
 assertions:
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 4
   transcript_contains:
     - first
     - second

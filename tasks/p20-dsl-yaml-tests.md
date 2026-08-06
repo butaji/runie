@@ -71,3 +71,6 @@ runtime-discovered and editable without recompiling the runner.
   assertions to `visual-submitted.yaml`, pinning the post-event state
   (`is_streaming: false`, no pending tools, two messages) alongside its visual
   transcript assertions.
+- **Structured-tool state coverage (2026-08-05):** The structured-update
+  fixture now also asserts the terminal core state declaratively, keeping tool
+  rendering and functional message-count verification in one YAML scenario.
