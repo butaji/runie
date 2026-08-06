@@ -158,3 +158,15 @@ The next implementation should model Grok's post-tool viewport reveal as an
 owned reducer event (with an explicit target/offset), then assert the resulting
 snapshot and screen. Until that event contract is source-backed, the existing
 tool-update fixture is intentionally not tightened.
+
+## Current audit checkpoint (2026-08-06)
+
+The source inventory was rerun against the authoritative Pi and Grok
+checkouts; it produced the expected 774 classified entries. The local gate is
+green, but this proves only the modeled event/replay contracts. The remaining
+high-value evidence gap is a single actor-owned identity across
+`ToolExecutionStart → ToolExecutionUpdate → ToolExecutionEnd` when a feed row
+was not pre-seeded by a compatibility fixture. The next parity change must add
+that event-driven row identity and a YAML trace before tightening screen-cell
+assertions. No full-parity claim is made from the current component or saved
+cast checks.

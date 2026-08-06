@@ -45,7 +45,8 @@ publish immutable `watch` snapshots to the pure view.
   and theme changes; a reducer regression covers append/replace/clear.
 - `ScrollbackActor` now owns that reducer behind an acknowledged batch
   mailbox and publishes read-only `watch` snapshots, with an actor-level feed
-  regression test. Live renderer cutover remains pending.
+  regression test. The live renderer consumes this actor; only synchronous
+  compatibility reducers remain outside the production path.
 - The production event loop now mirrors each completed feed reduction into
   `ScrollbackActor` as one atomic snapshot, and the live binary renders from
   that actor snapshot after startup. The legacy feed mutex remains only as a
