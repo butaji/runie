@@ -13,6 +13,13 @@ Runie-specific errors and configuration events remain on the broad
 compatibility path. This is an incremental migration, not evidence that all
 consumers have completed the crate split.
 
+The migration now also covers `TurnEnd`, assistant `MessageStart`/
+`MessageUpdate`/`MessageEnd`, tool execution lifecycle events, and tool-result
+message boundaries. Dynamic tool-hook events are converted to the Pi contract
+when eligible and deliberately retain the compatibility path when they are
+Runie-specific. Core event-sequence and YAML replay tests remain green after
+the migration.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.

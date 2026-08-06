@@ -207,6 +207,13 @@ async fn publish_pi_and_apply(deps: &RunLoopDeps, event: PiAgentEvent) {
     deps.state.publish_pi_event(&deps.bus, event).await;
 }
 
+async fn publish_pi_or_application(deps: &RunLoopDeps, event: AgentEvent) {
+    match PiAgentEvent::try_from(event) {
+        Ok(event) => publish_pi_and_apply(deps, event).await,
+        Err(event) => publish_and_apply(deps, event).await,
+    }
+}
+
 async fn initialize_run(
     prompts: Vec<AgentMessage>,
     deps: &RunLoopDeps,
@@ -319,9 +326,9 @@ async fn finish_assistant_turn(
     match decide_next_turn(&deps.state.snapshot(), tool_calls, false, false) {
         TurnPlan::ToolBatch { calls } => run_tool_batch(assistant, calls, deps, all_new).await,
         TurnPlan::Stop { .. } => {
-            publish_and_apply(
+            publish_pi_and_apply(
                 deps,
-                AgentEvent::TurnEnd {
+                PiAgentEvent::TurnEnd {
                     message: AgentMessage::Assistant(assistant),
                     tool_results: vec![],
                 },
@@ -330,9 +337,9 @@ async fn finish_assistant_turn(
             None
         }
         TurnPlan::Continue => {
-            publish_and_apply(
+            publish_pi_and_apply(
                 deps,
-                AgentEvent::TurnEnd {
+                PiAgentEvent::TurnEnd {
                     message: AgentMessage::Assistant(assistant),
                     tool_results: vec![],
                 },
@@ -408,12 +415,12 @@ async fn run_tool_batch(
     let prepublished_starts = !matches!(assistant.stop_reason, Some(StopReason::MaxTokens));
     if prepublished_starts {
         for call in &calls {
-            let event = AgentEvent::ToolExecutionStart {
+            let event = PiAgentEvent::ToolExecutionStart {
                 tool_call_id: call.id.clone(),
                 tool_name: call.name.clone(),
                 args: call.arguments.clone(),
             };
-            publish_and_apply(deps, event).await;
+            publish_pi_and_apply(deps, event).await;
         }
     }
     let outcome = if matches!(assistant.stop_reason, Some(StopReason::MaxTokens)) {
@@ -435,32 +442,30 @@ async fn publish_tool_outcome(
         if prepublished_starts && matches!(event, AgentEvent::ToolExecutionStart { .. }) {
             continue;
         }
-        publish_and_apply(deps, event).await;
+        publish_pi_or_application(deps, event).await;
     }
     for result in &outcome.tool_results {
         let message = AgentMessage::ToolResult(result.clone());
-        deps.state
-            .publish_event(
-                &deps.bus,
-                AgentEvent::MessageStart {
-                    message: message.clone(),
-                },
-            )
-            .await;
-        deps.state
-            .publish_event(
-                &deps.bus,
-                AgentEvent::MessageEnd {
-                    message: message.clone(),
-                },
-            )
-            .await;
+        publish_pi_and_apply(
+            deps,
+            PiAgentEvent::MessageStart {
+                message: message.clone(),
+            },
+        )
+        .await;
+        publish_pi_and_apply(
+            deps,
+            PiAgentEvent::MessageEnd {
+                message: message.clone(),
+            },
+        )
+        .await;
         all_new.push(message);
     }
     let more = !outcome.tool_results.is_empty() && !outcome.all_terminated;
-    publish_and_apply(
+    publish_pi_and_apply(
         deps,
-        AgentEvent::TurnEnd {
+        PiAgentEvent::TurnEnd {
             message: AgentMessage::Assistant(assistant),
             tool_results: outcome.tool_results.clone(),
         },
@@ -545,24 +550,22 @@ async fn stream_assistant(
         provider: model.provider.clone(),
         ..Default::default()
     };
-    deps.state
-        .publish_event(
-            &deps.bus,
-            AgentEvent::MessageStart {
-                message: assistant_message(&assistant),
-            },
-        )
-        .await;
+    publish_pi_and_apply(
+        deps,
+        PiAgentEvent::MessageStart {
+            message: assistant_message(&assistant),
+        },
+    )
+    .await;
 
     drain_assistant_events(&mut receiver, &mut assistant, deps).await;
-    deps.state
-        .publish_event(
-            &deps.bus,
-            AgentEvent::MessageEnd {
-                message: assistant_message(&assistant),
-            },
-        )
-        .await;
+    publish_pi_and_apply(
+        deps,
+        PiAgentEvent::MessageEnd {
+            message: assistant_message(&assistant),
+        },
+    )
+    .await;
     Some(assistant)
 }
 
@@ -612,11 +615,11 @@ async fn process_stream_event(
     apply_event(assistant, event.clone());
     let event = enrich_assistant_partial(event, assistant);
     if is_delta_event(&event) {
-        let update = AgentEvent::MessageUpdate {
+        let update = PiAgentEvent::MessageUpdate {
             message: assistant_message(assistant),
             event: event.clone(),
         };
-        publish_and_apply(deps, update).await;
+        publish_pi_and_apply(deps, update).await;
     }
     matches!(
         event,
