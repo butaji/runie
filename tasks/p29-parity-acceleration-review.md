@@ -53,6 +53,11 @@ Implementation progress (2026-08-06): Runie's view DSL now contains a pure
 viewport/content clamping. Its focused reducer tests pass; stack measurement
 and YAML exposure of these layout inputs remain open.
 
+The stack resolver is now used by the live chat adapter, and
+`visual-resize.yaml` records/validates all five region rectangles. This closes
+the first layout-measurement oracle; wider geometries and content-dependent
+intrinsic-height assertions remain open.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without

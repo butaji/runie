@@ -9,6 +9,12 @@ assertions:
   visual:
     cols: 40
     rows: 12
+    layout:
+      header: { x: 2, y: 1, width: 36, height: 1 }
+      scrollback: { x: 2, y: 2, width: 36, height: 4 }
+      prompt: { x: 2, y: 6, width: 36, height: 3 }
+      status: { x: 2, y: 10, width: 36, height: 1 }
+      footer_badge: { x: 2, y: 11, width: 36, height: 1 }
     screen_text:
       - "A response that wraps"
       - "Enter:send"

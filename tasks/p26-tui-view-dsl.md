@@ -41,6 +41,9 @@ renderer paints terminal cells.
   scrollback, and prompt regions. The existing Grok prompt/status gap and
   footer geometry remain explicit adapter constraints, and the full visual
   suite remains unchanged.
+- Added YAML `visual.layout` region assertions and covered the 40×12 resize
+  scenario. The runner checks header, scrollback, prompt, status, and footer
+  coordinates through the live layout adapter before screen-text assertions.
 
 ## Next boundaries
 

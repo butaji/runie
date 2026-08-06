@@ -380,12 +380,34 @@ pub struct VisualAssertions {
     pub header_meter: Option<String>,
     #[serde(default)]
     pub waiting_chrome: Option<String>,
+    /// Expected adapter geometry for a complete terminal frame. This keeps
+    /// wrapping/scrolling decisions inspectable without encoding Ratatui
+    /// objects in YAML.
+    #[serde(default)]
+    pub layout: Option<LayoutAssertions>,
     /// Optional asciinema oracle. The runner selects the first terminal frame
     /// containing every marker and compares the requested row text with the
     /// Runie TestBackend frame. YAML owns the state/marker recipe; Rust only
     /// supplies the generic dump decoder.
     #[serde(default)]
     pub reference: Option<DumpReference>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, Copy)]
+pub struct LayoutAssertions {
+    pub header: RegionGeometry,
+    pub scrollback: RegionGeometry,
+    pub prompt: RegionGeometry,
+    pub status: RegionGeometry,
+    pub footer_badge: RegionGeometry,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, Copy)]
+pub struct RegionGeometry {
+    pub x: u16,
+    pub y: u16,
+    pub width: u16,
+    pub height: u16,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1233,6 +1255,9 @@ async fn assert_visual_expectations(
     visual: &VisualAssertions,
 ) -> Result<(), String> {
     let buffer = render_visual_buffer(scenario, visual).await?;
+    if let Some(expected) = visual.layout {
+        assert_layout_expectations(visual, expected)?;
+    }
     let screen = buffer_to_screen(&buffer);
     for needle in &visual.screen_text {
         if !screen.contains(needle) {
@@ -1251,6 +1276,33 @@ async fn assert_visual_expectations(
     }
     if visual.pty {
         eprintln!("[visual] pty assertion requested but not yet implemented");
+    }
+    Ok(())
+}
+
+fn assert_layout_expectations(
+    visual: &VisualAssertions,
+    expected: LayoutAssertions,
+) -> Result<(), String> {
+    let layout = crate::layout::chat_layout_with_prompt_height(
+        ratatui::layout::Rect::new(0, 0, visual.cols, visual.rows),
+        crate::layout::PROMPT_HEIGHT,
+    );
+    let actual = [
+        ("header", layout.header, expected.header),
+        ("scrollback", layout.scrollback, expected.scrollback),
+        ("prompt", layout.prompt, expected.prompt),
+        ("status", layout.status, expected.status),
+        ("footer_badge", layout.footer_badge, expected.footer_badge),
+    ];
+    for (name, region, expected) in actual {
+        let actual = (region.x, region.y, region.width, region.height);
+        let expected = (expected.x, expected.y, expected.width, expected.height);
+        if actual != expected {
+            return Err(format!(
+                "layout {name} mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
     }
     Ok(())
 }
