@@ -71,6 +71,17 @@ full-cell divergence at frame 2. This confirms that a future exact frame oracle
 must align semantic application phases or capture timing before asserting
 one-to-one frame identity.
 
+The same indexed probe across the four saved matrix geometries reports:
+
+| geometry | Grok frames | Runie frames | first indexed divergence |
+| --- | ---: | ---: | ---: |
+| 62x32 | 62 | 23 | 1 |
+| 80x24 | 67 | 14 | 1 |
+| 100x30 | 98 | 19 | 1 |
+| 120x36 | 66 | 20 | 1 |
+
+The mismatch is therefore capture-phase-wide, not a single viewport defect.
+
 ## Review findings
 
 ### Fresh 62×32 paired capture — 2026-08-05
