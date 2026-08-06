@@ -121,7 +121,7 @@ The memory-search projection slice also establishes a model-only structured
 result parser below the reducer boundary, so live and replay paths do not
 format provider output independently.
 
-### Slice 13 in progress: FeedState reducer ownership
+### Slice 13 complete: FeedState reducer ownership
 
 `FeedState` now lives in `runie-tui-model` and owns the actor's transcript
 reduction, navigation, tool identity, workflow facts, and immutable snapshot
@@ -180,8 +180,13 @@ separate `update_tool` and `replace_tool` transitions and prefers active
 `tool_row_id` identity when provider call IDs repeat. The duplicate-ID
 regression passes with the expected first/second completion ownership.
 
-The old reducer helper block is now compiled only for unit-test migration
-audits and is not reachable from production. This keeps the shipped TUI from
-carrying a second state-transition implementation while the final source
-deletion remains a mechanical cleanup. No event payload is duplicated in the
-renderer.
+The old reducer helper block is compiled only for unit-test migration audits
+and is not reachable from production. This keeps the shipped TUI from carrying
+a second state-transition implementation. The remaining cleanup is mechanical
+test-code deletion only; it is not an actor-ownership or runtime event-flow
+gap. No event payload is duplicated in the renderer.
+
+**Verification (2026-08-06):** `scripts/validate-feed-actor-boundary.py` and
+`just ci` both pass. The boundary checker rejects widget construction or
+reduction from `ScrollbackActor`, while the model/unit/replay/visual suites
+exercise the same `FeedState::reduce` event path.
