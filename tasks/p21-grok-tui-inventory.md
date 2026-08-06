@@ -347,6 +347,11 @@ navigation and the live key-to-selection wiring remain open.
 The `tool_fold` YAML instruction now drives this reducer transition in replay,
 and the truncated activity fixture pins the resulting expanded mode.
 
+Live fold wiring (2026-08-06): the production `e` action now publishes the
+actor-owned fold intent for the last projected tool block, falling back to the
+activity-group fold only when no tool block exists. This is a deterministic
+bridge until Grok-equivalent cursor navigation selects arbitrary entries.
+
 Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
 theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
 `search`, web, background, or generic), and mixed/truncated YAML replays pin

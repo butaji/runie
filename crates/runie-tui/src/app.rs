@@ -410,6 +410,23 @@ impl App {
             .await;
     }
 
+    /// Grok's `e` fold intent targets the active scrollback entry. Until the
+    /// full cursor/navigation model lands, the actor's last tool block is the
+    /// deterministic selected-entry fallback; an empty feed keeps the legacy
+    /// activity-group fold behavior.
+    pub async fn toggle_selected_tool_fold(&self) {
+        let snapshot = self.scrollback_actor.snapshot();
+        if let Some(block) = snapshot.tool_blocks().last() {
+            self.scrollback_actor
+                .apply(crate::widgets::ScrollbackMsg::ToggleToolMode(
+                    block.tool_call_id.clone(),
+                ))
+                .await;
+        } else {
+            self.toggle_activity_fold().await;
+        }
+    }
+
     /// Apply a feed update through the actor that owns the rendered snapshot.
     /// The mutex is a compatibility fallback for apps whose renderer is not
     /// running yet.

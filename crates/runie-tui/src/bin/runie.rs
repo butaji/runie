@@ -461,7 +461,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                     continue;
                                 }
                                 Action::ToggleFold => {
-                                    app.toggle_activity_fold().await;
+                                    app.toggle_selected_tool_fold().await;
                                     continue;
                                 }
                                 Action::Quit => {
