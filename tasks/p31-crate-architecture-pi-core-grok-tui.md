@@ -2,6 +2,17 @@
 
 Status: in_progress (2026-08-06)
 
+## Typed core emission (2026-08-06)
+
+`AgentStateActor::publish_pi_event` is now the state-changing emission seam
+for Pi lifecycle/message/tool events. It publishes the closed
+`PiAgentEvent` contract and reduces its compatibility representation in the
+same actor-owned operation. The main loop driver uses this seam for agent
+start/end, turn start, and user/steering/follow-up message start/end events;
+Runie-specific errors and configuration events remain on the broad
+compatibility path. This is an incremental migration, not evidence that all
+consumers have completed the crate split.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.

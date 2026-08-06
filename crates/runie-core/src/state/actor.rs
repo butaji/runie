@@ -173,6 +173,18 @@ impl AgentStateActor {
         self.apply_event(&event).await;
     }
 
+    /// Publish and reduce a Pi-core event through the closed typed boundary.
+    ///
+    /// Keeping this separate from `publish_event` makes it impossible for a
+    /// Pi loop path to accidentally emit a Runie/TUI-only event while still
+    /// applying the compatibility representation to this actor's projection.
+    pub async fn publish_pi_event(&self, bus: &EventBus, event: crate::pi_event::PiAgentEvent) {
+        let wire_event = event.clone();
+        let event = event.try_into_agent_event();
+        bus.publish_pi(wire_event);
+        self.apply_event(&event).await;
+    }
+
     #[allow(
         clippy::too_many_lines,
         reason = "the event reducer keeps every state transition explicit"

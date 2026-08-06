@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::convert::default_convert_to_llm;
 use crate::events::EventBus;
 use crate::hooks::{ShouldStopAfterTurnContext, TurnHooks};
+use crate::pi_event::PiAgentEvent;
 use crate::provider::ProviderActor;
 use crate::queues::{FollowUpQueueActor, SteeringQueueActor};
 use crate::r#loop::turn::{decide_next_turn, TurnPlan};
@@ -84,10 +85,10 @@ pub async fn run_loop(
     skip_initial_steering_poll: bool,
 ) -> RunLoopOutcome {
     deps.state
-        .publish_event(&deps.bus, AgentEvent::AgentStart)
+        .publish_pi_event(&deps.bus, PiAgentEvent::AgentStart)
         .await;
     deps.state
-        .publish_event(&deps.bus, AgentEvent::TurnStart)
+        .publish_pi_event(&deps.bus, PiAgentEvent::TurnStart)
         .await;
     let mut override_ctx = initial_context_override(context, &prompts);
     let mut all_new = initialize_run(prompts, &deps, skip_initial_steering_poll).await;
@@ -129,7 +130,7 @@ pub async fn run_loop(
 
         if continue_after_turn(has_more_tool_calls, &deps, &mut all_new).await {
             deps.state
-                .publish_event(&deps.bus, AgentEvent::TurnStart)
+                .publish_pi_event(&deps.bus, PiAgentEvent::TurnStart)
                 .await;
             continue;
         }
@@ -171,9 +172,9 @@ async fn continue_after_turn(
 
 async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutcome {
     deps.state
-        .publish_event(
+        .publish_pi_event(
             &deps.bus,
-            AgentEvent::AgentEnd {
+            PiAgentEvent::AgentEnd {
                 messages: all_new.clone(),
             },
         )
@@ -202,6 +203,10 @@ async fn publish_and_apply(deps: &RunLoopDeps, event: AgentEvent) {
     deps.state.publish_event(&deps.bus, event).await;
 }
 
+async fn publish_pi_and_apply(deps: &RunLoopDeps, event: PiAgentEvent) {
+    deps.state.publish_pi_event(&deps.bus, event).await;
+}
+
 async fn initialize_run(
     prompts: Vec<AgentMessage>,
     deps: &RunLoopDeps,
@@ -224,22 +229,20 @@ async fn initialize_run(
 }
 
 async fn publish_input_message(message: &AgentMessage, deps: &RunLoopDeps) {
-    deps.state
-        .publish_event(
-            &deps.bus,
-            AgentEvent::MessageStart {
-                message: message.clone(),
-            },
-        )
-        .await;
-    deps.state
-        .publish_event(
-            &deps.bus,
-            AgentEvent::MessageEnd {
-                message: message.clone(),
-            },
-        )
-        .await;
+    publish_pi_and_apply(
+        deps,
+        PiAgentEvent::MessageStart {
+            message: message.clone(),
+        },
+    )
+    .await;
+    publish_pi_and_apply(
+        deps,
+        PiAgentEvent::MessageEnd {
+            message: message.clone(),
+        },
+    )
+    .await;
 }
 
 async fn run_assistant_turn(
