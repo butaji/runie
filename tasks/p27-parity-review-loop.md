@@ -69,6 +69,11 @@ unverified full-screen frame or core event family remains open.
   accepts `&&`-joined markers and requires all of them to be visible before
   indexing frames. A regression test covers the combined marker path, making
   settled-frame selection data-driven rather than timing-based.
+- Combined-marker result (2026-08-06): the fresh 80×24 run reaches the same
+  settled phase in both casts, but still has 4 Grok frames versus 2 Runie
+  frames. The first paired delta is one dynamic telemetry digit at `(69,1)`;
+  this is now classified as elapsed/token-clock parity, requiring deterministic
+  event-owned timing inputs before a cast-wide exact claim.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.
