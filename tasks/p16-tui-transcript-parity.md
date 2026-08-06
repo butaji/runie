@@ -564,3 +564,11 @@ semantics. The existing truncation projection now consumes those rows for
 read/execute output accounting, while terminal appearance remains stable.
 The next slice can apply Grok per-card spans and metadata without rebuilding
 identity in the widget.
+
+Tool lifecycle replay deduplication (2026-08-06): `FeedState` now treats a
+terminal `ToolEnd` payload as a replay of an already applied `ToolUpdate` when
+the same tool owns the same output text, even when a terminal activity line
+separates the events. YAML activity, structured-tool, and specialized-card
+fixtures assert the resulting single visible output set; web-search retains
+its separate source-summary projection. The model regression covers the
+update/activity/end sequence directly.

@@ -19,7 +19,7 @@ assertions:
     pending_tool_calls: 0
     messages: 4
     tool_blocks: 1
-    tool_output_lines: 4
+    tool_output_lines: 2
   transcript_contains:
     - first
     - second

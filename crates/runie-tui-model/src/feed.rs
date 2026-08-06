@@ -480,6 +480,35 @@ mod tests {
         assert_eq!(snapshot.tool_blocks[0].output, ["line one", "done"]);
         assert_eq!(snapshot.tool_blocks[0].kind, super::ToolCardKind::Read);
     }
+
+    #[test]
+    fn terminal_tool_output_replay_is_not_appended_twice() {
+        let mut state = super::FeedState::default();
+        state.reduce(super::ScrollbackMsg::SetToolName(
+            "call-1".into(),
+            "read".into(),
+        ));
+        state.reduce(super::ScrollbackMsg::ToolStart {
+            tool_call_id: "call-1".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        state.reduce(super::ScrollbackMsg::ToolUpdate {
+            tool_call_id: "call-1".into(),
+            header: None,
+            output: vec!["first".into(), "second".into()],
+        });
+        state.reduce(super::ScrollbackMsg::ToolEnd {
+            tool_call_id: "call-1".into(),
+            header: "Read README.md (2 lines)".into(),
+            activity: Some("completed".into()),
+            output: vec![
+                (super::LineKind::ToolResult, "first".into()),
+                (super::LineKind::ToolResult, "second".into()),
+            ],
+        });
+        assert_eq!(state.snapshot().tool_blocks[0].output, ["first", "second"]);
+    }
 }
 
 fn workflow_text_model(
@@ -826,8 +855,12 @@ impl FeedState {
                         .tool_modes
                         .insert(tool_call_id.clone(), ToolDisplayMode::Expanded);
                 }
-                for (kind, text) in output {
-                    self.append(Line::new(kind, text).for_tool(&tool_call_id));
+                let terminal_output_is_replay_of_update =
+                    self.tool_output_suffix_matches(&tool_call_id, &output);
+                if !terminal_output_is_replay_of_update {
+                    for (kind, text) in output {
+                        self.append(Line::new(kind, text).for_tool(&tool_call_id));
+                    }
                 }
                 self.replace_or_append_activity(activity);
             }
@@ -960,6 +993,21 @@ impl FeedState {
             line.kind = LineKind::Tool;
             line.settle_tool_row();
         }
+    }
+
+    fn tool_output_suffix_matches(&self, id: &str, output: &[(LineKind, String)]) -> bool {
+        if output.is_empty() || self.lines.len() < output.len() {
+            return false;
+        }
+        let existing: Vec<&str> = self
+            .lines
+            .iter()
+            .filter(|line| line.tool_call_id.as_deref() == Some(id))
+            .map(|line| line.text.as_str())
+            .collect();
+        output
+            .iter()
+            .all(|(_kind, expected)| existing.contains(&expected.as_str()))
     }
 
     fn mark_tool_error(&mut self, id: &str) {

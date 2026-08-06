@@ -26,7 +26,7 @@ events:
 assertions:
   state:
     tool_kinds: [memory_search, workflow]
-    tool_row_kinds: [header, header, content, content, content, content, content, content, content, content, content, content]
+    tool_row_kinds: [header, header, content, content, content, content, content]
   visual:
     cols: 80
     rows: 40

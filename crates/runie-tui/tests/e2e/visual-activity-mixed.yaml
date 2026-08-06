@@ -37,7 +37,7 @@ assertions:
     selected_tool_id: null
     selected_entry: 6
     tool_headers: ["List . (3 entries)", "Run cargo test → ✓"]
-    tool_outputs: [["Cargo.toml", "src", "crates", "Cargo.toml", "src", "crates"], ["cargo test completed", "cargo test completed"]]
+    tool_outputs: [["Cargo.toml", "src", "crates"], ["cargo test completed"]]
   visual:
     cols: 80
     rows: 24
