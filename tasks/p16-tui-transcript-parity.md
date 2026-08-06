@@ -267,3 +267,7 @@ Transcript block states:
   sub-rectangle. Passing only the scrollback rect into the pure renderer is
   therefore insufficient; the next layout API must carry terminal geometry
   explicitly before changing the responsive prefix rule.
+- **Compact-mode layout DSL (2026-08-05):** Added the pure
+  `grok_effective_compact` rule with Grok's 16-row short-terminal and 20-row
+  auto-compact tokens. Boundary tests cover unmeasured, threshold, overflow,
+  and user-forced compact states before renderer wiring.
