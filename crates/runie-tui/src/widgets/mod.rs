@@ -7,7 +7,7 @@ pub mod status;
 pub mod welcome;
 
 pub use command_palette::CommandPaletteWidget;
-pub use prompt::{InputMode, PromptOutcome, PromptWidget};
+pub use prompt::{InputMode, PromptOutcome, PromptSnapshot, PromptWidget};
 pub use runie_tui_model::PaletteAction;
 pub use scrollback::{
     FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock, ToolCardKind,

@@ -67,6 +67,11 @@ Prompt vocabulary is now model-owned as well: `InputMode` and
 handling, cursor geometry, history storage, and terminal rendering remain in
 the prompt actor/widget.
 
+Prompt state is now also exposed as renderer-independent `PromptSnapshot` from
+`runie-tui-model`; `PromptWidget::model_snapshot` and
+`PromptActor::model_snapshot` provide the actor-owned projection while the
+Ratatui widget snapshot remains as a compatibility path.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

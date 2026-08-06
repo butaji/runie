@@ -14,7 +14,9 @@ use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
 use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps};
 pub use crate::widgets::PaletteAction;
-use crate::widgets::{FeedSnapshot, PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
+use crate::widgets::{
+    FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
+};
 pub use runie_tui_model::{UiCommand, UiMsg, UiState};
 
 #[derive(Debug)]
@@ -198,6 +200,10 @@ impl PromptActor {
 
     pub fn snapshot(&self) -> PromptWidget {
         self.snapshot.borrow().clone()
+    }
+
+    pub fn model_snapshot(&self) -> PromptSnapshot {
+        self.snapshot.borrow().model_snapshot()
     }
 }
 

@@ -16,7 +16,7 @@ use runie_core::types::ThemeKind;
 use unicode_width::UnicodeWidthStr;
 
 use crate::appearance;
-pub use runie_tui_model::{InputMode, PromptOutcome};
+pub use runie_tui_model::{InputMode, PromptOutcome, PromptSnapshot};
 
 #[derive(Clone)]
 pub struct PromptWidget {
@@ -72,6 +72,24 @@ impl PromptWidget {
 
     pub fn text(&self) -> String {
         self.buffer.clone()
+    }
+
+    pub fn model_snapshot(&self) -> PromptSnapshot {
+        PromptSnapshot {
+            text: self.buffer.clone(),
+            focused: self.focused,
+            history: self.history.clone(),
+            history_index: self.history_index,
+            history_search: self.history_search,
+            mode: self.mode,
+            model_caption: self.model_caption.clone(),
+            show_placeholder: self.show_placeholder,
+            file_candidates: self.file_candidates.clone(),
+            file_candidate_index: self.file_candidate_index,
+            selected_file: self.selected_file.clone(),
+            viewer_lines: self.viewer_lines.clone(),
+            theme: self.theme,
+        }
     }
 
     pub fn is_empty(&self) -> bool {
