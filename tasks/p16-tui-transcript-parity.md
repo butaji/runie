@@ -589,3 +589,12 @@ marker is projected as `ToolCardRowKind::Status` even when replay has not yet
 observed the compatibility error-kind mutation. `visual-tool-error.yaml`
 asserts this model-level status role without introducing a second event or
 changing the actor ordering.
+
+Read completion-mode parity (2026-08-06): Grok's `ReadToolCallBlock` declares
+`finished_display_mode = Collapsed`, so a read card returns to its title-only
+projection after completion even if it was expanded while running. The
+canonical `FeedState` reducer now owns this transition, with a model event
+sequence regression. The existing YAML fold fixture remains the post-completion
+user-intent oracle; adding an in-flight mode event to the YAML runner remains a
+separate ordering improvement because control declarations are currently
+applied after the generated core event stream.

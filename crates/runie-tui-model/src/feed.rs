@@ -547,6 +547,34 @@ mod tests {
             ToolDisplayMode::Expanded
         );
     }
+
+    #[test]
+    fn read_card_settles_collapsed_after_completion() {
+        let mut state = super::FeedState::default();
+        state.reduce(super::ScrollbackMsg::SetToolName(
+            "read-1".into(),
+            "read".into(),
+        ));
+        state.reduce(super::ScrollbackMsg::ToolStart {
+            tool_call_id: "read-1".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        state.reduce(super::ScrollbackMsg::SetToolMode(
+            "read-1".into(),
+            ToolDisplayMode::Expanded,
+        ));
+        state.reduce(super::ScrollbackMsg::ToolEnd {
+            tool_call_id: "read-1".into(),
+            header: "Read README.md (2 lines)".into(),
+            activity: None,
+            output: vec![],
+        });
+        assert_eq!(
+            state.snapshot().tool_blocks[0].mode,
+            ToolDisplayMode::Collapsed
+        );
+    }
 }
 
 fn workflow_text_model(
@@ -859,17 +887,22 @@ impl FeedState {
                 output,
             } => {
                 self.replace_tool(&tool_call_id, header);
-                if self
-                    .navigation
-                    .tool_names
-                    .get(&tool_call_id)
-                    .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"))
-                    && self.navigation.tool_modes.get(&tool_call_id)
-                        == Some(&ToolDisplayMode::Truncated)
-                {
-                    self.navigation
-                        .tool_modes
-                        .insert(tool_call_id.clone(), ToolDisplayMode::Expanded);
+                if let Some(name) = self.navigation.tool_names.get(&tool_call_id) {
+                    if matches!(name.as_str(), "read" | "read_file") {
+                        // Grok's ReadToolCallBlock always settles back to its
+                        // title-only card after completion, even if it was
+                        // expanded while running.
+                        self.navigation
+                            .tool_modes
+                            .insert(tool_call_id.clone(), ToolDisplayMode::Collapsed);
+                    } else if matches!(name.as_str(), "bash" | "shell" | "exec" | "run")
+                        && self.navigation.tool_modes.get(&tool_call_id)
+                            == Some(&ToolDisplayMode::Truncated)
+                    {
+                        self.navigation
+                            .tool_modes
+                            .insert(tool_call_id.clone(), ToolDisplayMode::Expanded);
+                    }
                 }
                 let terminal_output_is_replay_of_update =
                     self.tool_output_suffix_matches(&tool_call_id, &output);
