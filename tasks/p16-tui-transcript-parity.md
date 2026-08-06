@@ -294,3 +294,10 @@ Transcript block states:
   projection, including `.` for the workspace root. The pure formatter has
   regression coverage for in-workspace and external paths; existing YAML
   fixtures continue to exercise the same event-driven headers.
+
+- **Running-card animation (2026-08-06):** Runie's actor-owned scrollback
+  projection now distinguishes running tool rows and advances their bullet
+  phase through `ScrollbackMsg::AdvanceAnimation`, synchronized with the
+  existing status animation cadence. A reducer/render test pins the first two
+  Grok glyph phases (`⋅`, `:`); terminal lifecycle rows settle back to the
+  static tool kind on completion.

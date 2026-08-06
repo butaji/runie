@@ -580,6 +580,11 @@ impl EventRenderer {
 
     async fn advance_animation(&self, actor: &StatusActor) {
         actor.apply(StatusMsg::AdvanceAnimation).await;
+        if let Some(scrollback_actor) = &self.scrollback_actor {
+            scrollback_actor
+                .apply(ScrollbackMsg::AdvanceAnimation)
+                .await;
+        }
     }
 
     #[allow(

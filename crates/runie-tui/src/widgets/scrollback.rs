@@ -18,6 +18,7 @@ pub enum LineKind {
     Reasoning,
     ThinkingStatus,
     Tool,
+    ToolRunning,
     ToolError,
     ToolResult,
     ToolOutput,
@@ -47,6 +48,7 @@ impl LineKind {
                 appearance::accent_style_for(theme).add_modifier(Modifier::BOLD)
             }
             LineKind::Tool => appearance::base_style_for(theme),
+            LineKind::ToolRunning => appearance::accent_style_for(theme),
             LineKind::ToolError => appearance::error_style_for(theme),
             LineKind::ToolResult => appearance::success_style_for(theme),
             LineKind::ToolOutput => appearance::base_style_for(theme),
@@ -68,6 +70,7 @@ impl LineKind {
             LineKind::Reasoning => "┃  ",
             LineKind::ThinkingStatus => "┃  ",
             LineKind::Tool => "◆ ",
+            LineKind::ToolRunning => "◆ ",
             LineKind::ToolError => "◆ ",
             LineKind::ToolResult => "  ↳ ",
             // Structured Grok tools render terminal output directly below the
@@ -123,6 +126,7 @@ pub enum ScrollbackMsg {
     AppendTurnSummary(String),
     Clear,
     SetTheme(ThemeKind),
+    AdvanceAnimation,
     RemoveKind(LineKind),
     NormalizeLiveCompletedAssistants,
     AddLiveAssistantTimestamp(usize),
@@ -170,6 +174,7 @@ pub struct Scrollback {
     prompt_timestamp: Option<String>,
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
     theme: ThemeKind,
+    animation_frame: usize,
 }
 
 impl Scrollback {
@@ -183,6 +188,7 @@ impl Scrollback {
             prompt_timestamp: None,
             tool_modes: HashMap::new(),
             theme: ThemeKind::GrokNight,
+            animation_frame: 0,
         }
     }
 
@@ -206,6 +212,9 @@ impl Scrollback {
                 self.clear();
             }
             ScrollbackMsg::SetTheme(theme) => self.set_theme(theme),
+            ScrollbackMsg::AdvanceAnimation => {
+                self.animation_frame = self.animation_frame.wrapping_add(1);
+            }
             ScrollbackMsg::RemoveKind(kind) => self.remove_kind(kind),
             ScrollbackMsg::NormalizeLiveCompletedAssistants => {
                 self.normalize_live_completed_assistants()
@@ -246,7 +255,12 @@ impl Scrollback {
                 activity,
             } => {
                 self.replace_or_append_activity(activity);
-                self.append(Line::new(LineKind::Tool, header).for_tool(tool_call_id));
+                let kind = if header.starts_with("Subagent running:") {
+                    LineKind::ToolRunning
+                } else {
+                    LineKind::Tool
+                };
+                self.append(Line::new(kind, header).for_tool(tool_call_id));
             }
             ScrollbackMsg::ToolUpdate {
                 tool_call_id,
@@ -266,7 +280,7 @@ impl Scrollback {
                 activity,
                 output,
             } => {
-                self.replace_tool_by_id(&tool_call_id, header);
+                self.finish_tool_by_id(&tool_call_id, header);
                 self.replace_or_append_activity(activity);
                 for (kind, text) in output {
                     self.append(Line::new(kind, text).for_tool(&tool_call_id));
@@ -303,6 +317,20 @@ impl Scrollback {
             .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
         {
             line.text = text;
+        }
+    }
+
+    fn finish_tool_by_id(&mut self, tool_call_id: &str, text: String) {
+        if let Some(line) = self
+            .lines
+            .iter_mut()
+            .rev()
+            .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
+        {
+            line.text = text;
+            if line.kind == LineKind::ToolRunning {
+                line.kind = LineKind::Tool;
+            }
         }
     }
 
@@ -625,6 +653,7 @@ impl Scrollback {
                 && matches!(
                     line.kind,
                     LineKind::Tool
+                        | LineKind::ToolRunning
                         | LineKind::ToolOutput
                         | LineKind::ToolResult
                         | LineKind::ToolError
@@ -650,6 +679,8 @@ impl Scrollback {
                     )
                 {
                     "┃"
+                } else if line.kind == LineKind::ToolRunning {
+                    running_bullet(self.animation_frame)
                 } else {
                     line.kind.prefix()
                 };
@@ -832,7 +863,7 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             ]);
         }
     }
-    if kind == LineKind::Tool {
+    if matches!(kind, LineKind::Tool | LineKind::ToolRunning) {
         let Some(header_start) = text.find("◆ ") else {
             return RatLine::from(text.to_owned()).style(style);
         };
@@ -883,6 +914,12 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         return RatLine::from(text.to_owned()).style(style);
     }
     styled_assistant_line(text, style)
+}
+
+const RUNNING_BULLETS: [&str; 4] = ["⋅ ", ": ", "⸬ ", "⁙ "];
+
+fn running_bullet(frame: usize) -> &'static str {
+    RUNNING_BULLETS[frame % RUNNING_BULLETS.len()]
 }
 
 fn styled_activity_line(text: &str, style: Style) -> RatLine<'static> {
@@ -1507,5 +1544,26 @@ mod tests {
             .expect("expanded style")
             .modifier
             .contains(Modifier::ITALIC));
+    }
+
+    #[test]
+    fn running_tool_bullet_advances_as_actor_owned_animation_state() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "worker".into(),
+            header: "Subagent running: \"inspect\"".into(),
+            activity: None,
+        });
+        let mut first = Buffer::empty(Rect::new(0, 0, 40, 1));
+        scrollback.render(Rect::new(0, 0, 40, 1), &mut first);
+        assert_eq!(first.cell((0, 0)).expect("running bullet").symbol(), "⋅");
+        scrollback.apply(ScrollbackMsg::AdvanceAnimation);
+        let mut second = Buffer::empty(Rect::new(0, 0, 40, 1));
+        scrollback.render(Rect::new(0, 0, 40, 1), &mut second);
+        assert_eq!(
+            second.cell((0, 0)).expect("next running bullet").symbol(),
+            ":"
+        );
     }
 }
