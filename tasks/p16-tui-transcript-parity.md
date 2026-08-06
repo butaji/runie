@@ -331,6 +331,10 @@ entire selected terminal row, including trailing empty cells, while preserving
 glyph foreground and modifiers. The focused test asserts both the indicator
 and the full-width background.
 
+Mode-specific fold affordance (2026-08-06): selected expanded tool headers now
+render Grok's downward `⌄`, while selected collapsed headers render the right
+`›` chevron. Both projections have focused cell-level render coverage.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running

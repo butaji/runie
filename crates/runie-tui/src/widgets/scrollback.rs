@@ -1981,6 +1981,31 @@ mod tests {
         );
     }
 
+    #[test]
+    fn collapsed_selected_tool_header_uses_grok_right_chevron() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "collapsed".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::SetToolMode(
+            "collapsed".into(),
+            runie_core::types::ToolDisplayMode::Collapsed,
+        ));
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 3));
+        scrollback.render(Rect::new(0, 0, 40, 3), &mut buffer);
+        assert!((0..3).any(|row| {
+            (0..40).any(|column| {
+                buffer
+                    .cell((column, row))
+                    .is_some_and(|cell| cell.symbol() == "›")
+            })
+        }));
+    }
+
     fn selected_cell_row(buffer: &Buffer) -> u16 {
         (0..3)
             .find(|row| {
