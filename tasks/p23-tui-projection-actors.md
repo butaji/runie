@@ -191,3 +191,8 @@ because it would conceal ownership and make YAML event assertions impossible.
   carries the tool-call ID, semantic header, and grouped activity text, so the
   actor owns the canonical initial row even while update/end adapters remain
   transitional.
+
+- **ToolUpdate actor cutover (2026-08-05):** Structured tool output and
+  partial header updates now produce acknowledged `ScrollbackMsg::ToolUpdate`
+  messages in the async event loop. Updates address rows by tool-call ID and
+  no longer replace the actor snapshot wholesale.

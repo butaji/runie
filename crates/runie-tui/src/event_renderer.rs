@@ -226,6 +226,17 @@ impl EventRenderer {
                                 )),
                                 _ => None,
                             };
+                            let actor_tool_update = match &event {
+                                AgentEvent::ToolExecutionUpdate {
+                                    tool_call_id,
+                                    partial_result,
+                                    ..
+                                } => self.handle_tool_update(
+                                    tool_call_id.clone(),
+                                    partial_result.clone(),
+                                ),
+                                _ => None,
+                            };
                             let mut feed_messages = scrollback_messages_for_event(&event);
                             if matches!(event, AgentEvent::AgentStart) {
                                 feed_messages.extend(agent_start_messages(self.emit_welcome));
@@ -271,12 +282,15 @@ impl EventRenderer {
                                 scrollback_actor.apply_batch(feed_messages).await;
                             }
                             let actor_tool_started = actor_tool_start.is_some();
+                            let actor_tool_updated = actor_tool_update.is_some();
                             if let Some(tool_start) = actor_tool_start {
                                 scrollback_actor.apply(tool_start).await;
+                            } else if let Some(tool_update) = actor_tool_update {
+                                scrollback_actor.apply(tool_update).await;
                             } else {
                                 self.apply_event(event);
                             }
-                            if !actor_owned_feed_event && !actor_tool_started {
+                            if !actor_owned_feed_event && !actor_tool_started && !actor_tool_updated {
                                 self.publish_scrollback_snapshot(&scrollback_actor).await;
                             }
                         }
@@ -358,7 +372,9 @@ impl EventRenderer {
                 tool_call_id,
                 partial_result,
                 ..
-            } => self.handle_tool_update(tool_call_id, partial_result),
+            } => {
+                let _ = self.handle_tool_update(tool_call_id, partial_result);
+            }
             AgentEvent::ToolExecutionEnd {
                 tool_call_id,
                 tool_name,
@@ -469,18 +485,31 @@ impl EventRenderer {
         }
     }
 
-    fn handle_tool_update(&mut self, tool_call_id: String, partial_result: serde_json::Value) {
+    fn handle_tool_update(
+        &mut self,
+        tool_call_id: String,
+        partial_result: serde_json::Value,
+    ) -> Option<ScrollbackMsg> {
         if self.in_tool_exec {
             if let Some(output) = structured_update_text(&partial_result) {
+                let output_lines = output
+                    .lines()
+                    .filter(|line| !line.is_empty())
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>();
                 for line in output.lines().filter(|line| !line.is_empty()) {
                     self.scrollback
                         .lock()
                         .append(Line::new(LineKind::ToolOutput, line).for_tool(&tool_call_id));
                 }
-                return;
+                return Some(ScrollbackMsg::ToolUpdate {
+                    tool_call_id,
+                    header: None,
+                    output: output_lines,
+                });
             }
             let Some(buffer) = self.tool_buffers.get_mut(&tool_call_id) else {
-                return;
+                return None;
             };
             buffer.push_str(&format!(
                 " | update: {}",
@@ -489,8 +518,14 @@ impl EventRenderer {
             if let Some(row) = self.tool_rows.get(&tool_call_id).copied() {
                 let updated = buffer.clone();
                 self.replace_tool_line(row, &updated);
+                return Some(ScrollbackMsg::ToolUpdate {
+                    tool_call_id,
+                    header: Some(updated),
+                    output: Vec::new(),
+                });
             }
         }
+        None
     }
 
     #[allow(
