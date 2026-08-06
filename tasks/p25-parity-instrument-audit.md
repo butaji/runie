@@ -37,6 +37,9 @@ called parity.
   sizes) from being mistaken for a visual parity report.
 - YAML `reference.exact_screen`: strict reference-frame symbol oracle.
 - YAML `reference.exact_attributes`: strict style/color oracle.
+- YAML `reference.frame_after`: phase-locks selection to the first frame after
+  a declarative marker, matching `cast_compare --frames-after` without putting
+  frame timing logic in Rust fixtures.
 
 The paired matrix is an evidence tool, not a fixture substitute. Reference
 casts must come from the same scenario and capture run; dynamic usage, timing,

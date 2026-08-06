@@ -726,6 +726,10 @@ pub struct DumpReference {
     pub cast: String,
     #[serde(default)]
     pub frame_contains: Vec<String>,
+    /// Select the first frame after a marker phase has appeared. This is the
+    /// YAML equivalent of the cast comparator's `--frames-after` mode.
+    #[serde(default)]
+    pub frame_after: Vec<String>,
     #[serde(default)]
     pub rows: Vec<DumpRowReference>,
     /// Compare every terminal cell in the selected frame, not only named rows.
@@ -1937,6 +1941,7 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
     let mut selected_cells = None;
     let mut selected_frame_index = None;
     let mut output_frame = 0usize;
+    let mut after_armed = reference.frame_after.is_empty();
     for line in lines {
         let event: serde_json::Value = serde_json::from_str(line)
             .map_err(|error| format!("parse dump event {}: {error}", path.display()))?;
@@ -1950,14 +1955,22 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
                 .as_bytes(),
         );
         let contents = parser.screen().contents();
+        let marker_match = reference
+            .frame_contains
+            .iter()
+            .all(|marker| contents.contains(marker));
+        let after_match = reference
+            .frame_after
+            .iter()
+            .all(|marker| contents.contains(marker));
         let frame_selected = match reference.frame_index {
             Some(index) => output_frame == index,
-            None => reference
-                .frame_contains
-                .iter()
-                .all(|marker| contents.contains(marker)),
+            None => after_armed && marker_match,
         };
         output_frame += 1;
+        if after_match {
+            after_armed = true;
+        }
         if frame_selected {
             selected = Some(contents);
             selected_cells = Some(dump_cells(parser.screen(), cols, rows));
@@ -1967,10 +1980,11 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
     }
     let reference_screen = selected.ok_or_else(|| {
         format!(
-            "dump {} has no matching frame (index {:?}, markers {:?})",
+            "dump {} has no matching frame (index {:?}, markers {:?}, after {:?})",
             path.display(),
             reference.frame_index,
-            reference.frame_contains
+            reference.frame_contains,
+            reference.frame_after
         )
     })?;
     if reference.exact_attributes {
