@@ -195,6 +195,11 @@ exact Pi event vector and screen/layout assertions. This keeps the central
 scenario pinned across event sequence, state projection, and full-screen
 geometry dimensions.
 
+The current deterministic fixture remains green across 62×32, 80×24, 100×30,
+and 120×36. Live 62×32 captures are tracked separately because timestamps,
+provider wording, usage, and Grok-only diagnostic hints vary between runs;
+those differences are not promoted into the deterministic Pi-core oracle.
+
 - **Declarative exact TUI event vector (2026-08-06):** The YAML runner now
   supports `assertions.exact_events`, comparing the complete ordered
   `AgentEvent` kind vector rather than only checking membership. The canonical
