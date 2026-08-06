@@ -360,7 +360,7 @@ impl App {
         Self {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new_with_bus(&bus),
-            scrollback_actor: ScrollbackActor::new(),
+            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
             loop_actor,
             bus,
             ui,
@@ -372,7 +372,7 @@ impl App {
         Self {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new_with_bus(&bus),
-            scrollback_actor: ScrollbackActor::new(),
+            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
             loop_actor,
             bus,
             ui,

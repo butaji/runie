@@ -340,3 +340,9 @@ subscription to the shared core event bus. `App` uses this constructor, so
 the live renderer no longer mutates status projection while consuming feed
 events; the deterministic YAML replay adapter retains its explicit
 acknowledged reducer path for phase-locked scenarios.
+
+Scrollback lifecycle ownership (2026-08-06): the live `ScrollbackActor` now
+also owns the shared bus subscription for `Reset` and atomically clears its
+transcript/selection projection. `App` uses this constructor; the renderer's
+complex feed reducer remains the explicit deterministic replay seam until all
+stateful tool grouping is moved into the actor.

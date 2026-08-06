@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, oneshot, watch};
 
-use runie_core::{spawn_actor_worker, task_owner::TaskOwner};
+use runie_core::types::AgentEvent;
+use runie_core::{spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
 use crate::widgets::{Scrollback, ScrollbackMsg};
 
@@ -17,6 +18,7 @@ pub struct ScrollbackActor {
     tx: mpsc::Sender<Command>,
     snapshot: watch::Receiver<Scrollback>,
     _owner: Arc<TaskOwner>,
+    _bus_owner: Option<Arc<TaskOwner>>,
 }
 
 impl ScrollbackActor {
@@ -39,7 +41,38 @@ impl ScrollbackActor {
             tx,
             snapshot,
             _owner: owner,
+            _bus_owner: None,
         }
+    }
+
+    /// Construct a live transcript projection that owns its lifecycle-event
+    /// subscription. Complex feed rendering remains an explicit event reducer;
+    /// reset ownership is handled here by the transcript actor itself.
+    pub fn new_with_bus(bus: &runie_core::events::EventBus) -> Self {
+        let mut actor = Self::new();
+        let mut events = bus.subscribe();
+        let tx = actor.tx.clone();
+        actor._bus_owner = Some(spawn_owned_worker!(async move {
+            loop {
+                match events.recv().await {
+                    Ok(AgentEvent::Reset) => {
+                        let (reply, acknowledged) = oneshot::channel();
+                        if tx
+                            .send(Command::ApplyBatch(vec![ScrollbackMsg::Clear], reply))
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                        let _ = acknowledged.await;
+                    }
+                    Ok(_) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        }));
+        actor
     }
 
     pub async fn apply(&self, message: ScrollbackMsg) {
@@ -77,6 +110,7 @@ impl Default for ScrollbackActor {
 mod tests {
     use super::ScrollbackActor;
     use crate::widgets::{Line, LineKind, ScrollbackMsg};
+    use runie_core::types::AgentEvent;
 
     #[tokio::test]
     async fn actor_publishes_acknowledged_feed_snapshot() {
@@ -89,6 +123,26 @@ mod tests {
             )))
             .await;
         assert_eq!(actor.snapshot().lines()[index].text, "hello");
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_clears_on_reset() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+        actor
+            .apply(ScrollbackMsg::Append(Line::new(
+                LineKind::Assistant,
+                "hello",
+            )))
+            .await;
+        bus.publish(AgentEvent::Reset);
+        snapshot.changed().await.expect("scrollback bus projection");
+        snapshot
+            .changed()
+            .await
+            .expect("scrollback reset projection");
+        assert!(actor.snapshot().lines().is_empty());
     }
 
     #[tokio::test]
