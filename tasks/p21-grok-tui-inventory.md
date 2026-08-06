@@ -188,6 +188,11 @@ Integration discovery progress: `search_tools` now uses Grok's `Search Tools`
 header and `(N results)` completion cardinality, covered by
 `visual-search-tools.yaml`.
 
+Subagent-card progress: subagent/agent/task tools now render explicit
+`Subagent started:` and `Subagent completed:` lifecycle text, covered by
+`visual-subagent-card.yaml`. Duration text remains intentionally deferred to
+the actor-owned tool timing projection.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

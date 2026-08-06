@@ -23,4 +23,4 @@ assertions:
     screen_text:
       - "◈ Read 1 file, Ran 1 subagent"
       - "◆ Read README.md"
-      - "✓"
+      - "Subagent completed: \"summarize\""

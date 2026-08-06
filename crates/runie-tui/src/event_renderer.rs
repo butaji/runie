@@ -824,6 +824,15 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Search Tools {query}")
         }
+        "subagent" | "agent" | "task" => {
+            let description = args
+                .get("description")
+                .or_else(|| args.get("task"))
+                .or_else(|| args.get("prompt"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Subagent started: {description:?}")
+        }
         "bash" | "shell" | "exec" | "run" => {
             let command = args
                 .get("command")
@@ -897,6 +906,10 @@ fn completed_tool_header(
                 if results == 1 { "" } else { "s" }
             )
         }
+        "subagent" | "agent" | "task" => pending_header
+            .strip_prefix("Subagent started: ")
+            .map(|description| format!("Subagent completed: {description}"))
+            .unwrap_or_else(|| pending_header.to_owned()),
         "edit" | "write" | "write_file" | "search_replace" => {
             let edits = output
                 .lines()

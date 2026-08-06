@@ -1,0 +1,21 @@
+name: visual-subagent-card
+description: >-
+  Grok subagent lifecycle cards use explicit started/completed semantic text.
+initial_prompt: "Delegate this"
+tools:
+  - name: subagent
+    kind: subagent
+events:
+  - start
+  - tool_call:
+      name: subagent
+      args: { description: "inspect the repository" }
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Subagent completed: \"inspect the repository\""
+    screen_excludes:
+      - "subagent {"
