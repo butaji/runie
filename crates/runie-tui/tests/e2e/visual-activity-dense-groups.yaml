@@ -1,0 +1,36 @@
+name: visual-activity-dense-groups
+description: |
+  Twelve ordered tool members exercise Grok's dense-group threshold. The
+  assistant delta is an explicit group break, so the trace distinguishes two
+  groups of six from one group of twelve without depending on a screenshot.
+initial_prompt: "inspect the repository"
+tools:
+  - name: bash
+    kind: bash
+events:
+  - start
+  - tool_call: { name: bash, args: { cmd: "one" } }
+  - tool_call: { name: bash, args: { cmd: "two" } }
+  - tool_call: { name: bash, args: { cmd: "three" } }
+  - tool_call: { name: bash, args: { cmd: "four" } }
+  - tool_call: { name: bash, args: { cmd: "five" } }
+  - tool_call: { name: bash, args: { cmd: "six" } }
+  - text_delta: "group break"
+  - tool_call: { name: bash, args: { cmd: "seven" } }
+  - tool_call: { name: bash, args: { cmd: "eight" } }
+  - tool_call: { name: bash, args: { cmd: "nine" } }
+  - tool_call: { name: bash, args: { cmd: "ten" } }
+  - tool_call: { name: bash, args: { cmd: "eleven" } }
+  - tool_call: { name: bash, args: { cmd: "twelve" } }
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    tool_blocks: 12
+    tool_kinds: [execute, execute, execute, execute, execute, execute, execute, execute, execute, execute, execute, execute]
+  visual:
+    cols: 80
+    rows: 24
+    activity_expanded: true
+    screen_text:
+      - "Run three"
+      - "Run twelve"

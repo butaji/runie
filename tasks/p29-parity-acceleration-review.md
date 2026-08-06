@@ -91,6 +91,13 @@ YAML assertion are intentionally still pending; the helper is covered by
 unit tests and keeps the next change from embedding grouping rules in paint
 code.
 
+The decisive replay oracle is now present as
+`visual-activity-dense-groups.yaml`: twelve ordered Bash members are split by
+an assistant delta into two six-member groups, and the fixture asserts all
+twelve typed blocks plus representative rendered rows. It currently passes
+the discovery/replay harness and establishes the event data needed to add
+Grok's ten-member `N more` projection without conflating group boundaries.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without
