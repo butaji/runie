@@ -96,6 +96,13 @@ pub struct ToolSpec {
     /// Optional Pi-compatible JSON Schema used by deterministic replay tools.
     #[serde(default)]
     pub parameters: Option<serde_json::Value>,
+    /// Optional deterministic result body/details for YAML-only replay cases.
+    #[serde(default)]
+    pub output: Option<String>,
+    #[serde(default)]
+    pub details: Option<serde_json::Value>,
+    #[serde(default)]
+    pub error: Option<String>,
 }
 
 fn default_tool_kind() -> String {
@@ -1037,6 +1044,7 @@ pub struct ReplayTool {
     name: String,
     output: String,
     error: bool,
+    details: serde_json::Value,
 }
 
 impl ReplayTool {
@@ -1045,6 +1053,7 @@ impl ReplayTool {
             name: name.into(),
             output: output.into(),
             error: false,
+            details: serde_json::Value::Null,
         }
     }
 
@@ -1053,6 +1062,7 @@ impl ReplayTool {
             name: name.into(),
             output: output.into(),
             error: true,
+            details: serde_json::Value::Null,
         }
     }
 
@@ -1061,6 +1071,16 @@ impl ReplayTool {
             name: name.into(),
             output: output.into(),
             error: false,
+            details: serde_json::Value::Null,
+        }
+    }
+
+    fn configured(name: &str, output: String, details: serde_json::Value, error: bool) -> Self {
+        Self {
+            name: name.into(),
+            output,
+            error,
+            details,
         }
     }
 }
@@ -1093,7 +1113,7 @@ impl AgentTool for ReplayTool {
             content: vec![ToolResultContent::Text {
                 text: self.output.clone(),
             }],
-            details: serde_json::Value::Null,
+            details: self.details.clone(),
             usage: None,
             added_tool_names: vec![],
             terminate: false,
@@ -1397,6 +1417,15 @@ fn register_scenario_tool(
     registry: &mut ToolRegistry,
     tool: &ToolSpec,
 ) -> Result<(), ScenarioError> {
+    if tool.output.is_some() || tool.details.is_some() || tool.error.is_some() {
+        registry.register(Arc::new(ReplayTool::configured(
+            &tool.name,
+            tool.output.clone().unwrap_or_default(),
+            tool.details.clone().unwrap_or(serde_json::Value::Null),
+            tool.error.is_some(),
+        )));
+        return Ok(());
+    }
     match tool.kind.as_str() {
         "echo" => registry.register(Arc::new(EchoTool::new(tool.parameters.clone()))),
         "list_dir" => registry.register(Arc::new(ReplayTool::new(
@@ -2343,6 +2372,15 @@ pub async fn render_visual_buffer(
     let follow_up = runie_core::queues::FollowUpQueueActor::new();
     let mut reg = ToolRegistry::new();
     for t in &scenario.tools {
+        if t.output.is_some() || t.details.is_some() || t.error.is_some() {
+            reg.register(Arc::new(ReplayTool::configured(
+                &t.name,
+                t.output.clone().unwrap_or_default(),
+                t.details.clone().unwrap_or(serde_json::Value::Null),
+                t.error.is_some(),
+            )));
+            continue;
+        }
         match t.kind.as_str() {
             "echo" => reg.register(Arc::new(EchoTool::new(t.parameters.clone()))),
             "list_dir" => reg.register(Arc::new(ReplayTool::new(

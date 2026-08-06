@@ -621,3 +621,9 @@ completion projection, transfer it through a scrollback event, and reduce it
 into `ToolCardRow` before rendering. YAML replay must then cover full, ranged,
 empty, media, and failed reads with header and semantic-row assertions. No
 range is inferred until that missing event data is preserved.
+
+The first YAML contract slice is now implemented: tool specs may override
+result `output`, `details`, and `error`, and `visual-read-range.yaml` asserts
+the ranged header through the real loop and actor renderer. Remaining fixtures
+for typed media and error rows stay pending until their semantic event payload
+is defined.

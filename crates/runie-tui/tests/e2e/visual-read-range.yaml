@@ -1,0 +1,31 @@
+name: visual-read-range
+description: Ranged Pi read metadata reaches the Grok-style card header through replay.
+initial_prompt: "inspect the middle of the file"
+tools:
+  - name: read
+    kind: read
+    output: |-
+      line 41
+      line 42
+      [18 more lines in file. Use offset=61 to continue.]
+    details:
+      truncation:
+        totalLines: 100
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "src/lib.rs", offset: 40, limit: 20 }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 1
+    tool_headers: ["Read src/lib.rs (41-42 of 100)"]
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "Read src/lib.rs (41-42 of 100)"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

@@ -261,6 +261,7 @@ pub struct EventRenderer {
     /// update and finish in a different order than they started.
     tool_rows: HashMap<String, usize>,
     tool_buffers: HashMap<String, String>,
+    tool_args: HashMap<String, serde_json::Value>,
     /// True between MessageStart(assistant) and MessageEnd(assistant).
     in_assistant_stream: bool,
     in_reasoning: bool,
@@ -320,6 +321,7 @@ impl EventRenderer {
             streaming_buffer: String::new(),
             tool_rows: HashMap::new(),
             tool_buffers: HashMap::new(),
+            tool_args: HashMap::new(),
             in_assistant_stream: false,
             in_reasoning: false,
             reasoning_buffer: String::new(),
@@ -802,6 +804,7 @@ impl EventRenderer {
             self.activity_subagents += 1;
         }
         self.active_tool_count += 1;
+        self.tool_args.insert(tool_call_id.clone(), args.clone());
         let tool_buffer = tool_header(&tool_name, &args);
         let activity = if self.activity_dirs
             + self.activity_files
@@ -924,10 +927,11 @@ impl EventRenderer {
             self.activity_failures += 1;
         }
         let tool_buffer = self.tool_buffers.remove(&tool_call_id).unwrap_or_default();
+        let tool_args = self.tool_args.remove(&tool_call_id).unwrap_or_default();
         let tool_buffer = if is_error {
             format!("{tool_buffer} ✗")
         } else {
-            completed_tool_header(&tool_buffer, &tool_name, &result)
+            completed_tool_header_with_args(&tool_buffer, &tool_name, &tool_args, &result)
         };
         if self.scrollback_actor.is_none() {
             if let Some(row) = self.tool_rows.remove(&tool_call_id) {

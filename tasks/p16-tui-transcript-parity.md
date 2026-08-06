@@ -604,3 +604,9 @@ Read ranged-header projection (2026-08-06): the scrollback actor now retains
 metadata to project ranged Read headers (`start-end of total`) through the
 existing event reduction path. This closes the common text-read range case;
 typed media and error metadata still require an explicit completion payload.
+
+The YAML DSL now accepts per-tool `output`, `details`, and `error` fields, so
+the ranged case is replayed from `visual-read-range.yaml` without recompiling
+the runner. The same argument-retention rule is applied in both the actor
+projection and compatibility renderer paths; the fixture exercises the live
+actor path and asserts the complete header text.
