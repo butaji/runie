@@ -18,6 +18,7 @@ pub enum LineKind {
     Reasoning,
     ThinkingStatus,
     Tool,
+    ToolError,
     ToolResult,
     ToolOutput,
     SessionStart,
@@ -46,6 +47,7 @@ impl LineKind {
                 appearance::accent_style_for(theme).add_modifier(Modifier::BOLD)
             }
             LineKind::Tool => appearance::base_style_for(theme),
+            LineKind::ToolError => appearance::error_style_for(theme),
             LineKind::ToolResult => appearance::success_style_for(theme),
             LineKind::ToolOutput => appearance::base_style_for(theme),
             LineKind::SessionStart => appearance::muted_style_for(theme),
@@ -66,6 +68,7 @@ impl LineKind {
             LineKind::Reasoning => "┃  ",
             LineKind::ThinkingStatus => "┃  ",
             LineKind::Tool => "◆ ",
+            LineKind::ToolError => "◆ ",
             LineKind::ToolResult => "  ↳ ",
             // Structured Grok tools render terminal output directly below the
             // tool header, with a two-column indentation and no result arrow.
@@ -130,6 +133,7 @@ pub enum ScrollbackMsg {
     ToggleActivityExpanded,
     SetPromptTimestamp(Option<String>),
     SetToolMode(String, runie_core::types::ToolDisplayMode),
+    MarkToolError(String),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
     AppendToLastByKind(LineKind, String),
@@ -218,6 +222,7 @@ impl Scrollback {
             }
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
+            ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
                 if let Some(line) = self.line_mut(index) {
                     line.text = text;
@@ -298,6 +303,17 @@ impl Scrollback {
             .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
         {
             line.text = text;
+        }
+    }
+
+    fn mark_tool_error(&mut self, tool_call_id: &str) {
+        if let Some(line) = self
+            .lines
+            .iter_mut()
+            .rev()
+            .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
+        {
+            line.kind = LineKind::ToolError;
         }
     }
 
@@ -586,25 +602,32 @@ impl Scrollback {
             if matches!(
                 tool_mode,
                 Some(runie_core::types::ToolDisplayMode::Collapsed)
-            ) && matches!(line.kind, LineKind::ToolOutput | LineKind::ToolResult)
-            {
+            ) && matches!(
+                line.kind,
+                LineKind::ToolOutput | LineKind::ToolResult | LineKind::ToolError
+            ) {
                 continue;
             }
             if matches!(
                 tool_mode,
                 Some(runie_core::types::ToolDisplayMode::Truncated)
-            ) && matches!(line.kind, LineKind::ToolOutput | LineKind::ToolResult)
-                && line
-                    .tool_call_id
-                    .as_ref()
-                    .is_some_and(|id| !truncated_output.insert(id.clone()))
+            ) && matches!(
+                line.kind,
+                LineKind::ToolOutput | LineKind::ToolResult | LineKind::ToolError
+            ) && line
+                .tool_call_id
+                .as_ref()
+                .is_some_and(|id| !truncated_output.insert(id.clone()))
             {
                 continue;
             }
             if !self.activity_expanded
                 && matches!(
                     line.kind,
-                    LineKind::Tool | LineKind::ToolOutput | LineKind::ToolResult
+                    LineKind::Tool
+                        | LineKind::ToolOutput
+                        | LineKind::ToolResult
+                        | LineKind::ToolError
                 )
                 && line.text != "session_start"
             {
@@ -1185,6 +1208,10 @@ mod tests {
             Some(Color::Rgb(225, 225, 225))
         );
         assert_eq!(LineKind::Tool.style().fg, Some(Color::Rgb(225, 225, 225)));
+        assert_eq!(
+            LineKind::ToolError.style().fg,
+            appearance::error_style_for(ThemeKind::GrokNight).fg
+        );
         assert_eq!(
             LineKind::ToolResult.style().fg,
             Some(Color::Rgb(158, 206, 106))

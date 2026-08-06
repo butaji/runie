@@ -34,3 +34,6 @@ assertions:
     screen_text:
       - "Subagent completed: \"inspect the repository\""
       - "Subagent failed: \"run the checks\""
+  scrollback_lines:
+    - kind: tool_error
+      contains: "Subagent failed"

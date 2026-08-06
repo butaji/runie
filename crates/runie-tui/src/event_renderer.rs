@@ -136,15 +136,21 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             work_id,
             description,
             is_error,
-        } => vec![ScrollbackMsg::ToolEnd {
-            tool_call_id: work_id.clone(),
-            header: format!(
-                "Subagent {}: {description:?}",
-                if *is_error { "failed" } else { "completed" }
-            ),
-            activity: None,
-            output: Vec::new(),
-        }],
+        } => {
+            let mut messages = vec![ScrollbackMsg::ToolEnd {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent {}: {description:?}",
+                    if *is_error { "failed" } else { "completed" }
+                ),
+                activity: None,
+                output: Vec::new(),
+            }];
+            if *is_error {
+                messages.push(ScrollbackMsg::MarkToolError(work_id.clone()));
+            }
+            messages
+        }
         _ => Vec::new(),
     }
 }
