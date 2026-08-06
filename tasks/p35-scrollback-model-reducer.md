@@ -146,3 +146,11 @@ ordered `ToolCardRowKind` sequences for grouped activity, truncated reads,
 structured tools, and web search. This broadens the model/render boundary
 proof beyond aggregate output counts while keeping fixture edits recompilation
 free.
+
+Navigation reducer delegation (2026-08-06): the compatibility `Scrollback`
+adapter now delegates theme, animation, fold, selection, tool-mode, prompt
+timestamp, follow, and viewport messages to `FeedState::reduce`. It rehydrates
+its terminal-facing fields from the model transition, so those message
+families no longer have parallel widget implementations. Renderer-specific
+transcript mutations remain compatibility-only until the remaining row
+reducer extraction is complete.

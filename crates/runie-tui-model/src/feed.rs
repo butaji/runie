@@ -527,6 +527,26 @@ mod tests {
             "Workflow release ◌ cancelled after 0.9s: ship it  [upload ○]"
         );
     }
+
+    #[test]
+    fn running_generic_fold_cycle_is_preserved_by_model_delegation() {
+        let mut state = super::FeedState::default();
+        state.reduce(super::ScrollbackMsg::ToolStartRunning {
+            tool_call_id: "call-1".into(),
+            header: "custom_tool running".into(),
+            activity: None,
+        });
+        state.reduce(super::ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            state.snapshot().tool_blocks[0].mode,
+            ToolDisplayMode::Truncated
+        );
+        state.reduce(super::ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            state.snapshot().tool_blocks[0].mode,
+            ToolDisplayMode::Expanded
+        );
+    }
 }
 
 fn workflow_text_model(
@@ -814,32 +834,12 @@ impl FeedState {
                 tool_call_id,
                 header,
                 activity,
-            }
-            | ScrollbackMsg::ToolStartRunning {
+            } => self.start_tool(tool_call_id, header, activity, false),
+            ScrollbackMsg::ToolStartRunning {
                 tool_call_id,
                 header,
                 activity,
-            } => {
-                self.replace_or_append_activity(activity);
-                if let Some(tool_name) = self.navigation.tool_names.get(&tool_call_id) {
-                    self.navigation
-                        .tool_modes
-                        .entry(tool_call_id.clone())
-                        .or_insert_with(|| default_tool_display_mode(tool_name));
-                }
-                let kind = if header.starts_with("Subagent running:") {
-                    LineKind::ToolRunning
-                } else {
-                    LineKind::Tool
-                };
-                let row_id = self.navigation.next_tool_row_id;
-                self.navigation.next_tool_row_id = row_id.wrapping_add(1);
-                self.append(
-                    Line::new(kind, header)
-                        .for_tool(tool_call_id)
-                        .for_tool_row(row_id),
-                );
-            }
+            } => self.start_tool(tool_call_id, header, activity, true),
             ScrollbackMsg::ToolUpdate {
                 tool_call_id,
                 header,
@@ -971,6 +971,34 @@ impl FeedState {
                 }
             }
         }
+    }
+
+    fn start_tool(
+        &mut self,
+        tool_call_id: String,
+        header: String,
+        activity: Option<String>,
+        running: bool,
+    ) {
+        self.replace_or_append_activity(activity);
+        if let Some(tool_name) = self.navigation.tool_names.get(&tool_call_id) {
+            self.navigation
+                .tool_modes
+                .entry(tool_call_id.clone())
+                .or_insert_with(|| default_tool_display_mode(tool_name));
+        }
+        let kind = if running || header.starts_with("Subagent running:") {
+            LineKind::ToolRunning
+        } else {
+            LineKind::Tool
+        };
+        let row_id = self.navigation.next_tool_row_id;
+        self.navigation.next_tool_row_id = row_id.wrapping_add(1);
+        self.append(
+            Line::new(kind, header)
+                .for_tool(tool_call_id)
+                .for_tool_row(row_id),
+        );
     }
 
     fn append(&mut self, line: Line) {
@@ -1220,6 +1248,7 @@ impl FeedState {
                 ToolDisplayMode::Truncated
             }
             ToolDisplayMode::Collapsed => ToolDisplayMode::Expanded,
+            ToolDisplayMode::Truncated if running_generic_card => ToolDisplayMode::Expanded,
             ToolDisplayMode::Truncated => ToolDisplayMode::Collapsed,
             ToolDisplayMode::Expanded if running_generic_card => ToolDisplayMode::Truncated,
             ToolDisplayMode::Expanded => ToolDisplayMode::Collapsed,

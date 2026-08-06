@@ -11,8 +11,8 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 use crate::appearance;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
-    project_tool_card_rows, FeedNavigation, FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock,
-    ToolCardKind, ToolCardRowKind,
+    project_tool_card_rows, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg,
+    ToolBlock, ToolCardKind, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -227,6 +227,19 @@ impl Scrollback {
         self.navigation.theme = theme;
     }
 
+    /// Delegate renderer-neutral navigation transitions to the canonical
+    /// model reducer. Legacy widget callers still receive the same snapshot,
+    /// but cannot create a second implementation of actor-owned navigation.
+    fn reduce_model(&mut self, message: ScrollbackMsg) {
+        let mut model = FeedState {
+            lines: self.lines.clone(),
+            navigation: self.navigation.clone(),
+        };
+        model.reduce(message);
+        self.lines = model.lines;
+        self.navigation = model.navigation;
+    }
+
     /// Apply one explicit transcript transition. Actor implementations and
     /// compatibility callers share this reducer boundary.
     #[allow(
@@ -243,9 +256,9 @@ impl Scrollback {
             ScrollbackMsg::Clear => {
                 self.clear();
             }
-            ScrollbackMsg::SetTheme(theme) => self.set_theme(theme),
+            ScrollbackMsg::SetTheme(theme) => self.reduce_model(ScrollbackMsg::SetTheme(theme)),
             ScrollbackMsg::AdvanceAnimation => {
-                self.navigation.advance_animation();
+                self.reduce_model(ScrollbackMsg::AdvanceAnimation);
             }
             ScrollbackMsg::RemoveKind(kind) => self.remove_kind(kind),
             ScrollbackMsg::NormalizeLiveCompletedAssistants => {
@@ -256,29 +269,41 @@ impl Scrollback {
             }
             ScrollbackMsg::RemoveEmptyAfter(kind) => self.remove_empty_after(kind),
             ScrollbackMsg::NormalizeActivitySpacing => self.normalize_activity_spacing(),
-            ScrollbackMsg::SetReasoningExpanded(expanded) => self.set_reasoning_expanded(expanded),
-            ScrollbackMsg::SetActivityExpanded(expanded) => self.set_activity_expanded(expanded),
-            ScrollbackMsg::ToggleActivityExpanded => {
-                self.set_activity_expanded(!self.navigation.activity_expanded);
+            ScrollbackMsg::SetReasoningExpanded(expanded) => {
+                self.reduce_model(ScrollbackMsg::SetReasoningExpanded(expanded));
             }
-            ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
+            ScrollbackMsg::SetActivityExpanded(expanded) => {
+                self.reduce_model(ScrollbackMsg::SetActivityExpanded(expanded));
+            }
+            ScrollbackMsg::ToggleActivityExpanded => {
+                self.reduce_model(ScrollbackMsg::ToggleActivityExpanded);
+            }
+            ScrollbackMsg::SetPromptTimestamp(timestamp) => {
+                self.reduce_model(ScrollbackMsg::SetPromptTimestamp(timestamp));
+            }
             ScrollbackMsg::SetFollowLatestUser(follow) => {
-                self.navigation.follow_latest_user = follow
+                self.reduce_model(ScrollbackMsg::SetFollowLatestUser(follow));
             }
             ScrollbackMsg::SetToolName(tool_call_id, tool_name) => {
-                self.navigation.tool_names.insert(tool_call_id, tool_name);
+                self.reduce_model(ScrollbackMsg::SetToolName(tool_call_id, tool_name));
             }
-            ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
-            ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
-            ScrollbackMsg::SelectNextTool => self.select_tool(1),
-            ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
-            ScrollbackMsg::SelectNextEntry => self.select_entry(1),
-            ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
-            ScrollbackMsg::ScrollBy(lines) => self.scroll_by(lines),
+            ScrollbackMsg::SetToolMode(id, mode) => {
+                self.reduce_model(ScrollbackMsg::SetToolMode(id, mode));
+            }
+            ScrollbackMsg::ToggleToolMode(id) => {
+                self.reduce_model(ScrollbackMsg::ToggleToolMode(id));
+            }
+            ScrollbackMsg::SelectNextTool => self.reduce_model(ScrollbackMsg::SelectNextTool),
+            ScrollbackMsg::SelectPreviousTool => {
+                self.reduce_model(ScrollbackMsg::SelectPreviousTool)
+            }
+            ScrollbackMsg::SelectNextEntry => self.reduce_model(ScrollbackMsg::SelectNextEntry),
+            ScrollbackMsg::SelectPreviousEntry => {
+                self.reduce_model(ScrollbackMsg::SelectPreviousEntry)
+            }
+            ScrollbackMsg::ScrollBy(lines) => self.reduce_model(ScrollbackMsg::ScrollBy(lines)),
             ScrollbackMsg::RevealLatest => {
-                self.navigation.autoscroll = true;
-                self.navigation.follow_latest_user = false;
-                self.navigation.scroll_offset = self.lines.len();
+                self.reduce_model(ScrollbackMsg::RevealLatest);
             }
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
@@ -800,48 +825,6 @@ impl Scrollback {
         self.navigation.scroll_offset
     }
 
-    fn selectable_entries(&self) -> Vec<usize> {
-        let mut entries = Vec::new();
-        let mut seen_tools = HashSet::new();
-        for (index, line) in self.lines.iter().enumerate() {
-            let selectable = match line.kind {
-                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => line
-                    .tool_call_id
-                    .as_ref()
-                    .is_none_or(|id| seen_tools.insert(id.clone())),
-                LineKind::User | LineKind::Assistant | LineKind::Reasoning => true,
-                _ => false,
-            };
-            if selectable {
-                entries.push(index);
-            }
-        }
-        entries
-    }
-
-    fn select_entry(&mut self, direction: i8) {
-        let entries = self.selectable_entries();
-        if entries.is_empty() {
-            self.navigation.selected_entry = None;
-            return;
-        }
-        let current = self
-            .navigation
-            .selected_entry
-            .and_then(|entry| entries.iter().position(|candidate| *candidate == entry));
-        let next = match (current, direction) {
-            (None, 1) => 0,
-            (None, -1) => entries.len() - 1,
-            (Some(index), 1) => (index + 1) % entries.len(),
-            (Some(0), -1) => entries.len() - 1,
-            (Some(index), -1) => index - 1,
-            _ => 0,
-        };
-        self.navigation.selected_entry = Some(entries[next]);
-        self.navigation.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
-        self.navigation.detach_from_tail();
-    }
-
     /// Apply Grok's explicit Ctrl+j/Ctrl+k viewport scroll intent. The actor
     /// owns the offset and hands follow mode off to the user once scrolling
     /// begins; rendering only clamps it against measured physical rows.
@@ -858,56 +841,6 @@ impl Scrollback {
         } else {
             self.navigation.scroll_offset =
                 self.navigation.scroll_offset.saturating_add(lines as usize);
-        }
-    }
-
-    fn select_tool(&mut self, direction: i8) {
-        let ids = self
-            .tool_blocks()
-            .into_iter()
-            .map(|block| block.tool_call_id)
-            .collect::<Vec<_>>();
-        if ids.is_empty() {
-            self.navigation.selected_tool_id = None;
-            return;
-        }
-        let current = self
-            .navigation
-            .selected_tool_id
-            .as_ref()
-            .and_then(|id| ids.iter().position(|candidate| candidate == id));
-        let next = match (current, direction) {
-            (None, 1) => 0,
-            (None, -1) => ids.len() - 1,
-            (Some(index), 1) => (index + 1) % ids.len(),
-            (Some(0), -1) => ids.len() - 1,
-            (Some(index), -1) => index - 1,
-            _ => 0,
-        };
-        self.navigation.selected_tool_id = Some(ids[next].clone());
-        self.reveal_dense_group(&ids[next]);
-    }
-
-    /// Selecting any member is Grok's reveal operation: the dense group is
-    /// keyed by its first member and all hidden members become renderable.
-    fn reveal_dense_group(&mut self, tool_id: &str) {
-        let groups = self.dense_tool_groups();
-        let Some((member_index, group_size)) = groups.get(tool_id) else {
-            return;
-        };
-        if *group_size > GROK_GROUP_MAX_VISIBLE
-            && *member_index < group_size - GROK_GROUP_MAX_VISIBLE
-        {
-            self.navigation.selected_entry = self
-                .lines
-                .iter()
-                .position(|line| line.tool_call_id.as_deref() == Some(tool_id));
-            self.navigation.center_revealed_entry = true;
-            if let Some(anchor) = groups.iter().find_map(|(id, (index, size))| {
-                (*size == *group_size && *index == 0).then_some(id.clone())
-            }) {
-                self.navigation.revealed_dense_groups.insert(anchor);
-            }
         }
     }
 
