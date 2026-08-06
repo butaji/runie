@@ -862,13 +862,9 @@ impl EventRenderer {
         }
         if self.in_tool_exec {
             if let Some(output) = structured_update_text(&partial_result) {
-                let output_lines = output
-                    .lines()
-                    .filter(|line| !line.is_empty())
-                    .map(str::to_owned)
-                    .collect::<Vec<_>>();
+                let output_lines = structured_memory_lines(&output);
                 if self.scrollback_actor.is_none() {
-                    for line in output.lines().filter(|line| !line.is_empty()) {
+                    for line in &output_lines {
                         self.scrollback
                             .lock()
                             .append(Line::new(LineKind::ToolOutput, line).for_tool(&tool_call_id));
@@ -974,10 +970,40 @@ impl EventRenderer {
             } else {
                 LineKind::ToolResult
             };
-            for line in tool_result_text(&result)
-                .lines()
-                .filter(|line| !line.is_empty())
-            {
+            let raw_output = tool_result_text(&result);
+            let rendered_lines: Vec<String> =
+                if matches!(tool_name.as_str(), "memory_search" | "memory-search") {
+                    let results = runie_tui_model::parse_memory_results(&raw_output);
+                    if results.is_empty() {
+                        raw_output.lines().map(str::to_owned).collect()
+                    } else {
+                        results
+                            .iter()
+                            .enumerate()
+                            .flat_map(|(index, result)| {
+                                let location = if result.start_line == 0 && result.end_line == 0 {
+                                    result.path.clone()
+                                } else {
+                                    format!(
+                                        "{}:{}-{}",
+                                        result.path, result.start_line, result.end_line
+                                    )
+                                };
+                                std::iter::once(format!(
+                                    "Result {} · {:.2} · {} · {}",
+                                    index + 1,
+                                    result.score,
+                                    result.source,
+                                    location
+                                ))
+                                .chain(result.snippet.lines().map(|line| format!("  {line}")))
+                            })
+                            .collect()
+                    }
+                } else {
+                    raw_output.lines().map(str::to_owned).collect()
+                };
+            for line in rendered_lines.iter().filter(|line| !line.is_empty()) {
                 if self.scrollback_actor.is_none() {
                     self.scrollback
                         .lock()
@@ -1465,10 +1491,7 @@ pub(crate) fn completed_tool_header(
             )
         }
         "memory_search" | "memory-search" => {
-            let matches = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
+            let matches = runie_tui_model::parse_memory_results(&output).len();
             format!(
                 "{pending_header} ({matches} result{})",
                 if matches == 1 { "" } else { "s" }
@@ -1537,6 +1560,36 @@ pub(crate) fn tool_result_text(result: &serde_json::Value) -> String {
                 .map(str::to_owned)
         })
         .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
+}
+
+fn structured_memory_lines(output: &str) -> Vec<String> {
+    let results = runie_tui_model::parse_memory_results(output);
+    if results.is_empty() {
+        return output
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(str::to_owned)
+            .collect();
+    }
+    results
+        .iter()
+        .enumerate()
+        .flat_map(|(index, result)| {
+            let location = if result.start_line == 0 && result.end_line == 0 {
+                result.path.clone()
+            } else {
+                format!("{}:{}-{}", result.path, result.start_line, result.end_line)
+            };
+            std::iter::once(format!(
+                "Result {} · {:.2} · {} · {}",
+                index + 1,
+                result.score,
+                result.source,
+                location
+            ))
+            .chain(result.snippet.lines().map(|line| format!("  {line}")))
+        })
+        .collect()
 }
 
 fn web_search_site_count(output: &str) -> usize {
@@ -2166,7 +2219,7 @@ mod tests {
             completed_tool_header(
                 "Memory Search actors",
                 "memory_search",
-                &serde_json::json!("one\ntwo"),
+                &serde_json::json!("### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 0-1)\n```\none\n```\n### Result 2 (score: 0.42, source: session)\n**File:** /memory/session.md (lines 2-3)\n```\ntwo\n```") ,
             ),
             "Memory Search actors (2 results)"
         );

@@ -6,6 +6,7 @@
 
 mod events;
 mod feed;
+mod memory;
 mod prompt;
 mod status;
 mod theme;
@@ -16,6 +17,7 @@ pub use feed::{
     default_tool_display_mode, project_tool_blocks, FeedNavigation, FeedSnapshot, Line, LineKind,
     ScrollbackMsg, ToolBlock, ToolCardKind,
 };
+pub use memory::{parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use theme::ThemeToken;

@@ -116,3 +116,7 @@ The remaining reducer flags `settled_no_tool_phase`, `live_grok_layout`, and
 replay snapshot rehydration use the same model-owned facts, preserving
 tool-row identity, settled no-tool rendering, and Grok layout selection across
 all four capture sizes. The full replay and visual matrix passes.
+
+The memory-search projection slice also establishes a model-only structured
+result parser below the reducer boundary, so live and replay paths do not
+format provider output independently.

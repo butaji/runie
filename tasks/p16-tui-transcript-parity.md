@@ -529,7 +529,20 @@ Grok's `WebSearchToolCallBlock` confirms this family is covered for the
 summary/source contract. Memory-search result parsing (score, source, file
 range, and snippet panel) remains the next specialized-card gap.
 
+Memory-card projection audit (2026-08-06): Grok parses `### Result N` blocks
+into score/source/file-range/snippet rows. A first implementation attempt was
+reverted after the visual runner exposed two distinct projection routes: the
+bus-backed live scrollback actor and deterministic replay. Formatting only one
+route duplicated raw provider rows; the correct fix must place one pure parser
+below both routes and preserve the single actor-owned mutation boundary.
+
 Non-tool selection YAML oracle (2026-08-06): `visual-hey.yaml` now performs
 `tool_select: entry_next` against a tool-free conversation and asserts the
 actor-owned `selected_entry` index. This proves user/assistant semantic rows
 participate in the same event-driven navigation contract as tool rows.
+
+Memory-card projection slice (2026-08-06): added the renderer-independent
+`parse_memory_results` contract with score, source, file range, and fenced
+snippet fields. Live event rendering and YAML replay now format the same
+structured rows, and `visual-specialized-tools.yaml` asserts both result
+headers and snippets.

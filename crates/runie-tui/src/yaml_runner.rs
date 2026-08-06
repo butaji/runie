@@ -1396,7 +1396,7 @@ fn register_scenario_tool(
         }
         "memory_search" => registry.register(Arc::new(ReplayTool::new(
             &tool.name,
-            "memory hit one\nmemory hit two",
+            "Found 2 memory result(s):\n\n### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 0-10)\n```\nactors\n```\n\n### Result 2 (score: 0.42, source: session)\n**File:** /memory/session.md (lines 4-7)\n```\nreplay\n```",
         ))),
         "workflow" => registry.register(Arc::new(ReplayTool::new(&tool.name, "workflow done"))),
         "web_fetch" => registry.register(Arc::new(ReplayTool::new(
@@ -2311,7 +2311,7 @@ pub async fn render_visual_buffer(
             "subagent" => reg.register(Arc::new(ReplayTool::new(&t.name, "subagent completed"))),
             "memory_search" => reg.register(Arc::new(ReplayTool::new(
                 &t.name,
-                "memory hit one\nmemory hit two",
+                "Found 2 memory result(s):\n\n### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 0-10)\n```\nactors\n```\n\n### Result 2 (score: 0.42, source: session)\n**File:** /memory/session.md (lines 4-7)\n```\nreplay\n```",
             ))),
             "workflow" => reg.register(Arc::new(ReplayTool::new(&t.name, "workflow done"))),
             "web_fetch" => reg.register(Arc::new(ReplayTool::new(

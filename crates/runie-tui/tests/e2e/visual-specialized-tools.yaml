@@ -28,7 +28,11 @@ assertions:
     tool_kinds: [memory_search, workflow]
   visual:
     cols: 80
-    rows: 24
+    rows: 40
     screen_text:
       - "Memory Search actors (2 results)"
+      - "Result 1 · 0.72 · global · /memory/MEMORY.md:0-10"
+      - "actors"
+      - "Result 2 · 0.42 · session · /memory/session.md:4-7"
+      - "replay"
       - "Workflow completed: release"

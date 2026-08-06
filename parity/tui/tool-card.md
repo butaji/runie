@@ -25,3 +25,8 @@ This is intentionally separate from generic tool execution state.
 `visual-tool-structured.yaml`, `visual-tool-error.yaml`, and parallel-order
 core replay tests. `visual-background-work.yaml` covers the subagent lifecycle
 and deterministic terminal labels.
+
+Memory-search cards additionally parse Grok's `### Result N` protocol into
+score, source, file range, and snippet rows. The parser is model-owned and
+renderer-neutral; `visual-specialized-tools.yaml` is the replay/visual oracle
+for the same structured output used by live events.
