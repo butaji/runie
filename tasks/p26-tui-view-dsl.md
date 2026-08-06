@@ -14,6 +14,9 @@ renderer paints terminal cells.
 - Added `layout::chat_elements()` as the adapter seam. Existing geometry is
   unchanged and remains the terminal-specific layer.
 - Added a structural unit test proving stable region ordering.
+- Added `ComponentSpec`/`StateOwner` metadata and the `CHAT_COMPONENTS`
+  registry. Each declarative region now names its semantic component and the
+  sole actor that owns its state.
 
 ## Next boundaries
 

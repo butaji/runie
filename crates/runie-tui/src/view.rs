@@ -16,6 +16,60 @@ pub enum Slot {
     FooterBadge,
 }
 
+/// Semantic component identity. These names are stable across terminal
+/// backends and are the vocabulary used by YAML/view assertions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ComponentKind {
+    Header,
+    Scrollback,
+    Prompt,
+    Status,
+    FooterBadge,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum StateOwner {
+    UiActor,
+    ScrollbackActor,
+    PromptActor,
+    StatusActor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ComponentSpec {
+    pub kind: ComponentKind,
+    pub slot: Slot,
+    pub owner: StateOwner,
+}
+
+pub const CHAT_COMPONENTS: [ComponentSpec; 5] = [
+    ComponentSpec {
+        kind: ComponentKind::Header,
+        slot: Slot::Header,
+        owner: StateOwner::UiActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::Scrollback,
+        slot: Slot::Scrollback,
+        owner: StateOwner::ScrollbackActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::Prompt,
+        slot: Slot::Prompt,
+        owner: StateOwner::PromptActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::Status,
+        slot: Slot::Status,
+        owner: StateOwner::StatusActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::FooterBadge,
+        slot: Slot::FooterBadge,
+        owner: StateOwner::StatusActor,
+    },
+];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element {
     Empty,
@@ -88,9 +142,16 @@ pub fn chat_view() -> Element {
     ])
 }
 
+pub fn component(slot: Slot) -> ComponentSpec {
+    CHAT_COMPONENTS
+        .into_iter()
+        .find(|spec| spec.slot == slot)
+        .expect("chat slots have component specs")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{chat_view, Direction, Element, Slot};
+    use super::{chat_view, component, ComponentKind, Direction, Element, Slot, StateOwner};
 
     #[test]
     fn chat_view_is_a_stable_declarative_region_tree() {
@@ -107,6 +168,12 @@ mod tests {
                 ],
             }
         );
+        assert_eq!(component(Slot::Scrollback).kind, ComponentKind::Scrollback);
+        assert_eq!(
+            component(Slot::Scrollback).owner,
+            StateOwner::ScrollbackActor
+        );
+        assert_eq!(component(Slot::Prompt).owner, StateOwner::PromptActor);
         assert_eq!(
             chat_view().slots().collect::<Vec<_>>(),
             vec![
