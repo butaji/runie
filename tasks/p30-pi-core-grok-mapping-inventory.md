@@ -147,6 +147,13 @@ the worker. YAML recorder and active-run handles are joined before replay
 returns. No orphan production task was found; this remains an invariant to
 re-audit whenever a new async boundary is added.
 
+Tool usage metadata audit (2026-08-06): Pi's `AgentToolResult.usage` is part
+of the serialized `ToolExecutionEnd.result`, and Runie's `AgentToolResult`,
+`ToolResultMessage`, and event serialization preserve that optional field.
+The TUI does not create a second tool-usage state field because that would
+duplicate the core-owned source of truth; usage remains available to the
+status/turn projection through the existing tool-result message boundary.
+
 ## Documentation audit (2026-08-06)
 
 Updated `README.md`, `crates/runie-core/PORT_NOTES.md`, and
