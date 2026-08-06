@@ -164,33 +164,34 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
 }
 
 fn render_live_ready_footer(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
-    buf.set_string(
-        area.x,
-        area.y,
-        " ".repeat(area.width as usize),
-        runie_tui::appearance::base_style_for(theme),
-    );
+    use ratatui::style::{Modifier, Style};
+    use ratatui::text::{Line, Span};
+    use ratatui::widgets::{Paragraph, Widget};
+
+    let key_style = if theme == runie_core::types::ThemeKind::GrokNight {
+        Style::default()
+    } else {
+        runie_tui::appearance::base_style_for(theme)
+    };
+    let muted_style = if theme == runie_core::types::ThemeKind::GrokNight {
+        Style::default()
+    } else {
+        runie_tui::appearance::muted_style_for(theme)
+    };
+
     let segments = [
-        (
-            "Shift+Tab",
-            runie_tui::appearance::base_style_for(theme)
-                .add_modifier(ratatui::style::Modifier::BOLD),
-        ),
-        (":mode  │  ", runie_tui::appearance::muted_style_for(theme)),
-        (
-            "Ctrl+x",
-            runie_tui::appearance::base_style_for(theme)
-                .add_modifier(ratatui::style::Modifier::BOLD),
-        ),
-        (":shortcuts", runie_tui::appearance::muted_style_for(theme)),
+        ("Shift+Tab", key_style.add_modifier(Modifier::BOLD)),
+        (":mode  │  ", muted_style),
+        ("Ctrl+x", key_style.add_modifier(Modifier::BOLD)),
+        (":shortcuts", muted_style),
     ];
-    let mut x = area.x;
-    for (text, style) in segments {
-        buf.set_string(x, area.y, text, style);
-        // Ratatui coordinates are terminal cells, not UTF-8 bytes. In
-        // particular, Grok's `│` separator is three bytes but one cell.
-        x = x.saturating_add(text.chars().count() as u16);
-    }
+    let spans = segments
+        .into_iter()
+        .map(|(text, style)| Span::styled(text, style))
+        .collect::<Vec<_>>();
+    Paragraph::new(Line::from(spans))
+        .style(muted_style)
+        .render(area, buf);
 }
 
 #[async_trait::async_trait]

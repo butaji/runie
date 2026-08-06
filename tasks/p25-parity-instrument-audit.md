@@ -214,9 +214,11 @@ ANSI attributes.
 for `Worked for` together with the compact settled `Shift+Tab` footer and rejects
 the active `Esc:cancel` footer. This prevents a capture from stopping between
 the feed's terminal update and the status actor's settled projection. A fresh
-62×32 capture now compares at 39 differing cells (24 glyph, 15 attributes)
-against the checked-in Grok cast; the remaining rows are dynamic timestamps,
-worked elapsed time, and footer bold attributes.
+62×32 capture now compares at 24 differing cells (24 glyph, zero attributes)
+against the checked-in Grok cast; the remaining rows are dynamic timestamps
+and worked elapsed time. The footer's 15 attribute-only cells disappeared after
+the live GrokNight footer switched to terminal-default semantic styles, matching
+the actor-owned status projection.
 
 ## Review findings
 
