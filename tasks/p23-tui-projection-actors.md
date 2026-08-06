@@ -408,3 +408,11 @@ The command-palette New Session action now delegates to `App::reset_session`
 and `LoopActor::reset()` instead of publishing `Reset` directly. This keeps
 core state, prompt, status, scrollback, and UI projections on one ordered
 actor-owned event boundary.
+## Ownership audit checkpoint (2026-08-06)
+
+The live `App::spawn_renderer` path constructs `EventRenderer::with_actors`
+with `ScrollbackActor` and `StatusActor`; the renderer's `Arc<Mutex<...>>`
+legacy path is retained only for compatibility/unit fixtures. The production
+binary now paints from the aggregate snapshot adapters, so no renderer draw
+operation mutates actor state. Removing the compatibility constructor remains
+a later crate-boundary migration, not evidence of a live ownership violation.
