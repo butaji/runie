@@ -494,7 +494,10 @@ impl App {
     /// Renderers consume this projection; they do not inspect ownership state
     /// through ad-hoc mutable fields.
     pub fn view_tree(&self) -> Element {
-        let model = self.model_snapshot();
+        Self::view_tree_from_model(&self.model_snapshot())
+    }
+
+    pub fn view_tree_from_model(model: &TuiSnapshot) -> Element {
         chat_view_with_props(ChatViewProps {
             welcome_visible: model.ui.show_welcome,
             shortcuts_visible: model.ui.shortcuts_open,

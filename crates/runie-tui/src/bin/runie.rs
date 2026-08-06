@@ -330,7 +330,8 @@ async fn run_app(
         use ratatui::widgets::Widget;
         let frame_area = frame.area();
         let layout = runie_tui::layout::chat_layout(frame_area);
-        let view = app.view_tree();
+        let model = app.model_snapshot();
+        let view = App::view_tree_from_model(&model);
         let status = app.status_snapshot();
         frame.buffer_mut().set_style(
             frame_area,
@@ -577,7 +578,8 @@ async fn run_app(
                     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let frame_area = f.area();
                         let buf = f.buffer_mut();
-                        let view = app.view_tree();
+                        let model = app.model_snapshot();
+                        let view = App::view_tree_from_model(&model);
                         let status = app.status_snapshot();
                         buf.set_style(
                             frame_area,

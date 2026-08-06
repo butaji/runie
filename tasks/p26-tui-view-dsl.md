@@ -50,6 +50,10 @@ renderer paints terminal cells.
 - Added renderer-independent `TuiSnapshot` in `runie-tui-model`, aggregating
   UI, feed, prompt, and status actor projections for one immutable view pass;
   `App::view_tree()` now consumes this aggregate.
+- The live binary now acquires that aggregate once per draw before deriving
+  overlay slots, avoiding an additional independent actor read for the same
+  declarative tree. Ratatui widget compatibility reads remain isolated to
+  terminal-specific painting and cursor geometry.
 
 ## Next boundaries
 
