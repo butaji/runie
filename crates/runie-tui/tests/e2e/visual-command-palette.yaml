@@ -9,7 +9,7 @@ assertions:
       - Ctrl+P
       - "new"
     screen_text:
-      - "Echo Command Query Title"
+      - "Commands"
       - "> new"
       - "New Session"
     screen_excludes:

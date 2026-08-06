@@ -154,7 +154,10 @@ fn grok_casts_have_a_classified_state_for_every_frame() {
                 "thinking"
             } else if screen.contains("Worked for") {
                 "completed"
-            } else if screen.contains("Echo Command Query Title") {
+            } else if screen.contains("Commands")
+                || screen.contains("Echo Command Query Title")
+                || (screen.contains("New Session") && screen.contains("Keyboard Shortcuts"))
+            {
                 "command_palette"
             } else if screen.trim().is_empty() {
                 "blank"

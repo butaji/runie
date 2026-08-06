@@ -11,4 +11,4 @@ assertions:
       - PaletteEnter
     screen_excludes:
       - "Command Palette"
-      - "Echo Command Query Title"
+      - "Commands"

@@ -173,6 +173,12 @@ search/web/background cards), followed by theme palette propagation and the
 remaining YAML state/effect matrix. Strict feed, waiting, collapsed, mixed, and
 truncated fixed-grid replays are green.
 
+Command-palette projection progress (2026-08-06): aligned the modal heading
+with Grok's `Commands` vocabulary and bounded keyboard selection to the
+currently filtered entry set. The state remains UI-actor-owned and the visual
+YAML scenarios exercise the rendered heading without introducing a direct core
+mutation path.
+
 Source audit: Grok's `UserMessageBlock` is the only standard conversation block
 that enables prompt vpad; system, session-event, thinking, background, and all
 specialized tool blocks explicitly disable it. The renderer also suppresses

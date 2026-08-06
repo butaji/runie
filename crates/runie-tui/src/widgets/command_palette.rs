@@ -62,6 +62,10 @@ impl CommandPaletteWidget {
             .into_iter()
             .nth(selected)
     }
+
+    pub fn entry_count(query: &str) -> usize {
+        Self::new(query, 0).filtered().len()
+    }
 }
 
 impl Widget for CommandPaletteWidget {
@@ -78,7 +82,7 @@ impl Widget for CommandPaletteWidget {
             height,
         };
         let entries = self.filtered();
-        let mut text = format!("Echo Command Query Title\n\n> {}\n", self.query);
+        let mut text = format!("Commands\n\n> {}\n", self.query);
         for (index, entry) in entries.iter().enumerate() {
             let marker = if index == self.selected { "› " } else { "  " };
             text.push_str(&format!("\n{marker}{entry}"));

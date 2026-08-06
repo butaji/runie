@@ -83,8 +83,16 @@ impl UiState {
                 self.command_palette_query.pop();
             }
             UiMsg::CommandPaletteMove(delta) => {
-                self.command_palette_index =
-                    self.command_palette_index.saturating_add_signed(delta);
+                let count =
+                    crate::widgets::CommandPaletteWidget::entry_count(&self.command_palette_query);
+                if count > 0 {
+                    self.command_palette_index = self
+                        .command_palette_index
+                        .saturating_add_signed(delta)
+                        .min(count - 1);
+                } else {
+                    self.command_palette_index = 0;
+                }
             }
             UiMsg::ActivateCommandPalette => {
                 self.last_palette_command = crate::widgets::CommandPaletteWidget::selected_entry(
