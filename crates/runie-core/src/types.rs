@@ -702,6 +702,8 @@ pub enum ThemeKind {
     RosePineMoon,
     OscuraMidnight,
     Auto,
+    /// Grok minimal-mode terminal-native palette; emits default/ANSI colors.
+    TerminalNative,
 }
 
 /// Per-tool block display state used by Grok's scrollback renderer.

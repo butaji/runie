@@ -101,6 +101,7 @@ pub fn load(theme: ThemeKind) -> Theme {
         ThemeKind::RosePineMoon => builtin("rose-pine-moon"),
         ThemeKind::OscuraMidnight => builtin("night-owl"),
         ThemeKind::Auto => load(ThemeKind::GrokNight),
+        ThemeKind::TerminalNative => load(ThemeKind::GrokNight),
     }
 }
 
@@ -210,6 +211,9 @@ pub fn warning_style() -> Style {
 }
 
 fn token_color(theme: ThemeKind, token: &str) -> Color {
+    if theme == ThemeKind::TerminalNative {
+        return Color::Reset;
+    }
     let color = load(theme).color(token);
     Color::Rgb(color.r, color.g, color.b)
 }
@@ -266,6 +270,17 @@ mod tests {
             user_style_for(ThemeKind::GrokDay).bg,
             Some(Color::Rgb(222, 222, 222))
         );
+    }
+
+    #[test]
+    fn terminal_native_theme_projects_default_terminal_colors() {
+        let native_base = Style::default().fg(Color::Reset).bg(Color::Reset);
+        assert_eq!(base_style_for(ThemeKind::TerminalNative), native_base);
+        assert_eq!(
+            background_style_for(ThemeKind::TerminalNative),
+            Style::default().bg(Color::Reset)
+        );
+        assert_eq!(accent_style_for(ThemeKind::TerminalNative), native_base);
     }
 
     #[test]

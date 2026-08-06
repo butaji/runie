@@ -21,6 +21,7 @@ events:
       args: { path: "README.md" }
   - done: { stop_reason: tool_use }
   - waiting: model
+  - theme: terminal_native
 
 assertions:
   visual:

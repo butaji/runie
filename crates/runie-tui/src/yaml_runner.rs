@@ -301,6 +301,9 @@ fn parse_theme(theme: &str) -> runie_core::types::ThemeKind {
         "rose_pine_moon" | "rose-pine-moon" => runie_core::types::ThemeKind::RosePineMoon,
         "oscura_midnight" | "oscura-midnight" => runie_core::types::ThemeKind::OscuraMidnight,
         "auto" => runie_core::types::ThemeKind::Auto,
+        "terminal_native" | "terminal-native" | "native" => {
+            runie_core::types::ThemeKind::TerminalNative
+        }
         _ => runie_core::types::ThemeKind::GrokNight,
     }
 }

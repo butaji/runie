@@ -48,6 +48,11 @@ unverified full-screen frame or core event family remains open.
   capability/theme mode that selects the same native palette when paritying
   Grok minimal mode; forcing RGB in the capture would test a different Grok
   mode, not the one currently being compared.
+- Native theme seam (2026-08-06): added `ThemeKind::TerminalNative` to the
+  event/state model. Opaline semantic intents resolve to terminal-reset colors
+  for this mode, while the existing GrokNight/GrokDay tokens remain unchanged.
+  `visual-grok-feed.yaml` now selects the mode through a theme event, and both
+  the YAML discovery test and the Grok feed visual assertion pass.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.
