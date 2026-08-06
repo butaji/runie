@@ -137,8 +137,6 @@ async fn end_to_end_prompt_renders_transcript() {
 
     // Spawn the renderer.
     let renderer = EventRenderer::with_actors(
-        app.scrollback.clone(),
-        app.status.clone(),
         app.scrollback_actor.clone(),
         app.status_actor.clone(),
         false,

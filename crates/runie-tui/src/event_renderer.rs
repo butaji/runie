@@ -182,13 +182,15 @@ impl EventRenderer {
     /// construction time. The compatibility constructors remain for the
     /// synchronous YAML harness and focused reducer tests.
     pub fn with_actors(
-        scrollback: Arc<Mutex<Scrollback>>,
-        status: Arc<Mutex<StatusBar>>,
         scrollback_actor: ScrollbackActor,
         status_actor: StatusActor,
         emit_welcome: bool,
     ) -> Self {
-        let mut renderer = Self::with_welcome(scrollback, status, emit_welcome);
+        let mut renderer = Self::with_welcome(
+            Arc::new(Mutex::new(Scrollback::new())),
+            Arc::new(Mutex::new(StatusBar::new())),
+            emit_welcome,
+        );
         renderer.scrollback_actor = Some(scrollback_actor);
         renderer.status_actor = Some(status_actor);
         renderer

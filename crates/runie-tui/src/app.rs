@@ -4,7 +4,6 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crossterm::event::KeyEvent;
-use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use runie_core::events::EventBus;
@@ -306,9 +305,7 @@ fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
 }
 
 pub struct App {
-    pub scrollback: Arc<Mutex<Scrollback>>,
     pub prompt: PromptActor,
-    pub status: Arc<Mutex<StatusBar>>,
     pub status_actor: StatusActor,
     pub scrollback_actor: ScrollbackActor,
     pub loop_actor: LoopActor,
@@ -320,9 +317,7 @@ impl App {
     pub fn new(loop_actor: LoopActor, bus: EventBus) -> Self {
         let ui = UiActor::new(&bus);
         Self {
-            scrollback: Arc::new(Mutex::new(Scrollback::new())),
             prompt: PromptActor::new(&bus),
-            status: Arc::new(Mutex::new(StatusBar::new())),
             status_actor: StatusActor::new(),
             scrollback_actor: ScrollbackActor::new(),
             loop_actor,
@@ -334,9 +329,7 @@ impl App {
     pub fn new_with_welcome(loop_actor: LoopActor, bus: EventBus) -> Self {
         let ui = UiActor::new_with_welcome(&bus, true);
         Self {
-            scrollback: Arc::new(Mutex::new(Scrollback::new())),
             prompt: PromptActor::new(&bus),
-            status: Arc::new(Mutex::new(StatusBar::new())),
             status_actor: StatusActor::new(),
             scrollback_actor: ScrollbackActor::new(),
             loop_actor,
@@ -423,8 +416,6 @@ impl App {
         tokio::sync::watch::Sender<bool>,
     ) {
         let renderer = EventRenderer::with_actors(
-            self.scrollback.clone(),
-            self.status.clone(),
             self.scrollback_actor.clone(),
             self.status_actor.clone(),
             false,

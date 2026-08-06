@@ -262,3 +262,10 @@ because it would conceal ownership and make YAML event assertions impossible.
   those handles without `Option`/mutex availability branching. Legacy
   `Arc<Mutex<Scrollback/StatusBar>>` fields remain only for compatibility
   widget constructors and focused synchronous renderer tests.
+
+- **App mutex projection removal (2026-08-05):** Removed the legacy
+  `Arc<Mutex<Scrollback>>` and `Arc<Mutex<StatusBar>>` fields from `App`.
+  Actor renderer construction now receives only actor handles; compatibility
+  mutex storage is confined inside the legacy `EventRenderer` test/replay
+  constructor and is not part of application state. The full gate remains
+  green.
