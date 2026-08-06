@@ -492,9 +492,9 @@ running-only cycle (`Collapsed -> Truncated -> Expanded -> Truncated`) and a
 different settled cycle (`Collapsed <-> Expanded`). Runie's Pi-core event
 projection currently marks only the explicit background/subagent lifecycle as
 `ToolRunning`; arbitrary tool execution has no typed running-state event in the
-TUI reducer. This remains an explicit gap. It must be closed by carrying the
-tool lifecycle's running fact through an actor-owned event before adding the
-running-only fold cycle; header-string inference would produce false parity.
+TUI reducer. This was the initial audit state; it is superseded by the
+ordinary lifecycle closure documented below. It remains here as the rejected
+ID-inference approach, not as the current implementation status.
 
 Ordinary tool lifecycle wiring (2026-08-06): attempts to make every ordinary
 start `ToolRunning` and settle all matching IDs exposed the compatibility
@@ -640,6 +640,12 @@ text.
 The YAML harness now uses `register_scenario_tool` as the single registration
 source for both normal and visual replay. This keeps declarative fixture
 fields and built-in tool variants consistent across all test entry points.
+
+Documentation reconciliation (2026-08-06): `ToolStartRunning`, opaque row
+ownership, the running fold-cycle test, and the YAML projection are the
+authoritative current contract; no generic running-card gap remains at the
+reducer boundary. Earlier paragraphs retain the rejected implementation path
+as audit history.
 
 Unknown-model fallback closure (2026-08-06): The live placeholder provider
 uses Pi's zero-valued unknown `Model.context_window`. The app previously
