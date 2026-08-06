@@ -185,3 +185,10 @@ boundary, fixing the prior case where the reducer reached the tail but the
 widget adapter silently reset follow state. `visual-scroll-reveal.yaml`
 asserts the event-driven transition and the adapter has a focused snapshot
 regression. No scheduler wait or sleep is involved.
+
+The Grok source audit also confirms that automatic follow is triggered by
+prompt submission (`send_prompt → follow_new_turn`), not by tool completion.
+Runie therefore keeps `RevealLatest` explicit for a user who has detached the
+viewport; wiring it unconditionally to `ToolExecutionEnd` would diverge from
+Grok by stealing an intentional scroll position. The next lifecycle parity
+work is the richer prompt page-flip/preserve policy, not a tool-end jump.
