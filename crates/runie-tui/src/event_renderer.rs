@@ -220,14 +220,11 @@ impl<T> Projection<T> {
     }
 
     #[cfg(not(test))]
-    fn lock(&self) -> T
-    where
-        T: Default,
-    {
-        // Actor-backed renderers never enter compatibility branches. This
-        // fallback keeps those private adapters type-checkable without
-        // retaining mutex storage in production.
-        T::default()
+    fn lock(&self) -> T {
+        // Production projections are actor-backed. A compatibility branch
+        // must never manufacture a default snapshot, which would create a
+        // silent second source of truth.
+        panic!("legacy projection accessed from actor renderer")
     }
 
     #[cfg(test)]
