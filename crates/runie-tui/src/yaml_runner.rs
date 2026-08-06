@@ -154,6 +154,10 @@ fn waiting_name(name: &str) -> WaitingReason {
 pub struct DoneSpec {
     #[serde(default)]
     pub stop_reason: StopReasonSpec,
+    /// Provider usage is part of the terminal event and must be fixture-owned
+    /// for deterministic footer parity; omitted usage keeps the zero default.
+    #[serde(default)]
+    pub usage: Usage,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -215,7 +219,7 @@ impl EventSpec {
             }),
             Self::Done { done } => Some(AssistantMessageEvent::Done {
                 stop_reason: StopReason::from(&done.stop_reason),
-                usage: Usage::default(),
+                usage: done.usage.clone(),
                 message: None,
             }),
             Self::Error { error } => Some(AssistantMessageEvent::Error {

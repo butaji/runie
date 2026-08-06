@@ -285,6 +285,7 @@ impl Default for ToolResultMessage {
 /// Token usage + cost accounting. Cost is per-million tokens in USD.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct Usage {
     pub input: u64,
     pub output: u64,

@@ -15,6 +15,13 @@ behavior fixtures editable without recompiling Rust.
 
 ## Progress
 
+- **Fixture-owned terminal usage (2026-08-06):** `Done` event YAML may now
+  declare `Usage` fields, which flow through the real assistant terminal event
+  into the actor-owned status/footer projection. Shared `Usage` serde defaults
+  keep compact fixtures concise while preserving the complete pi wire shape;
+  `visual-hey.yaml` exercises the path and the full workspace gate remains
+  green.
+
 - **TUI actor ownership reuse (2026-08-06):** `UiActor` and `PromptActor`
   now use the shared `runie-core` owned-worker DSL. Their worker lifetimes
   remain attached to cloned actor handles, while the duplicate local

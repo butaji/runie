@@ -7,7 +7,12 @@ prompt_timestamp: "9:27 PM"
 events:
   - start
   - text_delta: "Hi there!"
-  - done: { stop_reason: stop }
+  - done:
+      stop_reason: stop
+      usage:
+        input: 7
+        output: 8
+        total_tokens: 15
 assertions:
   visual:
     cols: 80
