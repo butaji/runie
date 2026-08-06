@@ -1,6 +1,6 @@
 //! 3-region chat layout: scrollback (top, grows) + prompt (middle, fixed) + status (bottom, 1 row).
 
-use crate::view::{chat_view, Slot};
+use crate::view::{chat_view, LayoutDirection, LayoutEntry, LayoutSize, Slot, StackLayout};
 use ratatui::layout::Rect;
 
 pub const STATUS_HEIGHT: u16 = 1;
@@ -73,39 +73,37 @@ pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLay
             .saturating_sub(OUTER_HPAD_LEFT + OUTER_HPAD_RIGHT),
         height: area.height.saturating_sub(1),
     };
+    let [header_height, scrollback_height, prompt_height] =
+        chat_region_heights(inner.height, prompt_height);
+    let header = Rect {
+        x: inner.x,
+        y: inner.y,
+        width: inner.width,
+        height: header_height,
+    };
+    let scrollback = Rect {
+        x: inner.x,
+        y: header.y + header.height,
+        width: inner.width,
+        height: scrollback_height,
+    };
+    let prompt = Rect {
+        x: inner.x,
+        y: scrollback.y + scrollback.height,
+        width: inner.width,
+        height: prompt_height,
+    };
     let status = Rect {
         x: inner.x,
-        y: inner.y + inner.height.saturating_sub(STATUS_HEIGHT + BOTTOM_MARGIN),
+        y: prompt.y + prompt.height + BOTTOM_MARGIN,
         width: inner.width,
         height: STATUS_HEIGHT,
     };
     let footer_badge = Rect {
         x: inner.x,
-        y: status.y + STATUS_HEIGHT,
+        y: status.y + status.height,
         width: inner.width,
         height: BOTTOM_MARGIN.min(area.height),
-    };
-    let available_prompt = status.y.saturating_sub(inner.y + HEADER_HEIGHT);
-    let prompt_height = prompt_height
-        .max(PROMPT_HEIGHT)
-        .min(available_prompt.max(PROMPT_HEIGHT));
-    let prompt = Rect {
-        x: inner.x,
-        y: status.y.saturating_sub(prompt_height + BOTTOM_MARGIN),
-        width: inner.width,
-        height: prompt_height,
-    };
-    let header = Rect {
-        x: inner.x,
-        y: inner.y,
-        width: inner.width,
-        height: HEADER_HEIGHT,
-    };
-    let scrollback = Rect {
-        x: inner.x,
-        y: inner.y + HEADER_HEIGHT,
-        width: inner.width,
-        height: prompt.y.saturating_sub(inner.y + HEADER_HEIGHT),
     };
     ChatLayout {
         header,
@@ -114,6 +112,41 @@ pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLay
         status,
         footer_badge,
     }
+}
+
+fn chat_region_heights(inner_height: u16, prompt_height: u16) -> [u16; 3] {
+    const ENTRIES: [LayoutEntry; 3] = [
+        LayoutEntry {
+            slot: Slot::Header,
+            basis: LayoutSize::Fixed(HEADER_HEIGHT),
+            grow: 0,
+            shrink: 0,
+            min_size: HEADER_HEIGHT,
+            max_size: Some(HEADER_HEIGHT),
+        },
+        LayoutEntry::grow(Slot::Scrollback, 0),
+        LayoutEntry {
+            slot: Slot::Prompt,
+            basis: LayoutSize::Fixed(PROMPT_HEIGHT),
+            grow: 0,
+            shrink: 0,
+            min_size: PROMPT_HEIGHT,
+            max_size: None,
+        },
+    ];
+    let mut entries = ENTRIES;
+    entries[2].basis = LayoutSize::Fixed(prompt_height.max(PROMPT_HEIGHT));
+    let layout = StackLayout {
+        direction: LayoutDirection::Vertical,
+        gap: 0,
+        entries: &entries,
+    };
+    let reserved = STATUS_HEIGHT + BOTTOM_MARGIN + BOTTOM_MARGIN;
+    let sizes = layout.allocate(
+        &[HEADER_HEIGHT, 0, prompt_height],
+        Some(inner_height.saturating_sub(reserved)),
+    );
+    [sizes[0], sizes[1], sizes[2]]
 }
 
 #[cfg(test)]

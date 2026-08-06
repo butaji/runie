@@ -37,6 +37,10 @@ renderer paints terminal cells.
   shrink, minimum, maximum, and gap handling. The resolver is covered by a
   renderer-independent allocation test; integrating it with the live layout
   adapter remains the next boundary.
+- Integrated the resolver into the live chat layout for the header,
+  scrollback, and prompt regions. The existing Grok prompt/status gap and
+  footer geometry remain explicit adapter constraints, and the full visual
+  suite remains unchanged.
 
 ## Next boundaries
 

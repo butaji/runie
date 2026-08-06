@@ -62,13 +62,13 @@ impl LayoutEntry {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StackLayout {
+pub struct StackLayout<'a> {
     pub direction: LayoutDirection,
     pub gap: u16,
-    pub entries: &'static [LayoutEntry],
+    pub entries: &'a [LayoutEntry],
 }
 
-impl StackLayout {
+impl<'a> StackLayout<'a> {
     /// Resolve the main-axis allocation without terminal or renderer state.
     /// Intrinsic sizes are supplied by component projections; basis/grow/
     /// shrink/min/max are the same declarative inputs used by pi's Stack.
@@ -196,8 +196,8 @@ pub struct ScrollLayout {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LayoutNode {
-    Stack(StackLayout),
+pub enum LayoutNode<'a> {
+    Stack(StackLayout<'a>),
     Scroll(ScrollLayout),
     Slot(Slot),
 }
