@@ -22,18 +22,19 @@ trap cleanup EXIT INT TERM
 tmux new-session -d -s "$session" -x "$cols" -y "$rows" \
   "bash -c 'read -r launch; eval \"\$launch\"'"
 tmux resize-window -t "$session" -x "$cols" -y "$rows"
-launch_prefix=""
+record_command="$command_line"
 if [[ -n "$env_assignments" ]]; then
     for assignment in $env_assignments; do
         if [[ "$assignment" != [A-Za-z_][A-Za-z0-9_]*=* ]]; then
             echo "invalid environment assignment: ${assignment}" >&2
             exit 1
         fi
-        launch_prefix+="export ${assignment}; "
+        record_command="export ${assignment}; ${record_command}"
     done
 fi
+printf -v quoted_command '%q' "$record_command"
 tmux send-keys -t "$session" -l \
-  "${launch_prefix}asciinema rec --capture-input --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command '$command_line' '$cast'"
+  "asciinema rec --capture-input --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command ${quoted_command} '$cast'"
 tmux send-keys -t "$session" Enter
 
 # Wait for the actual prompt, not merely alternate-screen initialization.

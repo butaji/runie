@@ -240,6 +240,13 @@ probe also renders the frozen `Worked for 1.9s`; the asciinema child currently
 needs one more propagation check for the elapsed override before frozen final
 screen parity can be accepted.
 
+The command is now shell-quoted as one asciinema command, which fixes the
+previous nested-quote failure: an elapsed-only capture reaches `Worked for
+1.9s`, and a timestamp-only capture reaches `11:20 PM`. Direct tmux accepts
+both overrides together. The remaining combined-asciinema propagation case is
+kept visible as an instrument defect rather than treating the 24-cell result
+as exact parity.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
