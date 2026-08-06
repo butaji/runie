@@ -652,6 +652,8 @@ pub struct StateAssertions {
     pub tool_header_row_active: Option<Vec<bool>>,
     /// Ordered output rows for each projected tool block.
     pub tool_outputs: Option<Vec<Vec<String>>>,
+    /// Ordered semantic card-row roles across the transcript.
+    pub tool_row_kinds: Option<Vec<runie_tui_model::ToolCardRowKind>>,
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
@@ -1660,6 +1662,7 @@ fn assert_optional_option_eq<T: PartialEq + std::fmt::Debug>(
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "the declarative tool-card fields are kept together for fixture diagnostics"
 )]
 fn assert_tool_block_expectations(
@@ -1755,6 +1758,22 @@ fn assert_tool_block_expectations(
                 .collect::<Vec<_>>(),
             "tool_outputs",
         )?;
+    }
+    if let Some(value) = &expected.tool_row_kinds {
+        let actual = runie_tui_model::project_tool_card_rows(
+            &outcome.feed.lines,
+            &outcome.feed.tool_names,
+            &outcome
+                .feed
+                .tool_blocks
+                .iter()
+                .map(|block| (block.tool_call_id.clone(), block.mode))
+                .collect(),
+        )
+        .into_iter()
+        .map(|row| row.row_kind)
+        .collect::<Vec<_>>();
+        assert_vec_equal(value, &actual, "tool_row_kinds")?;
     }
     if let Some(value) = &expected.tool_kinds {
         assert_vec_equal(
