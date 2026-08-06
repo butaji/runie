@@ -62,6 +62,7 @@ pub struct StatusBar {
     elapsed_ticks_override: Option<u64>,
     turn_usage: Option<Usage>,
     turn_stop_reason: Option<StopReason>,
+    context_window: Option<u64>,
 }
 
 /// Grok's one-row foreground activity indicator above the prompt.
@@ -178,6 +179,7 @@ impl StatusBar {
             elapsed_ticks_override: crate::clock::parity_elapsed_ticks(),
             turn_usage: None,
             turn_stop_reason: None,
+            context_window: None,
         }
     }
 
@@ -193,6 +195,7 @@ impl StatusBar {
             elapsed_ticks_override: None,
             turn_usage: snapshot.turn_usage,
             turn_stop_reason: snapshot.turn_stop_reason,
+            context_window: snapshot.context_window,
         }
     }
 
@@ -231,6 +234,7 @@ impl StatusBar {
                 self.turn_stop_reason = Some(stop_reason);
             }
             StatusMsg::SetTheme(theme) => self.theme = theme,
+            StatusMsg::SetContextWindow(window) => self.context_window = window,
             StatusMsg::AdvanceAnimation => {
                 if matches!(
                     self.state,
@@ -266,7 +270,12 @@ impl StatusBar {
             .as_ref()
             .map(|usage| usage.total_tokens)
             .unwrap_or_default();
-        format!("{} / 500K", format_token_count(used).replace('k', "K"))
+        let budget = self.context_window.unwrap_or(500_000);
+        format!(
+            "{} / {}",
+            format_token_count(used).replace('k', "K"),
+            format_token_count(budget).replace('k', "K")
+        )
     }
 
     /// Build the pure foreground status projection consumed by the TUI view.
@@ -316,6 +325,7 @@ impl StatusBar {
             elapsed_ticks: self.displayed_elapsed_ticks(),
             turn_usage: self.turn_usage.clone(),
             turn_stop_reason: self.turn_stop_reason,
+            context_window: self.context_window,
         }
     }
 

@@ -141,6 +141,7 @@ mod tests {
                 elapsed_ticks: 0,
                 turn_usage: None,
                 turn_stop_reason: None,
+                context_window: None,
             },
         };
         assert!(!snapshot.ui.show_welcome);
@@ -157,6 +158,7 @@ mod tests {
             elapsed_ticks: 0,
             turn_usage: None,
             turn_stop_reason: None,
+            context_window: None,
         };
         assert_eq!(snapshot.header_meter(), "0 / 500K");
     }

@@ -576,3 +576,10 @@ metadata, so closing this gap requires an explicit actor-owned model/context
 projection event (or a core snapshot bridge), not a renderer read or a
 fabricated YAML value. The missing data is recorded as a prerequisite for
 exact metric parity.
+
+Context-meter projection closure (2026-08-06): Runie status state now carries
+an optional actor-owned context-window denominator. The application delivers
+the active core model's window through `StatusMsg::SetContextWindow`; both the
+model header projection and renderer adapter use it, retaining `500K` only
+when upstream model metadata is unavailable. Unit coverage includes a 1M
+meter, and no renderer reads core state directly.

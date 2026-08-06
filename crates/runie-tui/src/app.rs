@@ -425,6 +425,11 @@ impl App {
 
     pub async fn refresh_model_caption(&self) {
         let model = self.loop_actor.state_snapshot().model;
+        self.status_actor
+            .apply(crate::widgets::StatusMsg::SetContextWindow(Some(
+                model.context_window,
+            )))
+            .await;
         if !model.name.is_empty() {
             self.prompt
                 .set_model_caption(format!("{} (high)", model.name))

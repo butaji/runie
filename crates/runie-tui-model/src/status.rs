@@ -36,6 +36,7 @@ pub enum StatusMsg {
     BeginTurn,
     FinishTurn(Usage, StopReason),
     SetTheme(ThemeKind),
+    SetContextWindow(Option<u64>),
     AdvanceAnimation,
 }
 
@@ -47,6 +48,7 @@ pub struct StatusSnapshot {
     pub elapsed_ticks: u64,
     pub turn_usage: Option<Usage>,
     pub turn_stop_reason: Option<StopReason>,
+    pub context_window: Option<u64>,
 }
 
 impl StatusSnapshot {
@@ -82,6 +84,7 @@ impl StatusSnapshot {
                 self.turn_stop_reason = Some(stop_reason);
             }
             StatusMsg::SetTheme(theme) => self.theme = theme,
+            StatusMsg::SetContextWindow(window) => self.context_window = window,
             StatusMsg::AdvanceAnimation => {
                 if matches!(
                     self.state,
@@ -103,16 +106,20 @@ impl StatusSnapshot {
             .as_ref()
             .map(|usage| usage.total_tokens)
             .unwrap_or_default();
+        let budget = self.context_window.unwrap_or(HEADER_TOKEN_BUDGET);
         format!(
-            "{} / {}K",
+            "{} / {}",
             format_token_count(used),
-            HEADER_TOKEN_BUDGET / 1_000
+            format_token_count(budget)
         )
     }
 }
 
 fn format_token_count(tokens: u64) -> String {
-    if tokens >= 100_000 {
+    if tokens >= 1_000_000 {
+        let rendered = format!("{:.1}", tokens as f64 / 1_000_000.0);
+        format!("{}M", rendered.trim_end_matches(".0"))
+    } else if tokens >= 100_000 {
         format!("{}K", tokens / 1_000)
     } else if tokens >= 1_000 {
         let rendered = format!("{:.1}", tokens as f64 / 1_000.0);
@@ -160,5 +167,12 @@ mod tests {
             ..StatusSnapshot::default()
         };
         assert_eq!(state.worked_for_label(), "Worked for 2.8s");
+    }
+
+    #[test]
+    fn context_window_is_actor_owned_and_changes_the_meter() {
+        let mut state = StatusSnapshot::default();
+        state.apply(StatusMsg::SetContextWindow(Some(1_000_000)), None);
+        assert_eq!(state.header_meter(), "0 / 1M");
     }
 }
