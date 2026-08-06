@@ -7,6 +7,7 @@
 
 pub mod app;
 pub mod appearance;
+pub mod clock;
 pub mod event_renderer;
 pub mod key;
 pub mod layout;

@@ -6,7 +6,7 @@
 
 use std::io::{self, Stdout};
 use std::sync::OnceLock;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -487,7 +487,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                             }
                                             let user_msg = AgentMessage::User(runie_core::types::UserMessage {
                                                 content: vec![runie_core::types::UserContent::Text { text }],
-                                                timestamp: unix_timestamp_seconds(),
+                                                timestamp: runie_tui::clock::unix_timestamp_seconds(),
                                             });
                                             if let Err(error) = app
                                                 .loop_actor
@@ -598,13 +598,6 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
             }
         }
     }
-}
-
-fn unix_timestamp_seconds() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_secs() as i64)
-        .unwrap_or_default()
 }
 
 #[allow(dead_code)]

@@ -1,7 +1,5 @@
 //! `App` — the top-level TUI controller.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use crossterm::event::KeyEvent;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -436,11 +434,7 @@ impl App {
     pub async fn handle_prompt_outcome(&mut self, outcome: PromptOutcome) -> Option<String> {
         match outcome {
             PromptOutcome::Submitted(text) => {
-                const MILLIS_PER_SECOND: u128 = 1_000;
-                let timestamp = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .map(|duration| duration.as_millis() / MILLIS_PER_SECOND)
-                    .unwrap_or_default() as i64;
+                let timestamp = crate::clock::unix_timestamp_seconds();
                 let user_msg = AgentMessage::User(runie_core::types::UserMessage {
                     content: vec![runie_core::types::UserContent::Text { text: text.clone() }],
                     timestamp,

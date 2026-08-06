@@ -220,6 +220,12 @@ and worked elapsed time. The footer's 15 attribute-only cells disappeared after
 the live GrokNight footer switched to terminal-default semantic styles, matching
 the actor-owned status projection.
 
+**Deterministic clock boundary (2026-08-06):** Live prompt timestamps now
+come from the TUI clock boundary. Production defaults to wall time, while
+capture/replay runs can set `RUNIE_PARITY_TIMESTAMP` to a Unix timestamp. The
+value enters the user event at the boundary and is never read by reducers or
+views, preserving actor/SSOT purity while making timestamp cells reproducible.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
