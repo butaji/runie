@@ -500,3 +500,12 @@ header after completion, while the completed preview is emitted as a structured
 output entry. A reducer row token must not be used as permission to rewrite
 that header; ownership and completion formatting require independent event
 contracts.
+
+Specialized-card source audit (2026-08-06): Grok's `ListDirToolCallBlock`,
+`ReadToolCallBlock`, and related blocks derive completed cardinality from the
+stored output during rendering (`N entries`, `N lines`, `N matches`, and so
+on). Runie's pure `completed_tool_header` formatter matches those source rules.
+The remaining discrepancy is the compatibility YAML projection's placement of
+the completion summary among output rows; it is covered by the mixed-activity
+oracle and must be resolved together with explicit row ownership, not by
+changing the formatter in isolation.
