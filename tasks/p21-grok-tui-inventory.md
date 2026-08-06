@@ -382,3 +382,7 @@ Replay parity (2026-08-06): deterministic `apply_actor_event` replay now
 projects the same per-tool default display mode as the live bus actor
 (`Truncated` for execute/bash-like tools and `Collapsed` otherwise). Explicit
 YAML `tool_mode` events still override the default through the event reducer.
+
+Default-mode scenario (2026-08-06): `visual-tool-default-modes.yaml` verifies
+that Bash and Read blocks receive `Truncated` and `Collapsed` from the event
+sequence without a compiled fixture change or explicit mode instruction.

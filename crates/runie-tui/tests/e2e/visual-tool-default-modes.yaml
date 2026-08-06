@@ -1,0 +1,30 @@
+name: visual-tool-default-modes
+description: |
+  Tool starts receive Grok's source-backed display defaults through the event
+  reducer when no explicit YAML override is present.
+initial_prompt: "inspect"
+tools:
+  - name: bash
+    kind: bash
+  - name: read
+    kind: read
+events:
+  - start
+  - tool_call:
+      name: bash
+      args: { cmd: "pwd" }
+  - tool_call:
+      name: read
+      args: { path: "README.md" }
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    tool_blocks: 2
+    tool_modes: [truncated, collapsed]
+    tool_kinds: [execute, read]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Run pwd"
+      - "Read README.md"
