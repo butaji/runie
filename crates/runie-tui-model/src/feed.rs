@@ -154,6 +154,64 @@ pub struct ToolBlock {
     pub tool_row_id: Option<u64>,
 }
 
+/// Semantic row within a typed Grok tool card. Renderers may add spans,
+/// colours, and terminal geometry, but must not rediscover this identity from
+/// text after crossing the model boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCardRowKind {
+    Header,
+    Content,
+    Status,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ToolCardRow {
+    pub tool_call_id: String,
+    pub card_kind: ToolCardKind,
+    pub row_kind: ToolCardRowKind,
+    pub text: String,
+    pub mode: ToolDisplayMode,
+    pub is_running: bool,
+    pub is_error: bool,
+}
+
+/// Project transcript rows into semantic card rows in transcript order.
+pub fn project_tool_card_rows(
+    lines: &[Line],
+    tool_names: &HashMap<String, String>,
+    tool_modes: &HashMap<String, ToolDisplayMode>,
+) -> Vec<ToolCardRow> {
+    let mut rows = Vec::new();
+    for line in lines {
+        let Some(tool_call_id) = line.tool_call_id.as_deref() else {
+            continue;
+        };
+        let header = tool_names
+            .get(tool_call_id)
+            .map(String::as_str)
+            .unwrap_or(&line.text);
+        let row_kind = match line.kind {
+            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => ToolCardRowKind::Header,
+            LineKind::ToolOutput | LineKind::ToolResult => ToolCardRowKind::Content,
+            _ => continue,
+        };
+        rows.push(ToolCardRow {
+            tool_call_id: tool_call_id.to_owned(),
+            card_kind: ToolCardKind::from_header(header),
+            row_kind,
+            text: line.text.clone(),
+            mode: tool_modes
+                .get(tool_call_id)
+                .copied()
+                .unwrap_or(ToolDisplayMode::Expanded),
+            is_running: line.kind == LineKind::ToolRunning,
+            is_error: line.kind == LineKind::ToolError,
+        });
+    }
+    rows
+}
+
 /// Grok's specialized tool-card families supported by pi-core tool events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -316,7 +374,10 @@ impl ToolCardKind {
 
 #[cfg(test)]
 mod tests {
-    use super::{default_tool_display_mode, project_tool_blocks, Line, LineKind, ToolCardKind};
+    use super::{
+        default_tool_display_mode, project_tool_blocks, project_tool_card_rows, Line, LineKind,
+        ToolCardKind, ToolCardRowKind,
+    };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
 
@@ -357,6 +418,21 @@ mod tests {
         );
         assert_eq!(blocks[0].output, ["line"]);
         assert_eq!(blocks[1].kind, ToolCardKind::Execute);
+    }
+
+    #[test]
+    fn card_rows_preserve_specialized_identity_and_semantic_role() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "Read README.md").for_tool("call-1"),
+            Line::new(LineKind::ToolOutput, "first line").for_tool("call-1"),
+            Line::new(LineKind::ToolError, "failed").for_tool("call-1"),
+        ];
+        let names = HashMap::from([(String::from("call-1"), String::from("read"))]);
+        let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
+        assert_eq!(rows[0].card_kind, ToolCardKind::Read);
+        assert_eq!(rows[0].row_kind, ToolCardRowKind::Header);
+        assert_eq!(rows[1].row_kind, ToolCardRowKind::Content);
+        assert!(rows[2].is_error);
     }
 
     #[test]

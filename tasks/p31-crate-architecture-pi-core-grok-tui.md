@@ -435,3 +435,7 @@ Typed-card rendering audit confirms the next layer boundary: `FeedState` and
 all card rows into a generic physical-row tuple. A renderer-neutral card-row
 projection is required before exact Grok spans, metadata, and selection ranges
 can be implemented without creating a second state owner.
+
+The first card-row projection is now model-owned: truncation accounting
+consumes `ToolCardRowKind::Content` rows, leaving Ratatui responsible only for
+appearance and geometry.

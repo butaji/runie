@@ -557,3 +557,10 @@ header spans, status glyphs, metadata rows, and selection ranges. The next
 parity slice must introduce a renderer-neutral card-row vocabulary carrying
 that semantic identity before Ratatui styles are applied; changing individual
 colors or prefixes in `physical_rows` would lose the distinction again.
+
+Typed-card row vocabulary slice (2026-08-06): added model-owned
+`ToolCardRowKind`/`ToolCardRow` projections for header, content, and status
+semantics. The existing truncation projection now consumes those rows for
+read/execute output accounting, while terminal appearance remains stable.
+The next slice can apply Grok per-card spans and metadata without rebuilding
+identity in the widget.

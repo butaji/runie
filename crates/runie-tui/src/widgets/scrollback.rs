@@ -11,7 +11,8 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 use crate::appearance;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
-    FeedNavigation, FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind,
+    project_tool_card_rows, FeedNavigation, FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock,
+    ToolCardKind, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -1302,18 +1303,15 @@ impl Scrollback {
         let mut truncated_output = HashSet::new();
         let mut preview_output_totals: HashMap<String, usize> = HashMap::new();
         let mut preview_output_seen: HashMap<String, usize> = HashMap::new();
-        for line in &self.lines {
-            if matches!(line.kind, LineKind::ToolOutput | LineKind::ToolResult) {
-                if let Some(id) = line.tool_call_id.as_ref() {
-                    if self.navigation.tool_names.get(id).is_some_and(|name| {
-                        matches!(
-                            name.as_str(),
-                            "read" | "read_file" | "bash" | "shell" | "exec" | "run"
-                        )
-                    }) {
-                        *preview_output_totals.entry(id.clone()).or_default() += 1;
-                    }
-                }
+        for row in project_tool_card_rows(
+            &self.lines,
+            &self.navigation.tool_names,
+            &self.navigation.tool_modes,
+        ) {
+            if row.row_kind == ToolCardRowKind::Content
+                && matches!(row.card_kind, ToolCardKind::Read | ToolCardKind::Execute)
+            {
+                *preview_output_totals.entry(row.tool_call_id).or_default() += 1;
             }
         }
         let dense_groups = self.dense_tool_groups();
