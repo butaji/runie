@@ -196,6 +196,14 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
 
 ## Progress
 
+- **Live actor-boundary audit (2026-08-06):** Re-scanned all production
+  `EventBus::publish` call sites after the lifecycle fixes. Core driver
+  state-relevant events (`agent_start`, `turn_start`, `turn_end`, tool
+  completion, errors, and `agent_end`) all pass through the state actor before
+  publication. Remaining direct bus calls are isolated TUI projection actors
+  or test scaffolding. This closes the core event-to-state ownership audit;
+  the unresolved p19 work remains full cast-wide frame/attribute comparison.
+
 **Hey state contract (2026-08-06):** The canonical four-size `visual-hey`
 fixture now asserts the terminal `ready` status, zero pending/tool blocks,
 two core messages, and the actor-owned tail-follow scroll offset (`9`) in addition to the
