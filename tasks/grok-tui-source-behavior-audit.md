@@ -252,3 +252,8 @@ Palette query-editing closure (2026-08-06): the YAML visual DSL now exposes a
 `CommandPaletteBackspace` message. `visual-command-palette-edit.yaml` proves
 that `newx` reduces to `new` while the palette remains open, removing the
 previous Rust-only coverage gap.
+
+Palette movement oracle (2026-08-06): `visual-command-palette-movement.yaml`
+now drives `Ctrl-P → PaletteDown` and asserts palette index `1` plus the
+visible `Keyboard Shortcuts` selection. This covers the bounded, filtered
+selection transition through the UI actor and full visual buffer.

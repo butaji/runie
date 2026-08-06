@@ -1,0 +1,16 @@
+name: visual-command-palette-movement
+description: Palette selection movement is bounded and visible in the YAML oracle.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - PaletteDown
+    palette_open: true
+    palette_query: ""
+    palette_index: 1
+    screen_text:
+      - "Commands"
+      - "Keyboard Shortcuts"
