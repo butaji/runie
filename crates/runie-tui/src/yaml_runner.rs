@@ -555,7 +555,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     append_declared_events(&mut events_from_task, scenario);
 
     let scrollback_lines =
-        replay_scenario_events(&events_from_task, scenario.initial_prompt.is_none());
+        replay_scenario_events(&events_from_task, scenario.initial_prompt.is_none()).await;
     Ok(ScenarioOutcome {
         events: events_from_task,
         scrollback: scrollback_lines,
@@ -567,15 +567,20 @@ fn append_declared_events(events: &mut Vec<AgentEvent>, scenario: &Scenario) {
     events.extend(scenario.events.iter().filter_map(EventSpec::waiting_event));
 }
 
-fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Vec<Line> {
+async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Vec<Line> {
     let scrollback = Arc::new(Mutex::new(Scrollback::new()));
     let status = Arc::new(Mutex::new(crate::widgets::StatusBar::new()));
     let mut renderer = EventRenderer::with_welcome(scrollback.clone(), status, emit_welcome);
     for event in events {
         renderer.apply_event(event.clone());
     }
-    let lines = scrollback.lock().snapshot_lines();
-    lines
+    let actor = crate::ScrollbackActor::new();
+    actor
+        .apply(ScrollbackMsg::ReplaceSnapshot(Box::new(
+            scrollback.lock().clone(),
+        )))
+        .await;
+    actor.snapshot().snapshot_lines()
 }
 
 async fn record_and_run_scenario(

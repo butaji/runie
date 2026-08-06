@@ -125,6 +125,13 @@ publish immutable `watch` snapshots to the pure view.
   after YAML prompt editing now also goes through the feed actor, preventing
   the setup phase from mutating a snapshot that the renderer does not read.
 
+- **Scenario replay projection cutover (2026-08-05):** `run_scenario` now
+  returns the final feed through a `ScrollbackActor` snapshot rather than
+  exposing the compatibility reducer's lines directly. The stateful
+  compatibility renderer remains an input adapter during migration, while
+  YAML assertions observe the same actor-owned projection surface as the live
+  view.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status
