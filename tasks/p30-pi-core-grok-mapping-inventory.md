@@ -139,6 +139,14 @@ keys (`toolCallId`, `toolName`) and absence of snake_case aliases. No missing
 field was invented at the event boundary; the remaining lifecycle work is
 downstream projection and YAML behavior coverage.
 
+Async ownership audit (2026-08-06): every production `tokio::spawn` is owned
+by a returned/stored `JoinHandle` or an enclosing actor owner. `App` returns
+the renderer handle, `LoopActor` stores and awaits the current run, and
+`ProviderActor` retains stream pumps in a `JoinSet` whose lifetime is owned by
+the worker. YAML recorder and active-run handles are joined before replay
+returns. No orphan production task was found; this remains an invariant to
+re-audit whenever a new async boundary is added.
+
 ## Documentation audit (2026-08-06)
 
 Updated `README.md`, `crates/runie-core/PORT_NOTES.md`, and
