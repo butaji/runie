@@ -516,3 +516,11 @@ fully compared. The checked-in `runie-full.cast` additionally contains stale
 `[renderer]` diagnostic lines absent from the current source, so it remains a
 diagnostic artifact and must be replaced by a fresh capture before any cast
 zero-diff claim.
+## Fresh capture attempt (2026-08-06)
+
+An isolated `just tmux-cast 80 24 ... grok Hey q` attempt produced only the
+asciicast header before the installed Grok process failed to reach a ready
+prompt and the bounded capture was interrupted. No frame from that attempt is
+used as parity evidence. The replay normalization change is independently
+validated by the existing casts and tests; a new authenticated/ready capture
+is still required for the final live zero-diff audit.
