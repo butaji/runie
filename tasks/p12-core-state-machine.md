@@ -75,6 +75,12 @@ Variants: `is_streaming ∈ {true,false}`; `pending_tool_calls ⊆ {active tool 
 - **Settlement cleanup (2026-08-06):** `agent_end` now clears pending tool
   calls as well as streaming state. This matches Pi's `finishRun()` behavior
   for aborted or otherwise interrupted tool batches.
+
+- **Error timing (2026-08-06):** error projection now follows Pi's reducer
+  ordering: `message_end` stores the assistant message, while `turn_end`
+  promotes its `error_message` into `AgentStateSnapshot.error_message`.
+  Both live driver `turn_end` branches now use the actor event boundary, so
+  abort/error state is visible in the authoritative snapshot.
 # Latest parity correction (2026-08-06)
 
 The tool registry is now projected into `AgentStateSnapshot.tools` at the

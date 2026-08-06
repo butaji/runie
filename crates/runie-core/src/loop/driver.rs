@@ -316,17 +316,25 @@ async fn finish_assistant_turn(
     match decide_next_turn(&deps.state.snapshot(), tool_calls, false, false) {
         TurnPlan::ToolBatch { calls } => run_tool_batch(assistant, calls, deps, all_new).await,
         TurnPlan::Stop { .. } => {
-            deps.bus.publish(AgentEvent::TurnEnd {
-                message: AgentMessage::Assistant(assistant),
-                tool_results: vec![],
-            });
+            publish_and_apply(
+                deps,
+                AgentEvent::TurnEnd {
+                    message: AgentMessage::Assistant(assistant),
+                    tool_results: vec![],
+                },
+            )
+            .await;
             None
         }
         TurnPlan::Continue => {
-            deps.bus.publish(AgentEvent::TurnEnd {
-                message: AgentMessage::Assistant(assistant),
-                tool_results: vec![],
-            });
+            publish_and_apply(
+                deps,
+                AgentEvent::TurnEnd {
+                    message: AgentMessage::Assistant(assistant),
+                    tool_results: vec![],
+                },
+            )
+            .await;
             Some((vec![], false))
         }
     }

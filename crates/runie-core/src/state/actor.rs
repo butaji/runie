@@ -194,13 +194,12 @@ impl AgentStateActor {
             }
             AgentEvent::MessageEnd { message } => {
                 state.messages.push(message.clone());
-                if let AgentMessage::Assistant(assistant) = message {
+                if matches!(message, AgentMessage::Assistant(_)) {
                     // Pi keeps `isStreaming` true until `agent_end` has
                     // settled. `message_end` closes the assistant message,
                     // but the agent may still run turn-end hooks and queue
                     // work before the run is truly idle.
                     state.streaming_message = None;
-                    state.error_message = assistant.error_message.clone();
                 }
             }
             AgentEvent::ToolExecutionStart { tool_call_id, .. } => {
@@ -254,13 +253,19 @@ impl AgentStateActor {
                 state.error_message = Some(message);
             }
             AgentEvent::ThinkingLevelChanged { level } => state.thinking_level = level,
+            AgentEvent::TurnEnd { message, .. } => {
+                if let AgentMessage::Assistant(assistant) = message {
+                    if assistant.error_message.is_some() {
+                        state.error_message = assistant.error_message.clone();
+                    }
+                }
+            }
             AgentEvent::Reset => *state = AgentStateSnapshot::default(),
             AgentEvent::MessageStart { .. }
             | AgentEvent::TurnStart
             | AgentEvent::Waiting { .. }
             | AgentEvent::ThemeChanged { .. }
             | AgentEvent::ToolDisplayModeChanged { .. }
-            | AgentEvent::TurnEnd { .. }
             | AgentEvent::ToolExecutionUpdate { .. }
             | AgentEvent::BackgroundWorkStarted { .. }
             | AgentEvent::BackgroundWorkProgress { .. }
@@ -462,8 +467,19 @@ mod tests {
         actor.sync().await;
         let snapshot = actor.snapshot();
         assert!(snapshot.is_streaming);
-        assert_eq!(snapshot.error_message.as_deref(), Some("aborted"));
+        assert!(snapshot.error_message.is_none());
         assert_eq!(snapshot.messages.len(), 1);
+        actor
+            .apply_event(&AgentEvent::TurnEnd {
+                message: AgentMessage::Assistant(AssistantMessage {
+                    error_message: Some("aborted".into()),
+                    ..Default::default()
+                }),
+                tool_results: vec![],
+            })
+            .await;
+        actor.sync().await;
+        assert_eq!(actor.snapshot().error_message.as_deref(), Some("aborted"));
         actor
             .apply_event(&AgentEvent::AgentEnd { messages: vec![] })
             .await;
