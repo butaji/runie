@@ -92,6 +92,15 @@ The same indexed probe across the four saved matrix geometries reports:
 
 The mismatch is therefore capture-phase-wide, not a single viewport defect.
 
+**Strict saved-cast probe (2026-08-06):** Replayed the preserved 62×32
+same-run pair with `just cast-compare`. The comparator examined all 1,984
+cells and reported 190 differences: 170 glyph differences and 20
+attribute-only differences. The attribute coordinates are concentrated in the
+footer shortcut row (Grok bold versus Runie non-bold), while the glyph rows
+remain dominated by response text, reasoning placement, timestamps, usage,
+and elapsed time. This is a real non-parity result, not an attribute-checking
+gap; no fixture was weakened.
+
 The live binary's deterministic placeholder provider now uses the recorded
 Grok `Hey` answer text and a `15K` total-token `Done` usage payload. These
 values flow through the normal provider/core event path; the renderer does not
