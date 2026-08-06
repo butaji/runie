@@ -629,3 +629,9 @@ The YAML dump oracle now accepts `reference.format: ansi` for these settled
 artifacts. It wraps the ANSI screen into a one-frame VT replay using the YAML
 frame geometry, so `exact_screen`, `exact_attributes`, and `require_truecolor`
 remain available without recompiling when the captured artifact changes.
+
+The standalone ANSI comparator also has `--attributes-only`. It reports
+foreground/background/modifier mismatches while ignoring response prose; this
+is diagnostic only and does not alter strict symbol parity. On the latest
+independent live captures it reports 339 style-only differences, with the
+largest hotspots at the header, prompt, and dynamic feed rows.

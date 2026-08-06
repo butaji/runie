@@ -73,6 +73,11 @@ def main():
     parser.add_argument("right")
     parser.add_argument("--cols", type=int)
     parser.add_argument("--rows", type=int)
+    parser.add_argument(
+        "--attributes-only",
+        action="store_true",
+        help="compare terminal styles while ignoring glyph text",
+    )
     args = parser.parse_args()
     left, right = parse(args.left), parse(args.right)
     height = args.rows or max(len(left), len(right))
@@ -86,11 +91,13 @@ def main():
         for x in range(width):
             lc = lrow[x] if x < len(lrow) else (" ", DEFAULT)
             rc = rrow[x] if x < len(rrow) else (" ", DEFAULT)
-            if lc[0] != rc[0]:
-                glyphs += 1
-                row_diff += 1
-            elif lc[1] != rc[1]:
+            glyph_diff = lc[0] != rc[0]
+            style_diff = lc[1] != rc[1]
+            if style_diff:
                 styles += 1
+                row_diff += 1
+            elif glyph_diff and not args.attributes_only:
+                glyphs += 1
                 row_diff += 1
         if row_diff:
             hotspots.append((row_diff, y + 1))
