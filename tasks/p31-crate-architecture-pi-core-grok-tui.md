@@ -1,0 +1,117 @@
+# p31 — Crate architecture: pi core + Grok TUI
+
+Status: in_progress (2026-08-06)
+
+## Governing rule
+
+Runie has exactly two product layers:
+
+1. **Pi core** — agent behavior, state, events, queues, tools, hooks,
+   cancellation, and provider stream boundary.
+2. **Grok TUI** — the complete presentation reach of Grok, restricted to the
+   facts and interactions exposed by pi core. Grok-only product features are
+   not added to Runie.
+
+The terminal renderer is never a source of truth. It consumes immutable view
+models derived from actor snapshots.
+
+## Target workspace
+
+```text
+crates/
+├── runie-core/                 # pi-agent-core port; no terminal dependencies
+│   └── src/
+│       ├── types/               # messages, models, tools, usage, errors
+│       ├── events/              # facts, bus, subscriptions, event DSL
+│       ├── state/               # AgentStateActor + immutable snapshots
+│       ├── loop/                # turn driver and LoopActor
+│       ├── queues/              # steering/follow-up actor-owned queues
+│       ├── tools/               # registry, validation, execution actor
+│       ├── provider/            # StreamFn, provider actor, replay adapter
+│       └── hooks/               # turn/tool hook contracts
+│
+├── runie-tui-model/             # core-event → TUI facts and view models
+│   └── src/
+│       ├── actors/               # Status, Scrollback, Prompt, Ui actors
+│       ├── messages/             # TUI intents and reducer messages
+│       ├── projection/           # pure event reducers and snapshots
+│       ├── view_model/           # immutable Grok-shaped component data
+│       └── scenarios/             # YAML scenario schema/loader
+│
+├── runie-tui-theme/             # Opaline/Grok semantic tokens only
+│   └── src/
+│       ├── tokens.rs              # roles, not widget-specific colors
+│       ├── palettes.rs            # Grok day/night + terminal-native
+│       └── resolve.rs              # token → terminal style
+│
+├── runie-tui-render/             # pure view model → terminal cells
+│   └── src/
+│       ├── layout/                # responsive geometry
+│       ├── components/            # feed, prompt, status, tool, workflow
+│       ├── animation/             # deterministic frame selection
+│       └── cell.rs                # glyph/fg/bg/attributes output
+│
+├── runie-tui/                     # runtime shell and executable
+│   └── src/
+│       ├── runtime.rs             # terminal/event loop only
+│       ├── wiring.rs              # actor/bus composition
+│       └── bin/runie.rs           # CLI entry point
+│
+└── runie-parity/                 # dev/test-only capture and comparison
+    └── src/
+        ├── yaml.rs                # event sequence scenarios
+        ├── capture.rs             # tmux/asciinema/VT capture adapters
+        ├── oracle.rs              # complete-cell comparisons
+        └── matrix.rs              # standard terminal sizes
+```
+
+## Dependency direction
+
+```text
+runie-core
+    ▲
+    │ facts/intents
+runie-tui-model ──► runie-tui-theme
+    │ view models
+    ▼
+runie-tui-render ──► ratatui/crossterm/VT
+    ▲
+runie-tui ──────── runtime wiring only
+
+runie-parity ─────► core + tui-model + tui-render (dev/test only)
+```
+
+Rules:
+
+- `runie-core` must not depend on any TUI crate.
+- `runie-tui-model` may depend on `runie-core`, never on ratatui or crossterm.
+- `runie-tui-theme` may depend on Opaline, never on actors or terminal I/O.
+- `runie-tui-render` may depend on model/theme and terminal cell libraries,
+  but cannot publish core events or mutate actor state.
+- `runie-tui` owns terminal setup, input decoding, shutdown, and task handles.
+- `runie-parity` is not a runtime dependency and cannot define production
+  behavior.
+
+## Migration order
+
+1. Extract `runie-tui-model` from `event_renderer.rs`,
+   `status_actor.rs`, `scrollback_actor.rs`, and prompt/UI actor modules.
+2. Extract theme tokens and palette resolution from `appearance.rs` and
+   `terminal_color.rs` into `runie-tui-theme`.
+3. Move pure widgets, layout, and cell snapshots into `runie-tui-render`.
+4. Reduce `runie-tui` to runtime wiring and binaries.
+5. Move YAML/asciinema comparison helpers into `runie-parity`; retain tests
+   that exercise the public crate boundaries.
+6. Delete compatibility paths only after actor replay and four-size visual
+   tests pass through the new boundaries.
+
+## Acceptance
+
+- A compile-time dependency check prevents core → TUI edges.
+- Every TUI state transition is an event reduced by one owning actor.
+- Rendering accepts only immutable view models and emits complete terminal
+  cells (glyph, width, foreground, background, and attributes).
+- The pi-core feature inventory in `tasks/p30-*` maps to at least one model
+  projection and one YAML/replay test.
+- Grok-only features are explicitly excluded rather than silently stubbed.
+- `just ci` remains the required local gate throughout migration.

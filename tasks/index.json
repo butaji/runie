@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p31",
+      "file": "p31-crate-architecture-pi-core-grok-tui.md",
+      "status": "in_progress",
+      "title": "Split pi core, TUI model, theme, renderer, runtime, and parity boundaries"
+    },
+    {
       "id": "p30",
       "file": "p30-pi-core-grok-mapping-inventory.md",
       "status": "in_progress",
