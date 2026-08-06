@@ -246,3 +246,50 @@ async fn missing_tool_produces_pi_formatted_error() {
     assert!(result.is_error);
     assert_eq!(text, "Tool missing not found");
 }
+
+#[tokio::test]
+async fn before_tool_block_without_reason_uses_pi_default_text() {
+    let tool = Arc::new(RecordingTool {
+        received: Arc::new(Mutex::new(Vec::new())),
+    });
+    let mut builder = TestLoopBuilder::new(Arc::new(tool_call_stream("rec")));
+    builder = builder.tool(tool);
+    builder.hooks.before_tool_call = Some(Arc::new(|_| {
+        Box::pin(async {
+            runie_core::types::BeforeToolCallResult {
+                block: true,
+                reason: None,
+            }
+        })
+    }));
+    let test = builder.build();
+
+    let out = test
+        .actor
+        .prompt(
+            vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text { text: "go".into() }],
+                timestamp: 1,
+            })],
+            AgentContext::default(),
+        )
+        .await
+        .unwrap();
+    let result = out
+        .iter()
+        .find_map(|m| match m {
+            AgentMessage::ToolResult(tr) => Some(tr),
+            _ => None,
+        })
+        .expect("a blocked tool result should be produced");
+    let text: String = result
+        .content
+        .iter()
+        .map(|content| match content {
+            ToolResultContent::Text { text } => text.clone(),
+            _ => String::new(),
+        })
+        .collect();
+    assert!(result.is_error);
+    assert_eq!(text, "Tool execution was blocked");
+}

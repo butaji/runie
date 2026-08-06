@@ -312,7 +312,9 @@ async fn dispatch_prepared(
         })
         .await;
         if decision.block {
-            return Err(decision.reason.unwrap_or_else(|| "blocked".into()));
+            return Err(decision
+                .reason
+                .unwrap_or_else(|| "Tool execution was blocked".into()));
         }
     }
 

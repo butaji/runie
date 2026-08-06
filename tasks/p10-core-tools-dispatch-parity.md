@@ -17,6 +17,11 @@ an absent registry entry before preparation/validation and emits Pi's exact
 the YAML visual runner does not expose tool-result content for this case, so
 no misleading screen fixture was added.
 
+**Default block reason parity (2026-08-06):** A `before_tool_call` block with
+no reason now produces Pi's exact `Tool execution was blocked` text instead
+of Runie's former `blocked` shorthand. The real loop integration test covers
+the default while custom reasons remain passed through unchanged.
+
 The current executor still emits a synthetic `tool_execution_update` with
 `{"status":"running"}` before dispatch. Pi emits updates only from a tool's
 `onUpdate` callback. Removing this compatibility event requires regenerating
