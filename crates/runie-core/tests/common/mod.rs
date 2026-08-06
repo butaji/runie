@@ -42,9 +42,11 @@ impl MockStreamFn {
         Self::new(vec![
             AssistantMessageEvent::Start,
             AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: "Hello".into(),
             },
             AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: " world".into(),
             },
             AssistantMessageEvent::Done {

@@ -58,7 +58,10 @@ impl StreamFn for RecordingStream {
             ]
         } else {
             vec![
-                AssistantMessageEvent::TextDelta { delta: "hi".into() },
+                AssistantMessageEvent::TextDelta {
+                    index: 0,
+                    delta: "hi".into(),
+                },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,
                     usage: Usage::default(),

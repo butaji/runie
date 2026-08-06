@@ -120,9 +120,15 @@ fn append_text_events(value: &serde_json::Value, events: &mut Vec<AssistantMessa
             .filter(|s| !s.is_empty())
         {
             events.push(if thinking {
-                AssistantMessageEvent::ThinkingDelta { delta: text.into() }
+                AssistantMessageEvent::ThinkingDelta {
+                    index: 1,
+                    delta: text.into(),
+                }
             } else {
-                AssistantMessageEvent::TextDelta { delta: text.into() }
+                AssistantMessageEvent::TextDelta {
+                    index: 0,
+                    delta: text.into(),
+                }
             });
         }
     }

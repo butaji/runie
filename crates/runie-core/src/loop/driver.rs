@@ -677,12 +677,12 @@ fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
         AssistantMessageEvent::Start => {}
         // Sectional markers delimit content blocks; the deltas carry content.
         AssistantMessageEvent::TextStart { .. } | AssistantMessageEvent::TextEnd { .. } => {}
-        AssistantMessageEvent::TextDelta { delta } => {
+        AssistantMessageEvent::TextDelta { delta, .. } => {
             push_or_append(assistant, AssistantContent::Text { text: delta });
         }
         AssistantMessageEvent::ThinkingStart { .. } | AssistantMessageEvent::ThinkingEnd { .. } => {
         }
-        AssistantMessageEvent::ThinkingDelta { delta } => {
+        AssistantMessageEvent::ThinkingDelta { delta, .. } => {
             push_or_append(assistant, AssistantContent::Thinking { text: delta });
         }
         AssistantMessageEvent::ToolCallStart { partial, .. }

@@ -189,9 +189,11 @@ impl EventSpec {
         match self {
             Self::Bare(s) if s == "start" => Some(AssistantMessageEvent::Start),
             Self::TextDelta { text_delta } => Some(AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: text_delta.clone(),
             }),
             Self::ThinkingDelta { thinking_delta } => Some(AssistantMessageEvent::ThinkingDelta {
+                index: 1,
                 delta: thinking_delta.clone(),
             }),
             Self::ToolCall { tool_call } => Some(AssistantMessageEvent::ToolCallDelta {

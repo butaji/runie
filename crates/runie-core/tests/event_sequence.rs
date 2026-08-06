@@ -54,6 +54,7 @@ impl StreamFn for SequentialToolStream {
         } else {
             vec![
                 AssistantMessageEvent::TextDelta {
+                    index: 0,
                     delta: "done".into(),
                 },
                 AssistantMessageEvent::Done {
@@ -84,7 +85,10 @@ impl StreamFn for UsageStream {
             ..Usage::default()
         };
         let events = vec![
-            AssistantMessageEvent::TextDelta { delta: "hi".into() },
+            AssistantMessageEvent::TextDelta {
+                index: 0,
+                delta: "hi".into(),
+            },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage,

@@ -50,9 +50,11 @@ impl StreamFn for TwoTurnMock {
         let events = vec![
             AssistantMessageEvent::Start,
             AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: "Hello".into(),
             },
             AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: " world".into(),
             },
             AssistantMessageEvent::Done {

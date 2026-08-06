@@ -40,7 +40,10 @@ impl StreamFn for PauseStream {
         let release = self.release.lock().take();
         let head = futures::stream::once(async move {
             let _ = started.send(true);
-            AssistantMessageEvent::TextDelta { delta: "hi".into() }
+            AssistantMessageEvent::TextDelta {
+                index: 0,
+                delta: "hi".into(),
+            }
         });
         let tail = futures::stream::once(async move {
             if let Some(mut rx) = release {

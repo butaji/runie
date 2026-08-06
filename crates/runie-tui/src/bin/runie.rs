@@ -204,9 +204,11 @@ impl StreamFn for PlaceholderStream {
         let events = vec![
             AssistantMessageEvent::Start,
             AssistantMessageEvent::ThinkingDelta {
+                index: 1,
                 delta: "briefly considering the request".into(),
             },
             AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: "Hey — what are you working on? I can help with the runie codebase, the parity audit work in progress, or anything else you need.".into(),
             },
             AssistantMessageEvent::Done {

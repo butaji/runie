@@ -64,6 +64,7 @@ impl StreamFn for TruncatingStream {
             vec![
                 AssistantMessageEvent::Start,
                 AssistantMessageEvent::TextDelta {
+                    index: 0,
                     delta: "after".into(),
                 },
                 AssistantMessageEvent::Done {

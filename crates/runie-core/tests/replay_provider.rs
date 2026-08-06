@@ -55,6 +55,7 @@ impl StreamFn for AbortStream {
             if state == 0 {
                 return Some((
                     AssistantMessageEvent::TextDelta {
+                        index: 0,
                         delta: "partial".into(),
                     },
                     (1, release),
@@ -489,8 +490,10 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
         let mut payload_text = String::new();
         while let Some(event) = stream.next().await {
             match &event {
-                AssistantMessageEvent::TextDelta { delta }
-                | AssistantMessageEvent::ThinkingDelta { delta } => payload_text.push_str(delta),
+                AssistantMessageEvent::TextDelta { delta, .. }
+                | AssistantMessageEvent::ThinkingDelta { delta, .. } => {
+                    payload_text.push_str(delta)
+                }
                 _ => {}
             }
             events.push(event_name(&event));

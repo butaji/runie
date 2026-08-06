@@ -56,7 +56,10 @@ impl StreamFn for BlockingStream {
         let release = self.release.lock().take();
         let head = futures::stream::once(async move {
             let _ = started.send(true);
-            AssistantMessageEvent::TextDelta { delta: "x".into() }
+            AssistantMessageEvent::TextDelta {
+                index: 0,
+                delta: "x".into(),
+            }
         });
         let tail = futures::stream::once(async move {
             if let Some(mut rx) = release {

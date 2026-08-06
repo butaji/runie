@@ -93,14 +93,14 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             ScrollbackMsg::Append(Line::new(LineKind::Assistant, "")),
         ],
         AgentEvent::MessageUpdate {
-            event: AssistantMessageEvent::TextDelta { delta },
+            event: AssistantMessageEvent::TextDelta { delta, .. },
             ..
         } => vec![ScrollbackMsg::AppendToLastByKind(
             LineKind::Assistant,
             delta.clone(),
         )],
         AgentEvent::MessageUpdate {
-            event: AssistantMessageEvent::ThinkingDelta { delta },
+            event: AssistantMessageEvent::ThinkingDelta { delta, .. },
             ..
         } => vec![ScrollbackMsg::AppendToLastByKind(
             LineKind::Reasoning,
@@ -1040,7 +1040,7 @@ impl EventRenderer {
     #[allow(clippy::cognitive_complexity)]
     fn handle_message_update(&mut self, event: AssistantMessageEvent) {
         match event {
-            AssistantMessageEvent::TextDelta { delta } if self.in_assistant_stream => {
+            AssistantMessageEvent::TextDelta { delta, .. } if self.in_assistant_stream => {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Streaming);
                 }
@@ -1050,7 +1050,7 @@ impl EventRenderer {
                     self.replace_last_assistant_line(&self.streaming_buffer.clone());
                 }
             }
-            AssistantMessageEvent::ThinkingDelta { delta } if self.in_assistant_stream => {
+            AssistantMessageEvent::ThinkingDelta { delta, .. } if self.in_assistant_stream => {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Thinking);
                 }
@@ -1613,6 +1613,10 @@ mod tests {
         );
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "keeps the pure feed mapping table together"
+    )]
     #[test]
     fn feed_event_mapping_is_pure_and_explicit() {
         let reset = scrollback_messages_for_event(&AgentEvent::Reset);
@@ -1644,6 +1648,7 @@ mod tests {
         );
         let delta = scrollback_messages_for_event(&AgentEvent::MessageUpdate {
             event: AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: "world".into(),
             },
             message: AgentMessage::Assistant(Default::default()),
@@ -1724,6 +1729,7 @@ mod tests {
                 ..runie_core::types::AssistantMessage::default()
             }),
             event: AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: "Hello".into(),
             },
         });
@@ -1753,6 +1759,7 @@ mod tests {
                 ..runie_core::types::AssistantMessage::default()
             }),
             event: AssistantMessageEvent::TextDelta {
+                index: 0,
                 delta: "partial".into(),
             },
         });

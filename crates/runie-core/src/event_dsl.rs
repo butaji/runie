@@ -106,7 +106,10 @@ mod tests {
             "Start"
         );
         assert_eq!(
-            crate::assistant_event_kind!(AssistantMessageEvent::TextDelta { delta: "x".into() }),
+            crate::assistant_event_kind!(AssistantMessageEvent::TextDelta {
+                index: 0,
+                delta: "x".into()
+            }),
             "TextDelta"
         );
         assert_eq!(

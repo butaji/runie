@@ -7,6 +7,13 @@ empty-queue error. Its steering path also skips the normal initial steering
 poll, matching pi's `skipInitialSteeringPoll` option. A focused regression
 covers the steering path.
 
+**Assistant stream wire shape (2026-08-06):** Text and thinking delta events
+now carry pi-compatible `contentIndex` fields, and their end events carry the
+matching `contentIndex` plus `content`. Producers in the core replay provider,
+live TUI sample stream, YAML runner, and test traces all populate the fields;
+serialization tests assert the exact camel-cased keys. Pi's `partial` payloads
+on every granular stream event remain an explicit follow-up gap.
+
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered
