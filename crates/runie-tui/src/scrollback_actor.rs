@@ -548,6 +548,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn bus_owned_actor_does_not_replay_transcript_messages() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::MessageStart {
+            message: runie_core::types::AgentMessage::User(runie_core::types::UserMessage {
+                content: vec![runie_core::types::UserContent::Text {
+                    text: "duplicate me".into(),
+                }],
+                timestamp: 0,
+            }),
+        });
+        bus.publish(AgentEvent::ThemeChanged {
+            theme: runie_core::types::ThemeKind::GrokDay,
+        });
+        snapshot
+            .changed()
+            .await
+            .expect("actor-scoped event projection");
+        assert!(actor.snapshot().lines().is_empty());
+        assert_eq!(
+            actor.snapshot().theme(),
+            runie_core::types::ThemeKind::GrokDay
+        );
+    }
+
+    #[tokio::test]
     async fn bus_owned_actor_projects_background_lifecycle() {
         let bus = runie_core::events::EventBus::new();
         let actor = ScrollbackActor::new_with_bus(&bus);
