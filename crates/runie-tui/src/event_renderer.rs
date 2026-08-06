@@ -54,6 +54,28 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
 
 pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
     match event {
+        AgentEvent::MessageStart {
+            message: runie_core::types::AgentMessage::User(user),
+        } => {
+            let text = user
+                .content
+                .iter()
+                .map(|content| match content {
+                    runie_core::types::UserContent::Text { text } => text.as_str(),
+                    runie_core::types::UserContent::Image { .. } => "[image]",
+                })
+                .collect::<Vec<_>>()
+                .join("");
+            vec![ScrollbackMsg::Append(Line::new(LineKind::User, text))]
+        }
+        AgentEvent::MessageStart {
+            message: runie_core::types::AgentMessage::Assistant(_),
+        } => vec![
+            ScrollbackMsg::Append(Line::new(LineKind::System, "")),
+            ScrollbackMsg::Append(Line::new(LineKind::ThinkingStatus, "◆ Thinking…")),
+            ScrollbackMsg::Append(Line::new(LineKind::System, "")),
+            ScrollbackMsg::Append(Line::new(LineKind::Assistant, "")),
+        ],
         AgentEvent::Reset => vec![ScrollbackMsg::Clear],
         AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(*theme)],
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
@@ -991,6 +1013,26 @@ mod tests {
         });
         assert_eq!(theme, vec![ScrollbackMsg::SetTheme(ThemeKind::GrokDay)]);
         assert!(scrollback_messages_for_event(&AgentEvent::TurnStart).is_empty());
+        let user = scrollback_messages_for_event(&AgentEvent::MessageStart {
+            message: AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text {
+                    text: "hello".into(),
+                }],
+                timestamp: 0,
+            }),
+        });
+        assert!(matches!(
+            user.as_slice(),
+            [ScrollbackMsg::Append(line)]
+                if line.kind == LineKind::User && line.text == "hello"
+        ));
+        assert_eq!(
+            scrollback_messages_for_event(&AgentEvent::MessageStart {
+                message: AgentMessage::Assistant(Default::default()),
+            })
+            .len(),
+            4
+        );
     }
 
     #[test]

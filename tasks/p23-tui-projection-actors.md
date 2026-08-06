@@ -82,6 +82,13 @@ publish immutable `watch` snapshots to the pure view.
   `ScrollbackMsg::Append` system rows; production handlers retain the legacy
   mutation only for pre-actor compatibility construction.
 
+- **Message-start projection migration (2026-08-05):** User and assistant
+  `MessageStart` events now map purely to acknowledged `ScrollbackMsg` batches
+  before the compatibility renderer runs. This gives the actor the canonical
+  initial user/assistant rows (including the transient thinking block) and
+  preserves the YAML event-to-snapshot contract. Unit and full fixture replay
+  gates remain green.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status
