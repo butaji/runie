@@ -1349,3 +1349,9 @@ initial prompt were checked.
 state, two core messages, and all three actor-owned background tool blocks in
 addition to its lifecycle events and full-screen completion/error/cancellation
 text.
+**Subagent card state oracle (2026-08-06):**
+`visual-subagent-card.yaml` now asserts the final ready/non-streaming
+projection, four core messages produced by the delegated lifecycle, and one
+tool block in addition to its complete-screen semantic card text. The card
+kind remains intentionally renderer vocabulary because Grok's subagent card
+is not a distinct Pi core tool-card enum.

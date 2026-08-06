@@ -15,6 +15,11 @@ events:
       mode: expanded
   - done: { stop_reason: stop }
 assertions:
+  state:
+    status: ready
+    is_streaming: false
+    messages: 4
+    tool_blocks: 1
   visual:
     cols: 80
     rows: 24
