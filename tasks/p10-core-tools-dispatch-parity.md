@@ -2,6 +2,14 @@
 
 ## Pending Pi event-vector migration (2026-08-06)
 
+**Callback settlement parity (2026-08-06):** Pi scopes
+`tool_execution_update` callbacks to the tool's `execute()` promise. Runie's
+executor now owns an atomic settlement gate and drops callbacks arriving
+after the promise resolves or aborts; the focused regression and full local
+gate pass. This is deliberately orthogonal to YAML event replay because the
+fixture format cannot represent a retained post-settlement callback without
+introducing scheduler timing.
+
 The current executor still emits a synthetic `tool_execution_update` with
 `{"status":"running"}` before dispatch. Pi emits updates only from a tool's
 `onUpdate` callback. Removing this compatibility event requires regenerating
