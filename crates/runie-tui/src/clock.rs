@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const PARITY_TIMESTAMP_ENV: &str = "RUNIE_PARITY_TIMESTAMP";
 const PARITY_ELAPSED_TICKS_ENV: &str = "RUNIE_PARITY_ELAPSED_TICKS";
+const PARITY_CLOCK_ENV: &str = "RUNIE_PARITY_CLOCK";
 const MILLIS_PER_SECOND: u128 = 1_000;
 
 /// Return the event timestamp used by the live prompt path.
@@ -12,6 +13,9 @@ const MILLIS_PER_SECOND: u128 = 1_000;
 /// fixed Unix timestamp through `RUNIE_PARITY_TIMESTAMP`, keeping the clock
 /// input outside the pure event projections.
 pub fn unix_timestamp_seconds() -> i64 {
+    if let Some((timestamp, _)) = parity_clock() {
+        return timestamp;
+    }
     if let Some(timestamp) = configured_timestamp(std::env::var(PARITY_TIMESTAMP_ENV).ok()) {
         return timestamp;
     }
@@ -23,7 +27,16 @@ pub fn unix_timestamp_seconds() -> i64 {
 
 /// Optional deterministic 20Hz status duration for parity captures.
 pub fn parity_elapsed_ticks() -> Option<u64> {
+    if let Some((_, elapsed_ticks)) = parity_clock() {
+        return Some(elapsed_ticks);
+    }
     configured_elapsed_ticks(std::env::var(PARITY_ELAPSED_TICKS_ENV).ok())
+}
+
+fn parity_clock() -> Option<(i64, u64)> {
+    let value = std::env::var(PARITY_CLOCK_ENV).ok()?;
+    let (timestamp, elapsed_ticks) = value.split_once(',')?;
+    Some((timestamp.parse().ok()?, elapsed_ticks.parse().ok()?))
 }
 
 fn configured_timestamp(value: Option<String>) -> Option<i64> {

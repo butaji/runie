@@ -247,6 +247,14 @@ both overrides together. The remaining combined-asciinema propagation case is
 kept visible as an instrument defect rather than treating the 24-cell result
 as exact parity.
 
+**Atomic parity clock (2026-08-06):** Asciinema propagates one parity
+assignment reliably, so the TUI now also accepts
+`RUNIE_PARITY_CLOCK=UNIX_SECONDS,ELAPSED_TICKS`. The capture
+`RUNIE_PARITY_CLOCK=1785990000,38` produces an exact 62×32 full-cell match
+against the Grok `Hey` reference: all 1,984 cells equal, with zero glyph or
+attribute differences. Individual timestamp and elapsed variables remain
+available for focused probes.
+
 **Prompt timestamp edge alignment (2026-08-06):** The user-feed timestamp
 projection no longer reserves a fixed eight-cell gutter after the prompt. It
 right-aligns the timestamp against the feed width, matching Grok's edge-based

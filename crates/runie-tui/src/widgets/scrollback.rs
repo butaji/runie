@@ -746,7 +746,7 @@ impl Scrollback {
                                 format!(
                                     "{head}{:>reserved$}",
                                     timestamp,
-                                    reserved = timestamp_width + TIMESTAMP_GUTTER_SPACES
+                                    reserved = timestamp_width + TIMESTAMP_GUTTER_SPACES + 1
                                 ),
                                 false,
                             ));
@@ -762,11 +762,11 @@ impl Scrollback {
                             );
                             continue;
                         }
-                        text.push_str(
-                            &" ".repeat(
-                                width.saturating_sub(text.chars().count() + timestamp_width),
-                            ),
-                        );
+                        const ASSISTANT_TIMESTAMP_EDGE_OFFSET: usize = 1;
+                        let padding = width
+                            .saturating_sub(text.chars().count() + timestamp_width)
+                            .saturating_add(ASSISTANT_TIMESTAMP_EDGE_OFFSET);
+                        text.push_str(&" ".repeat(padding));
                         text.push_str(timestamp);
                     }
                 }

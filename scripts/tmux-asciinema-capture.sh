@@ -24,13 +24,15 @@ tmux new-session -d -s "$session" -x "$cols" -y "$rows" \
 tmux resize-window -t "$session" -x "$cols" -y "$rows"
 record_command="$command_line"
 if [[ -n "$env_assignments" ]]; then
+    validated_assignments=""
     for assignment in $env_assignments; do
         if [[ "$assignment" != [A-Za-z_][A-Za-z0-9_]*=* ]]; then
             echo "invalid environment assignment: ${assignment}" >&2
             exit 1
         fi
-        record_command="export ${assignment}; ${record_command}"
+        validated_assignments+="${assignment} "
     done
+    record_command="${validated_assignments}${record_command}"
 fi
 printf -v quoted_command '%q' "$record_command"
 tmux send-keys -t "$session" -l \
