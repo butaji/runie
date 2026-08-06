@@ -143,6 +143,11 @@ publish immutable `watch` snapshots to the pure view.
   as `ScrollbackMsg::SetPromptTimestamp` alongside the user row, preserving
   live timestamp parity without consulting the compatibility mutex.
 
+- **Message-update duplicate-write removal (2026-08-05):** Text and thinking
+  deltas now update only the actor-owned assistant/reasoning rows in production;
+  the compatibility handler still accumulates stream buffers and retains its
+  row reducer only for synchronous renderer tests.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

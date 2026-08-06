@@ -660,7 +660,9 @@ impl EventRenderer {
                 }
                 self.in_reasoning = false;
                 self.streaming_buffer.push_str(&delta);
-                self.replace_last_assistant_line(&self.streaming_buffer.clone());
+                if self.scrollback_actor.is_none() {
+                    self.replace_last_assistant_line(&self.streaming_buffer.clone());
+                }
             }
             AssistantMessageEvent::ThinkingDelta { delta } if self.in_assistant_stream => {
                 if self.status_actor.is_none() {
@@ -668,7 +670,9 @@ impl EventRenderer {
                 }
                 self.in_reasoning = true;
                 self.reasoning_buffer.push_str(&delta);
-                self.replace_last_reasoning_line(&self.reasoning_buffer.clone());
+                if self.scrollback_actor.is_none() {
+                    self.replace_last_reasoning_line(&self.reasoning_buffer.clone());
+                }
             }
             AssistantMessageEvent::Done {
                 stop_reason, usage, ..
