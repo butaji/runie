@@ -1,5 +1,13 @@
 # p04 — Core types: granular `AssistantMessageEvent` sub-kinds
 
+## Latest event-publication correction (2026-08-06)
+
+The loop now publishes `MessageUpdate` for every non-terminal sectional
+marker—text/thinking/tool-call start, delta, and end—matching Pi's
+`runAgentLoop` stream switch. Previously only delta variants reached the bus,
+which could hide fold boundaries from the TUI even though the wire enum was
+already complete.
+
 **Parity target:** pi streaming event sub-kinds.
 
 ## Pi reference

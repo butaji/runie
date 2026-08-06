@@ -679,9 +679,15 @@ fn enrich_assistant_partial(
 fn is_delta_event(event: &AssistantMessageEvent) -> bool {
     matches!(
         event,
-        AssistantMessageEvent::TextDelta { .. }
+        AssistantMessageEvent::TextStart { .. }
+            | AssistantMessageEvent::TextDelta { .. }
+            | AssistantMessageEvent::TextEnd { .. }
+            | AssistantMessageEvent::ThinkingStart { .. }
             | AssistantMessageEvent::ThinkingDelta { .. }
+            | AssistantMessageEvent::ThinkingEnd { .. }
+            | AssistantMessageEvent::ToolCallStart { .. }
             | AssistantMessageEvent::ToolCallDelta { .. }
+            | AssistantMessageEvent::ToolCallEnd { .. }
     )
 }
 
