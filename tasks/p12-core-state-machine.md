@@ -66,6 +66,11 @@ Variants: `is_streaming ∈ {true,false}`; `pending_tool_calls ⊆ {active tool 
   documented lifecycle: assistant `message_end` records the final message but
   leaves `is_streaming` true; `agent_end` clears streaming after turn hooks and
   queue decisions have settled.
+
+- **Run-start projection (2026-08-06):** `agent_start` now crosses the same
+  actor/event boundary as the rest of the live loop. It reopens streaming,
+  clears the previous error and pending-call projection, and lets a new run
+  begin from a clean runtime state, matching `Agent.runWithLifecycle`.
 # Latest parity correction (2026-08-06)
 
 The tool registry is now projected into `AgentStateSnapshot.tools` at the

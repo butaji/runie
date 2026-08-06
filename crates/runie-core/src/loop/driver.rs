@@ -74,6 +74,7 @@ pub struct RunLoopOutcome {
 /// `pi-agent-core`'s `prompt("X")` event sequence.
 #[allow(
     clippy::cognitive_complexity,
+    clippy::too_many_lines,
     reason = "the loop keeps Pi's ordered turn, hook, queue, and settlement transitions together"
 )]
 pub async fn run_loop(
@@ -82,8 +83,12 @@ pub async fn run_loop(
     deps: RunLoopDeps,
     skip_initial_steering_poll: bool,
 ) -> RunLoopOutcome {
-    deps.bus.publish(AgentEvent::AgentStart);
-    deps.bus.publish(AgentEvent::TurnStart);
+    deps.state
+        .publish_event(&deps.bus, AgentEvent::AgentStart)
+        .await;
+    deps.state
+        .publish_event(&deps.bus, AgentEvent::TurnStart)
+        .await;
     let mut override_ctx = initial_context_override(context, &prompts);
     let mut all_new = initialize_run(prompts, &deps, skip_initial_steering_poll).await;
 
@@ -123,7 +128,9 @@ pub async fn run_loop(
         }
 
         if continue_after_turn(has_more_tool_calls, &deps, &mut all_new).await {
-            deps.bus.publish(AgentEvent::TurnStart);
+            deps.state
+                .publish_event(&deps.bus, AgentEvent::TurnStart)
+                .await;
             continue;
         }
         break;

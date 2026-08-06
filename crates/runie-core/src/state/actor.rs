@@ -179,6 +179,12 @@ impl AgentStateActor {
     )]
     fn apply_event_to_state(state: &mut AgentStateSnapshot, event: AgentEvent) {
         match event {
+            AgentEvent::AgentStart => {
+                state.is_streaming = true;
+                state.streaming_message = None;
+                state.pending_tool_calls.clear();
+                state.error_message = None;
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);
@@ -250,7 +256,6 @@ impl AgentStateActor {
             AgentEvent::ThinkingLevelChanged { level } => state.thinking_level = level,
             AgentEvent::Reset => *state = AgentStateSnapshot::default(),
             AgentEvent::MessageStart { .. }
-            | AgentEvent::AgentStart
             | AgentEvent::TurnStart
             | AgentEvent::Waiting { .. }
             | AgentEvent::ThemeChanged { .. }
@@ -461,6 +466,19 @@ mod tests {
             .await;
         actor.sync().await;
         assert!(!actor.snapshot().is_streaming);
+    }
+
+    #[tokio::test]
+    async fn agent_start_reopens_stream_and_clears_previous_error() {
+        let actor = AgentStateActor::new();
+        actor.set_error(Some("previous failure".into())).await;
+        actor.apply_event(&AgentEvent::AgentStart).await;
+        actor.sync().await;
+        let snapshot = actor.snapshot();
+        assert!(snapshot.is_streaming);
+        assert!(snapshot.streaming_message.is_none());
+        assert!(snapshot.pending_tool_calls.is_empty());
+        assert!(snapshot.error_message.is_none());
     }
 
     #[tokio::test]
