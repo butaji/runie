@@ -174,3 +174,10 @@ actor-owned `ScrollbackMsg::SetFollowLatestUser` reducer input. Visual replay
 applies this event after transcript reduction, so tool-update fixtures can
 declare their viewport phase without sleeps or scheduler yields. The
 `visual-tool-update` scenario uses it and asserts `follow_latest_user: true`.
+## Assertion macro boundary (2026-08-06)
+
+The YAML runner now uses a small `assert_yaml_eq!` macro for scalar
+projection checks. It only expands assertion/diagnostic boilerplate; fixtures
+remain runtime-loaded YAML and reducers, actors, and rendering stay ordinary
+event-driven code. This keeps the DSL concise without hiding state ownership
+or introducing macro-generated mutable state.

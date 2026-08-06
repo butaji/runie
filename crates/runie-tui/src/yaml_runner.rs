@@ -589,6 +589,23 @@ pub struct Assertions {
     pub state: Option<StateAssertions>,
 }
 
+/// Small assertion DSL used by the YAML projection oracle. It keeps the
+/// fixture-facing field checks declarative while preserving one consistent
+/// diagnostic shape; it has no state or rendering side effects.
+macro_rules! assert_yaml_eq {
+    ($expected:expr, $actual:expr, $field:literal) => {
+        if let Some(expected) = $expected {
+            let actual = $actual;
+            if actual != expected {
+                return Err(format!(
+                    "state {} mismatch: expected {:?}, got {:?}",
+                    $field, expected, actual
+                ));
+            }
+        }
+    };
+}
+
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct StateAssertions {
     /// Renderer-independent status label (for example `thinking` or `ready`).
@@ -1399,46 +1416,19 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
-    if let Some(value) = expected.is_streaming {
-        if actual.is_streaming != value {
-            return Err(format!(
-                "state is_streaming mismatch: expected {value}, got {}",
-                actual.is_streaming
-            ));
-        }
-    }
-    if let Some(value) = expected.thinking_level {
-        if actual.thinking_level != value {
-            return Err(format!(
-                "state thinking_level mismatch: expected {value:?}, got {:?}",
-                actual.thinking_level
-            ));
-        }
-    }
-    if let Some(value) = expected.pending_tool_calls {
-        if actual.pending_tool_calls.len() != value {
-            return Err(format!(
-                "state pending_tool_calls mismatch: expected {value}, got {:?}",
-                actual.pending_tool_calls
-            ));
-        }
-    }
-    if let Some(value) = expected.messages {
-        if actual.messages.len() != value {
-            return Err(format!(
-                "state messages mismatch: expected {value}, got {}",
-                actual.messages.len()
-            ));
-        }
-    }
-    if let Some(value) = expected.tool_count {
-        if actual.tools.len() != value {
-            return Err(format!(
-                "state tool_count mismatch: expected {value}, got {}",
-                actual.tools.len()
-            ));
-        }
-    }
+    assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
+    assert_yaml_eq!(
+        expected.thinking_level,
+        actual.thinking_level,
+        "thinking_level"
+    );
+    assert_yaml_eq!(
+        expected.pending_tool_calls,
+        actual.pending_tool_calls.len(),
+        "pending_tool_calls"
+    );
+    assert_yaml_eq!(expected.messages, actual.messages.len(), "messages");
+    assert_yaml_eq!(expected.tool_count, actual.tools.len(), "tool_count");
     if let Some(needle) = &expected.streaming_contains {
         let text = actual
             .streaming_message
