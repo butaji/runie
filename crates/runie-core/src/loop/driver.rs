@@ -570,6 +570,7 @@ async fn process_stream_event(
     deps: &RunLoopDeps,
 ) -> bool {
     apply_event(assistant, event.clone());
+    let event = enrich_assistant_partial(event, assistant);
     if is_delta_event(&event) {
         let update = AgentEvent::MessageUpdate {
             message: assistant_message(assistant),
@@ -581,6 +582,46 @@ async fn process_stream_event(
         event,
         AssistantMessageEvent::Done { .. } | AssistantMessageEvent::Error { .. }
     )
+}
+
+fn enrich_assistant_partial(
+    event: AssistantMessageEvent,
+    assistant: &AssistantMessage,
+) -> AssistantMessageEvent {
+    let partial = assistant.clone();
+    match event {
+        AssistantMessageEvent::TextStart { index, .. } => {
+            AssistantMessageEvent::TextStart { index, partial }
+        }
+        AssistantMessageEvent::TextDelta { index, delta, .. } => AssistantMessageEvent::TextDelta {
+            index,
+            delta,
+            partial,
+        },
+        AssistantMessageEvent::TextEnd { index, content, .. } => AssistantMessageEvent::TextEnd {
+            index,
+            content,
+            partial,
+        },
+        AssistantMessageEvent::ThinkingStart { index, .. } => {
+            AssistantMessageEvent::ThinkingStart { index, partial }
+        }
+        AssistantMessageEvent::ThinkingDelta { index, delta, .. } => {
+            AssistantMessageEvent::ThinkingDelta {
+                index,
+                delta,
+                partial,
+            }
+        }
+        AssistantMessageEvent::ThinkingEnd { index, content, .. } => {
+            AssistantMessageEvent::ThinkingEnd {
+                index,
+                content,
+                partial,
+            }
+        }
+        other => other,
+    }
 }
 
 fn is_delta_event(event: &AssistantMessageEvent) -> bool {
@@ -794,6 +835,28 @@ fn _tools_marker(_t: &[Arc<dyn AgentTool>]) {}
 #[cfg(test)]
 mod event_reconstruction_tests {
     use super::*;
+
+    #[test]
+    fn stream_updates_replace_provider_placeholder_with_owned_partial() {
+        let assistant = AssistantMessage {
+            content: vec![AssistantContent::Text {
+                text: "hello".into(),
+            }],
+            ..AssistantMessage::default()
+        };
+        let event = enrich_assistant_partial(
+            AssistantMessageEvent::TextDelta {
+                index: 0,
+                delta: "hello".into(),
+                partial: AssistantMessage::default(),
+            },
+            &assistant,
+        );
+        let AssistantMessageEvent::TextDelta { partial, .. } = event else {
+            panic!("text delta remains a text delta");
+        };
+        assert_eq!(partial, assistant);
+    }
 
     #[test]
     fn tool_call_markers_reconstruct_one_content_block() {

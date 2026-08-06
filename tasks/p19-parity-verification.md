@@ -15,7 +15,10 @@ serialization tests assert the exact camel-cased keys. Pi's `partial` payloads
 are now present and tested on every text and thinking variant. Synthetic
 replay/YAML sources currently use an explicit default payload; deriving the
 fully accumulated partial assistant message at each live provider boundary
-remains an explicit semantic follow-up.
+is now performed by the loop reducer before `MessageUpdate` publication. A
+focused reducer test proves the provider placeholder is replaced by the
+actor-owned accumulated assistant state; provider transport events themselves
+remain immutable inputs.
 
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
