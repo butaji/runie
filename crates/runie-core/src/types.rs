@@ -1234,6 +1234,40 @@ mod tests {
     }
 
     #[test]
+    fn background_work_events_round_trip_with_pi_style_tags() {
+        let events = [
+            AgentEvent::BackgroundWorkStarted {
+                work_id: "worker-1".into(),
+                description: "inspect".into(),
+                background: true,
+            },
+            AgentEvent::BackgroundWorkProgress {
+                work_id: "worker-1".into(),
+                description: "inspect".into(),
+                activity: "reading".into(),
+            },
+            AgentEvent::BackgroundWorkFinished {
+                work_id: "worker-1".into(),
+                description: "inspect".into(),
+                is_error: true,
+            },
+        ];
+        for event in events {
+            let json = serde_json::to_value(&event).expect("background event serializes");
+            assert!(json["type"]
+                .as_str()
+                .is_some_and(|kind| kind.starts_with("background_work_")));
+            assert_eq!(json["workId"], "worker-1");
+            let decoded: AgentEvent =
+                serde_json::from_value(json).expect("background event decodes");
+            assert_eq!(
+                serde_json::to_value(decoded).expect("decoded event serializes"),
+                serde_json::to_value(event).expect("original event serializes")
+            );
+        }
+    }
+
+    #[test]
     fn waiting_reason_labels_match_grok_subjects() {
         assert_eq!(WaitingReason::Model.label(), "Waiting for response…");
         assert_eq!(WaitingReason::Subagent.label(), "Waiting on subagent…");

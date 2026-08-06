@@ -14,6 +14,14 @@ events:
   - background_end:
       work_id: worker-1
       description: "inspect the repository"
+  - background_start:
+      work_id: worker-2
+      description: "run the checks"
+      background: true
+  - background_end:
+      work_id: worker-2
+      description: "run the checks"
+      is_error: true
   - done: { stop_reason: stop }
 assertions:
   events:
@@ -25,3 +33,4 @@ assertions:
     rows: 24
     screen_text:
       - "Subagent completed: \"inspect the repository\""
+      - "Subagent failed: \"run the checks\""

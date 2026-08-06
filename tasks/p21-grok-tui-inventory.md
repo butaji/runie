@@ -199,6 +199,10 @@ for background work start/progress/finish. The scrollback projection maps them
 to actor-owned semantic Subagent rows, and YAML replays the running and
 completed states without inferring lifecycle from a generic tool name.
 
+Failure-branch coverage (2026-08-06): background lifecycle wire round-trips
+now pin camelCase `workId` and the YAML scenario also replays a failed worker,
+ensuring the typed error state survives the core-to-feed boundary.
+
 Source audit: Grok's `UserMessageBlock` is the only standard conversation block
 that enables prompt vpad; system, session-event, thinking, background, and all
 specialized tool blocks explicitly disable it. The renderer also suppresses
