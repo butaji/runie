@@ -178,12 +178,7 @@ async fn run_parallel_calls(
     for call in calls.iter().cloned() {
         let ctx = ctx.clone();
         running.push(async move {
-            let mut events = vec![crate::types::AgentEvent::ToolExecutionUpdate {
-                tool_call_id: call.id.clone(),
-                tool_name: call.name.clone(),
-                args: call.arguments.clone(),
-                partial_result: serde_json::json!({"status": "running"}),
-            }];
+            let mut events = Vec::new();
             let (result, is_error) = dispatch_result(&call, &ctx).await;
             events.extend(take_updates(&ctx));
             events.push(tool_end(&call, &result, is_error));

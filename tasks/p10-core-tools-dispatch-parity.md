@@ -92,3 +92,8 @@ Result order: parallel completion order for events; source order for messages.
   before/after hook payloads now serialize pi-compatible camelCase keys,
   including `addedToolNames` and `isError`, with focused serialization
   coverage.
+## Completed Pi event-vector migration (2026-08-06)
+Removed the synthetic running update from parallel tool dispatch. `ToolExecutionUpdate`
+now represents only a tool's callback-driven partial result, matching Pi's
+`tool_execution_update` contract. Updated all affected YAML exact-event oracles;
+`replay_provider` passes across the complete trace corpus.
