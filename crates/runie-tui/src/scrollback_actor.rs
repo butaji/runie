@@ -110,4 +110,55 @@ mod tests {
         assert_eq!(lines.lines()[0].kind, LineKind::TurnSummary);
         assert_eq!(lines.lines()[0].text, "Worked for 1.0s");
     }
+
+    #[tokio::test]
+    async fn actor_reduces_parallel_tool_rows_by_tool_id() {
+        let actor = ScrollbackActor::new();
+        actor
+            .apply_batch(vec![
+                ScrollbackMsg::ToolStart {
+                    tool_call_id: "a".into(),
+                    header: "Read a.txt".into(),
+                    activity: Some("◈ Read 1 file".into()),
+                },
+                ScrollbackMsg::ToolStart {
+                    tool_call_id: "b".into(),
+                    header: "Read b.txt".into(),
+                    activity: Some("◈ Read 2 files".into()),
+                },
+                ScrollbackMsg::ToolUpdate {
+                    tool_call_id: "a".into(),
+                    header: Some("Read a.txt (1 lines)".into()),
+                    output: vec!["a".into()],
+                },
+                ScrollbackMsg::ToolEnd {
+                    tool_call_id: "b".into(),
+                    header: "Read b.txt (1 lines)".into(),
+                    activity: None,
+                    output: vec![(LineKind::ToolOutput, "b".into())],
+                },
+            ])
+            .await;
+        let lines = actor.snapshot();
+        assert_eq!(
+            lines
+                .lines()
+                .iter()
+                .find(|line| line.tool_call_id.as_deref() == Some("a"))
+                .expect("tool a")
+                .text,
+            "Read a.txt (1 lines)"
+        );
+        assert_eq!(
+            lines
+                .lines()
+                .iter()
+                .find(|line| line.tool_call_id.as_deref() == Some("b"))
+                .expect("tool b")
+                .text,
+            "Read b.txt (1 lines)"
+        );
+        assert!(lines.lines().iter().any(|line| line.text == "a"));
+        assert!(lines.lines().iter().any(|line| line.text == "b"));
+    }
 }

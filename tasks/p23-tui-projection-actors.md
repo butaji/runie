@@ -178,3 +178,10 @@ tool-row replacement, theme/tool-mode changes, reasoning/activity expansion,
 timestamp and spacing normalization, and render-time live normalization. These
 must become explicit reducer messages; a generic closure command is forbidden
 because it would conceal ownership and make YAML event assertions impossible.
+
+- **Typed tool lifecycle reducer seam (2026-08-05):** Added explicit
+  `ToolStart`, `ToolUpdate`, and `ToolEnd` messages. The reducer addresses
+  parallel rows by tool-call ID, updates grouped activity text, and appends
+  output/result rows atomically. Actor coverage verifies out-of-order parallel
+  completion; the next cutover is wiring `EventRenderer` tool events to these
+  messages instead of the compatibility snapshot bridge.

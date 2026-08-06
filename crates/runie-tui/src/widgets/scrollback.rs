@@ -133,6 +133,22 @@ pub enum ScrollbackMsg {
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
     AppendToLastByKind(LineKind, String),
+    ToolStart {
+        tool_call_id: String,
+        header: String,
+        activity: Option<String>,
+    },
+    ToolUpdate {
+        tool_call_id: String,
+        header: Option<String>,
+        output: Vec<String>,
+    },
+    ToolEnd {
+        tool_call_id: String,
+        header: String,
+        activity: Option<String>,
+        output: Vec<(LineKind, String)>,
+    },
     FinalizeAssistant {
         has_reasoning: bool,
         reasoning_expanded: bool,
@@ -222,6 +238,38 @@ impl Scrollback {
                     self.append(Line::new(kind, text));
                 }
             }
+            ScrollbackMsg::ToolStart {
+                tool_call_id,
+                header,
+                activity,
+            } => {
+                self.replace_or_append_activity(activity);
+                self.append(Line::new(LineKind::Tool, header).for_tool(tool_call_id));
+            }
+            ScrollbackMsg::ToolUpdate {
+                tool_call_id,
+                header,
+                output,
+            } => {
+                if let Some(header) = header {
+                    self.replace_tool_by_id(&tool_call_id, header);
+                }
+                for text in output {
+                    self.append(Line::new(LineKind::ToolOutput, text).for_tool(&tool_call_id));
+                }
+            }
+            ScrollbackMsg::ToolEnd {
+                tool_call_id,
+                header,
+                activity,
+                output,
+            } => {
+                self.replace_tool_by_id(&tool_call_id, header);
+                self.replace_or_append_activity(activity);
+                for (kind, text) in output {
+                    self.append(Line::new(kind, text).for_tool(&tool_call_id));
+                }
+            }
             ScrollbackMsg::FinalizeAssistant {
                 has_reasoning,
                 reasoning_expanded,
@@ -244,6 +292,28 @@ impl Scrollback {
 
     pub fn theme(&self) -> ThemeKind {
         self.theme
+    }
+
+    fn replace_tool_by_id(&mut self, tool_call_id: &str, text: String) {
+        if let Some(line) = self
+            .lines
+            .iter_mut()
+            .rev()
+            .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
+        {
+            line.text = text;
+        }
+    }
+
+    fn replace_or_append_activity(&mut self, activity: Option<String>) {
+        let Some(activity) = activity else {
+            return;
+        };
+        if let Some(line) = self.last_mut_by_kind(LineKind::Activity) {
+            line.text = activity;
+        } else {
+            self.append(Line::new(LineKind::Activity, activity));
+        }
     }
 
     pub fn append(&mut self, line: Line) -> usize {
