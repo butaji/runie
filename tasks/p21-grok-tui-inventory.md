@@ -363,6 +363,11 @@ through the same scrollback actor and `selected_tool_id` asserts the resulting
 projection. The mixed activity fixture now pins both forward and reverse
 transcript-order selection.
 
+Selected-header affordance (2026-08-06): the selected tool header now swaps
+Grok's collapsed bullet for the `›` fold indicator in the pure scrollback
+render path; the transformation is derived from actor-owned selection and
+uses existing theme tokens.
+
 Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
 theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
 `search`, web, background, or generic), and mixed/truncated YAML replays pin

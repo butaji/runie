@@ -316,6 +316,11 @@ expanded or truncated tool remains visible while the surrounding activity
 group is collapsed. The
 full typed block/navigation model and cast-wide reconciliation remain open.
 
+Selected tool affordance (2026-08-06): selected tool headers now render the
+Grok `›` fold indicator from actor-owned selection state, with a focused cell
+regression covering the pure scrollback renderer. Full selection boxes and
+non-tool entry selection remain open.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running

@@ -856,12 +856,16 @@ impl Scrollback {
             {
                 continue;
             }
+            let selected = line
+                .tool_call_id
+                .as_ref()
+                .is_some_and(|id| self.selected_tool_id.as_ref() == Some(id));
             let source = if line.kind == LineKind::Reasoning && !self.reasoning_expanded {
-                "Thought"
+                "Thought".to_owned()
             } else {
-                line.text.as_str()
+                line.text.clone()
             };
-            let fence = line.kind == LineKind::Assistant && is_fence(source);
+            let fence = line.kind == LineKind::Assistant && is_fence(&source);
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
                 let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
@@ -877,6 +881,13 @@ impl Scrollback {
                     )
                 {
                     "┃"
+                } else if selected
+                    && matches!(
+                        line.kind,
+                        LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                    )
+                {
+                    "› "
                 } else if line.kind == LineKind::ToolRunning {
                     running_bullet(self.animation_frame)
                 } else {
@@ -1095,11 +1106,19 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
     if kind == LineKind::TurnSummary && text.contains("◆ Thought") {
         return styled_thought_summary(text, style);
     }
-    if matches!(kind, LineKind::Tool | LineKind::ToolRunning) {
-        let Some(header_start) = text.find("◆ ") else {
+    if matches!(
+        kind,
+        LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+    ) {
+        let (header_start, marker_len) = text
+            .find("◆ ")
+            .map(|start| (start, "◆ ".len()))
+            .or_else(|| text.find("› ").map(|start| (start, "› ".len())))
+            .unwrap_or((usize::MAX, 0));
+        if header_start == usize::MAX {
             return RatLine::from(text.to_owned()).style(style);
-        };
-        let split = header_start + "◆ ".len();
+        }
+        let split = header_start + marker_len;
         let (prefix, body) = text.split_at(split);
         let name_end = body.find(|c: char| c.is_whitespace()).unwrap_or(body.len());
         let name = &body[..name_end];
@@ -1891,6 +1910,30 @@ mod tests {
         assert_eq!(scrollback.selected_tool_id(), Some("first"));
         scrollback.apply(ScrollbackMsg::SelectPreviousTool);
         assert_eq!(scrollback.selected_tool_id(), Some("second"));
+    }
+
+    #[test]
+    fn selected_tool_header_uses_grok_fold_indicator() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "selected".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 3));
+        scrollback.render(Rect::new(0, 0, 40, 3), &mut buffer);
+        assert!(
+            (0..40).any(|column| buffer
+                .cell((column, 0))
+                .is_some_and(|cell| cell.symbol() == "›"))
+                || (0..40).any(|column| {
+                    buffer
+                        .cell((column, 1))
+                        .is_some_and(|cell| cell.symbol() == "›")
+                })
+        );
     }
 
     #[test]
