@@ -186,10 +186,10 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
             tool_call_id,
             tool_name,
             ..
-        } => vec![ScrollbackMsg::SetToolMode(
-            tool_call_id,
-            default_tool_display_mode(&tool_name),
-        )],
+        } => vec![
+            ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
+            ScrollbackMsg::SetToolMode(tool_call_id, default_tool_display_mode(&tool_name)),
+        ],
         event @ (AgentEvent::BackgroundWorkStarted { .. }
         | AgentEvent::BackgroundWorkProgress { .. }
         | AgentEvent::BackgroundWorkFinished { .. }

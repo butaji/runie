@@ -386,3 +386,8 @@ YAML `tool_mode` events still override the default through the event reducer.
 Default-mode scenario (2026-08-06): `visual-tool-default-modes.yaml` verifies
 that Bash and Read blocks receive `Truncated` and `Collapsed` from the event
 sequence without a compiled fixture change or explicit mode instruction.
+
+Typed tool identity (2026-08-06): actor/replay start events now publish the
+tool name into the scrollback reducer separately from the display header.
+`ToolBlock.kind` therefore survives completion-header rewrites and only falls
+back to legacy header inference for compatibility-created rows.

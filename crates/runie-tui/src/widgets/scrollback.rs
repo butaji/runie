@@ -141,6 +141,7 @@ pub enum ScrollbackMsg {
     ToggleActivityExpanded,
     SetPromptTimestamp(Option<String>),
     SetFollowLatestUser(bool),
+    SetToolName(String, String),
     SetToolMode(String, runie_core::types::ToolDisplayMode),
     ToggleToolMode(String),
     SelectNextTool,
@@ -185,6 +186,7 @@ pub struct Scrollback {
     prompt_timestamp: Option<String>,
     settled_no_tool_phase: bool,
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
+    tool_names: HashMap<String, String>,
     theme: ThemeKind,
     animation_frame: usize,
     selected_tool_id: Option<String>,
@@ -221,23 +223,41 @@ pub enum ToolCardKind {
     Generic,
 }
 
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the pure tool-name vocabulary maps Grok aliases to one card family"
+)]
 fn tool_card_kind(header: &str) -> ToolCardKind {
     let lower = header.trim_start().to_ascii_lowercase();
-    if lower.starts_with("run ") || lower.starts_with("execute ") {
+    if matches!(lower.as_str(), "bash" | "shell" | "exec" | "run")
+        || lower.starts_with("run ")
+        || lower.starts_with("execute ")
+    {
         ToolCardKind::Execute
-    } else if lower.starts_with("read ") {
+    } else if matches!(lower.as_str(), "read" | "read_file") || lower.starts_with("read ") {
         ToolCardKind::Read
-    } else if lower.starts_with("edit ") || lower.starts_with("write ") {
+    } else if matches!(
+        lower.as_str(),
+        "edit" | "write" | "write_file" | "search_replace"
+    ) || lower.starts_with("edit ")
+        || lower.starts_with("write ")
+    {
         ToolCardKind::Edit
-    } else if lower.starts_with("list ") {
+    } else if matches!(lower.as_str(), "list_dir" | "list_files") || lower.starts_with("list ") {
         ToolCardKind::ListDir
-    } else if lower.starts_with("web search ") {
+    } else if matches!(lower.as_str(), "web_search" | "web-search")
+        || lower.starts_with("web search ")
+    {
         ToolCardKind::WebSearch
-    } else if lower.starts_with("search ") {
+    } else if matches!(lower.as_str(), "search" | "grep" | "find") || lower.starts_with("search ") {
         ToolCardKind::Search
-    } else if lower.starts_with("fetch ") {
+    } else if matches!(lower.as_str(), "web_fetch" | "web-fetch" | "fetch")
+        || lower.starts_with("fetch ")
+    {
         ToolCardKind::WebFetch
-    } else if lower.starts_with("subagent ") {
+    } else if matches!(lower.as_str(), "subagent" | "agent" | "task")
+        || lower.starts_with("subagent ")
+    {
         ToolCardKind::Background
     } else {
         ToolCardKind::Generic
@@ -255,6 +275,7 @@ impl Scrollback {
             prompt_timestamp: None,
             settled_no_tool_phase: false,
             tool_modes: HashMap::new(),
+            tool_names: HashMap::new(),
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
             selected_tool_id: None,
@@ -302,6 +323,9 @@ impl Scrollback {
             }
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
             ScrollbackMsg::SetFollowLatestUser(follow) => self.follow_latest_user = follow,
+            ScrollbackMsg::SetToolName(tool_call_id, tool_name) => {
+                self.tool_names.insert(tool_call_id, tool_name);
+            }
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
@@ -411,7 +435,10 @@ impl Scrollback {
                     blocks.push(ToolBlock {
                         tool_call_id: id.to_owned(),
                         header: line.text.clone(),
-                        kind: tool_card_kind(&line.text),
+                        kind: self.tool_names.get(id).map_or_else(
+                            || tool_card_kind(&line.text),
+                            |name| tool_card_kind(name),
+                        ),
                         output: Vec::new(),
                         mode: self
                             .tool_modes
@@ -428,7 +455,10 @@ impl Scrollback {
             match line.kind {
                 LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
                     block.header = line.text.clone();
-                    block.kind = tool_card_kind(&line.text);
+                    block.kind = self
+                        .tool_names
+                        .get(id)
+                        .map_or_else(|| tool_card_kind(&line.text), |name| tool_card_kind(name));
                     block.is_running = line.kind == LineKind::ToolRunning;
                     block.is_error = line.kind == LineKind::ToolError;
                 }
@@ -509,6 +539,8 @@ impl Scrollback {
 
     pub fn clear(&mut self) {
         self.lines.clear();
+        self.tool_names.clear();
+        self.tool_modes.clear();
         self.scroll_offset = 0;
         self.selected_tool_id = None;
         self.selected_entry = None;
@@ -2094,6 +2126,24 @@ mod tests {
         assert!(!blocks[0].is_running);
         assert_eq!(blocks[1].output, vec!["passed"]);
         assert!(!blocks[1].is_running);
+    }
+
+    #[test]
+    fn typed_tool_name_survives_header_rewrite() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName("call-1".into(), "read".into()));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "call-1".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "call-1".into(),
+            header: "Completed README.md".into(),
+            activity: None,
+            output: Vec::new(),
+        });
+        assert_eq!(scrollback.tool_blocks()[0].kind, ToolCardKind::Read);
     }
 
     #[test]
