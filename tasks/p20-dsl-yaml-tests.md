@@ -212,3 +212,6 @@ requiring Rust recompilation when the YAML sequence changes.
 Pi event tags are read from the generated serde representation rather than a
 second hand-maintained variant matcher, keeping the YAML oracle coupled to the
 macro-generated wire contract.
+The same closed-boundary assertion now also covers the text-only
+`hello-streaming` and `tool-echo` fixtures, giving the basic replay corpus
+Pi-compatible event-vector evidence without requiring Rust recompilation.
