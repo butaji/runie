@@ -1229,7 +1229,9 @@ async fn replay_scenario_events(
     }
     for window in declared_context_windows(scenario) {
         status_actor
-            .apply(crate::widgets::StatusMsg::SetContextWindow(Some(window)))
+            .apply(crate::widgets::StatusMsg::SetContextWindow(
+                (window > 0).then_some(window),
+            ))
             .await;
     }
     for tool_call_id in declared_tool_folds(scenario) {
@@ -1550,7 +1552,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
     }
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
     assert_yaml_eq!(
-        expected.context_window.map(Some),
+        expected
+            .context_window
+            .map(|window| (window > 0).then_some(window)),
         outcome.status.context_window,
         "context_window"
     );

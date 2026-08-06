@@ -1,0 +1,15 @@
+name: visual-context-window-default
+description: Zero-valued Pi model metadata keeps Grok's 500K context fallback.
+initial_prompt: "show default context"
+events:
+  - start
+  - context_window: 0
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    context_window: 0
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "show default context"

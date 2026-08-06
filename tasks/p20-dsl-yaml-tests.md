@@ -236,6 +236,12 @@ changes recompilation-free and eliminating a second formatting contract.
 
 ### Actor-owned context metrics (2026-08-06)
 
+Zero-window normalization (2026-08-06): YAML `context_window: 0` now follows
+the same event-boundary contract as the live model refresh: it delivers
+`None` to `StatusActor`, preserving Grok's `500K` fallback. The new
+`visual-context-window-default.yaml` fixture asserts both the actor state and
+the full header meter without compiled scenario code.
+
 The replay DSL now accepts `context_window: N` as a declarative event. It is
 delivered to `StatusActor` as `StatusMsg::SetContextWindow`, rather than being
 written into a renderer or inferred from a snapshot. A state assertion such as
