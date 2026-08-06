@@ -52,9 +52,47 @@ macro_rules! assistant_event_kind {
     }};
 }
 
+/// Declare a small string-backed action registry without hand-written label
+/// matching. The expansion remains a plain enum plus readable `from_label`
+/// match, so callers can inspect it with `cargo expand`.
+#[macro_export]
+macro_rules! typed_action_registry {
+    ($(#[$meta:meta])* $vis:vis enum $name:ident {
+        $( $variant:ident => $label:literal ),+ $(,)?
+    }) => {
+        $(#[$meta])*
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        $vis enum $name {
+            $( $variant ),+
+        }
+
+        impl $name {
+            $vis fn from_label(label: &str) -> Option<Self> {
+                Some(match label {
+                    $( $label => Self::$variant, )+
+                    _ => return None,
+                })
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::types::AssistantMessageEvent;
+
+    crate::typed_action_registry! {
+        enum TestAction {
+            First => "First",
+            Second => "Second",
+        }
+    }
+
+    #[test]
+    fn typed_action_registry_maps_labels_and_rejects_unknown_values() {
+        assert_eq!(TestAction::from_label("First"), Some(TestAction::First));
+        assert_eq!(TestAction::from_label("missing"), None);
+    }
 
     #[test]
     fn assistant_event_kind_macro_covers_event_families() {

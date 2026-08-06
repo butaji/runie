@@ -51,24 +51,25 @@ pub enum UiCommand {
     ActivatePaletteEntry(PaletteAction),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PaletteAction {
-    NewSession,
-    NewSessionInWorktree,
-    AgentDashboard,
-    BackToHome,
-    DeleteThisSession,
-    ResumeSession,
-    ShareSession,
-    RenameSession,
-    SessionInfo,
-    CompactHistory,
-    ContextUsage,
-    ViewPlan,
-    Memory,
-    SwitchModel,
-    KeyboardShortcuts,
-    Quit,
+runie_core::typed_action_registry! {
+    pub enum PaletteAction {
+        NewSession => "New Session",
+        NewSessionInWorktree => "New Session in Worktree",
+        AgentDashboard => "Agent Dashboard",
+        BackToHome => "Back to Home",
+        DeleteThisSession => "Delete This Session",
+        ResumeSession => "Resume Session",
+        ShareSession => "Share Session",
+        RenameSession => "Rename Session",
+        SessionInfo => "Session Info",
+        CompactHistory => "Compact History",
+        ContextUsage => "Context Usage",
+        ViewPlan => "View Plan",
+        Memory => "Memory",
+        SwitchModel => "Switch Model",
+        KeyboardShortcuts => "Keyboard Shortcuts",
+        Quit => "Quit",
+    }
 }
 
 fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
@@ -83,25 +84,7 @@ fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
 }
 
 fn palette_action_for(entry: &str) -> Option<PaletteAction> {
-    Some(match entry {
-        "New Session" => PaletteAction::NewSession,
-        "New Session in Worktree" => PaletteAction::NewSessionInWorktree,
-        "Agent Dashboard" => PaletteAction::AgentDashboard,
-        "Back to Home" => PaletteAction::BackToHome,
-        "Delete This Session" => PaletteAction::DeleteThisSession,
-        "Resume Session" => PaletteAction::ResumeSession,
-        "Share Session" => PaletteAction::ShareSession,
-        "Rename Session" => PaletteAction::RenameSession,
-        "Session Info" => PaletteAction::SessionInfo,
-        "Compact History" => PaletteAction::CompactHistory,
-        "Context Usage" => PaletteAction::ContextUsage,
-        "View Plan" => PaletteAction::ViewPlan,
-        "Memory" => PaletteAction::Memory,
-        "Switch Model" => PaletteAction::SwitchModel,
-        "Keyboard Shortcuts" => PaletteAction::KeyboardShortcuts,
-        "Quit" => PaletteAction::Quit,
-        _ => return None,
-    })
+    PaletteAction::from_label(entry)
 }
 
 fn initial_ui_state(show_welcome: bool) -> UiState {
