@@ -303,3 +303,9 @@ because it would conceal ownership and make YAML event assertions impossible.
   `UiCommand` events emitted by `UiActor` for palette activation. It no longer
   dispatches session actions by rereading `UiState.last_palette_command`;
   command execution follows the actor event boundary.
+
+- **Production projection isolation (2026-08-06):** Legacy
+  `Arc<Mutex<Scrollback/StatusBar>>` storage and constructors are now compiled
+  only for focused unit-test adapters. Production `EventRenderer` projection
+  storage contains actor-backed slots only; the synchronous compatibility
+  reducer remains available under test without widening the live architecture.

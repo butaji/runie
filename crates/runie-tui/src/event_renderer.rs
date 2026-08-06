@@ -1,12 +1,15 @@
 //! `EventRenderer` — subscribes to `runie-core`'s event bus and mutates widgets.
 
+use std::collections::HashMap;
 use std::time::Duration;
-use std::{collections::HashMap, sync::Arc};
 
+#[cfg(test)]
 use parking_lot::Mutex;
 #[cfg(test)]
 use runie_core::types::AssistantContent;
 use runie_core::types::{AgentEvent, AssistantMessageEvent};
+#[cfg(test)]
+use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, Status, StatusBar, StatusMsg};
@@ -114,16 +117,43 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
 
 #[derive(Clone)]
 enum Projection<T> {
+    #[cfg(test)]
     Legacy(Arc<Mutex<T>>),
+    #[cfg(test)]
     Actor,
+    #[cfg(not(test))]
+    Actor(std::marker::PhantomData<T>),
 }
 
 impl<T> Projection<T> {
+    fn actor() -> Self {
+        #[cfg(test)]
+        {
+            Self::Actor
+        }
+        #[cfg(not(test))]
+        {
+            Self::Actor(std::marker::PhantomData)
+        }
+    }
+
+    #[cfg(test)]
     fn lock(&self) -> parking_lot::MutexGuard<'_, T> {
         match self {
             Self::Legacy(value) => value.lock(),
             Self::Actor => panic!("legacy projection accessed from actor renderer"),
         }
+    }
+
+    #[cfg(not(test))]
+    fn lock(&self) -> T
+    where
+        T: Default,
+    {
+        // Actor-backed renderers never enter compatibility branches. This
+        // fallback keeps those private adapters type-checkable without
+        // retaining mutex storage in production.
+        T::default()
     }
 
     #[cfg(test)]
@@ -168,10 +198,12 @@ pub struct EventRenderer {
 }
 
 impl EventRenderer {
+    #[cfg(test)]
     pub fn new(scrollback: Arc<Mutex<Scrollback>>, status: Arc<Mutex<StatusBar>>) -> Self {
         Self::with_welcome(scrollback, status, false)
     }
 
+    #[cfg(test)]
     pub fn with_welcome(
         scrollback: Arc<Mutex<Scrollback>>,
         status: Arc<Mutex<StatusBar>>,
@@ -226,8 +258,8 @@ impl EventRenderer {
         emit_welcome: bool,
     ) -> Self {
         Self::with_projections(
-            Projection::Actor,
-            Projection::Actor,
+            Projection::actor(),
+            Projection::actor(),
             Some(scrollback_actor),
             Some(status_actor),
             emit_welcome,
