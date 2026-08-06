@@ -1,6 +1,5 @@
 //! `App` — the top-level TUI controller.
 
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crossterm::event::KeyEvent;
@@ -103,19 +102,11 @@ impl UiState {
     }
 }
 
-struct UiTaskOwner(tokio::task::JoinHandle<()>);
-
-impl Drop for UiTaskOwner {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
-
 #[derive(Clone)]
 pub struct UiActor {
     tx: mpsc::Sender<(UiMsg, tokio::sync::oneshot::Sender<()>)>,
     snapshot: watch::Receiver<UiState>,
-    _owner: Arc<UiTaskOwner>,
+    _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }
 
 impl UiActor {
@@ -132,8 +123,7 @@ impl UiActor {
         };
         let (snapshot_tx, snapshot) = watch::channel(initial.clone());
         let mut events = bus.subscribe();
-        // OWNER: UiActor — mailbox worker is retained by the actor handle.
-        let owner = Arc::new(UiTaskOwner(tokio::spawn(async move {
+        let owner = runie_core::spawn_owned_worker!(async move {
             let mut state = initial;
             loop {
                 tokio::select! {
@@ -151,7 +141,7 @@ impl UiActor {
                     }
                 }
             }
-        })));
+        });
         Self {
             tx,
             snapshot,
@@ -184,7 +174,7 @@ enum PromptMsg {
 pub struct PromptActor {
     tx: mpsc::Sender<PromptMsg>,
     snapshot: watch::Receiver<PromptWidget>,
-    _owner: Arc<UiTaskOwner>,
+    _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }
 
 impl PromptActor {
@@ -192,12 +182,7 @@ impl PromptActor {
         let (tx, rx) = mpsc::channel(32);
         let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new());
         let events = bus.subscribe();
-        // OWNER: PromptActor — mailbox worker is retained by the actor handle.
-        let owner = Arc::new(UiTaskOwner(tokio::spawn(run_prompt_actor(
-            rx,
-            events,
-            snapshot_tx,
-        ))));
+        let owner = runie_core::spawn_owned_worker!(run_prompt_actor(rx, events, snapshot_tx,));
         Self {
             tx,
             snapshot,

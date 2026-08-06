@@ -15,6 +15,12 @@ behavior fixtures editable without recompiling Rust.
 
 ## Progress
 
+- **TUI actor ownership reuse (2026-08-06):** `UiActor` and `PromptActor`
+  now use the shared `runie-core` owned-worker DSL. Their worker lifetimes
+  remain attached to cloned actor handles, while the duplicate local
+  `JoinHandle`/`Drop` owner wrapper was removed. The actor ownership macro tests
+  and full workspace gate verify the migration.
+
 - Added `spawn_owned_worker!`, a small internal DSL that constructs an
   aborting `TaskOwner` around an actor worker handle. Mailboxes and worker
   loops remain explicit at each call site.
