@@ -191,8 +191,9 @@ projection uses it to remove only the duplicate pre-thought separator; generic
 no-tool inference is avoided, so tool and legacy snapshot states remain
 unchanged. Replay paths that provide the timing metadata align the isolated
 feed phase with Grok, and the thought summary styling bolds only `Thought`,
-matching Grok's cell attributes. The live provider bridge still needs to carry
-timing into the terminal assistant projection.
+matching Grok's cell attributes. The live provider bridge now carries timing
+into the terminal assistant projection without adding marker events to the
+existing replay sequence.
 
 **Terminal assistant usage projection (2026-08-06):** Assistant usage and stop
 reason are now consumed from the existing `AgentEvent::MessageEnd` payload by
@@ -208,6 +209,14 @@ provider's `0.2s` thought duration and settled row phase. The strict 62×32
 probe reached 41 differing cells before the final two-cell marker-style
 correction; remaining deltas are live clocks, worked elapsed time, and footer
 ANSI attributes.
+
+**Settled capture boundary (2026-08-06):** The tmux/asciinema harness now waits
+for `Worked for` together with the compact settled `Shift+Tab` footer and rejects
+the active `Esc:cancel` footer. This prevents a capture from stopping between
+the feed's terminal update and the status actor's settled projection. A fresh
+62×32 capture now compares at 39 differing cells (24 glyph, 15 attributes)
+against the checked-in Grok cast; the remaining rows are dynamic timestamps,
+worked elapsed time, and footer bold attributes.
 
 ## Review findings
 

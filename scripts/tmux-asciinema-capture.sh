@@ -44,12 +44,15 @@ fi
 
 tmux send-keys -t "$session" -l "$prompt"
 tmux send-keys -t "$session" Enter
-# Wait for the completed-turn marker so the cast contains the same settled
-# state in both applications. This is a bounded external-process probe.
+# Wait for both the completed-turn marker and the settled input footer so the
+# cast does not stop on the first feed update while the status actor is still
+# rendering its active phase. This is a bounded external-process probe.
 settled=0
 for _ in $(seq 1 200); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
-    if printf '%s' "$screen" | grep -Fq 'Worked for'; then
+    if printf '%s' "$screen" | grep -Fq 'Worked for' \
+        && printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
+        && ! printf '%s' "$screen" | grep -Fq 'Esc:cancel'; then
         settled=1
         break
     fi
