@@ -3,7 +3,7 @@
 
 use tokio::sync::broadcast;
 
-use crate::types::AgentEvent;
+use crate::{pi_event::PiAgentEvent, types::AgentEvent};
 
 /// Per-topic broadcast capacity. Sized to absorb a full agent run's worth of
 /// events without dropping for slow subscribers.
@@ -26,8 +26,34 @@ impl EventBus {
         let _ = self.tx.send(event);
     }
 
+    /// Publish only the closed Pi-core event contract.
+    pub fn publish_pi(&self, event: PiAgentEvent) {
+        self.publish(event.try_into_agent_event());
+    }
+
     pub fn subscribe(&self) -> broadcast::Receiver<AgentEvent> {
         self.tx.subscribe()
+    }
+
+    pub fn subscribe_pi(&self) -> PiEventReceiver {
+        PiEventReceiver {
+            inner: self.subscribe(),
+        }
+    }
+}
+
+pub struct PiEventReceiver {
+    inner: broadcast::Receiver<AgentEvent>,
+}
+
+impl PiEventReceiver {
+    pub async fn recv(&mut self) -> Result<PiAgentEvent, broadcast::error::RecvError> {
+        loop {
+            let event = self.inner.recv().await?;
+            if let Ok(pi_event) = PiAgentEvent::try_from(event) {
+                return Ok(pi_event);
+            }
+        }
     }
 }
 
@@ -55,5 +81,16 @@ mod tests {
         let bus = EventBus::new();
         // No subscribers; should not panic.
         bus.publish(AgentEvent::AgentStart);
+    }
+
+    #[tokio::test]
+    async fn typed_pi_subscription_filters_application_events() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe_pi();
+        bus.publish(AgentEvent::ThemeChanged {
+            theme: crate::types::ThemeKind::GrokNight,
+        });
+        bus.publish_pi(PiAgentEvent::TurnStart);
+        assert!(matches!(rx.recv().await.unwrap(), PiAgentEvent::TurnStart));
     }
 }

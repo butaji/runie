@@ -273,3 +273,8 @@ It mirrors Pi's closed lifecycle/tool event set, converts back to the existing
 bus representation, and rejects application-only variants at the boundary.
 The runtime bus still uses `AgentEvent` for compatibility; migrating actors
 and providers to the closed type is the next step.
+
+The event bus now exposes `publish_pi` and an async `subscribe_pi` facade.
+The facade filters application-only events while retaining the existing
+compatibility receiver, providing an incremental migration path for actors
+without weakening SSOT ownership or event-based delivery.
