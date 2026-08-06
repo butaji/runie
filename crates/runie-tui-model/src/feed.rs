@@ -54,6 +54,8 @@ pub struct FeedSnapshot {
     pub prompt_timestamp: Option<String>,
     pub revealed_dense_groups: HashSet<String>,
     pub center_revealed_entry: bool,
+    pub workflow_headers: HashMap<String, String>,
+    pub workflow_phases: HashMap<String, Vec<(String, String)>>,
     pub follow_latest_user: bool,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
@@ -78,6 +80,8 @@ pub struct FeedNavigation {
     pub prompt_timestamp: Option<String>,
     pub revealed_dense_groups: HashSet<String>,
     pub center_revealed_entry: bool,
+    pub workflow_headers: HashMap<String, String>,
+    pub workflow_phases: HashMap<String, Vec<(String, String)>>,
 }
 
 impl Default for FeedNavigation {
@@ -96,6 +100,8 @@ impl Default for FeedNavigation {
             prompt_timestamp: None,
             revealed_dense_groups: HashSet::new(),
             center_revealed_entry: false,
+            workflow_headers: HashMap::new(),
+            workflow_phases: HashMap::new(),
         }
     }
 }

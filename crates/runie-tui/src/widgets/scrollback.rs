@@ -188,8 +188,6 @@ pub struct Scrollback {
     /// kept in the renderer.
     next_tool_row_id: u64,
     navigation: FeedNavigation,
-    workflow_headers: HashMap<String, String>,
-    workflow_phases: HashMap<String, Vec<(String, String)>>,
 }
 
 impl Scrollback {
@@ -212,6 +210,8 @@ impl Scrollback {
         scrollback.navigation.tool_modes = snapshot.tool_modes;
         scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
+        scrollback.navigation.workflow_headers = snapshot.workflow_headers;
+        scrollback.navigation.workflow_phases = snapshot.workflow_phases;
         scrollback.next_tool_row_id = scrollback
             .lines
             .iter()
@@ -229,8 +229,6 @@ impl Scrollback {
             tool_names: HashMap::new(),
             next_tool_row_id: 0,
             navigation: FeedNavigation::default(),
-            workflow_headers: HashMap::new(),
-            workflow_phases: HashMap::new(),
         }
     }
 
@@ -373,9 +371,12 @@ impl Scrollback {
                 name,
                 objective,
             } => {
-                self.workflow_headers
+                self.navigation
+                    .workflow_headers
                     .insert(run_id.clone(), format!("Workflow {name}: {objective}"));
-                self.workflow_phases.insert(run_id.clone(), Vec::new());
+                self.navigation
+                    .workflow_phases
+                    .insert(run_id.clone(), Vec::new());
                 self.append(
                     Line::new(
                         LineKind::ToolRunning,
@@ -396,13 +397,18 @@ impl Scrollback {
                 state,
                 active_agents,
             } => {
-                let phases = self.workflow_phases.entry(run_id.clone()).or_default();
+                let phases = self
+                    .navigation
+                    .workflow_phases
+                    .entry(run_id.clone())
+                    .or_default();
                 if let Some(existing) = phases.iter_mut().find(|(title, _)| title == &phase) {
                     existing.1 = state.clone();
                 } else {
                     phases.push((phase, state));
                 }
                 let header = self
+                    .navigation
                     .workflow_headers
                     .get(&run_id)
                     .map(String::as_str)
@@ -411,7 +417,8 @@ impl Scrollback {
                     &run_id,
                     workflow_text(
                         header,
-                        self.workflow_phases
+                        self.navigation
+                            .workflow_phases
                             .get(&run_id)
                             .map(Vec::as_slice)
                             .unwrap_or(&[]),
@@ -427,6 +434,7 @@ impl Scrollback {
                 elapsed_ms,
             } => {
                 let header = self
+                    .navigation
                     .workflow_headers
                     .get(&run_id)
                     .map(String::as_str)
@@ -435,7 +443,8 @@ impl Scrollback {
                     &run_id,
                     workflow_text(
                         header,
-                        self.workflow_phases
+                        self.navigation
+                            .workflow_phases
                             .get(&run_id)
                             .map(Vec::as_slice)
                             .unwrap_or(&[]),
@@ -589,8 +598,8 @@ impl Scrollback {
         self.tool_names.clear();
         self.navigation.tool_modes.clear();
         self.next_tool_row_id = 0;
-        self.workflow_headers.clear();
-        self.workflow_phases.clear();
+        self.navigation.workflow_headers.clear();
+        self.navigation.workflow_phases.clear();
         self.navigation.revealed_dense_groups.clear();
         self.navigation.center_revealed_entry = false;
         self.navigation.scroll_offset = 0;
@@ -632,6 +641,8 @@ impl Scrollback {
             tool_modes: self.navigation.tool_modes.clone(),
             revealed_dense_groups: self.navigation.revealed_dense_groups.clone(),
             center_revealed_entry: self.navigation.center_revealed_entry,
+            workflow_headers: self.navigation.workflow_headers.clone(),
+            workflow_phases: self.navigation.workflow_phases.clone(),
         }
     }
 

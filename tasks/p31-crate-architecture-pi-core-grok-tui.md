@@ -409,3 +409,7 @@ placement, and wrapped user-row rendering.
 The ninth p35 slice is complete: dense-group reveal and centered-entry state
 are now model-owned across selection, viewport placement, reset, snapshot
 rehydration, and activity rendering.
+
+The tenth p35 slice is complete: workflow headers and phase trails are now
+model-owned across lifecycle reduction, status-card construction, reset, and
+snapshot rehydration.

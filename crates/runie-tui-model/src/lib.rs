@@ -189,6 +189,8 @@ mod tests {
             tool_modes: std::collections::HashMap::new(),
             revealed_dense_groups: std::collections::HashSet::new(),
             center_revealed_entry: false,
+            workflow_headers: std::collections::HashMap::new(),
+            workflow_phases: std::collections::HashMap::new(),
         }
     }
 }

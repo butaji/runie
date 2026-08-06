@@ -94,3 +94,10 @@ rendering consume that model fact; timestamped submission visual tests pass.
 `FeedNavigation`. Selection-triggered dense-group reveal, centered viewport
 placement, collapse/reset behavior, snapshot rehydration, and dense activity
 rendering consume those model-owned facts.
+
+### Slice 10 complete: workflow-card state ownership
+
+Workflow headers and phase trails now live in `FeedNavigation`. Workflow
+lifecycle event reduction, phase/status card construction, reset behavior, and
+snapshot rehydration use model-owned maps; workflow lifecycle and terminal
+state YAML/visual cases pass.
