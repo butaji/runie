@@ -482,23 +482,27 @@ impl EventRenderer {
         } else {
             None
         };
-        if let Some(activity) = &activity {
-            let mut scrollback = self.scrollback.lock();
-            if !starts_new_activity_group {
-                if let Some(line) = scrollback.last_mut_by_kind(LineKind::Activity) {
-                    line.text = activity.clone();
+        if self.scrollback_actor.is_none() {
+            if let Some(activity) = &activity {
+                let mut scrollback = self.scrollback.lock();
+                if !starts_new_activity_group {
+                    if let Some(line) = scrollback.last_mut_by_kind(LineKind::Activity) {
+                        line.text = activity.clone();
+                    } else {
+                        scrollback.append(Line::new(LineKind::Activity, activity.clone()));
+                    }
                 } else {
                     scrollback.append(Line::new(LineKind::Activity, activity.clone()));
                 }
-            } else {
-                scrollback.append(Line::new(LineKind::Activity, activity.clone()));
             }
         }
-        let row = self
-            .scrollback
-            .lock()
-            .append(Line::new(LineKind::Tool, tool_buffer.clone()).for_tool(&tool_call_id));
-        self.tool_rows.insert(tool_call_id.clone(), row);
+        if self.scrollback_actor.is_none() {
+            let row = self
+                .scrollback
+                .lock()
+                .append(Line::new(LineKind::Tool, tool_buffer.clone()).for_tool(&tool_call_id));
+            self.tool_rows.insert(tool_call_id.clone(), row);
+        }
         self.tool_buffers
             .insert(tool_call_id.clone(), tool_buffer.clone());
         ScrollbackMsg::ToolStart {
@@ -520,10 +524,12 @@ impl EventRenderer {
                     .filter(|line| !line.is_empty())
                     .map(str::to_owned)
                     .collect::<Vec<_>>();
-                for line in output.lines().filter(|line| !line.is_empty()) {
-                    self.scrollback
-                        .lock()
-                        .append(Line::new(LineKind::ToolOutput, line).for_tool(&tool_call_id));
+                if self.scrollback_actor.is_none() {
+                    for line in output.lines().filter(|line| !line.is_empty()) {
+                        self.scrollback
+                            .lock()
+                            .append(Line::new(LineKind::ToolOutput, line).for_tool(&tool_call_id));
+                    }
                 }
                 return Some(ScrollbackMsg::ToolUpdate {
                     tool_call_id,
@@ -538,9 +544,13 @@ impl EventRenderer {
                 " | update: {}",
                 serde_json::to_string(&partial_result).unwrap_or_default()
             ));
-            if let Some(row) = self.tool_rows.get(&tool_call_id).copied() {
-                let updated = buffer.clone();
-                self.replace_tool_line(row, &updated);
+            let updated = buffer.clone();
+            if self.scrollback_actor.is_none() {
+                if let Some(row) = self.tool_rows.get(&tool_call_id).copied() {
+                    self.replace_tool_line(row, &updated);
+                }
+            }
+            if self.scrollback_actor.is_some() || self.tool_rows.contains_key(&tool_call_id) {
                 return Some(ScrollbackMsg::ToolUpdate {
                     tool_call_id,
                     header: Some(updated),
@@ -573,8 +583,10 @@ impl EventRenderer {
         } else {
             completed_tool_header(&tool_buffer, &tool_name, &result)
         };
-        if let Some(row) = self.tool_rows.remove(&tool_call_id) {
-            self.replace_tool_line(row, &tool_buffer);
+        if self.scrollback_actor.is_none() {
+            if let Some(row) = self.tool_rows.remove(&tool_call_id) {
+                self.replace_tool_line(row, &tool_buffer);
+            }
         }
         let activity = if self.active_tool_count == 0
             && self.activity_dirs
@@ -594,9 +606,11 @@ impl EventRenderer {
         } else {
             None
         };
-        if let Some(activity) = &activity {
-            if let Some(line) = self.scrollback.lock().last_mut_by_kind(LineKind::Activity) {
-                line.text = activity.clone();
+        if self.scrollback_actor.is_none() {
+            if let Some(activity) = &activity {
+                if let Some(line) = self.scrollback.lock().last_mut_by_kind(LineKind::Activity) {
+                    line.text = activity.clone();
+                }
             }
         }
         let mut output = Vec::new();
@@ -613,9 +627,11 @@ impl EventRenderer {
                 .lines()
                 .filter(|line| !line.is_empty())
             {
-                self.scrollback
-                    .lock()
-                    .append(Line::new(kind, line).for_tool(&tool_call_id));
+                if self.scrollback_actor.is_none() {
+                    self.scrollback
+                        .lock()
+                        .append(Line::new(kind, line).for_tool(&tool_call_id));
+                }
                 output.push((kind, line.to_owned()));
             }
         }

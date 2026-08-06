@@ -203,3 +203,10 @@ because it would conceal ownership and make YAML event assertions impossible.
   start/update/end lifecycle is now actor-routed; compatibility mutation is
   retained only as a transitional adapter until the renderer state maps are
   removed.
+
+- **Tool compatibility-write removal (2026-08-05):** After actor startup,
+  tool start/update/end handlers no longer mutate `Scrollback` rows, activity
+  summaries, or output rows behind the compatibility mutex. They retain only
+  lifecycle counters and buffers needed to construct the typed messages. The
+  actor is now the sole production feed-row owner for the complete tool
+  lifecycle.
