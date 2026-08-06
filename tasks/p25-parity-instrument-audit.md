@@ -166,6 +166,18 @@ fixtures passed. It was reverted; no snapshot was regenerated. The next fix
 must use an explicit scenario/state discriminator rather than infer behavior
 from the absence of tool rows.
 
+**Grok timing ownership audit (2026-08-06):** The authoritative Grok tracker
+(`xai-grok-pager/src/acp/tracker.rs`) stores `last_thinking_elapsed_ms`, derives
+it from server timestamps attached to thinking chunks, and freezes it when the
+thinking block finishes. Empty pre-created thinking blocks are removed rather
+than rendered as a fake `0.0s` summary. Runie's `AgentEvent::MessageUpdate` and
+`MessageEnd` contracts currently carry no equivalent timing metadata, forcing
+the renderer's `0.9s` placeholder and causing the remaining `0.2s`/`0.9s`
+strict-cast mismatch. The next parity change belongs in the core event DSL and
+actor-owned state projection, with YAML replay values for server timestamps;
+the renderer should consume the resulting projection rather than hardcode a
+duration.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
