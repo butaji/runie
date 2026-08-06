@@ -546,3 +546,14 @@ Memory-card projection slice (2026-08-06): added the renderer-independent
 snippet fields. Live event rendering and YAML replay now format the same
 structured rows, and `visual-specialized-tools.yaml` asserts both result
 headers and snippets.
+
+Typed-card render audit (2026-08-06): the actor/model side now preserves
+Grok's `ToolCardKind`, lifecycle flags, display mode, output ownership, and
+parallel-call identity. The remaining renderer gap is architectural: the
+widget's `physical_rows` still flattens every specialized card into
+`(LineKind, String, code_row)` tuples. Grok's `Read`, `Edit`, `WebSearch`,
+`MemorySearch`, `Workflow`, and background cards each have card-specific
+header spans, status glyphs, metadata rows, and selection ranges. The next
+parity slice must introduce a renderer-neutral card-row vocabulary carrying
+that semantic identity before Ratatui styles are applied; changing individual
+colors or prefixes in `physical_rows` would lose the distinction again.

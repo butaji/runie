@@ -429,3 +429,9 @@ the renderer-neutral `FeedState`, with `Scrollback` restricted to snapshot
 rehydration and terminal painting. A model event-sequence test validates the
 tool lifecycle projection; duplicate widget reducer removal remains the next
 extraction step.
+
+Typed-card rendering audit confirms the next layer boundary: `FeedState` and
+`ToolBlock` retain semantic card identity, while the widget currently reduces
+all card rows into a generic physical-row tuple. A renderer-neutral card-row
+projection is required before exact Grok spans, metadata, and selection ranges
+can be implemented without creating a second state owner.
