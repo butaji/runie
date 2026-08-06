@@ -116,6 +116,19 @@ special-case the text or mutate status state. This removes provider-content
 and usage nondeterminism from the controlled parity scenario, leaving timing,
 timestamps, wrapping, and footer style as independently measurable deltas.
 
+**Fresh Runie recapture (2026-08-06):** A new isolated 62×32 Runie cast was
+captured after the footer cell-width correction:
+`/tmp/runie-runie-capture.VUt9J4/runie-hey.cast`. Compared with the preserved
+Grok reference using the strict full-cell comparator, it reports 246 differing
+cells (231 glyph differences and 15 attribute-only differences). The footer
+separator spacing is now aligned; the remaining footer attributes are the
+Grok-bold versus Runie-regular shortcut labels. The other deltas are visible
+scenario differences: the captured Runie response is longer and wraps onto
+different rows, its reasoning and completion rows occur later, and its prompt
+timestamp is live rather than matching the reference. This confirms the
+instrument catches real scenario differences and does not establish pixel
+parity from a stale cast pair.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
