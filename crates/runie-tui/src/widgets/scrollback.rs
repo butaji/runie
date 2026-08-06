@@ -1150,7 +1150,11 @@ impl Scrollback {
                         key_color
                     } else if *kind == LineKind::CompletedAssistant && index < 3 {
                         Color::Reset
-                    } else if body_end.is_some_and(|end| x <= end) {
+                    } else if body_end.is_some_and(|end| {
+                        x <= end
+                            && (*kind != LineKind::User
+                                || pointer.is_some_and(|pointer| x > pointer))
+                    }) {
                         body_color
                     } else {
                         Color::Reset
@@ -2206,6 +2210,7 @@ mod tests {
         let mut scrollback = Scrollback::new();
         scrollback.append(Line::new(LineKind::SessionStart, "◆ session_start"));
         scrollback.append(Line::new(LineKind::User, "Hey"));
+        scrollback.set_live_grok_layout(true);
         let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 4));
         scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 4), 24, &mut buffer);
         let row = (0..4)
@@ -2222,6 +2227,11 @@ mod tests {
         assert_eq!(
             buffer.cell((79, row)).expect("full user row background").bg,
             Color::Rgb(36, 36, 36)
+        );
+        assert_eq!(
+            buffer.cell((2, row)).expect("user gutter foreground").fg,
+            Color::Reset,
+            "Grok leaves the user-row lead gutter at terminal-default foreground"
         );
     }
 

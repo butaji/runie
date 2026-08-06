@@ -691,3 +691,12 @@ comparison from 324 to 261 differing cells (254 style-only, 7 glyph), with
 the header row reduced to 11 differing cells. Remaining hotspots are the
 prompt/response dynamic rows, footer/status chrome, and timing-dependent
 content; the capture remains non-zero evidence rather than a parity claim.
+
+User-panel gutter pass (2026-08-06): A fresh four-geometry matrix isolated a
+stable style mismatch in every viewport: Runie's user-row paragraph inherited
+the primary foreground across the three leading gutter cells, while Grok
+emits only the panel background there and leaves the foreground terminal
+default. The live Grok layout projection now resets that gutter foreground
+while retaining the theme-token panel background. A focused renderer test
+asserts the cell contract; dynamic response text, timestamps, elapsed values,
+and context-meter data remain separate non-static mismatches.
