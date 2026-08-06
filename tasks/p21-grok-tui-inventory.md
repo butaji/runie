@@ -391,6 +391,12 @@ that same phase trail by `run_id`; the YAML lifecycle oracle asserts the final
 single-card projection. Richer per-phase glyphs and exact Grok spacing remain
 an attribute-level follow-up.
 
+Workflow card typography parity (2026-08-06): the Grok source renderer formats
+terminal status before the objective (`name done in duration: objective`),
+renders phase states as `✓`/`●`/`○`, and only shows active-agent count while
+running. Runie's workflow formatter now follows that rule, with the YAML visual
+oracle asserting the exact semantic header and full-screen occurrence.
+
 Selected-header affordance (2026-08-06): the selected tool header now swaps
 Grok's collapsed bullet for the `›` fold indicator in the pure scrollback
 render path; the transformation is derived from actor-owned selection and

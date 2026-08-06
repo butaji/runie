@@ -23,9 +23,9 @@ assertions:
   required_events: [workflow_started, workflow_progress, workflow_finished]
   state:
     tool_blocks: 1
-    tool_headers: ["Workflow release: ship the release [tests: active] done in 1.2s"]
+    tool_headers: ["Workflow release done in 1.2s: ship the release  [tests ●]"]
   visual:
     cols: 80
     rows: 24
     screen_text:
-      - "Workflow release: ship the release [tests: active] done in 1.2s"
+      - "Workflow release done in 1.2s: ship the release  [tests ●]"

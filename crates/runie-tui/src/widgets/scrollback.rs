@@ -21,6 +21,45 @@ fn format_elapsed(elapsed_ms: Option<u64>) -> String {
         .unwrap_or_default()
 }
 
+fn workflow_phase_mark(state: &str) -> char {
+    match state {
+        "done" => '✓',
+        "active" => '●',
+        _ => '○',
+    }
+}
+
+fn workflow_text(
+    header: &str,
+    phases: &[(String, String)],
+    status: &str,
+    elapsed_ms: Option<u64>,
+    active_agents: u32,
+) -> String {
+    let body = header.strip_prefix("Workflow ").unwrap_or(header);
+    let (name, objective) = body.split_once(':').unwrap_or((body, ""));
+    let verb = match status {
+        "active" => format!("{name}: "),
+        "cancelled" => format!("{name} ◌ cancelled after{}: ", format_elapsed(elapsed_ms)),
+        "paused" => format!("{name} paused at{}: ", format_elapsed(elapsed_ms)),
+        "failed" | "interrupted" => format!("{name} failed{}: ", format_elapsed(elapsed_ms)),
+        _ => format!("{name} done{}: ", format_elapsed(elapsed_ms)),
+    };
+    let trail = phases
+        .iter()
+        .map(|(title, phase_state)| format!("{title} {}", workflow_phase_mark(phase_state)))
+        .collect::<Vec<_>>()
+        .join(" · ");
+    let mut result = format!("Workflow {verb}{}", objective.trim());
+    if !trail.is_empty() {
+        result.push_str(&format!("  [{trail}]"));
+    }
+    if status == "active" && active_agents > 0 {
+        result.push_str(&format!("  ({active_agents} agents)"));
+    }
+    result
+}
+
 /// Grok's default dense activity-group budget. A zero budget is reserved for
 /// the source-compatible "no truncation" configuration.
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
@@ -490,7 +529,13 @@ impl Scrollback {
                 self.append(
                     Line::new(
                         LineKind::ToolRunning,
-                        format!("Workflow {name}: {objective} [running] (0 agents)"),
+                        workflow_text(
+                            &format!("Workflow {name}: {objective}"),
+                            &[],
+                            "active",
+                            None,
+                            0,
+                        ),
                     )
                     .for_tool(run_id),
                 );
@@ -507,27 +552,22 @@ impl Scrollback {
                 } else {
                     phases.push((phase, state));
                 }
-                let trail = self
-                    .workflow_phases
+                let header = self
+                    .workflow_headers
                     .get(&run_id)
-                    .map(|items| {
-                        items
-                            .iter()
-                            .map(|(title, state)| format!("{title}: {state}"))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    })
-                    .unwrap_or_default();
+                    .map(String::as_str)
+                    .unwrap_or("Workflow");
                 self.replace_tool_by_id(
                     &run_id,
-                    format!(
-                        "{} [{}] ({} agents)",
-                        self.workflow_headers
+                    workflow_text(
+                        header,
+                        self.workflow_phases
                             .get(&run_id)
-                            .map(String::as_str)
-                            .unwrap_or("Workflow"),
-                        trail,
-                        active_agents
+                            .map(Vec::as_slice)
+                            .unwrap_or(&[]),
+                        "active",
+                        None,
+                        active_agents,
                     ),
                 );
             }
@@ -536,28 +576,22 @@ impl Scrollback {
                 status,
                 elapsed_ms,
             } => {
-                let trail = self
-                    .workflow_phases
+                let header = self
+                    .workflow_headers
                     .get(&run_id)
-                    .map(|items| {
-                        items
-                            .iter()
-                            .map(|(title, state)| format!("{title}: {state}"))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    })
-                    .unwrap_or_default();
+                    .map(String::as_str)
+                    .unwrap_or("Workflow");
                 self.replace_tool_by_id(
                     &run_id,
-                    format!(
-                        "{} [{}] {}{}",
-                        self.workflow_headers
+                    workflow_text(
+                        header,
+                        self.workflow_phases
                             .get(&run_id)
-                            .map(String::as_str)
-                            .unwrap_or("Workflow"),
-                        trail,
-                        status,
-                        format_elapsed(elapsed_ms)
+                            .map(Vec::as_slice)
+                            .unwrap_or(&[]),
+                        &status,
+                        elapsed_ms,
+                        0,
                     ),
                 );
             }
