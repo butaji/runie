@@ -101,12 +101,12 @@ fn finish_replay_events(
         events.push(AssistantMessageEvent::ToolCallDelta {
             index: 0,
             delta: arguments.clone(),
-            partial: ToolCall {
+            partial: AssistantMessage::with_tool_call(ToolCall {
                 id,
                 name,
                 arguments: args,
                 thought_signature: None,
-            },
+            }),
         });
     }
     events.push(AssistantMessageEvent::Done {

@@ -232,6 +232,18 @@ pub struct AssistantMessage {
     pub timestamp: i64,
 }
 
+impl AssistantMessage {
+    /// Build the minimal assistant partial used by Pi's tool-call stream
+    /// events. The provider partial is a complete assistant message, even
+    /// when it currently contains only one tool-call content block.
+    pub fn with_tool_call(call: ToolCall) -> Self {
+        Self {
+            content: vec![AssistantContent::ToolCall(call)],
+            ..Self::default()
+        }
+    }
+}
+
 /// Tool result content block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -892,7 +904,7 @@ pub enum AssistantMessageEvent {
         /// Raw argument/name delta emitted by pi-ai before partial reduction.
         #[serde(default)]
         delta: String,
-        partial: ToolCall,
+        partial: AssistantMessage,
     },
     #[serde(rename = "toolcall_end")]
     ToolCallEnd {
@@ -1225,12 +1237,12 @@ mod tests {
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
                 delta: "{\"path\":\"a.rs\"}".into(),
-                partial: ToolCall {
+                partial: AssistantMessage::with_tool_call(ToolCall {
                     id: "c".into(),
                     name: "x".into(),
                     arguments: serde_json::json!({}),
                     thought_signature: None,
-                },
+                }),
             },
             AssistantMessageEvent::ToolCallEnd {
                 index: 0,

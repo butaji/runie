@@ -672,6 +672,13 @@ fn enrich_assistant_partial(
             tool_call,
             partial,
         },
+        AssistantMessageEvent::ToolCallDelta { index, delta, .. } => {
+            AssistantMessageEvent::ToolCallDelta {
+                index,
+                delta,
+                partial,
+            }
+        }
         other => other,
     }
 }
@@ -770,6 +777,10 @@ fn truncated_result(call: &ToolCall) -> AgentToolResult {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the pure assistant event reducer keeps Pi variants together"
+)]
 fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
     use crate::types::AssistantContent;
     match event {
@@ -786,9 +797,19 @@ fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
         AssistantMessageEvent::ThinkingDelta { delta, .. } => {
             push_or_append(assistant, AssistantContent::Thinking { text: delta });
         }
-        AssistantMessageEvent::ToolCallStart { partial, .. }
-        | AssistantMessageEvent::ToolCallDelta { partial, .. } => {
+        AssistantMessageEvent::ToolCallStart { partial, .. } => {
             upsert_tool_call(assistant, partial);
+        }
+        AssistantMessageEvent::ToolCallDelta { partial, .. } => {
+            for content in partial.content {
+                match content {
+                    AssistantContent::ToolCall(call) => upsert_tool_call(assistant, call),
+                    other => push_or_append(assistant, other),
+                }
+            }
+            assistant.stop_reason = partial.stop_reason;
+            assistant.usage = partial.usage;
+            assistant.thinking_elapsed_ms = partial.thinking_elapsed_ms;
         }
         AssistantMessageEvent::ToolCallEnd { tool_call, .. } => {
             upsert_tool_call(assistant, tool_call);
@@ -940,10 +961,10 @@ mod event_reconstruction_tests {
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
                 delta: "{\"path\":\"a.rs\"}".into(),
-                partial: ToolCall {
+                partial: AssistantMessage::with_tool_call(ToolCall {
                     arguments: serde_json::json!({"path": "a.rs"}),
                     ..partial.clone()
-                },
+                }),
             },
         );
         apply_event(

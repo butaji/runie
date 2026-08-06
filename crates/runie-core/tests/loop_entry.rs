@@ -265,12 +265,12 @@ impl StreamFn for AbortStream {
             AssistantMessageEvent::ToolCallDelta {
                 index: 0,
                 delta: "{}".into(),
-                partial: ToolCall {
+                partial: AssistantMessage::with_tool_call(ToolCall {
                     id: "c1".into(),
                     name: "echo".into(),
                     arguments: serde_json::json!({}),
                     thought_signature: None,
-                },
+                }),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::ToolUse,

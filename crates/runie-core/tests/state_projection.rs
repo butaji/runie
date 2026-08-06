@@ -170,12 +170,12 @@ impl StreamFn for OneToolStream {
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
                     delta: "{}".into(),
-                    partial: ToolCall {
+                    partial: AssistantMessage::with_tool_call(ToolCall {
                         id: "tool-1".into(),
                         name: "block_tool".into(),
                         arguments: serde_json::json!({}),
                         thought_signature: None,
-                    },
+                    }),
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::ToolUse,

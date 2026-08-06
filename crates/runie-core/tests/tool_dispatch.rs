@@ -10,7 +10,7 @@ use futures::stream;
 
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AfterToolCallResult, AgentContext, AgentMessage, AgentTool, AgentToolResult,
+    AfterToolCallResult, AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
     AssistantMessageEvent, BeforeToolCallResult, Model, SimpleStreamOptions, StopReason, ToolCall,
     ToolResultContent, Usage, UserContent, UserMessage,
 };
@@ -108,22 +108,22 @@ impl StreamFn for TwoToolStream {
                 AssistantMessageEvent::ToolCallDelta {
                     index: 0,
                     delta: "{}".into(),
-                    partial: ToolCall {
+                    partial: AssistantMessage::with_tool_call(ToolCall {
                         id: "f".into(),
                         name: "fast_tool".into(),
                         arguments: serde_json::json!({}),
                         thought_signature: None,
-                    },
+                    }),
                 },
                 AssistantMessageEvent::ToolCallDelta {
                     index: 1,
                     delta: "{}".into(),
-                    partial: ToolCall {
+                    partial: AssistantMessage::with_tool_call(ToolCall {
                         id: "s".into(),
                         name: "slow_tool".into(),
                         arguments: serde_json::json!({}),
                         thought_signature: None,
-                    },
+                    }),
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::ToolUse,

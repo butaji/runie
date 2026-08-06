@@ -75,8 +75,10 @@ than an unverified lifecycle branch.
 
 **Tool-call delta wire parity (2026-08-06):** Pi's
 `AssistantMessageEvent.toolcall_delta` carries both the raw `delta` string and
-the reconstructed `partial` tool call. Runie now preserves and serializes that
-field, with replay providers and the YAML runner populating it. The
+the full reconstructed assistant `partial` message. Runie now preserves and
+serializes both fields, with replay providers and the YAML runner populating
+them. The reducer merges tool-call content from partials so synthetic replay
+partials cannot discard sibling calls. The
 `visual-tool-call-sections.yaml` fixture exercises the no-recompile path;
 decoding defaults keep older traces readable.
 

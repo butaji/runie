@@ -14,8 +14,9 @@ use futures::stream;
 use parking_lot::Mutex;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessageEvent, Model,
-    SimpleStreamOptions, StopReason, ToolCall, ToolResultContent, Usage, UserContent, UserMessage,
+    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
+    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall, ToolResultContent,
+    Usage, UserContent, UserMessage,
 };
 
 use common::TestLoopBuilder;
@@ -40,12 +41,12 @@ fn tool_call_stream(name: &str) -> impl StreamFn {
                     AssistantMessageEvent::ToolCallDelta {
                         index: 0,
                         delta: "{}".into(),
-                        partial: ToolCall {
+                        partial: AssistantMessage::with_tool_call(ToolCall {
                             id: "c1".into(),
                             name: self.name.clone(),
                             arguments: serde_json::json!({ "raw": 1 }),
                             thought_signature: None,
-                        },
+                        }),
                     },
                     AssistantMessageEvent::Done {
                         stop_reason: StopReason::ToolUse,
