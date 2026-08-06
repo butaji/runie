@@ -254,3 +254,6 @@ Transcript block states:
   now use an explicit `LineKind::Separator`, distinct from Grok system/session
   blocks. Existing compact/full replay behavior remains green while the
   renderer gains the metadata needed for per-entry vpad decisions.
+- **Separator normalization (2026-08-05):** Activity-spacing normalization
+  now inserts `LineKind::Separator` rather than reintroducing a generic system
+  line, keeping the metadata distinction intact through reducer operations.

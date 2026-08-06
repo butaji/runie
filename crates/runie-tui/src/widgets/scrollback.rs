@@ -314,7 +314,7 @@ impl Scrollback {
             }
         }
         self.lines
-            .insert(index + 1, Line::new(LineKind::System, ""));
+            .insert(index + 1, Line::new(LineKind::Separator, ""));
     }
 
     /// Set Grok-compatible reasoning display mode. Collapsed mode renders
