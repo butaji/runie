@@ -10,7 +10,7 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 
 use crate::appearance;
 use runie_core::types::ThemeKind;
-pub use runie_tui_model::{FeedSnapshot, Line, LineKind, ScrollbackMsg};
+pub use runie_tui_model::{FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind};
 
 // Grok reserves a visible gutter between the first assistant row and its
 // right-aligned clock before wrapping the remaining response text.
@@ -177,101 +177,6 @@ pub struct Scrollback {
     follow_latest_user: bool,
     workflow_headers: HashMap<String, String>,
     workflow_phases: HashMap<String, Vec<(String, String)>>,
-}
-
-/// Read-only typed projection of one Grok tool block. It is rebuilt from the
-/// actor-owned scrollback lines; it is not a second mutable source of truth.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ToolBlock {
-    pub tool_call_id: String,
-    pub header: String,
-    pub kind: ToolCardKind,
-    pub output: Vec<String>,
-    pub mode: runie_core::types::ToolDisplayMode,
-    pub is_running: bool,
-    pub is_error: bool,
-}
-
-/// Grok's specialized tool-card families as a read-only presentation
-/// projection. Lifecycle ownership remains with core/event actors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ToolCardKind {
-    Execute,
-    Read,
-    Edit,
-    ListDir,
-    Search,
-    WebSearch,
-    WebFetch,
-    MemorySearch,
-    Workflow,
-    Todo,
-    Use,
-    SearchTools,
-    Background,
-    Generic,
-}
-
-#[allow(
-    clippy::cognitive_complexity,
-    clippy::too_many_lines,
-    reason = "the pure tool-name vocabulary maps Grok aliases to one card family"
-)]
-fn tool_card_kind(header: &str) -> ToolCardKind {
-    let lower = header.trim_start().to_ascii_lowercase();
-    if matches!(lower.as_str(), "bash" | "shell" | "exec" | "run")
-        || lower.starts_with("run ")
-        || lower.starts_with("execute ")
-    {
-        ToolCardKind::Execute
-    } else if matches!(lower.as_str(), "read" | "read_file") || lower.starts_with("read ") {
-        ToolCardKind::Read
-    } else if matches!(
-        lower.as_str(),
-        "edit" | "write" | "write_file" | "search_replace"
-    ) || lower.starts_with("edit ")
-        || lower.starts_with("write ")
-    {
-        ToolCardKind::Edit
-    } else if matches!(lower.as_str(), "list_dir" | "list_files") || lower.starts_with("list ") {
-        ToolCardKind::ListDir
-    } else if matches!(lower.as_str(), "web_search" | "web-search")
-        || lower.starts_with("web search ")
-    {
-        ToolCardKind::WebSearch
-    } else if matches!(lower.as_str(), "search" | "grep" | "find") || lower.starts_with("search ") {
-        ToolCardKind::Search
-    } else if matches!(lower.as_str(), "web_fetch" | "web-fetch" | "fetch")
-        || lower.starts_with("fetch ")
-    {
-        ToolCardKind::WebFetch
-    } else if matches!(lower.as_str(), "memory_search" | "memory-search")
-        || lower.starts_with("memory search ")
-    {
-        ToolCardKind::MemorySearch
-    } else if matches!(lower.as_str(), "workflow" | "run_workflow" | "run-workflow")
-        || lower.starts_with("workflow ")
-    {
-        ToolCardKind::Workflow
-    } else if matches!(lower.as_str(), "todo" | "todo_write" | "todo-write")
-        || lower.starts_with("todo ")
-    {
-        ToolCardKind::Todo
-    } else if matches!(lower.as_str(), "use" | "use_tool" | "use-tool") || lower.starts_with("use ")
-    {
-        ToolCardKind::Use
-    } else if matches!(lower.as_str(), "search_tools" | "search-tools")
-        || lower.starts_with("search tools ")
-    {
-        ToolCardKind::SearchTools
-    } else if matches!(lower.as_str(), "subagent" | "agent" | "task")
-        || lower.starts_with("subagent ")
-    {
-        ToolCardKind::Background
-    } else {
-        ToolCardKind::Generic
-    }
 }
 
 impl Scrollback {
@@ -529,8 +434,8 @@ impl Scrollback {
                         tool_call_id: id.to_owned(),
                         header: line.text.clone(),
                         kind: self.tool_names.get(id).map_or_else(
-                            || tool_card_kind(&line.text),
-                            |name| tool_card_kind(name),
+                            || ToolCardKind::from_header(&line.text),
+                            |name| ToolCardKind::from_header(name),
                         ),
                         output: Vec::new(),
                         mode: self
@@ -548,10 +453,10 @@ impl Scrollback {
             match line.kind {
                 LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
                     block.header = line.text.clone();
-                    block.kind = self
-                        .tool_names
-                        .get(id)
-                        .map_or_else(|| tool_card_kind(&line.text), |name| tool_card_kind(name));
+                    block.kind = self.tool_names.get(id).map_or_else(
+                        || ToolCardKind::from_header(&line.text),
+                        |name| ToolCardKind::from_header(name),
+                    );
                     block.is_running = line.kind == LineKind::ToolRunning;
                     block.is_error = line.kind == LineKind::ToolError;
                 }
@@ -657,6 +562,7 @@ impl Scrollback {
     pub fn model_snapshot(&self) -> FeedSnapshot {
         FeedSnapshot {
             lines: self.lines.clone(),
+            tool_blocks: self.tool_blocks(),
             scroll_offset: self.scroll_offset,
             reasoning_expanded: self.reasoning_expanded,
             activity_expanded: self.activity_expanded,

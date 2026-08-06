@@ -39,6 +39,10 @@ The YAML runner now derives `selected_tool_id`, `selected_entry`, and
 still intentionally use the terminal renderer path, so model and pixel
 coverage remain separate.
 
+Typed `ToolBlock` and `ToolCardKind` projections are now model-owned, and
+`FeedSnapshot` carries the ordered tool-card projection. YAML tool assertions
+therefore consume the same immutable model data as future renderers.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

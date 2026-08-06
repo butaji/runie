@@ -37,6 +37,7 @@ pub struct Line {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FeedSnapshot {
     pub lines: Vec<Line>,
+    pub tool_blocks: Vec<ToolBlock>,
     pub scroll_offset: usize,
     pub reasoning_expanded: bool,
     pub activity_expanded: bool,
@@ -47,6 +48,105 @@ pub struct FeedSnapshot {
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
+}
+
+/// Read-only typed projection of one Grok tool block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ToolBlock {
+    pub tool_call_id: String,
+    pub header: String,
+    pub kind: ToolCardKind,
+    pub output: Vec<String>,
+    pub mode: ToolDisplayMode,
+    pub is_running: bool,
+    pub is_error: bool,
+}
+
+/// Grok's specialized tool-card families supported by pi-core tool events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCardKind {
+    Execute,
+    Read,
+    Edit,
+    ListDir,
+    Search,
+    WebSearch,
+    WebFetch,
+    MemorySearch,
+    Workflow,
+    Todo,
+    Use,
+    SearchTools,
+    Background,
+    Generic,
+}
+
+impl ToolCardKind {
+    #[allow(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        reason = "the pure tool alias vocabulary maps Grok card families explicitly"
+    )]
+    pub fn from_header(header: &str) -> Self {
+        let lower = header.trim_start().to_ascii_lowercase();
+        if matches!(lower.as_str(), "bash" | "shell" | "exec" | "run")
+            || lower.starts_with("run ")
+            || lower.starts_with("execute ")
+        {
+            Self::Execute
+        } else if matches!(lower.as_str(), "read" | "read_file") || lower.starts_with("read ") {
+            Self::Read
+        } else if matches!(
+            lower.as_str(),
+            "edit" | "write" | "write_file" | "search_replace"
+        ) || lower.starts_with("edit ")
+            || lower.starts_with("write ")
+        {
+            Self::Edit
+        } else if matches!(lower.as_str(), "list_dir" | "list_files") || lower.starts_with("list ")
+        {
+            Self::ListDir
+        } else if matches!(lower.as_str(), "web_search" | "web-search")
+            || lower.starts_with("web search ")
+        {
+            Self::WebSearch
+        } else if matches!(lower.as_str(), "search" | "grep" | "find")
+            || lower.starts_with("search ")
+        {
+            Self::Search
+        } else if matches!(lower.as_str(), "web_fetch" | "web-fetch" | "fetch")
+            || lower.starts_with("fetch ")
+        {
+            Self::WebFetch
+        } else if matches!(lower.as_str(), "memory_search" | "memory-search")
+            || lower.starts_with("memory search ")
+        {
+            Self::MemorySearch
+        } else if matches!(lower.as_str(), "workflow" | "run_workflow" | "run-workflow")
+            || lower.starts_with("workflow ")
+        {
+            Self::Workflow
+        } else if matches!(lower.as_str(), "todo" | "todo_write" | "todo-write")
+            || lower.starts_with("todo ")
+        {
+            Self::Todo
+        } else if matches!(lower.as_str(), "use" | "use_tool" | "use-tool")
+            || lower.starts_with("use ")
+        {
+            Self::Use
+        } else if matches!(lower.as_str(), "search_tools" | "search-tools")
+            || lower.starts_with("search tools ")
+        {
+            Self::SearchTools
+        } else if matches!(lower.as_str(), "subagent" | "agent" | "task")
+            || lower.starts_with("subagent ")
+        {
+            Self::Background
+        } else {
+            Self::Generic
+        }
+    }
 }
 
 impl FeedSnapshot {

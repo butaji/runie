@@ -941,7 +941,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     Ok(ScenarioOutcome {
         events: events_from_task,
         scrollback: feed.lines.clone(),
-        tool_blocks: scrollback.tool_blocks(),
+        tool_blocks: feed.tool_blocks.clone(),
         selected_tool_id: feed.selected_tool_id.clone(),
         selected_entry: feed.selected_entry,
         scroll_offset: feed.scroll_offset,
