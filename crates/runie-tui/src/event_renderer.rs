@@ -816,6 +816,14 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Fetch {url}")
         }
+        "search_tools" | "search-tools" => {
+            let query = args
+                .get("query")
+                .or_else(|| args.get("pattern"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Search Tools {query}")
+        }
         "bash" | "shell" | "exec" | "run" => {
             let command = args
                 .get("command")
@@ -877,6 +885,16 @@ fn completed_tool_header(
             format!(
                 "{pending_header} ({sources} source{})",
                 if sources == 1 { "" } else { "s" }
+            )
+        }
+        "search_tools" | "search-tools" => {
+            let results = output
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .count();
+            format!(
+                "{pending_header} ({results} result{})",
+                if results == 1 { "" } else { "s" }
             )
         }
         "edit" | "write" | "write_file" | "search_replace" => {

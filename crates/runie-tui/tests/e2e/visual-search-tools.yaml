@@ -1,0 +1,22 @@
+name: visual-search-tools
+description: >-
+  Grok integration-tool discovery card uses the Search Tools semantic header
+  and result cardinality.
+initial_prompt: "Find a tool"
+tools:
+  - name: search_tools
+    kind: echo
+events:
+  - start
+  - tool_call:
+      name: search_tools
+      args: { query: "filesystem" }
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Search Tools filesystem"
+    screen_excludes:
+      - "search_tools {"

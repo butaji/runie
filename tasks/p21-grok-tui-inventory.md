@@ -184,6 +184,10 @@ Execute-card progress: shell/exec tool headers now use Grok's semantic `Run`
 label with the command argument, and `visual-execute.yaml` exercises the path
 through the real event replay and rendered screen assertions.
 
+Integration discovery progress: `search_tools` now uses Grok's `Search Tools`
+header and `(N results)` completion cardinality, covered by
+`visual-search-tools.yaml`.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining
