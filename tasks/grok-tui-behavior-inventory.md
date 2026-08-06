@@ -2,6 +2,14 @@
 
 Status: active (2026-08-06)
 
+## Current source audit (2026-08-06)
+
+`scripts/source-inventory.sh` currently reports 37 Pi agent files, 169 Pi AI
+files, 496 Grok pager files, and 68 Grok pager-render files. The inventory is
+therefore synchronized with the checked-out references. This does not close
+the behavioral acceptance criteria below: the remaining evidence gaps are
+full-cell cast attributes/telemetry and reducer-owned opaque tool-row identity.
+
 This is the source-backed behavior inventory for the Grok pager. The target is
 the Grok presentation of events that Runie can receive from Pi core; Grok-only
 ACP, sessions, providers, MCP, voice, plugins, billing, dashboards, and
