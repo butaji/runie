@@ -121,6 +121,10 @@ publish immutable `watch` snapshots to the pure view.
   the actor snapshot consumed by rendering. The legacy mutex is retained only
   when an app has no renderer actor yet.
 
+- **Typed-frame reset cutover (2026-08-05):** Clearing synthetic welcome rows
+  after YAML prompt editing now also goes through the feed actor, preventing
+  the setup phase from mutating a snapshot that the renderer does not read.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

@@ -1399,7 +1399,7 @@ pub async fn render_visual_buffer(
     // Grok clears the idle welcome surface as soon as editing begins; the
     // synthetic idle events above must not remain in the typed frame.
     if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {
-        app.scrollback.lock().clear();
+        app.apply_scrollback(ScrollbackMsg::Clear).await;
     }
 
     // If scenario has an initial_prompt and no Enter step, submit it.
