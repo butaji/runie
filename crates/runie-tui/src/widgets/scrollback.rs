@@ -15,6 +15,40 @@ use runie_core::types::ThemeKind;
 // right-aligned clock before wrapping the remaining response text.
 const TIMESTAMP_GUTTER_SPACES: usize = 3;
 
+/// Grok's default dense activity-group budget. A zero budget is reserved for
+/// the source-compatible "no truncation" configuration.
+pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
+
+/// Classify consecutive tool members into Grok dense groups. The returned
+/// tuples contain `(member_index, group_size)` for each tool id; non-tool
+/// entries are represented by `None`. This is deliberately pure so the actor
+/// reducer, renderer, and YAML oracle can share the same grouping semantics.
+pub fn dense_tool_group_members(tool_ids: &[Option<&str>]) -> Vec<Option<(usize, usize)>> {
+    let mut result = vec![None; tool_ids.len()];
+    let mut start = 0;
+    while start < tool_ids.len() {
+        if tool_ids[start].is_none() {
+            start += 1;
+            continue;
+        }
+        let mut end = start + 1;
+        while end < tool_ids.len() && tool_ids[end].is_some() {
+            end += 1;
+        }
+        let size = tool_ids[start..end]
+            .iter()
+            .filter(|candidate| candidate.is_some())
+            .count();
+        for (member_index, slot) in result[start..end].iter_mut().enumerate() {
+            if tool_ids[start + member_index].is_some() {
+                *slot = Some((member_index, size));
+            }
+        }
+        start = end;
+    }
+    result
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineKind {
     User,
@@ -2552,5 +2586,26 @@ mod tests {
         scrollback.render(Rect::new(0, 0, 40, 2), &mut buffer);
         assert_eq!(buffer.cell((0, 1)).expect("tool bullet").symbol(), "◆");
         assert_eq!(buffer.cell((2, 1)).expect("tool label").symbol(), "R");
+    }
+
+    #[test]
+    fn dense_tool_groups_preserve_breaks_and_member_positions() {
+        let ids = [Some("a"), Some("b"), Some("c"), None, Some("d"), Some("e")];
+        assert_eq!(
+            dense_tool_group_members(&ids),
+            vec![
+                Some((0, 3)),
+                Some((1, 3)),
+                Some((2, 3)),
+                None,
+                Some((0, 2)),
+                Some((1, 2)),
+            ]
+        );
+    }
+
+    #[test]
+    fn grok_group_budget_is_named_and_source_defaulted() {
+        assert_eq!(GROK_GROUP_MAX_VISIBLE, 10);
     }
 }

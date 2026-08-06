@@ -84,6 +84,13 @@ projection. This is the smallest oracle that distinguishes collapsed activity
 from Grok's `N more` truncation. Until then, the three-worker lifecycle frame
 is a fixture-specific pass, not generalized group parity.
 
+Implementation progress (2026-08-06): `runie-tui` now exposes a pure
+`dense_tool_group_members` policy helper and the named
+`GROK_GROUP_MAX_VISIBLE` source default. Reducer/renderer integration and the
+YAML assertion are intentionally still pending; the helper is covered by
+unit tests and keeps the next change from embedding grouping rules in paint
+code.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without
