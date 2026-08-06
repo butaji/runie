@@ -375,3 +375,16 @@ assertion was weakened.
 In progress. Full-cell dumps, row diagnostics, and phase-locked frame
 selection are implemented. `visual-grok-feed` is now locked to Grok output
 frame 81; its mismatch remains visible as a real parity failure.
+
+### Deterministic clock checkpoint — 2026-08-06
+
+The capture harness now supports an atomic parity clock shared by the prompt
+timestamp and elapsed-time renderer. With the frozen Grok `Hey` final frame,
+`RUNIE_PARITY_CLOCK=1785990000,38` produces an exact 62x32 full-cell match:
+1,984/1,984 cells equal, with zero glyph and zero attribute differences.
+
+The four-size capture matrix is also bounded and reproducible. Fresh live Grok
+captures remain useful for discovering behavior, but are not exact pixel
+oracles because the installed provider independently changes answer text,
+usage, timestamps, and elapsed time. Matrix acceptance therefore requires a
+frozen transcript/usage/clock contract, not merely matching terminal size.
