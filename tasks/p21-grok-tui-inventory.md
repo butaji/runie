@@ -530,3 +530,12 @@ Workflow status formatter audit (2026-08-06): compared against Grok's
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
 and `at 1.2s`, while done/failed retain Grok's `in 1.2s` form; the source
 distinction is no longer lost in a shared prefix helper.
+### Fold transition closure: running generic tools
+
+Grok's `OtherToolCallBlock::next_fold_mode` is state-dependent. While the
+card is running it cycles `Collapsed -> Truncated -> Expanded -> Truncated`;
+after completion it cycles `Collapsed <-> Expanded`. Runie now derives this
+state from the actor-owned `ToolBlock::is_running` projection and applies the
+special cycle only to running generic cards. The reducer test
+`running_generic_tool_uses_grok_truncated_fold_cycle_then_settled_cycle`
+replays both phases without timers or renderer state.

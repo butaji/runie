@@ -792,6 +792,11 @@ impl Scrollback {
             .tool_names
             .get(tool_call_id)
             .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"));
+        let running_generic_card = self.tool_blocks().iter().any(|block| {
+            block.tool_call_id == tool_call_id
+                && block.is_running
+                && block.kind == ToolCardKind::Generic
+        });
         let next = match self
             .tool_modes
             .get(tool_call_id)
@@ -799,20 +804,28 @@ impl Scrollback {
             .unwrap_or(runie_core::types::ToolDisplayMode::Expanded)
         {
             runie_core::types::ToolDisplayMode::Collapsed => {
-                if read_card {
+                if read_card || running_generic_card {
                     runie_core::types::ToolDisplayMode::Truncated
                 } else {
                     runie_core::types::ToolDisplayMode::Expanded
                 }
             }
             // Grok treats Truncated as an intermediate preview, and folding
-            // that preview returns to the title-only state. It must not jump
-            // to the full output view.
+            // that preview either returns to the title-only state (settled)
+            // or advances to the full output view (while running).
             runie_core::types::ToolDisplayMode::Truncated => {
-                runie_core::types::ToolDisplayMode::Collapsed
+                if running_generic_card {
+                    runie_core::types::ToolDisplayMode::Expanded
+                } else {
+                    runie_core::types::ToolDisplayMode::Collapsed
+                }
             }
             runie_core::types::ToolDisplayMode::Expanded => {
-                runie_core::types::ToolDisplayMode::Collapsed
+                if running_generic_card {
+                    runie_core::types::ToolDisplayMode::Truncated
+                } else {
+                    runie_core::types::ToolDisplayMode::Collapsed
+                }
             }
         };
         self.set_tool_mode(tool_call_id, next);
@@ -2672,6 +2685,49 @@ mod tests {
             scrollback.tool_blocks()[0].mode,
             runie_core::types::ToolDisplayMode::Expanded
         );
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Collapsed
+        );
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Expanded
+        );
+    }
+
+    #[test]
+    fn running_generic_tool_uses_grok_truncated_fold_cycle_then_settled_cycle() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::ToolStartRunning {
+            tool_call_id: "call-1".into(),
+            header: "custom_tool running".into(),
+            activity: None,
+        });
+
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Truncated
+        );
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Expanded
+        );
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Truncated
+        );
+
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "call-1".into(),
+            header: "custom_tool done".into(),
+            activity: None,
+            output: Vec::new(),
+        });
         scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
         assert_eq!(
             scrollback.tool_blocks()[0].mode,
