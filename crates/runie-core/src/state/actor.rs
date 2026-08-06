@@ -269,6 +269,9 @@ impl AgentStateActor {
             AgentEvent::AgentEnd { .. } => {
                 state.is_streaming = false;
                 state.streaming_message = None;
+                // Pi's run finalizer clears the runtime-owned pending set at
+                // settlement, including interrupted tool batches.
+                state.pending_tool_calls.clear();
             }
         }
     }
@@ -479,6 +482,17 @@ mod tests {
         assert!(snapshot.streaming_message.is_none());
         assert!(snapshot.pending_tool_calls.is_empty());
         assert!(snapshot.error_message.is_none());
+    }
+
+    #[tokio::test]
+    async fn agent_end_clears_interrupted_pending_tool_calls() {
+        let actor = AgentStateActor::new();
+        actor.add_pending_tool_call("call-1".into()).await;
+        actor
+            .apply_event(&AgentEvent::AgentEnd { messages: vec![] })
+            .await;
+        actor.sync().await;
+        assert!(actor.snapshot().pending_tool_calls.is_empty());
     }
 
     #[tokio::test]

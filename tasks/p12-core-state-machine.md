@@ -71,6 +71,10 @@ Variants: `is_streaming ∈ {true,false}`; `pending_tool_calls ⊆ {active tool 
   actor/event boundary as the rest of the live loop. It reopens streaming,
   clears the previous error and pending-call projection, and lets a new run
   begin from a clean runtime state, matching `Agent.runWithLifecycle`.
+
+- **Settlement cleanup (2026-08-06):** `agent_end` now clears pending tool
+  calls as well as streaming state. This matches Pi's `finishRun()` behavior
+  for aborted or otherwise interrupted tool batches.
 # Latest parity correction (2026-08-06)
 
 The tool registry is now projected into `AgentStateSnapshot.tools` at the
