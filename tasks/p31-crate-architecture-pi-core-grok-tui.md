@@ -405,3 +405,7 @@ day/night and terminal-native theme paths.
 The eighth p35 slice is complete: the optional prompt timestamp is now
 model-owned across timestamp event reduction, snapshot rehydration, live clock
 placement, and wrapped user-row rendering.
+
+The ninth p35 slice is complete: dense-group reveal and centered-entry state
+are now model-owned across selection, viewport placement, reset, snapshot
+rehydration, and activity rendering.

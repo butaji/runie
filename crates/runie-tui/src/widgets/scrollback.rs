@@ -182,8 +182,6 @@ pub struct Scrollback {
     lines: Vec<Line>,
     settled_no_tool_phase: bool,
     live_grok_layout: bool,
-    revealed_dense_groups: HashSet<String>,
-    center_revealed_entry: bool,
     tool_names: HashMap<String, String>,
     /// Monotonic identity for rows created by this reducer adapter. The
     /// identity is persisted on `Line`; no second live-row ownership map is
@@ -212,8 +210,8 @@ impl Scrollback {
         scrollback.navigation.selected_tool_id = snapshot.selected_tool_id;
         scrollback.navigation.selected_entry = snapshot.selected_entry;
         scrollback.navigation.tool_modes = snapshot.tool_modes;
-        scrollback.revealed_dense_groups = snapshot.revealed_dense_groups;
-        scrollback.center_revealed_entry = snapshot.center_revealed_entry;
+        scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
+        scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
         scrollback.next_tool_row_id = scrollback
             .lines
             .iter()
@@ -228,8 +226,6 @@ impl Scrollback {
             lines: Vec::new(),
             settled_no_tool_phase: false,
             live_grok_layout: false,
-            revealed_dense_groups: HashSet::new(),
-            center_revealed_entry: false,
             tool_names: HashMap::new(),
             next_tool_row_id: 0,
             navigation: FeedNavigation::default(),
@@ -595,8 +591,8 @@ impl Scrollback {
         self.next_tool_row_id = 0;
         self.workflow_headers.clear();
         self.workflow_phases.clear();
-        self.revealed_dense_groups.clear();
-        self.center_revealed_entry = false;
+        self.navigation.revealed_dense_groups.clear();
+        self.navigation.center_revealed_entry = false;
         self.navigation.scroll_offset = 0;
         self.navigation.selected_tool_id = None;
         self.navigation.selected_entry = None;
@@ -634,8 +630,8 @@ impl Scrollback {
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),
-            revealed_dense_groups: self.revealed_dense_groups.clone(),
-            center_revealed_entry: self.center_revealed_entry,
+            revealed_dense_groups: self.navigation.revealed_dense_groups.clone(),
+            center_revealed_entry: self.navigation.center_revealed_entry,
         }
     }
 
@@ -899,11 +895,11 @@ impl Scrollback {
                 .lines
                 .iter()
                 .position(|line| line.tool_call_id.as_deref() == Some(tool_id));
-            self.center_revealed_entry = true;
+            self.navigation.center_revealed_entry = true;
             if let Some(anchor) = groups.iter().find_map(|(id, (index, size))| {
                 (*size == *group_size && *index == 0).then_some(id.clone())
             }) {
-                self.revealed_dense_groups.insert(anchor);
+                self.navigation.revealed_dense_groups.insert(anchor);
             }
         }
     }
@@ -1017,11 +1013,11 @@ impl Scrollback {
                     .iter()
                     .position(|(_, text, _)| text.contains(selected_text))
                 {
-                    if self.center_revealed_entry {
+                    if self.navigation.center_revealed_entry {
                         let max_offset = total.saturating_sub(visible);
                         self.navigation.scroll_offset =
                             selected_row.saturating_sub(visible / 2).min(max_offset);
-                        self.center_revealed_entry = false;
+                        self.navigation.center_revealed_entry = false;
                     } else if selected_row < self.navigation.scroll_offset {
                         self.navigation.scroll_offset = selected_row;
                     } else if selected_row >= self.navigation.scroll_offset + visible {
@@ -1387,7 +1383,9 @@ impl Scrollback {
                         let group_revealed = dense_groups
                             .iter()
                             .find(|(_, (index, size))| *index == 0 && *size == *group_size)
-                            .is_some_and(|(anchor, _)| self.revealed_dense_groups.contains(anchor));
+                            .is_some_and(|(anchor, _)| {
+                                self.navigation.revealed_dense_groups.contains(anchor)
+                            });
                         if !group_revealed && hidden > 0 && *member_index < hidden {
                             if emitted_dense_headers.insert(tool_id.to_owned()) {
                                 rows.push((

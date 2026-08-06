@@ -87,3 +87,10 @@ resolution remains in the renderer.
 The optional prompt timestamp now lives in `FeedNavigation`. Timestamp event
 reduction, snapshot rehydration, live clock placement, and wrapped user-row
 rendering consume that model fact; timestamped submission visual tests pass.
+
+### Slice 9 complete: dense-group reveal ownership
+
+`revealed_dense_groups` and `center_revealed_entry` now live in
+`FeedNavigation`. Selection-triggered dense-group reveal, centered viewport
+placement, collapse/reset behavior, snapshot rehydration, and dense activity
+rendering consume those model-owned facts.

@@ -52,16 +52,14 @@ pub struct FeedSnapshot {
     pub reasoning_expanded: bool,
     pub activity_expanded: bool,
     pub prompt_timestamp: Option<String>,
+    pub revealed_dense_groups: HashSet<String>,
+    pub center_revealed_entry: bool,
     pub follow_latest_user: bool,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
-    /// Dense Grok activity groups explicitly revealed by entry selection.
-    pub revealed_dense_groups: HashSet<String>,
-    /// Whether selection has revealed the centered entry in a dense group.
-    pub center_revealed_entry: bool,
 }
 
 /// Renderer-independent navigation and animation facts for a feed.
@@ -78,6 +76,8 @@ pub struct FeedNavigation {
     pub tool_modes: HashMap<String, ToolDisplayMode>,
     pub theme: ThemeKind,
     pub prompt_timestamp: Option<String>,
+    pub revealed_dense_groups: HashSet<String>,
+    pub center_revealed_entry: bool,
 }
 
 impl Default for FeedNavigation {
@@ -94,6 +94,8 @@ impl Default for FeedNavigation {
             tool_modes: HashMap::new(),
             theme: ThemeKind::GrokNight,
             prompt_timestamp: None,
+            revealed_dense_groups: HashSet::new(),
+            center_revealed_entry: false,
         }
     }
 }
