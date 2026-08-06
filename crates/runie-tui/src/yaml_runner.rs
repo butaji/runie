@@ -89,6 +89,9 @@ pub enum EventSpec {
     ToolFold {
         tool_fold: String,
     },
+    ToolSelect {
+        tool_select: String,
+    },
     BackgroundStart {
         background_start: BackgroundStartSpec,
     },
@@ -233,6 +236,7 @@ impl EventSpec {
             Self::Theme { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
+            Self::ToolSelect { .. } => None,
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
             | Self::BackgroundEnd { .. }
@@ -241,6 +245,10 @@ impl EventSpec {
         }
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the declarative control-event projection stays in one table"
+    )]
     fn waiting_event(&self) -> Option<AgentEvent> {
         match self {
             Self::Waiting { waiting } => Some(AgentEvent::Waiting {
@@ -254,6 +262,7 @@ impl EventSpec {
                 mode: tool_mode.mode,
             }),
             Self::ToolFold { .. } => None,
+            Self::ToolSelect { .. } => None,
             Self::BackgroundStart { background_start } => Some(AgentEvent::BackgroundWorkStarted {
                 work_id: background_start.work_id.clone(),
                 description: background_start.description.clone(),
@@ -334,6 +343,7 @@ pub struct StateAssertions {
     /// Ordered output rows for each projected tool block.
     pub tool_outputs: Option<Vec<Vec<String>>>,
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
+    pub selected_tool_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -663,6 +673,7 @@ pub struct ScenarioOutcome {
     pub events: Vec<AgentEvent>,
     pub scrollback: Vec<Line>,
     pub tool_blocks: Vec<ToolBlock>,
+    pub selected_tool_id: Option<String>,
     pub state: runie_core::state::AgentStateSnapshot,
 }
 
@@ -691,6 +702,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         events: events_from_task,
         scrollback: scrollback.lines().to_vec(),
         tool_blocks: scrollback.tool_blocks(),
+        selected_tool_id: scrollback.selected_tool_id().map(str::to_owned),
         state: actor_snapshot.state_snapshot(),
     })
 }
@@ -716,6 +728,9 @@ async fn replay_scenario_events(
             .apply(ScrollbackMsg::ToggleToolMode(tool_call_id))
             .await;
     }
+    for message in declared_tool_selections(scenario) {
+        scrollback_actor.apply(message).await;
+    }
     scrollback_actor.snapshot()
 }
 
@@ -725,6 +740,22 @@ fn declared_tool_folds(scenario: &Scenario) -> Vec<String> {
         .iter()
         .filter_map(|event| match event {
             EventSpec::ToolFold { tool_fold } => Some(tool_fold.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn declared_tool_selections(scenario: &Scenario) -> Vec<ScrollbackMsg> {
+    scenario
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EventSpec::ToolSelect { tool_select } if tool_select == "next" => {
+                Some(ScrollbackMsg::SelectNextTool)
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "previous" => {
+                Some(ScrollbackMsg::SelectPreviousTool)
+            }
             _ => None,
         })
         .collect()
@@ -968,6 +999,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         }
     }
     assert_tool_block_expectations(outcome, expected)?;
+    if let Some(expected) = &expected.selected_tool_id {
+        if outcome.selected_tool_id.as_deref() != Some(expected.as_str()) {
+            return Err(format!(
+                "state selected_tool_id mismatch: expected {expected:?}, got {:?}",
+                outcome.selected_tool_id
+            ));
+        }
+    }
     Ok(())
 }
 
