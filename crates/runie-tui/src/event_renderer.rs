@@ -113,12 +113,12 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
 }
 
 pub struct EventRenderer {
-    pub scrollback: Arc<Mutex<Scrollback>>,
-    pub scrollback_actor: Option<ScrollbackActor>,
-    pub status: Arc<Mutex<StatusBar>>,
+    scrollback: Arc<Mutex<Scrollback>>,
+    scrollback_actor: Option<ScrollbackActor>,
+    status: Arc<Mutex<StatusBar>>,
     /// Actor-owned status projection used by the production event loop while
     /// the compatibility widget projection is being retired.
-    pub status_actor: Option<StatusActor>,
+    status_actor: Option<StatusActor>,
     /// Accumulated text while an assistant message is streaming.
     streaming_buffer: String,
     /// Tool rows are keyed by the core tool-call id because parallel tools may

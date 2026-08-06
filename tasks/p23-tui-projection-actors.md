@@ -269,3 +269,9 @@ because it would conceal ownership and make YAML event assertions impossible.
   mutex storage is confined inside the legacy `EventRenderer` test/replay
   constructor and is not part of application state. The full gate remains
   green.
+
+- **Renderer projection encapsulation (2026-08-06):** Made both actor handles
+  and legacy projection storage private to `EventRenderer`. External callers
+  can no longer replace or mutate either projection behind the event-rendering
+  boundary; production construction remains actor-backed through
+  `with_actors`.
