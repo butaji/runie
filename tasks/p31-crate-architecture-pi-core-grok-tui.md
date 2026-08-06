@@ -151,6 +151,11 @@ well. Its legacy `snapshot()` method reconstructs a `PromptWidget` only for
 compatibility rendering; prompt state, cursor geometry, history, and theme
 remain actor-owned model facts.
 
+The `UiActor` audit is already closed: its watch channel has always carried
+model-owned `UiState` from `runie-tui-model`, so no compatibility widget
+migration is required there. A source scan confirms no TUI actor publishes
+`Scrollback`, `StatusBar`, or `PromptWidget` through a watch channel.
+
 ## Target workspace
 
 ```text
