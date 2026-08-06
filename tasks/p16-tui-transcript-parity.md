@@ -352,6 +352,12 @@ off autoscroll without mutating state in the renderer. Key mapping and reducer
 tests pass; YAML step support is available for post-submit interaction
 scenarios.
 
+Post-submit YAML phase (2026-08-06): `visual.post_steps` now provides a
+deterministic interaction phase after the initial prompt and event stream have
+settled. It supports the scroll chords without sleeps or polling; a follow-up
+fixture still needs a stable expected viewport frame before promotion to the
+visual matrix.
+
 Background lifecycle default audit (2026-08-06): Grok's lifecycle block has a
 collapsed default, but applying that token alone exposes a deeper missing
 piece in Runie's grouped lifecycle height/viewport projection: later completed

@@ -368,6 +368,11 @@ pub struct VisualAssertions {
     /// Each step is a key event (e.g. "hello", "Enter", "Ctrl+C").
     #[serde(default)]
     pub steps: Vec<String>,
+    /// Interaction steps applied after the declared event stream and initial
+    /// prompt have settled. This is the deterministic phase for testing
+    /// viewport behavior on real feed content.
+    #[serde(default)]
+    pub post_steps: Vec<String>,
     /// If true, also spawn the real `runie` binary in a pty and assert
     /// the same `screen_text` / `screen_excludes` substrings there.
     /// Requires `portable-pty` (currently a no-op stub).
@@ -1905,6 +1910,14 @@ pub async fn render_visual_buffer(
         }
     }
 
+    for step in &vis.post_steps {
+        match step.as_str() {
+            "Ctrl+J" => app.scroll_scrollback_by(1).await,
+            "Ctrl+K" => app.scroll_scrollback_by(-1).await,
+            _ => return Err(format!("unsupported post visual step: {step}")),
+        }
+    }
+
     // Let the recorder make progress without introducing timing-dependent
     // sleeps into visual tests.
     for _ in 0..3 {
@@ -1965,6 +1978,13 @@ pub async fn render_visual_buffer(
         match step.as_str() {
             "Up" => app.select_previous_tool().await,
             "Down" => app.select_next_tool().await,
+            _ => {}
+        }
+    }
+    for step in &vis.post_steps {
+        match step.as_str() {
+            "Ctrl+J" => app.scroll_scrollback_by(1).await,
+            "Ctrl+K" => app.scroll_scrollback_by(-1).await,
             _ => {}
         }
     }
