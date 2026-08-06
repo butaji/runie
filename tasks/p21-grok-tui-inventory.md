@@ -530,6 +530,13 @@ Workflow status formatter audit (2026-08-06): compared against Grok's
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
 and `at 1.2s`, while done/failed retain Grok's `in 1.2s` form; the source
 distinction is no longer lost in a shared prefix helper.
+
+Read-card truncation parity (2026-08-06): Grok's `ReadToolCallBlock` keeps
+the first five and last three wrapped content lines with a standalone `…`
+between them in `Truncated` mode. Runie's typed read projection now preserves
+that same preview shape; other tool families retain their separate truncation
+rules. A pure renderer test pins the event-owned rows without timing or
+renderer-side state.
 ### Fold transition closure: running generic tools
 
 Grok's `OtherToolCallBlock::next_fold_mode` is state-dependent. While the

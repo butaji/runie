@@ -1243,6 +1243,21 @@ impl Scrollback {
         let mut rows = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
+        let mut read_output_totals: HashMap<String, usize> = HashMap::new();
+        let mut read_output_seen: HashMap<String, usize> = HashMap::new();
+        for line in &self.lines {
+            if matches!(line.kind, LineKind::ToolOutput | LineKind::ToolResult) {
+                if let Some(id) = line.tool_call_id.as_ref() {
+                    if self
+                        .tool_names
+                        .get(id)
+                        .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"))
+                    {
+                        *read_output_totals.entry(id.clone()).or_default() += 1;
+                    }
+                }
+            }
+        }
         let dense_groups = self.dense_tool_groups();
         let mut emitted_dense_headers = HashSet::new();
         let mut user_vpad_emitted = false;
@@ -1331,12 +1346,34 @@ impl Scrollback {
             ) && matches!(
                 line.kind,
                 LineKind::ToolOutput | LineKind::ToolResult | LineKind::ToolError
-            ) && line
-                .tool_call_id
-                .as_ref()
-                .is_some_and(|id| !truncated_output.insert(id.clone()))
-            {
-                continue;
+            ) {
+                let Some(tool_id) = line.tool_call_id.as_ref() else {
+                    continue;
+                };
+                if self
+                    .tool_names
+                    .get(tool_id)
+                    .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"))
+                {
+                    let seen = read_output_seen.entry(tool_id.clone()).or_default();
+                    let total = read_output_totals.get(tool_id).copied().unwrap_or_default();
+                    let position = *seen;
+                    *seen += 1;
+                    const READ_PREVIEW_LINES: usize = 5;
+                    const READ_PREVIEW_TAIL_LINES: usize = 3;
+                    if total > READ_PREVIEW_LINES + READ_PREVIEW_TAIL_LINES {
+                        if position == READ_PREVIEW_LINES {
+                            rows.push((LineKind::ToolOutput, "…".into(), false));
+                        }
+                        if position >= READ_PREVIEW_LINES
+                            && position < total.saturating_sub(READ_PREVIEW_TAIL_LINES)
+                        {
+                            continue;
+                        }
+                    }
+                } else if !truncated_output.insert(tool_id.clone()) {
+                    continue;
+                }
             }
             if !self.activity_expanded
                 && matches!(
@@ -2742,6 +2779,39 @@ mod tests {
             scrollback.tool_blocks()[0].mode,
             runie_core::types::ToolDisplayMode::Expanded
         );
+    }
+
+    #[test]
+    fn read_truncated_preview_keeps_groks_first_five_ellipsis_and_last_three() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName("read-1".into(), "read".into()));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "read-1".into(),
+            header: "Read src/lib.rs".into(),
+            activity: None,
+        });
+        for index in 1..=10 {
+            scrollback.append(
+                Line::new(LineKind::ToolOutput, format!("line {index}")).for_tool("read-1"),
+            );
+        }
+        scrollback.apply(ScrollbackMsg::SetToolMode(
+            "read-1".into(),
+            runie_core::types::ToolDisplayMode::Truncated,
+        ));
+
+        let rows = scrollback
+            .physical_rows(80, false, 30)
+            .into_iter()
+            .map(|(_, text, _)| text)
+            .collect::<Vec<_>>();
+        assert!(rows.iter().any(|row| row.contains("line 1")));
+        assert!(rows.iter().any(|row| row.contains("line 5")));
+        assert!(rows.iter().any(|row| row == "…"));
+        assert!(rows.iter().any(|row| row.contains("line 8")));
+        assert!(rows.iter().any(|row| row.contains("line 10")));
+        assert!(!rows.iter().any(|row| row.contains("line 6")));
+        assert!(!rows.iter().any(|row| row.contains("line 7")));
     }
 
     #[test]
