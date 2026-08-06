@@ -45,6 +45,9 @@ Grok's default tool-fold policy is likewise model-owned through
 ordinary and specialized cards start `Collapsed`. Both live and replay event
 reducers consume this single pure policy.
 
+`StatusActor` now imports the model projection directly; only the legacy
+`EventRenderer` compatibility façade retains the re-export.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.

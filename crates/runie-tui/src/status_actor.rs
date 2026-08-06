@@ -6,8 +6,8 @@ use runie_core::types::AgentEvent;
 use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::event_renderer::status_messages_for_event;
 use crate::widgets::{StatusBar, StatusMsg, StatusSnapshot};
+use runie_tui_model::status_messages_for_event;
 
 enum Command {
     Apply(StatusMsg, oneshot::Sender<()>),
