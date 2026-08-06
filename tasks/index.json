@@ -153,6 +153,12 @@
       "file": "p25-parity-instrument-audit.md",
       "status": "in_progress",
       "title": "Verification: independent parity instrument and frame-selection audit"
+    },
+    {
+      "id": "p26",
+      "file": "p26-tui-view-dsl.md",
+      "status": "in_progress",
+      "title": "Architecture: declarative TUI view tree separated from terminal rendering"
     }
   ]
 }

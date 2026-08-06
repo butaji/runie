@@ -1,5 +1,6 @@
 //! 3-region chat layout: scrollback (top, grows) + prompt (middle, fixed) + status (bottom, 1 row).
 
+use crate::view::{chat_view, Slot};
 use ratatui::layout::Rect;
 
 pub const STATUS_HEIGHT: u16 = 1;
@@ -37,6 +38,11 @@ pub struct ChatLayout {
     pub footer_badge: Rect,
 }
 
+/// The declarative surface consumed by the terminal layout adapter.
+pub fn chat_elements() -> crate::view::Element {
+    chat_view()
+}
+
 pub fn chat_layout(area: Rect) -> ChatLayout {
     chat_layout_with_prompt_height(area, PROMPT_HEIGHT)
 }
@@ -46,6 +52,16 @@ pub fn chat_layout(area: Rect) -> ChatLayout {
     reason = "the layout reducer keeps all dependent regions visible together"
 )]
 pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLayout {
+    debug_assert_eq!(
+        chat_elements().slots().collect::<Vec<_>>(),
+        vec![
+            Slot::Header,
+            Slot::Scrollback,
+            Slot::Prompt,
+            Slot::Status,
+            Slot::FooterBadge,
+        ]
+    );
     // Grok reserves one terminal row above the chat and two columns on each
     // side for its full-mode chrome. The transcript rail itself is inside the
     // scrollback content projection.

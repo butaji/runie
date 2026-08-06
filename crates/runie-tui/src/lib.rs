@@ -14,6 +14,7 @@ pub mod layout;
 pub mod scrollback_actor;
 pub mod status_actor;
 pub mod terminal_color;
+pub mod view;
 pub mod widgets;
 pub mod yaml_runner;
 
