@@ -49,8 +49,13 @@ runner while individual tool rows continue to render `✗`.
   now models Grok's full-mode user-block vertical padding at widths `>= 70`,
   uses the compact assistant rail below that breakpoint, and suppresses the
   full-mode summary separator in narrow viewports. The strict suite confirms
-  the 80×24 feed advances past its prior prompt-row mismatch; compact-tail
-  height still needs reconciliation in `visual-scroll.yaml`.
+  the 80×24 feed advances past its prior prompt-row mismatch.
+
+- **Compact autoscroll replay (2026-08-05):** Fixed the responsive viewport
+  projection so actor-owned autoscroll follows newly appended wrapped rows,
+  including the long-overflow lead used by the 40×12 `visual-scroll.yaml`
+  scenario. The full YAML fixture gate now passes; the lead is expressed as
+  named layout tokens rather than a render magic number.
 
 ## Grok reference
 

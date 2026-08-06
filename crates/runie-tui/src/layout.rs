@@ -15,6 +15,10 @@ pub const OUTER_HPAD_RIGHT: u16 = 2;
 pub const SCROLLBACK_ACCENT_WIDTH: u16 = 1;
 pub const SCROLLBACK_BLOCK_PAD_LEFT: u16 = 2;
 pub const SCROLLBACK_BLOCK_PAD_RIGHT: u16 = 1;
+/// Compact Grok scrollback keeps a small lead above the absolute tail.
+pub const COMPACT_SCROLL_LEAD_ROWS: usize = 2;
+pub const COMPACT_SCROLL_OVERFLOW_LEAD_ROWS: usize = 8;
+pub const COMPACT_SCROLL_OVERFLOW_THRESHOLD: usize = 8;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChatLayout {

@@ -343,6 +343,10 @@ impl Scrollback {
         self.lines.get_mut(index)
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "render keeps viewport selection and cell projection together"
+    )]
     pub fn render(&mut self, area: Rect, buf: &mut Buffer) {
         // Wrap-aware: each Line is one logical row that may wrap to multiple
         // physical rows. We approximate by giving each line 1 "slot" plus
@@ -350,13 +354,22 @@ impl Scrollback {
         let physical_rows = self.physical_rows(area.width as usize);
         let total = physical_rows.len();
         let visible = area.height as usize;
+        let compact_scroll_lead =
+            if total > visible + crate::layout::COMPACT_SCROLL_OVERFLOW_THRESHOLD {
+                crate::layout::COMPACT_SCROLL_OVERFLOW_LEAD_ROWS
+            } else {
+                crate::layout::COMPACT_SCROLL_LEAD_ROWS
+            };
         // Clamp scroll_offset so the tail is visible.
         if total > visible {
             let max_offset = total - visible;
-            if self.scroll_offset > max_offset {
-                self.scroll_offset = max_offset;
-            }
-            if self.scroll_offset == 0 && self.autoscroll {
+            if self.autoscroll {
+                self.scroll_offset = if area.width < 50 {
+                    max_offset.saturating_sub(compact_scroll_lead)
+                } else {
+                    max_offset
+                };
+            } else if self.scroll_offset > max_offset {
                 self.scroll_offset = max_offset;
             }
         } else {
