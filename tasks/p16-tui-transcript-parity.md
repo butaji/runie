@@ -345,3 +345,12 @@ and specialized block rendering remain open.
 The YAML runner now asserts the projection's block/member counts for structured,
 error, and execute tool scenarios, making this intermediate block model part of
 the event-sequence-to-state verification surface.
+
+Source audit (2026-08-06): Grok assigns default fold modes per concrete tool
+block (`Read`/`ListDir`/`Edit`/search/fetch → `Collapsed`, execute/bash →
+`Truncated` or `Collapsed`). Runie currently receives only generic tool-start
+headers and explicit mode events, so its compatibility fallback remains
+`Expanded`. A direct reducer default change breaks the existing background
+activity viewport contract; closing this gap requires carrying the typed tool
+variant/default mode through the event DSL and validating the full activity
+lifecycle in YAML.
