@@ -29,6 +29,13 @@ call's cancellation token from an already-aborted actor watch and performs the
 same post-hook check. The focused executor regression verifies that the hook
 observes the cancelled signal and the tool is never reached.
 
+**Abort-during-hook parity (2026-08-06):** The actor watch is also reduced
+while an asynchronous `before_tool_call` hook is pending. A transition to
+aborted cancels the hook's per-call token, lets the hook observe cancellation,
+and then settles with Pi's `Operation aborted` result before tool execution.
+The regression triggers the watch from inside the hook and uses a bounded
+future rather than a sleep.
+
 The current executor still emits a synthetic `tool_execution_update` with
 `{"status":"running"}` before dispatch. Pi emits updates only from a tool's
 `onUpdate` callback. Removing this compatibility event requires regenerating

@@ -306,13 +306,18 @@ async fn dispatch_prepared(
     }
 
     if let Some(ref hook) = ctx.hooks.before_tool_call {
-        let decision = hook(BeforeToolCallContext {
-            assistant_message: ctx.assistant_message.clone(),
-            tool_call: call.clone(),
-            args: call.arguments.clone(),
-            context: ctx.context.clone(),
-            signal: signal.clone(),
-        })
+        let decision = run_before_tool_hook(
+            hook,
+            BeforeToolCallContext {
+                assistant_message: ctx.assistant_message.clone(),
+                tool_call: call.clone(),
+                args: call.arguments.clone(),
+                context: ctx.context.clone(),
+                signal: signal.clone(),
+            },
+            signal.clone(),
+            ctx.abort.clone(),
+        )
         .await;
         if signal.is_cancelled() || run_abort_requested(ctx) {
             signal.cancel();
@@ -337,6 +342,31 @@ fn run_abort_requested(ctx: &ToolExecContext) -> bool {
     ctx.abort
         .as_ref()
         .is_some_and(|receiver| *receiver.borrow())
+}
+
+async fn run_before_tool_hook(
+    hook: &BeforeToolCallHook,
+    input: BeforeToolCallContext,
+    signal: tokio_util::sync::CancellationToken,
+    mut abort: Option<tokio::sync::watch::Receiver<bool>>,
+) -> BeforeToolCallResult {
+    let hook_future = hook(input);
+    tokio::pin!(hook_future);
+    loop {
+        let Some(receiver) = abort.as_mut() else {
+            return hook_future.await;
+        };
+        tokio::select! {
+            decision = &mut hook_future => return decision,
+            changed = receiver.changed() => {
+                if changed.is_err() {
+                    abort = None;
+                } else if *receiver.borrow() {
+                    signal.cancel();
+                }
+            }
+        }
+    }
 }
 
 async fn execute_tool(
@@ -593,6 +623,51 @@ mod tests {
         let error = dispatch_one(&call, &ctx).await.expect_err("aborted call");
         assert_eq!(error, "Operation aborted");
         assert!(hook_saw_aborted.load(Ordering::Acquire));
+        assert!(!executed.load(Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    async fn abort_during_before_tool_hook_cancels_hook_signal() {
+        let executed = Arc::new(AtomicBool::new(false));
+        let mut registry = ToolRegistry::new();
+        registry.register(Arc::new(AbortAwareTool {
+            executed: executed.clone(),
+        }));
+        let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
+        let ctx = ToolExecContext {
+            assistant_message: AssistantMessage::default(),
+            context: crate::types::AgentContext::default(),
+            abort: Some(abort_rx),
+            registry: Arc::new(registry),
+            hooks: ToolExecHooks {
+                before_tool_call: Some(Arc::new(move |input| {
+                    let abort_tx = abort_tx.clone();
+                    Box::pin(async move {
+                        abort_tx.send(true).expect("abort receiver is live");
+                        input.signal.cancelled().await;
+                        BeforeToolCallResult::default()
+                    })
+                })),
+                ..ToolExecHooks::default()
+            },
+            bus: None,
+            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+        };
+        let call = ToolCall {
+            id: "abort-hook-1".into(),
+            name: "abort_aware".into(),
+            arguments: serde_json::json!({}),
+            thought_signature: None,
+        };
+
+        let error = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            dispatch_one(&call, &ctx),
+        )
+        .await
+        .expect("abort should settle the hook")
+        .expect_err("aborted call");
+        assert_eq!(error, "Operation aborted");
         assert!(!executed.load(Ordering::Acquire));
     }
 
