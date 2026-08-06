@@ -21,6 +21,25 @@ struct Cell {
 type Replay = ((u16, u16), Vec<Cell>, Vec<String>);
 type FrameReplay = ((u16, u16), Vec<Vec<Cell>>);
 
+/// Count frames that occur in the same order in both captures. This is a
+/// diagnostic only: strict parity still requires equal frame counts and
+/// ordinal cell equality. The ordered intersection separates capture cadence
+/// differences from frames that have no visual counterpart at all.
+fn ordered_common_frame_count(left: &[Vec<Cell>], right: &[Vec<Cell>]) -> usize {
+    let mut right_index = 0;
+    let mut common = 0;
+    for left_frame in left {
+        if let Some(offset) = right[right_index..]
+            .iter()
+            .position(|right_frame| right_frame == left_frame)
+        {
+            right_index += offset + 1;
+            common += 1;
+        }
+    }
+    common
+}
+
 fn strip_private_modes(output: &str) -> String {
     let bytes = output.as_bytes();
     let mut result = String::with_capacity(output.len());
@@ -262,11 +281,15 @@ fn main() -> Result<()> {
         let exact = left_geometry == right_geometry
             && left_frames.len() == right_frames.len()
             && first_difference.is_none();
+        let ordered_common_frames = ordered_common_frame_count(&left_frames, &right_frames);
         println!(
-            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"first_difference\":{},\"first_cell_difference\":{},\"exact\":{}}}",
+            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"ordered_common_frames\":{},\"left_unmatched_frames\":{},\"right_unmatched_frames\":{},\"first_difference\":{},\"first_cell_difference\":{},\"exact\":{}}}",
             left_frames.len(),
             right_frames.len(),
             compared,
+            ordered_common_frames,
+            left_frames.len().saturating_sub(ordered_common_frames),
+            right_frames.len().saturating_sub(ordered_common_frames),
             first_difference.map_or_else(
                 || "null".into(),
                 |frame| (frame + 1).to_string(),
@@ -414,7 +437,7 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::replay_frames;
+    use super::{ordered_common_frame_count, replay_frames, Cell};
     use std::path::{Path, PathBuf};
 
     fn cast(name: &str) -> PathBuf {
@@ -422,6 +445,26 @@ mod tests {
             .join("../..")
             .join("artifacts")
             .join(name)
+    }
+
+    fn frame(symbol: &str) -> Vec<Cell> {
+        vec![Cell {
+            symbol: symbol.into(),
+            width: 1,
+            fg: "default".into(),
+            bg: "default".into(),
+            bold: false,
+            italic: false,
+            underline: false,
+            inverse: false,
+        }]
+    }
+
+    #[test]
+    fn ordered_common_frames_distinguish_cadence_from_missing_visual_states() {
+        let left = vec![frame("a"), frame("b"), frame("c")];
+        let right = vec![frame("a"), frame("a"), frame("b"), frame("c")];
+        assert_eq!(ordered_common_frame_count(&left, &right), 3);
     }
 
     #[test]

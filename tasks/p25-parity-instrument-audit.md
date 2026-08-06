@@ -500,3 +500,10 @@ attributes. This keeps the strict equality decision unchanged while making
 the next Grok capture actionable: a mismatch can be assigned to terminal
 capability, glyph geometry, styling, or an unmodeled attribute without
 inspecting raw JSON manually.
+## Ordered frame intersection diagnostic (2026-08-06)
+
+`cast_compare --frames` now reports the ordered common-frame count and the
+unmatched-frame counts in addition to its unchanged strict ordinal result.
+This identifies whether two captures share the same visible states at a
+different cadence or contain genuinely missing states. It is diagnostic only:
+frame-count equality and exact cell equality are still required for success.
