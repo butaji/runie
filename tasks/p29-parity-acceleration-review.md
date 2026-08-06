@@ -150,3 +150,11 @@ without a deterministic settle/viewport boundary would encode a flaky
 capture. The missing datum is the exact Grok post-tool reveal/follow phase,
 which must be represented as an explicit YAML event before tightening this
 oracle.
+## Follow-up decision: settle must remain event-driven (2026-08-06)
+
+The YAML runner currently has no generic `settle` event; adding one that merely
+awaits scheduler turns would violate the no-sleep, event-based test contract.
+The next implementation should model Grok's post-tool viewport reveal as an
+owned reducer event (with an explicit target/offset), then assert the resulting
+snapshot and screen. Until that event contract is source-backed, the existing
+tool-update fixture is intentionally not tightened.
