@@ -335,6 +335,11 @@ Mode-specific fold affordance (2026-08-06): selected expanded tool headers now
 render Grok's downward `⌄`, while selected collapsed headers render the right
 `›` chevron. Both projections have focused cell-level render coverage.
 
+Selection border token (2026-08-06): the selected non-tool entry surface now
+also paints Grok's theme-projected `border.selection` rail at both row edges.
+The GrokNight and GrokDay border colors live in Opaline themes; the widget does
+not contain raw selection RGB values.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running

@@ -24,6 +24,7 @@ yellow = "#e0af68"
 green = "#9ece6a"
 red = "#f7768e"
 selection = "#1c1c1c"
+selection_border = "#3c3c41"
 
 [tokens]
 "text.primary" = "fg"
@@ -37,6 +38,7 @@ warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "bg"
 "bg.selection" = "selection"
+"border.selection" = "selection_border"
 
 [styles]
 keyword = { fg = "accent.primary", bold = true }
@@ -59,6 +61,7 @@ yellow = "#a27612"
 green = "#378e23"
 red = "#cd3048"
 selection = "#e4e4e4"
+selection_border = "#b9b9be"
 
 [tokens]
 "text.primary" = "fg"
@@ -72,6 +75,7 @@ warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "bg"
 "bg.selection" = "selection"
+"border.selection" = "selection_border"
 
 [styles]
 keyword = { fg = "accent.primary", bold = true }
@@ -128,6 +132,10 @@ pub fn warning_style_for(theme: ThemeKind) -> Style {
 
 pub fn selected_style_for(theme: ThemeKind) -> Style {
     Style::default().bg(token_color(theme, "bg.selection"))
+}
+
+pub fn selected_border_style_for(theme: ThemeKind) -> Style {
+    Style::default().fg(token_color(theme, "border.selection"))
 }
 
 pub fn base_style() -> Style {

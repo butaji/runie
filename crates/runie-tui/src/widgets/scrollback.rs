@@ -831,6 +831,18 @@ impl Scrollback {
                         cell.set_style(cell.style().patch(selected_style));
                     }
                 }
+                if selected_non_tool_text.is_some_and(|value| text.contains(value)) {
+                    let border_style = appearance::selected_border_style_for(self.theme);
+                    if let Some(cell) = buf.cell_mut((area.x, area.y + row as u16)) {
+                        cell.set_symbol("│").set_style(border_style);
+                    }
+                    if area.width > 1 {
+                        let right = area.x + area.width - 1;
+                        if let Some(cell) = buf.cell_mut((right, area.y + row as u16)) {
+                            cell.set_symbol("│").set_style(border_style);
+                        }
+                    }
+                }
             }
         }
     }
@@ -2032,6 +2044,7 @@ mod tests {
             buffer.cell((39, 0)).expect("selected row").bg,
             ratatui::style::Color::Rgb(28, 28, 28)
         );
+        assert_eq!(buffer.cell((0, 0)).expect("selection border").symbol(), "│");
     }
 
     #[test]
