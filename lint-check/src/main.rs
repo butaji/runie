@@ -1,11 +1,13 @@
 //! Project linter.
 //!
-//! Enforces two rules across `crates/runie-core/src/**.rs`:
+//! Enforces source and dependency-boundary rules across the workspace:
 //!
 //! 1. **Magic numbers >= 1000** must be replaced with named constants.
 //! 2. **Orphan `tokio::spawn`** calls must be owned by an actor (handle stored in
 //!    `JoinSet` or actor mailbox). For now we just flag each `tokio::spawn` site
 //!    so the implementer adds a justifying comment with an owner.
+//! 3. **Layer violations** are rejected: `runie-core` cannot depend on TUI or
+//!    terminal crates, and `runie-tui-model` cannot depend on terminal crates.
 //!
 //! Run with: `cargo run -p lint-check`.
 
@@ -30,12 +32,50 @@ fn main() -> ExitCode {
 }
 
 fn scan_project() -> Vec<String> {
-    WalkDir::new(SCAN_ROOT)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter_map(|entry| scan_entry(entry.path()))
-        .flatten()
-        .collect()
+    let mut findings = scan_dependency_boundaries();
+    findings.extend(
+        WalkDir::new(SCAN_ROOT)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter_map(|entry| scan_entry(entry.path()))
+            .flatten(),
+    );
+    findings
+}
+
+fn scan_dependency_boundaries() -> Vec<String> {
+    [
+        (
+            "crates/runie-core/Cargo.toml",
+            &["runie-tui", "ratatui", "crossterm", "vt100"][..],
+        ),
+        (
+            "crates/runie-tui-model/Cargo.toml",
+            &["ratatui", "crossterm", "vt100"][..],
+        ),
+    ]
+    .into_iter()
+    .flat_map(|(manifest, forbidden)| {
+        let Ok(contents) = fs::read_to_string(manifest) else {
+            return vec![format!("{manifest}: manifest is missing")];
+        };
+        forbidden
+            .iter()
+            .filter(|dependency| dependency_declared(&contents, dependency))
+            .map(|dependency| {
+                format!("{manifest}: forbidden dependency `{dependency}` violates layer boundary")
+            })
+            .collect()
+    })
+    .collect()
+}
+
+fn dependency_declared(manifest: &str, dependency: &str) -> bool {
+    manifest.lines().any(|line| {
+        let line = line.split('#').next().unwrap_or_default().trim();
+        line.strip_prefix(dependency)
+            .is_some_and(|rest| rest.starts_with(' ') || rest.starts_with('='))
+    })
 }
 
 fn scan_entry(path: &Path) -> Option<Vec<String>> {
@@ -133,3 +173,23 @@ fn line_contains_joinset_above(src: &str, idx: usize) -> bool {
 
 #[allow(dead_code)]
 fn _path_marker(_p: &Path) {}
+
+#[cfg(test)]
+mod tests {
+    use super::dependency_declared;
+
+    #[test]
+    fn dependency_boundary_parser_ignores_comments_and_similar_names() {
+        let manifest = "# ratatui = \"0.29\"\nratatui-extra = \"1\"\n";
+        assert!(!dependency_declared(manifest, "ratatui"));
+    }
+
+    #[test]
+    fn dependency_boundary_parser_accepts_table_and_version_forms() {
+        assert!(dependency_declared("ratatui = \"0.29\"", "ratatui"));
+        assert!(dependency_declared(
+            "ratatui = { version = \"0.29\" }",
+            "ratatui"
+        ));
+    }
+}
