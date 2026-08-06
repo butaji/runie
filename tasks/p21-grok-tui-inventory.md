@@ -173,6 +173,13 @@ search/web/background cards), followed by theme palette propagation and the
 remaining YAML state/effect matrix. Strict feed, waiting, collapsed, mixed, and
 truncated fixed-grid replays are green.
 
+Source audit: Grok's `UserMessageBlock` is the only standard conversation block
+that enables prompt vpad; system, session-event, thinking, background, and all
+specialized tool blocks explicitly disable it. The renderer also suppresses
+vpad when the available content area is smaller than three rows. Runie's
+`Line::has_vpad` metadata and terminal-height-aware renderer now preserve that
+distinction, with unit coverage for full, compact, and undersized panes.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining
