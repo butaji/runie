@@ -59,6 +59,12 @@ unverified full-screen frame or core event family remains open.
   default, so the four-geometry RGB fixtures are unchanged.
 - Reproducible command (2026-08-06): `just tui-native` exposes that live mode
   for tmux/asciinema captures and manual Grok-vs-Runie comparison.
+- Fresh native comparison (2026-08-06): paired 80×24 casts produced
+  `different_attributes: 0`; the remaining 351 differences were glyph-only
+  and concentrated in settled transcript rows. The Grok cast selected its
+  post-exit blank frame while Runie retained the settled frame, so the next
+  instrument step is marker-locked final-frame selection (`Worked for` plus
+  the settled footer), not another color change.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.
