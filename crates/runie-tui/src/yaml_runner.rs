@@ -1834,8 +1834,8 @@ fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             .iter()
             .map(|event| {
                 runie_core::PiAgentEvent::try_from(event.clone())
-                    .map(|event| pi_event_kind(&event))
                     .map_err(|event| format!("non-Pi event: {}", event_kind(&event)))
+                    .and_then(|event| pi_event_wire_kind(&event))
             })
             .collect::<Result<Vec<_>, _>>()?;
         let expected = expected.iter().map(String::as_str).collect::<Vec<_>>();
@@ -1885,20 +1885,13 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
     }
 }
 
-fn pi_event_kind(event: &runie_core::PiAgentEvent) -> &'static str {
-    use runie_core::PiAgentEvent::*;
-    match event {
-        AgentStart => "agent_start",
-        AgentEnd { .. } => "agent_end",
-        TurnStart => "turn_start",
-        TurnEnd { .. } => "turn_end",
-        MessageStart { .. } => "message_start",
-        MessageUpdate { .. } => "message_update",
-        MessageEnd { .. } => "message_end",
-        ToolExecutionStart { .. } => "tool_execution_start",
-        ToolExecutionUpdate { .. } => "tool_execution_update",
-        ToolExecutionEnd { .. } => "tool_execution_end",
-    }
+fn pi_event_wire_kind(event: &runie_core::PiAgentEvent) -> Result<String, String> {
+    serde_json::to_value(event)
+        .map_err(|error| format!("Pi event serialization failed: {error}"))?
+        .get("type")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .ok_or_else(|| "Pi event serialization omitted its type tag".to_owned())
 }
 
 fn assert_transcript_expectations(

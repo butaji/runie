@@ -209,3 +209,6 @@ The runner converts every emitted event through `PiAgentEvent::try_from` and
 fails if an application/TUI event crosses the Pi fixture boundary. The
 `visual-hey` fixture exercises the complete user/assistant lifecycle without
 requiring Rust recompilation when the YAML sequence changes.
+Pi event tags are read from the generated serde representation rather than a
+second hand-maintained variant matcher, keeping the YAML oracle coupled to the
+macro-generated wire contract.
