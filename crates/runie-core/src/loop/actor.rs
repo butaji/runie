@@ -186,11 +186,10 @@ impl LoopActor {
                 .replace_messages(context.messages.clone())
                 .await;
         }
-        let tools = if context.tools.is_empty() {
-            self.inner.deps.tool_executor.tools()
-        } else {
-            context.tools.clone()
-        };
+        let tools = context
+            .tools
+            .clone()
+            .unwrap_or_else(|| self.inner.deps.tool_executor.tools());
         self.inner.deps.state.set_tools(tools).await;
     }
 

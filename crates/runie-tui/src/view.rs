@@ -297,6 +297,15 @@ pub struct HeaderViewProps {
     pub theme: ThemeKind,
 }
 
+/// Complete renderer-neutral declarative document for one chat frame.
+/// `root` answers what is present; `components` answers ownership. Geometry,
+/// terminal capabilities, styles, and painting are intentionally absent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ViewDocument {
+    pub root: Element,
+    pub components: &'static [ComponentSpec],
+}
+
 pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
     ComponentSpec {
         kind: ComponentKind::Header,
@@ -415,6 +424,13 @@ pub fn chat_view() -> Element {
     chat_view_with_props(ChatViewProps::default())
 }
 
+pub fn chat_document(props: ChatViewProps) -> ViewDocument {
+    ViewDocument {
+        root: chat_view_with_props(props),
+        components: &CHAT_COMPONENTS,
+    }
+}
+
 pub fn chat_view_with_props(props: ChatViewProps) -> Element {
     let mut children = vec![
         view!(slot Slot::Header),
@@ -491,6 +507,23 @@ mod tests {
                 Slot::Status,
                 Slot::FooterBadge,
             ]
+        );
+    }
+
+    #[test]
+    fn chat_document_keeps_composition_and_ownership_separate() {
+        let document = super::chat_document(ChatViewProps {
+            command_palette_visible: true,
+            ..ChatViewProps::default()
+        });
+        assert_eq!(document.components.len(), super::CHAT_COMPONENTS.len());
+        assert!(document
+            .root
+            .slots()
+            .any(|slot| slot == Slot::CommandPaletteOverlay));
+        assert_eq!(
+            component(Slot::CommandPaletteOverlay).owner,
+            StateOwner::UiActor
         );
     }
 

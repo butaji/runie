@@ -100,6 +100,26 @@ Runie has exactly two product layers:
 The terminal renderer is never a source of truth. It consumes immutable view
 models derived from actor snapshots.
 
+## Declarative TUI composition contract (2026-08-06)
+
+The TUI is organized as a browser-like pipeline:
+
+1. **Facts** — actors own state and publish events; `runie-tui-model` exposes
+   immutable snapshots.
+2. **What** — `view::ViewDocument` and `Element` describe slots, overlays,
+   component identity, and state ownership. They contain no terminal
+   coordinates, Ratatui styles, or I/O.
+3. **Measure/layout** — `layout.rs` resolves responsive regions from the
+   declarative tree and viewport; it owns terminal geometry only.
+4. **Resolve/paint** — appearance/theme and widgets turn semantic paint
+   intents plus snapshots into terminal cells. Ratatui buffers, colors,
+   modifiers, cursor placement, and VT capabilities live here.
+5. **Runtime effects** — the event loop owns input, terminal writes, task
+   handles, and core event publication; it never becomes a second state store.
+
+`ViewDocument` is the explicit composition boundary: tests can assert the
+“what” tree and ownership independently from “how” a backend paints it.
+
 ## Target workspace
 
 ```text

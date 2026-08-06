@@ -145,7 +145,7 @@ fn initial_context_override(
 ) -> Option<AgentContext> {
     let has_context = !context.messages.is_empty()
         || !context.system_prompt.is_empty()
-        || !context.tools.is_empty();
+        || context.tools.is_some();
     if !has_context {
         return None;
     }
@@ -253,7 +253,7 @@ async fn run_assistant_turn(
     let base_context = AgentContext {
         system_prompt: snap.system_prompt,
         messages: snap.messages,
-        tools: snap.tools,
+        tools: Some(snap.tools),
     };
     let context = override_ctx.unwrap_or(base_context);
     let effective = match &deps.transform_context {
@@ -282,7 +282,7 @@ async fn run_assistant_turn(
     let hook_context = AgentContext {
         system_prompt: post_turn.system_prompt,
         messages: merge_context_messages(&context.messages, &post_turn.messages),
-        tools: post_turn.tools,
+        tools: Some(post_turn.tools),
     };
     Some((assistant, hook_context, results, more))
 }
@@ -475,7 +475,7 @@ async fn execute_tool_calls(
     let context = AgentContext {
         system_prompt: snapshot.system_prompt,
         messages: snapshot.messages,
-        tools: snapshot.tools,
+        tools: Some(snapshot.tools),
     };
     match deps
         .tool_executor

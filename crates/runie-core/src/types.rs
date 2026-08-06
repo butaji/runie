@@ -585,7 +585,9 @@ pub struct ThinkingBudgets {
 pub struct AgentContext {
     pub system_prompt: String,
     pub messages: Vec<AgentMessage>,
-    pub tools: Vec<std::sync::Arc<dyn AgentTool>>,
+    /// `None` matches Pi's omitted optional tools field; `Some(empty)` means
+    /// the caller explicitly supplied no tools.
+    pub tools: Option<Vec<std::sync::Arc<dyn AgentTool>>>,
 }
 
 /// Mutable agent state. Read-only fields are computed from the mutable ones
@@ -963,6 +965,18 @@ pub struct AfterToolCallContext {
 )]
 mod tests {
     use super::*;
+
+    #[test]
+    fn agent_context_distinguishes_omitted_and_explicit_empty_tools() {
+        assert!(AgentContext::default().tools.is_none());
+        assert!(AgentContext {
+            tools: Some(Vec::new()),
+            ..AgentContext::default()
+        }
+        .tools
+        .expect("explicit empty tools")
+        .is_empty());
+    }
 
     #[test]
     fn thinking_level_serde_round_trip() {

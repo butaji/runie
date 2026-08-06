@@ -78,7 +78,9 @@ impl Scenario {
                     })
                 })
                 .collect(),
-            tools: Vec::new(),
+            // Omitted in YAML: let the scenario's registered executor tools
+            // supply the Pi-compatible default.
+            tools: None,
         }
     }
 }
