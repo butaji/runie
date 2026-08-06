@@ -214,6 +214,18 @@ impl EventRenderer {
                     match result {
                         Ok(event) => {
                             status_actor.apply_event(&event).await;
+                            let actor_tool_start = match &event {
+                                AgentEvent::ToolExecutionStart {
+                                    tool_call_id,
+                                    tool_name,
+                                    args,
+                                } => Some(self.handle_tool_start(
+                                    tool_call_id.clone(),
+                                    tool_name.clone(),
+                                    args.clone(),
+                                )),
+                                _ => None,
+                            };
                             let mut feed_messages = scrollback_messages_for_event(&event);
                             if matches!(event, AgentEvent::AgentStart) {
                                 feed_messages.extend(agent_start_messages(self.emit_welcome));
@@ -258,8 +270,13 @@ impl EventRenderer {
                             if !feed_messages.is_empty() {
                                 scrollback_actor.apply_batch(feed_messages).await;
                             }
-                            self.apply_event(event);
-                            if !actor_owned_feed_event {
+                            let actor_tool_started = actor_tool_start.is_some();
+                            if let Some(tool_start) = actor_tool_start {
+                                scrollback_actor.apply(tool_start).await;
+                            } else {
+                                self.apply_event(event);
+                            }
+                            if !actor_owned_feed_event && !actor_tool_started {
                                 self.publish_scrollback_snapshot(&scrollback_actor).await;
                             }
                         }
@@ -334,7 +351,9 @@ impl EventRenderer {
                 tool_call_id,
                 tool_name,
                 args,
-            } => self.handle_tool_start(tool_call_id, tool_name, args),
+            } => {
+                let _ = self.handle_tool_start(tool_call_id, tool_name, args);
+            }
             AgentEvent::ToolExecutionUpdate {
                 tool_call_id,
                 partial_result,
@@ -385,7 +404,7 @@ impl EventRenderer {
         tool_call_id: String,
         tool_name: String,
         args: serde_json::Value,
-    ) {
+    ) -> ScrollbackMsg {
         let starts_new_activity_group = self.active_tool_count == 0 && !self.activity_group_open;
         if starts_new_activity_group {
             self.activity_dirs = 0;
@@ -407,29 +426,33 @@ impl EventRenderer {
         }
         self.active_tool_count += 1;
         let tool_buffer = tool_header(&tool_name, &args);
-        if self.activity_dirs
+        let activity = if self.activity_dirs
             + self.activity_files
             + self.activity_commands
             + self.activity_subagents
             > 0
         {
-            let activity = activity_text(
+            Some(activity_text(
                 self.activity_dirs,
                 self.activity_files,
                 self.activity_commands,
                 self.activity_subagents,
                 self.activity_failures,
                 true,
-            );
+            ))
+        } else {
+            None
+        };
+        if let Some(activity) = &activity {
             let mut scrollback = self.scrollback.lock();
             if !starts_new_activity_group {
                 if let Some(line) = scrollback.last_mut_by_kind(LineKind::Activity) {
-                    line.text = activity;
+                    line.text = activity.clone();
                 } else {
-                    scrollback.append(Line::new(LineKind::Activity, activity));
+                    scrollback.append(Line::new(LineKind::Activity, activity.clone()));
                 }
             } else {
-                scrollback.append(Line::new(LineKind::Activity, activity));
+                scrollback.append(Line::new(LineKind::Activity, activity.clone()));
             }
         }
         let row = self
@@ -437,7 +460,13 @@ impl EventRenderer {
             .lock()
             .append(Line::new(LineKind::Tool, tool_buffer.clone()).for_tool(&tool_call_id));
         self.tool_rows.insert(tool_call_id.clone(), row);
-        self.tool_buffers.insert(tool_call_id, tool_buffer);
+        self.tool_buffers
+            .insert(tool_call_id.clone(), tool_buffer.clone());
+        ScrollbackMsg::ToolStart {
+            tool_call_id,
+            header: tool_buffer,
+            activity,
+        }
     }
 
     fn handle_tool_update(&mut self, tool_call_id: String, partial_result: serde_json::Value) {

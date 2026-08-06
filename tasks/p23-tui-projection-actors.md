@@ -185,3 +185,9 @@ because it would conceal ownership and make YAML event assertions impossible.
   output/result rows atomically. Actor coverage verifies out-of-order parallel
   completion; the next cutover is wiring `EventRenderer` tool events to these
   messages instead of the compatibility snapshot bridge.
+
+- **ToolStart actor cutover (2026-08-05):** Production event-bus handling now
+  derives and acknowledges `ScrollbackMsg::ToolStart` directly. The message
+  carries the tool-call ID, semantic header, and grouped activity text, so the
+  actor owns the canonical initial row even while update/end adapters remain
+  transitional.
