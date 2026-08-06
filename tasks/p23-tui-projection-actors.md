@@ -244,3 +244,10 @@ because it would conceal ownership and make YAML event assertions impossible.
 
   The actor module now also pins this transition directly, independent of
   `EventRenderer` construction.
+
+- **Actor-backed YAML visual replay (2026-08-05):** Added an acknowledged
+  `EventRenderer::apply_actor_event` seam and switched the visual YAML runner
+  to feed recorded events through `StatusActor`/`ScrollbackActor` snapshots.
+  The first comparison caught and fixed a missing separator before the
+  completion row; all 28 visual tests and YAML discovery now pass without
+  snapshot weakening.

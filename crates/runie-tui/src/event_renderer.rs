@@ -336,6 +336,102 @@ impl EventRenderer {
         }
     }
 
+    /// Apply one recorded event through the same acknowledged actor
+    /// projections used by the live bus loop. This is the YAML replay seam;
+    /// it keeps event ordering deterministic without falling back to a
+    /// mutex-owned snapshot.
+    #[allow(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        reason = "actor replay keeps one event-to-projection transaction explicit"
+    )]
+    pub async fn apply_actor_event(&mut self, event: AgentEvent) {
+        let status_actor = self
+            .status_actor
+            .get_or_insert_with(StatusActor::new)
+            .clone();
+        let scrollback_actor = self
+            .scrollback_actor
+            .get_or_insert_with(ScrollbackActor::new)
+            .clone();
+        status_actor.apply_event(&event).await;
+        let tool_message = match &event {
+            AgentEvent::ToolExecutionStart {
+                tool_call_id,
+                tool_name,
+                args,
+            } => {
+                Some(self.handle_tool_start(tool_call_id.clone(), tool_name.clone(), args.clone()))
+            }
+            AgentEvent::ToolExecutionUpdate {
+                tool_call_id,
+                partial_result,
+                ..
+            } => self.handle_tool_update(tool_call_id.clone(), partial_result.clone()),
+            AgentEvent::ToolExecutionEnd {
+                tool_call_id,
+                tool_name,
+                result,
+                is_error,
+            } => Some(self.handle_tool_end(
+                tool_call_id.clone(),
+                tool_name.clone(),
+                result.clone(),
+                *is_error,
+            )),
+            _ => None,
+        };
+        let mut messages = scrollback_messages_for_event(&event);
+        if matches!(event, AgentEvent::AgentStart) {
+            messages.extend(agent_start_messages(self.emit_welcome));
+        }
+        if let AgentEvent::MessageEnd {
+            message: runie_core::types::AgentMessage::Assistant(_),
+        } = &event
+        {
+            messages.push(ScrollbackMsg::FinalizeAssistant {
+                has_reasoning: !self.reasoning_buffer.is_empty(),
+                reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
+                summary: "◆ Thought for 0.9s".into(),
+            });
+        }
+        if let AgentEvent::MessageUpdate {
+            event: AssistantMessageEvent::Error { error, .. },
+            ..
+        } = &event
+        {
+            messages.push(ScrollbackMsg::Append(Line::new(
+                LineKind::System,
+                format!("error: {error}"),
+            )));
+        }
+        if let AgentEvent::MessageEnd {
+            message: runie_core::types::AgentMessage::Assistant(assistant),
+        } = &event
+        {
+            if let Some(error) = &assistant.error_message {
+                messages.push(ScrollbackMsg::Append(Line::new(
+                    LineKind::System,
+                    format!("error: {error}"),
+                )));
+            }
+        }
+        if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
+            messages.push(ScrollbackMsg::Append(Line::new(LineKind::Separator, "")));
+            messages.push(ScrollbackMsg::AppendTurnSummary(
+                status_actor.snapshot().worked_for_label(),
+            ));
+        }
+        if !messages.is_empty() {
+            scrollback_actor.apply_batch(messages).await;
+        }
+        if let Some(message) = tool_message {
+            scrollback_actor.apply(message).await;
+        } else {
+            self.apply_event(event);
+        }
+    }
+
     async fn advance_animation(&self, actor: &StatusActor) {
         actor.apply(StatusMsg::AdvanceAnimation).await;
     }
