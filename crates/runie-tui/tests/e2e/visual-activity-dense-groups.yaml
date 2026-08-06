@@ -30,6 +30,7 @@ assertions:
     cols: 80
     rows: 50
     activity_expanded: true
+    center_revealed_entry: true
     steps: [Down, Down, Down, Down, Down, Down, Down, Down, Down, Down, Down]
     screen_text:
       - "Run one"

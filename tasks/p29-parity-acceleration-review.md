@@ -128,6 +128,13 @@ the viewport midpoint on the next frame, matching Grok's
 `scroll_to_entry_center` phase while retaining normal visibility-following for
 ordinary selection. Focused and full gates pass.
 
+Centered-selection YAML oracle (2026-08-06): `VisualAssertions` now accepts
+`center_revealed_entry` and checks the actor snapshot after visual `steps` are
+reduced but before drawing. `visual-activity-dense-groups.yaml` asserts the
+one-shot centering intent after eleven `Down` events, closing the previous
+compiled-code-only evidence gap without conflating event-state assertions with
+the later visual interaction phase.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without

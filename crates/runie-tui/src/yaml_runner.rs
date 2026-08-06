@@ -733,6 +733,9 @@ pub struct VisualAssertions {
     /// Render grouped tool member rows instead of only the activity summary.
     #[serde(default)]
     pub activity_expanded: Option<bool>,
+    /// Optional actor-owned dense-group centering intent after visual steps.
+    #[serde(default)]
+    pub center_revealed_entry: Option<bool>,
     #[serde(default)]
     pub header_meter: Option<String>,
     #[serde(default)]
@@ -2776,6 +2779,18 @@ pub async fn render_visual_buffer(
             "Ctrl+J" => app.scroll_scrollback_by(1).await,
             "Ctrl+K" => app.scroll_scrollback_by(-1).await,
             _ => {}
+        }
+    }
+    if let Some(expected) = vis.center_revealed_entry {
+        let actual = app
+            .scrollback_actor
+            .snapshot()
+            .model_snapshot()
+            .center_revealed_entry;
+        if actual != expected {
+            return Err(format!(
+                "visual center_revealed_entry mismatch: expected {expected}, got {actual}"
+            ));
         }
     }
     if scenario.capture_while_waiting {
