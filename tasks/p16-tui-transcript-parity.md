@@ -312,5 +312,6 @@ The remaining p16 implementation gap is the full Grok block model: typed
 foldable tool entries and strict
 cast-wide frame reconciliation. These remain intentionally open; current
 YAML fixtures now cover Grok's member-card rule that an individually expanded
-tool remains visible while the surrounding activity group is collapsed. The
+expanded or truncated tool remains visible while the surrounding activity
+group is collapsed. The
 full typed block/navigation model and cast-wide reconciliation remain open.
