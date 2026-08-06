@@ -4,6 +4,7 @@
 //! named variants reuse Opaline's compatible builtins. Widgets consume
 //! semantic tokens instead of owning raw RGB constants.
 
+use crate::view::PaintIntent;
 use opaline::{load_from_str, Theme};
 use ratatui::style::{Color, Modifier, Style};
 use runie_core::types::ThemeKind;
@@ -105,9 +106,29 @@ pub fn load(theme: ThemeKind) -> Theme {
 
 /// Theme-aware semantic projections for ratatui widgets.
 pub fn base_style_for(theme: ThemeKind) -> Style {
-    Style::default()
-        .fg(token_color(theme, "text.primary"))
-        .bg(token_color(theme, "bg.base"))
+    style_for_intent(theme, PaintIntent::Base)
+}
+
+/// Resolve a declarative paint intent at the terminal boundary.
+pub fn style_for_intent(theme: ThemeKind, intent: PaintIntent) -> Style {
+    match intent {
+        PaintIntent::Base => Style::default()
+            .fg(token_color(theme, "text.primary"))
+            .bg(token_color(theme, "bg.base")),
+        PaintIntent::Panel => Style::default()
+            .fg(token_color(theme, "text.primary"))
+            .bg(token_color(theme, "bg.panel")),
+        PaintIntent::Muted => muted_style_for(theme),
+        PaintIntent::Accent => accent_style_for(theme),
+        PaintIntent::SecondaryAccent => secondary_style_for(theme),
+        PaintIntent::Success => success_style_for(theme),
+        PaintIntent::Error => error_style_for(theme),
+        PaintIntent::Warning => warning_style_for(theme),
+        PaintIntent::Selection => selected_style_for(theme),
+        PaintIntent::SelectionBorder => selected_border_style_for(theme),
+        PaintIntent::DiffInsert => diff_insert_style_for(theme),
+        PaintIntent::DiffDelete => diff_delete_style_for(theme),
+    }
 }
 
 pub fn background_style_for(theme: ThemeKind) -> Style {
@@ -115,9 +136,7 @@ pub fn background_style_for(theme: ThemeKind) -> Style {
 }
 
 pub fn user_style_for(theme: ThemeKind) -> Style {
-    Style::default()
-        .fg(token_color(theme, "text.primary"))
-        .bg(token_color(theme, "bg.panel"))
+    style_for_intent(theme, PaintIntent::Panel)
 }
 
 pub fn diff_insert_style_for(theme: ThemeKind) -> Style {
@@ -247,5 +266,28 @@ mod tests {
             user_style_for(ThemeKind::GrokDay).bg,
             Some(Color::Rgb(222, 222, 222))
         );
+    }
+
+    #[test]
+    fn every_declarative_paint_intent_resolves_for_both_grok_themes() {
+        let intents = [
+            PaintIntent::Base,
+            PaintIntent::Panel,
+            PaintIntent::Muted,
+            PaintIntent::Accent,
+            PaintIntent::SecondaryAccent,
+            PaintIntent::Success,
+            PaintIntent::Error,
+            PaintIntent::Warning,
+            PaintIntent::Selection,
+            PaintIntent::SelectionBorder,
+            PaintIntent::DiffInsert,
+            PaintIntent::DiffDelete,
+        ];
+        for theme in [ThemeKind::GrokNight, ThemeKind::GrokDay] {
+            for intent in intents {
+                assert_ne!(style_for_intent(theme, intent), Style::default());
+            }
+        }
     }
 }

@@ -35,6 +35,24 @@ pub enum StateOwner {
     StatusActor,
 }
 
+/// Semantic paint intent. It is deliberately not a Ratatui `Style`: terminal
+/// colors, modifiers, and capability quantization belong to the renderer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PaintIntent {
+    Base,
+    Panel,
+    Muted,
+    Accent,
+    SecondaryAccent,
+    Success,
+    Error,
+    Warning,
+    Selection,
+    SelectionBorder,
+    DiffInsert,
+    DiffDelete,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ComponentSpec {
     pub kind: ComponentKind,

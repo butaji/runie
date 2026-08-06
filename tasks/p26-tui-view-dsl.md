@@ -17,6 +17,8 @@ renderer paints terminal cells.
 - Added `ComponentSpec`/`StateOwner` metadata and the `CHAT_COMPONENTS`
   registry. Each declarative region now names its semantic component and the
   sole actor that owns its state.
+- Added terminal-independent `PaintIntent` values. Opaline/Ratatui style
+  resolution is now explicitly an adapter concern in `appearance.rs`.
 
 ## Next boundaries
 
