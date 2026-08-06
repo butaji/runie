@@ -54,3 +54,10 @@ and the full visual matrix verify the adapter round-trip.
 reveal-to-latest, append-tail following, physical-row clamping, selection
 reveal, snapshot rehydration, and YAML scroll assertions use that single
 model-owned field; rendering still performs only terminal-size clamping.
+
+### Slice 4 complete: selection ownership
+
+`selected_tool_id` and `selected_entry` now live in `FeedNavigation`. Tool and
+entry navigation, dense-group reveal, selected-row rendering, snapshot
+rehydration, and compatibility accessors all use the model-owned values. The
+existing selection and dense-group visual/replay tests pass unchanged.

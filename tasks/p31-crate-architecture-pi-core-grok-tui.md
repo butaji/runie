@@ -385,3 +385,7 @@ visual suite pass.
 The third p35 slice is complete: `scroll_offset` is now also owned by
 `FeedNavigation`; explicit scroll, reveal, append-tail, selection reveal,
 snapshot, and renderer clamping consume that same model fact.
+
+The fourth p35 slice is complete: `selected_tool_id` and `selected_entry` are
+now model-owned navigation facts across tool/entry navigation, dense-group
+reveal, selected rendering, and snapshot rehydration.

@@ -195,8 +195,6 @@ pub struct Scrollback {
     next_tool_row_id: u64,
     theme: ThemeKind,
     navigation: FeedNavigation,
-    selected_tool_id: Option<String>,
-    selected_entry: Option<usize>,
     workflow_headers: HashMap<String, String>,
     workflow_phases: HashMap<String, Vec<(String, String)>>,
 }
@@ -216,8 +214,8 @@ impl Scrollback {
         scrollback.navigation.follow_latest_user = snapshot.follow_latest_user;
         scrollback.theme = snapshot.theme;
         scrollback.navigation.animation_frame = snapshot.animation_frame;
-        scrollback.selected_tool_id = snapshot.selected_tool_id;
-        scrollback.selected_entry = snapshot.selected_entry;
+        scrollback.navigation.selected_tool_id = snapshot.selected_tool_id;
+        scrollback.navigation.selected_entry = snapshot.selected_entry;
         scrollback.tool_modes = snapshot.tool_modes;
         scrollback.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.center_revealed_entry = snapshot.center_revealed_entry;
@@ -245,8 +243,6 @@ impl Scrollback {
             next_tool_row_id: 0,
             theme: ThemeKind::GrokNight,
             navigation: FeedNavigation::default(),
-            selected_tool_id: None,
-            selected_entry: None,
             workflow_headers: HashMap::new(),
             workflow_phases: HashMap::new(),
         }
@@ -608,8 +604,8 @@ impl Scrollback {
         self.revealed_dense_groups.clear();
         self.center_revealed_entry = false;
         self.navigation.scroll_offset = 0;
-        self.selected_tool_id = None;
-        self.selected_entry = None;
+        self.navigation.selected_tool_id = None;
+        self.navigation.selected_entry = None;
         self.navigation.follow_latest_user = false;
     }
 
@@ -639,8 +635,8 @@ impl Scrollback {
             activity_expanded: self.activity_expanded,
             prompt_timestamp: self.prompt_timestamp.clone(),
             follow_latest_user: self.navigation.follow_latest_user,
-            selected_tool_id: self.selected_tool_id.clone(),
-            selected_entry: self.selected_entry,
+            selected_tool_id: self.navigation.selected_tool_id.clone(),
+            selected_entry: self.navigation.selected_entry,
             theme: self.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.tool_modes.clone(),
@@ -795,11 +791,11 @@ impl Scrollback {
     }
 
     pub fn selected_tool_id(&self) -> Option<&str> {
-        self.selected_tool_id.as_deref()
+        self.navigation.selected_tool_id.as_deref()
     }
 
     pub fn selected_entry(&self) -> Option<usize> {
-        self.selected_entry
+        self.navigation.selected_entry
     }
 
     pub fn scroll_offset(&self) -> usize {
@@ -828,10 +824,11 @@ impl Scrollback {
     fn select_entry(&mut self, direction: i8) {
         let entries = self.selectable_entries();
         if entries.is_empty() {
-            self.selected_entry = None;
+            self.navigation.selected_entry = None;
             return;
         }
         let current = self
+            .navigation
             .selected_entry
             .and_then(|entry| entries.iter().position(|candidate| *candidate == entry));
         let next = match (current, direction) {
@@ -842,8 +839,8 @@ impl Scrollback {
             (Some(index), -1) => index - 1,
             _ => 0,
         };
-        self.selected_entry = Some(entries[next]);
-        self.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
+        self.navigation.selected_entry = Some(entries[next]);
+        self.navigation.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
         self.navigation.detach_from_tail();
     }
 
@@ -873,10 +870,11 @@ impl Scrollback {
             .map(|block| block.tool_call_id)
             .collect::<Vec<_>>();
         if ids.is_empty() {
-            self.selected_tool_id = None;
+            self.navigation.selected_tool_id = None;
             return;
         }
         let current = self
+            .navigation
             .selected_tool_id
             .as_ref()
             .and_then(|id| ids.iter().position(|candidate| candidate == id));
@@ -888,7 +886,7 @@ impl Scrollback {
             (Some(index), -1) => index - 1,
             _ => 0,
         };
-        self.selected_tool_id = Some(ids[next].clone());
+        self.navigation.selected_tool_id = Some(ids[next].clone());
         self.reveal_dense_group(&ids[next]);
     }
 
@@ -902,7 +900,7 @@ impl Scrollback {
         if *group_size > GROK_GROUP_MAX_VISIBLE
             && *member_index < group_size - GROK_GROUP_MAX_VISIBLE
         {
-            self.selected_entry = self
+            self.navigation.selected_entry = self
                 .lines
                 .iter()
                 .position(|line| line.tool_call_id.as_deref() == Some(tool_id));
@@ -1015,6 +1013,7 @@ impl Scrollback {
         }
 
         if let Some(selected_text) = self
+            .navigation
             .selected_entry
             .and_then(|index| self.lines.get(index).map(|line| line.text.as_str()))
         {
@@ -1067,7 +1066,7 @@ impl Scrollback {
             self.navigation.scroll_offset
         };
         let end = (start + visible).min(total);
-        let selected_non_tool_text = self.selected_entry.and_then(|index| {
+        let selected_non_tool_text = self.navigation.selected_entry.and_then(|index| {
             self.lines.get(index).and_then(|line| {
                 if line.tool_call_id.is_none() {
                     Some(line.text.as_str())
@@ -1475,7 +1474,7 @@ impl Scrollback {
             let selected = line
                 .tool_call_id
                 .as_ref()
-                .is_some_and(|id| self.selected_tool_id.as_ref() == Some(id));
+                .is_some_and(|id| self.navigation.selected_tool_id.as_ref() == Some(id));
             let source = if line.kind == LineKind::Reasoning && !self.reasoning_expanded {
                 "Thought".to_owned()
             } else {
