@@ -53,8 +53,8 @@ herdr-compare LEFT RIGHT COLS="" ROWS="":
 
 # Record a fixed-geometry application as a timed asciinema PTY cast.
 # The private tmux session is isolated and removed when the command exits.
-tmux-cast COLS ROWS CAST COMMAND PROMPT QUIT_KEY:
-    scripts/tmux-asciinema-capture.sh {{COLS}} {{ROWS}} {{CAST}} {{COMMAND}} {{PROMPT}} {{QUIT_KEY}}
+tmux-cast COLS ROWS CAST COMMAND PROMPT QUIT_KEY ENV="":
+    scripts/tmux-asciinema-capture.sh {{COLS}} {{ROWS}} {{CAST}} {{COMMAND}} {{PROMPT}} {{QUIT_KEY}} {{ENV}}
 
 # Replay and compare two asciinema casts through vt100 cell-by-cell.
 cast-compare LEFT RIGHT:

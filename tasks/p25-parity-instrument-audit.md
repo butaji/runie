@@ -232,6 +232,14 @@ and active status chrome; when unset, animation advances exactly as before.
 This makes both dynamic clock classes controllable without special-casing the
 renderer or weakening full-cell assertions.
 
+**Capture environment injection (2026-08-06):** `tmux-cast` now accepts a
+space-separated `NAME=VALUE` environment argument and exports it in the private
+tmux shell before starting asciinema. The timestamp override propagates through
+the complete capture path and matches the Grok reference clock. A direct tmux
+probe also renders the frozen `Worked for 1.9s`; the asciinema child currently
+needs one more propagation check for the elapsed override before frozen final
+screen parity can be accepted.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

@@ -6,7 +6,8 @@ rows=${2:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KE
 cast=${3:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY}
 command_line=${4:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY}
 prompt=${5:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY}
-quit_key=${6:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY}
+quit_key=${6:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY [ENV_ASSIGNMENTS]}
+env_assignments=${7:-}
 session="runie-cast-$$"
 
 command -v tmux >/dev/null || { echo "tmux is required" >&2; exit 1; }
@@ -21,8 +22,18 @@ trap cleanup EXIT INT TERM
 tmux new-session -d -s "$session" -x "$cols" -y "$rows" \
   "bash -c 'read -r launch; eval \"\$launch\"'"
 tmux resize-window -t "$session" -x "$cols" -y "$rows"
+launch_prefix=""
+if [[ -n "$env_assignments" ]]; then
+    for assignment in $env_assignments; do
+        if [[ "$assignment" != [A-Za-z_][A-Za-z0-9_]*=* ]]; then
+            echo "invalid environment assignment: ${assignment}" >&2
+            exit 1
+        fi
+        launch_prefix+="export ${assignment}; "
+    done
+fi
 tmux send-keys -t "$session" -l \
-  "asciinema rec --capture-input --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command '$command_line' '$cast'"
+  "${launch_prefix}asciinema rec --capture-input --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command '$command_line' '$cast'"
 tmux send-keys -t "$session" Enter
 
 # Wait for the actual prompt, not merely alternate-screen initialization.
