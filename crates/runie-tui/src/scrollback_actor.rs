@@ -4,33 +4,25 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, oneshot, watch};
 
+use runie_core::{spawn_actor_worker, task_owner::TaskOwner};
+
 use crate::widgets::{Scrollback, ScrollbackMsg};
 
 enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
 }
 
-struct Owner(tokio::task::JoinHandle<()>);
-
-impl Drop for Owner {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
-
 #[derive(Clone)]
 pub struct ScrollbackActor {
     tx: mpsc::Sender<Command>,
     snapshot: watch::Receiver<Scrollback>,
-    _owner: Arc<Owner>,
+    _owner: Arc<TaskOwner>,
 }
 
 impl ScrollbackActor {
     pub fn new() -> Self {
-        let (tx, mut rx) = mpsc::channel(32);
         let (snapshot_tx, snapshot) = watch::channel(Scrollback::new());
-        // OWNER: ScrollbackActor — retained by every public handle clone.
-        let owner = Arc::new(Owner(tokio::spawn(async move {
+        let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = Scrollback::new();
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
@@ -42,7 +34,7 @@ impl ScrollbackActor {
                 let _ = snapshot_tx.send(state.clone());
                 let _ = reply.send(());
             }
-        })));
+        });
         Self {
             tx,
             snapshot,

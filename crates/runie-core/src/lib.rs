@@ -35,7 +35,7 @@ pub mod tools;
 
 pub mod hooks;
 
-pub(crate) mod task_owner;
+pub mod task_owner;
 
 pub use types::{
     AfterToolCallContext, AfterToolCallResult, AgentContext, AgentEvent, AgentMessage,

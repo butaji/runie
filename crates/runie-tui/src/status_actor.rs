@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use runie_core::types::AgentEvent;
+use runie_core::{spawn_actor_worker, task_owner::TaskOwner};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::event_renderer::status_messages_for_event;
@@ -13,28 +14,18 @@ enum Command {
     ApplyBatch(Vec<StatusMsg>, oneshot::Sender<()>),
 }
 
-struct Owner(tokio::task::JoinHandle<()>);
-
-impl Drop for Owner {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
-
 /// Handle to the single owner of the status projection.
 #[derive(Clone)]
 pub struct StatusActor {
     tx: mpsc::Sender<Command>,
     snapshot: watch::Receiver<StatusBar>,
-    _owner: Arc<Owner>,
+    _owner: Arc<TaskOwner>,
 }
 
 impl StatusActor {
     pub fn new() -> Self {
-        let (tx, mut rx) = mpsc::channel(16);
         let (snapshot_tx, snapshot) = watch::channel(StatusBar::new());
-        // OWNER: StatusActor — retained in every cloned public handle.
-        let owner = Arc::new(Owner(tokio::spawn(async move {
+        let (tx, owner) = spawn_actor_worker!(16, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = StatusBar::new();
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
@@ -47,7 +38,7 @@ impl StatusActor {
                 let _ = snapshot_tx.send(state.clone());
                 let _ = reply.send(());
             }
-        })));
+        });
         Self {
             tx,
             snapshot,

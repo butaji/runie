@@ -6,27 +6,31 @@ use tokio::task::JoinHandle;
 ///
 /// The mailbox and worker loop remain explicit at each call site; the macro
 /// only makes task ownership impossible to forget when spawning the worker.
+#[macro_export]
 macro_rules! spawn_owned_worker {
     ($future:expr) => {
+        // OWNER: the actor handle returned with this TaskOwner.
         std::sync::Arc::new($crate::task_owner::TaskOwner::new(tokio::spawn($future)))
     };
 }
 
-pub(crate) use spawn_owned_worker;
+pub use crate::spawn_owned_worker;
 
 /// Actor DSL for the repeated mailbox/channel plus owned-worker setup.
 /// Command enums and worker loops stay visible at each call site.
+#[macro_export]
 macro_rules! spawn_actor_worker {
     ($capacity:expr, $worker:expr) => {{
         let (tx, rx) = tokio::sync::mpsc::channel($capacity);
-        let owner = $crate::task_owner::spawn_owned_worker!($worker(rx));
+        let owner = $crate::spawn_owned_worker!($worker(rx));
         (tx, owner)
     }};
 }
 
-pub(crate) use spawn_actor_worker;
+pub use crate::spawn_actor_worker;
 
 /// Mailbox DSL for the repeated one-shot reply pattern used by actors.
+#[macro_export]
 macro_rules! mailbox_call {
     ($tx:expr, $command:expr, $default:expr) => {{
         let (reply_tx, mut reply_rx) = tokio::sync::mpsc::channel(1);
@@ -35,18 +39,18 @@ macro_rules! mailbox_call {
     }};
 }
 
-pub(crate) use mailbox_call;
+pub use crate::mailbox_call;
 
 /// Keeps an actor's worker task attached to the actor's lifetime.
 ///
 /// The handle is shared because public actor handles are cheap clones. The
 /// final clone aborts the worker instead of detaching it from the runtime.
-pub(crate) struct TaskOwner {
+pub struct TaskOwner {
     handle: JoinHandle<()>,
 }
 
 impl TaskOwner {
-    pub(crate) fn new(handle: JoinHandle<()>) -> Self {
+    pub fn new(handle: JoinHandle<()>) -> Self {
         Self { handle }
     }
 }

@@ -157,6 +157,11 @@ publish immutable `watch` snapshots to the pure view.
 
 ### Progress — 2026-08-05
 
+- Promoted the owned-worker DSL across the crate boundary and reused
+  `spawn_actor_worker!` for TUI projection actors. The macro now centralizes
+  channel/owner construction while mailbox reducers remain explicit; macro
+  expansion remains readable and the existing ownership tests cover it.
+
 - Added `EventRenderer::with_actors` and switched production
   `App::spawn_renderer` to construct the renderer with its actor handles
   already attached. This removes the public-field mutation step from the live
