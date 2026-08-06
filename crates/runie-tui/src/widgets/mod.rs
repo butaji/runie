@@ -6,7 +6,7 @@ pub mod scrollback;
 pub mod status;
 pub mod welcome;
 
-pub use command_palette::CommandPaletteWidget;
+pub use command_palette::{CommandPaletteWidget, PaletteAction};
 pub use prompt::{InputMode, PromptOutcome, PromptWidget};
 pub use scrollback::{Line, LineKind, Scrollback, ScrollbackMsg};
 pub use status::{

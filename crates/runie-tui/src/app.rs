@@ -14,6 +14,7 @@ use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
 use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
+pub use crate::widgets::PaletteAction;
 use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, StatusBar};
 
 #[derive(Debug)]
@@ -49,27 +50,6 @@ pub enum UiMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiCommand {
     ActivatePaletteEntry(PaletteAction),
-}
-
-runie_core::typed_action_registry! {
-    pub enum PaletteAction {
-        NewSession => "New Session",
-        NewSessionInWorktree => "New Session in Worktree",
-        AgentDashboard => "Agent Dashboard",
-        BackToHome => "Back to Home",
-        DeleteThisSession => "Delete This Session",
-        ResumeSession => "Resume Session",
-        ShareSession => "Share Session",
-        RenameSession => "Rename Session",
-        SessionInfo => "Session Info",
-        CompactHistory => "Compact History",
-        ContextUsage => "Context Usage",
-        ViewPlan => "View Plan",
-        Memory => "Memory",
-        SwitchModel => "Switch Model",
-        KeyboardShortcuts => "Keyboard Shortcuts",
-        Quit => "Quit",
-    }
 }
 
 fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {

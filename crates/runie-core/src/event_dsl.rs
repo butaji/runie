@@ -67,6 +67,10 @@ macro_rules! typed_action_registry {
         }
 
         impl $name {
+            $vis const fn labels() -> &'static [&'static str] {
+                &[$($label),+]
+            }
+
             $vis fn from_label(label: &str) -> Option<Self> {
                 Some(match label {
                     $( $label => Self::$variant, )+
@@ -90,6 +94,7 @@ mod tests {
 
     #[test]
     fn typed_action_registry_maps_labels_and_rejects_unknown_values() {
+        assert_eq!(TestAction::labels(), &["First", "Second"]);
         assert_eq!(TestAction::from_label("First"), Some(TestAction::First));
         assert_eq!(TestAction::from_label("missing"), None);
     }
