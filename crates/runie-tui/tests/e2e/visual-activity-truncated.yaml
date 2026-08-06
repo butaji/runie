@@ -21,8 +21,8 @@ assertions:
     tool_blocks: 1
     tool_modes: [collapsed]
     tool_kinds: [read]
-    tool_headers: ["Read README.md"]
-    tool_outputs: [["# runie", "Read README.md (3 lines)", "# runie", "This is **Runie**."]]
+    tool_headers: ["Read README.md (3 lines)"]
+    tool_outputs: [["# runie", "This is **Runie**.", "# runie", "This is **Runie**."]]
   visual:
     cols: 80
     rows: 24

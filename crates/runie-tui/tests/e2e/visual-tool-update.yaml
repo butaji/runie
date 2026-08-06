@@ -20,7 +20,7 @@ assertions:
   required_events: [tool_execution_start, tool_execution_update, tool_execution_end]
   state:
     tool_blocks: 1
-    tool_headers: ["Run cargo test"]
+    tool_headers: ["Run cargo test → ✓"]
   visual:
     cols: 80
     rows: 24

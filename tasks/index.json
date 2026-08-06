@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p33",
+      "file": "grok-tui-behavior-inventory.md",
+      "status": "in_progress",
+      "title": "Inventory: source-backed Grok TUI lifecycle, animation, input, palette, hotkeys, metrics, and Pi mapping"
+    },
+    {
       "id": "p32",
       "file": "p32-tool-row-ownership.md",
       "status": "in_progress",

@@ -36,8 +36,8 @@ assertions:
     tool_kinds: [list_dir, execute]
     selected_tool_id: null
     selected_entry: 6
-    tool_headers: ["List .", "Run cargo test"]
-    tool_outputs: [["Cargo.toml", "src", "List . (3 entries)", "Cargo.toml", "src", "crates"], ["Run cargo test → ✓", "cargo test completed"]]
+    tool_headers: ["List . (3 entries)", "Run cargo test → ✓"]
+    tool_outputs: [["Cargo.toml", "src", "crates", "Cargo.toml", "src", "crates"], ["cargo test completed", "cargo test completed"]]
   visual:
     cols: 80
     rows: 24

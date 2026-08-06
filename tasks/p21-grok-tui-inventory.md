@@ -7,6 +7,9 @@ The complete file-level scan is reproducible with
 `scripts/source-inventory.sh` and documented in
 `tasks/grok-tui-file-inventory.md`; the current source counts are 496 pager
 files and 68 renderer files. This inventory remains active until every
+Pi-mappable behavior has the detailed lifecycle contract recorded in
+`tasks/grok-tui-behavior-inventory.md` and a matching YAML/state/full-cell
+oracle.
 Pi-core-mapped component has a source-backed YAML or cell-level assertion.
 
 **Construction audit (2026-08-05):** Grok composes the agent view from a
@@ -509,3 +512,8 @@ The remaining discrepancy is the compatibility YAML projection's placement of
 the completion summary among output rows; it is covered by the mixed-activity
 oracle and must be resolved together with explicit row ownership, not by
 changing the formatter in isolation.
+
+Reducer checkpoint (2026-08-06): Runie's scrollback reducer now targets the
+semantic tool header when settling a card, preserving all output rows. The
+mixed, truncated, and update fixtures assert this event-to-state contract;
+duplicate-ID compatibility seed ownership remains a separate open item.

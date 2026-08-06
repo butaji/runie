@@ -35,6 +35,18 @@ reported the mismatch. Row identity and completion-output placement are
 therefore separate contracts; the next fixture must assert both before the
 token is reintroduced.
 
+## Header-row targeting checkpoint (2026-08-06)
+
+The reducer now resolves `ToolUpdate` and `ToolEnd` against the newest matching
+semantic header (`Tool`, `ToolRunning`, or `ToolError`) instead of the newest
+line with the call ID. This prevents a streamed output line from being
+rewritten as a completion header and matches Grok's block model, where the
+header owns cardinality/status text and output rows remain body content.
+The mixed, truncated, and tool-update YAML oracles were updated to assert the
+source-aligned projection; the full visual snapshot suite remains green.
+This is a useful ownership boundary, but not yet the final opaque row-token
+design required for duplicate compatibility seeds.
+
 ## Objective
 
 Give each live `ToolExecutionStart` a reducer-owned row identity distinct from
