@@ -416,3 +416,7 @@ legacy path is retained only for compatibility/unit fixtures. The production
 binary now paints from the aggregate snapshot adapters, so no renderer draw
 operation mutates actor state. Removing the compatibility constructor remains
 a later crate-boundary migration, not evidence of a live ownership violation.
+The legacy `EventRenderer::new` / `with_welcome` constructors are now
+`cfg(test)`-only. Production builds can construct the renderer only through
+`with_actors`, making accidental reintroduction of mutable widget state a
+compile-time failure rather than a convention.
