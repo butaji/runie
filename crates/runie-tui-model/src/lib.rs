@@ -4,6 +4,10 @@
 //! dependency. Actors reduce events into these immutable values; renderers
 //! only consume them.
 
+mod status;
+
+pub use status::{Status, StatusMsg};
+
 /// Pure viewport projection for a feed that may follow its newest content.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScrollState {

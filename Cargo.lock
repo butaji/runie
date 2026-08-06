@@ -731,6 +731,9 @@ dependencies = [
 [[package]]
 name = "runie-tui-model"
 version = "0.1.0"
+dependencies = [
+ "runie-core",
+]
 
 [[package]]
 name = "rustix"

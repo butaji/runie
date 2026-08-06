@@ -5,5 +5,8 @@ edition.workspace = true
 license.workspace = true
 description = "Pure actor-derived view models for the Grok-style Runie TUI"
 
+[dependencies]
+runie-core = { path = "../runie-core" }
+
 [lints]
 workspace = true

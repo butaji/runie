@@ -8,6 +8,12 @@ compatibility re-export, so existing widgets and YAML replay remain stable.
 The model has direct reducer tests, while the existing `visual-scroll.yaml`
 continues to verify the integrated actor/rendering behavior.
 
+The status vocabulary is now also model-owned: `Status` and `StatusMsg` live
+in `runie-tui-model`, while `StatusBar` retains only terminal styling,
+animation presentation, and Ratatui rendering. `runie-tui` re-exports these
+types for compatibility; the status actor still remains the sole reducer
+owner.
+
 ## Governing rule
 
 Runie has exactly two product layers:

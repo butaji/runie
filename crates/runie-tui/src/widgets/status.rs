@@ -6,38 +6,20 @@ use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
-use runie_core::types::{StopReason, ThemeKind, Usage, WaitingReason};
+use runie_core::types::{StopReason, ThemeKind, Usage};
+pub use runie_tui_model::{Status, StatusMsg};
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub enum Status {
-    #[default]
-    Ready,
-    Loading,
-    Thinking,
-    Streaming,
-    Waiting(WaitingReason),
-    Aborted,
-    Error(String),
+pub trait StatusStyleExt {
+    fn style(&self) -> Style;
+    fn style_for(&self, theme: ThemeKind) -> Style;
 }
 
-impl Status {
-    pub fn label(&self) -> String {
-        match self {
-            Self::Ready => "ready".into(),
-            Self::Loading => "loading".into(),
-            Self::Thinking => "thinking...".into(),
-            Self::Streaming => "streaming".into(),
-            Self::Waiting(reason) => format!("waiting: {}", reason.label()),
-            Self::Aborted => "aborted".into(),
-            Self::Error(e) => format!("error: {e}"),
-        }
-    }
-
-    pub fn style(&self) -> Style {
+impl StatusStyleExt for Status {
+    fn style(&self) -> Style {
         self.style_for(ThemeKind::GrokNight)
     }
 
-    pub fn style_for(&self, theme: ThemeKind) -> Style {
+    fn style_for(&self, theme: ThemeKind) -> Style {
         match self {
             Self::Ready => appearance::success_style_for(theme),
             Self::Loading => appearance::muted_style_for(theme),
@@ -80,17 +62,6 @@ pub struct StatusBar {
     elapsed_ticks_override: Option<u64>,
     turn_usage: Option<Usage>,
     turn_stop_reason: Option<StopReason>,
-}
-
-/// Messages accepted by the status projection owner. The reducer is pure so
-/// an actor can apply the same transition and publish a watch snapshot.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StatusMsg {
-    Set(Status),
-    BeginTurn,
-    FinishTurn(Usage, StopReason),
-    SetTheme(ThemeKind),
-    AdvanceAnimation,
 }
 
 /// Grok's one-row foreground activity indicator above the prompt.
