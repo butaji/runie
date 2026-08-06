@@ -180,7 +180,6 @@ impl LinePresentationExt for LineKind {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Scrollback {
     lines: Vec<Line>,
-    prompt_timestamp: Option<String>,
     settled_no_tool_phase: bool,
     live_grok_layout: bool,
     revealed_dense_groups: HashSet<String>,
@@ -206,7 +205,7 @@ impl Scrollback {
         scrollback.navigation.autoscroll = snapshot.autoscroll;
         scrollback.navigation.reasoning_expanded = snapshot.reasoning_expanded;
         scrollback.navigation.activity_expanded = snapshot.activity_expanded;
-        scrollback.prompt_timestamp = snapshot.prompt_timestamp;
+        scrollback.navigation.prompt_timestamp = snapshot.prompt_timestamp;
         scrollback.navigation.follow_latest_user = snapshot.follow_latest_user;
         scrollback.navigation.theme = snapshot.theme;
         scrollback.navigation.animation_frame = snapshot.animation_frame;
@@ -227,7 +226,6 @@ impl Scrollback {
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
-            prompt_timestamp: None,
             settled_no_tool_phase: false,
             live_grok_layout: false,
             revealed_dense_groups: HashSet::new(),
@@ -629,7 +627,7 @@ impl Scrollback {
             scroll_offset: self.navigation.scroll_offset,
             reasoning_expanded: self.navigation.reasoning_expanded,
             activity_expanded: self.navigation.activity_expanded,
-            prompt_timestamp: self.prompt_timestamp.clone(),
+            prompt_timestamp: self.navigation.prompt_timestamp.clone(),
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
             selected_entry: self.navigation.selected_entry,
@@ -711,7 +709,7 @@ impl Scrollback {
     }
 
     pub fn set_prompt_timestamp(&mut self, timestamp: Option<String>) {
-        self.prompt_timestamp = timestamp;
+        self.navigation.prompt_timestamp = timestamp;
     }
 
     /// Select the production live adapter's Grok gutter geometry. Replay
@@ -966,7 +964,7 @@ impl Scrollback {
         // overflow based on text length and area width.
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
         let mut physical_rows = self.physical_rows(area.width as usize, compact, area.height);
-        let prompt_lead_rows = if self.prompt_timestamp.is_some() {
+        let prompt_lead_rows = if self.navigation.prompt_timestamp.is_some() {
             2
         } else {
             1
@@ -1126,7 +1124,11 @@ impl Scrollback {
             if self.live_grok_layout
                 && matches!(*kind, LineKind::User | LineKind::CompletedAssistant)
             {
-                let timestamp = self.prompt_timestamp.as_deref().unwrap_or_default();
+                let timestamp = self
+                    .navigation
+                    .prompt_timestamp
+                    .as_deref()
+                    .unwrap_or_default();
                 let body_color = if *kind == LineKind::User {
                     appearance::base_style_for(self.navigation.theme)
                         .fg
@@ -1519,7 +1521,7 @@ impl Scrollback {
                     format!("{}{}", " ".repeat(prefix.chars().count()), part)
                 };
                 if line.kind == LineKind::CompletedAssistant && index == 0 {
-                    if let Some(timestamp) = self.prompt_timestamp.as_deref() {
+                    if let Some(timestamp) = self.navigation.prompt_timestamp.as_deref() {
                         let timestamp_width = timestamp.chars().count();
                         let target =
                             width.saturating_sub(timestamp_width + TIMESTAMP_GUTTER_SPACES);
@@ -1565,11 +1567,17 @@ impl Scrollback {
                         text.push_str(timestamp);
                     }
                 }
-                if line.kind == LineKind::User && index == 0 && self.prompt_timestamp.is_some() {
+                if line.kind == LineKind::User
+                    && index == 0
+                    && self.navigation.prompt_timestamp.is_some()
+                {
                     append_user_with_timestamp(
                         &mut rows,
                         text,
-                        self.prompt_timestamp.as_deref().unwrap_or_default(),
+                        self.navigation
+                            .prompt_timestamp
+                            .as_deref()
+                            .unwrap_or_default(),
                         width,
                     );
                 } else {

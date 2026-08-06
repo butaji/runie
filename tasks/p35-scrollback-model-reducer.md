@@ -81,3 +81,9 @@ model fact; the complete specialized-tool YAML and visual suite passes.
 snapshot rehydration, feed projections, and all day/night/terminal-native
 rendering paths use that fact; only semantic-token-to-terminal-style
 resolution remains in the renderer.
+
+### Slice 8 complete: prompt timestamp ownership
+
+The optional prompt timestamp now lives in `FeedNavigation`. Timestamp event
+reduction, snapshot rehydration, live clock placement, and wrapped user-row
+rendering consume that model fact; timestamped submission visual tests pass.

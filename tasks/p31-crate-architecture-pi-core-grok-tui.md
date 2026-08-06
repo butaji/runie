@@ -401,3 +401,7 @@ cycling, typed-card projection, snapshot rehydration, and rendering.
 The seventh p35 slice is complete: `ThemeKind` is now model-owned while
 Opaline/Ratatui style resolution remains renderer-only, preserving the
 day/night and terminal-native theme paths.
+
+The eighth p35 slice is complete: the optional prompt timestamp is now
+model-owned across timestamp event reduction, snapshot rehydration, live clock
+placement, and wrapped user-row rendering.

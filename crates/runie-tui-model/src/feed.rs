@@ -77,6 +77,7 @@ pub struct FeedNavigation {
     pub activity_expanded: bool,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
     pub theme: ThemeKind,
+    pub prompt_timestamp: Option<String>,
 }
 
 impl Default for FeedNavigation {
@@ -92,6 +93,7 @@ impl Default for FeedNavigation {
             activity_expanded: false,
             tool_modes: HashMap::new(),
             theme: ThemeKind::GrokNight,
+            prompt_timestamp: None,
         }
     }
 }
