@@ -105,6 +105,11 @@ publish immutable `watch` snapshots to the pure view.
   reasoning retention; the compatibility renderer follows the same event for
   legacy tests. Unit and YAML replay gates remain green.
 
+- **SSOT correction (2026-08-05):** Finalization now reads the expansion mode
+  from the `ScrollbackActor` snapshot rather than the compatibility mutex,
+  removing the last compatibility-state decision from that actor transition.
+  Clippy and the repository lint remain clean.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

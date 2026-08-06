@@ -52,6 +52,10 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the event projection table keeps actor-owned mappings declarative"
+)]
 pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
     match event {
         AgentEvent::MessageStart {
@@ -212,7 +216,7 @@ impl EventRenderer {
                             {
                                 feed_messages.push(ScrollbackMsg::FinalizeAssistant {
                                     has_reasoning: !self.reasoning_buffer.is_empty(),
-                                    reasoning_expanded: self.scrollback.lock().reasoning_expanded(),
+                                    reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
                                     summary: "◆ Thought for 0.9s".into(),
                                 });
                             }
@@ -933,6 +937,10 @@ fn agent_start_messages(emit_welcome: bool) -> Vec<ScrollbackMsg> {
     ]
 }
 
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "activity vocabulary remains one pure Grok label projection"
+)]
 fn activity_text(
     dirs: usize,
     files: usize,

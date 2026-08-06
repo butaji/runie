@@ -161,6 +161,10 @@ impl Scrollback {
 
     /// Apply one explicit transcript transition. Actor implementations and
     /// compatibility callers share this reducer boundary.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the reducer keeps all explicit transcript messages in one readable match"
+    )]
     pub fn apply(&mut self, message: ScrollbackMsg) -> Option<usize> {
         match message {
             ScrollbackMsg::Append(line) => return Some(self.append(line)),
@@ -209,9 +213,7 @@ impl Scrollback {
                 reasoning_expanded,
                 summary,
             } => {
-                if !has_reasoning {
-                    self.remove_kind(LineKind::ThinkingStatus);
-                } else if reasoning_expanded {
+                if !has_reasoning || reasoning_expanded {
                     self.remove_kind(LineKind::ThinkingStatus);
                 } else {
                     if let Some(thinking) = self.last_mut_by_kind(LineKind::ThinkingStatus) {
