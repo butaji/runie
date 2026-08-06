@@ -406,3 +406,9 @@ Source color correction (2026-08-06): Grok's user prompt block uses the
 theme's light panel colors (`#242424` Night and `#dedede` Day), distinct from
 the selection surface. Opaline `bg.panel` tokens now preserve that distinction
 and user-row cell coverage asserts both palettes.
+
+Live follow correction (2026-08-06): user prompts now activate the actor-owned
+follow anchor on the first prompt after `session_start` as well as later turns,
+so a submitted input is pinned at the top while the response streams. The YAML
+snapshot harness explicitly disables that live viewport mode after replay to
+keep settled/cast phases deterministic.

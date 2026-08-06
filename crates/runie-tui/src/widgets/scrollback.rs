@@ -140,6 +140,7 @@ pub enum ScrollbackMsg {
     SetActivityExpanded(bool),
     ToggleActivityExpanded,
     SetPromptTimestamp(Option<String>),
+    SetFollowLatestUser(bool),
     SetToolMode(String, runie_core::types::ToolDisplayMode),
     ToggleToolMode(String),
     SelectNextTool,
@@ -300,6 +301,7 @@ impl Scrollback {
                 self.set_activity_expanded(!self.activity_expanded);
             }
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
+            ScrollbackMsg::SetFollowLatestUser(follow) => self.follow_latest_user = follow,
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
@@ -492,7 +494,7 @@ impl Scrollback {
             && self
                 .lines
                 .iter()
-                .any(|existing| existing.kind == LineKind::User)
+                .any(|existing| matches!(existing.kind, LineKind::SessionStart | LineKind::User))
         {
             self.follow_latest_user = true;
         }
@@ -1729,6 +1731,30 @@ mod tests {
             .style()
             .add_modifier
             .contains(Modifier::DIM));
+    }
+
+    #[test]
+    fn user_prompt_paints_grok_panel_background_across_the_row() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::SessionStart, "◆ session_start"));
+        scrollback.append(Line::new(LineKind::User, "Hey"));
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 4));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 4), 24, &mut buffer);
+        let row = (0..4)
+            .find(|row| {
+                buffer
+                    .cell((5, *row))
+                    .is_some_and(|cell| cell.symbol() == "H")
+            })
+            .expect("user row");
+        assert_eq!(
+            buffer.cell((0, row)).expect("user row background").bg,
+            Color::Rgb(36, 36, 36)
+        );
+        assert_eq!(
+            buffer.cell((79, row)).expect("full user row background").bg,
+            Color::Rgb(36, 36, 36)
+        );
     }
 
     #[test]

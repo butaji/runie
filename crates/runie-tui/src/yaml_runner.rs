@@ -1844,6 +1844,11 @@ pub async fn render_visual_buffer(
     for ev in events.into_iter() {
         renderer.apply_actor_event(ev).await;
     }
+    // Visual fixtures are deterministic settled snapshots; keep their
+    // viewport phase independent from live follow mode so wrapped responses
+    // remain visible while the real app follows newly submitted prompts.
+    app.apply_scrollback(ScrollbackMsg::SetFollowLatestUser(false))
+        .await;
     // Replay events establish the transcript first; navigation keystrokes are
     // then applied to the actor snapshot so visual assertions observe the
     // same ordering as the live application.
