@@ -250,6 +250,9 @@ fn tool_result_message_named(
 /// Apply `prepareArguments` (pi agent-loop.ts:586) and validate. Returns the
 /// prepared call (args possibly replaced) or a pi-formatted validation error.
 fn prepare_and_validate(call: &ToolCall, ctx: &ToolExecContext) -> Result<ToolCall, String> {
+    if ctx.registry.lookup(&call.name).is_none() {
+        return Err(format!("Tool {} not found", call.name));
+    }
     let prepared = prepared_call(call, ctx);
     if let Some(tool) = ctx.registry.lookup(&prepared.name) {
         if let Err(e) = tool.validate_arguments(&prepared.arguments) {

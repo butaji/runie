@@ -10,6 +10,13 @@ gate pass. This is deliberately orthogonal to YAML event replay because the
 fixture format cannot represent a retained post-settlement callback without
 introducing scheduler timing.
 
+**Missing-tool preflight parity (2026-08-06):** `prepareToolCall` now rejects
+an absent registry entry before preparation/validation and emits Pi's exact
+`Tool <name> not found` result text. The real loop integration test
+`missing_tool_produces_pi_formatted_error` covers the event-driven result;
+the YAML visual runner does not expose tool-result content for this case, so
+no misleading screen fixture was added.
+
 The current executor still emits a synthetic `tool_execution_update` with
 `{"status":"running"}` before dispatch. Pi emits updates only from a tool's
 `onUpdate` callback. Removing this compatibility event requires regenerating

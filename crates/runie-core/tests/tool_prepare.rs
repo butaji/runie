@@ -211,3 +211,38 @@ async fn validation_failure_produces_pi_formatted_error() {
         "should include the args"
     );
 }
+
+#[tokio::test]
+async fn missing_tool_produces_pi_formatted_error() {
+    let test = TestLoopBuilder::new(Arc::new(tool_call_stream("missing"))).build();
+
+    let out = test
+        .actor
+        .prompt(
+            vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text { text: "go".into() }],
+                timestamp: 1,
+            })],
+            AgentContext::default(),
+        )
+        .await
+        .unwrap();
+
+    let result = out
+        .iter()
+        .find_map(|m| match m {
+            AgentMessage::ToolResult(tr) => Some(tr),
+            _ => None,
+        })
+        .expect("a missing-tool result should be produced");
+    let text: String = result
+        .content
+        .iter()
+        .map(|content| match content {
+            ToolResultContent::Text { text } => text.clone(),
+            _ => String::new(),
+        })
+        .collect();
+    assert!(result.is_error);
+    assert_eq!(text, "Tool missing not found");
+}
