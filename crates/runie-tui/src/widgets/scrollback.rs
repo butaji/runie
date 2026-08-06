@@ -1057,16 +1057,21 @@ impl Scrollback {
         // overflow based on text length and area width.
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
         let mut physical_rows = self.physical_rows(area.width as usize, compact, area.height);
+        let prompt_lead_rows = if self.prompt_timestamp.is_some() {
+            2
+        } else {
+            1
+        };
         // Grok reserves one visual lead row for a submitted prompt. Live
-        // event sequences normally already contain a separator; direct/YAML
-        // reducer inputs may not, so add the lead only to the projection and
-        // never to actor-owned logical state.
+        // Event sequences may already contain a separator, but Grok still
+        // reserves a distinct lead row before the submitted prompt. Add it
+        // only to the projection and never to actor-owned logical state.
         if self.follow_latest_user {
             if let Some(user_row) = physical_rows
                 .iter()
                 .position(|(kind, _, _)| *kind == LineKind::User)
             {
-                if user_row == 0 || physical_rows[user_row - 1].0 != LineKind::Separator {
+                for _ in 0..prompt_lead_rows {
                     physical_rows.insert(user_row, (LineKind::Separator, String::new(), false));
                 }
             }
@@ -1126,11 +1131,13 @@ impl Scrollback {
                     while user_row > 0 && physical_rows[user_row - 1].0 == LineKind::User {
                         user_row -= 1;
                     }
-                    let anchored = if user_row > 0 && physical_rows[user_row - 1].1.is_empty() {
-                        user_row - 1
-                    } else {
-                        user_row
-                    };
+                    let lead = physical_rows[..user_row]
+                        .iter()
+                        .rev()
+                        .take_while(|(_, text, _)| text.is_empty())
+                        .count()
+                        .min(prompt_lead_rows);
+                    let anchored = user_row.saturating_sub(lead);
                     // Keep a newly submitted prompt at the top while the
                     // response fits. Once incoming content outgrows the
                     // viewport, follow the tail so new output remains visible.
@@ -2221,6 +2228,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the full submitted-frame oracle keeps all row assertions together"
+    )]
     fn live_submission_sequence_keeps_timestamped_user_row_visible() {
         let mut scrollback = Scrollback::new();
         scrollback.append(Line::new(LineKind::Separator, ""));
@@ -2258,6 +2269,14 @@ mod tests {
             visible.contains("❯ Hey"),
             "live user row missing: {visible:?}"
         );
+        let user_row = (0..15)
+            .find(|row| {
+                buffer
+                    .cell((5, *row))
+                    .is_some_and(|cell| cell.symbol() == "H")
+            })
+            .expect("live user row position");
+        assert_eq!(user_row, 2, "submitted prompt must retain Grok's lead row");
         assert!(
             visible.contains("6:20 AM"),
             "user timestamp missing: {visible:?}"
@@ -2902,5 +2921,32 @@ mod tests {
         let mut after = Buffer::empty(Rect::new(0, 0, 40, 30));
         scrollback.render(Rect::new(0, 0, 40, 30), &mut after);
         assert!(row_text(&after).contains("Run command-1"));
+    }
+
+    #[test]
+    fn workflow_card_uses_grok_status_and_phase_glyph_order() {
+        assert_eq!(
+            workflow_text(
+                "Workflow release: ship the release",
+                &[
+                    ("plan".into(), "done".into()),
+                    ("tests".into(), "active".into())
+                ],
+                "done",
+                Some(1_200),
+                0,
+            ),
+            "Workflow release done in 1.2s: ship the release  [plan ✓ · tests ●]"
+        );
+        assert_eq!(
+            workflow_text(
+                "Workflow release: ship the release",
+                &[("tests".into(), "active".into())],
+                "active",
+                None,
+                2,
+            ),
+            "Workflow release: ship the release  [tests ●]  (2 agents)"
+        );
     }
 }

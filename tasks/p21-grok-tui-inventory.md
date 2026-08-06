@@ -397,6 +397,13 @@ renders phase states as `✓`/`●`/`○`, and only shows active-agent count whi
 running. Runie's workflow formatter now follows that rule, with the YAML visual
 oracle asserting the exact semantic header and full-screen occurrence.
 
+Submitted-prompt top anchor (2026-08-06): the feed previously added Grok's
+visual lead row only when no separator preceded the user line. Real submitted
+events already contain a separator and vpad, so the prompt rendered one row too
+high at the top. Follow-mode projection now always adds the distinct lead row;
+the live timestamped submission test pins the user glyph at row 2 and the
+four-size `Hey` replay remains green.
+
 Selected-header affordance (2026-08-06): the selected tool header now swaps
 Grok's collapsed bullet for the `›` fold indicator in the pure scrollback
 render path; the transformation is derived from actor-owned selection and
