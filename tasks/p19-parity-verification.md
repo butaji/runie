@@ -8,6 +8,12 @@ GrokNight Opaline surface (`fg #6c6c6c`, `bg #141414`). The fixture remains
 symbol-exact; a fresh truecolor Grok capture is required before this oracle
 can be promoted without comparing incompatible terminal capabilities.
 
+**Declarative queue-mode oracle (2026-08-06):** YAML scenarios now select the
+actor-owned `steering_mode` and `follow_up_mode` instead of the runner forcing
+pi's default `one-at-a-time`. `follow-up.yaml` exercises `follow_up_mode: all`
+with two queued messages and asserts they are drained in one continuation
+turn. This keeps queue semantics in the no-recompile replay layer.
+
 **Capture capability contract (2026-08-06):** `tmux-asciinema-capture.sh` now
 records with `TERM=xterm-256color COLORTERM=truecolor` by default, while still
 allowing validated caller overrides. YAML dump references also support

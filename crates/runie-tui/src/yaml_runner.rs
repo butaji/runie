@@ -35,6 +35,10 @@ pub struct Scenario {
     #[serde(default)]
     pub follow_up: Vec<String>,
     #[serde(default)]
+    pub steering_mode: Option<runie_core::types::QueueMode>,
+    #[serde(default)]
+    pub follow_up_mode: Option<runie_core::types::QueueMode>,
+    #[serde(default)]
     pub tools: Vec<ToolSpec>,
     pub events: Vec<EventSpec>,
     /// Capture the frame after tool execution while the next model request is
@@ -912,8 +916,8 @@ fn build_scenario_loop(scenario: &Scenario) -> Result<(EventBus, LoopActor), Sce
         stream_options: Default::default(),
         abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
-        steering_mode: runie_core::types::QueueMode::OneAtATime,
-        follow_up_mode: runie_core::types::QueueMode::OneAtATime,
+        steering_mode: scenario.steering_mode.unwrap_or_default(),
+        follow_up_mode: scenario.follow_up_mode.unwrap_or_default(),
     };
     Ok((bus, LoopActor::new(deps)))
 }
@@ -1668,8 +1672,8 @@ pub async fn render_visual_buffer(
         stream_options: Default::default(),
         abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
-        steering_mode: runie_core::types::QueueMode::OneAtATime,
-        follow_up_mode: runie_core::types::QueueMode::OneAtATime,
+        steering_mode: scenario.steering_mode.unwrap_or_default(),
+        follow_up_mode: scenario.follow_up_mode.unwrap_or_default(),
     };
     let actor = LoopActor::new(deps);
     let app = App::new_with_welcome(actor, bus.clone());
