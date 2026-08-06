@@ -247,6 +247,16 @@ both overrides together. The remaining combined-asciinema propagation case is
 kept visible as an instrument defect rather than treating the 24-cell result
 as exact parity.
 
+**Prompt timestamp edge alignment (2026-08-06):** The user-feed timestamp
+projection no longer reserves a fixed eight-cell gutter after the prompt. It
+right-aligns the timestamp against the feed width, matching Grok's edge-based
+placement and reducing the controlled 62×32 probe from 24 to 20 glyph
+differences. The wrap gutter is retained for long prompts while short prompts
+right-align at the Grok edge. The locked Grok YAML fixture remains green, and a
+fresh frozen 62×32 probe now reports 10 glyph-only differences: the user row is
+exact, with only completed-assistant timestamp edge placement and elapsed
+capture propagation remaining.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
