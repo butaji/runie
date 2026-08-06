@@ -73,6 +73,13 @@ detect additions or removals in either upstream tree.
 | Model/usage/cost | `ai/src/types.ts`, model helpers | Rust model/usage types and status projection | covered for core event payloads |
 | Abort/cancellation | agent loop + stream options | `CancellationToken`, owned tasks | covered; retain owned-spawn lint |
 | Tool argument preparation | agent tool definitions | prepare/validate/dispatch path | covered by p09–p10 |
+| Tool update callback lifetime | `agent/src/types.ts` + agent loop | executor-scoped update gate | covered; late callbacks are ignored after execute settles |
+
+The late-callback regression remains a focused Rust test rather than a YAML
+fixture: YAML describes event sequences after they exist, while this contract
+requires retaining and invoking a callback after the async tool promise has
+settled. Encoding that with a scheduler delay would violate the event-based,
+no-sleep test invariant.
 | Compaction/session/harness | `agent/src/harness/**` | no core equivalent currently | explicitly out of scope; add only if promoted into runie-core |
 | Provider catalog/OAuth/images | `ai/src/providers/**`, `auth/**`, `images/**` | no runie-core contract | out of scope |
 

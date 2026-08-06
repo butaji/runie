@@ -4,7 +4,14 @@
 //! the supplied sink. In parallel mode, completion-order and source-order
 //! are separated per the TS README §With Tool Calls.
 
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use futures::StreamExt;
 
@@ -323,7 +330,14 @@ async fn execute_tool(
     let updates = ctx.updates.clone();
     let bus = ctx.bus.clone();
     let update_call = call.clone();
+    let settled = Arc::new(AtomicBool::new(false));
+    let callback_settled = settled.clone();
     let on_update = Box::new(move |partial_result| {
+        // Pi scopes updates to the execute promise. A callback retained by a
+        // tool after it settles must become a no-op, even if it fires later.
+        if !tool_update_is_live(&callback_settled) {
+            return;
+        }
         let event = crate::types::AgentEvent::ToolExecutionUpdate {
             tool_call_id: update_call.id.clone(),
             tool_name: update_call.name.clone(),
@@ -342,13 +356,19 @@ async fn execute_tool(
         Some(signal.clone()),
         Some(on_update),
     );
-    tokio::select! {
+    let result = tokio::select! {
         result = tool_future => result.map_err(|e| e.to_string()),
         aborted = wait_for_tool_abort(ctx.abort.clone()) => {
             signal.cancel();
             if aborted { Err("aborted".into()) } else { Err("tool execution aborted".into()) }
         }
-    }
+    };
+    settled.store(true, Ordering::Release);
+    result
+}
+
+fn tool_update_is_live(settled: &AtomicBool) -> bool {
+    !settled.load(Ordering::Acquire)
 }
 
 async fn wait_for_tool_abort(mut abort: Option<tokio::sync::watch::Receiver<bool>>) -> bool {
@@ -482,6 +502,14 @@ mod tests {
             assert!(outcome.tool_results.is_empty());
             assert!(!outcome.all_terminated);
         });
+    }
+
+    #[test]
+    fn settled_tool_update_callbacks_are_ignored() {
+        let settled = AtomicBool::new(false);
+        assert!(tool_update_is_live(&settled));
+        settled.store(true, Ordering::Release);
+        assert!(!tool_update_is_live(&settled));
     }
 
     #[tokio::test]
