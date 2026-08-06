@@ -91,3 +91,8 @@ runtime-discovered and editable without recompiling the runner.
 - **Structured-tool state coverage (2026-08-05):** The structured-update
   fixture now also asserts the terminal core state declaratively, keeping tool
   rendering and functional message-count verification in one YAML scenario.
+
+- **Typed registry DSL (2026-08-06):** Added the readable
+  `typed_action_registry!` macro in `runie-core` and used it for TUI
+  command-palette actions. The expansion generates the enum and label match;
+  macro and palette registry tests cover known and unknown labels.
