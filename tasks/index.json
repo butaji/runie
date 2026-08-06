@@ -145,7 +145,7 @@
     {
       "id": "p19",
       "file": "p19-parity-verification.md",
-      "status": "pending",
+      "status": "in_progress",
       "title": "Verification: parity harness (pi event-sequence replay + grok cast snapshot diffs)"
     },
     {

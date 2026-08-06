@@ -20,6 +20,13 @@ and Grok pager-render 68 files. The inventory is therefore current; green
 local tests do not close the documented full-color cast, specialized-card
 completion-output, or actor-owned row-identity gaps.
 
+**Live projection follow-up (2026-08-06):** The production renderer now has an
+explicit `with_live_actors` projection variant for Grok's live assistant-start
+spacing. YAML replay continues through `with_actors`, so deterministic fixture
+selection and event contracts remain stable. This is an intentional adapter
+difference, not a second state owner: both paths consume the same event
+projection and only the live layout policy changes.
+
 ## Governing scope
 
 **Runie = pi-agent-core behavior + Grok TUI, limited to pi-core features.**

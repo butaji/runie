@@ -43,8 +43,15 @@ called parity.
   projection now emits `Thinking… → separator → response`, matching the
   captured Grok live frame after the aligned user row. The former leading
   separator placed the complete thought/response/completion block one row
-  too low. The pure event-mapping oracle was updated from four to three
-  messages; all event-renderer tests must remain green before recapturing.
+  too low. This is isolated to the production live actor renderer;
+  deterministic YAML replay retains the four-message mapping and its existing
+  selection indices.
+- **Verification boundary (2026-08-06):** A fresh 62×32 comparison after the
+  live placement fix reduced the mismatch from 144 glyph cells to 22 cells
+  with the plain captured response, and the row-placement/terminal-color
+  classes disappeared. The remaining cells are usage width, wall-clock
+  prompt/assistant timestamps, worked elapsed value, and captured response
+  style; these require shared frozen inputs before an exact-zero claim.
 - **Same-event alternate-screen correction (2026-08-06):** Raw replay showed
   Grok writes its settled feed and `ESC[?1049l` in one PTY output event.
   `cast_compare` previously applied Grok's terminal clear before processing the
