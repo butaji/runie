@@ -77,6 +77,12 @@ publish immutable `watch` snapshots to the pure view.
   so this task stays open until those adapters are removed or isolated behind
   a separately named test-only surface.
 
+- **Actor-only regression (2026-08-06):** Added a focused async renderer test
+  that constructs `with_actors`, replays `AgentStart` and user
+  `MessageStart`, and asserts both actor snapshots. This protects the
+  production path against accidentally reintroducing legacy projection access
+  while keeping the event-to-snapshot contract explicit.
+
 ## Latest progress
 
 - The production `e` activity-fold action now publishes

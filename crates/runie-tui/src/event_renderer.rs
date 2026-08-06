@@ -1419,6 +1419,35 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn actor_renderer_reduces_events_without_legacy_projections() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), false);
+
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        assert_eq!(status.snapshot().current(), &Status::Thinking);
+        assert!(scrollback
+            .snapshot()
+            .find_first_containing("session_start")
+            .is_some());
+
+        renderer
+            .apply_actor_event(AgentEvent::MessageStart {
+                message: AgentMessage::User(UserMessage {
+                    content: vec![UserContent::Text {
+                        text: "hello".into(),
+                    }],
+                    timestamp: 0,
+                }),
+            })
+            .await;
+        assert!(scrollback
+            .snapshot()
+            .find_first_containing("hello")
+            .is_some());
+    }
+
     #[test]
     fn agent_start_emits_welcome_and_sets_thinking() {
         let (mut r, sb, st) = new_renderer();
