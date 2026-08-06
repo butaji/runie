@@ -13,8 +13,8 @@
     {"id":"tool-card","doc":"tool-card.md","sources":["scrollback/blocks/tool"],"fixtures":["visual-tool-structured.yaml","visual-tool-error.yaml"]},
     {"id":"prompt-composer","doc":"prompt-composer.md","sources":["views/prompt_widget","app/agent_view/prompt.rs"],"fixtures":["visual-prompts.yaml","visual-file-search.yaml"]},
     {"id":"status-footer","doc":"status-footer.md","sources":["views/agent_status.rs","views/turn_status.rs"],"fixtures":["visual-status-working.yaml","visual-grok-waiting.yaml"]},
-    {"id":"theme-tokens","doc":"theme-tokens.md","sources":["../xai-grok-pager-render/src/theme.rs","../xai-grok-pager-render/src/glyphs.rs"],"fixtures":["visual-theme-day.yaml"]},
-    {"id":"animation","doc":"animation.md","sources":["glyphs.rs","app/agent_view/render.rs","scrollback/blocks/subagent.rs"],"fixtures":["visual-status-working.yaml","visual-background-work.yaml"]},
+    {"id":"theme-tokens","doc":"theme-tokens.md","sources":["../../xai-grok-pager-render/src/theme","../../xai-grok-pager-render/src/glyphs.rs"],"fixtures":["visual-theme-day.yaml"]},
+    {"id":"animation","doc":"animation.md","sources":["../../xai-grok-pager-render/src/glyphs.rs","app/agent_view/render.rs","scrollback/blocks/subagent.rs"],"fixtures":["visual-status-working.yaml","visual-background-work.yaml"]},
     {"id":"command-palette","doc":"command-palette.md","sources":["app/agent_view/input.rs","slash/commands/mod.rs"],"fixtures":["visual-command-palette.yaml","visual-command-palette-activate.yaml"]},
     {"id":"welcome","doc":"welcome.md","sources":["views/welcome"],"fixtures":["visual-welcome-badges.yaml"]}
   ]

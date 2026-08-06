@@ -26,3 +26,8 @@ vertical-padding metadata, sticky headers, and strict cast parity remain open.
 Animation contract refresh (2026-08-06): the component manifest and animation
 page now document the independent actor-owned scrollback demand signal and
 the Grok running-bullet sequence, linked to `visual-background-work.yaml`.
+
+Manifest contract validation (2026-08-06): added `just parity-check` and
+`scripts/validate-parity-index.py`. It validates all 14 component IDs, page
+files, Grok source paths (including the sibling renderer crate), and YAML
+fixtures. This prevents the source-backed inventory from silently drifting.

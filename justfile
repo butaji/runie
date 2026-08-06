@@ -33,6 +33,10 @@ test-core:
 test-tui:
     cargo test -p runie-tui
 
+# Validate the source-backed Grok TUI component manifest.
+parity-check:
+    python3 scripts/validate-parity-index.py
+
 # Run YAML e2e scenarios from crates/runie-tui/tests/e2e/*.yaml.
 # Add or edit YAML files freely — no rebuild required.
 e2e:
