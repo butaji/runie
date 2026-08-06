@@ -403,6 +403,12 @@ impl EventRenderer {
                 result = rx.recv() => {
                     match result {
                         Ok(event) => {
+                            // EventRenderer is the single production bus
+                            // delivery boundary. Actors are mailbox-only in
+                            // App, so one core event produces one acknowledged
+                            // status transition rather than racing a second
+                            // bus-owned projection.
+                            status_actor.apply_event(&event).await;
                             self.record_thinking_elapsed(&event);
                             let actor_tool_start = match &event {
                                 AgentEvent::ToolExecutionStart {
@@ -1856,6 +1862,28 @@ mod tests {
             .snapshot()
             .find_first_containing("hello")
             .is_some());
+    }
+
+    #[tokio::test]
+    async fn live_renderer_is_the_single_status_event_delivery_boundary() {
+        let bus = runie_core::events::EventBus::new();
+        let status = StatusActor::new();
+        let scrollback = ScrollbackActor::new();
+        let renderer = EventRenderer::with_actors(scrollback, status.clone(), false);
+        let mut status_updates = status.subscribe();
+        let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let task = tokio::spawn(renderer.run(bus.subscribe(), shutdown_rx));
+
+        bus.publish(AgentEvent::AgentStart);
+        status_updates
+            .changed()
+            .await
+            .expect("renderer status delivery");
+        assert_eq!(status.snapshot().current(), &Status::Thinking);
+
+        shutdown_tx.send(true).expect("renderer shutdown");
+        task.await.expect("renderer task");
     }
 
     #[test]

@@ -439,3 +439,10 @@ can be implemented without creating a second state owner.
 The first card-row projection is now model-owned: truncation accounting
 consumes `ToolCardRowKind::Content` rows, leaving Ratatui responsible only for
 appearance and geometry.
+
+Live actor delivery correction (2026-08-06): production App construction no
+longer gives feed/status actors independent bus subscriptions while the
+renderer also consumes that bus. `EventRenderer::run` owns the single event
+delivery transaction and sends status/feed reducer messages through actor
+mailboxes. This keeps state ownership singular and avoids duplicate
+reductions; bus-owned constructors remain explicit test/adaptor seams.

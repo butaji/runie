@@ -396,6 +396,15 @@ Tool header-update ownership (2026-08-06): non-structured active-tool update
 payloads now extend per-call header buffers inside `ScrollbackActor`, keyed by
 tool ID. Live renderer update messages are no longer applied a second time;
 completion-card and activity-summary reduction remain the next boundary.
+
+Single live delivery boundary (2026-08-06): production `App` now constructs
+mailbox-only `StatusActor` and `ScrollbackActor`. `EventRenderer::run` is the
+sole subscriber that translates each bus event into acknowledged actor
+messages, including status transitions. This removes the prior double-
+subscription path where bus-owned actors and the renderer could both reduce
+one event. The live boundary has an async regression test; `new_with_bus`
+remains an explicit adapter for isolated actor tests and callers that own a
+bus subscription.
 ## Latest audit (2026-08-06)
 
 - **Run-loop actor requirement:** `EventRenderer::run` no longer uses
