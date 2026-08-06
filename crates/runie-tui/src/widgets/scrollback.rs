@@ -119,6 +119,11 @@ pub enum ScrollbackMsg {
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
     AppendToLastByKind(LineKind, String),
+    FinalizeAssistant {
+        has_reasoning: bool,
+        reasoning_expanded: bool,
+        summary: String,
+    },
     /// Transitional bridge used while event reduction is moved fully into
     /// the actor. It still publishes one immutable state atomically.
     ReplaceSnapshot(Box<Scrollback>),
@@ -197,6 +202,23 @@ impl Scrollback {
                     line.text.push_str(&text);
                 } else {
                     self.append(Line::new(kind, text));
+                }
+            }
+            ScrollbackMsg::FinalizeAssistant {
+                has_reasoning,
+                reasoning_expanded,
+                summary,
+            } => {
+                if !has_reasoning {
+                    self.remove_kind(LineKind::ThinkingStatus);
+                } else if reasoning_expanded {
+                    self.remove_kind(LineKind::ThinkingStatus);
+                } else {
+                    if let Some(thinking) = self.last_mut_by_kind(LineKind::ThinkingStatus) {
+                        thinking.kind = LineKind::TurnSummary;
+                        thinking.text = summary;
+                    }
+                    self.remove_kind(LineKind::Reasoning);
                 }
             }
             ScrollbackMsg::ReplaceSnapshot(snapshot) => *self = *snapshot,

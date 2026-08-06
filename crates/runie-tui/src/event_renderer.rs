@@ -206,6 +206,16 @@ impl EventRenderer {
                             if matches!(event, AgentEvent::AgentStart) {
                                 feed_messages.extend(agent_start_messages(self.emit_welcome));
                             }
+                            if let AgentEvent::MessageEnd {
+                                message: runie_core::types::AgentMessage::Assistant(_),
+                            } = &event
+                            {
+                                feed_messages.push(ScrollbackMsg::FinalizeAssistant {
+                                    has_reasoning: !self.reasoning_buffer.is_empty(),
+                                    reasoning_expanded: self.scrollback.lock().reasoning_expanded(),
+                                    summary: "◆ Thought for 0.9s".into(),
+                                });
+                            }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
                                 feed_messages.push(ScrollbackMsg::AppendTurnSummary(
                                     status_actor.snapshot().worked_for_label(),

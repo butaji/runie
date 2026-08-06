@@ -99,6 +99,12 @@ publish immutable `watch` snapshots to the pure view.
   actor owns creation of the first reasoning row and accumulation of all later
   chunks, with mapping/reducer tests and YAML replay coverage kept green.
 
+- **Assistant finalization migration (2026-08-05):** `MessageEnd` now emits
+  `FinalizeAssistant` to the feed actor. The reducer owns removal of the
+  transient thinking row, collapsed `Thought` conversion, and expanded-mode
+  reasoning retention; the compatibility renderer follows the same event for
+  legacy tests. Unit and YAML replay gates remain green.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status
