@@ -20,6 +20,7 @@ assertions:
     - turn_end
     - agent_end
   state:
+    status: ready
     is_streaming: false
     pending_tool_calls: 0
     messages: 2

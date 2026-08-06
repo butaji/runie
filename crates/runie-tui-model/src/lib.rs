@@ -11,7 +11,7 @@ mod ui;
 
 pub use feed::{FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
-pub use status::{Status, StatusMsg};
+pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use ui::{PaletteAction, UiCommand, UiMsg, UiState};
 
 /// Pure viewport projection for a feed that may follow its newest content.

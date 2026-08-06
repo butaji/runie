@@ -16,6 +16,7 @@ use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps}
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
+    StatusSnapshot,
 };
 pub use runie_tui_model::{UiCommand, UiMsg, UiState};
 
@@ -463,6 +464,10 @@ impl App {
 
     pub fn status_snapshot(&self) -> StatusBar {
         self.status_actor.snapshot()
+    }
+
+    pub fn status_model_snapshot(&self) -> StatusSnapshot {
+        self.status_actor.model_snapshot()
     }
 
     pub fn scrollback_snapshot(&self) -> Scrollback {

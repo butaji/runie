@@ -7,7 +7,7 @@ use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::event_renderer::status_messages_for_event;
-use crate::widgets::{StatusBar, StatusMsg};
+use crate::widgets::{StatusBar, StatusMsg, StatusSnapshot};
 
 enum Command {
     Apply(StatusMsg, oneshot::Sender<()>),
@@ -92,6 +92,10 @@ impl StatusActor {
         self.snapshot.borrow().clone()
     }
 
+    pub fn model_snapshot(&self) -> StatusSnapshot {
+        self.snapshot.borrow().model_snapshot()
+    }
+
     pub fn subscribe(&self) -> watch::Receiver<StatusBar> {
         self.snapshot.clone()
     }
@@ -114,6 +118,10 @@ mod tests {
         let actor = StatusActor::new();
         actor.apply(StatusMsg::Set(Status::Thinking)).await;
         assert_eq!(actor.snapshot().current(), &Status::Thinking);
+        let model = actor.model_snapshot();
+        assert_eq!(model.state, Status::Thinking);
+        assert_eq!(model.theme, runie_core::types::ThemeKind::GrokNight);
+        assert!(model.turn_usage.is_none());
     }
 
     #[tokio::test]

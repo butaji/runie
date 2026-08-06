@@ -72,6 +72,11 @@ Prompt state is now also exposed as renderer-independent `PromptSnapshot` from
 `PromptActor::model_snapshot` provide the actor-owned projection while the
 Ratatui widget snapshot remains as a compatibility path.
 
+Status state is now exposed as renderer-independent `StatusSnapshot`, carrying
+the actor-owned state, theme, animation frame, elapsed ticks, usage, and stop
+reason. `StatusActor::model_snapshot` and `App::status_model_snapshot` expose
+this projection while `StatusBar` remains a compatibility renderer facade.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

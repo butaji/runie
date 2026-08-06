@@ -522,6 +522,8 @@ pub struct Assertions {
 
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct StateAssertions {
+    /// Renderer-independent status label (for example `thinking` or `ready`).
+    pub status: Option<String>,
     pub is_streaming: Option<bool>,
     pub pending_tool_calls: Option<usize>,
     pub messages: Option<usize>,
@@ -914,6 +916,7 @@ pub struct ScenarioOutcome {
     pub selected_entry: Option<usize>,
     pub scroll_offset: usize,
     pub state: runie_core::state::AgentStateSnapshot,
+    pub status: crate::widgets::StatusSnapshot,
 }
 
 pub struct ScenarioError(pub String);
@@ -931,7 +934,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
     append_declared_events(&mut events_from_task, scenario);
 
-    let scrollback = replay_scenario_events(
+    let (scrollback, status) = replay_scenario_events(
         &events_from_task,
         scenario.initial_prompt.is_none(),
         scenario,
@@ -947,6 +950,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         scroll_offset: feed.scroll_offset,
         feed,
         state: actor_snapshot.state_snapshot(),
+        status,
     })
 }
 
@@ -958,11 +962,11 @@ async fn replay_scenario_events(
     events: &[AgentEvent],
     emit_welcome: bool,
     scenario: &Scenario,
-) -> Scrollback {
+) -> (Scrollback, crate::widgets::StatusSnapshot) {
     let scrollback_actor = crate::ScrollbackActor::new();
     let status_actor = crate::StatusActor::new();
     let mut renderer =
-        EventRenderer::with_actors(scrollback_actor.clone(), status_actor, emit_welcome);
+        EventRenderer::with_actors(scrollback_actor.clone(), status_actor.clone(), emit_welcome);
     for event in events {
         renderer.apply_actor_event(event.clone()).await;
     }
@@ -977,7 +981,7 @@ async fn replay_scenario_events(
     for message in declared_scrolls(scenario) {
         scrollback_actor.apply(message).await;
     }
-    scrollback_actor.snapshot()
+    (scrollback_actor.snapshot(), status_actor.model_snapshot())
 }
 
 fn declared_tool_folds(scenario: &Scenario) -> Vec<String> {
@@ -1221,6 +1225,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         return Ok(());
     };
     let actual = &outcome.state;
+    if let Some(expected) = &expected.status {
+        let actual_status = outcome.status.state.label();
+        if actual_status != *expected {
+            return Err(format!(
+                "state status mismatch: expected {expected:?}, got {actual_status:?}"
+            ));
+        }
+    }
     if let Some(value) = expected.is_streaming {
         if actual.is_streaming != value {
             return Err(format!(

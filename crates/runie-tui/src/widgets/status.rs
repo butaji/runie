@@ -7,7 +7,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
 use runie_core::types::{StopReason, ThemeKind, Usage};
-pub use runie_tui_model::{Status, StatusMsg};
+pub use runie_tui_model::{Status, StatusMsg, StatusSnapshot};
 
 pub trait StatusStyleExt {
     fn style(&self) -> Style;
@@ -291,6 +291,17 @@ impl StatusBar {
 
     pub fn current(&self) -> &Status {
         &self.state
+    }
+
+    pub fn model_snapshot(&self) -> StatusSnapshot {
+        StatusSnapshot {
+            state: self.state.clone(),
+            theme: self.theme,
+            animation_frame: self.animation_frame,
+            elapsed_ticks: self.displayed_elapsed_ticks(),
+            turn_usage: self.turn_usage.clone(),
+            turn_stop_reason: self.turn_stop_reason,
+        }
     }
 
     pub fn theme(&self) -> ThemeKind {

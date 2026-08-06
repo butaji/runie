@@ -13,6 +13,7 @@ pub use scrollback::{
     FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock, ToolCardKind,
 };
 pub use status::{
-    braille_spinner_frames, Status, StatusBar, StatusMsg, TurnStatus, TurnStatusPhase,
+    braille_spinner_frames, Status, StatusBar, StatusMsg, StatusSnapshot, TurnStatus,
+    TurnStatusPhase,
 };
 pub use welcome::{version_badge, VersionBadgeVariant, WelcomeWidget};

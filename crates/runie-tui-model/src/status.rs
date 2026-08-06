@@ -36,3 +36,13 @@ pub enum StatusMsg {
     SetTheme(ThemeKind),
     AdvanceAnimation,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatusSnapshot {
+    pub state: Status,
+    pub theme: ThemeKind,
+    pub animation_frame: usize,
+    pub elapsed_ticks: u64,
+    pub turn_usage: Option<Usage>,
+    pub turn_stop_reason: Option<StopReason>,
+}
