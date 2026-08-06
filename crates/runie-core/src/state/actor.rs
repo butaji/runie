@@ -189,7 +189,10 @@ impl AgentStateActor {
             AgentEvent::MessageEnd { message } => {
                 state.messages.push(message.clone());
                 if let AgentMessage::Assistant(assistant) = message {
-                    state.is_streaming = false;
+                    // Pi keeps `isStreaming` true until `agent_end` has
+                    // settled. `message_end` closes the assistant message,
+                    // but the agent may still run turn-end hooks and queue
+                    // work before the run is truly idle.
                     state.streaming_message = None;
                     state.error_message = assistant.error_message.clone();
                 }
@@ -248,7 +251,6 @@ impl AgentStateActor {
             AgentEvent::Reset => *state = AgentStateSnapshot::default(),
             AgentEvent::MessageStart { .. }
             | AgentEvent::AgentStart
-            | AgentEvent::AgentEnd { .. }
             | AgentEvent::TurnStart
             | AgentEvent::Waiting { .. }
             | AgentEvent::ThemeChanged { .. }
@@ -259,6 +261,10 @@ impl AgentStateActor {
             | AgentEvent::BackgroundWorkProgress { .. }
             | AgentEvent::BackgroundWorkFinished { .. }
             | AgentEvent::BackgroundWorkCancelled { .. } => {}
+            AgentEvent::AgentEnd { .. } => {
+                state.is_streaming = false;
+                state.streaming_message = None;
+            }
         }
     }
 
@@ -447,9 +453,14 @@ mod tests {
             .await;
         actor.sync().await;
         let snapshot = actor.snapshot();
-        assert!(!snapshot.is_streaming);
+        assert!(snapshot.is_streaming);
         assert_eq!(snapshot.error_message.as_deref(), Some("aborted"));
         assert_eq!(snapshot.messages.len(), 1);
+        actor
+            .apply_event(&AgentEvent::AgentEnd { messages: vec![] })
+            .await;
+        actor.sync().await;
+        assert!(!actor.snapshot().is_streaming);
     }
 
     #[tokio::test]

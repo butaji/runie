@@ -72,6 +72,10 @@ pub struct RunLoopOutcome {
 
 /// Run a full agent loop for the supplied prompts. Mirrors
 /// `pi-agent-core`'s `prompt("X")` event sequence.
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the loop keeps Pi's ordered turn, hook, queue, and settlement transitions together"
+)]
 pub async fn run_loop(
     prompts: Vec<AgentMessage>,
     context: AgentContext,
@@ -115,7 +119,7 @@ pub async fn run_loop(
             new_messages: all_new.clone(),
         };
         if apply_turn_hooks(&deps, hook_ctx, &mut override_model, &mut override_ctx).await {
-            return end_run(all_new, &deps);
+            return end_run(all_new, &deps).await;
         }
 
         if continue_after_turn(has_more_tool_calls, &deps, &mut all_new).await {
@@ -125,7 +129,7 @@ pub async fn run_loop(
         break;
     }
 
-    end_run(all_new, &deps)
+    end_run(all_new, &deps).await
 }
 
 fn initial_context_override(
@@ -158,10 +162,15 @@ async fn continue_after_turn(
     inject_follow_up_messages(deps, all_new).await
 }
 
-fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutcome {
-    deps.bus.publish(AgentEvent::AgentEnd {
-        messages: all_new.clone(),
-    });
+async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutcome {
+    deps.state
+        .publish_event(
+            &deps.bus,
+            AgentEvent::AgentEnd {
+                messages: all_new.clone(),
+            },
+        )
+        .await;
     RunLoopOutcome {
         new_messages: all_new,
     }
