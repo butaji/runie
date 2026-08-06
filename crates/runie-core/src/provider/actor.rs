@@ -99,8 +99,11 @@ async fn run_provider_worker(
                     Err(error) => {
                         let receiver = event_tx.subscribe();
                         let _ = event_tx.send(crate::types::AssistantMessageEvent::Error {
-                            error: error.to_string(),
-                            message: None,
+                            reason: crate::types::StopReason::Error,
+                            error: crate::types::AssistantMessage::with_error(
+                                crate::types::StopReason::Error,
+                                error.to_string(),
+                            ),
                         });
                         let _ = reply.send(receiver);
                     }
@@ -247,7 +250,7 @@ mod tests {
         assert!(matches!(
             rx.recv().await.unwrap(),
             crate::types::AssistantMessageEvent::Error { error, .. }
-                if error == "api: bad request"
+                if error.error_text() == "api: bad request"
         ));
     }
 }

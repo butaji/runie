@@ -120,8 +120,11 @@ mod tests {
         );
         assert_eq!(
             crate::assistant_event_kind!(AssistantMessageEvent::Error {
-                error: "failed".into(),
-                message: None
+                reason: crate::types::StopReason::Error,
+                error: crate::types::AssistantMessage::with_error(
+                    crate::types::StopReason::Error,
+                    "failed",
+                )
             }),
             "Error"
         );

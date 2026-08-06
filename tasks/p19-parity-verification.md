@@ -88,6 +88,13 @@ Pi's `toolcall_start.partial` is a complete `AssistantMessage`, not a bare
 events, and the reducer merges their tool-call content through one pure helper
 so multi-call streams retain all siblings.
 
+**Assistant stream error wire parity (2026-08-06):** Pi terminates assistant
+streams with `error: AssistantMessage` plus a separate `reason` (`error` or
+`aborted`). Runie previously exposed a string error and optional message with
+the inverse wire shape. The event now carries Pi's typed reason and terminal
+assistant payload; UI consumers use a pure `error_text()` projection, while
+provider/YAML paths populate the same event contract.
+
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered

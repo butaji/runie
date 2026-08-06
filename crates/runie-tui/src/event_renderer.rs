@@ -54,7 +54,7 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
                 StatusMsg::Set(Status::Ready),
             ],
             AssistantMessageEvent::Error { error, .. } => {
-                vec![StatusMsg::Set(Status::Error(error.clone()))]
+                vec![StatusMsg::Set(Status::Error(error.error_text()))]
             }
             _ => Vec::new(),
         },
@@ -517,7 +517,7 @@ impl EventRenderer {
                             {
                                 feed_messages.push(ScrollbackMsg::Append(Line::new(
                                     LineKind::System,
-                                    format!("error: {error}"),
+                                    format!("error: {}", error.error_text()),
                                 )));
                             }
                             if let AgentEvent::MessageEnd {
@@ -628,7 +628,7 @@ impl EventRenderer {
         {
             messages.push(ScrollbackMsg::Append(Line::new(
                 LineKind::System,
-                format!("error: {error}"),
+                format!("error: {}", error.error_text()),
             )));
         }
         if let AgentEvent::MessageEnd {
@@ -1191,12 +1191,13 @@ impl EventRenderer {
             }
             AssistantMessageEvent::Error { error, .. } => {
                 if self.status_actor.is_none() {
-                    self.status.lock().set(Status::Error(error.clone()));
+                    self.status.lock().set(Status::Error(error.error_text()));
                 }
                 if self.scrollback_actor.is_none() {
-                    self.scrollback
-                        .lock()
-                        .append(Line::new(LineKind::System, format!("error: {error}")));
+                    self.scrollback.lock().append(Line::new(
+                        LineKind::System,
+                        format!("error: {}", error.error_text()),
+                    ));
                 }
             }
             AssistantMessageEvent::ToolCallDelta { .. }

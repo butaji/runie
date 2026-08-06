@@ -450,8 +450,8 @@ impl EventSpec {
                 message: None,
             }),
             Self::Error { error } => Some(AssistantMessageEvent::Error {
-                error: error.clone(),
-                message: None,
+                reason: StopReason::Error,
+                error: AssistantMessage::with_error(StopReason::Error, error.clone()),
             }),
             Self::Waiting { .. } => None,
             Self::Theme { .. } => None,

@@ -815,12 +815,11 @@ fn apply_event(assistant: &mut AssistantMessage, event: AssistantMessageEvent) {
                 *assistant = terminal;
             }
         }
-        AssistantMessageEvent::Error { error, message } => {
-            assistant.stop_reason = Some(StopReason::Error);
-            assistant.error_message = Some(error);
-            if let Some(terminal) = message {
-                *assistant = terminal;
-            }
+        AssistantMessageEvent::Error { reason, error } => {
+            assistant.stop_reason = Some(reason);
+            assistant.error_message = error.error_message;
+            assistant.usage = error.usage;
+            assistant.raw_stop_reason = error.raw_stop_reason;
         }
     }
 }

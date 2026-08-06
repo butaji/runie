@@ -242,6 +242,20 @@ impl AssistantMessage {
             ..Self::default()
         }
     }
+
+    pub fn with_error(reason: StopReason, message: impl Into<String>) -> Self {
+        Self {
+            stop_reason: Some(reason),
+            error_message: Some(message.into()),
+            ..Self::default()
+        }
+    }
+
+    pub fn error_text(&self) -> String {
+        self.error_message
+            .clone()
+            .unwrap_or_else(|| "assistant stream failed".to_owned())
+    }
 }
 
 /// Tool result content block.
@@ -924,10 +938,9 @@ pub enum AssistantMessageEvent {
     },
     Error {
         #[serde(rename = "reason")]
-        error: String,
+        reason: StopReason,
         /// Pi's error event carries the terminal assistant message.
-        #[serde(default)]
-        message: Option<AssistantMessage>,
+        error: AssistantMessage,
     },
 }
 
@@ -1260,8 +1273,8 @@ mod tests {
                 message: None,
             },
             AssistantMessageEvent::Error {
-                error: "boom".into(),
-                message: None,
+                reason: StopReason::Error,
+                error: AssistantMessage::with_error(StopReason::Error, "boom"),
             },
         ];
         for e in events {
@@ -1420,12 +1433,12 @@ mod tests {
         assert!(done.get("stopReason").is_none());
 
         let error = serde_json::to_value(AssistantMessageEvent::Error {
-            error: "aborted".into(),
-            message: None,
+            reason: StopReason::Aborted,
+            error: AssistantMessage::with_error(StopReason::Aborted, "aborted"),
         })
         .expect("error event serializes");
         assert_eq!(error["reason"], "aborted");
-        assert!(error.get("error").is_none());
+        assert_eq!(error["error"]["errorMessage"], "aborted");
 
         let stream = AssistantMessageEvent::ToolCallEnd {
             index: 0,
