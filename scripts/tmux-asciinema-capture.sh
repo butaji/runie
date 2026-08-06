@@ -27,6 +27,8 @@ tmux resize-window -t "$session" -x "$cols" -y "$rows"
 # either value through the validated assignment list, but a capture must not
 # silently inherit a terminal-default palette from the host shell.
 record_command="TERM=xterm-256color COLORTERM=truecolor"
+capture_term="xterm-256color"
+capture_colorterm="truecolor"
 if [[ -n "$env_assignments" ]]; then
     validated_assignments=""
     for assignment in $env_assignments; do
@@ -35,6 +37,10 @@ if [[ -n "$env_assignments" ]]; then
             exit 1
         fi
         validated_assignments+="${assignment} "
+        case "$assignment" in
+            TERM=*) capture_term=${assignment#TERM=} ;;
+            COLORTERM=*) capture_colorterm=${assignment#COLORTERM=} ;;
+        esac
     done
     record_command+=" ${validated_assignments}"
 fi
@@ -129,8 +135,8 @@ jq -n \
   --arg grok_version "$grok_version" \
   --arg tmux_version "$tmux_version" \
   --arg asciinema_version "$asciinema_version" \
-  --arg term "${TERM:-}" \
-  --arg colorterm "${COLORTERM:-}" \
+  --arg term "$capture_term" \
+  --arg colorterm "$capture_colorterm" \
   --arg cast "$cast" \
   --arg raw "${cast%.cast}.raw" \
   --argjson cols "$cols" \

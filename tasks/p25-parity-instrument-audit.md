@@ -478,3 +478,10 @@ The comparison includes glyph, foreground/background color, bold, italic,
 underline, and inverse attributes for every compared cell. The unequal frame
 counts and first-cell diagnostic are retained as a failing parity signal; no
 frame filtering or attribute downgrade is allowed to turn this into a pass.
+## Capture manifest provenance correction (2026-08-06)
+
+`tmux-asciinema-capture.sh` now records the effective `TERM` and `COLORTERM`
+assignments passed to the captured command, including validated caller
+overrides, instead of inheriting the parent shell's values. This prevents
+capture metadata from overstating color capability and makes later
+`exact_attributes` decisions auditable.
