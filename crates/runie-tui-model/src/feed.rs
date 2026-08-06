@@ -45,6 +45,8 @@ pub struct Line {
 pub struct FeedSnapshot {
     pub lines: Vec<Line>,
     pub tool_blocks: Vec<ToolBlock>,
+    /// Tool names are reducer facts used to resolve specialized Grok cards.
+    pub tool_names: HashMap<String, String>,
     pub autoscroll: bool,
     pub scroll_offset: usize,
     pub reasoning_expanded: bool,
@@ -104,6 +106,69 @@ pub fn default_tool_display_mode(tool_name: &str) -> ToolDisplayMode {
     } else {
         ToolDisplayMode::Collapsed
     }
+}
+
+/// Pure projection from transcript facts to Grok's typed tool cards.
+/// Ordering follows first appearance in the transcript, including parallel
+/// tool calls. Terminal widgets must consume this result rather than rebuild
+/// card identity from rendered cells.
+#[allow(
+    clippy::too_many_lines,
+    reason = "keeps the pure line-to-card projection and its ordering rules together"
+)]
+pub fn project_tool_blocks(
+    lines: &[Line],
+    tool_names: &HashMap<String, String>,
+    tool_modes: &HashMap<String, ToolDisplayMode>,
+) -> Vec<ToolBlock> {
+    let mut blocks = Vec::new();
+    for line in lines {
+        let Some(id) = line.tool_call_id.as_deref() else {
+            continue;
+        };
+        let kind_for = |text: &str| {
+            tool_names.get(id).map_or_else(
+                || ToolCardKind::from_header(text),
+                |name| ToolCardKind::from_header(name),
+            )
+        };
+        let Some(index) = blocks
+            .iter()
+            .position(|block: &ToolBlock| block.tool_call_id == id)
+        else {
+            if matches!(
+                line.kind,
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+            ) {
+                blocks.push(ToolBlock {
+                    tool_call_id: id.to_owned(),
+                    header: line.text.clone(),
+                    kind: kind_for(&line.text),
+                    output: Vec::new(),
+                    mode: tool_modes
+                        .get(id)
+                        .copied()
+                        .unwrap_or(ToolDisplayMode::Expanded),
+                    is_running: line.kind == LineKind::ToolRunning,
+                    is_error: line.kind == LineKind::ToolError,
+                    tool_row_id: line.tool_row_id,
+                });
+            }
+            continue;
+        };
+        let block = &mut blocks[index];
+        match line.kind {
+            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
+                block.header = line.text.clone();
+                block.kind = kind_for(&line.text);
+                block.is_running = line.kind == LineKind::ToolRunning;
+                block.is_error = line.kind == LineKind::ToolError;
+            }
+            LineKind::ToolOutput | LineKind::ToolResult => block.output.push(line.text.clone()),
+            _ => {}
+        }
+    }
+    blocks
 }
 
 impl ToolCardKind {
@@ -175,8 +240,9 @@ impl ToolCardKind {
 
 #[cfg(test)]
 mod tests {
-    use super::default_tool_display_mode;
+    use super::{default_tool_display_mode, project_tool_blocks, Line, LineKind, ToolCardKind};
     use runie_core::types::ToolDisplayMode;
+    use std::collections::HashMap;
 
     #[test]
     fn default_tool_modes_match_grok_families() {
@@ -192,6 +258,29 @@ mod tests {
             default_tool_display_mode("memory_search"),
             ToolDisplayMode::Collapsed
         );
+    }
+
+    #[test]
+    fn tool_projection_is_ordered_and_renderer_independent() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "read src/lib.rs").for_tool("second"),
+            Line::new(LineKind::ToolOutput, "line").for_tool("second"),
+            Line::new(LineKind::ToolRunning, "bash cargo test").for_tool("first"),
+        ];
+        let names = HashMap::from([
+            ("second".to_owned(), "read".to_owned()),
+            ("first".to_owned(), "bash".to_owned()),
+        ]);
+        let blocks = project_tool_blocks(&lines, &names, &HashMap::new());
+        assert_eq!(
+            blocks
+                .iter()
+                .map(|block| block.tool_call_id.as_str())
+                .collect::<Vec<_>>(),
+            ["second", "first"]
+        );
+        assert_eq!(blocks[0].output, ["line"]);
+        assert_eq!(blocks[1].kind, ToolCardKind::Execute);
     }
 }
 

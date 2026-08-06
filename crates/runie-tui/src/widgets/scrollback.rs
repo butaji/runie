@@ -490,64 +490,9 @@ impl Scrollback {
         self.theme
     }
 
-    /// Project line storage into Grok's typed tool-block view. Ordering follows
-    /// first appearance in the transcript, including parallel tool calls.
-    #[allow(
-        clippy::too_many_lines,
-        reason = "keeps the pure line-to-block projection together"
-    )]
+    /// Compatibility adapter for the model-owned typed tool projection.
     pub fn tool_blocks(&self) -> Vec<ToolBlock> {
-        let mut blocks = Vec::new();
-        for line in &self.lines {
-            let Some(id) = line.tool_call_id.as_deref() else {
-                continue;
-            };
-            let Some(index) = blocks
-                .iter()
-                .position(|block: &ToolBlock| block.tool_call_id == id)
-            else {
-                if matches!(
-                    line.kind,
-                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-                ) {
-                    blocks.push(ToolBlock {
-                        tool_call_id: id.to_owned(),
-                        header: line.text.clone(),
-                        kind: self.tool_names.get(id).map_or_else(
-                            || ToolCardKind::from_header(&line.text),
-                            |name| ToolCardKind::from_header(name),
-                        ),
-                        output: Vec::new(),
-                        mode: self
-                            .tool_modes
-                            .get(id)
-                            .copied()
-                            .unwrap_or(runie_core::types::ToolDisplayMode::Expanded),
-                        is_running: line.kind == LineKind::ToolRunning,
-                        is_error: line.kind == LineKind::ToolError,
-                        tool_row_id: line.tool_row_id,
-                    });
-                }
-                continue;
-            };
-            let block = &mut blocks[index];
-            match line.kind {
-                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
-                    block.header = line.text.clone();
-                    block.kind = self.tool_names.get(id).map_or_else(
-                        || ToolCardKind::from_header(&line.text),
-                        |name| ToolCardKind::from_header(name),
-                    );
-                    block.is_running = line.kind == LineKind::ToolRunning;
-                    block.is_error = line.kind == LineKind::ToolError;
-                }
-                LineKind::ToolOutput | LineKind::ToolResult => {
-                    block.output.push(line.text.clone());
-                }
-                _ => {}
-            }
-        }
-        blocks
+        runie_tui_model::project_tool_blocks(&self.lines, &self.tool_names, &self.tool_modes)
     }
 
     fn replace_tool_by_id(&mut self, tool_call_id: &str, text: String) {
@@ -689,6 +634,7 @@ impl Scrollback {
         FeedSnapshot {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),
+            tool_names: self.tool_names.clone(),
             autoscroll: self.autoscroll,
             scroll_offset: self.scroll_offset,
             reasoning_expanded: self.reasoning_expanded,

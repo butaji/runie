@@ -101,6 +101,13 @@ Typed `ToolBlock` and `ToolCardKind` projections are now model-owned, and
 `FeedSnapshot` carries the ordered tool-card projection. YAML tool assertions
 therefore consume the same immutable model data as future renderers.
 
+The line-to-tool-card projection itself is now in `runie-tui-model` as the
+pure `project_tool_blocks` function. `FeedSnapshot` carries the reducer-owned
+tool-name facts required for specialized Grok card classification, and the
+Ratatui `Scrollback` implementation is only a compatibility adapter. A model
+unit test covers parallel first-appearance ordering, output accumulation, and
+specialized execute classification.
+
 The remaining `ScenarioOutcome.tool_blocks` field is compatibility-only; all
 tool-count, mode, header, output, and kind assertions read
 `ScenarioOutcome.feed.tool_blocks`.

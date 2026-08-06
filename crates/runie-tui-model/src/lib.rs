@@ -13,7 +13,8 @@ mod ui;
 
 pub use events::status_messages_for_event;
 pub use feed::{
-    default_tool_display_mode, FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind,
+    default_tool_display_mode, project_tool_blocks, FeedSnapshot, Line, LineKind, ScrollbackMsg,
+    ToolBlock, ToolCardKind,
 };
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
@@ -174,6 +175,7 @@ mod tests {
         FeedSnapshot {
             lines: Vec::new(),
             tool_blocks: Vec::new(),
+            tool_names: std::collections::HashMap::new(),
             autoscroll: true,
             scroll_offset: 0,
             reasoning_expanded: false,
