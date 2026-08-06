@@ -197,6 +197,12 @@ Theme-token audit: the compact welcome title no longer uses terminal-default
 `Color::Cyan`; it now resolves through the GrokNight Opaline accent token, so
 welcome chrome follows the same theme projection as the feed and status bar.
 
+Full-screen theme propagation (2026-08-06): both live binary draw paths now
+derive the terminal background from the actor-owned `StatusBar` theme
+snapshot. A `ThemeChanged` event therefore updates the background as well as
+feed, status, and prompt token consumers; the previous hardcoded GrokNight
+background was a real palette propagation gap. The complete local gate passes.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

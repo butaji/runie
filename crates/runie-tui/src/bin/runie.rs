@@ -28,7 +28,7 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
 use runie_core::types::{
-    AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ThemeKind, ToolExecutionMode,
+    AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ToolExecutionMode,
 };
 
 use runie_tui::app::{App, AppExit};
@@ -294,7 +294,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
         let status = app.status_snapshot();
         frame.buffer_mut().set_style(
             frame_area,
-            runie_tui::appearance::background_style_for(ThemeKind::GrokNight),
+            runie_tui::appearance::background_style_for(status.theme()),
         );
         if matches!(status.current(), Status::Ready) {
             render_live_ready_footer(layout.status, frame.buffer_mut());
@@ -496,11 +496,11 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         let frame_area = f.area();
                         let buf = f.buffer_mut();
+                        let status = app.status_snapshot();
                         buf.set_style(
                             frame_area,
-                            runie_tui::appearance::background_style_for(ThemeKind::GrokNight),
+                            runie_tui::appearance::background_style_for(status.theme()),
                         );
-                        let status = app.status_snapshot();
                         let turn_status = status.turn_status();
                         if matches!(status.current(), Status::Ready) {
                             render_live_ready_footer(layout.status, buf);
