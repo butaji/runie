@@ -44,7 +44,7 @@ if [[ -n "$env_assignments" ]]; then
     done
     record_command+=" ${validated_assignments}"
 fi
-record_command+="$command_line"
+record_command+=" $command_line"
 escaped_command=${record_command//\'/\'\\\'\'}
 quoted_command="'${escaped_command}'"
 tmux send-keys -t "$session" -l \

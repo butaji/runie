@@ -22,6 +22,18 @@ called parity.
   mismatched probe prompt, geometry, `TERM`, or `COLORTERM` before reporting
   cell differences; Grok/Runie command strings remain intentionally allowed to
   differ.
+- **Capture command delimiter correction (2026-08-06):** With no caller
+  environment overrides, the command builder previously joined
+  `COLORTERM=truecolor` directly to `grok`/Runie, producing an invalid command
+  such as `truecolorgrok` and an empty cast. The delimiter is now explicit;
+  `bash -n` plus a fresh Grok capture guards this path.
+- **Fresh capture recheck (2026-08-06):** After the delimiter fix, isolated
+  62×32 Grok and Runie `Hey` casts both completed with manifests and matching
+  probe/terminal metadata. The strict final-screen comparison reports 316
+  glyph-only differences; the phase-locked `Worked for` comparison reports
+  six Grok visible frames versus one Runie frame. This is valid evidence of a
+  remaining phase/frame mismatch, not a capture-launch failure, and remains
+  open for semantic alignment.
 - `cast_compare --frames`: opt-in indexed frame replay. It retains the full
   cell/style grid after every output event and reports frame counts plus the
   first corresponding-frame divergence, making timing/frame alignment visible
