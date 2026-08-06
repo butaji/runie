@@ -493,3 +493,10 @@ an actor-completed row, and those rows must not be merged by ID alone. The
 change was reverted after the oracle caught header corruption. The remaining
 implementation must introduce explicit row ownership/identity before closing
 the ordinary running-state gap.
+
+Completion-output boundary (2026-08-06): the same oracle also pins a separate
+Grok card rule: ordinary specialized cards retain their compact invocation
+header after completion, while the completed preview is emitted as a structured
+output entry. A reducer row token must not be used as permission to rewrite
+that header; ownership and completion formatting require independent event
+contracts.

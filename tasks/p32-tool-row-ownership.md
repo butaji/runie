@@ -24,6 +24,17 @@ next implementation must carry an opaque reducer-owned row identity from the
 start intent through update/end messages; matching by `tool_call_id` remains
 unsafe for compatibility-seeded replays.
 
+## Completion-output boundary (2026-08-06)
+
+A first implementation experiment carried a reducer token to the live header
+and correctly settled that header. The existing Grok oracle then failed: Grok's
+specialized cards retain the short header (`List .`, `Run cargo test`) and put
+the completed preview (`List . (3 entries)`, `Run cargo test → ✓`) in the
+output stream. The experiment was reverted after the event-sequence gate
+reported the mismatch. Row identity and completion-output placement are
+therefore separate contracts; the next fixture must assert both before the
+token is reintroduced.
+
 ## Objective
 
 Give each live `ToolExecutionStart` a reducer-owned row identity distinct from
