@@ -25,18 +25,23 @@ pub struct StatusActor {
 
 impl StatusActor {
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(StatusBar::new().model_snapshot());
+        let initial = StatusSnapshot {
+            elapsed_ticks: crate::clock::parity_elapsed_ticks().unwrap_or_default(),
+            ..StatusSnapshot::default()
+        };
+        let elapsed_seed = crate::clock::parity_elapsed_ticks();
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
         let (tx, owner) = spawn_actor_worker!(16, |mut rx: mpsc::Receiver<Command>| async move {
-            let mut state = StatusBar::new();
+            let mut state = initial;
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
                     Command::Apply(message, reply) => (vec![message], reply),
                     Command::ApplyBatch(messages, reply) => (messages, reply),
                 };
                 for message in messages {
-                    state.apply(message);
+                    state.apply(message, elapsed_seed);
                 }
-                let _ = snapshot_tx.send(state.model_snapshot());
+                let _ = snapshot_tx.send(state.clone());
                 let _ = reply.send(());
             }
         });
