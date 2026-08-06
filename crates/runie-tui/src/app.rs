@@ -530,6 +530,10 @@ impl App {
                 meter: model.status.header_meter(),
                 theme: model.status.theme,
             },
+            feed: model.feed.clone(),
+            prompt: model.prompt.clone(),
+            status: model.status.clone(),
+            ui: model.ui.clone(),
         })
     }
 

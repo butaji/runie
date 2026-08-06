@@ -10,6 +10,7 @@ use std::fmt;
 use runie_core::types::ThemeKind;
 
 pub use runie_tui_model::ScrollState;
+use runie_tui_model::{FeedSnapshot, PromptSnapshot, StatusSnapshot, UiState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LayoutViewport {
@@ -304,6 +305,10 @@ pub struct HeaderViewProps {
 pub struct ViewProps {
     pub chat: ChatViewProps,
     pub header: HeaderViewProps,
+    pub feed: FeedSnapshot,
+    pub prompt: PromptSnapshot,
+    pub status: StatusSnapshot,
+    pub ui: UiState,
 }
 
 /// Complete renderer-neutral declarative document for one chat frame.
@@ -441,6 +446,10 @@ pub fn chat_document(props: ChatViewProps) -> ViewDocument {
             meter: String::new(),
             theme: ThemeKind::default(),
         },
+        feed: FeedSnapshot::default(),
+        prompt: PromptSnapshot::default(),
+        status: StatusSnapshot::default(),
+        ui: UiState::new(),
     })
 }
 
@@ -540,6 +549,10 @@ mod tests {
         assert_eq!(document.components.len(), super::CHAT_COMPONENTS.len());
         assert!(document.props.chat.command_palette_visible);
         assert_eq!(document.props.header.meter, "");
+        assert!(document.props.feed.is_empty());
+        assert!(document.props.prompt.is_empty());
+        assert_eq!(document.props.status.state, runie_tui_model::Status::Ready);
+        assert_eq!(document.props.ui, runie_tui_model::UiState::new());
         assert!(document
             .root
             .slots()

@@ -94,11 +94,15 @@ boundary rather than through renderer-only state or direct actor reads.
   widget during painting. `StatusSnapshot::header_meter()` keeps that
   projection renderer-independent.
 
+- `ViewProps` now also carries the feed, prompt, status, and UI actor
+  projections. Both live draw paths consume those values from the one
+  document produced for the frame; the pre-draw readiness check remains an
+  event-loop decision, outside painting.
+
 ## Next boundaries
 
-1. Migrate the remaining widget-specific props (feed, prompt, status, and
-   overlays) from compatibility widget reconstruction to immutable view-model
-   fields in `ViewProps`.
+1. Replace remaining compatibility widget-derived overlay/layout measurements
+   with explicit immutable component props where parity requires them.
 2. Add stack measurement/reflow from `LayoutEntry` basis/grow/shrink values.
 3. Add a terminal-independent cell/style intent layer.
 4. Adapt scrollback, prompt, status, and overlays one component at a time;

@@ -39,7 +39,7 @@ pub enum StatusMsg {
     AdvanceAnimation,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StatusSnapshot {
     pub state: Status,
     pub theme: ThemeKind,

@@ -9,8 +9,9 @@ pub enum PromptOutcome {
     Ignored,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum InputMode {
+    #[default]
     Normal,
     Alternate,
     Plan,
@@ -18,7 +19,7 @@ pub enum InputMode {
     FileViewer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PromptSnapshot {
     pub text: String,
     pub focused: bool,

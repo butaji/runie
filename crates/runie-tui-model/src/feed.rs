@@ -37,7 +37,7 @@ pub struct Line {
 /// Immutable feed projection shared across actors, scenario runners, and
 /// renderers. It intentionally contains facts and view controls only; the
 /// mutable reducer and terminal caches remain in `runie-tui`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FeedSnapshot {
     pub lines: Vec<Line>,
     pub tool_blocks: Vec<ToolBlock>,
