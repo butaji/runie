@@ -398,3 +398,9 @@ completion-card and activity-summary reduction remain the next boundary.
   without both actor handles now fails explicitly at its run boundary;
   production remains actor-only while legacy mutex constructors stay confined
   to tests.
+# Latest reset-boundary correction (2026-08-06)
+
+The command-palette New Session action now delegates to `App::reset_session`
+and `LoopActor::reset()` instead of publishing `Reset` directly. This keeps
+core state, prompt, status, scrollback, and UI projections on one ordered
+actor-owned event boundary.

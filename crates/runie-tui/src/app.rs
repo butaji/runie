@@ -308,6 +308,12 @@ impl App {
         self.ui.send(UiMsg::ToggleShortcuts).await;
     }
 
+    /// Reset the core and every event-driven TUI projection through the loop
+    /// actor's single reset boundary.
+    pub async fn reset_session(&self) {
+        self.loop_actor.reset().await;
+    }
+
     /// Publish a theme change and wait until both live projections acknowledge
     /// the event. The wait is cooperative and bounded; no renderer state is
     /// mutated directly.
