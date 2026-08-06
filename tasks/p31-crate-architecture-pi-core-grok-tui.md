@@ -58,6 +58,10 @@ selection, and count helpers are shared by the actor reducer and widget.
 `UiState` has consequently moved into the model crate without importing
 terminal code.
 
+`UiCommand` is now model-owned as the pure effect intent emitted by `UiActor`.
+The runtime binary remains the effect owner: it consumes the intent and
+publishes core events or performs application shutdown.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

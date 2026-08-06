@@ -40,6 +40,12 @@ impl PaletteAction {
     }
 }
 
+/// Pure intent emitted by the UI actor for an effect-owning consumer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UiCommand {
+    ActivatePaletteEntry(PaletteAction),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiMsg {
     HideWelcome,
