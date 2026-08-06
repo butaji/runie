@@ -617,13 +617,17 @@ fn enrich_assistant_partial(
                 partial,
             }
         }
-        AssistantMessageEvent::ThinkingEnd { index, content, .. } => {
-            AssistantMessageEvent::ThinkingEnd {
-                index,
-                content,
-                partial,
-            }
-        }
+        AssistantMessageEvent::ThinkingEnd {
+            index,
+            content,
+            elapsed_ms,
+            ..
+        } => AssistantMessageEvent::ThinkingEnd {
+            index,
+            content,
+            elapsed_ms,
+            partial,
+        },
         AssistantMessageEvent::ToolCallEnd {
             index, tool_call, ..
         } => AssistantMessageEvent::ToolCallEnd {
@@ -640,6 +644,7 @@ fn is_delta_event(event: &AssistantMessageEvent) -> bool {
         event,
         AssistantMessageEvent::TextDelta { .. }
             | AssistantMessageEvent::ThinkingDelta { .. }
+            | AssistantMessageEvent::ThinkingEnd { .. }
             | AssistantMessageEvent::ToolCallDelta { .. }
     )
 }

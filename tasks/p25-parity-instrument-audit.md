@@ -178,6 +178,15 @@ actor-owned state projection, with YAML replay values for server timestamps;
 the renderer should consume the resulting projection rather than hardcode a
 duration.
 
+**Thinking elapsed event contract (2026-08-06):** `ThinkingEnd` now carries
+optional `elapsedMs` metadata, the core partial-reconstruction path preserves
+it, and the stream driver publishes the marker as a `MessageUpdate` so the
+actor-owned TUI projection can consume it. The controlled placeholder emits
+`elapsedMs: 200`; a fresh 62×32 cast now renders `Thought for 0.2s`, matching
+the preserved Grok frame. The field is optional for backward-compatible
+replays, with existing fixtures retaining the deterministic fallback. Core,
+YAML, and visual test suites remain green.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

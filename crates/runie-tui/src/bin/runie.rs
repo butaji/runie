@@ -212,6 +212,12 @@ impl StreamFn for PlaceholderStream {
                 delta: "briefly considering the request".into(),
                 partial: AssistantMessage::default(),
             },
+            AssistantMessageEvent::ThinkingEnd {
+                index: 1,
+                content: "briefly considering the request".into(),
+                elapsed_ms: Some(200),
+                partial: AssistantMessage::default(),
+            },
             AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: "Hey — what are you working on? I can help with code, tests, debugging, or anything else in this repo.".into(),

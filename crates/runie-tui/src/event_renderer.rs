@@ -16,6 +16,7 @@ use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, Status, StatusBa
 use crate::{ScrollbackActor, StatusActor};
 
 const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
+const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
 
 /// Pure mapping for status-owned portions of the core event stream.
 pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
@@ -181,6 +182,11 @@ fn format_elapsed(elapsed_ms: Option<u64>) -> String {
         .unwrap_or_default()
 }
 
+fn thinking_summary(elapsed_ms: Option<u64>) -> String {
+    let elapsed_ms = elapsed_ms.unwrap_or(DEFAULT_THINKING_ELAPSED_MS);
+    format!("◆ Thought for {:.1}s", elapsed_ms as f64 / 1_000.0)
+}
+
 fn format_error(is_error: bool, error: Option<&str>) -> String {
     if is_error {
         error.map(|value| format!(" ({value})")).unwrap_or_default()
@@ -253,6 +259,7 @@ pub struct EventRenderer {
     in_assistant_stream: bool,
     in_reasoning: bool,
     reasoning_buffer: String,
+    thinking_elapsed_ms: Option<u64>,
     /// True between ToolExecutionStart and ToolExecutionEnd.
     in_tool_exec: bool,
     activity_dirs: usize,
@@ -307,6 +314,7 @@ impl EventRenderer {
             in_assistant_stream: false,
             in_reasoning: false,
             reasoning_buffer: String::new(),
+            thinking_elapsed_ms: None,
             in_tool_exec: false,
             activity_dirs: 0,
             activity_files: 0,
@@ -374,6 +382,7 @@ impl EventRenderer {
                 result = rx.recv() => {
                     match result {
                         Ok(event) => {
+                            self.record_thinking_elapsed(&event);
                             status_actor.apply_event(&event).await;
                             let actor_tool_start = match &event {
                                 AgentEvent::ToolExecutionStart {
@@ -423,7 +432,7 @@ impl EventRenderer {
                                 feed_messages.push(ScrollbackMsg::FinalizeAssistant {
                                     has_reasoning: !self.reasoning_buffer.is_empty(),
                                     reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
-                                    summary: "◆ Thought for 0.9s".into(),
+                                    summary: thinking_summary(self.thinking_elapsed_ms),
                                 });
                             }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
@@ -490,6 +499,7 @@ impl EventRenderer {
         reason = "actor replay keeps one event-to-projection transaction explicit"
     )]
     pub async fn apply_actor_event(&mut self, event: AgentEvent) {
+        self.record_thinking_elapsed(&event);
         let status_actor = self
             .status_actor
             .get_or_insert_with(StatusActor::new)
@@ -536,7 +546,7 @@ impl EventRenderer {
             messages.push(ScrollbackMsg::FinalizeAssistant {
                 has_reasoning: !self.reasoning_buffer.is_empty(),
                 reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
-                summary: "◆ Thought for 0.9s".into(),
+                summary: thinking_summary(self.thinking_elapsed_ms),
             });
         }
         if let AgentEvent::MessageUpdate {
@@ -591,6 +601,7 @@ impl EventRenderer {
         reason = "event loop coordinates owned status/feed projections and shutdown"
     )]
     pub fn apply_event(&mut self, event: AgentEvent) {
+        self.record_thinking_elapsed(&event);
         if self.status_actor.is_none() {
             for message in status_messages_for_event(&event) {
                 self.status.lock().apply(message);
@@ -652,6 +663,19 @@ impl EventRenderer {
             | AgentEvent::BackgroundWorkProgress { .. }
             | AgentEvent::BackgroundWorkFinished { .. }
             | AgentEvent::BackgroundWorkCancelled { .. } => {}
+        }
+    }
+
+    fn record_thinking_elapsed(&mut self, event: &AgentEvent) {
+        if let AgentEvent::MessageUpdate {
+            event: AssistantMessageEvent::ThinkingEnd { elapsed_ms, .. },
+            ..
+        } = event
+        {
+            self.thinking_elapsed_ms = *elapsed_ms;
+        }
+        if matches!(event, AgentEvent::AgentStart | AgentEvent::Reset) {
+            self.thinking_elapsed_ms = None;
         }
     }
 
@@ -1009,7 +1033,7 @@ impl EventRenderer {
                 } else if !self.reasoning_buffer.is_empty() {
                     if let Some(thinking) = scrollback.last_mut_by_kind(LineKind::ThinkingStatus) {
                         thinking.kind = LineKind::TurnSummary;
-                        thinking.text = "◆ Thought for 0.9s".into();
+                        thinking.text = thinking_summary(self.thinking_elapsed_ms);
                     }
                     scrollback.remove_kind(LineKind::Reasoning);
                 } else {

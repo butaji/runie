@@ -849,6 +849,9 @@ pub enum AssistantMessageEvent {
         #[serde(rename = "contentIndex")]
         index: usize,
         content: String,
+        /// Server-derived thinking duration, when the provider supplies it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        elapsed_ms: Option<u64>,
         partial: AssistantMessage,
     },
     #[serde(rename = "toolcall_start")]
@@ -1166,6 +1169,7 @@ mod tests {
             AssistantMessageEvent::ThinkingEnd {
                 index: 1,
                 content: "think".into(),
+                elapsed_ms: None,
                 partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::ToolCallStart {
@@ -1338,11 +1342,13 @@ mod tests {
         let thinking_end = serde_json::to_value(AssistantMessageEvent::ThinkingEnd {
             index: 3,
             content: "considering".into(),
+            elapsed_ms: Some(500),
             partial: AssistantMessage::default(),
         })
         .expect("thinking end serializes");
         assert_eq!(thinking_end["contentIndex"], 3);
         assert_eq!(thinking_end["content"], "considering");
+        assert_eq!(thinking_end["elapsedMs"], 500);
         assert!(thinking_end["partial"].is_object());
 
         let done = serde_json::to_value(AssistantMessageEvent::Done {
