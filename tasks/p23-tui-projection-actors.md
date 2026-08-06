@@ -421,3 +421,11 @@ The legacy `EventRenderer::new` / `with_welcome` constructors are now
 `cfg(test)`-only. Production builds can construct the renderer only through
 `with_actors`, making accidental reintroduction of mutable widget state a
 compile-time failure rather than a convention.
+
+Error-row transition audit (2026-08-06): a focused attempt to classify
+`ToolError` as a renderer-neutral `Status` row exposed an event-order gap in
+the YAML replay seam: the terminal error header is observed before the
+follow-up error-state transition, and adding an unacknowledged second replay
+step perturbs the search-tools scenario. The semantic row remains `Header`
+until completion and error state can be carried in one acknowledged actor
+batch; no fixture was weakened.
