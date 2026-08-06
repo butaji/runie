@@ -379,3 +379,10 @@ Tool header-update ownership (2026-08-06): non-structured active-tool update
 payloads now extend per-call header buffers inside `ScrollbackActor`, keyed by
 tool ID. Live renderer update messages are no longer applied a second time;
 completion-card and activity-summary reduction remain the next boundary.
+## Latest audit (2026-08-06)
+
+- **Run-loop actor requirement:** `EventRenderer::run` no longer uses
+  `get_or_insert_with` to manufacture projection actors. A live renderer
+  without both actor handles now fails explicitly at its run boundary;
+  production remains actor-only while legacy mutex constructors stay confined
+  to tests.

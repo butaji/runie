@@ -418,12 +418,12 @@ impl EventRenderer {
     ) {
         let status_actor = self
             .status_actor
-            .get_or_insert_with(StatusActor::new)
-            .clone();
+            .clone()
+            .expect("production EventRenderer::run requires a StatusActor");
         let scrollback_actor = self
             .scrollback_actor
-            .get_or_insert_with(ScrollbackActor::new)
-            .clone();
+            .clone()
+            .expect("production EventRenderer::run requires a ScrollbackActor");
         const ANIMATION_TICK: Duration = Duration::from_millis(50);
         let mut tick = Box::pin(tokio::time::sleep(ANIMATION_TICK));
         loop {
