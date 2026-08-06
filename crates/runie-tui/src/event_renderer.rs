@@ -189,6 +189,9 @@ impl EventRenderer {
                         Ok(event) => {
                             status_actor.apply_event(&event).await;
                             let mut feed_messages = scrollback_messages_for_event(&event);
+                            if matches!(event, AgentEvent::AgentStart) {
+                                feed_messages.extend(agent_start_messages(self.emit_welcome));
+                            }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
                                 feed_messages.push(ScrollbackMsg::AppendTurnSummary(
                                     status_actor.snapshot().worked_for_label(),
@@ -889,6 +892,23 @@ fn structured_update_text(result: &serde_json::Value) -> Option<String> {
     clippy::cognitive_complexity,
     reason = "activity label projection keeps Grok's ordered vocabulary together"
 )]
+fn agent_start_messages(emit_welcome: bool) -> Vec<ScrollbackMsg> {
+    if emit_welcome {
+        return welcome_modal_lines()
+            .into_iter()
+            .map(ScrollbackMsg::Append)
+            .collect();
+    }
+    vec![
+        ScrollbackMsg::Append(Line::new(LineKind::System, "")),
+        ScrollbackMsg::Append(Line::new(
+            LineKind::SessionStart,
+            "◆ session_start  [hooks: 1]",
+        )),
+        ScrollbackMsg::Append(Line::new(LineKind::System, "")),
+    ]
+}
+
 fn activity_text(
     dirs: usize,
     files: usize,

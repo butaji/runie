@@ -89,6 +89,11 @@ publish immutable `watch` snapshots to the pure view.
   preserves the YAML event-to-snapshot contract. Unit and full fixture replay
   gates remain green.
 
+- **Session-start projection migration (2026-08-05):** `AgentStart` now
+  publishes the standard session-start rows or the welcome-modal rows directly
+  to `ScrollbackActor` before compatibility rendering. Both actor-owned startup
+  variants are covered by the existing unit/YAML gates.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status
