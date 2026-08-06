@@ -314,16 +314,16 @@ impl App {
         self.loop_actor.reset().await;
     }
 
-    /// Publish a theme change and wait until both live projections acknowledge
+    /// Publish a theme change and wait until all live projections acknowledge
     /// the event. The wait is cooperative and bounded; no renderer state is
     /// mutated directly.
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
         const THEME_ACK_ATTEMPTS: usize = 16;
         self.bus
             .publish(runie_core::types::AgentEvent::ThemeChanged { theme });
-        self.prompt.set_theme(theme).await;
         for _ in 0..THEME_ACK_ATTEMPTS {
-            if self.status_snapshot().theme() == theme
+            if self.model_snapshot().prompt.theme == theme
+                && self.status_snapshot().theme() == theme
                 && self.scrollback_snapshot().theme() == theme
             {
                 return;

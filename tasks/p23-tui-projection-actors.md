@@ -2,6 +2,10 @@
 
 ## Current state correction (2026-08-06)
 
+Theme changes now use the bus as the sole transition boundary. `App::set_theme`
+does not directly mutate the prompt actor; it waits for prompt, status, and
+scrollback projections to acknowledge the shared `ThemeChanged` event.
+
 The historical migration notes below mention a lazy actor-owned renderer. The
 current implementation is stricter: `EventRenderer::run` and
 `apply_actor_event` require actor handles supplied by `with_actors`; they never
