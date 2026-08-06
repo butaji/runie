@@ -595,3 +595,24 @@ special glyphs (`✓` and `●`); cancelled, failed, and unknown phase states al
 fall back to `○`. The renderer-neutral workflow projection now follows that
 rule, with a model regression covering a cancelled phase. The terminal status
 itself still uses Grok's separate `◌ cancelled` label.
+
+### Read-card range metadata audit (2026-08-06)
+
+Grok's `acp/tracker.rs` converts completed `FileContent` metadata into
+`ReadToolCallBlock::with_line_range`: the first line is `offset + 1`, and the
+last line is either `offset + limit` clamped to `total_lines`, or
+`total_lines` when no limit is present. The block renders this as a header
+suffix, including `({start}-{end} of {total})` for a subset, and also retains
+typed empty, media, and error states.
+
+Runie carries tool-call arguments on `ToolExecutionStart`, but its completion
+path currently reduces the generic JSON result to text before the scrollback
+actor receives it. That drops `offset`, `limit`, `total_lines`, media kind, and
+typed read errors. Parsing formatted text would be lossy and would bypass the
+actor-owned event boundary.
+
+Required next event contract: preserve typed read metadata in the core/tool
+completion projection, transfer it through a scrollback event, and reduce it
+into `ToolCardRow` before rendering. YAML replay must then cover full, ranged,
+empty, media, and failed reads with header and semantic-row assertions. No
+range is inferred until that missing event data is preserved.

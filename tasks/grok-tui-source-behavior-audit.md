@@ -224,4 +224,12 @@ Implementation order:
 Current gaps remain explicit: full terminal-attribute capture, specialized
   card rendering/metrics, and complete actor-owned row identity across all
   live adapters. This audit is complete as a source inventory but the parity
-  objective is not complete until those fixtures and implementations pass.
+objective is not complete until those fixtures and implementations pass.
+
+Read range/data contract audit (2026-08-06): Grok's ACP tracker preserves
+typed `FileContent` metadata through completion and maps `offset`, `limit`,
+and `total_lines` to the visible `Read start-end` header suffix. Runie's
+current `ToolExecutionEnd` to text-lines projection drops those fields before
+the scrollback actor, so exact range/empty/media/error parity cannot be
+claimed. This is an event-contract gap: preserve typed metadata in events and
+reduce it into the renderer-neutral card model before adding visual fixtures.
