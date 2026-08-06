@@ -51,6 +51,12 @@ called parity.
    terminal-height path is exercised across the same capture sizes used by
    `scripts/capture-matrix.sh`.
 
+9. The workspace run after execute-card and geometry changes passes all core,
+   TUI unit, YAML replay, and cast-backed tests. Six legacy Insta snapshots
+   still fail only on the source-backed user-vpad row shift; their generated
+   `.snap.new` files were discarded. These references require fresh same-run
+   Grok captures before acceptance, so they remain strict and unchanged.
+
 ## Status
 
 In progress. Full-cell dumps, row diagnostics, and phase-locked frame
