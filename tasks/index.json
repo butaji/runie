@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p34",
+      "file": "grok-tui-source-behavior-audit.md",
+      "status": "in_progress",
+      "title": "Source audit: Grok feed lifecycle, animation clocks, input, palette, hotkeys, statuses, metrics, and Pi mapping"
+    },
+    {
       "id": "p33",
       "file": "grok-tui-behavior-inventory.md",
       "status": "in_progress",
