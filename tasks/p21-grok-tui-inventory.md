@@ -179,6 +179,11 @@ currently filtered entry set. The state remains UI-actor-owned and the visual
 YAML scenarios exercise the rendered heading without introducing a direct core
 mutation path.
 
+Command activation events (2026-08-06): palette activation now emits a typed
+`UiCommand` from the UI actor after the reducer acknowledgement. The YAML
+runner consumes that event to publish `Reset` for `New Session`; command
+execution is no longer inferred from a mutable UI snapshot.
+
 Source audit: Grok's `UserMessageBlock` is the only standard conversation block
 that enables prompt vpad; system, session-event, thinking, background, and all
 specialized tool blocks explicitly disable it. The renderer also suppresses

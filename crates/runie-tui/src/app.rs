@@ -8,7 +8,7 @@ use ratatui::layout::Rect;
 use runie_core::events::EventBus;
 use runie_core::r#loop::LoopActor;
 use runie_core::types::{AgentEvent, AgentMessage};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{broadcast, mpsc, watch};
 
 use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
@@ -42,6 +42,32 @@ pub enum UiMsg {
     CommandPaletteMove(isize),
     ActivateCommandPalette,
     Reset,
+}
+
+/// Commands emitted by the UI actor after a pure palette reduction. Consumers
+/// execute these commands through their own actor/event boundary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UiCommand {
+    ActivatePaletteEntry(String),
+}
+
+fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
+    if !matches!(message, UiMsg::ActivateCommandPalette) {
+        return None;
+    }
+    crate::widgets::CommandPaletteWidget::selected_entry(
+        &state.command_palette_query,
+        state.command_palette_index,
+    )
+    .map(|entry| UiCommand::ActivatePaletteEntry(entry.to_owned()))
+}
+
+fn initial_ui_state(show_welcome: bool) -> UiState {
+    if show_welcome {
+        UiState::with_welcome()
+    } else {
+        UiState::new()
+    }
 }
 
 impl UiState {
@@ -114,6 +140,7 @@ impl UiState {
 pub struct UiActor {
     tx: mpsc::Sender<(UiMsg, tokio::sync::oneshot::Sender<()>)>,
     snapshot: watch::Receiver<UiState>,
+    commands: broadcast::Sender<UiCommand>,
     _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }
 
@@ -123,12 +150,10 @@ impl UiActor {
     }
 
     pub fn new_with_welcome(bus: &EventBus, show_welcome: bool) -> Self {
-        let initial = if show_welcome {
-            UiState::with_welcome()
-        } else {
-            UiState::new()
-        };
+        let initial = initial_ui_state(show_welcome);
         let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (commands, _) = broadcast::channel(32);
+        let command_tx = commands.clone();
         let mut events = bus.subscribe();
         let (tx, owner) = runie_core::spawn_actor_worker!(32, |mut rx: mpsc::Receiver<(
             UiMsg,
@@ -139,7 +164,11 @@ impl UiActor {
                 tokio::select! {
                     message = rx.recv() => {
                         let Some((message, applied)) = message else { break };
+                        let command = palette_command_for(&state, message);
                         state = state.update(message);
+                        if let Some(command) = command {
+                            let _ = command_tx.send(command);
+                        }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = applied.send(());
                     }
@@ -155,6 +184,7 @@ impl UiActor {
         Self {
             tx,
             snapshot,
+            commands,
             _owner: owner,
         }
     }
@@ -168,6 +198,10 @@ impl UiActor {
 
     pub fn snapshot(&self) -> UiState {
         self.snapshot.borrow().clone()
+    }
+
+    pub fn subscribe_commands(&self) -> broadcast::Receiver<UiCommand> {
+        self.commands.subscribe()
     }
 }
 
@@ -359,6 +393,10 @@ impl App {
         self.ui.snapshot().last_palette_command
     }
 
+    pub fn subscribe_ui_commands(&self) -> broadcast::Receiver<UiCommand> {
+        self.ui.subscribe_commands()
+    }
+
     pub async fn hide_welcome(&self) {
         self.ui.send(UiMsg::HideWelcome).await;
     }
@@ -493,6 +531,20 @@ mod tests {
             }
         }
         panic!("UiActor enabled the removed welcome surface");
+    }
+
+    #[tokio::test]
+    async fn ui_actor_publishes_palette_activation_command() {
+        let bus = EventBus::new();
+        let actor = UiActor::new(&bus);
+        let mut commands = actor.subscribe_commands();
+        actor.send(UiMsg::ToggleCommandPalette).await;
+        actor.send(UiMsg::CommandPaletteChar('n')).await;
+        actor.send(UiMsg::ActivateCommandPalette).await;
+        assert_eq!(
+            commands.recv().await.unwrap(),
+            super::UiCommand::ActivatePaletteEntry("New Session".into())
+        );
     }
 
     #[tokio::test]

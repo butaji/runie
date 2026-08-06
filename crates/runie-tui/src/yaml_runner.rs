@@ -1339,7 +1339,13 @@ pub async fn render_visual_buffer(
             continue;
         }
         if step == "PaletteEnter" {
-            if app.activate_command_palette().await.as_deref() == Some("New Session") {
+            let mut ui_commands = app.subscribe_ui_commands();
+            app.activate_command_palette().await;
+            if matches!(
+                ui_commands.recv().await,
+                Ok(crate::app::UiCommand::ActivatePaletteEntry(command))
+                    if command == "New Session"
+            ) {
                 app.bus.publish(runie_core::types::AgentEvent::Reset);
             }
             continue;
