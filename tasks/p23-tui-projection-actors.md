@@ -68,6 +68,15 @@ publish immutable `watch` snapshots to the pure view.
   initial frame and compatibility event-renderer tests.
 - Existing `EventRenderer` and rendering paths still use compatibility mutexes.
 
+- **Actor construction boundary (2026-08-06):** `EventRenderer::with_actors`
+  now constructs its projections directly in actor mode. Production startup
+  therefore does not allocate or retain a compatibility mutex for either
+  scrollback or status; the private `Projection<T>` enum makes accidental
+  legacy locking fail loudly. The remaining mutex-backed constructors are
+  deliberately limited to synchronous reducer tests and compatibility replay,
+  so this task stays open until those adapters are removed or isolated behind
+  a separately named test-only surface.
+
 ## Latest progress
 
 - The production `e` activity-fold action now publishes
