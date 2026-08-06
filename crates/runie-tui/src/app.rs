@@ -532,7 +532,7 @@ impl App {
                 // completed turn it remains below the feed, matching Grok's
                 // one-shot tip promotion. Terminal-size gating belongs to
                 // the renderer because this projection is size-independent.
-                doctor_hint_visible: matches!(model.status.state, Status::Ready)
+                compact_mode_hint_visible: matches!(model.status.state, Status::Ready)
                     && !model.feed.is_empty(),
             },
             header: HeaderViewProps {

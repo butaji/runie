@@ -1,5 +1,14 @@
 # p26 — Declarative TUI view DSL
 
+## Semantic hint naming correction (2026-08-06)
+
+The declarative component tree now names the Grok small-screen surface
+`CompactModeHint` end-to-end. The previous `DoctorHint` identity was a stale
+compatibility name left behind after the renderer was aligned to Grok's
+`Tight on space? Try /compact-mode` behavior. Visibility remains an immutable
+view prop derived from the actor snapshot; terminal-row gating remains a pure
+layout predicate in the renderer adapter.
+
 ## Objective
 
 Separate the actor-owned model and declarative component tree from terminal

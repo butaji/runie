@@ -354,7 +354,7 @@ async fn run_app(
         );
         if view
             .slots()
-            .any(|slot| slot == runie_tui::view::Slot::DoctorHint)
+            .any(|slot| slot == runie_tui::view::Slot::CompactModeHint)
             && runie_tui::layout::grok_small_screen_tip_visible(frame_area.height)
         {
             render_compact_hint(layout.prompt, frame.buffer_mut(), status.theme());
@@ -614,7 +614,7 @@ async fn run_app(
                             frame_area.height,
                             buf,
                         );
-                if view.slots().any(|slot| slot == runie_tui::view::Slot::DoctorHint)
+                if view.slots().any(|slot| slot == runie_tui::view::Slot::CompactModeHint)
                     && runie_tui::layout::grok_small_screen_tip_visible(frame_area.height)
                 {
                     render_compact_hint(layout.prompt, buf, status.theme());

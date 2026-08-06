@@ -233,7 +233,7 @@ pub enum Slot {
     WelcomeOverlay,
     ShortcutsOverlay,
     CommandPaletteOverlay,
-    DoctorHint,
+    CompactModeHint,
 }
 
 /// Semantic component identity. These names are stable across terminal
@@ -248,7 +248,7 @@ pub enum ComponentKind {
     WelcomeOverlay,
     ShortcutsOverlay,
     CommandPaletteOverlay,
-    DoctorHint,
+    CompactModeHint,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -289,7 +289,7 @@ pub struct ChatViewProps {
     pub welcome_visible: bool,
     pub shortcuts_visible: bool,
     pub command_palette_visible: bool,
-    pub doctor_hint_visible: bool,
+    pub compact_mode_hint_visible: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -363,8 +363,8 @@ pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
         owner: StateOwner::UiActor,
     },
     ComponentSpec {
-        kind: ComponentKind::DoctorHint,
-        slot: Slot::DoctorHint,
+        kind: ComponentKind::CompactModeHint,
+        slot: Slot::CompactModeHint,
         owner: StateOwner::StatusActor,
     },
 ];
@@ -428,7 +428,7 @@ impl fmt::Display for Slot {
             Self::WelcomeOverlay => "welcome-overlay",
             Self::ShortcutsOverlay => "shortcuts-overlay",
             Self::CommandPaletteOverlay => "command-palette-overlay",
-            Self::DoctorHint => "doctor-hint",
+            Self::CompactModeHint => "compact-mode-hint",
         })
     }
 }
@@ -478,8 +478,8 @@ pub fn chat_view_with_props(props: ChatViewProps) -> Element {
     if props.command_palette_visible {
         children.push(view!(slot Slot::CommandPaletteOverlay));
     }
-    if props.doctor_hint_visible {
-        children.push(view!(slot Slot::DoctorHint));
+    if props.compact_mode_hint_visible {
+        children.push(view!(slot Slot::CompactModeHint));
     }
     view!(vertical_iter children)
 }
