@@ -399,9 +399,22 @@ mod tests {
         delivered: Option<tokio::sync::oneshot::Sender<AgentEvent>>,
     }
 
+    struct PiDeliverySubscriber {
+        delivered: Option<tokio::sync::oneshot::Sender<crate::PiAgentEvent>>,
+    }
+
     #[async_trait::async_trait]
     impl crate::events::Subscriber for DeliverySubscriber {
         async fn handle(&mut self, event: &crate::types::AgentEvent) {
+            if let Some(delivered) = self.delivered.take() {
+                let _ = delivered.send(event.clone());
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl crate::events::PiSubscriber for PiDeliverySubscriber {
+        async fn handle_pi(&mut self, event: &crate::PiAgentEvent) {
             if let Some(delivered) = self.delivered.take() {
                 let _ = delivered.send(event.clone());
             }
@@ -431,5 +444,23 @@ mod tests {
             rx.await.unwrap(),
             crate::types::AgentEvent::AgentStart
         ));
+    }
+
+    #[tokio::test]
+    async fn pi_subscriber_bridge_filters_compatibility_events() {
+        let bus = EventBus::new();
+        let subscribers = SubscriberRegistry::new();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        subscribers
+            .register_pi(Box::new(PiDeliverySubscriber {
+                delivered: Some(tx),
+            }))
+            .await;
+        let _owner = spawn_pi_subscriber_bridge(&bus, &subscribers);
+        bus.publish(AgentEvent::ThemeChanged {
+            theme: crate::types::ThemeKind::GrokNight,
+        });
+        bus.publish_pi(crate::PiAgentEvent::TurnStart);
+        assert!(matches!(rx.await.unwrap(), crate::PiAgentEvent::TurnStart));
     }
 }

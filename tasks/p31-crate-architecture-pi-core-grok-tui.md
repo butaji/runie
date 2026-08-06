@@ -27,6 +27,9 @@ the filtered Pi stream. Pi subscribers therefore never cross the broad
 `Subscriber::handle` adapter; both paths remain async and registration-order
 settled.
 
+The dedicated Pi bridge now has an actor-layer regression test proving that a
+Runie `ThemeChanged` event is ignored while a typed `TurnStart` is delivered.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.
