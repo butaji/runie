@@ -572,3 +572,9 @@ separates the events. YAML activity, structured-tool, and specialized-card
 fixtures assert the resulting single visible output set; web-search retains
 its separate source-summary projection. The model regression covers the
 update/activity/end sequence directly.
+
+Semantic row oracle expansion (2026-08-06): the activity-mixed, truncated-read,
+structured-tool, and web-search YAML scenarios now assert ordered
+`ToolCardRowKind` sequences in addition to headers and output text. This keeps
+the renderer-neutral card contract executable across grouped, specialized,
+and replay-deduplicated feed paths before any per-card styling is changed.

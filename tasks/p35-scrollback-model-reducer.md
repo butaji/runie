@@ -140,3 +140,9 @@ unit tests until the renderer adapter migration is complete.
 An executable `feed-actor-boundary-check` now guards this seam in `just ci`:
 the actor must contain `FeedState` reduction and may not construct or reduce
 the Ratatui `Scrollback` widget.
+
+Semantic card-row oracle expansion (2026-08-06): YAML replay now validates
+ordered `ToolCardRowKind` sequences for grouped activity, truncated reads,
+structured tools, and web search. This broadens the model/render boundary
+proof beyond aggregate output counts while keeping fixture edits recompilation
+free.

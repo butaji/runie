@@ -18,6 +18,7 @@ assertions:
     tool_blocks: 1
     tool_kinds: [web_search]
     tool_headers: ["Web Search Rust terminal UI (2 sites)"]
+    tool_row_kinds: [header, content, content, content, content, content, content, content]
     tool_outputs:
       - ["https://docs.rs/runie", "https://docs.rs/ratatui", "https://rust-lang.org/learn", "https://docs.rs/runie", "https://docs.rs/ratatui", "https://rust-lang.org/learn", "  Sources: docs.rs, rust-lang.org"]
   visual:

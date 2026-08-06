@@ -20,6 +20,7 @@ assertions:
     messages: 4
     tool_blocks: 1
     tool_output_lines: 2
+    tool_row_kinds: [header, content, content]
   transcript_contains:
     - first
     - second
