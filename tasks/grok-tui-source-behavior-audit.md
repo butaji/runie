@@ -229,7 +229,9 @@ objective is not complete until those fixtures and implementations pass.
 Read range/data contract audit (2026-08-06): Grok's ACP tracker preserves
 typed `FileContent` metadata through completion and maps `offset`, `limit`,
 and `total_lines` to the visible `Read start-end` header suffix. Runie's
-current `ToolExecutionEnd` to text-lines projection drops those fields before
-the scrollback actor, so exact range/empty/media/error parity cannot be
-claimed. This is an event-contract gap: preserve typed metadata in events and
-reduce it into the renderer-neutral card model before adding visual fixtures.
+current `ToolExecutionEnd` projection previously dropped those fields before
+the scrollback actor. The actor now retains start arguments by call ID and
+projects the common ranged text header from the result metadata; a pure test
+covers `41-42 of 100`. Exact empty/media/error parity remains an event-contract
+gap: preserve those typed fields in events and reduce them into the
+renderer-neutral card model before adding the remaining visual fixtures.

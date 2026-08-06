@@ -605,11 +605,16 @@ last line is either `offset + limit` clamped to `total_lines`, or
 suffix, including `({start}-{end} of {total})` for a subset, and also retains
 typed empty, media, and error states.
 
-Runie carries tool-call arguments on `ToolExecutionStart`, but its completion
-path currently reduces the generic JSON result to text before the scrollback
-actor receives it. That drops `offset`, `limit`, `total_lines`, media kind, and
-typed read errors. Parsing formatted text would be lossy and would bypass the
-actor-owned event boundary.
+Runie carries tool-call arguments on `ToolExecutionStart`. The scrollback
+actor now retains those arguments by call ID and projects the ranged header
+from the completion result's `details.truncation.totalLines`, with a pure
+regression for `Read src/lib.rs (41-42 of 100)`. This closes the common ranged
+text-header case without making the renderer inspect core state.
+
+The completion path still reduces generic JSON content to text for the body,
+so media kind and typed read errors are not yet preserved as semantic card
+metadata. Parsing formatted body text remains intentionally limited to the
+fallback range calculation and must not become the long-term contract.
 
 Required next event contract: preserve typed read metadata in the core/tool
 completion projection, transfer it through a scrollback event, and reduce it

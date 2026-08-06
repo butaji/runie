@@ -92,6 +92,7 @@ async fn run_bus_projection(
 ) {
     let mut active_tools = HashSet::new();
     let mut tool_headers = HashMap::new();
+    let mut tool_args = HashMap::new();
     let mut tool_names = HashMap::new();
     let mut activity_dirs = 0;
     let mut activity_files = 0;
@@ -116,6 +117,7 @@ async fn run_bus_projection(
                 tool_call_id.clone(),
                 crate::event_renderer::tool_header(tool_name, args),
             );
+            tool_args.insert(tool_call_id.clone(), args.clone());
             tool_names.insert(tool_call_id.clone(), tool_name.clone());
             if matches!(tool_name.as_str(), "list_dir" | "list_files") {
                 activity_dirs += 1;
@@ -131,6 +133,7 @@ async fn run_bus_projection(
         let completion = ordinary_tool_end_messages(
             &mut active_tools,
             &mut tool_headers,
+            &mut tool_args,
             &mut tool_names,
             &mut active_tool_count,
             &mut activity_failures,
@@ -276,9 +279,11 @@ fn tool_update_messages(
     clippy::too_many_lines,
     reason = "the pure completion fold keeps card, output, and activity variants atomic"
 )]
+#[allow(clippy::too_many_arguments)]
 fn ordinary_tool_end_messages(
     active_tools: &mut HashSet<String>,
     tool_headers: &mut HashMap<String, String>,
+    tool_args: &mut HashMap<String, serde_json::Value>,
     tool_names: &mut HashMap<String, String>,
     active_tool_count: &mut usize,
     activity_failures: &mut usize,
@@ -300,6 +305,7 @@ fn ordinary_tool_end_messages(
     }
     *active_tool_count = active_tool_count.saturating_sub(1);
     let pending = tool_headers.remove(tool_call_id).unwrap_or_default();
+    let args = tool_args.remove(tool_call_id).unwrap_or_default();
     let name = tool_names
         .remove(tool_call_id)
         .unwrap_or_else(|| tool_name.clone());
@@ -307,7 +313,7 @@ fn ordinary_tool_end_messages(
         *activity_failures += 1;
         format!("{pending} ✗")
     } else {
-        crate::event_renderer::completed_tool_header(&pending, &name, result)
+        crate::event_renderer::completed_tool_header_with_args(&pending, &name, &args, result)
     };
     let activity = if *active_tool_count == 0 && dirs + files + commands + subagents > 0 {
         Some(crate::event_renderer::activity_text(

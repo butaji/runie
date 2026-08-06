@@ -598,3 +598,9 @@ sequence regression. The existing YAML fold fixture remains the post-completion
 user-intent oracle; adding an in-flight mode event to the YAML runner remains a
 separate ordering improvement because control declarations are currently
 applied after the generated core event stream.
+
+Read ranged-header projection (2026-08-06): the scrollback actor now retains
+`ToolExecutionStart.args` by call ID and uses Pi/Grok-compatible completion
+metadata to project ranged Read headers (`start-end of total`) through the
+existing event reduction path. This closes the common text-read range case;
+typed media and error metadata still require an explicit completion payload.

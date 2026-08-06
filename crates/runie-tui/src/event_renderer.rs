@@ -1521,6 +1521,45 @@ pub(crate) fn completed_tool_header(
     }
 }
 
+/// Add Grok's source-backed Read range suffix while retaining the generic
+/// completion-header API for callers that do not have tool arguments.
+pub(crate) fn completed_tool_header_with_args(
+    pending_header: &str,
+    tool_name: &str,
+    args: &serde_json::Value,
+    result: &serde_json::Value,
+) -> String {
+    if matches!(tool_name, "read" | "read_file") {
+        let Some(offset) = args.get("offset").and_then(serde_json::Value::as_u64) else {
+            return completed_tool_header(pending_header, tool_name, result);
+        };
+        let output = tool_result_text(result);
+        let content_lines = output
+            .lines()
+            .take_while(|line| !line.starts_with('['))
+            .count() as u64;
+        let end = offset.saturating_add(content_lines.max(1));
+        let total = result
+            .get("details")
+            .and_then(|details| details.get("truncation"))
+            .and_then(|truncation| truncation.get("totalLines"))
+            .and_then(serde_json::Value::as_u64)
+            .or_else(|| {
+                output.lines().find_map(|line| {
+                    line.split(" of ")
+                        .nth(1)
+                        .and_then(|part| part.split(|c: char| !c.is_ascii_digit()).next())
+                        .and_then(|value| value.parse().ok())
+                })
+            });
+        return match total {
+            Some(total) => format!("{pending_header} ({}-{} of {total})", offset + 1, end),
+            None => format!("{pending_header} ({}-{end})", offset + 1),
+        };
+    }
+    completed_tool_header(pending_header, tool_name, result)
+}
+
 pub(crate) fn tool_result_text(result: &serde_json::Value) -> String {
     result
         .as_str()
@@ -2170,6 +2209,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn completed_file_tools_use_grok_card_cardinality() {
         assert_eq!(
             completed_tool_header(
@@ -2202,6 +2242,18 @@ mod tests {
         assert_eq!(
             completed_tool_header("Workflow release", "workflow", &serde_json::json!("done")),
             "Workflow completed: release"
+        );
+        assert_eq!(
+            completed_tool_header_with_args(
+                "Read src/lib.rs",
+                "read_file",
+                &serde_json::json!({"offset": 40, "limit": 20}),
+                &serde_json::json!({
+                    "content": [{"text": "line 41\nline 42\n[18 more lines in file. Use offset=61 to continue.]"}],
+                    "details": {"truncation": {"totalLines": 100}}
+                })
+            ),
+            "Read src/lib.rs (41-42 of 100)"
         );
     }
 
