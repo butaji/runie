@@ -275,3 +275,11 @@ because it would conceal ownership and make YAML event assertions impossible.
   can no longer replace or mutate either projection behind the event-rendering
   boundary; production construction remains actor-backed through
   `with_actors`.
+
+- **Projection storage separation (2026-08-06):** Replaced the renderer's
+  unconditional compatibility mutex fields with an explicit private
+  `Projection` enum. Actor-backed renderers now hold actor projections in those
+  slots, while mutex storage exists only for legacy synchronous constructors;
+  legacy access from an actor renderer fails loudly instead of silently
+  creating a second source of truth. The compatibility adapter itself remains
+  pending removal after synchronous replay is fully actorized.

@@ -112,10 +112,33 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
     }
 }
 
+#[derive(Clone)]
+enum Projection<T> {
+    Legacy(Arc<Mutex<T>>),
+    Actor,
+}
+
+impl<T> Projection<T> {
+    fn lock(&self) -> parking_lot::MutexGuard<'_, T> {
+        match self {
+            Self::Legacy(value) => value.lock(),
+            Self::Actor => panic!("legacy projection accessed from actor renderer"),
+        }
+    }
+
+    #[cfg(test)]
+    fn legacy_arc(&self) -> Arc<Mutex<T>> {
+        match self {
+            Self::Legacy(value) => value.clone(),
+            Self::Actor => panic!("legacy projection accessed from actor renderer"),
+        }
+    }
+}
+
 pub struct EventRenderer {
-    scrollback: Arc<Mutex<Scrollback>>,
+    scrollback: Projection<Scrollback>,
     scrollback_actor: Option<ScrollbackActor>,
-    status: Arc<Mutex<StatusBar>>,
+    status: Projection<StatusBar>,
     /// Actor-owned status projection used by the production event loop while
     /// the compatibility widget projection is being retired.
     status_actor: Option<StatusActor>,
@@ -155,9 +178,9 @@ impl EventRenderer {
         emit_welcome: bool,
     ) -> Self {
         Self {
-            scrollback,
+            scrollback: Projection::Legacy(scrollback),
             scrollback_actor: None,
-            status,
+            status: Projection::Legacy(status),
             status_actor: None,
             streaming_buffer: String::new(),
             tool_rows: HashMap::new(),
@@ -191,6 +214,8 @@ impl EventRenderer {
             Arc::new(Mutex::new(StatusBar::new())),
             emit_welcome,
         );
+        renderer.scrollback = Projection::Actor;
+        renderer.status = Projection::Actor;
         renderer.scrollback_actor = Some(scrollback_actor);
         renderer.status_actor = Some(status_actor);
         renderer
@@ -1387,7 +1412,7 @@ mod tests {
         // Pre-seed a stale line. AgentStart now emits the welcome modal
         // instead of clearing (matches grok's minimal-mode chrome where
         // the welcome block persists across runs).
-        r = EventRenderer::with_welcome(r.scrollback.clone(), r.status.clone(), true);
+        r = EventRenderer::with_welcome(r.scrollback.legacy_arc(), r.status.legacy_arc(), true);
         r.apply_event(AgentEvent::AgentStart);
         assert!(
             !sb.lock().is_empty(),
