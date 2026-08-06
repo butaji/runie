@@ -44,6 +44,9 @@ renderer paints terminal cells.
 - Added YAML `visual.layout` region assertions and covered the 40×12 resize
   scenario. The runner checks header, scrollback, prompt, status, and footer
   coordinates through the live layout adapter before screen-text assertions.
+- Added `visual.layout_matrix` and declared the `Hey` feed geometry contract
+  at 62×32, 80×24, 100×30, and 120×36. The YAML runner re-renders each
+  matrix case and validates all five regions without recompiling fixtures.
 
 ## Next boundaries
 

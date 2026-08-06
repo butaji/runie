@@ -43,3 +43,36 @@ assertions:
       - "user>"
       - "Thinking…"
       - "Thought"
+    layout_matrix:
+      - cols: 62
+        rows: 32
+        layout:
+          header: { x: 2, y: 1, width: 58, height: 1 }
+          scrollback: { x: 2, y: 2, width: 58, height: 24 }
+          prompt: { x: 2, y: 26, width: 58, height: 3 }
+          status: { x: 2, y: 30, width: 58, height: 1 }
+          footer_badge: { x: 2, y: 31, width: 58, height: 1 }
+      - cols: 80
+        rows: 24
+        layout:
+          header: { x: 2, y: 1, width: 76, height: 1 }
+          scrollback: { x: 2, y: 2, width: 76, height: 16 }
+          prompt: { x: 2, y: 18, width: 76, height: 3 }
+          status: { x: 2, y: 22, width: 76, height: 1 }
+          footer_badge: { x: 2, y: 23, width: 76, height: 1 }
+      - cols: 100
+        rows: 30
+        layout:
+          header: { x: 2, y: 1, width: 96, height: 1 }
+          scrollback: { x: 2, y: 2, width: 96, height: 22 }
+          prompt: { x: 2, y: 24, width: 96, height: 3 }
+          status: { x: 2, y: 28, width: 96, height: 1 }
+          footer_badge: { x: 2, y: 29, width: 96, height: 1 }
+      - cols: 120
+        rows: 36
+        layout:
+          header: { x: 2, y: 1, width: 116, height: 1 }
+          scrollback: { x: 2, y: 2, width: 116, height: 28 }
+          prompt: { x: 2, y: 30, width: 116, height: 3 }
+          status: { x: 2, y: 34, width: 116, height: 1 }
+          footer_badge: { x: 2, y: 35, width: 116, height: 1 }

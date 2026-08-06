@@ -58,6 +58,10 @@ The stack resolver is now used by the live chat adapter, and
 the first layout-measurement oracle; wider geometries and content-dependent
 intrinsic-height assertions remain open.
 
+The `Hey` scenario now carries a four-geometry `layout_matrix`, and the
+runner executes each case through the same live adapter. This removes the
+previous gap where the four-size test existed only in compiled Rust code.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without

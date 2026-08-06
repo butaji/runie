@@ -385,6 +385,9 @@ pub struct VisualAssertions {
     /// objects in YAML.
     #[serde(default)]
     pub layout: Option<LayoutAssertions>,
+    /// Additional frozen geometries for the same event/state scenario.
+    #[serde(default)]
+    pub layout_matrix: Vec<LayoutMatrixCase>,
     /// Optional asciinema oracle. The runner selects the first terminal frame
     /// containing every marker and compares the requested row text with the
     /// Runie TestBackend frame. YAML owns the state/marker recipe; Rust only
@@ -408,6 +411,13 @@ pub struct RegionGeometry {
     pub y: u16,
     pub width: u16,
     pub height: u16,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, Copy)]
+pub struct LayoutMatrixCase {
+    pub cols: u16,
+    pub rows: u16,
+    pub layout: LayoutAssertions,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1256,7 +1266,14 @@ async fn assert_visual_expectations(
 ) -> Result<(), String> {
     let buffer = render_visual_buffer(scenario, visual).await?;
     if let Some(expected) = visual.layout {
-        assert_layout_expectations(visual, expected)?;
+        assert_layout_expectations(visual.cols, visual.rows, expected)?;
+    }
+    for case in &visual.layout_matrix {
+        let mut matrix_visual = visual.clone();
+        matrix_visual.cols = case.cols;
+        matrix_visual.rows = case.rows;
+        render_visual_buffer(scenario, &matrix_visual).await?;
+        assert_layout_expectations(case.cols, case.rows, case.layout)?;
     }
     let screen = buffer_to_screen(&buffer);
     for needle in &visual.screen_text {
@@ -1281,11 +1298,12 @@ async fn assert_visual_expectations(
 }
 
 fn assert_layout_expectations(
-    visual: &VisualAssertions,
+    cols: u16,
+    rows: u16,
     expected: LayoutAssertions,
 ) -> Result<(), String> {
     let layout = crate::layout::chat_layout_with_prompt_height(
-        ratatui::layout::Rect::new(0, 0, visual.cols, visual.rows),
+        ratatui::layout::Rect::new(0, 0, cols, rows),
         crate::layout::PROMPT_HEIGHT,
     );
     let actual = [
