@@ -1,11 +1,23 @@
 # Pi core file inventory
 
-Generated from the current source trees on 2026-08-06. Every file is listed so
+The executable source of truth is `scripts/source-inventory.sh`; the sections
+below are a review snapshot and must not override its output. The current
+source trees contain 48 agent files and 174 AI files. Every file is listed so
 parity claims can be traced to a concrete source file. Provider catalogs,
 OAuth, image, session, and harness files are inventory inputs and remain
 out of Runie core scope unless promoted by p30.
 
-## packages/agent/src (37 files)
+## Inventory delta (2026-08-06)
+
+The deterministic scan found 23 paths added or renamed upstream since this
+snapshot and 7 paths no longer present. The complete delta is kept here until
+this long-form review snapshot is regenerated:
+
+- Added/current: `agent/harness/{reducer,result,session/context,session/index,session/jsonl,session/jsonl/codec,session/jsonl/errors,session/jsonl/repo,session/jsonl/storage,session/jsonl/types,session/memory,session/search,session/state,session/testing/conformance,session/testing/index,session/testing/types,session/types,telemetry}.ts`.
+- Added/current: `ai/providers/{baseten,baseten.models,qwen-token-plan-individual,qwen-token-plan-individual.models}.ts` and `ai/utils/abort.ts`.
+- Removed/renamed from this snapshot: `agent/harness/session/{array-session-reader,fork,jsonl-store,keyed-operation-queue,memory-store,repository,search-backend}.ts`.
+
+## packages/agent/src (48 files; snapshot pending refresh)
 
 - `/Users/admin/Code/agents/pi/packages/agent/src/agent-loop.ts` — agent lifecycle
 - `/Users/admin/Code/agents/pi/packages/agent/src/agent.ts` — agent lifecycle
@@ -45,7 +57,7 @@ out of Runie core scope unless promoted by p30.
 - `/Users/admin/Code/agents/pi/packages/agent/src/stream-fn.ts` — agent-core support
 - `/Users/admin/Code/agents/pi/packages/agent/src/types.ts` — wire/state types
 
-## packages/ai/src (169 files)
+## packages/ai/src (174 files; snapshot pending refresh)
 
 - `/Users/admin/Code/agents/pi/packages/ai/src/api/anthropic-messages.lazy.ts` — provider/API boundary
 - `/Users/admin/Code/agents/pi/packages/ai/src/api/anthropic-messages.ts` — provider/API boundary

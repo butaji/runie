@@ -48,8 +48,8 @@ The source scan enumerated:
 
 | Source | Files scanned | Functional families |
 |---|---:|---|
-| `pi/packages/agent/src` | 37 TypeScript files | agent loop, state, events, messages, tools, queues, stream adapters, harness boundaries |
-| `pi/packages/ai/src` | 169 TypeScript files | model/usage types, provider stream contracts, API adapters, transforms, retries, auth/image boundaries |
+| `pi/packages/agent/src` | 48 TypeScript files | agent loop, state, events, messages, tools, queues, stream adapters, harness boundaries |
+| `pi/packages/ai/src` | 174 TypeScript files | model/usage types, provider stream contracts, API adapters, transforms, retries, auth/image boundaries |
 | `grok-build/xai-grok-pager/src` | 496 Rust files | scrollback blocks, prompt, status, overlays, modals, palette, commands, layouts, session UI |
 | `grok-build/xai-grok-pager-render/src` | 68 Rust files | theme tokens, terminal capabilities, colors, glyphs, wrapping, overlays, safe buffer |
 
